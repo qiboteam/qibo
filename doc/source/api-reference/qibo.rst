@@ -2249,9 +2249,9 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Gate Set Tomography
 -------------------
 
-The gate set tomography (GST) follows the procedure outlined in https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs of the functions, when used correctly, will allow one to set up the proper variables necessary for probabilistic error cancellation to mitigate noise arising from noisy quantum hardware. The codes allow for calibrating an empty circuit, and for one and two qubits of gate set tomography. We give some examples to illustrate the usage of the functions for clarity. 
+The gate set tomography (GST) follows the procedure outlined in https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs of the functions, when used correctly, will allow one to set up the proper variables necessary for probabilistic error cancellation to mitigate noise arising from noisy quantum hardware. The codes allow for calibrating an empty circuit, and for one and two qubits of gate set tomography. We give some examples to illustrate the usage of the functions for clarity.
 
-First, import the necessary modules. As an example, we import depolarizing noise as an example. 
+First, import the necessary modules. As an example, we import depolarizing noise as an example.
 .. testsetup:: python
 
     from qibo.noise import NoiseModel, DepolarizingError

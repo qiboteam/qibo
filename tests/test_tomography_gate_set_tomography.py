@@ -70,7 +70,7 @@ def test_prepare_states_invalid_k_valid_nqubits(k, nqubits):
 def test_meaasurement_basis_value_j_single_qubit(j):
     # Test for valid input with a single qubit
     nqubits = 1
-    U = 1/np.sqrt(2) * np.array([[1, -1j],[1j, -1]])
+    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
     correct_gates = [
         [gates.M(0)],
         [gates.H(0), gates.M(0)],
@@ -87,7 +87,7 @@ def test_meaasurement_basis_value_j_single_qubit(j):
 def test_measurement_basis_value_j_two_qubits(j):
     # Test for valid input with two qubits
     nqubits = 2
-    U = 1/np.sqrt(2) * np.array([[1, -1j],[1j, -1]])
+    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
     correct_gates = [
         [gates.M(0), gates.M(1)],
         [gates.M(0), gates.H(1), gates.M(1)],
@@ -191,12 +191,12 @@ def test_reset_register_sp_0_singlequbitcircuit():
     nqubits = 1
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
-    test_circuit.add(gates.RX(0, np.pi/3))
+    test_circuit.add(gates.RX(0, np.pi / 3))
 
     inverse_circuit = reset_register(test_circuit, "sp_0")
 
     correct_gates = [
-        [gates.RX(0, np.pi/3).dagger()],
+        [gates.RX(0, np.pi / 3).dagger()],
         [gates.H(0)],
     ]
 
@@ -213,9 +213,7 @@ def test_reset_register_sp_1_twoqubitcircuit():
 
     inverse_circuit = reset_register(test_circuit, "sp_1")
 
-    correct_gates = [
-        [gates.S(0).dagger()]
-    ]
+    correct_gates = [[gates.S(0).dagger()]]
 
     for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
         assert isinstance(gate, type(groundtruth[0]))
@@ -227,13 +225,11 @@ def test_reset_register_sp_1_singlequbitcircuit():
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
     test_circuit.add(gates.S(0))
-    test_circuit.add(gates.RX(1, np.pi/3))
+    test_circuit.add(gates.RX(1, np.pi / 3))
 
     inverse_circuit = reset_register(test_circuit, "sp_1")
 
-    correct_gates = [
-        [gates.RX(1, np.pi/3).dagger()]
-    ]
+    correct_gates = [[gates.RX(1, np.pi / 3).dagger()]]
 
     for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
         assert isinstance(gate, type(groundtruth[0]))
@@ -249,7 +245,7 @@ def test_reset_register_sp_t():
     inverse_circuit = reset_register(test_circuit, "sp_t")
 
     correct_gates = [
-        [gates.CNOT(0,1)],
+        [gates.CNOT(0, 1)],
         [gates.H(0)],
     ]
     for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
