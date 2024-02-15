@@ -1,4 +1,5 @@
 """"Testing utils for DoubleBracketIteration model"""
+
 import numpy as np
 import pytest
 
