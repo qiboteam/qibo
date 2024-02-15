@@ -32,8 +32,7 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
 
 
 def uniform_sampling_U3(ngates: int, seed=None, backend=None):
-    """
-    Samples parameters for Haar-random :math:`U_{3}` (``qibo.gates.U3``).
+    """Samples parameters for Haar-random :math:`U_{3}` (``qibo.gates.U3``).
 
     Args:
         ngates (int): Total number of :math:`U_{3}`s to be sampled.
