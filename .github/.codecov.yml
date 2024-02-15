@@ -1,3 +1,12 @@
+coverage:
+  status:
+    project:
+      default:
+        threshold: 0.5%
+
+github_checks:
+  annotations: false
+
 ignore:
   - "setup.py"
   - "src/qibo/tests/test_custom_functions.py"
