@@ -1,4 +1,5 @@
 """Test :class:`qibo.models.circuit.Circuit` for density matrix and noise simulation."""
+
 import numpy as np
 import pytest
 

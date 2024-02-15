@@ -1,4 +1,5 @@
 """Testing DoubleBracketIteration model"""
+
 import numpy as np
 import pytest
 
@@ -11,12 +12,13 @@ from qibo.models.dbi.double_bracket import (
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 1
+seed = 10
 """Number of steps for evolution."""
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_double_bracket_iteration_canonical(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.canonical,
@@ -30,7 +32,7 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -38,9 +40,8 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
-    with pytest.raises(ValueError):
-        dbi(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
-
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
 
@@ -49,7 +50,7 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_double_bracket_iteration_single_commutator(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -57,16 +58,18 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
+
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
-    dbi(step=0.01)
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_hyperopt_step(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(Hamiltonian(nqubits, h0, backend=backend))
 
@@ -115,7 +118,7 @@ def test_energy_fluctuations(backend):
 def test_double_bracket_iteration_scheduling_grid_hyperopt(
     backend, nqubits, scheduling
 ):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -125,12 +128,12 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
     for _ in range(NSTEPS):
         step1 = dbi.choose_step(d=d, scheduling=scheduling)
         dbi(d=d, step=step1)
-    step2 = dbi.choose_step(scheduling=scheduling)
+    step2 = dbi.choose_step()
     dbi(step=step2)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [3, 4, 6])
 @pytest.mark.parametrize("n", [2, 3])
 @pytest.mark.parametrize(
     "backup_scheduling", [None, DoubleBracketScheduling.use_polynomial_approximation]
@@ -138,7 +141,7 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
 def test_double_bracket_iteration_scheduling_polynomial(
     backend, nqubits, n, backup_scheduling
 ):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -149,6 +152,8 @@ def test_double_bracket_iteration_scheduling_polynomial(
     for _ in range(NSTEPS):
         step1 = dbi.polynomial_step(n=n, d=d, backup_scheduling=backup_scheduling)
         dbi(d=d, step=step1)
-    step2 = dbi.polynomial_step(n=n)
+    step2 = dbi.choose_step(
+        scheduling=DoubleBracketScheduling.use_polynomial_approximation, n=n
+    )
     dbi(step=step2)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm

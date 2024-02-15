@@ -38,7 +38,7 @@ def generate_Z_operators(nqubits: int):
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
-    # list of tupples, e.g. ('Z','I','Z')
+    # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
 
@@ -53,7 +53,7 @@ def generate_Z_operators(nqubits: int):
 
 
 def str_to_symbolic(name: str):
-    """Converts string into symbolic hamiltonian
+    """Convert string into symbolic hamiltonian.
     Example:
         .. testcode::
 
@@ -78,18 +78,26 @@ def select_best_dbr_generator(
 ):
     """Selects the best double bracket rotation generator from a list and runs the
 
-    Args:
-        dbi_object (_DoubleBracketIteration): The target DoubleBracketIteration object.
-        d_list (list): List of diagonal operators (np.array) to run from.
-        step (float): Fixed iteration duration.
-            Defaults to ``None``, uses hyperopt.
-        step_min (float): Minimally allowed iteration duration.
-        step_max (float): Maximally allowed iteration duration.
-        max_evals (int): Maximally allowed number of evaluation in hyperopt.
-        compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+        Args:
+            dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
+            d_list (list): list of diagonal operators (np.array) to run from.
+            step (float): fixed iteration duration.
+                Defaults to ``None``, uses hyperopt.
+    <<<<<<< HEAD
+            step_min (float): Minimally allowed iteration duration.
+            step_max (float): Maximally allowed iteration duration.
+            max_evals (int): Maximally allowed number of evaluation in hyperopt.
+            compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+    =======
+            step_min (float): minimally allowed iteration duration.
+            step_max (float): maximally allowed iteration duration.
+            max_evals (int): maximally allowed number of evaluation in hyperopt.
+            compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+            mode (`DoubleBracketGeneratorType`): DBI generator type used for the selection.
+    >>>>>>> 056830fff9eedef0da2003a638ce4dbd30b6e3b8
 
-    Returns:
-        The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
+        Returns:
+            The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
     if scheduling is None:
         scheduling = dbi_object.scheduling
@@ -101,7 +109,7 @@ def select_best_dbr_generator(
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list[i] = CS_angle_sgn(dbi_eval, d)
+        flip_list[i] = cs_angle_sgn(dbi_eval, d)
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.choose_step(
@@ -141,8 +149,8 @@ def select_best_dbr_generator(
     return dbi_eval, idx_max_loss, step_optimal, flip
 
 
-def CS_angle_sgn(dbi_object, d):
-    """Calculates the sign of Cauchy-Schwarz Angle $$<W(Z), W(canonical)>_{HS}$$"""
+def cs_angle_sgn(dbi_object, d):
+    """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
     norm = np.trace(
         np.dot(
             np.conjugate(

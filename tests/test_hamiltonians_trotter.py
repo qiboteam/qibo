@@ -1,4 +1,5 @@
 """Test Trotter Hamiltonian methods from `qibo/core/hamiltonians.py`."""
+
 import numpy as np
 import pytest
 
