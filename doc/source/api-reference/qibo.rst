@@ -2244,13 +2244,14 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
     :members:
     :member-order: bysource
 
-Gate set tomography
-"""""""""""""""""""
+.. _Gate Set Tomography:
 
-Gate set tomography is used to obtain the noise profile of each operator.
-The noise profile can then be inverted and encoded in basis operations to be
-used in probabilistic error cancellation.
+Gate Set Tomography
+-------------------
 
+The gate set tomography (GST) follows the procedure outlined in https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs of the functions, when used correctly, will allow one to set up the proper variables necessary for probabilistic error cancellation to mitigate noise arising from noisy quantum hardware. The codes allow for one and two qubits of gate set tomography. We give some examples to illustrate the usage of the functions for clarity. 
+
+First, import the necessary modules. As an example, we import depolarizing noise as an example. 
 .. testsetup:: python
 
     from qibo.noise import NoiseModel, DepolarizingError
@@ -2262,12 +2263,63 @@ used in probabilistic error cancellation.
     seed_value = 42  # You can use any integer value as the seed
     np.random.seed(seed_value)
 
+Single qubit example
+^^^^^^^^^^^^^^^^^^^^
+
+Suppose we have a single qubit quantum circuit and we want to perform probabilistic error cancellation on this circuit. We will need to do gate set tomography for a single qubit quantum circuit and all its gates individually first. Consider an example where our quantum circuit contains the Hadamard gate and an RX gate, here is how we do gate set tomography using the function ``execute_GST()`` for both gates individually and also without any operator for calibration.
+
 .. testcode:: python
 
-    # Create the quantum circuit
-    circuit = Circuit(2)
+    # Create the single qubit quantum circuit
+    circuit = Circuit(1)
     circuit.add(gates.H(0))
     circuit.add(gates.RX(0, np.pi/7))
+    circuit.add(gates.M(0))
+
+    # Create noise model
+    lam = 0.4
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+
+    # Perform gate set tomography without any operator for calibration
+    GST_empty_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
+
+    # Perform gate set tomography for the Hadamard gate
+    gate_Hadamard = gates.H(0)
+    GST_H_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
+
+    # Do gate set tomography for Rx(pi/7) gate
+    gate_RX = gates.RX(0, np.pi/7)
+    GST_RX_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
+
+**Definitions (single qubit):**
+
+- \(Q_j\): The measurement basis associated with index \(j\) where \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
+- \(\rho_k\): The initialized quantum state associated with index \(k\) where \(k \in \{0, 1, 2, 3\} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}\).
+
+
+For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`` ``GST_H_1qb`` and ``GST_RX_1qb`` are 4 by 4 matrices. Each matrix has elements indexed by \(j)\ and \(k)\ given respectively as
+
+.. math::
+    GST\_empty\_1qb\_{jk} = \text{tr}(Q\_j \rho\_k)
+
+.. math::
+    GST\_H\_1qb\_{jk} = \text{tr}(Q\_j H \rho\_k)
+
+.. math::
+    GST\_RX\_1qb\_{jk} = \text{tr}(Q\_j RX \rho\_k)
+
+
+Two qubits example
+^^^^^^^^^^^^^^^^^^
+
+As another example, suppose we have a two qubit quantum circuit that generates a Bell state. Here is how we do gate set tomography using the function``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any operator (both single qubit and two-qubit) for calibration. We will need to calibrate an empty single qubit circuit and an empty two-qubit circuit as the Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This will become relevant when doing probabilistic error cancellation.
+
+.. testcode:: python
+
+    # Create the single qubit quantum circuit
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0,1))
     circuit.add(gates.M(0))
     circuit.add(gates.M(1))
@@ -2277,18 +2329,33 @@ used in probabilistic error cancellation.
     depol = NoiseModel()
     depol.add(DepolarizingError(lam))
 
-    # Do gate set tomography for an empty circuit by leaving gate=None.
-    gjk_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
-    gjk_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol)
+    # Perform gate set tomography without any operator for calibration (single qubit)
+    GST_empty_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
 
-    # Do gate set tomography for Hadamard gate
+    # Perform gate set tomography without any operator for calibration (two qubits)
+    GST_empty_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol)
+
+    # Perform gate set tomography for the Hadamard gate
     gate_Hadamard = gates.H(0)
-    Ojk_1qb_Hadamard = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
-
-    # Do gate set tomography for Rx(pi/7) gate
-    gate_RX = gates.RX(0, np.pi/7)
-    Ojk_1qb_RX = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
+    GST_H_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
 
     # Do gate set tomography for CNOT gate
     gate_CNOT = gates.CNOT(0,1)
-    Ojk_2qb_CNOT = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
+    GST_CNOT_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
+
+**Definitions (two qubits):**
+
+- \(Q_j\): The measurement basis associated with index \(j\) where \(j \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{I, X, Y, Z\}^{\otimes 2}\).
+- \(\rho_k\): The initialized quantum state associated with index \(k\) where \(k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}\).
+
+In this two qubits example, we have a combination of single qubit and two-qubit gate set tomography. The outputs given by ``GST_empty_1qb`` and ``GST_H_1qb`` are 4 by 4 matrices. Their description is identical to that in the previous example. On the other hand, the outputs given by ``GST_empty_2qb`` and ``GST_CNOT_2qb`` are 16 by 16 matrices and have elements indexed by \(j)\ and \(k)\ given respectively as
+
+.. math::
+    GST\_empty\_2qb\_{jk} = \text{tr}(Q\_j \rho\_k)
+
+.. math::
+    GST\_CNOT\_2qb\_{jk} = \text{tr}(Q\_j H \rho\_k)
+
+.. autoclass:: qibo.tomography.gate_set_tomography
+    :members:
+    :member-order: bysource
