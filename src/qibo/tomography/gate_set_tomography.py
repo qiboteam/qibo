@@ -207,11 +207,6 @@ def execute_GST(
         backend = GlobalBackend()
 
     if gate is not None:
-        # qb_gate = len(gate.qubits)
-        # if nqubits != qb_gate:
-        #     raise_error(ValueError, f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
-        #     )
-        # gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
         if nqubits != len(gate.qubits):
             raise_error(
                 ValueError,
