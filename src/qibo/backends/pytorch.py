@@ -30,13 +30,13 @@ class TorchMatrices(NumpyMatrices):
     def __init__(self, dtype):
         super().__init__(dtype)
         self.torch = torch
-        self.torch_dtype = torch_dtype_dict[dtype]
+        self.dtype = torch_dtype_dict[dtype]
 
     def _cast(self, x, dtype):
-        return self.torch.tensor(x, dtype=self.torch_dtype)
+        return self.torch.tensor(x, dtype=dtype)
 
     def Unitary(self, u):
-        return self._cast(u, dtype=self.torch_dtype)
+        return self._cast(u, dtype=self.dtype)
 
 
 class PyTorchBackend(NumpyBackend):
