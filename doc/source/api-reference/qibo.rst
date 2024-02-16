@@ -2325,7 +2325,7 @@ First, again, import the necessary modules. We import depolarizing noise as an e
 
 .. testcode::
 
-    # Create the single qubit quantum circuit
+    # Create the two qubit quantum circuit
     circuit = qibo.models.Circuit(2)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0,1))
