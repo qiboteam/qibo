@@ -29,6 +29,8 @@ joblib = "^1.2.0"
 hyperopt = "^0.2.7"
 tabulate = "^0.9.0"
 numpy = "^1.26.4"
+networkx = "^3.2.1"
+cvxpy = {version = "^1.4.2", optional = true}
 tensorflow = {version = "^2.14.1", optional = true}
 
 [tool.poetry.group.dev]
@@ -77,6 +79,8 @@ test-docs = "make -C doc doctest"
 
 
 
+
+
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -84,6 +88,8 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+
+
 
 
 
