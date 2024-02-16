@@ -28,6 +28,8 @@ cma = "^3.3.0"
 joblib = "^1.2.0"
 hyperopt = "^0.2.7"
 tabulate = "^0.9.0"
+numpy = "^1.26.4"
+tensorflow = {version = "^2.14.1", optional = true}
 
 [tool.poetry.group.dev]
 optional = true
@@ -73,6 +75,8 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
+
+
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -80,6 +84,8 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+
+
 
 [tool.poetry.group.cuda12]
 optional = true
