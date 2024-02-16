@@ -23,15 +23,16 @@ def construct_clifford_backend(backend):
                 str(excinfo.value)
                 == "TensorflowBackend for Clifford Simulation is not supported yet."
             )
-    elif isinstance(backend, PyTorchBackend):
+
+    if isinstance(backend, PyTorchBackend):
         with pytest.raises(NotImplementedError) as excinfo:
             clifford_backend = CliffordBackend(backend)
             assert (
                 str(excinfo.value)
                 == "PyTorchBackend for Clifford Simulation is not supported."
             )
-    else:
-        return CliffordBackend(backend)
+
+    return CliffordBackend(backend)
 
 
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
