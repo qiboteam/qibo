@@ -2263,7 +2263,13 @@ Suppose we have a single qubit quantum circuit and we want to perform probabilis
     from qibo import gates
     from qibo.noise import NoiseModel
     from qibo.noise import DepolarizingError
-    from qibo.tomography.gate_set_tomography import *
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+        reset_register,
+    )
 
     # Create the single qubit quantum circuit
     circuit = models.Circuit(1)
@@ -2316,7 +2322,13 @@ As another example, suppose we have a two qubit quantum circuit that generates a
     from qibo import gates
     from qibo.noise import NoiseModel
     from qibo.noise import DepolarizingError
-    from qibo.tomography.gate_set_tomography import *
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+        reset_register,
+    )
 
     # Create the two qubit quantum circuit
     circuit = qibo.models.Circuit(2)
