@@ -7,6 +7,7 @@ from typing import Union
 import numpy as np
 
 from qibo import gates
+from qibo.backends import _clifford_operations
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
@@ -36,19 +37,38 @@ class CliffordBackend(NumpyBackend):
 
         from qibo.backends import _check_backend
 
-        engine = _check_backend(engine)
+        if engine is None:
+            engine = _check_backend(engine)
+            engine = engine.name if engine.platform is None else engine.platform
 
-        if isinstance(engine, TensorflowBackend):
+        class CliffordEngine:
+            pass
+
+        self.engine = CliffordEngine()
+        for method in dir(_clifford_operations):
+            setattr(self.engine, method, getattr(_clifford_operations, method))
+
+        if engine == "numpy":
+            pass
+        elif engine == "numba":
+            from qibojit.backends import clifford_operations_cpu
+
+            for method in dir(clifford_operations_cpu):
+                setattr(self.engine, method, getattr(clifford_operations_cpu, method))
+        elif engine == "cupy":
+            from qibojit.backends import clifford_operations_gpu
+
+            for method in dir(clifford_operations_gpu):
+                setattr(self.engine, method, getattr(clifford_operations_gpu, method))
+        else:
             raise_error(
                 NotImplementedError,
-                "TensorflowBackend for Clifford Simulation is not supported.",
+                f"Backend `{engine}` is not supported for Clifford Simulation.",
             )
 
-        self.engine = engine
-        self.np = _calculation_engine(engine)
+        self.np = self.engine.np
 
         self.name = "clifford"
-        self.clifford_operations = engine.clifford_operations
 
     def cast(self, x, dtype=None, copy: bool = False):
         """Cast an object as the array type of the current backend.
@@ -109,7 +129,7 @@ class CliffordBackend(NumpyBackend):
         return self.engine._clifford_post_execution_reshape(state, nqubits)
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
-        operation = getattr(self.clifford_operations, gate.__class__.__name__)
+        operation = getattr(self.engine, gate.__class__.__name__)
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
         )
@@ -166,7 +186,7 @@ class CliffordBackend(NumpyBackend):
                 state,
                 measurements=circuit.measurements,
                 nshots=nshots,
-                engine=self.engine,
+                _backend=self,
             )
 
             return clifford
@@ -213,7 +233,7 @@ class CliffordBackend(NumpyBackend):
             self.zero_state(circuit.nqubits),
             measurements=circuit.measurements,
             nshots=nshots,
-            engine=self.engine,
+            _backend=self,
         )
         result.symplectic_matrix, result._samples = None, None
 
@@ -247,14 +267,12 @@ class CliffordBackend(NumpyBackend):
 
         if collapse:
             samples = [
-                self.clifford_operations.M(state, qubits, nqubits)
-                for _ in range(nshots - 1)
+                self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)
             ]  # parallelize?
-            samples.append(self.clifford_operations.M(state, qubits, nqubits, collapse))
+            samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
             samples = [
-                self.clifford_operations.M(state, qubits, nqubits)
-                for _ in range(nshots)
+                self.engine.M(state, qubits, nqubits) for _ in range(nshots)
             ]  # parallelize?
 
         return self.engine.cast(samples, dtype=int)

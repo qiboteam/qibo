@@ -1,6 +1,11 @@
 from functools import reduce
 
 import numpy as np
+from scipy import sparse
+
+name = "numpy"
+
+np = np
 
 
 def _get_rxz(symplectic_matrix, nqubits):
@@ -439,3 +444,28 @@ def M(state, qubits, nqubits, collapse=False):
             state_copy, outcome = _determined_outcome(state_copy, q, nqubits)
         sample.append(outcome)
     return sample
+
+
+def cast(x, dtype=None, copy=False):
+    if dtype is None:
+        dtype = "complex128"
+    if isinstance(x, np.ndarray):
+        return x.astype(dtype, copy=copy)
+    elif sparse.issparse(x):
+        return x.astype(dtype, copy=copy)
+    return np.array(x, dtype=dtype, copy=copy)
+
+
+def _clifford_pre_execution_reshape(state):
+    return state
+
+
+def _clifford_post_execution_reshape(state, nqubits):
+    return state
+
+
+def identity_density_matrix(nqubits, normalize: bool = True):
+    state = np.eye(2**nqubits, dtype="complex128")
+    if normalize is True:
+        state /= 2**nqubits
+    return state

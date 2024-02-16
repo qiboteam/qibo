@@ -18,13 +18,10 @@ numpy_bkd = NumpyBackend()
 
 def construct_clifford_backend(backend):
     if isinstance(backend, TensorflowBackend):
-        with pytest.raises(NotImplementedError) as excinfo:
-            clifford_backend = CliffordBackend(backend)
-            assert (
-                str(excinfo.value)
-                == "TensorflowBackend for Clifford Simulation is not supported yet."
-            )
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend.name)
     else:
+        backend = backend.name if backend.platform is None else backend.platform
         return CliffordBackend(backend)
 
 
@@ -251,9 +248,7 @@ def test_set_backend(backend):
         platform = str(backend)
     set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().engine.platform
-    if global_platform is None:
-        global_platform = str(GlobalBackend().engine)
+    global_platform = GlobalBackend().engine.name
     assert global_platform == platform
 
 
