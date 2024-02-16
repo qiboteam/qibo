@@ -6,7 +6,3 @@ coverage:
 
 github_checks:
   annotations: false
-
-ignore:
-  - "setup.py"
-  - "src/qibo/tests/test_custom_functions.py"
