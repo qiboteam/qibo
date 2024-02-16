@@ -2257,18 +2257,18 @@ Single qubit example
 Suppose we have a single qubit quantum circuit and we want to perform probabilistic error cancellation on this circuit. We will need to do gate set tomography for a single qubit quantum circuit and all its gates individually first. Consider an example where our quantum circuit contains the Hadamard gate and an RX gate, here is how we do gate set tomography using the function ``execute_GST()`` for both gates individually and also without any operator for calibration.
 
 First, import the necessary modules. We import depolarizing noise as an example.
-.. testsetup:: python
-
-    from qibo.noise import NoiseModel, DepolarizingError
-    from qibo import Circuit
+.. testsetup::
+    
+    import qibo
+    from qibo import models
     from qibo import gates
+    from qibo.noise import NoiseModel, DepolarizingError
     from qibo.tomography.gate_set_tomography import *
-    import numpy as np
 
-.. testcode:: python
+.. testcode::
 
     # Create the single qubit quantum circuit
-    circuit = qibo.models.Circuit(1)
+    circuit = models.Circuit(1)
     circuit.add(gates.H(0))
     circuit.add(gates.RX(0, np.pi/7))
     circuit.add(gates.M(0))
@@ -2313,15 +2313,15 @@ Two qubits example
 As another example, suppose we have a two qubit quantum circuit that generates a Bell state. Here is how we do gate set tomography using the function``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any operator (both single qubit and two-qubit) for calibration. We will need to calibrate an empty single qubit circuit and an empty two-qubit circuit as the Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This will become relevant when doing probabilistic error cancellation.
 
 First, again, import the necessary modules. We import depolarizing noise as an example.
-.. testsetup:: python
+.. testsetup::
 
-    from qibo.noise import NoiseModel, DepolarizingError
-    from qibo import Circuit
+    import qibo
+    from qibo import models
     from qibo import gates
+    from qibo.noise import NoiseModel, DepolarizingError
     from qibo.tomography.gate_set_tomography import *
-    import numpy as np
 
-.. testcode:: python
+.. testcode::
 
     # Create the single qubit quantum circuit
     circuit = qibo.models.Circuit(2)
