@@ -2258,7 +2258,7 @@ Suppose we have a single qubit quantum circuit and we want to perform probabilis
 
 First, import the necessary modules. We import depolarizing noise as an example.
 .. testsetup::
-    
+
     import qibo
     from qibo import models
     from qibo import gates
