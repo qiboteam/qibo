@@ -123,7 +123,7 @@ class PyTorchBackend(NumpyBackend):
         return super().issparse(x)
 
     def to_numpy(self, x):
-        if type(x) is self.torch.Tensor:
+        if isinstance(x, self.torch.Tensor):
             return x.detach().cpu().numpy()
         return x
 

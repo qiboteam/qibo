@@ -60,7 +60,9 @@ class NumpyMatrices:
         )
 
     def I(self, n=2):
-        return self._cast(self.np.eye(n, dtype=self.dtype), dtype=self.dtype)
+        # dtype=complex is necessary for pytorch backend,
+        # _cast will take care of casting in the right dtype for all the backends
+        return self._cast(self.np.eye(n, dtype=complex), dtype=self.dtype)
 
     def Align(self, n=2):
         return self._cast(self.I(n), dtype=self.dtype)

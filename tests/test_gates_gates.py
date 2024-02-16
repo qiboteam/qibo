@@ -68,12 +68,6 @@ def test_z(backend):
     assert gates.Z(0).unitary
 
 
-def to_numpy(array):
-    if isinstance(array, np.ndarray):
-        return array
-    return array.detach().cpu().numpy()
-
-
 def test_sx(backend):
     nqubits = 1
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -99,13 +93,14 @@ def test_sx(backend):
 
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
+    np_final_state_decompose = backend.to_numpy(final_state_decompose)
+    np_obs = backend.to_numpy(observable)
+    np_target_state = backend.to_numpy(target_state)
     backend.assert_allclose(
-        np.transpose(np.conj(to_numpy(final_state_decompose)))
-        @ to_numpy(observable)
-        @ to_numpy(final_state_decompose),
-        np.transpose(np.conj(to_numpy(target_state)))
-        @ to_numpy(observable)
-        @ to_numpy(target_state),
+        np.transpose(np.conj(np_final_state_decompose))
+        @ np_obs
+        @ np_final_state_decompose,
+        np.transpose(np.conj(np_target_state)) @ np_obs @ np_target_state,
     )
 
     assert gates.SX(0).qasm_label == "sx"
@@ -138,13 +133,14 @@ def test_sxdg(backend):
 
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
+    np_final_state_decompose = backend.to_numpy(final_state_decompose)
+    np_obs = backend.to_numpy(observable)
+    np_target_state = backend.to_numpy(target_state)
     backend.assert_allclose(
-        np.transpose(np.conj(to_numpy(final_state_decompose)))
-        @ to_numpy(observable)
-        @ to_numpy(final_state_decompose),
-        np.transpose(np.conj(to_numpy(target_state)))
-        @ to_numpy(observable)
-        @ to_numpy(target_state),
+        np.transpose(np.conj(np_final_state_decompose))
+        @ np_obs
+        @ np_final_state_decompose,
+        np.transpose(np.conj(np_target_state)) @ np_obs @ np_target_state,
     )
 
     assert gates.SXDG(0).qasm_label == "sxdg"
@@ -1255,6 +1251,7 @@ def test_unitary(backend, nqubits):
 
 
 def test_unitary_initialization(backend):
+
     matrix = np.random.random((4, 4))
     gate = gates.Unitary(matrix, 0, 1)
     backend.assert_allclose(gate.parameters[0], matrix)

@@ -289,12 +289,6 @@ def test_norm(backend, density_matrix, seed):
     backend.assert_allclose(final_norm, target_norm)
 
 
-def to_numpy(x):
-    if isinstance(x, np.ndarray):
-        return x
-    return x.detach().cpu().numpy()
-
-
 @pytest.mark.parametrize("seed", list(range(1, 5 + 1)))
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nqubits", list(range(2, 6 + 1, 2)))
@@ -313,11 +307,13 @@ def test_overlap(backend, nqubits, density_matrix, seed):
     if density_matrix:
         final_overlap = overlap.apply_density_matrix(backend, state1)
         target_overlap = np.trace(
-            np.transpose(np.conj(to_numpy(state0))) @ to_numpy(state1)
+            np.transpose(np.conj(backend.to_numpy(state0))) @ backend.to_numpy(state1)
         )
     else:
         final_overlap = overlap.apply(backend, state1)
-        target_overlap = np.abs(np.sum(np.conj(to_numpy(state0)) * to_numpy(state1)))
+        target_overlap = np.abs(
+            np.sum(np.conj(backend.to_numpy(state0)) * backend.to_numpy(state1))
+        )
 
     backend.assert_allclose(final_overlap, target_overlap)
 

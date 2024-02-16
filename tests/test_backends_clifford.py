@@ -23,18 +23,17 @@ def construct_clifford_backend(backend):
             clifford_backend = CliffordBackend(backend)
             assert (
                 str(excinfo.value)
-                == "TensorflowBackend for Clifford Simulation is not supported yet."
+                == "TensorflowBackend for Clifford Simulation is not supported."
             )
-
-    if isinstance(backend, PyTorchBackend):
+    elif isinstance(backend, PyTorchBackend):
         with pytest.raises(NotImplementedError) as excinfo:
             clifford_backend = CliffordBackend(backend)
             assert (
                 str(excinfo.value)
-                == "PyTorchBackend for Clifford Simulation is not supported yet."
+                == "PyTorchBackend for Clifford Simulation is not supported."
             )
-
-    return CliffordBackend(backend)
+    else:
+        return CliffordBackend(backend)
 
 
 THETAS_1Q = [
