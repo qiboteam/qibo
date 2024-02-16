@@ -2262,7 +2262,8 @@ First, import the necessary modules. We import depolarizing noise as an example.
     import qibo
     from qibo import models
     from qibo import gates
-    from qibo.noise import NoiseModel, DepolarizingError
+    from qibo.noise import NoiseModel
+    from qibo.noise import DepolarizingError
     from qibo.tomography.gate_set_tomography import *
 
 .. testcode::
@@ -2318,7 +2319,8 @@ First, again, import the necessary modules. We import depolarizing noise as an e
     import qibo
     from qibo import models
     from qibo import gates
-    from qibo.noise import NoiseModel, DepolarizingError
+    from qibo.noise import NoiseModel
+    from qibo.noise import DepolarizingError
     from qibo.tomography.gate_set_tomography import *
 
 .. testcode::
