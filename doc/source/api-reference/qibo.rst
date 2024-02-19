@@ -2428,6 +2428,8 @@ arising from noisy quantum hardware. The codes allow for calibrating an empty
 circuit, and for one and two qubits of gate set tomography. We give some
 examples to illustrate the usage of the functions for clarity.
 
+The ``reset_registers()`` function requires a string argument serving as the identifier for the qubit number(s) from which the inverse circuit will be obtained. This identifier ensures that the function returns an inverse circuit of the specified register, resulting in the preparation of the zero state :math:`| 0 \rangle`. It's important to note that this function is specifically designed for qubit(s) without entangling gates."
+
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -2478,20 +2480,20 @@ calibration. We import depolarizing noise as an example.
 
 **Definitions (single qubit):**
 
-- \(Q_j\): The measurement basis associated with index \(j\) where \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
-- \(\rho_k\): The initialized quantum state associated with index \(k\) where \(k \in \{0, 1, 2, 3\} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}\).
+- :math:`\(Q_j\)`: The measurement basis associated with index :math:`\(j\)` where :math:`\(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\)`.
+- :math:`\(\rho_k\)`: The initialized quantum state associated with index :math:`\(k\)` where :math:`\(k \in \{0, 1, 2, 3\} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}\)`.
 
 
 For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`` ``GST_H_1qb`` and ``GST_RX_1qb`` are 4 by 4 matrices. Each matrix has elements indexed by \(j)\ and \(k)\ given respectively as
 
 .. math::
-    GST\_empty\_1qb\_{jk} = \text{tr}(Q\_j \rho\_k)
+    \text{GST}\_\text{empty}\_\text{1qb}\_{jk} = \text{tr}(Q\_j \rho\_k)
 
 .. math::
-    GST\_H\_1qb\_{jk} = \text{tr}(Q\_j H \rho\_k)
+    \text{GST}\_\text{H}\_\text{1qb}\_{jk} = \text{tr}(Q\_j H \rho\_k)
 
 .. math::
-    GST\_RX\_1qb\_{jk} = \text{tr}(Q\_j RX \rho\_k)
+    \text{GST}\_\text{RX}\_\text{1qb}\_{jk} = \text{tr}(Q\_j RX \rho\_k)
 
 
 Two qubits example
@@ -2542,16 +2544,16 @@ As another example, suppose we have a two qubit quantum circuit that generates a
 
 **Definitions (two qubits):**
 
-- \(Q_j\): The measurement basis associated with index \(j\) where \(j \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{I, X, Y, Z\}^{\otimes 2}\).
-- \(\rho_k\): The initialized quantum state associated with index \(k\) where \(k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}\).
+- :math:`\(Q_j\)`: The measurement basis associated with index :math:`\(j\)` where :math:`\(j \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{I, X, Y, Z\}^{\otimes 2}\)`.
+- :math:`\(\rho_k\)`: The initialized quantum state associated with index :math:`\(k\)` where :math:`\(k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}\)`.
 
-In this two qubits example, we have a combination of single qubit and two-qubit gate set tomography. The outputs given by ``GST_empty_1qb`` and ``GST_H_1qb`` are 4 by 4 matrices. Their description is identical to that in the previous example. On the other hand, the outputs given by ``GST_empty_2qb`` and ``GST_CNOT_2qb`` are 16 by 16 matrices and have elements indexed by \(j)\ and \(k)\ given respectively as
-
-.. math::
-    GST\_empty\_2qb\_{jk} = \text{tr}(Q\_j \rho\_k)
+In this two qubits example, we have a combination of single qubit and two-qubit gate set tomography. The outputs given by ``GST_empty_1qb`` and ``GST_H_1qb`` are 4 by 4 matrices. Their description is identical to that in the previous example. On the other hand, the outputs given by ``GST_empty_2qb`` and ``GST_CNOT_2qb`` are 16 by 16 matrices and have elements indexed by :math:`\(j)\` and :math:`\(k)\` given respectively as
 
 .. math::
-    GST\_CNOT\_2qb\_{jk} = \text{tr}(Q\_j H \rho\_k)
+    \text{GST}\_\text{empty}\_\text{2qb}\_{jk} = \text{tr}(Q\_j \rho\_k)
+
+.. math::
+    \text{GST}\_\text{CNOT}\_\text{2qb}\_{jk} = \text{tr}(Q\_j H \rho\_k)
 
 .. autoclass:: qibo.tomography.gate_set_tomography
     :members:
