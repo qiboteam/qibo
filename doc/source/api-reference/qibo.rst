@@ -2419,14 +2419,28 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Gate Set Tomography
 -------------------
 
-The gate set tomography (GST) follows the procedure outlined in https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs of the functions, when used correctly, will allow one to set up the proper variables necessary for probabilistic error cancellation to mitigate noise arising from noisy quantum hardware. The codes allow for calibrating an empty circuit, and for one and two qubits of gate set tomography. We give some examples to illustrate the usage of the functions for clarity.
+The gate set tomography (GST) follows the procedure outlined in
+https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the
+Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs
+of the functions, when used correctly, will allow one to set up the proper
+variables necessary for probabilistic error cancellation to mitigate noise
+arising from noisy quantum hardware. The codes allow for calibrating an empty
+circuit, and for one and two qubits of gate set tomography. We give some
+examples to illustrate the usage of the functions for clarity.
 
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
-Suppose we have a single qubit quantum circuit and we want to perform probabilistic error cancellation on this circuit. We will need to do gate set tomography for a single qubit quantum circuit and all its gates individually first. Consider an example where our quantum circuit contains the Hadamard gate and an RX gate, here is how we do gate set tomography using the function ``execute_GST()`` for both gates individually and also without any operator for calibration. We import depolarizing noise as an example.
+Suppose we have a single qubit quantum circuit and we want to perform
+probabilistic error cancellation on this circuit. We will need to do gate set
+tomography for a single qubit quantum circuit and all its gates individually
+first. Consider an example where our quantum circuit contains the Hadamard gate
+and an RX gate, here is how we do gate set tomography using the function
+``execute_GST()`` for both gates individually and also without any operator for
+calibration. We import depolarizing noise as an example.
 
 .. code-block::  python
+
     import qibo
     from qibo import models
     from qibo import gates
@@ -2486,6 +2500,7 @@ Two qubits example
 As another example, suppose we have a two qubit quantum circuit that generates a Bell state. Here is how we do gate set tomography using the function``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any operator (both single qubit and two-qubit) for calibration. We will need to calibrate an empty single qubit circuit and an empty two-qubit circuit as the Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This will become relevant when doing probabilistic error cancellation. We import depolarizing noise as an example.
 
 .. code-block::  python
+
     import qibo
     from qibo import models
     from qibo import gates
