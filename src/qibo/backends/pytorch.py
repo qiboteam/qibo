@@ -126,7 +126,7 @@ class PyTorchBackend(NumpyBackend):
 
     def to_numpy(self, x):
         if isinstance(x, self.torch.Tensor):
-            return x.detach().cpu().numpy()
+            return x.numpy(force=True)
         return x
 
     def compile(self, func):
