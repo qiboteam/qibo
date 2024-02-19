@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import GlobalBackend, NumpyBackend
+from qibo.backends import NumpyBackend, _check_backend
 from qibo.config import raise_error
 
 magic_basis = np.array(
@@ -50,8 +50,7 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     Returns:
         (ndarray) Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if backend.__class__.__name__ in [
         "CupyBackend",
@@ -154,9 +153,8 @@ def calculate_diagonal(unitary, ua, ub, va, vb):
 
 
 def magic_decomposition(unitary, backend=None):
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
+    backend = _check_backend(backend)
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi)
@@ -167,8 +165,7 @@ def magic_decomposition(unitary, backend=None):
 
 def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis, dtype=bell_basis.dtype)
@@ -248,8 +245,7 @@ def two_qubit_decomposition(q0, q1, unitary, backend=None):
     Returns:
         (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     ud_diag = to_bell_diagonal(unitary, backend=backend)
     ud = None

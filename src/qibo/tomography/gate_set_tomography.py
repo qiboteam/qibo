@@ -3,8 +3,8 @@ from itertools import product
 import numpy as np
 
 from qibo import Circuit, gates, symbols
-from qibo.config import raise_error
 from qibo.backends import GlobalBackend
+from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 
 
@@ -13,13 +13,13 @@ def prepare_states(k, nqubits):
 
         Args:
         k (int): The index of the state to be prepared.
-            For a single qubit, \(k \in \{0, 1, 2, 3\} \equiv 
-                \{| 0 \rangle \langle 0 |,
-                  | 1 \rangle \langle 1 |,
-                  | + \rangle \langle + |,
-                  | y+ \rangle \langle y+ | \).
-            For two qubits, \(k \in \{0, 1, 2, 3\}^{\otimes 2}\).
-        nqubits (int): Number of qubits in the circuit. 
+            For a single qubit, \\(k \\in \\{0, 1, 2, 3\\} \\equiv
+                \\{| 0 \rangle \\langle 0 |,
+                  | 1 \rangle \\langle 1 |,
+                  | + \rangle \\langle + |,
+                  | y+ \rangle \\langle y+ | \\).
+            For two qubits, \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
+        nqubits (int): Number of qubits in the circuit.
 
     Returns:
         circuit (:class:`qibo.models.Circuit`): Circuit prepared in the specified state.
@@ -27,7 +27,8 @@ def prepare_states(k, nqubits):
 
     if not nqubits in (1, 2):
         raise_error(
-            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
     gates_list = [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)]
@@ -40,7 +41,7 @@ def prepare_states(k, nqubits):
 
 
 def measurement_basis(j, circ):
-    """Implements a measurement basis for circuit indexed by `j`.
+    r"""Implements a measurement basis for circuit indexed by `j`.
 
         Args:
         j (int): The index of the measurement basis.
@@ -55,7 +56,8 @@ def measurement_basis(j, circ):
     nqubits = circ.nqubits
     if not nqubits in (1, 2):
         raise_error(
-            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
     meas_list = [gates.Z, gates.X, gates.Y, gates.Z]
@@ -69,7 +71,7 @@ def measurement_basis(j, circ):
 
 
 def reset_register(circuit, invert_register):
-    """Returns an inverse circuit of the selected register to prepare the zero state \(|0\rangle\).
+    """Returns an inverse circuit of the selected register to prepare the zero state \\(|0\rangle\\).
         One can then add inverse_circuit to the original circuit by addition:
             circ_with_inverse = circ.copy()
             circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
@@ -110,7 +112,7 @@ def reset_register(circuit, invert_register):
             "sp_1"
             " to reset qubit 1, or "
             "sp_t"
-            " to reset both qubits."
+            " to reset both qubits.",
         )
 
     return new_circ.invert()
@@ -135,7 +137,8 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     nqubits = circuit.nqubits
     if not nqubits in (1, 2):
         raise_error(
-            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
     else:
@@ -183,7 +186,8 @@ def execute_GST(
     # Check if gate is 1 or 2 qubit gate.
     if not nqubits in (1, 2):
         raise_error(
-            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
     # Check if invert_register has the correct string.
@@ -193,14 +197,15 @@ def execute_GST(
             and invert_register != "sp_1"
             and invert_register != "sp_t"
         ):
-            raise_error(NameError,
+            raise_error(
+                NameError,
                 f"{invert_register} not recognized. Input "
                 "sp_0"
                 " to reset qubit 0, "
                 "sp_1"
                 " to reset qubit 1, or "
                 "sp_t"
-                " to reset both qubits."
+                " to reset both qubits.",
             )
 
     if backend is None:  # pragma: no cover

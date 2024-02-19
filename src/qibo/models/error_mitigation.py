@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import GlobalBackend
+from qibo.backends import GlobalBackend, _check_backend
 from qibo.config import raise_error
 
 
@@ -148,8 +148,8 @@ def ZNE(
         1. K. Temme, S. Bravyi et al, *Error mitigation for short-depth quantum circuits*.
            `arXiv:1612.02058 [quant-ph] <https://arxiv.org/abs/1612.02058>`_.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     if readout is None:
         readout = {}
 
@@ -197,8 +197,7 @@ def sample_training_circuit_cdr(
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
@@ -303,8 +302,8 @@ def CDR(
         1. P. Czarnik, A. Arrasmith et al, *Error mitigation with Clifford quantum-circuit data*.
            `arXiv:2005.10189 [quant-ph] <https://arxiv.org/abs/2005.10189>`_.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     if readout is None:
         readout = {}
 
@@ -314,7 +313,8 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        val = circ(nshots=nshots).expectation_from_samples(observable)
+        result = backend.execute_circuit(circ, nshots=nshots)
+        val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         val = get_expectation_val_with_readout_mitigation(
             circ, observable, noise_model, nshots, readout, qubit_map, backend=backend
@@ -389,8 +389,8 @@ def vnCDR(
         1. A. Lowe, MH. Gordon et al, *Unified approach to data-driven quantum error mitigation*.
            `arXiv:2011.01157 [quant-ph] <https://arxiv.org/abs/2011.01157>`_.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     if readout is None:
         readout = {}
 
@@ -400,7 +400,8 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        val = circ(nshots=nshots).expectation_from_samples(observable)
+        result = backend.execute_circuit(circ, nshots=nshots)
+        val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
@@ -493,8 +494,7 @@ def get_response_matrix(
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     response_matrix = np.zeros((2**nqubits, 2**nqubits))
 
@@ -597,8 +597,7 @@ def apply_randomized_readout_mitigation(
         random_pauli,
     )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     meas_qubits = circuit.measurements[0].qubits
     nshots_r = int(nshots / ncircuits)
@@ -670,8 +669,8 @@ def get_expectation_val_with_readout_mitigation(
     Returns:
         float: the mitigated expectation value of the observable.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     if readout is None:  # pragma: no cover
         readout = {}
 
@@ -717,8 +716,7 @@ def sample_clifford_training_circuit(
         random_clifford,
     )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     non_clifford_gates_indices = [
         i
@@ -781,8 +779,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
         vectorization,
     )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     sampled_circuit = sample_clifford_training_circuit(circuit, backend=backend)
     unitary_matrix = sampled_circuit.unitary(backend=backend)
@@ -880,8 +877,8 @@ def ICS(
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     if readout is None:
         readout = {}
 
@@ -897,7 +894,7 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
-        circuit_result = training_circuit(nshots=nshots)
+        circuit_result = backend.execute_circuit(training_circuit, nshots=nshots)
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
         noisy_expectation = get_expectation_val_with_readout_mitigation(

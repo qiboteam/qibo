@@ -270,17 +270,118 @@ For instance, the following two circuit generations are equivalent:
     circuit_2.add(gates.X(2))
 
 
+.. image:: ../_static/comp_basis_encoder.png
+   :width: 3400px
+   :height: 2000px
+   :scale: 25 %
+   :align: center
+
+
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
+Phase Encoder
+"""""""""""""
+
+Encodes data of length :math:`n` into the phases of :math:`n` qubits.
+
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import phase_encoder
+
+.. testcode::
+
+    nqubits = 3
+    phases = np.random.rand(nqubits)
+
+    circuit_1 = phase_encoder(phases, rotation="RX")
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
+
+
+.. image:: ../_static/phase_encoder.png
+   :width: 1333px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+
+.. autofunction:: qibo.models.encodings.phase_encoder
 
 
 Unary Encoder
 """""""""""""
+
+Given a classical ``data`` array :math:`\mathbf{x} \in \mathbb{R}^{d}` such that
+
+.. math::
+    \mathbf{x} = (x_{1}, x_{2}, \dots, x_{d}) \, ,
+
+this function generate the circuit that prepares the following quantum state
+:math:`\ket{\psi} \in \mathcal{H}`:
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \sum_{k=1}^{d} \, x_{k} \, \ket{k} \, ,
+
+with :math:`\mathcal{H} \cong \mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
+and :math:`\|\cdot\|_{\textup{HS}}` being the Hilbert-Schmidt norm.
+
+Here, :math:`\ket{k}` is a unary representation of the number :math:`k`.
+For instance, for :math:`d = 3`, the final state would be
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \left( x_{1} \ket{001} + x_{2} \ket{010} + x_{3} \ket{100} \right) \, .
+
+There are multiple circuit architechtures that lead to unary encoding of classical data.
+For example, to encode a :math:`8`-dimensional data, one could use the so-called
+*tree* architechture below:
+
+.. image:: ../_static/unary_encoder_tree.png
+   :width: 1333px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+where the first gate is the :class:`qibo.gates.X`
+and the parametrized gates are the :class:`qibo.gates.RBS`.
+To know how the angles :math:`\{\theta_{k}\}_{[k]}` are calculated for this architecture,
+please refer to S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*,
+`arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
+
+On the other hand, the same encoding could be performed using the so-called
+*diagonal* (also known as *ladder*) architecture below:
+
+.. image:: ../_static/unary_encoder_ladder.png
+   :width: 1867px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+This architecture leads to a choice of angles based on
+`spherical coordinates in a d-dimensional hypersphere
+<https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates>`_.
+
 
 .. autofunction:: qibo.models.encodings.unary_encoder
 
 
 Unary Encoder for Random Gaussian States
 """"""""""""""""""""""""""""""""""""""""
+
+Performs the same unary encoder as :class:`qibo.models.encodings.unary_encoder`
+using the *tree* architecture , with the difference being that now each entry
+of the :math:`d`-dimensional array is sampled from a Gaussian distribution
+:math:`\mathcal{N}(0, 1)`.
+
 
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
@@ -1515,6 +1616,138 @@ The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.cli
     :member-order: bysource
 
 
+Entanglement measures
+^^^^^^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entanglement measures.
+
+
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
+Entanglement fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
+
+
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Entropy measures
+^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entropy measures.
+
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Classical relative entropy
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_entropy
+
+
+Classical Rényi entropy
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
+Classical Rényi relative entropy
+""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
+
+
+Classical Tsallis entropy
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+
+von Neumann entropy
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+
+Relative von Neumann entropy
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and either ``state`` or ``target`` is non-Hermitian,
+    an error will be raised when using `cupy` backend.
+
+
+Rényi entropy
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.renyi_entropy
+
+
+Relative Rényi entropy
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_renyi_entropy
+
+
+Tsallis entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.tsallis_entropy
+
+
+Entanglement entropy
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if
+    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and the reduced density matrix is non-Hermitian, an error will be raised
+    when using `cupy` backend.
+
+
 Metrics
 ^^^^^^^
 
@@ -1533,57 +1766,17 @@ Impurity
 .. autofunction:: qibo.quantum_info.impurity
 
 
-Concurrence
-"""""""""""
-
-.. autofunction:: qibo.quantum_info.concurrence
-
-
-Entanglement of formation
-"""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_of_formation
-
-
-Entropy
-"""""""
-
-.. autofunction:: qibo.quantum_info.entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
-
-Entanglement entropy
-""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
-
 Trace distance
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if difference
+    ``check_hermitian`` flag allows the user to choose if the function will check if difference
     between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and,
+    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
     more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be
+    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
     raised when using `cupy` backend.
 
 
@@ -1617,12 +1810,6 @@ Bures distance
 .. autofunction:: qibo.quantum_info.bures_distance
 
 
-Entanglement fidelity
-"""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_fidelity
-
-
 Process fidelity
 """"""""""""""""
 
@@ -1653,18 +1840,6 @@ Diamond Norm
 .. autofunction:: qibo.quantum_info.diamond_norm
 
 
-Meyer-Wallach entanglement
-""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
-
-
-Entanglement capability
-"""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entangling_capability
-
-
 Expressibility of parameterized quantum circuits
 """"""""""""""""""""""""""""""""""""""""""""""""
 
@@ -1679,6 +1854,13 @@ Frame Potential
 
 Quantum Networks
 ^^^^^^^^^^^^^^^^
+
+Quantum network is an object that unifies the representation of quantum states, channels,
+observables, and higher-order quantum operators.
+
+For more details, see G. Chiribella *et al.*, *Theoretical framework for quantum networks*,
+`Physical Review A 80.2 (2009): 022339
+<https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`_.
 
 .. autoclass:: qibo.quantum_info.quantum_networks.QuantumNetwork
     :members:
@@ -2075,18 +2257,6 @@ Hadamard Transform
 .. autofunction:: qibo.quantum_info.hadamard_transform
 
 
-Shannon entropy
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.shannon_entropy
-
-
-Total Variation distance
-""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.total_variation_distance
-
-
 Hellinger distance
 """"""""""""""""""
 
@@ -2249,29 +2419,43 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Gate Set Tomography
 -------------------
 
-The gate set tomography (GST) follows the procedure outlined in https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs of the functions, when used correctly, will allow one to set up the proper variables necessary for probabilistic error cancellation to mitigate noise arising from noisy quantum hardware. The codes allow for calibrating an empty circuit, and for one and two qubits of gate set tomography. We give some examples to illustrate the usage of the functions for clarity. 
-
-First, import the necessary modules. As an example, we import depolarizing noise as an example. 
-.. testsetup:: python
-
-    from qibo.noise import NoiseModel, DepolarizingError
-    from qibo import Circuit
-    from qibo import gates
-    from qibo.tomography.gate_set_tomography import *
-    import numpy as np
-
-    seed_value = 42  # You can use any integer value as the seed
-    np.random.seed(seed_value)
+The gate set tomography (GST) follows the procedure outlined in
+https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the
+Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs
+of the functions, when used correctly, will allow one to set up the proper
+variables necessary for probabilistic error cancellation to mitigate noise
+arising from noisy quantum hardware. The codes allow for calibrating an empty
+circuit, and for one and two qubits of gate set tomography. We give some
+examples to illustrate the usage of the functions for clarity.
 
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
-Suppose we have a single qubit quantum circuit and we want to perform probabilistic error cancellation on this circuit. We will need to do gate set tomography for a single qubit quantum circuit and all its gates individually first. Consider an example where our quantum circuit contains the Hadamard gate and an RX gate, here is how we do gate set tomography using the function ``execute_GST()`` for both gates individually and also without any operator for calibration.
+Suppose we have a single qubit quantum circuit and we want to perform
+probabilistic error cancellation on this circuit. We will need to do gate set
+tomography for a single qubit quantum circuit and all its gates individually
+first. Consider an example where our quantum circuit contains the Hadamard gate
+and an RX gate, here is how we do gate set tomography using the function
+``execute_GST()`` for both gates individually and also without any operator for
+calibration. We import depolarizing noise as an example.
 
-.. testcode:: python
+.. code-block::  python
+
+    import qibo
+    from qibo import models
+    from qibo import gates
+    from qibo.noise import NoiseModel
+    from qibo.noise import DepolarizingError
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+        reset_register,
+    )
 
     # Create the single qubit quantum circuit
-    circuit = Circuit(1)
+    circuit = models.Circuit(1)
     circuit.add(gates.H(0))
     circuit.add(gates.RX(0, np.pi/7))
     circuit.add(gates.M(0))
@@ -2313,12 +2497,25 @@ For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`
 Two qubits example
 ^^^^^^^^^^^^^^^^^^
 
-As another example, suppose we have a two qubit quantum circuit that generates a Bell state. Here is how we do gate set tomography using the function``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any operator (both single qubit and two-qubit) for calibration. We will need to calibrate an empty single qubit circuit and an empty two-qubit circuit as the Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This will become relevant when doing probabilistic error cancellation.
+As another example, suppose we have a two qubit quantum circuit that generates a Bell state. Here is how we do gate set tomography using the function``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any operator (both single qubit and two-qubit) for calibration. We will need to calibrate an empty single qubit circuit and an empty two-qubit circuit as the Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This will become relevant when doing probabilistic error cancellation. We import depolarizing noise as an example.
 
-.. testcode:: python
+.. code-block::  python
 
-    # Create the single qubit quantum circuit
-    circuit = Circuit(1)
+    import qibo
+    from qibo import models
+    from qibo import gates
+    from qibo.noise import NoiseModel
+    from qibo.noise import DepolarizingError
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+        reset_register,
+    )
+
+    # Create the two qubit quantum circuit
+    circuit = qibo.models.Circuit(2)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0,1))
     circuit.add(gates.M(0))
