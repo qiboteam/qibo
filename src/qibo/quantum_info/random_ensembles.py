@@ -226,7 +226,8 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -1177,12 +1178,14 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
+    kron = backend.torch.kron if backend.name == "pytorch" else np.kron
+
     if order == "row":
-        operator = np.kron(
+        operator = kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = np.kron(
+        operator = kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 
