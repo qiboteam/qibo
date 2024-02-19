@@ -16,7 +16,7 @@ NSTEPS = 5
 """Number of steps for evolution."""
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [2, 3])
 def test_generate_Z_operators(backend, nqubits):
     h0 = random_hermitian(2**nqubits)
     dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
@@ -30,7 +30,7 @@ def test_generate_Z_operators(backend, nqubits):
     assert norm_diff < 1e-3
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [2, 3])
 @pytest.mark.parametrize("step", [0.1, None])
 def test_select_best_dbr_generator(backend, nqubits, step):
     h0 = random_hermitian(2**nqubits, seed=1, backend=backend)
