@@ -77,7 +77,7 @@ def select_best_dbr_generator(
     compare_canonical: bool = True,
     mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.single_commutator,
 ):
-    """Selects the best double bracket rotation generator from a list and runs the
+    """Selects the best double bracket rotation generator from a list and execute the rotation.
 
     Args:
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
