@@ -2329,12 +2329,26 @@ class Unitary(ParametrizedGate):
         }
 
         if check_unitary:
-            product = np.transpose(np.conj(unitary)) @ unitary
-            sums = all(np.abs(1 - product.sum(axis=1)) < PRECISION_TOL)
-            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+            if unitary.__class__.__name__ == "Tensor":
+                import torch  # pylint: disable=C0145
 
-            self.unitary = True if sums and diagonal else False
-            del sums, diagonal, product
+                diag_function = torch.diag
+                all_function = torch.all
+            else:
+                diag_function = np.diag
+                all_function = np.all
+
+            product = np.transpose(np.conj(unitary)) @ unitary
+            diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
+            off_diagonals = bool(
+                all_function(
+                    np.abs(product - diag_function(diag_function(product)))
+                    < PRECISION_TOL
+                )
+            )
+
+            self.unitary = True if diagonals and off_diagonals else False
+            del diagonals, off_diagonals, product
 
     @Gate.parameters.setter
     def parameters(self, x):
