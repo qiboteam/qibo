@@ -54,6 +54,7 @@ def test_shannon_entropy_errors(backend):
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_shannon_entropy(backend, base):
     prob_array = [1.0, 0.0]
+    prob_array = backend.cast(prob_array, dtype=np.float64)
     result = shannon_entropy(prob_array, base, backend=backend)
     backend.assert_allclose(result, 0.0)
 
@@ -115,6 +116,9 @@ def test_classical_relative_entropy(backend, base, kind):
 
     if kind is not None:
         prob_p, prob_q = kind(prob_p), kind(prob_q)
+    else:
+        prob_p = np.real(backend.cast(prob_p))
+        prob_q = np.real(backend.cast(prob_q))
 
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
 
@@ -168,7 +172,9 @@ def test_classical_renyi_entropy(backend, alpha, base, kind):
     if alpha == 0.0:
         target = np.log2(len(prob_dist)) / np.log2(base)
     elif alpha == 1:
-        target = shannon_entropy(prob_dist, base=base, backend=backend)
+        target = shannon_entropy(
+            backend.cast(prob_dist, dtype=np.float64), base=base, backend=backend
+        )
     elif alpha == 2:
         target = -1 * np.log2(np.sum(prob_dist**2)) / np.log2(base)
     elif alpha == np.inf:
@@ -178,6 +184,8 @@ def test_classical_renyi_entropy(backend, alpha, base, kind):
 
     if kind is not None:
         prob_dist = kind(prob_dist)
+    else:
+        prob_dist = np.real(backend.cast(prob_dist))
 
     renyi_ent = classical_renyi_entropy(prob_dist, alpha, base=base, backend=backend)
 
@@ -261,7 +269,12 @@ def test_classical_relative_renyi_entropy(backend, alpha, base, kind):
     if alpha == 0.5:
         target = -2 * np.log2(np.sum(np.sqrt(prob_p * prob_q))) / np.log2(base)
     elif alpha == 1.0:
-        target = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
+        target = classical_relative_entropy(
+            np.real(backend.cast(prob_p)),
+            np.real(backend.cast(prob_q)),
+            base=base,
+            backend=backend,
+        )
     elif alpha == np.inf:
         target = np.log2(max(prob_p / prob_q)) / np.log2(base)
     else:
@@ -273,6 +286,9 @@ def test_classical_relative_renyi_entropy(backend, alpha, base, kind):
 
     if kind is not None:
         prob_p, prob_q = kind(prob_p), kind(prob_q)
+    else:
+        prob_p = np.real(backend.cast(prob_p))
+        prob_q = np.real(backend.cast(prob_q))
 
     divergence = classical_relative_renyi_entropy(
         prob_p, prob_q, alpha=alpha, base=base, backend=backend
@@ -326,12 +342,16 @@ def test_classical_tsallis_entropy(backend, alpha, base, kind):
     prob_dist /= np.sum(prob_dist)
 
     if alpha == 1.0:
-        target = shannon_entropy(prob_dist, base=base, backend=backend)
+        target = shannon_entropy(
+            np.real(backend.cast(prob_dist)), base=base, backend=backend
+        )
     else:
         target = (1 / (1 - alpha)) * (np.sum(prob_dist**alpha) - 1)
 
     if kind is not None:
         prob_dist = kind(prob_dist)
+    else:
+        prob_dist = np.real(backend.cast(prob_dist))
 
     backend.assert_allclose(
         classical_tsallis_entropy(prob_dist, alpha=alpha, base=base, backend=backend),
