@@ -17,51 +17,53 @@ class NumpyMatrices:
 
     @cached_property
     def H(self):
-        return self.np.array([[1, 1], [1, -1]], dtype=self.dtype) / self.np.sqrt(2)
+        return self._cast([[1, 1], [1, -1]], dtype=self.dtype) / self.np.sqrt(2)
 
     @cached_property
     def X(self):
-        return self.np.array([[0, 1], [1, 0]], dtype=self.dtype)
+        return self._cast([[0, 1], [1, 0]], dtype=self.dtype)
 
     @cached_property
     def Y(self):
-        return self.np.array([[0, -1j], [1j, 0]], dtype=self.dtype)
+        return self._cast([[0j, -1j], [1j, 0j]], dtype=self.dtype)
 
     @cached_property
     def Z(self):
-        return self.np.array([[1, 0], [0, -1]], dtype=self.dtype)
+        return self._cast([[1, 0], [0, -1]], dtype=self.dtype)
 
     @cached_property
     def SX(self):
-        return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
+        return self._cast([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
 
     @cached_property
     def SXDG(self):
-        return self.np.transpose(self.np.conj(self.SX))
+        return self._cast([[1 - 1j, 1 + 1j], [1 + 1j, 1 - 1j]], dtype=self.dtype) / 2
 
     @cached_property
     def S(self):
-        return self.np.array([[1, 0], [0, 1j]], dtype=self.dtype)
+        return self._cast([[1 + 0j, 0j], [0j, 1j]], dtype=self.dtype)
 
     @cached_property
     def SDG(self):
-        return self.np.conj(self.S)
+        return self._cast([[1 + 0j, 0j], [0j, -1j]], dtype=self.dtype)
 
     @cached_property
     def T(self):
-        return self.np.array(
+        return self._cast(
             [[1, 0], [0, self.np.exp(1j * self.np.pi / 4.0)]], dtype=self.dtype
         )
 
     @cached_property
     def TDG(self):
-        return self.np.conj(self.T)
+        return self._cast(
+            [[1, 0], [0, self.np.exp(-1j * self.np.pi / 4.0)]], dtype=self.dtype
+        )
 
     def I(self, n=2):
-        return self.np.eye(n, dtype=self.dtype)
+        return self._cast(self.np.eye(n, dtype=self.dtype), dtype=self.dtype)
 
     def Align(self, n=2):
-        return self.I(n)
+        return self._cast(self.I(n), dtype=self.dtype)
 
     def M(self):  # pragma: no cover
         raise_error(NotImplementedError)
@@ -98,9 +100,10 @@ class NumpyMatrices:
         eplus = self.np.exp(1j * (phi + lam) / 2.0)
         eminus = self.np.exp(1j * (phi - lam) / 2.0)
         return self._cast(
-            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
+            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]]
+            / self.np.sqrt(2),
             dtype=self.dtype,
-        ) / self.np.sqrt(2)
+        )
 
     def U3(self, theta, phi, lam):
         cost = self.np.cos(theta / 2)
@@ -116,24 +119,31 @@ class NumpyMatrices:
         )
 
     def U1q(self, theta, phi):
-        return self.U3(theta, phi - self.np.pi / 2, self.np.pi / 2 - phi)
+        return self._cast(
+            self.U3(theta, phi - self.np.pi / 2, self.np.pi / 2 - phi), dtype=self.dtype
+        )
 
     @cached_property
     def CNOT(self):
-        return self.np.array(
+        return self._cast(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=self.dtype
         )
 
     @cached_property
     def CY(self):
-        return self.np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
+        return self._cast(
+            [
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 + 0j, 0j, 0j],
+                [0j, 0j, 0j, -1j],
+                [0j, 0j, 1j, 0j],
+            ],
             dtype=self.dtype,
         )
 
     @cached_property
     def CZ(self):
-        return self.np.array(
+        return self._cast(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=self.dtype
         )
 
@@ -141,7 +151,7 @@ class NumpyMatrices:
     def CSX(self):
         a = (1 + 1j) / 2
         b = self.np.conj(a)
-        return self.np.array(
+        return self._cast(
             [
                 [1, 0, 0, 0],
                 [0, 1, 0, 0],
@@ -153,7 +163,17 @@ class NumpyMatrices:
 
     @cached_property
     def CSXDG(self):
-        return self.np.transpose(self.np.conj(self.CSX))
+        a = (1 - 1j) / 2
+        b = self.np.conj(a)
+        return self._cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, a, b],
+                [0, 0, b, a],
+            ],
+            dtype=self.dtype,
+        )
 
     def CRX(self, theta):
         cos = self.np.cos(theta / 2.0) + 0j
@@ -218,43 +238,49 @@ class NumpyMatrices:
 
     @cached_property
     def SWAP(self):
-        return self.np.array(
+        return self._cast(
             [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=self.dtype
         )
 
     @cached_property
     def iSWAP(self):
-        return self.np.array(
-            [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=self.dtype
+        return self._cast(
+            [
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 0j, 1j, 0j],
+                [0j, 1j, 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
+            ],
+            dtype=self.dtype,
         )
 
     @cached_property
     def SiSWAP(self):
-        return self.np.array(
+        return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1 / self.np.sqrt(2), 1j / self.np.sqrt(2), 0],
-                [0, 1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
-                [0, 0, 0, 1],
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 / self.np.sqrt(2) + 0j, 1j / self.np.sqrt(2), 0j],
+                [0j, 1j / self.np.sqrt(2), 1 / self.np.sqrt(2) + 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
         )
 
     @cached_property
     def SiSWAPDG(self):
-        return self.np.array(
+        return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1 / self.np.sqrt(2), -1j / self.np.sqrt(2), 0],
-                [0, -1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
-                [0, 0, 0, 1],
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 / self.np.sqrt(2) + 0j, -1j / self.np.sqrt(2), 0j],
+                [0j, -1j / self.np.sqrt(2), 1 / self.np.sqrt(2) + 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
         )
 
     @cached_property
     def FSWAP(self):
-        return self.np.array(
+        return self._cast(
             [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, -1]], dtype=self.dtype
         )
 
@@ -277,7 +303,7 @@ class NumpyMatrices:
         cost = self.np.cos(self.np.pi / 2) + 0j
         isint = -1j * self.np.sin(self.np.pi / 2)
         phase = self.np.exp(-1j * self.np.pi / 6)
-        return self.np.array(
+        return self._cast(
             [
                 [1, 0, 0, 0],
                 [0, cost, isint, 0],
@@ -392,14 +418,19 @@ class NumpyMatrices:
 
     @cached_property
     def ECR(self):
-        return self.np.array(
-            [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
+        return self._cast(
+            [
+                [0j, 0j, 1 + 0j, 1j],
+                [0j, 0j, 1j, 1 + 0j],
+                [1 + 0j, -1j, 0j, 0j],
+                [-1j, 1 + 0j, 0j, 0j],
+            ],
             dtype=self.dtype,
         ) / self.np.sqrt(2)
 
     @cached_property
     def TOFFOLI(self):
-        return self.np.array(
+        return self._cast(
             [
                 [1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 0],
@@ -409,13 +440,14 @@ class NumpyMatrices:
                 [0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 0, 0, 1, 0],
-            ]
+            ],
+            dtype=self.dtype,
         )
 
     def DEUTSCH(self, theta):
         sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
-        cos = self.np.cos(theta)
-        return self.np.array(
+        cos = self.np.cos(theta) + 0j
+        return self._cast(
             [
                 [1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 0],
