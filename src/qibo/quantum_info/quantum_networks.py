@@ -164,7 +164,7 @@ class QuantumNetwork:
         self._matrix = self._full()
         self._pure = False
 
-        partial_trace = np.einsum("jkjl -> kl", self._matrix)
+        partial_trace = self._einsum("jkjl -> kl", self._matrix)
         identity = self._backend.cast(
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
@@ -212,7 +212,7 @@ class QuantumNetwork:
         self._matrix = self._full()
         self._pure = False
 
-        partial_trace = np.einsum("jklk -> jl", self._matrix)
+        partial_trace = self._einsum("jklk -> jl", self._matrix)
         identity = self._backend.cast(
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
@@ -292,12 +292,12 @@ class QuantumNetwork:
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        matrix = np.copy(self._matrix)
+        matrix = self._backend.cast(self._matrix, copy=True)
 
         if self.is_pure():
-            return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
+            return self._einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
 
-        return np.einsum("jklm,km -> jl", matrix, state)
+        return self._einsum("jklm,km -> jl", matrix, state)
 
     def link_product(self, second_network, subscripts: str = "ij,jk -> ik"):
         """Link product between two quantum networks.
@@ -353,7 +353,7 @@ class QuantumNetwork:
         if super_subscripts:
             cexpr = "jklmnopq,klop->jmnq"
             return QuantumNetwork(
-                np.einsum(cexpr, first_matrix, second_matrix),
+                self._einsum(cexpr, first_matrix, second_matrix),
                 [self.partition[0] + self.partition[-1]],
             )
 
@@ -361,12 +361,12 @@ class QuantumNetwork:
 
         if inv_subscripts:
             return QuantumNetwork(
-                np.einsum(cexpr, second_matrix, first_matrix),
+                self._einsum(cexpr, second_matrix, first_matrix),
                 [second_network.partition[0], self.partition[1]],
             )
 
         return QuantumNetwork(
-            np.einsum(cexpr, first_matrix, second_matrix),
+            self._einsum(cexpr, first_matrix, second_matrix),
             [self.partition[0], second_network.partition[1]],
         )
 
@@ -633,6 +633,10 @@ class QuantumNetwork:
         """Sets tensor based on inputs."""
         self._backend = _check_backend(self._backend)
 
+        self._einsum = (
+            self._backend.torch.einsum if self._backend.name == "pytorch" else np.einsum
+        )
+
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
 
@@ -661,11 +665,10 @@ class QuantumNetwork:
 
     def _full(self):
         """Reshapes input matrix based on purity."""
-        matrix = np.copy(self._matrix)
-        if self.is_pure():
-            matrix = np.einsum("jk,lm -> kjml", matrix, np.conj(matrix))
+        matrix = self._backend.cast(self._matrix, copy=True)
 
-            return matrix
+        if self.is_pure():
+            matrix = self._einsum("jk,lm -> kjml", matrix, np.conj(matrix))
 
         return matrix
 
