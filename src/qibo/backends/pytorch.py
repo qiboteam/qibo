@@ -82,17 +82,19 @@ class PyTorchBackend(NumpyBackend):
             dtype = torch_dtype_dict[dtype.__name__]
         else:
             dtype = torch_dtype_dict[str(dtype)]
+
         if isinstance(x, self.torch.Tensor):
             x = x.to(dtype)
-        elif isinstance(x, list):
-            if all(isinstance(i, self.torch.Tensor) for i in x):
-                x = [i.to(dtype) for i in x]
-            else:
-                x = [self.torch.tensor(i, dtype=dtype) for i in x]
+        elif isinstance(x, list) and all(
+            isinstance(row, self.torch.Tensor) for row in x
+        ):
+            x = self.torch.stack(x)
         else:
             x = self.torch.tensor(x, dtype=dtype)
+
         if copy:
             return x.clone()
+
         return x
 
     def apply_gate(self, gate, state, nqubits):
