@@ -355,9 +355,7 @@ class PyTorchBackend(NumpyBackend):
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
-            return self.torch.sparse.mm(
-                matrix1, matrix2
-            )  # pylint: disable=not-callable
+            return self.torch.sparse.mm(matrix1, matrix2)  # pylint: disable=E1102
         return self.torch.matmul(matrix1, matrix2)
 
     def calculate_hamiltonian_state_product(self, matrix, state):
