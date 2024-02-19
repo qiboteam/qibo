@@ -540,7 +540,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     # Create VQE model
-    opt = ScipyMinimizer({'method': 'BFGS'})
+    opt = ScipyMinimizer(method="BFGS")
     vqe = models.VQE(circuit, hamiltonian)
 
     nparams = len(circuit.get_parameters())
@@ -625,7 +625,7 @@ Here is a simple example using a custom loss function:
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    optimizer = ScipyMinimizer(options={'method': 'BFGS'})
+    optimizer = ScipyMinimizer(method="BFGS")
     result = optimizer.fit(
         initial_parameters=params, loss=myloss, args=(c, data)
     )
@@ -660,7 +660,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = 0.01 * np.random.uniform(0,1,4)
-    opt = ScipyMinimizer(options={'method': 'BFGS'})
+    opt = ScipyMinimizer(method="BFGS")
 
     best, params, extra = qaoa.minimize(opt, initial_parameters=initial_parameters)
 
@@ -1809,7 +1809,7 @@ done as follows:
     evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    opt = ScipyMinimizer({'method': 'BFGS'})
+    opt = ScipyMinimizer(method="BFGS")
     best, params, extra = evolution.minimize(opt, initial_parameters=initial_guess, fit_options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
