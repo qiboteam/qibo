@@ -7,7 +7,7 @@ from typing import Union
 import numpy as np
 
 from qibo import gates
-from qibo.backends import _check_backend, _clifford_operations
+from qibo.backends import _clifford_operations
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
@@ -34,6 +34,8 @@ class CliffordBackend(NumpyBackend):
         super().__init__()
 
         if engine is None:
+            from qibo.backends import _check_backend
+            
             engine = _check_backend(engine)
             engine = engine.name if engine.platform is None else engine.platform
 
