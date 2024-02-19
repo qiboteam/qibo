@@ -51,7 +51,7 @@ class CMAES(Optimizer):
         self,
         initial_parameters: Union[List, ndarray],
         loss: callable,
-        args: Tuple,
+        args: Optional[Tuple] = None,
         fit_options: Optional[dict] = None,
     ):
         """Perform the optimizations via CMA-ES.
@@ -68,6 +68,11 @@ class CMAES(Optimizer):
             tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
 
+        if fit_options is None:
+            options = {}
+        else:
+            options = fit_options
+
         log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
         r = cma.fmin2(
@@ -79,7 +84,7 @@ class CMAES(Optimizer):
             restart_from_best=self.restarts_from_best,
             incpopsize=self.iconpopsize,
             callback=self.callback,
-            options=fit_options,
+            options=options,
         )
 
         return r[1].result.fbest, r[1].result.xbest, r
@@ -144,7 +149,10 @@ class BasinHopping(Optimizer):
         log.info(f"No `fit_options` are required for the Basin-Hopping optimizer.")
 
     def fit(
-        self, initial_parameters: Union[List, ndarray], loss: callable, args: Tuple
+        self,
+        initial_parameters: Union[List, ndarray],
+        loss: callable,
+        args: Optional[Tuple] = None,
     ):
         """Perform the optimizations via Basin-Hopping strategy.
 

@@ -48,7 +48,7 @@ class ScipyMinimizer(Optimizer):
         self,
         initial_parameters: Union[List, ndarray],
         loss: callable,
-        args: Tuple,
+        args: Union[Tuple] = None,
         fit_options: Optional[dict] = None,
     ):
         """Perform the optimizations via ScipyMinimizer.
@@ -121,7 +121,7 @@ class ParallelBFGS(ScipyMinimizer):
         self,
         initial_parameters: Union[List, ndarray],
         loss: callable,
-        args: Tuple,
+        args: Union[Tuple] = None,
         fit_options: Optional[dict] = None,
     ):
         """Performs the optimizations via ParallelBFGS.

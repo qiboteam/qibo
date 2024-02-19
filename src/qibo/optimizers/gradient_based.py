@@ -49,7 +49,7 @@ class TensorflowSGD(Optimizer):
         self,
         initial_parameters: Union[List, ndarray],
         loss: callable,
-        args: Tuple,
+        args: Union[Tuple] = None,
         epochs: int = 10000,
         nmessage: int = 100,
         loss_threshold: Optional[float] = None,
