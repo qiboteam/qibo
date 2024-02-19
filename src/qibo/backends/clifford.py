@@ -35,7 +35,7 @@ class CliffordBackend(NumpyBackend):
 
         if engine is None:
             from qibo.backends import _check_backend
-            
+
             engine = _check_backend(engine)
             engine = engine.name if engine.platform is None else engine.platform
 
