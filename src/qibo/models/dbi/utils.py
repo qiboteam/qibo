@@ -6,8 +6,7 @@ import numpy as np
 from hyperopt import hp, tpe
 
 from qibo import symbols
-from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,

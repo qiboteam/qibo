@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 
-from qibo import set_backend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
