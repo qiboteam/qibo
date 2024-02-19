@@ -110,13 +110,20 @@ def train_adiabatic_evolution(
         if force_positive:
             options["bounds"] = [0, 1e5]
 
+        penalty = True
+
         if initial_p is None:
             initial_p = initial_p
         else:
             print("Reusing previous best parameters")
 
-        opt = CMAES(initial_p, loss=loss_evaluation, optimizer_kwargs=options)
-        result = opt.fit()
+        opt = CMAES()
+        result = opt.fit(
+            initial_parameters=initial_p,
+            loss=loss_evaluation,
+            fit_options=options,
+            args=(penalty,),
+        )
 
         return result, result[1]
 
