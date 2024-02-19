@@ -115,7 +115,7 @@ def pauli_basis(
     else:
         basis = basis_full
 
-    basis = backend.cast(basis)
+    basis = backend.cast(basis, dtype=backend.dtype)
 
     if normalize:
         basis /= np.sqrt(2**nqubits)

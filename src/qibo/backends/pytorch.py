@@ -64,15 +64,19 @@ class PyTorchBackend(NumpyBackend):
         self,
         x: Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray]],
         dtype: Union[str, torch.dtype, np.dtype, type] = None,
-        copy=False,
+        copy: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
         This method supports casting of single tensors or lists of tensors as for the Tensoflow backend.
 
         Args:
-            x (Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray], int, float, complex]): Input to be casted.
-            dtype (Union[str, torch.dtype, np.dtype, type]): Target data type. If None, the default dtype of the backend is used.
-            copy (bool): If True, the input tensor is copied before casting.
+            x (Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray], int, float, complex]):
+                Input to be casted.
+            dtype (Union[str, torch.dtype, np.dtype, type]): Target data type.
+                If ``None``, the default dtype of the backend is used.
+                Defaults to ``None``.
+            copy (bool, optional): If ``True``, the input tensor is copied before casting.
+                Defaults to ``False``.
         """
         if dtype is None:
             dtype = self.torch_dtype

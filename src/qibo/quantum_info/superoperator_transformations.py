@@ -488,6 +488,8 @@ def choi_to_kraus(
             kraus_right.append(
                 coeff * unvectorization(eigenvector_right, order=order, backend=backend)
             )
+        kraus_left = backend.cast(kraus_left)
+        kraus_right = backend.cast(kraus_right)
         kraus_ops = backend.cast([kraus_left, kraus_right])
     else:
         # when choi_super_op is CP
