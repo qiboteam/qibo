@@ -75,7 +75,6 @@ def select_best_dbr_generator(
     step_max: float = 1,
     max_evals: int = 200,
     compare_canonical: bool = True,
-    mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.single_commutator,
 ):
     """Selects the best double bracket rotation generator from a list and execute the rotation.
 
@@ -88,7 +87,6 @@ def select_best_dbr_generator(
         step_max (float): maximally allowed iteration duration.
         max_evals (int): maximally allowed number of evaluation in hyperopt.
         compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
-        mode (`DoubleBracketGeneratorType`): DBI generator type used for the selection.
 
     Returns:
         The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
@@ -96,12 +94,11 @@ def select_best_dbr_generator(
     norms_off_diagonal_restriction = [
         dbi_object.off_diagonal_norm for _ in range(len(d_list))
     ]
-    optimal_steps = [0 for _ in range(len(d_list))]
-    flip_list = [1 for _ in range(len(d_list))]
+    optimal_steps, flip_list = [], []
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list[i] = cs_angle_sgn(dbi_eval, d)
+        flip_list.append(cs_angle_sgn(dbi_eval, d))
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.hyperopt_step(
@@ -115,7 +112,7 @@ def select_best_dbr_generator(
             else:
                 step_best = step
             dbi_eval(step=step_best, d=flip_list[i] * d)
-            optimal_steps[i] = step_best
+            optimal_steps.append(step_best)
             norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
