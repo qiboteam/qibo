@@ -56,7 +56,10 @@ def test_uniform_sampling_U3(backend, seed):
             ]
         )
     expectation_values = backend.cast(expectation_values)
-    expectation_values = np.mean(expectation_values, axis=0)
+
+    mean_function = backend.torch.mean if backend.name == "pytorch" else np.mean
+
+    expectation_values = mean_function(expectation_values, axis=0)
 
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
@@ -150,40 +153,36 @@ def test_random_hermitian(backend):
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
 
-def test_random_unitary(backend):
+@pytest.mark.parametrize("measure", [None, "haar"])
+def test_random_unitary(backend, measure):
     with pytest.raises(TypeError):
         dims = np.array([1])
-        random_unitary(dims, backend=backend)
+        random_unitary(dims, measure=measure, backend=backend)
     with pytest.raises(TypeError):
         dims = 2
-        measure = 1
-        random_unitary(dims, measure, backend=backend)
+        random_unitary(dims, measure=1, backend=backend)
     with pytest.raises(ValueError):
         dims = 0
-        random_unitary(dims, backend=backend)
+        random_unitary(dims, measure=measure, backend=backend)
     with pytest.raises(ValueError):
         dims = 2
         random_unitary(dims, measure="gaussian", backend=backend)
     with pytest.raises(TypeError):
         dims = 2
-        random_unitary(dims=2, seed=0.1, backend=backend)
+        random_unitary(dims=2, measure=measure, seed=0.1, backend=backend)
 
     # tests if operator is unitary (measure == "haar")
     dims = 4
-    matrix = random_unitary(dims, backend=backend)
+    matrix = random_unitary(dims, measure=measure, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    matrix_inv = np.linalg.inv(matrix)
+    matrix_inv = (
+        backend.torch.inverse(matrix)
+        if backend.name == "pytorch"
+        else np.linalg.inv(matrix)
+    )
     norm = float(
         backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2)
     )
-    backend.assert_allclose(norm < PRECISION_TOL, True)
-
-    # tests if operator is unitary (measure == None)
-    dims, measure = 4, None
-    matrix = random_unitary(dims, measure, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
-    matrix_inv = np.linalg.inv(matrix)
-    norm = float(backend.calculate_norm(matrix_inv - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
@@ -465,8 +464,10 @@ def test_random_pauli(
             )
     else:
         matrix = np.transpose(matrix, (1, 0, 2, 3))
-        matrix = [reduce(np.kron, row) for row in matrix]
-        matrix = reduce(np.dot, matrix)
+        kron = backend.torch.kron if backend.name == "pytorch" else np.kron
+        matrix = [reduce(kron, row) for row in matrix]
+        dot = backend.torch.matmul if backend.name == "pytorch" else np.dot
+        matrix = reduce(dot, matrix)
 
         if subset is None:
             backend.assert_allclose(
@@ -557,10 +558,13 @@ def test_random_stochastic_matrix(backend):
         dims = 4
         random_stochastic_matrix(dims, seed=0.1, backend=backend)
 
+    sum_function = backend.torch.sum if backend.name == "pytorch" else np.sum
+    diag = backend.torch.diag if backend.name == "pytorch" else np.diag
+
     # tests if matrix is row-stochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, backend=backend)
-    sum_rows = np.sum(matrix, axis=1)
+    sum_rows = sum_function(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -570,18 +574,20 @@ def test_random_stochastic_matrix(backend):
     matrix = random_stochastic_matrix(
         dims, diagonally_dominant=True, max_iterations=1000, backend=backend
     )
-    sum_rows = np.sum(matrix, axis=1)
+
+    sum_function = backend.torch.sum if backend.name == "pytorch" else np.sum
+    sum_rows = sum_function(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * np.diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * diag(matrix) - sum_rows > 0), True)
 
     # tests if matrix is bistochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, bistochastic=True, backend=backend)
-    sum_rows = np.sum(matrix, axis=1)
-    column_rows = np.sum(matrix, axis=0)
+    sum_rows = sum_function(matrix, axis=1)
+    column_rows = sum_function(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -598,8 +604,8 @@ def test_random_stochastic_matrix(backend):
         max_iterations=1000,
         backend=backend,
     )
-    sum_rows = np.sum(matrix, axis=1)
-    column_rows = np.sum(matrix, axis=0)
+    sum_rows = sum_function(matrix, axis=1)
+    column_rows = sum_function(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -607,8 +613,8 @@ def test_random_stochastic_matrix(backend):
     backend.assert_allclose(all(column_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(column_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * np.diag(matrix) - sum_rows > 0), True)
-    backend.assert_allclose(all(2 * np.diag(matrix) - column_rows > 0), True)
+    backend.assert_allclose(all(2 * diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * diag(matrix) - column_rows > 0), True)
 
     # tests warning for max_iterations
     dims = 4
