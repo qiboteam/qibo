@@ -41,10 +41,10 @@ def generate_Z_operators(nqubits: int):
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
 
-    for op_string_tup in combination_strings:
+    for zi_string_combination in combination_strings:
         # except for the identity
-        if "Z" in op_string_tup:
-            op_name = "".join(op_string_tup)
+        if "Z" in zi_string_combination:
+            op_name = "".join(zi_string_combination)
             tensor_op = str_to_symbolic(op_name)
             # append in output_dict
             output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
@@ -136,9 +136,7 @@ def select_best_dbr_generator(
         optimal_steps.append(step_best)
         norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
     # find best d
-    idx_max_loss = norms_off_diagonal_restriction.index(
-        min(norms_off_diagonal_restriction)
-    )
+    idx_max_loss = np.argmin(norms_off_diagonal_restriction)
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
     dbi_eval = deepcopy(dbi_object)
