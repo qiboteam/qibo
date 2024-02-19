@@ -1,6 +1,7 @@
 """Tests for qibo.models.encodings"""
 
 import math
+from itertools import product
 
 import numpy as np
 import pytest
@@ -8,6 +9,7 @@ from scipy.optimize import curve_fit
 
 from qibo.models.encodings import (
     comp_basis_encoder,
+    phase_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
@@ -48,9 +50,58 @@ def test_comp_basis_encoder(backend, basis_element):
     backend.assert_allclose(state, target)
 
 
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("rotation", ["RX", "RY", "RZ"])
+def test_phase_encoder(backend, rotation, kind):
+    sampler = np.random.default_rng(1)
+
+    nqubits = 3
+    dims = 2**nqubits
+
+    with pytest.raises(TypeError):
+        data = sampler.random((nqubits, nqubits))
+        data = backend.cast(data, dtype=data.dtype)
+        phase_encoder(data, rotation=rotation)
+    with pytest.raises(TypeError):
+        data = sampler.random(nqubits)
+        data = backend.cast(data, dtype=data.dtype)
+        phase_encoder(data, rotation=True)
+    with pytest.raises(ValueError):
+        data = sampler.random(nqubits)
+        data = backend.cast(data, dtype=data.dtype)
+        phase_encoder(data, rotation="rzz")
+
+    phases = np.random.rand(nqubits)
+
+    if rotation in ["RX", "RY"]:
+        functions = list(product([np.cos, np.sin], repeat=nqubits))
+        target = []
+        for row in functions:
+            elem = 1.0
+            for phase, func in zip(phases, row):
+                elem *= func(phase / 2)
+                if rotation == "RX" and func.__name__ == "sin":
+                    elem *= -1.0j
+            target.append(elem)
+    else:
+        target = [np.exp(-0.5j * sum(phases))] + [0.0] * (dims - 1)
+
+    target = np.array(target, dtype=complex)
+    target = backend.cast(target, dtype=target.dtype)
+
+    if kind is not None:
+        phases = kind(phases)
+
+    state = phase_encoder(phases, rotation=rotation)
+    state = backend.execute_circuit(state).state()
+
+    backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [8])
-def test_unary_encoder(backend, nqubits, architecture):
+def test_unary_encoder(backend, nqubits, architecture, kind):
     sampler = np.random.default_rng(1)
 
     with pytest.raises(TypeError):
@@ -75,6 +126,9 @@ def test_unary_encoder(backend, nqubits, architecture):
     sampler = np.random.default_rng(1)
     data = 2 * sampler.random(nqubits) - 1
     data = backend.cast(data, dtype=data.dtype)
+
+    if kind is not None:
+        data = kind(data)
 
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()

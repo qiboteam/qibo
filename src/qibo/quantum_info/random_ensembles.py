@@ -32,10 +32,10 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
 
 
 def uniform_sampling_U3(ngates: int, seed=None, backend=None):
-    """Samples parameters for Haar-random :math:`U_{3}`s (:class:`qibo.gates.U3`).
+    """Samples parameters for Haar-random :class:`qibo.gates.U3`.
 
     Args:
-        ngates (int): Total number of :math:`U_{3}`s to be sampled.
+        ngates (int): Total number of :math:`U_{3}` gates to be sampled.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
@@ -44,7 +44,7 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
             Defaults to ``None``.
 
     Returns:
-        (ndarray): array of shape (``ngates``, :math:`3`).
+        ndarray: array of shape (``ngates``, :math:`3`).
     """
     if not isinstance(ngates, int):
         raise_error(
@@ -579,7 +579,7 @@ def random_clifford(
     Args:
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
-            object. If ``False``, returns an ``ndarray`` object. Defaults to ``False``.
+            object. If ``False``, returns an ``ndarray`` object. Defaults to ``True``.
         density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
             the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
