@@ -218,7 +218,8 @@ class CliffordBackend(NumpyBackend):
         samples = []
         for _ in range(nshots):
             res = self.execute_circuit(circuit_copy, initial_state, nshots=1)
-            [measurement.result.reset() for measurement in circuit_copy.measurements]
+            for measurement in circuit_copy.measurements:
+                measurement.result.reset()
             samples.append(res.samples())
         samples = self.np.vstack(samples)
 
