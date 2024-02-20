@@ -66,7 +66,7 @@ dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "clifford_simulator_numba" }
 tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux'" }
 
 [tool.poe.tasks]
@@ -83,7 +83,7 @@ optional = true
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "clifford_simulator_numba" }
 
 [tool.poetry.group.cuda12]
 optional = true
@@ -91,7 +91,7 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "clifford_simulator_numba" }
 
 [tool.pylint.reports]
 output-format = "colorized"

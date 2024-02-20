@@ -63,7 +63,6 @@ class CliffordBackend(NumpyBackend):
                 NotImplementedError,
                 f"Backend `{engine}` is not supported for Clifford Simulation.",
             )
-        print(dir(self.engine))
 
         self.np = self.engine.np
 
