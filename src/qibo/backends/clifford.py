@@ -2,6 +2,7 @@
 
 import collections
 from functools import reduce
+from importlib.util import find_spec, module_from_spec
 from typing import Union
 
 import numpy as np
@@ -39,12 +40,9 @@ class CliffordBackend(NumpyBackend):
             engine = _check_backend(engine)
             engine = engine.name if engine.platform is None else engine.platform
 
-        class CliffordEngine:
-            pass
-
-        self.engine = CliffordEngine()
-        for method in dir(_clifford_operations):
-            setattr(self.engine, method, getattr(_clifford_operations, method))
+        spec = find_spec("qibo.backends._clifford_operations")
+        self.engine = module_from_spec(spec)
+        spec.loader.exec_module(self.engine)
 
         if engine == "numpy":
             pass
@@ -65,6 +63,7 @@ class CliffordBackend(NumpyBackend):
                 NotImplementedError,
                 f"Backend `{engine}` is not supported for Clifford Simulation.",
             )
+        print(dir(self.engine))
 
         self.np = self.engine.np
 
@@ -86,7 +85,7 @@ class CliffordBackend(NumpyBackend):
         res = [int(r) if not isinstance(r, str) else r for r in res]
         counts = [int(v) for v in counts]
 
-        return collections.Counter(zip(res, counts))
+        return collections.Counter(dict(zip(res, counts)))
 
     def zero_state(self, nqubits: int):
         """Construct the zero state |00...00>.
@@ -199,7 +198,7 @@ class CliffordBackend(NumpyBackend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit, nshots: int = 1000, initial_state=None):
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots: int = 1000):
         """Execute a Clifford circuits ``nshots`` times.
 
         This is used for all the simulations that involve repeated execution.
