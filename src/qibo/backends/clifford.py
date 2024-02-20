@@ -40,6 +40,8 @@ class CliffordBackend(NumpyBackend):
             engine = _check_backend(engine)
             engine = engine.name if engine.platform is None else engine.platform
 
+        self.platform = engine
+
         spec = find_spec("qibo.backends._clifford_operations")
         self.engine = module_from_spec(spec)
         spec.loader.exec_module(self.engine)
