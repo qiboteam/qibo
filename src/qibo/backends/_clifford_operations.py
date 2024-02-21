@@ -5,8 +5,6 @@ from scipy import sparse
 
 name = "numpy"
 
-np = np
-
 
 def _get_rxz(symplectic_matrix, nqubits):
     return (
