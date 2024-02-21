@@ -3772,7 +3772,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "clifford_simulator_numba"
-resolved_reference = "2e292d4df7c57597986ef821061e5fdce5d49097"
+resolved_reference = "3e0505d52b0890a484ca57cae3b5ff8deb7e9949"
 
 [[package]]
 name = "recommonmark"
