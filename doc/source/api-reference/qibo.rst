@@ -1592,12 +1592,12 @@ passing a symplectic matrix to the constructor.
 .. testsetup::
 
    from qibo.quantum_info import Clifford
-   from qibo.backends import CliffordBackend, NumpyBackend
+   from qibo.backends import CliffordBackend
 
    # construct the |00...0> state
-   backend = CliffordBackend(NumpyBackend())
+   backend = CliffordBackend("numpy")
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
+   clifford = Clifford(symplectic_matrix, engine="numpy")
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
