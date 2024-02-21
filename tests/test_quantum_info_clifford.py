@@ -21,8 +21,7 @@ def construct_clifford_backend(backend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
     else:
-        backend = backend.name if backend.platform is None else backend.platform
-        return CliffordBackend(backend)
+        return CliffordBackend(_get_engine_name(backend))
 
 
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
