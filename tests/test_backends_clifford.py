@@ -10,6 +10,7 @@ from qibo.backends import (
     NumpyBackend,
     TensorflowBackend,
 )
+from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
@@ -21,8 +22,7 @@ def construct_clifford_backend(backend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
     else:
-        backend = backend.name if backend.platform is None else backend.platform
-        return CliffordBackend(backend)
+        return CliffordBackend(_get_engine_name(backend))
 
 
 THETAS_1Q = [
@@ -243,9 +243,7 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    platform = backend.platform
-    if platform is None:
-        platform = str(backend)
+    platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), CliffordBackend)
     global_platform = GlobalBackend().engine.name

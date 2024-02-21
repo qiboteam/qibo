@@ -13,14 +13,8 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
 
-def _calculation_engine(backend):
-    """Helper function to initialize the Clifford backend with the correct engine."""
-    if backend.name == "qibojit":
-        if backend.platform in ["cupy", "cuquantum"]:  # pragma: no cover
-            return backend.cp
-        return backend.np
-
-    return backend.np
+def _get_engine_name(backend):
+    return backend.platform if backend.platform is not None else backend.name
 
 
 class CliffordBackend(NumpyBackend):
@@ -37,8 +31,7 @@ class CliffordBackend(NumpyBackend):
         if engine is None:
             from qibo.backends import _check_backend
 
-            engine = _check_backend(engine)
-            engine = engine.name if engine.platform is None else engine.platform
+            engine = _get_engine_name(_check_backend(engine))
 
         self.platform = engine
 

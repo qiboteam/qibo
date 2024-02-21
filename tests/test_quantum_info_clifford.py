@@ -6,6 +6,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, TensorflowBackend
+from qibo.backends.clifford import _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
     _one_qubit_paulis_string_product,
@@ -24,16 +25,12 @@ def construct_clifford_backend(backend):
         return CliffordBackend(backend)
 
 
-def get_engine(backend):
-    return backend.platform if backend.platform is not None else backend.name
-
-
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
 def test_clifford_from_symplectic_matrix(backend, nqubits):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
-    engine = get_engine(backend)
+    engine = _get_engine_name(backend)
     symplectic_matrix = clifford_backend.zero_state(nqubits)
     clifford_1 = Clifford(symplectic_matrix, engine=engine)
     clifford_2 = Clifford(symplectic_matrix[:-1], engine=engine)
@@ -56,7 +53,7 @@ def test_clifford_from_circuit(backend, measurement):
         c.add(gates.M(*np.random.choice(3, size=2, replace=False)))
 
     result = clifford_backend.execute_circuit(c)
-    obj = Clifford.from_circuit(c, engine=get_engine(backend))
+    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     backend.assert_allclose(obj.state(), result.state())
     if measurement:
         backend.assert_allclose(obj.probabilities(), result.probabilities())
@@ -71,7 +68,7 @@ def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
 
     clifford = random_clifford(nqubits, seed=seed, backend=backend)
 
-    engine = get_engine(backend)
+    engine = _get_engine_name(backend)
     symplectic_matrix_original = Clifford.from_circuit(
         clifford, engine=engine
     ).symplectic_matrix
@@ -125,7 +122,7 @@ def test_clifford_initialization(backend, nqubits):
     circuit = random_clifford(nqubits, backend=backend)
     symplectic_matrix = clifford_backend.execute_circuit(circuit).symplectic_matrix
 
-    engine = get_engine(backend)
+    engine = _get_engine_name(backend)
     clifford_from_symplectic = Clifford(symplectic_matrix, engine=engine)
     clifford_from_circuit = Clifford.from_circuit(circuit, engine=engine)
     clifford_from_initialization = Clifford(circuit, engine=engine)
@@ -150,7 +147,7 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
     c = Circuit(nqubits)
     c.add(gates.X(2))
     c.add(gates.H(0))
-    obj = Clifford.from_circuit(c, engine=get_engine(backend))
+    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
             reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
@@ -218,7 +215,7 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
     c = Circuit(nqubits)
     c.add(gates.X(2))
     c.add(gates.H(0))
-    obj = Clifford.from_circuit(c, engine=get_engine(backend))
+    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
             reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
@@ -284,7 +281,7 @@ def test_clifford_samples_frequencies(backend, binary):
     c = random_clifford(5)
     c.add(gates.M(3, register_name="3"))
     c.add(gates.M(0, 1, register_name="01"))
-    obj = Clifford.from_circuit(c, nshots=50, engine=get_engine(backend))
+    obj = Clifford.from_circuit(c, nshots=50, engine=_get_engine_name(backend))
     samples_1 = obj.samples(binary=binary, registers=True)
     samples_2 = obj.samples(binary=binary, registers=False)
     if binary:
@@ -319,7 +316,7 @@ def test_clifford_samples_error(backend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend)
     else:
-        obj = Clifford.from_circuit(c, engine=get_engine(backend))
+        obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
         with pytest.raises(RuntimeError) as excinfo:
             obj.samples()
             assert str(excinfo.value) == "No measurement provided."
@@ -332,7 +329,7 @@ def test_clifford_copy(backend, nqubits, deep):
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
 
     circuit = random_clifford(nqubits, backend=backend)
-    clifford = Clifford.from_circuit(circuit, engine=get_engine(backend))
+    clifford = Clifford.from_circuit(circuit, engine=_get_engine_name(backend))
 
     with pytest.raises(TypeError):
         clifford.copy(deep="True")
