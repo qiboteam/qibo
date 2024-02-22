@@ -24,14 +24,9 @@ class Hamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix=None, backend=None):
-        if backend is None:  # pragma: no cover
-            from qibo.backends import (  # pylint: disable=import-outside-toplevel
-                GlobalBackend,
-            )
+        from qibo.backends import _check_backend
 
-            self.backend = GlobalBackend()
-        else:
-            self.backend = backend
+        self.backend = _check_backend(backend)
 
         if not (
             isinstance(matrix, self.backend.tensor_types)
@@ -355,14 +350,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         from qibo.symbols import Symbol  # pylint: disable=import-outside-toplevel
 
         self._qiboSymbol = Symbol  # also used in ``self._get_symbol_matrix``
-        if backend is None:  # pragma: no cover
-            from qibo.backends import (  # pylint: disable=import-outside-toplevel
-                GlobalBackend,
-            )
 
-            self.backend = GlobalBackend()
-        else:
-            self.backend = backend
+        from qibo.backends import _check_backend
+
+        self.backend = _check_backend(backend)
+
         if form is not None:
             self.form = form
         if nqubits is not None:

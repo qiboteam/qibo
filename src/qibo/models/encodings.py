@@ -70,28 +70,52 @@ def comp_basis_encoder(
     return circuit
 
 
-def unary_encoder(data, architecture: str = "tree"):
-    """Creates circuit that performs the unary encoding of ``data``.
-
-    Given a classical ``data`` array :math:`\\mathbf{x} \\in \\mathbb{R}^{d}` such that
-
-    .. math::
-        \\mathbf{x} = (x_{1}, x_{2}, \\dots, x_{d}) \\, ,
-
-    this function generate the circuit that prepares the following quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}`:
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k} \\, ,
-
-    with :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
+def phase_encoder(data, rotation: str = "RY"):
+    """Creates circuit that performs the phase encoding of ``data``.
 
     Args:
-        data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
+        rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
+            If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
+            If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
+            Defaults to ``"RY"``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in phase encoding.
+    """
+    if isinstance(data, list):
+        data = np.array(data)
+
+    if len(data.shape) != 1:
+        raise_error(
+            TypeError,
+            f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
+        )
+
+    if not isinstance(rotation, str):
+        raise_error(
+            TypeError,
+            f"``rotation`` must be type str, but it is type {type(rotation)}.",
+        )
+
+    if rotation not in ["RX", "RY", "RZ"]:
+        raise_error(ValueError, f"``rotation`` {rotation} not found.")
+
+    nqubits = len(data)
+    gate = getattr(gates, rotation.upper())
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
+    circuit.set_parameters(data)
+
+    return circuit
+
+
+def unary_encoder(data, architecture: str = "tree"):
+    """Creates circuit that performs the (deterministic) unary encoding of ``data``.
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array of data to be loaded.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
@@ -99,11 +123,10 @@ def unary_encoder(data, architecture: str = "tree"):
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
-
-    References:
-        1. S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*.
-        `arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
     """
+    if isinstance(data, list):
+        data = np.array(data)
+
     if len(data.shape) != 1:
         raise_error(
             TypeError,
@@ -143,26 +166,12 @@ def unary_encoder(data, architecture: str = "tree"):
 def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed=None):
     """Creates a circuit that performs the unary encoding of a random Gaussian state.
 
-    Given :math:`d` qubits, encodes the quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}` such that
-
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k}
-
-    where :math:`x_{k}` are independent Gaussian random variables,
-    :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` is a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
-
-    At depth :math:`h`, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
+    At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
     gates :math:`RBS(\\theta_{k})` are sampled from the following probability density function:
 
     .. math::
-        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})}
-            \\abs{\\sin(\\theta) \\, \\cos(\\theta)}^{2^{h-1} - 1} \\, ,
+        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})} \\,
+            \\left|\\sin(\\theta) \\, \\cos(\\theta)\\right|^{2^{h-1} - 1} \\, ,
 
     where :math:`\\Gamma(\\cdot)` is the
     `Gamma function <https://en.wikipedia.org/wiki/Gamma_function>`_.

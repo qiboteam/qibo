@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
@@ -80,8 +80,7 @@ class Channel(Gate):
             vectorization,
         )
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
 
@@ -128,8 +127,7 @@ class Channel(Gate):
             choi_to_liouville,
         )
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         super_op = self.to_choi(nqubits=nqubits, order=order, backend=backend)
         super_op = choi_to_liouville(super_op, order=order, backend=backend)
@@ -166,8 +164,7 @@ class Channel(Gate):
 
         from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         super_op = self.to_liouville(nqubits=nqubits, backend=backend)
 
