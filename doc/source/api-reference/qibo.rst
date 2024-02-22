@@ -2510,11 +2510,8 @@ depolarizing noise as an example.
 
 .. code-block::  python
 
-    import qibo
-    from qibo import models
-    from qibo import gates
-    from qibo.noise import NoiseModel
-    from qibo.noise import DepolarizingError
+    from qibo import Circuit, models
+    from qibo.noise import DepolarizingError, NoiseModel
     from qibo.tomography.gate_set_tomography import (
         GST_execute_circuit,
         execute_GST,
@@ -2524,7 +2521,7 @@ depolarizing noise as an example.
     )
 
     # Create the two qubit quantum circuit
-    circuit = qibo.models.Circuit(2)
+    circuit = Circuit(2)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0,1))
     circuit.add(gates.M(0))
