@@ -250,6 +250,8 @@ def gradient_onsite_Z(
             + s * ds * b
             + 2 * ds * c
         )
+    grad = np.array(grad)
+    grad = grad / np.linalg.norm(grad)
     return grad, s
 
 
@@ -291,13 +293,11 @@ def gradient_descent_onsite_Z(
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
     if onsite_Z_ops is None:
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)
-    off_diagonal_norm_history = [dbi_object.off_diagonal_norm]
     if d is None:
         d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
     grad, s = gradient_onsite_Z(
         dbi_object, d, n_taylor=n_taylor, onsite_Z_ops=onsite_Z_ops
     )
-    off_diagonal_norm_history.append(dbi_object.loss(s, d))
     # optimize gradient descent step with hyperopt
     if space is None:
         space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
@@ -321,4 +321,4 @@ def gradient_descent_onsite_Z(
     d_coef = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
     d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
     dbi_object(step=s, d=d)
-    return s, d_coef, d, off_diagonal_norm_history
+    return s, d_coef, d

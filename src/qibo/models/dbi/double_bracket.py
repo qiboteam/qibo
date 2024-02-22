@@ -225,22 +225,10 @@ class DoubleBracketIteration:
         if backup_scheduling is None:
             backup_scheduling = DoubleBracketScheduling.use_grid_search
 
-        def sigma(h: np.array):
-            return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
-
-        def Gamma(k: int):
-            r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
-            if k == 0:
-                return self.h.matrix
-            else:
-                W = self.commutator(d, sigma(self.h.matrix))
-                result = self.h.matrix
-                for _ in range(k):
-                    result = self.commutator(W, result)
-            return result
-
         # list starting from s^n highest order to s^0
-        sigma_gamma_list = np.array([sigma(Gamma(k)) for k in range(n + 2)])
+        sigma_gamma_list = np.array(
+            [self.sigma(self.Gamma(k, d)) for k in range(n + 2)]
+        )
         exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
         # coefficients for rotation with [W,H] and H
         c1 = [
@@ -258,7 +246,8 @@ class DoubleBracketIteration:
                 power = k + j
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
-        roots = np.roots(list(reversed(trace_coefficients[: n + 1])))
+        taylor_coefficients = list(reversed(trace_coefficients[:n]))
+        roots = np.roots(taylor_coefficients)
         error = 1e-3
         real_positive_roots = [
             np.real(root)
@@ -267,7 +256,7 @@ class DoubleBracketIteration:
         ]
         # solution exists, return minimum s
         if len(real_positive_roots) > 0:
-            return min(real_positive_roots)
+            return min(real_positive_roots), taylor_coefficients
         # solution does not exist, resort to backup scheduling
         elif (
             backup_scheduling == DoubleBracketScheduling.use_polynomial_approximation
@@ -277,7 +266,12 @@ class DoubleBracketIteration:
                 n=n + 1, d=d, backup_scheduling=backup_scheduling
             )
         else:
-            return self.choose_step(d=d, scheduling=backup_scheduling)
+            print(
+                f"Unable to find roots with current order, resorting to {backup_scheduling}"
+            )
+            return self.choose_step(d=d, scheduling=backup_scheduling), list(
+                reversed(trace_coefficients[: n + 1])
+            )
 
     def choose_step(
         self,
@@ -292,7 +286,9 @@ class DoubleBracketIteration:
         if scheduling is DoubleBracketScheduling.use_hyperopt:
             return self.hyperopt_step(d=d, **kwargs)
         if scheduling is DoubleBracketScheduling.use_polynomial_approximation:
-            return self.polynomial_step(d=d, **kwargs)
+            # omit taylor coefficients
+            step, _ = self.polynomial_step(d=d, **kwargs)
+            return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
@@ -330,3 +326,17 @@ class DoubleBracketIteration:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
         return self.h.energy_fluctuation(state)
+
+    def sigma(self, h: np.array):
+        return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
+
+    def Gamma(self, k: int, d: np.array):
+        r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+        if k == 0:
+            return self.h.matrix
+        else:
+            W = self.commutator(d, self.sigma(self.h.matrix))
+            result = self.h.matrix
+            for _ in range(k):
+                result = self.commutator(W, result)
+        return result
