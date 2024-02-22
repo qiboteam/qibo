@@ -2450,10 +2450,8 @@ calibration. We import depolarizing noise as an example.
 .. code-block::  python
 
     import qibo
-    from qibo import models
-    from qibo import gates
-    from qibo.noise import NoiseModel
-    from qibo.noise import DepolarizingError
+    from qibo import Circuit, gates
+    from qibo.noise import DepolarizingError, NoiseModel
     from qibo.tomography.gate_set_tomography import (
         GST_execute_circuit,
         execute_GST,
@@ -2463,7 +2461,7 @@ calibration. We import depolarizing noise as an example.
     )
 
     # Create the single qubit quantum circuit
-    circuit = models.Circuit(1)
+    circuit = Circuit(1)
     circuit.add(gates.H(0))
     circuit.add(gates.RX(0, np.pi/7))
     circuit.add(gates.M(0))
