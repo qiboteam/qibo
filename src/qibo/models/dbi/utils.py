@@ -6,8 +6,7 @@ import hyperopt
 import numpy as np
 
 from qibo import symbols
-from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
@@ -42,10 +41,10 @@ def generate_Z_operators(nqubits: int):
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
 
-    for op_string_tup in combination_strings:
+    for zi_string_combination in combination_strings:
         # except for the identity
-        if "Z" in op_string_tup:
-            op_name = "".join(op_string_tup)
+        if "Z" in zi_string_combination:
+            op_name = "".join(zi_string_combination)
             tensor_op = str_to_symbolic(op_name)
             # append in output_dict
             output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
@@ -76,7 +75,7 @@ def select_best_dbr_generator(
     scheduling: DoubleBracketScheduling = None,
     **kwargs,
 ):
-    """Selects the best double bracket rotation generator from a list and runs the
+    """Selects the best double bracket rotation generator from a list and execute the rotation.
 
     Args:
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
@@ -94,12 +93,11 @@ def select_best_dbr_generator(
     norms_off_diagonal_restriction = [
         dbi_object.off_diagonal_norm for _ in range(len(d_list))
     ]
-    optimal_steps = [0 for _ in range(len(d_list))]
-    flip_list = [1 for _ in range(len(d_list))]
+    optimal_steps, flip_list = [], []
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list[i] = cs_angle_sgn(dbi_eval, d)
+        flip_list.append(cs_angle_sgn(dbi_eval, d))
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.choose_step(
@@ -108,7 +106,7 @@ def select_best_dbr_generator(
             else:
                 step_best = step
             dbi_eval(step=step_best, d=flip_list[i] * d)
-            optimal_steps[i] = step_best
+            optimal_steps.append(step_best)
             norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
@@ -123,9 +121,7 @@ def select_best_dbr_generator(
         optimal_steps.append(step_best)
         norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
     # find best d
-    idx_max_loss = norms_off_diagonal_restriction.index(
-        min(norms_off_diagonal_restriction)
-    )
+    idx_max_loss = np.argmin(norms_off_diagonal_restriction)
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
     dbi_eval = deepcopy(dbi_object)
