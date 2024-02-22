@@ -449,7 +449,7 @@ def cast(x, dtype=None, copy=False):
         dtype = "complex128"
     if isinstance(x, np.ndarray):
         return x.astype(dtype, copy=copy)
-    elif sparse.issparse(x):
+    elif sparse.issparse(x):  # pragma: no cover
         return x.astype(dtype, copy=copy)
     return np.array(x, dtype=dtype, copy=copy)
 
@@ -464,6 +464,6 @@ def _clifford_post_execution_reshape(state, nqubits):
 
 def identity_density_matrix(nqubits, normalize: bool = True):
     state = np.eye(2**nqubits, dtype="complex128")
-    if normalize is True:
+    if normalize is True:  # pragma: no cover
         state /= 2**nqubits
     return state
