@@ -246,7 +246,7 @@ def test_set_backend(backend):
     platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().engine.name
+    global_platform = GlobalBackend().platform
     assert global_platform == platform
 
 
