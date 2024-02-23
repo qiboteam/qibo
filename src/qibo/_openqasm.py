@@ -43,13 +43,13 @@ class DefinedGate:
 def _qibo_gate_name(gate):
     if gate == "cx":
         return "CNOT"
-    
+
     if gate == "id":
         return "I"
-    
+
     if gate == "ccx":
         return "TOFFOLI"
-    
+
     return gate.upper()
 
 
