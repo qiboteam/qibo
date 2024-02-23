@@ -369,6 +369,8 @@ class NumpyBackend(Backend):
         return state
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+        if initial_state is not None:
+            initial_state = self.cast(initial_state)
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -528,7 +530,7 @@ class NumpyBackend(Backend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = np.mean(self.to_numpy(final_states), 0)
+            final_state = self.np.mean(self.to_numpy(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
@@ -655,13 +657,15 @@ class NumpyBackend(Backend):
         from qibo.config import SHOT_BATCH_SIZE
 
         nprobs = probabilities / self.np.sum(probabilities)
-        frequencies = self.np.zeros(len(nprobs), dtype="int64")
+        frequencies = self.np.zeros(len(nprobs), dtype=self.np.int64)
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
         frequencies = self.update_frequencies(
             frequencies, nprobs, nshots % SHOT_BATCH_SIZE
         )
-        return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
+        return collections.Counter(
+            {i: f.item() for i, f in enumerate(frequencies) if f > 0}
+        )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         fprobs = self.np.array(bitflip_probabilities, dtype="float64")
