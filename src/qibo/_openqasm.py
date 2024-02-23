@@ -73,7 +73,7 @@ class QASMParser:
             density_matrix (bool, optional): If `True`, the constructed circuit would evolve density matrices.
 
         Returns:
-            (:class:`qibo.models.Circuit`): The constructed qibo Circuit.
+            :class:`qibo.models.Circuit`: circuit constructed from QASM string.
         """
         parsed = self.parser.parse(qasm_string)
         gates = []
