@@ -225,7 +225,11 @@ def ds_di_onsite_Z(
 
 
 def gradient_onsite_Z(
-    dbi_object: DoubleBracketIteration, d: np.array, n_taylor=3, onsite_Z_ops=None
+    dbi_object: DoubleBracketIteration,
+    d: np.array,
+    n_taylor=3,
+    onsite_Z_ops=None,
+    use_ds=False,
 ):
     """Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients"""
     # n is the highest order for calculating s
@@ -236,12 +240,15 @@ def gradient_onsite_Z(
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)
     grad = np.zeros(nqubits)
     s, coef = dbi_object.polynomial_step(
+        d=d,
         n=n_taylor,
         backup_scheduling=DoubleBracketScheduling.use_polynomial_approximation,
     )
     a, b, c = coef[len(coef) - 3 :]
     for i in range(nqubits):
         da, db, dc, ds = ds_di_onsite_Z(dbi_object, d, i, [a, b, c], onsite_Z_ops)
+        if use_ds is True:
+            ds = 0
         grad[i] = (
             s**3 / 3 * da
             + s**2 / 2 * db
@@ -281,7 +288,6 @@ def gradient_descent_onsite_Z(
     d: np.array = None,
     n_taylor: int = 3,
     onsite_Z_ops=None,
-    grad_tol: float = 1e-2,
     lr_min: float = 1e-5,
     lr_max: float = 1,
     max_evals: int = 100,
@@ -289,6 +295,7 @@ def gradient_descent_onsite_Z(
     optimizer: callable = None,
     look_ahead: int = 1,
     verbose: bool = False,
+    use_ds: bool = True,
 ):
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
     if onsite_Z_ops is None:
@@ -296,7 +303,7 @@ def gradient_descent_onsite_Z(
     if d is None:
         d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
     grad, s = gradient_onsite_Z(
-        dbi_object, d, n_taylor=n_taylor, onsite_Z_ops=onsite_Z_ops
+        dbi_object, d, n_taylor=n_taylor, onsite_Z_ops=onsite_Z_ops, use_ds=use_ds
     )
     # optimize gradient descent step with hyperopt
     if space is None:
@@ -320,5 +327,11 @@ def gradient_descent_onsite_Z(
 
     d_coef = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
     d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
-    dbi_object(step=s, d=d)
     return s, d_coef, d
+
+
+def diagonal_min_max(matrix: np.array):
+    L = int(np.log2(matrix.shape[0]))
+    D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
+    D = np.diag(D)
+    return D
