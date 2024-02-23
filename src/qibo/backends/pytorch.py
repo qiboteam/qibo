@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Union
 
 import numpy as np
@@ -134,7 +135,8 @@ class PyTorchBackend(NumpyBackend):
         return x
 
     def compile(self, func):
-        return self.np.jit.script(func)
+        return func
+        # return self.np.jit.script(func)
 
     def matrix(self, gate):
         npmatrix = super().matrix(gate)
@@ -149,7 +151,14 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
+    def samples_to_decimal(self, samples, nqubits):
+        samples = self.cast(samples, dtype="int32")
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=torch.int32)
+        qrange = (2**qrange).unsqueeze(1)
+        return self.np.matmul(samples, qrange).squeeze(1)
+
     def samples_to_binary(self, samples, nqubits):
+        samples = self.cast(samples, dtype="int32")
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
         samples = samples.int()
         samples = samples[:, None] >> qrange
@@ -172,7 +181,7 @@ class PyTorchBackend(NumpyBackend):
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
         probs = self.np.sum(state.type(rtype), dim=unmeasured_qubits)
-        return self._order_probabilities(probs, qubits, nqubits).view(-1)
+        return self._order_probabilities(probs, qubits, nqubits).reshape(-1)
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
         order = tuple(sorted(qubits))
@@ -185,10 +194,10 @@ class PyTorchBackend(NumpyBackend):
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).view(-1)
 
-    # def calculate_frequencies(self, samples):
-    #     res, counts = self.np.unique(samples, return_counts=True)
-    #     res, counts = res.tolist(), counts.tolist()
-    #     return collections.Counter({k: v for k, v in zip(res, counts)})
+    def calculate_frequencies(self, samples):
+        res, counts = self.np.unique(samples, return_counts=True)
+        res, counts = res.tolist(), counts.tolist()
+        return Counter({k: v for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         frequencies = self.cast(frequencies, dtype="int")
