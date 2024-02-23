@@ -93,7 +93,7 @@ class NumpyBackend(Backend):
 
     def plus_state(self, nqubits):
         state = self.np.ones(2**nqubits, dtype=self.dtype)
-        state /= self.np.sqrt(2**nqubits)
+        state /= self.np.sqrt(self.cast(2**nqubits))
         return state
 
     def plus_density_matrix(self, nqubits):
@@ -114,7 +114,7 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2**rank, dtype=self.dtype)
+        matrix = np.eye(2**rank, dtype=np.complex128)
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
@@ -122,7 +122,7 @@ class NumpyBackend(Backend):
             gmatrix = self.to_numpy(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
+            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=np.complex128)
             gmatrix = np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
@@ -137,7 +137,7 @@ class NumpyBackend(Backend):
             gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
-        return matrix
+        return self.cast(matrix)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -530,7 +530,7 @@ class NumpyBackend(Backend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = self.np.mean(self.to_numpy(final_states), 0)
+            final_state = np.mean(self.to_numpy(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
@@ -741,10 +741,9 @@ class NumpyBackend(Backend):
             else:
                 from scipy.linalg import expm
             return expm(-1j * a * matrix)
-        else:
-            expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-            ud = self.np.transpose(self.np.conj(eigenvectors))
-            return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+        ud = self.np.transpose(self.np.conj(eigenvectors))
+        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)

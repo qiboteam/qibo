@@ -1,4 +1,3 @@
-import collections
 from typing import Union
 
 import numpy as np
@@ -57,6 +56,9 @@ class PyTorchBackend(NumpyBackend):
 
     def set_device(self, device):  # pragma: no cover
         self.device = device
+
+    def set_seed(self, seed):
+        self.np.manual_seed(seed)
 
     def cast(
         self,
@@ -125,6 +127,8 @@ class PyTorchBackend(NumpyBackend):
         return super().issparse(x)
 
     def to_numpy(self, x):
+        if isinstance(x, list):
+            return np.asarray([self.to_numpy(i) for i in x])
         if isinstance(x, self.np.Tensor):
             return x.numpy(force=True)
         return x
@@ -138,10 +142,6 @@ class PyTorchBackend(NumpyBackend):
 
     def matrix_parametrized(self, gate):
         npmatrix = super().matrix_parametrized(gate)
-        return self.np.tensor(npmatrix, dtype=self.dtype)
-
-    def matrix_fused(self, gate):
-        npmatrix = super().matrix_fused(gate)
         return self.np.tensor(npmatrix, dtype=self.dtype)
 
     def sample_shots(self, probabilities, nshots):
@@ -185,10 +185,10 @@ class PyTorchBackend(NumpyBackend):
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).view(-1)
 
-    def calculate_frequencies(self, samples):
-        res, counts = self.np.unique(samples, return_counts=True)
-        res, counts = res.tolist(), counts.tolist()
-        return collections.Counter({k: v for k, v in zip(res, counts)})
+    # def calculate_frequencies(self, samples):
+    #     res, counts = self.np.unique(samples, return_counts=True)
+    #     res, counts = res.tolist(), counts.tolist()
+    #     return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         frequencies = self.cast(frequencies, dtype="int")
@@ -220,7 +220,9 @@ class PyTorchBackend(NumpyBackend):
             return self.np.linalg.matrix_exp(  # pylint: disable=not-callable
                 -1j * a * matrix
             )
-        return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+        ud = self.np.transpose(self.np.conj(eigenvectors), 0, 1)
+        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         state = self.cast(state)

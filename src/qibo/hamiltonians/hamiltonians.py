@@ -243,6 +243,7 @@ class Hamiltonian(AbstractHamiltonian):
             )
         new_matrix = self.matrix * o
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+        o = self.backend.cast(o)
         if self._eigenvalues is not None:
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues

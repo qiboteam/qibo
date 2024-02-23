@@ -108,7 +108,7 @@ def test_control_matrix_unitary(backend):
     u = np.random.random((2, 2))
     gate = gates.Unitary(u, 0).controlled_by(1)
     matrix = backend.control_matrix(gate)
-    target_matrix = np.eye(4, dtype=backend.dtype)
+    target_matrix = np.eye(4, dtype=np.complex128)
     target_matrix[2:, 2:] = u
     backend.assert_allclose(matrix, target_matrix)
 

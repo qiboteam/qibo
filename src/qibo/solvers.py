@@ -74,7 +74,7 @@ class Exponential(BaseSolver):
     def __call__(self, state):
         propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
-        return (propagator @ state[:, self.backend.np.newaxis])[:, 0]
+        return (propagator @ state[:, None])[:, 0]
 
 
 class RungeKutta4(BaseSolver):

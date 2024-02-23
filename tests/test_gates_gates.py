@@ -753,7 +753,7 @@ def test_fswap(backend):
             [0, 1, 0, 0],
             [0, 0, 0, -1],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = matrix @ initial_state
@@ -815,7 +815,7 @@ def test_sycamore(backend):
             [0, -1j, 0, 0],
             [0, 0, 0, np.exp(-1j * np.pi / 6)],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = matrix @ initial_state
@@ -955,7 +955,7 @@ def test_rzx(backend):
             [0, 0, cos, 1j * sin],
             [0, 0, 1j * sin, cos],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = matrix @ initial_state
@@ -996,7 +996,7 @@ def test_rxxyy(backend):
             [0, -1j * sin, cos, 0],
             [0, 0, 0, 1],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = matrix @ initial_state
@@ -1081,7 +1081,7 @@ def test_givens(backend):
             [0, np.sin(theta), np.cos(theta), 0],
             [0, 0, 0, 1],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
@@ -1121,7 +1121,7 @@ def test_rbs(backend):
             [0, -np.sin(theta), np.cos(theta), 0],
             [0, 0, 0, 1],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
@@ -1160,7 +1160,7 @@ def test_ecr(backend):
             [1, -1j, 0, 0],
             [-1j, 1, 0, 0],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     ) / np.sqrt(2)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
@@ -1224,7 +1224,7 @@ def test_deutsch(backend):
             [0, 0, 0, 0, 0, 0, 1j * cos, sin],
             [0, 0, 0, 0, 0, 0, sin, 1j * cos],
         ],
-        dtype=backend.dtype,
+        dtype=np.complex128,
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
