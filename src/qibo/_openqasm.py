@@ -43,12 +43,14 @@ class DefinedGate:
 def _qibo_gate_name(gate):
     if gate == "cx":
         return "CNOT"
-    elif gate == "id":
+    
+    if gate == "id":
         return "I"
-    elif gate == "ccx":
+    
+    if gate == "ccx":
         return "TOFFOLI"
-    else:
-        return gate.upper()
+    
+    return gate.upper()
 
 
 class QASMParser:
