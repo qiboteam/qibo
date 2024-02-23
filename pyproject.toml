@@ -93,6 +93,12 @@ cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 
+[tool.poetry.group.cloud]
+optional = true
+
+[tool.poetry.group.cloud.dependencies]
+qibo-cloud-backends = ">=0.0.1"
+
 [tool.pylint.reports]
 output-format = "colorized"
 

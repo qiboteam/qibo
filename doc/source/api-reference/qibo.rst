@@ -2420,3 +2420,9 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
+
+
+Cloud Backends
+^^^^^^^^^^^^^^
+
+Additional backends, that support the remote execution of quantum circuits through cloud service providers, are provided by the optional qibo plugin `qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_. For more information please refer to the `official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.
