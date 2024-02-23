@@ -61,7 +61,8 @@ class QASMParser:
     ):
         self.parser = openqasm3.parser
         self.defined_gates = {}
-        self.q_registers, self.c_registers = {}, set()
+        self.q_registers = {}
+        self.c_registers = set()
 
     def to_circuit(self, qasm_string: str, accelerators=None, density_matrix=False):
         """Converts a QASM program into a :class:`qibo.models.Circuit`.
