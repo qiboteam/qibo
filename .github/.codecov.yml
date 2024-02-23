@@ -1,3 +1,0 @@
-ignore:
-  - "setup.py"
-  - "src/qibo/tests/test_custom_functions.py"
