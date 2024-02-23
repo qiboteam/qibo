@@ -28,6 +28,13 @@ def test_errors(backend):
     matrix = random_density_matrix(2**3, backend=backend)
     net = QuantumNetwork(matrix, (2,) * 3, backend=backend)
 
+    comb_partition = (2,) * 4
+    comb_sys_out = (False, True) * 2
+    comb = random_density_matrix(2**4, backend=backend)
+    comb_choi = QuantumNetwork(
+        comb, comb_partition, system_output=comb_sys_out, backend=backend
+    )
+
     with pytest.raises(TypeError):
         QuantumNetwork(channel.to_choi(backend=backend), partition=True)
 
@@ -90,6 +97,18 @@ def test_errors(backend):
 
     with pytest.raises(NotImplementedError):
         net @ network
+
+    with pytest.raises(ValueError):
+        network @ net
+
+    with pytest.raises(ValueError):
+        network @ QuantumNetwork(comb, (16, 16), pure=True, backend=backend)
+
+    with pytest.raises(ValueError):
+        comb_choi @ QuantumNetwork(comb, (16, 16), pure=True, backend=backend)
+
+    with pytest.raises(ValueError):
+        comb_choi @ net
 
     with pytest.raises(ValueError):
         QuantumNetwork(matrix, (1, 2), backend=backend)
