@@ -1,9 +1,10 @@
 import math
 
 import numpy as np
-import pytest
 
-from qibo import Circuit, gates
+import qibo
+from qibo import gates
+from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
 num_angles = 21
@@ -291,13 +292,57 @@ def test_qcnn_training():
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
     testcircuit = test_qcnn._circuit
     result = test_qcnn.minimize(
-        init_theta, data=data, labels=labels, nshots=1000, method="Powell"
+        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
     )
 
     # test Predictions function
     predictions = []
     for n in range(len(data)):
-        predictions.append(test_qcnn.predict(data[n], nshots=1000)[0])
+        predictions.append(test_qcnn.predict(data[n], nshots=10000)[0])
+
+    # test Accuracy function
+    predictions.append(1)
+    labels = np.array([[1], [-1], [1]])
+    test_qcnn.Accuracy(labels, predictions)
+
+
+def test_two_qubit_ansatz():
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.RX(0, 0))
+    c.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
+
+
+def test_two_qubit_ansatz_training():
+    # test qibojit case (copy initial state as quick-fix for in-place update)
+    qibo.set_backend("qibojit")
+
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.RX(0, 0))
+    c.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
+
+    data = np.zeros([2, 16])
+    for i in range(2):
+        data_i = np.random.rand(16)
+        data[i] = data_i / np.linalg.norm(data_i)
+    labels = [[1], [-1]]
+
+    totalNParams = test_qcnn.nparams_layer * 2
+    init_theta = [
+        0 for i in range(totalNParams + 1)
+    ]  # totalNParams+1 to account for bias parameter.
+
+    result = test_qcnn.minimize(
+        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
+    )
+
+    # test Predictions function
+    predictions = []
+    for n in range(len(data)):
+        predictions.append(test_qcnn.predict(data[n], nshots=10000)[0])
 
     # test Accuracy function
     predictions.append(1)

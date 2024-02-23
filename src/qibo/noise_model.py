@@ -341,10 +341,9 @@ class CompositeNoiseModel:
 
         from scipy.optimize import Bounds, direct
 
-        if backend == None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         nshots = target_result.nshots
         target_prob = freq_to_prob(target_result.frequencies())
