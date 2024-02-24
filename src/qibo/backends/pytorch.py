@@ -70,8 +70,8 @@ class PyTorchBackend(NumpyBackend):
         copy: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
-        
-        This method supports casting of single tensors or lists of tensors 
+
+        This method supports casting of single tensors or lists of tensors
         as for the :class:`qibo.backends.PyTorchBackend`.
 
         Args:
