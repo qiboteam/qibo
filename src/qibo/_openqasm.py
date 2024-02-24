@@ -64,7 +64,7 @@ class QASMParser:
         self.q_registers = {}
         self.c_registers = set()
 
-    def to_circuit(self, qasm_string: str, accelerators=None, density_matrix=False):
+    def to_circuit(self, qasm_string: str, accelerators: dict = None, density_matrix: bool = False):
         """Converts a QASM program into a :class:`qibo.models.Circuit`.
 
         Args:
