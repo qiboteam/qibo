@@ -1,3 +1,5 @@
+"""PyTorch backend."""
+
 from collections import Counter
 from typing import Union
 
@@ -8,7 +10,6 @@ from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 torch_dtype_dict = {
     "int": torch.int32,
@@ -24,6 +25,7 @@ torch_dtype_dict = {
 
 
 class TorchMatrices(NumpyMatrices):
+    """Matrix representation of every gate as a torch Tensor."""
 
     def __init__(self, dtype):
         super().__init__(dtype)
@@ -68,7 +70,9 @@ class PyTorchBackend(NumpyBackend):
         copy: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
-        This method supports casting of single tensors or lists of tensors as for the Tensoflow backend.
+        
+        This method supports casting of single tensors or lists of tensors 
+        as for the :class:`qibo.backends.PyTorchBackend`.
 
         Args:
             x (Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray], int, float, complex]):
@@ -180,9 +184,7 @@ class PyTorchBackend(NumpyBackend):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        probs = self.np.sum(
-            state.type(rtype), dim=unmeasured_qubits
-        )  # pylint: disable=E1123
+        probs = self.np.sum(state.type(rtype), unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).reshape(-1)
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
@@ -199,7 +201,7 @@ class PyTorchBackend(NumpyBackend):
     def calculate_frequencies(self, samples):
         res, counts = self.np.unique(samples, return_counts=True)
         res, counts = res.tolist(), counts.tolist()
-        return Counter({k: v for k, v in zip(res, counts)})
+        return Counter(zip(res, counts))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         frequencies = self.cast(frequencies, dtype="int")
@@ -232,9 +234,7 @@ class PyTorchBackend(NumpyBackend):
                 -1j * a * matrix
             )
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.transpose(
-            self.np.conj(eigenvectors), 0, 1
-        )  # pylint: disable=E1121
+        ud = self.np.transpose(self.np.conj(eigenvectors), dim0=0, dim1=1)
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
@@ -375,7 +375,7 @@ class PyTorchBackend(NumpyBackend):
         return self.np.reshape(state, shape)
 
     def reset_error_density_matrix(self, gate, state, nqubits):
-        from qibo.gates import X
+        from qibo.gates import X  # pylint: disable=C0415
 
         state = self.cast(state)
         shape = state.shape
@@ -443,17 +443,18 @@ class PyTorchBackend(NumpyBackend):
                 [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
                 [4, 0, 0, 0, 0, 0, 0, 4, 4, 0],
             ]
-        elif name == "test_probabilistic_measurement":
+
+        if name == "test_probabilistic_measurement":
             if "cuda" in self.device:  # pragma: no cover
                 return {0: 273, 1: 233, 2: 242, 3: 252}
-            else:
-                return {0: 271, 1: 239, 2: 242, 3: 248}
-        elif name == "test_unbalanced_probabilistic_measurement":
+            return {0: 271, 1: 239, 2: 242, 3: 248}
+
+        if name == "test_unbalanced_probabilistic_measurement":
             if "cuda" in self.device:  # pragma: no cover
                 return {0: 196, 1: 153, 2: 156, 3: 495}
-            else:
-                return {0: 168, 1: 188, 2: 154, 3: 490}
-        elif name == "test_post_measurement_bitflips_on_circuit":
+            return {0: 168, 1: 188, 2: 154, 3: 490}
+
+        if name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30},
                 {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
