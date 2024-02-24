@@ -180,7 +180,9 @@ class PyTorchBackend(NumpyBackend):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        probs = self.np.sum(state.type(rtype), dim=unmeasured_qubits)  # pylint: diable=E1123
+        probs = self.np.sum(
+            state.type(rtype), dim=unmeasured_qubits
+        )  # pylint: diable=E1123
         return self._order_probabilities(probs, qubits, nqubits).reshape(-1)
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
