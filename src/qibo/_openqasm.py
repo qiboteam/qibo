@@ -158,42 +158,54 @@ class QASMParser:
                 pass
             init_args.append(arg)
         # check whether the gate exists in qibo.gates already
-        try:
-            gates = [
-                getattr(qibo.gates, _qibo_gate_name(gate.name.name))(
-                    *qubits, *init_args
-                )
-            ]
-        except:
+        if _qibo_gate_name(gate.name.name) in dir(qibo.gates):
             try:
-                # check whether the gate was defined by the user
-                gates = self.defined_gates.get(gate.name.name).get_gates(
-                    qubits, init_args
-                )
-            except:
+                gates = [
+                    getattr(qibo.gates, _qibo_gate_name(gate.name.name))(
+                        *qubits, *init_args
+                    )
+                ]
+            # the gate exists in qibo.gates but invalid construction
+            except TypeError:
                 raise_error(
                     ValueError, f"Invalid gate declaration at span: {gate.span}"
                 )
+        # check whether the gate was defined by the user
+        elif gate.name.name in self.defined_gates:
+            try:
+                gates = self.defined_gates.get(gate.name.name).get_gates(
+                    qubits, init_args
+                )
+            # the gate exists in self.defined_gates but invalid construction
+            except TypeError:
+                raise_error(
+                    ValueError, f"Invalid gate declaration at span: {gate.span}"
+                )
+        # undefined gate
+        else:
+            raise_error(ValueError, f"Undefined gate at span: {gate.span}")
         return gates
 
     def _unroll_expression(self, expr):
         """Unrolls an argument definition expression to retrieve the
         complete argument as a string."""
-        try:
+        # check whether the expression is a simple string, e.g. `pi` or `theta`
+        if "name" in dir(expr):
             return expr.name
-        except:
-            try:
-                return expr.value
-            except:
-                expr_dict = {}
-                for attr in ("lhs", "op", "expression", "rhs"):
-                    expr_dict[attr] = ""
-                    try:
-                        val = self._unroll_expression(getattr(expr, attr))
-                    except:
-                        continue
-                    expr_dict[attr] += str(val)
-                return "".join(list(expr_dict.values()))
+        # check whether the expression is a single value, e.g. `0.1234`
+        elif "value" in dir(expr):
+            return expr.value
+        # the expression is composite, e.g. `2*pi` or `3*theta/2`
+        else:
+            expr_dict = {}
+            for attr in ("lhs", "op", "expression", "rhs"):
+                expr_dict[attr] = ""
+                if attr in dir(expr):
+                    val = self._unroll_expression(getattr(expr, attr))
+                else:
+                    continue
+                expr_dict[attr] += str(val)
+            return "".join(list(expr_dict.values()))
 
     def _def_gate(self, definition):
         """Converts a :class:`openqasm3.ast.QuantumGateDefinition` statement
