@@ -230,7 +230,7 @@ class QASMParser:
                     qubits, init_args
                 )
             # the gate exists in self.defined_gates but invalid construction
-            except TypeError:
+            except ValueError:
                 raise_error(
                     ValueError, f"Invalid gate declaration at span: {gate.span}"
                 )
