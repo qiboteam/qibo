@@ -488,7 +488,7 @@ rx(0.123)(0.25)(0) q[0];
         c = Circuit.from_qasm(target)
 
 
-def test_from_qasm_gate_command():
+def test_from_qasm_gate_command(backend):
     target = """OPENQASM 2.0;
 include "qelib1.inc";
 gate bob(theta,alpha) q0,q1 { h q1; cx q0,q1; rz(theta) q1; rx(alpha) q0; h q1; }
@@ -497,18 +497,26 @@ qreg q[3];
 bob(-pi/2,pi) q[0],q[2];
 alice q[1],q[0];"""
     c = Circuit.from_qasm(target)
-    for i in range(2):
-        assert isinstance(c.queue[0 + 5 * i], gates.H)
-        assert isinstance(c.queue[1 + 5 * i], gates.CNOT)
-        assert isinstance(c.queue[2 + 5 * i], gates.RZ)
-        assert isinstance(c.queue[3 + 5 * i], gates.RX)
-        assert isinstance(c.queue[4 + 5 * i], gates.H)
-    assert isinstance(c.queue[10], gates.X)
-    assert isinstance(c.queue[11], gates.H)
-    assert isinstance(c.queue[12], gates.CNOT)
-    assert isinstance(c.queue[13], gates.RZ)
-    assert isinstance(c.queue[14], gates.RX)
-    assert isinstance(c.queue[15], gates.H)
+    print(c.draw())
+
+    def bob(theta, alpha, q0, q1):
+        gate = gates.FusedGate(q0, q1)
+        gate.append(gates.H(q1))
+        gate.append(gates.CNOT(q0, q1))
+        gate.append(gates.RZ(q1, theta=theta))
+        gate.append(gates.RX(q0, theta=alpha))
+        gate.append(gates.H(q1))
+        return gate
+
+    def alice(q0, q1):
+        gate = gates.FusedGate(q0, q1)
+        gate.append(bob(np.pi / 4, np.pi, q0, q1))
+        gate.append(gates.X(q0))
+        gate.append(bob(-np.pi / 4, np.pi / 2, q0, q1))
+        return gate
+
+    backend.assert_allclose(c.queue[0].matrix(), bob(-np.pi / 2, np.pi, 0, 2).matrix())
+    backend.assert_allclose(c.queue[1].matrix(), alice(1, 0).matrix())
 
 
 def test_from_qasm_unsupported_statement():
