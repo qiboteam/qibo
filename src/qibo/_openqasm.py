@@ -2,10 +2,12 @@
 
 from typing import Union
 
+import numpy as np
 import openqasm3
 
 import qibo
 from qibo.config import raise_error
+from qibo.gates import FusedGate
 
 
 class DefinedGate:
@@ -145,7 +147,7 @@ class QASMParser:
 
     def _get_gate(self, gate):
         """Converts a :class:`openqasm3.ast.QuantumGate` statement
-        into :class:`qibo.gates.measurements.M`."""
+        into :class:`qibo.gates.Gate`."""
         qubits = [self._get_qubit(q) for q in gate.qubits]
         init_args = []
         for arg in gate.arguments:
@@ -155,6 +157,7 @@ class QASMParser:
             except:
                 pass
             init_args.append(arg)
+        # check whether the gate exists in qibo.gates already
         try:
             gates = [
                 getattr(qibo.gates, _qibo_gate_name(gate.name.name))(
@@ -163,6 +166,7 @@ class QASMParser:
             ]
         except:
             try:
+                # check whether the gate was defined by the user
                 gates = self.defined_gates.get(gate.name.name).get_gates(
                     qubits, init_args
                 )
