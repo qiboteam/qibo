@@ -85,11 +85,9 @@ class PyTorchBackend(NumpyBackend):
         """
         if dtype is None:
             dtype = self.dtype
-        elif isinstance(dtype, self.np.dtype):
-            dtype = dtype
         elif isinstance(dtype, type):
             dtype = torch_dtype_dict[dtype.__name__]
-        else:
+        elif not isinstance(dtype, torch.dtype):
             dtype = torch_dtype_dict[str(dtype)]
 
         if isinstance(x, self.np.Tensor):

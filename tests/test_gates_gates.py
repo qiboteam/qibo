@@ -436,9 +436,10 @@ def test_u3(backend, seed_state, seed_observable):
         backend.cast(np.transpose(np.conj(final_state_decompose)))
         @ observable
         @ final_state_decompose,
-        backend.cast(np.transpose(np.conj(target_state))) @ observable @ target_state,
+        backend.cast(np.transpose(np.conj(target_state)))
+        @ observable
+        @ backend.cast(target_state),
     )
-
     assert gates.U3(0, theta, phi, lam).qasm_label == "u3"
     assert not gates.U3(0, theta, phi, lam).clifford
     assert gates.U3(0, theta, phi, lam).unitary
@@ -527,7 +528,9 @@ def test_cy(backend, controlled_by, seed_state, seed_observable):
         backend.cast(np.transpose(np.conj(final_state_decompose)))
         @ observable
         @ final_state_decompose,
-        backend.cast(np.transpose(np.conj(target_state))) @ observable @ target_state,
+        backend.cast(np.transpose(np.conj(target_state)))
+        @ observable
+        @ backend.cast(target_state),
     )
 
     assert gates.CY(0, 1).qasm_label == "cy"
@@ -571,7 +574,9 @@ def test_cz(backend, controlled_by, seed_state, seed_observable):
         backend.cast(np.transpose(np.conj(final_state_decompose)))
         @ observable
         @ final_state_decompose,
-        backend.cast(np.transpose(np.conj(target_state))) @ observable @ target_state,
+        backend.cast(np.transpose(np.conj(target_state)))
+        @ observable
+        @ backend.cast(target_state),
     )
 
     assert gates.CZ(0, 1).qasm_label == "cz"
