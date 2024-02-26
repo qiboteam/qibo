@@ -487,6 +487,18 @@ rx(0.123)(0.25)(0) q[0];
     with pytest.raises(parser.QASM3ParsingError):
         c = Circuit.from_qasm(target)
 
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[3];
+gate bob(theta,alpha) q0,q1 { h q1; cx q0,q1; rz(theta) q1; rx(alpha) q0; h q1; }
+"""
+
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(f"{target}bob(0.1, 0.2, 0.3) q[1],q[0];")
+
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(f"{target}bob(0.1, 0.2) q[1],q[0],q[2];")
+
 
 def test_from_qasm_gate_command(backend):
     target = """OPENQASM 2.0;
@@ -497,7 +509,6 @@ qreg q[3];
 bob(-pi/2,pi) q[0],q[2];
 alice q[1],q[0];"""
     c = Circuit.from_qasm(target)
-    print(c.draw())
 
     def bob(theta, alpha, q0, q1):
         gate = gates.FusedGate(q0, q1)

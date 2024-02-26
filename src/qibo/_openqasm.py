@@ -42,6 +42,16 @@ class DefinedGate:
         Returns:
             :class:`qibo.gates.special.FusedGate`: the composed gate evaluated on the input qubits with the input arguments.
         """
+        if len(self.args) != len(args):
+            raise_error(
+                ValueError,
+                f"Invalid `args` argument passed to the user-defined gate `{self.name}` upon construction. {args} was passed but something of the form {self.args} is expected.",
+            )
+        elif len(self.qubits) != len(qubits):
+            raise_error(
+                ValueError,
+                f"Invalid `qubits` argument passed to the user-defined gate `{self.name}` upon construction. {qubits} was passed but something of the form {self.qubits} is expected.",
+            )
         qubit_map = dict(zip(self.qubits, qubits))
         args_map = dict(zip(self.args, args))
         return self._construct_fused_gate(self.gates, qubits, qubit_map, args_map)
