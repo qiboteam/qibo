@@ -5,7 +5,6 @@ from functools import partial
 import hyperopt
 import numpy as np
 
-from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
 
@@ -33,13 +32,12 @@ class DoubleBracketIteration:
     Example:
         .. testcode::
 
-            import numpy as np
             from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
-            from qibo.hamiltonians import Hamiltonian
             from qibo.quantum_info import random_hermitian
+            from qibo.hamiltonians import Hamiltonian
 
             nqubits = 4
-            h0 = random_hermitian(2**nqubits)
+            h0 = random_hermitian(2**nqubits, seed=2)
             dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
             # diagonalized matrix
@@ -68,14 +66,14 @@ class DoubleBracketIteration:
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+                d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+                d = self.diagonal_h_matrix
             operator = (
                 self.h.exp(-step)
                 @ self.backend.calculate_matrix_exp(-step, d)
@@ -103,12 +101,12 @@ class DoubleBracketIteration:
 
     @property
     def off_diagonal_norm(self):
-        """Norm of off-diagonal part of H matrix."""
+        r"""Hilbert Schmidt norm of off-diagonal part of H matrix, namely :math:`\\text{Tr}(\\sqrt{A^{\\dagger} A})`."""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
-        return np.real(
-            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
+        return np.sqrt(
+            np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h)))
         )
 
     @property
@@ -125,6 +123,7 @@ class DoubleBracketIteration:
         optimizer: callable = None,
         look_ahead: int = 1,
         verbose: bool = False,
+        d: np.array = None,
     ):
         """
         Optimize iteration step.
@@ -136,7 +135,8 @@ class DoubleBracketIteration:
             space: see hyperopt.hp possibilities;
             optimizer: see hyperopt algorithms;
             look_ahead: number of iteration steps to compute the loss function;
-            verbose: level of verbosity.
+            verbose: level of verbosity;
+            d: diagonal operator for generating double-bracket iterations.
 
         Returns:
             (float): optimized best iteration step.
@@ -148,28 +148,28 @@ class DoubleBracketIteration:
 
         space = space("step", step_min, step_max)
         best = hyperopt.fmin(
-            fn=partial(self.loss, look_ahead=look_ahead),
+            fn=partial(self.loss, d=d, look_ahead=look_ahead),
             space=space,
             algo=optimizer.suggest,
             max_evals=max_evals,
             verbose=verbose,
         )
-
         return best["step"]
 
-    def loss(self, step: float, look_ahead: int = 1):
+    def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
         Compute loss function distance between `look_ahead` steps.
 
         Args:
             step: iteration step.
+            d: diagonal operator, use canonical by default.
             look_ahead: number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
         h_copy = deepcopy(self.h)
 
         for _ in range(look_ahead):
-            self.__call__(mode=self.mode, step=step)
+            self.__call__(mode=self.mode, step=step, d=d)
 
         # off_diagonal_norm's value after the steps
         loss = self.off_diagonal_norm
