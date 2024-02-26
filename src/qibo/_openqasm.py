@@ -1,5 +1,6 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
+from itertools import repeat
 from typing import Union
 
 import numpy as np
@@ -163,7 +164,12 @@ class QASMParser:
                 self.c_registers.update({name: list(range(size))})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
-        circ = qibo.Circuit(nqubits, accelerators, density_matrix)
+        circ = qibo.Circuit(
+            nqubits,
+            accelerators,
+            density_matrix,
+            wire_names=self._construct_wire_names(),
+        )
         for gate in gates:
             circ.add(gate)
         self._reorder_registers(circ.measurements)
@@ -268,3 +274,14 @@ class QASMParser:
         gates according to the classical registers order defined in the QASM program."""
         for meas in measurements:
             meas.target_qubits = [self.c_registers[meas.register_name].pop(0)]
+
+    def _construct_wire_names(self):
+        """Builds the wires names from the declared quantum registers."""
+        wire_names = []
+        for reg_name, reg_qubits in self.q_registers.items():
+            wires = sorted(
+                zip(repeat(reg_name, len(reg_qubits)), reg_qubits), key=lambda x: x[1]
+            )
+            for wire in wires:
+                wire_names.append(f"{wire[0]}{wire[1]}")
+        return wire_names
