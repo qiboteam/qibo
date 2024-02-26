@@ -54,20 +54,14 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = (
-        backend.torch.sum(prob_dist) if backend.name == "pytorch" else np.sum(prob_dist)
-    )
+    total_sum = backend.np.sum(prob_dist)
 
     if np.abs(total_sum - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     log_prob = np.where(prob_dist != 0, np.log2(prob_dist) / np.log2(base), 0.0)
 
-    shan_entropy = (
-        -backend.torch.sum(prob_dist * log_prob)
-        if backend.name == "pytorch"
-        else -np.sum(prob_dist * log_prob)
-    )
+    shan_entropy = -backend.np.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
@@ -127,16 +121,10 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
             ValueError,
             "All elements of the probability array must be between 0. and 1..",
         )
-    total_sum_p = (
-        backend.torch.sum(prob_dist_p)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist_p)
-    )
-    total_sum_q = (
-        backend.torch.sum(prob_dist_q)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist_q)
-    )
+    total_sum_p = backend.np.sum(prob_dist_p)
+
+    total_sum_q = backend.np.sum(prob_dist_q)
+
     if np.abs(total_sum_p - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
 
@@ -151,11 +139,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     log_prob = np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
 
-    relative = (
-        backend.torch.sum(prob_dist_p * log_prob)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist_p * log_prob)
-    )
+    relative = backend.np.sum(prob_dist_p * log_prob)
 
     return entropy_p - relative
 
@@ -228,9 +212,7 @@ def classical_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = (
-        backend.torch.sum(prob_dist) if backend.name == "pytorch" else np.sum(prob_dist)
-    )
+    total_sum = backend.np.sum(prob_dist)
 
     if np.abs(total_sum - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -244,11 +226,7 @@ def classical_renyi_entropy(
     if alpha == np.inf:
         return -1 * np.log2(max(prob_dist)) / np.log2(base)
 
-    total_sum = (
-        backend.torch.sum(prob_dist**alpha)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist**alpha)
-    )
+    total_sum = backend.np.sum(prob_dist**alpha)
 
     renyi_ent = (1 / (1 - alpha)) * np.log2(total_sum) / np.log2(base)
 
@@ -332,16 +310,8 @@ def classical_relative_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum_p = (
-        backend.torch.sum(prob_dist_p)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist_p)
-    )
-    total_sum_q = (
-        backend.torch.sum(prob_dist_q)
-        if backend.name == "pytorch"
-        else np.sum(prob_dist_q)
-    )
+    total_sum_p = backend.np.sum(prob_dist_p)
+    total_sum_q = backend.np.sum(prob_dist_q)
 
     if np.abs(total_sum_p - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
@@ -351,11 +321,8 @@ def classical_relative_renyi_entropy(
 
     if alpha == 0.5:
         total_sum = np.sqrt(prob_dist_p * prob_dist_q)
-        total_sum = (
-            backend.torch.sum(total_sum)
-            if backend.name == "pytorch"
-            else np.sum(total_sum)
-        )
+        total_sum = backend.np.sum(total_sum)
+
         return -2 * np.log2(total_sum) / np.log2(base)
 
     if alpha == 1.0:
@@ -369,11 +336,7 @@ def classical_relative_renyi_entropy(
     prob_p = prob_dist_p**alpha
     prob_q = prob_dist_q ** (1 - alpha)
 
-    total_sum = (
-        backend.torch.sum(prob_p * prob_q)
-        if backend.name == "pytorch"
-        else np.sum(prob_p * prob_q)
-    )
+    total_sum = backend.np.sum(prob_p * prob_q)
 
     return (1 / (alpha - 1)) * np.log2(total_sum) / np.log2(base)
 
@@ -431,9 +394,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = (
-        backend.torch.sum(prob_dist) if backend.name == "pytorch" else np.sum(prob_dist)
-    )
+    total_sum = backend.np.sum(prob_dist)
 
     if np.abs(total_sum - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -442,9 +403,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
     total_sum = prob_dist**alpha
-    total_sum = (
-        backend.torch.sum(total_sum) if backend.name == "pytorch" else np.sum(total_sum)
-    )
+    total_sum = backend.np.sum(total_sum)
 
     return (1 / (1 - alpha)) * (total_sum - 1)
 

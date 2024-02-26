@@ -1178,14 +1178,12 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
-    kron = backend.torch.kron if backend.name == "pytorch" else np.kron
-
     if order == "row":
-        operator = kron(
+        operator = backend.np.kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = kron(
+        operator = backend.np.kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 

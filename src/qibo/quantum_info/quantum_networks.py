@@ -633,9 +633,7 @@ class QuantumNetwork:
         """Sets tensor based on inputs."""
         self._backend = _check_backend(self._backend)
 
-        self._einsum = (
-            self._backend.torch.einsum if self._backend.name == "pytorch" else np.einsum
-        )
+        self._einsum = self._backend.np.einsum
 
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
