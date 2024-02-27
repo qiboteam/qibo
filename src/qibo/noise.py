@@ -272,13 +272,28 @@ class NoiseModel:
         if isinstance(qubits, int):
             qubits = (qubits,)
 
-        if condition is not None and not callable(condition):
-            raise TypeError(
-                "condition should be callable. Got {} instead."
-                "".format(type(condition))
+        if (
+            conditions is not None
+            and not callable(conditions)
+            and not isinstance(conditions, list)
+        ):
+            raise_error(
+                TypeError,
+                f"`conditions` should be  either a callable or a list of callables. Got {type(conditions)} instead.",
             )
-        else:
-            self.errors[gate].append((condition, error, qubits))
+
+        if isinstance(conditions, list) and not all(
+            callable(condition) for condition in conditions
+        ):
+            raise_error(
+                TypeError,
+                f"A element of `conditions` list is not a callable.",
+            )
+
+        if callable(conditions):
+            conditions = [conditions]
+
+        self.errors[gate].append((conditions, error, qubits))
 
     # def composite(self, params):
     #     """Build a noise model to simulate the noisy behaviour of a quantum computer.
@@ -326,12 +341,16 @@ class NoiseModel:
             )
             if all(not isinstance(error, ReadoutError) for _, error, _ in errors_list):
                 noisy_circuit.add(gate)
-            for condition, error, qubits in errors_list:
-                if condition is None or condition(gate):
-                    if qubits is None:
-                        qubits = gate.qubits
-                    else:
-                        qubits = tuple(set(gate.qubits) & set(qubits))
+            for conditions, error, qubits in errors_list:
+                if conditions is None or all(
+                    condition(gate) for condition in conditions
+                ):
+                    qubits = (
+                        gate.qubits
+                        if qubits is None
+                        else tuple(set(gate.qubits) & set(qubits))
+                    )
+
                     if len(qubits) == 0:
                         continue
 
@@ -357,12 +376,23 @@ class NoiseModel:
                     else:
                         noisy_circuit.add(error.channel(qubits, error.options))
 
-            for x in noisy_circuit.queue:
-                print(x.name, x.qubits, x.init_args)
-            print()
-            print()
-
         return noisy_circuit
+
+
+class _ConditionQubits:
+    def __init__(self, qubits=None):
+        self.qubits = qubits
+
+    def condition_qubits(self, gate):
+        return gate.qubits == self.qubits
+
+    def condition_gate_single(self, gate):
+        """Condition that had to be matched to apply noise channel to single-qubit ``gate``."""
+        return len(gate.qubits) == 1
+
+    def condition_gate_two(self, gate):
+        """Condition that had to be matched to apply noise channel to two-qubit ``gate``."""
+        return len(gate.qubits) == 2
 
 
 class IBMQNoiseModel(NoiseModel):
@@ -458,15 +488,14 @@ class IBMQNoiseModel(NoiseModel):
     def __init__(self):
         super().__init__()
 
-    def _condition_single_qubit_gate(self, gate):
-        """Condition that had to be matched to apply noise channel to single-qubit ``gate``."""
-        return len(gate.qubits) == 1
+    # def _condition_single_qubit_gate(self, gate):
 
-    def _condition_two_qubit_gate(self, gate):
-        """Condition that had to be matched to apply noise channel to two-qubit ``gate``."""
-        return len(gate.qubits) == 2
+    #     return len(gate.qubits) == 1
 
-    def add(self, parameters):
+    # def _condition_two_qubit_gate(self, gate):
+    #     return len(gate.qubits) == 2
+
+    def from_dict(self, parameters):
         self.parameters = parameters
         t_1 = self.parameters["t1"]
         t_2 = self.parameters["t2"]
@@ -474,53 +503,70 @@ class IBMQNoiseModel(NoiseModel):
         excited_population = self.parameters["excited_population"]
         depolarizing_one_qubit = self.parameters["depolarizing_one_qubit"]
         depolarizing_two_qubit = self.parameters["depolarizing_two_qubit"]
-        bitflips_01, bitflips_10 = self.parameters["bitflips_error"]
+        readout_one_qubit = self.parameters["readout_one_qubit"]
 
         for qubit_key, lamb in depolarizing_one_qubit.items():
-            super().add(
+            self.add(
                 DepolarizingError(lamb),
                 qubits=int(qubit_key),
-                condition=self._condition_single_qubit_gate,
+                conditions=_ConditionQubits().condition_gate_single,
             )
 
         if isinstance(depolarizing_two_qubit, (float, int)):
-            super().add(
+            self.add(
                 DepolarizingError(depolarizing_two_qubit),
-                condition=self._condition_two_qubit_gate,
+                conditions=_ConditionQubits().condition_gate_two,
             )
-        elif isinstance(depolarizing_two_qubit, dict):
+
+        if isinstance(depolarizing_two_qubit, dict):
             for key, lamb in depolarizing_two_qubit.items():
                 qubits = key.replace(" ", "").split("-")
                 qubits = tuple(map(int, qubits))
-                super().add(
+                self.add(
                     DepolarizingError(lamb),
                     qubits=qubits,
-                    condition=self._condition_two_qubit_gate,
+                    conditions=[
+                        _ConditionQubits().condition_gate_two,
+                        _ConditionQubits(qubits).condition_qubits,
+                    ],
                 )
 
         for qubit_key in t_1.keys():
-            super().add(
+            self.add(
                 ThermalRelaxationError(
                     t_1[qubit_key], t_2[qubit_key], gate_time_1, excited_population
                 ),
                 qubits=int(qubit_key),
-                condition=self._condition_single_qubit_gate,
+                conditions=_ConditionQubits().condition_gate_single,
             )
-            super().add(
+            self.add(
                 ThermalRelaxationError(
                     t_1[qubit_key], t_2[qubit_key], gate_time_2, excited_population
                 ),
                 qubits=int(qubit_key),
-                condition=self._condition_two_qubit_gate,
+                conditions=_ConditionQubits().condition_gate_two,
             )
 
-        for qubit, (p_01, p_10) in enumerate(zip(bitflips_01, bitflips_10)):
-            probabilities = [[1 - p_01, p_01], [p_10, 1 - p_10]]
-            super().add(
-                ReadoutError(probabilities),
-                gate=gates.M,
-                qubits=qubit,
-            )
+        if isinstance(readout_one_qubit, (int, float)):
+            probabilities = [
+                [1 - readout_one_qubit, readout_one_qubit],
+                [readout_one_qubit, 1 - readout_one_qubit],
+            ]
+            self.add(ReadoutError(probabilities), gate=gates.M)
+
+        if isinstance(readout_one_qubit, dict):
+            for qubit, probs in readout_one_qubit.items():
+                if isinstance(probs, (int, float)):
+                    probs = (probs, probs)
+                elif isinstance(probs, (tuple, list)) and len(probs) == 1:
+                    probs *= 2
+
+                probabilities = [[1 - probs[0], probs[0]], [probs[1], 1 - probs[1]]]
+                self.add(
+                    ReadoutError(probabilities),
+                    gate=gates.M,
+                    qubits=int(qubit),
+                )
 
 
 # %%
@@ -533,25 +579,22 @@ parameters = {
     "gate_time": (0.1, 0.2),
     "excited_population": 0.1,
     "depolarizing_one_qubit": {"0": 0.1, "1": 0.1, "3": 0.1},
-    "depolarizing_two_qubit": {"0-1": 0.1},  # "1-2": 0.2, "2-3": 0.3},
-    # "depolarizing_two_qubit": 0.2,
-    "bitflips_error": ([0.1 for _ in range(nqubits)], [0.1 for _ in range(4)]),
+    "depolarizing_two_qubit": {"0-1": 0.1, "2-3": 0.3},
+    "readout_one_qubit": {"0": (0.1, 0.1), "1": 0.1, "3": [0.1, 0.1]},
+    # "readout_one_qubit": 0.1,
 }
 
 noise_model = IBMQNoiseModel()
-noise_model.add(parameters)
+noise_model.from_dict(parameters)
 
 phases = list(range(nqubits))
 circuit = phase_encoder(phases, rotation="RY")
 circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
-circuit.add(gates.M(qubit) for qubit in range(1, nqubits - 1))
+circuit += phase_encoder(phases, rotation="RY")
+circuit.add(gates.M(qubit) for qubit in range(0, nqubits - 1))
 
 noisy_circuit = noise_model.apply(circuit)
 print(noisy_circuit.draw())
-
-# %%
-for gate in noisy_circuit.queue:
-    print(gate.name, gate.qubits)
 
 
 # %%
@@ -603,6 +646,3 @@ noise_model.add(ReadoutError(probabilities), gate=gates.M)
 noisy_circuit = noise_model.apply(circuit)
 
 print(noisy_circuit.draw())
-
-# %%
-"3- 4".replace(" ", "").split("-")
