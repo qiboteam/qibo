@@ -322,19 +322,6 @@ class NoiseModel:
             if all(not isinstance(error, ReadoutError) for _, error, _ in errors_list):
                 noisy_circuit.add(gate)
 
-            if gate.name == "measure":
-                readout_error_qubits = [
-                    qubits
-                    for _, error, qubits in errors_list
-                    if isinstance(error, ReadoutError)
-                ]
-                if (
-                    gate.qubits not in readout_error_qubits
-                    and gate.register_name
-                    not in noisy_circuit.measurement_tuples.keys()
-                ):
-                    noisy_circuit.add(gate)
-
             for conditions, error, qubits in errors_list:
                 if conditions is None or all(
                     condition(gate) for condition in conditions
@@ -369,6 +356,19 @@ class NoiseModel:
                         noisy_circuit.add(gate)
                     else:
                         noisy_circuit.add(error.channel(qubits, error.options))
+
+            if gate.name == "measure":
+                readout_error_qubits = [
+                    qubits
+                    for _, error, qubits in errors_list
+                    if isinstance(error, ReadoutError)
+                ]
+                if (
+                    gate.qubits not in readout_error_qubits
+                    and gate.register_name
+                    not in noisy_circuit.measurement_tuples.keys()
+                ):
+                    noisy_circuit.add(gate)
 
         return noisy_circuit
 
