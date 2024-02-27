@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibo import gates, models
-from qibo.quantum_info import hellinger_fidelity
+from qibo.quantum_info.utils import hellinger_fidelity, hellinger_shot_error
 
 
 def noisy_circuit(circuit, params):
@@ -198,28 +198,6 @@ def freq_to_prob(freq):
         index = "{:b}".format(k).zfill(nqubits)
         prob[k] = freq[index] / norm
     return prob
-
-
-def hellinger_shot_error(p, q, nshots):
-    """Hellinger fidelity error caused by using two probability distributions estimated using a finite number of shots.
-    It is calculated propagating the probability error of each state of the system. The complete formula is:
-    :math:`(1 - H^{2}(p, q))/\\sqrt{nshots} * \\sum_{i=1}^{n}(\\sqrt{p_i(1-q_i)}+\\sqrt{q_i(1-p_i)})`
-    where the sum is made all over the possible states and :math:`H(p, q)` is the Hellinger distance.
-
-       Args:
-           p (numpy.ndarray): (discrete) probability distribution :math:`p`.
-           q (numpy.ndarray): (discrete) probability distribution :math:`q`.
-           nshots (int): the number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
-
-       Returns:
-           (float): The Hellinger fidelity error.
-
-    """
-    hellinger_fid = hellinger_fidelity(p, q)
-    hellinger_fid_e = np.sqrt(hellinger_fid / nshots) * np.sum(
-        np.sqrt(q * (1 - p)) + np.sqrt(p * (1 - q))
-    )
-    return hellinger_fid_e
 
 
 def loss(parameters, *args):
