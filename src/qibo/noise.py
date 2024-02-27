@@ -260,7 +260,7 @@ class NoiseModel:
             # Build a noise model with a Pauli error on RX(pi/2) gates.
             error = PauliError(list(zip(["X", "Y", "Z"], [0.01, 0.5, 0.1])))
             noise = NoiseModel()
-            noise.add(PauliError([("X", 0.5)]), gates.RX, condition=is_sqrt_x)
+            noise.add(PauliError([("X", 0.5)]), gates.RX, conditions=is_sqrt_x)
 
             # Generate a noiseless circuit.
             circuit = Circuit(1)
@@ -328,7 +328,11 @@ class NoiseModel:
                     for _, error, qubits in errors_list
                     if isinstance(error, ReadoutError)
                 ]
-                if gate.qubits not in readout_error_qubits:
+                if (
+                    gate.qubits not in readout_error_qubits
+                    and gate.register_name
+                    not in noisy_circuit.measurement_tuples.keys()
+                ):
                     noisy_circuit.add(gate)
 
             for conditions, error, qubits in errors_list:

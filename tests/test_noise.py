@@ -530,11 +530,11 @@ def test_add_condition(backend, density_matrix):
     reset = ResetError(0.8, 0.2)
     thermal = ThermalRelaxationError(2, 1, 0.3)
     noise = NoiseModel()
-    noise.add(reset, gates.RX, condition=condition_pi_2)
-    noise.add(thermal, gates.RX, condition=condition_3_pi_2)
+    noise.add(reset, gates.RX, conditions=condition_pi_2)
+    noise.add(thermal, gates.RX, conditions=condition_3_pi_2)
 
     with pytest.raises(TypeError):
-        noise.add(reset, gates.RX, condition=2)
+        noise.add(reset, gates.RX, conditions=2)
 
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(gates.RX(0, np.pi))

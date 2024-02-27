@@ -999,7 +999,7 @@ Here is an example on how to use a noise model:
       noise.add(PauliError([("X", 0.5)]), gates.H, 1)
       noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
       is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
-      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, condition=is_sqrt_x)
+      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, conditions=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
