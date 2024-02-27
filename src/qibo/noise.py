@@ -438,7 +438,7 @@ class IBMQNoiseModel(NoiseModel):
                         all qubits share the same single-qubit depolarizing parameter.
                         If ``dict``, expects qubit indexes as keys and their respective
                         depolarizing parameter as values.
-                        See :class:`qibo.gates.channels.DepolarizingErrorChannel`
+                        See :class:`qibo.gates.channels.DepolarizingChannel`
                         for a detailed definition of depolarizing parameter.
                     - ``depolarizing_two_qubit`` (int or float or dict):  If ``int`` or ``float``,
                         all two-qubit gates share the same two-qubit depolarizing parameter
@@ -446,7 +446,7 @@ class IBMQNoiseModel(NoiseModel):
                         If ``dict``, expects pair qubit indexes as keys separated by a hiphen
                          (e.g. "0-1" for gate that has "0" as control and "1" as target)
                          and their respective depolarizing parameter as values.
-                        See :class:`qibo.gates.channels.DepolarizingErrorChannel`
+                        See :class:`qibo.gates.channels.DepolarizingChannel`
                         for a detailed definition of depolarizing parameter.
                     - ``t1`` (int or float or dict): If ``int`` or ``float``, all qubits share the
                         same ``t1``. If ``dict``, expects qubit indexes as keys and its
@@ -460,6 +460,17 @@ class IBMQNoiseModel(NoiseModel):
                         See :class:`qibo.gates.channels.ThermalRelaxationChannel`
                         for a detailed definition of ``t2``.
                         Note that ``t2`` and ``t1`` must be passed with the same type.
+                    - ``gate_times`` (tuple or list): pair of gate times representing
+                        gate times for :class:`ThermalRelaxationError` following, respectively,
+                        one- and two-qubit gates.
+                    - ``excited_population``(int or float): See :class:`ThermalRelaxationChannel`.
+                    - ``readout_one_qubit`` (int or float or dict): If ``int`` or ``float``,
+                        :math:`p(0|1) = p(1|0)`, and all qubits share the same readout error
+                        probabilities. If ``dict``, expects qubit indexes as keys and
+                        values as ``tuple`` (or ``list``) in the format :math:`(p(0|1),\\,p(1|0))`.
+                        If values are ``tuple`` or ``list`` of length 1 or ``float`` or ``int``,
+                        then it is assumed that :math:`p(0|1) = p(1|0)`.
+
         """
         self.parameters = parameters
         t_1 = self.parameters["t1"]
@@ -512,7 +523,8 @@ class IBMQNoiseModel(NoiseModel):
                 ThermalRelaxationError(t_1, t_2, gate_time_2, excited_population),
                 conditions=_ConditionQubits().condition_gate_two,
             )
-        else:
+
+        if isinstance(t_1, dict) and isinstance(t_2, dict):
             for qubit_key in t_1.keys():
                 self.add(
                     ThermalRelaxationError(
