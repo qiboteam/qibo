@@ -88,12 +88,15 @@ def reset_register(circuit, invert_register):
     """
     valid_registers = [(0,), (1,), (0, 1)]
     if invert_register is not None:
-        if not isinstance(invert_register, tuple) or invert_register not in valid_registers:
+        if (
+            not isinstance(invert_register, tuple)
+            or invert_register not in valid_registers
+        ):
             raise_error(
                 NameError,
                 f"{invert_register} not recognized.",
             )
-            
+
         elif invert_register == (0,) or invert_register == (1,):
             register_to_reset = invert_register[0]
             new_circ = Circuit(1)
@@ -231,7 +234,10 @@ def execute_GST(
     # Check if invert_register has the correct register(s).
     valid_registers = [(0,), (1,), (0, 1)]
     if invert_register is not None:
-        if not isinstance(invert_register, tuple) or invert_register not in valid_registers:
+        if (
+            not isinstance(invert_register, tuple)
+            or invert_register not in valid_registers
+        ):
             raise_error(
                 NameError,
                 f"{invert_register} not recognized.",

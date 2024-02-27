@@ -160,7 +160,7 @@ def test_reset_register_valid_tuple_1qb():
 
     invert_register = (0,)
     inverse_circuit = reset_register(test_circuit, invert_register)
-    
+
     correct_gates = [
         [gates.H(0)],
     ]
