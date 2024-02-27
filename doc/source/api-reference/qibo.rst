@@ -2431,7 +2431,7 @@ By characterizing the impact of noise on quantum gates, GST enables the identifi
 
 The GST functionalities are encapsulated in the :class:`qibo.tomography.gate_set_tomography` module, providing users with versatile tools to perform gate set tomography on quantum circuits. This module includes functions for calibrating an empty circuit, as well as conducting gate set tomography for one and two qubits.
 
-To illustrate the usage of GST functions, we provide examples of how to conduct GST for single qubit gates and two qubit gates. If no gate is specified, then GST serves to calibrate the circuit. 
+To illustrate the usage of GST functions, we provide examples of how to conduct GST for single qubit gates and two qubit gates. If no gate is specified, then GST serves to calibrate the circuit.
 
 References:
 
@@ -2496,7 +2496,7 @@ For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`
 Two qubits example
 ^^^^^^^^^^^^^^^^^^
 
-As another example, Suppose we want to do gate set tomography for two 
+As another example, Suppose we want to do gate set tomography for two
 scenarios: (1) Empty circuit (two qubit circuit); and (2) :math:`\text{CNOT}`
 gate. This is how we use the function ``execute_GST()`` for both scenarios
 individually. We will also import depolarizing noise as an example again.
