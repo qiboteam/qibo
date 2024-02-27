@@ -258,14 +258,13 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     .. math::
         (1 - H^{2}(p, q))^{2} \\, ,
 
-    where :math:`H(p, q)` is the Hellinger distance
-    (:func:`qibo.quantum_info.utils.hellinger_distance`).
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
         prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
-        validate (bool, optional): if True, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Default: False.
+        validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -274,9 +273,60 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
         (float): Hellinger fidelity.
 
     """
+    backend = _check_backend(backend)
+
     distance = hellinger_distance(prob_dist_p, prob_dist_q, validate, backend=backend)
 
     return (1 - distance**2) ** 2
+
+
+def hellinger_shot_error(
+    prob_dist_p, prob_dist_q, nshots: int, validate: bool = False, backend=None
+):
+    """Calculates the Hellinger fidelity error between two discrete probability distributions estimated from finite statistics.
+
+    It is calculated propagating the probability error of each state of the system.
+    The complete formula is:
+
+    .. math::
+        \\frac{1 - H^{2}(p, q)}{\\sqrt{nshots}} \\, \\sum_{k} \\,
+            \\left(\\sqrt{p_{k} \\, (1 - q_{k})} + \\sqrt{q_{k} \\, (1 - p_{k})}\\right)
+
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`,
+    and :math:`1 - H^{2}(p, q)` is the square root of the
+    :func:`qibo.quantum_info.utils.hellinger_fidelity`.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        nshots (int): number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
+        validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        (float): Hellinger fidelity error.
+
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    hellinger_error = hellinger_fidelity(
+        prob_dist_p, prob_dist_q, validate=validate, backend=backend
+    )
+    hellinger_error = np.sqrt(hellinger_error / nshots) * np.sum(
+        np.sqrt(prob_dist_q * (1 - prob_dist_p))
+        + np.sqrt(prob_dist_p * (1 - prob_dist_q))
+    )
+
+    return hellinger_error
 
 
 def haar_integral(
