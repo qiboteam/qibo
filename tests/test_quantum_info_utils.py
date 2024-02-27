@@ -4,9 +4,10 @@ from re import finditer
 import numpy as np
 import pytest
 
-from qibo import Circuit, matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
+from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
@@ -14,6 +15,7 @@ from qibo.quantum_info.utils import (
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
+    hellinger_shot_error,
     pqc_integral,
 )
 
@@ -173,6 +175,34 @@ def test_hellinger(backend, validate, kind):
 
     assert distance == target
     assert fidelity == (1 - target**2) ** 2
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("validate", [False, True])
+def test_hellinger_shot_error(backend, validate, kind):
+    nqubits, nshots = 5, 1000
+
+    circuit = random_clifford(nqubits, seed=1, backend=backend)
+    circuit.add(gates.M(qubit) for qubit in range(nqubits))
+
+    circuit_2 = random_clifford(nqubits, seed=2, backend=backend)
+    circuit_2.add(gates.M(qubit) for qubit in range(nqubits))
+
+    prob_dist_p = backend.execute_circuit(circuit, nshots=nshots).probabilities()
+    prob_dist_q = backend.execute_circuit(circuit_2, nshots=nshots).probabilities()
+
+    if kind is not None:
+        prob_dist_p = kind(prob_dist_p)
+        prob_dist_q = kind(prob_dist_q)
+
+    hellinger_error = hellinger_shot_error(
+        prob_dist_p, prob_dist_q, nshots, validate=validate, backend=backend
+    )
+    hellinger_fid = hellinger_fidelity(
+        prob_dist_p, prob_dist_q, validate=validate, backend=backend
+    )
+
+    assert 2 * hellinger_error < hellinger_fid
 
 
 def test_haar_integral_errors(backend):
