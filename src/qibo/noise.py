@@ -434,13 +434,14 @@ class IBMQNoiseModel(NoiseModel):
                 and :class:`qibo.noise.ReadoutError`.
 
                 The keys and values of the dictionary parameters are defined below:
-                - ``depolarizing_one_qubit`` (*int* or *float* or *dict*):  If ``int`` or
+
+                - ``"depolarizing_one_qubit"`` (*int* or *float* or *dict*):  If ``int`` or
                     ``float``, all qubits share the same single-qubit depolarizing parameter.
                     If ``dict``, expects qubit indexes as keys and their respective
                     depolarizing parameter as values.
                     See :class:`qibo.gates.channels.DepolarizingChannel`
                     for a detailed definition of depolarizing parameter.
-                - ``depolarizing_two_qubit`` (*int* or *float* or *dict*):  If ``int`` or
+                - ``"depolarizing_two_qubit"`` (*int* or *float* or *dict*):  If ``int`` or
                     ``float``, all two-qubit gates share the same two-qubit depolarizing
                     parameter regardless in which pair of qubits the two-qubit gate is acting on.
                     If ``dict``, expects pair qubit indexes as keys separated by a hiphen
@@ -448,23 +449,23 @@ class IBMQNoiseModel(NoiseModel):
                     and their respective depolarizing parameter as values.
                     See :class:`qibo.gates.channels.DepolarizingChannel`
                     for a detailed definition of depolarizing parameter.
-                - ``t1`` (*int* or *float* or *dict*): If ``int`` or ``float``, all qubits
+                - ``"t1"`` (*int* or *float* or *dict*): If ``int`` or ``float``, all qubits
                     share the same ``t1``. If ``dict``, expects qubit indexes as keys and its
                     respective ``t1`` as values.
                     See :class:`qibo.gates.channels.ThermalRelaxationChannel`
                     for a detailed definition of ``t1``.
                     Note that ``t1`` and ``t2`` must be passed with the same type.
-                - ``t1`` (*int* or *float* or *dict*): If ``int`` or ``float``, all qubits share
+                - ``"t2"`` (*int* or *float* or *dict*): If ``int`` or ``float``, all qubits share
                     the same ``t2``. If ``dict``, expects qubit indexes as keys and its
                     respective ``t2`` as values.
                     See :class:`qibo.gates.channels.ThermalRelaxationChannel`
                     for a detailed definition of ``t2``.
                     Note that ``t2`` and ``t1`` must be passed with the same type.
-                - ``gate_times`` (*tuple* or *list*): pair of gate times representing
+                - ``"gate_times"`` (*tuple* or *list*): pair of gate times representing
                     gate times for :class:`ThermalRelaxationError` following, respectively,
                     one- and two-qubit gates.
-                - ``excited_population`` (*int* or *float*): See :class:`ThermalRelaxationChannel`.
-                - ``readout_one_qubit`` (*int* or *float* or *dict*): If ``int`` or ``float``,
+                - ``"excited_population"`` (*int* or *float*): See :class:`ThermalRelaxationChannel`.
+                - ``"readout_one_qubit"`` (*int* or *float* or *dict*): If ``int`` or ``float``,
                     :math:`p(0|1) = p(1|0)`, and all qubits share the same readout error
                     probabilities. If ``dict``, expects qubit indexes as keys and
                     values as ``tuple`` (or ``list``) in the format :math:`(p(0|1),\\,p(1|0))`.
