@@ -2425,35 +2425,28 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Gate Set Tomography
 -------------------
 
-The gate set tomography (GST) follows the procedure outlined in
-https://arxiv.org/pdf/1712.09271.pdf, which follows closely to that of the
-Linear inversion GST given in https://arxiv.org/pdf/1509.02921.pdf. The outputs
-of the functions, when used correctly, will allow one to set up the proper
-variables necessary for probabilistic error cancellation to mitigate noise
-arising from noisy quantum hardware. The codes allow for calibrating an empty
-circuit, and for one and two qubits of gate set tomography. We give some
-examples to illustrate the usage of the functions for clarity.
+Gate Set Tomography (GST) is a powerful technique employed in quantum information processing to characterize the behavior of quantum gates on quantum hardware [1, 2]. The primary objective of GST is to provide a robust framework for obtaining an representation of quantum gates within a predefined gate set, even when subjected to noise inherent in quantum hardware.
 
-The ``reset_registers()`` function in
-:class:`qibo.tomography.gate_set_tomography` requires a string argument serving
-as the identifier for the qubit number(s) from which the inverse circuit will
-be obtained. This identifier ensures that the function returns an inverse
-circuit of the specified register, resulting in the preparation of the zero
-state :math:`| 0 \rangle`. It's important to note that this function is
-specifically designed for qubit(s) without entangling gates."
+By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental in setting up the necessary parameters for Probabilistic Error Cancellation (PEC), a technique employed to enhance the fidelity of quantum computations in the presence of noise.
+
+The GST functionalities are encapsulated in the :class:`qibo.tomography.gate_set_tomography` module, providing users with versatile tools to perform gate set tomography on quantum circuits. This module includes functions for calibrating an empty circuit, as well as conducting gate set tomography for one and two qubits.
+
+To illustrate the usage of GST functions, we provide examples of how to conduct GST for single qubit gates and two qubit gates. If no gate is specified, then GST serves to calibrate the circuit. 
+
+References:
+[1] Blume-Kohout, Robin, et al. "Robust, self-consistent, closed-form tomography of quantum logic gates on a trapped ion qubit." arXiv preprint arXiv:1310.4492 (2013).
+[2] Greenbaum, Daniel. "Introduction to quantum gate set tomography." arXiv preprint arXiv:1509.02921 (2015).
+[3] Nielsen, Erik, et al. "Gate set tomography." Quantum 5 (2021): 557.
 
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
-Suppose we have a single qubit quantum circuit and we want to perform
-probabilistic error cancellation on this circuit. We will need to do gate set
-tomography for a single qubit quantum circuit and all its gates individually
-first. Consider an example where our quantum circuit contains the Hadamard gate
-and an RX gate, here is how we do gate set tomography using the function
-``execute_GST()`` for both gates individually and also without any operator for
-calibration. We import depolarizing noise as an example.
+Suppose we want to do gate set tomography for three scenarios: (1) Empty circuit
+(single qubit circuit); (2) RX(np.pi/7) gate; and (3) Hadamard gate. This is how
+we use the function ``execute_GST()`` for both gates individually. We will also
+import depolarizing noise as an example.
 
-.. code-block::  python
+.. testsetup::
 
     import qibo
     from qibo import Circuit, gates
@@ -2463,14 +2456,10 @@ calibration. We import depolarizing noise as an example.
         execute_GST,
         measurement_basis,
         prepare_states,
-        reset_register,
     )
 
-    # Create the single qubit quantum circuit
-    circuit = Circuit(1)
-    circuit.add(gates.H(0))
-    circuit.add(gates.RX(0, np.pi/7))
-    circuit.add(gates.M(0))
+.. code-block::  python
+
 
     # Create noise model
     lam = 0.4
@@ -2493,7 +2482,6 @@ calibration. We import depolarizing noise as an example.
 - :math:`Q_j`: The measurement basis associated with index :math:`j` where :math:`j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}`.
 - :math:`\rho_k`: The initialized quantum state associated with index :math:`k` where :math:`k \in \{0, 1, 2, 3\} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}`.
 
-
 For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`` ``GST_H_1qb`` and ``GST_RX_1qb`` are 4 by 4 matrices. Each matrix has elements indexed by :math:`j` and :math:`k` given respectively as
 
 ``GST_empty_1qb``:math:`_{jk} = \text{tr}(Q_j \rho_k)`,
@@ -2505,48 +2493,32 @@ For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`
 Two qubits example
 ^^^^^^^^^^^^^^^^^^
 
-As another example, suppose we have a two qubit quantum circuit that generates
-a Bell state. Here is how we do gate set tomography using the function
-``execute_GST()`` for the Hadamard gate, the CNOT gate, and without any
-operator (both single qubit and two-qubit) for calibration. We will need to
-calibrate an empty single qubit circuit and an empty two-qubit circuit as the
-Hadamard gate is a single qubit gate and the CNOT is a two-qubit gate. This
-will become relevant when doing probabilistic error cancellation. We import
-depolarizing noise as an example.
+As another example, Suppose we want to do gate set tomography for two 
+scenarios: (1) Empty circuit (two qubit circuit); and (2) CNOT gate.
+This is how we use the function ``execute_GST()`` for both scenarios
+individually. We will also import depolarizing noise as an example again.
 
-.. code-block::  python
+.. testsetup::
 
-    from qibo import Circuit, models
+    import qibo
+    from qibo import Circuit, gates
     from qibo.noise import DepolarizingError, NoiseModel
     from qibo.tomography.gate_set_tomography import (
         GST_execute_circuit,
         execute_GST,
         measurement_basis,
         prepare_states,
-        reset_register,
     )
 
-    # Create the two qubit quantum circuit
-    circuit = Circuit(2)
-    circuit.add(gates.H(0))
-    circuit.add(gates.CNOT(0,1))
-    circuit.add(gates.M(0))
-    circuit.add(gates.M(1))
+.. code-block::  python
 
     # Create noise model
     lam = 0.4
     depol = NoiseModel()
     depol.add(DepolarizingError(lam))
 
-    # Perform gate set tomography without any operator for calibration (single qubit)
-    GST_empty_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
-
     # Perform gate set tomography without any operator for calibration (two qubits)
     GST_empty_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol)
-
-    # Perform gate set tomography for the Hadamard gate
-    gate_Hadamard = gates.H(0)
-    GST_H_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
 
     # Do gate set tomography for CNOT gate
     gate_CNOT = gates.CNOT(0,1)
