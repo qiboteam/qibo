@@ -246,19 +246,17 @@ class QASMParser:
         if "name" in dir(expr):
             return expr.name
         # check whether the expression is a single value, e.g. `0.1234`
-        elif "value" in dir(expr):
+        if "value" in dir(expr):
             return expr.value
         # the expression is composite, e.g. `2*pi` or `3*theta/2`
-        else:
-            expr_dict = {}
-            for attr in ("lhs", "op", "expression", "rhs"):
-                expr_dict[attr] = ""
-                if attr in dir(expr):
-                    val = self._unroll_expression(getattr(expr, attr))
-                else:
-                    continue
+        expr_dict = {}
+        for attr in ("lhs", "op", "expression", "rhs"):
+            expr_dict[attr] = ""
+            if attr in dir(expr):
+                val = self._unroll_expression(getattr(expr, attr))
                 expr_dict[attr] += str(val)
-            return "".join(list(expr_dict.values()))
+
+        return "".join(list(expr_dict.values()))
 
     def _def_gate(self, definition):
         """Converts a :class:`openqasm3.ast.QuantumGateDefinition` statement
