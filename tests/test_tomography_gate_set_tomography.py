@@ -9,6 +9,7 @@ from qibo.tomography.gate_set_tomography import (
     execute_GST,
     measurement_basis,
     prepare_states,
+    reset_register,
 )
 
 
@@ -151,6 +152,120 @@ def test_measurement_basis_invalid_j_valid_nqubits(j, nqubits):
         new_circuit = measurement_basis(j, test_circuit)
 
 
+def test_reset_register_valid_tuple_1qb():
+    # Test for valid tuple
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+
+    invert_register = (0,)
+    inverse_circuit = reset_register(test_circuit, invert_register)
+    
+    correct_gates = [
+        [gates.H(0)],
+    ]
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+def test_reset_register0_twoqubitcircuit():
+    # Test resetting qubit 0
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.S(1))
+
+    inverse_circuit = reset_register(test_circuit, (0,))
+
+    correct_gates = [
+        [gates.H(0)],
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+def test_reset_register0_singlequbitcircuit():
+    # Test resetting qubit 0
+
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.RX(0, np.pi / 3))
+
+    inverse_circuit = reset_register(test_circuit, (0,))
+
+    correct_gates = [
+        [gates.RX(0, np.pi / 3).dagger()],
+        [gates.H(0)],
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+def test_reset_register1_twoqubitcircuit():
+    # Test resetting qubit 1
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.S(1))
+
+    inverse_circuit = reset_register(test_circuit, (1,))
+
+    correct_gates = [[gates.S(0).dagger()]]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+def test_reset_register1_singlequbitcircuit():
+    # Test resetting qubit 1
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.S(0))
+    test_circuit.add(gates.RX(1, np.pi / 3))
+
+    inverse_circuit = reset_register(test_circuit, (1,))
+
+    correct_gates = [[gates.RX(1, np.pi / 3).dagger()]]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+def test_reset_register_2():
+    # Test resetting both qubits
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.CNOT(0, 1))
+
+    inverse_circuit = reset_register(test_circuit, (0, 1))
+
+    correct_gates = [
+        [gates.CNOT(0, 1)],
+        [gates.H(0)],
+    ]
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
+
+
+@pytest.mark.parametrize("a, b", [(0, 2), (1, 2), (2, 3)])
+def test_reset_register_invalid_tuple(a, b):
+    # Test resetting both qubits
+
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.CNOT(0, 1))
+
+    # Check if NameError is raised
+    with pytest.raises(NameError):
+        inverse_circuit = reset_register(test_circuit, (a, b))
+
+
 def test_GST_execute_circuit_1qb_j0():
     np.random.seed(42)
     nqubits = 1
@@ -275,6 +390,95 @@ def test_GST_two_qubit_with_CRXgate(backend):
     np.random.seed(42)
     test_result = execute_GST(nqubits, gate=test_gate)
     backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST_one_qubit_with_gate_with_valid_reset_register_tuple(backend):
+    nqubits = 1
+    invert_register = (0,)
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST_two_qubit_with_gate_with_valid_reset_register_tuple(backend):
+    nqubits = 2
+    invert_register = (1,)
+    np.random.seed(42)
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
+    )
+    np.random.seed(42)
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
+    )
+
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST_one_qubit_with_param_gate_with_valid_reset_register_tuple(backend):
+    nqubits = 1
+    test_gate = gates.RX(0, np.pi / 7)
+    invert_register = (0,)
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST_two_qubit_with_param_gate_with_valid_reset_register_tuple(backend):
+    nqubits = 2
+    test_gate = gates.CNOT(0, 1)
+    invert_register = (1,)
+    np.random.seed(42)
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
+    )
+    np.random.seed(42)
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
+    )
+
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST_two_qubit_with_gate_with_valid_reset_register_tuple(backend):
+    nqubits = 2
+    test_gate = gates.CZ(0, 1)
+    invert_register = (0, 1)
+    np.random.seed(42)
+    control_result = execute_GST(
+        nqubits=nqubits,
+        gate=test_gate,
+        invert_register=invert_register,
+        backend=backend,
+    )
+    np.random.seed(42)
+    test_result = execute_GST(
+        nqubits=nqubits,
+        gate=test_gate,
+        invert_register=invert_register,
+        backend=backend,
+    )
+
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+@pytest.mark.parametrize("a, b", [(0, 2), (1, 2), (2, 3)])
+def test_GST_two_qubit_with_gate_with_invalid_reset_register_tuple(a, b):
+    nqubits = 2
+    test_gate = gates.CZ(0, 1)
+    invert_register = (a, b)
+    with pytest.raises(NameError):
+        result = execute_GST(
+            nqubits=nqubits, gate=test_gate, invert_register=invert_register
+        )
 
 
 def test_GST_empty_circuit_with_invalid_qb(backend):

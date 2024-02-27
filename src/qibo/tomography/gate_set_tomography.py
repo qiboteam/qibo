@@ -70,6 +70,92 @@ def measurement_basis(j, circ):
     return new_circ
 
 
+def reset_register(circuit, invert_register):
+    """Returns an inverse circuit of the selected register to prepare the zero state \\(|0\rangle\\).
+        One can then add inverse_circuit to the original circuit by addition:
+            circ_with_inverse = circ.copy()
+            circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
+        where register_to_reset = (0,), (1,) , or (0, 1).
+
+        Args:
+        circuit (:class:`qibo.models.Circuit`): original circuit
+        invert_register (tuple): Qubit(s) to reset: Use a tuple to specify which qubit(s) to reset:
+            - (0,) to reset qubit 0;
+            - (1,) to reset qubit 1; or
+            - (0,1) to reset both qubits.
+    Returns:
+        inverse_circuit (:class:`qibo.models.Circuit`): Inverse of the input circuit's register.
+    """
+    valid_registers = [(0,), (1,), (0, 1)]
+    if invert_register is not None:
+        if not isinstance(invert_register, tuple) or invert_register not in valid_registers:
+            raise_error(
+                NameError,
+                f"{invert_register} not recognized.",
+            )
+            
+        elif invert_register == (0,) or invert_register == (1,):
+            register_to_reset = invert_register[0]
+            new_circ = Circuit(1)
+            for data in circuit.raw["queue"]:
+                init_kwargs = data.get("init_kwargs", {})
+                if data["_target_qubits"][0] == register_to_reset:
+                    new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
+
+        else:
+            new_circ = circuit.copy()
+
+    return new_circ.invert()
+
+
+# def reset_register(circuit, invert_register):
+#     """Returns an inverse circuit of the selected register to prepare the zero state \\(|0\rangle\\).
+#         One can then add inverse_circuit to the original circuit by addition:
+#             circ_with_inverse = circ.copy()
+#             circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
+#         where register_to_reset = 0, 1, or [0,1].
+
+#         Args:
+#         circuit (:class:`qibo.models.Circuit`): original circuit
+#         invert_register (string): Qubit(s) to reset:
+#             'sp_0' (qubit 0);
+#             'sp_1' (qubit 1); or
+#             'sp_t' (both qubits)
+#             where 'sp' is an abbreviation for state_preparation.
+#     Returns:
+#         inverse_circuit (:class:`qibo.models.Circuit`): Inverse of the input circuit's register.
+#     """
+
+#     if invert_register == "sp_0" or invert_register == "sp_1":
+#         if invert_register == "sp_0":
+#             register_to_reset = 0
+#         elif invert_register == "sp_1":
+#             register_to_reset = 1
+
+#         new_circ = Circuit(1)
+#         for data in circuit.raw["queue"]:
+#             init_kwargs = data.get("init_kwargs", {})
+#             if data["_target_qubits"][0] == register_to_reset:
+#                 new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
+
+#     elif invert_register == "sp_t":
+#         new_circ = circuit.copy()
+
+#     else:
+#         raise_error(
+#             NameError,
+#             f"{invert_register} not recognized. Input "
+#             "sp_0"
+#             " to reset qubit 0, "
+#             "sp_1"
+#             " to reset qubit 1, or "
+#             "sp_t"
+#             " to reset both qubits.",
+#         )
+
+#     return new_circ.invert()
+
+
 def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
@@ -142,23 +228,32 @@ def execute_GST(
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
-    # Check if invert_register has the correct string.
+    # Check if invert_register has the correct register(s).
+    valid_registers = [(0,), (1,), (0, 1)]
     if invert_register is not None:
-        if (
-            invert_register != "sp_0"
-            and invert_register != "sp_1"
-            and invert_register != "sp_t"
-        ):
+        if not isinstance(invert_register, tuple) or invert_register not in valid_registers:
             raise_error(
                 NameError,
-                f"{invert_register} not recognized. Input "
-                "sp_0"
-                " to reset qubit 0, "
-                "sp_1"
-                " to reset qubit 1, or "
-                "sp_t"
-                " to reset both qubits.",
+                f"{invert_register} not recognized.",
             )
+
+    # # Check if invert_register has the correct string.
+    # if invert_register is not None:
+    #     if (
+    #         invert_register != "sp_0"
+    #         and invert_register != "sp_1"
+    #         and invert_register != "sp_t"
+    #     ):
+    #         raise_error(
+    #             NameError,
+    #             f"{invert_register} not recognized. Input "
+    #             "sp_0"
+    #             " to reset qubit 0, "
+    #             "sp_1"
+    #             " to reset qubit 1, or "
+    #             "sp_t"
+    #             " to reset both qubits.",
+    #         )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -177,12 +272,13 @@ def execute_GST(
         circ = prepare_states(k, nqubits)
         if invert_register is not None:
             inverted_circuit = reset_register(circ, invert_register)
-            if invert_register == "sp_0":
-                circ.add(inverted_circuit.on_qubits(0))
-            elif invert_register == "sp_1":
-                circ.add(inverted_circuit.on_qubits(1))
-            elif invert_register == "sp_t":
-                circ.add(inverted_circuit.on_qubits(0, 1))
+            # if invert_register == "sp_0":
+            #     circ.add(inverted_circuit.on_qubits(0))
+            # elif invert_register == "sp_1":
+            #     circ.add(inverted_circuit.on_qubits(1))
+            # elif invert_register == "sp_t":
+            #     circ.add(inverted_circuit.on_qubits(0, 1))
+            circ.add(inverted_circuit.on_qubits(*invert_register))
 
         if gate is not None:
             circ.add(gate)
