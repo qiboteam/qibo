@@ -1,6 +1,5 @@
 """PyTorch backend."""
 
-from collections import Counter
 from typing import Union
 
 import numpy as np
@@ -182,7 +181,10 @@ class PyTorchBackend(NumpyBackend):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        probs = self.np.sum(state.type(rtype), unmeasured_qubits)
+        if len(unmeasured_qubits) == 0:
+            probs = state.type(rtype)
+        else:
+            probs = self.np.sum(state.type(rtype), dim=unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).reshape(-1)
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
@@ -195,20 +197,6 @@ class PyTorchBackend(NumpyBackend):
         probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).view(-1)
-
-    def calculate_frequencies(self, samples):
-        res, counts = self.np.unique(samples, return_counts=True)
-        res, counts = res.tolist(), counts.tolist()
-        return Counter(zip(res, counts))
-
-    def update_frequencies(self, frequencies, probabilities, nsamples):
-        frequencies = self.cast(frequencies, dtype="int")
-        samples = self.sample_shots(probabilities, nsamples)
-        unique_samples, counts = self.np.unique(samples, return_counts=True)
-        frequencies.index_add_(
-            0, self.cast(unique_samples, dtype="int"), self.cast(counts, dtype="int")
-        )
-        return frequencies
 
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
@@ -436,25 +424,25 @@ class PyTorchBackend(NumpyBackend):
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0],
+                [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+                [0, 1, 1, 2, 1, 1, 4, 0, 0, 4],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 4, 0, 0, 0, 4],
             ]
 
         if name == "test_probabilistic_measurement":
-            if "cuda" in self.device:  # pragma: no cover
+            if self.device == "cuda":  # pragma: no cover
                 return {0: 273, 1: 233, 2: 242, 3: 252}
-            return {0: 271, 1: 239, 2: 242, 3: 248}
+            return {1: 270, 2: 248, 3: 244, 0: 238}
 
         if name == "test_unbalanced_probabilistic_measurement":
-            if "cuda" in self.device:  # pragma: no cover
+            if self.device == "cuda":  # pragma: no cover
                 return {0: 196, 1: 153, 2: 156, 3: 495}
-            return {0: 168, 1: 188, 2: 154, 3: 490}
+            return {3: 492, 2: 176, 0: 168, 1: 164}
 
         if name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30},
-                {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2},
+                {5: 12, 4: 6, 7: 6, 1: 5, 6: 1},
+                {3: 7, 0: 4, 2: 4, 6: 4, 7: 4, 5: 3, 1: 2, 4: 2},
             ]

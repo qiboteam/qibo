@@ -524,7 +524,7 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    samples.append("".join([str(s) for s in sample]))
+                    samples.append("".join([str(s) for s in self.to_numpy(sample)]))
                 for gate in circuit.measurements:
                     gate.result.reset()
 
@@ -631,7 +631,7 @@ class NumpyBackend(Backend):
         )
 
     def aggregate_shots(self, shots):
-        return self.np.array(shots, dtype=shots[0].dtype)
+        return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
@@ -643,8 +643,7 @@ class NumpyBackend(Backend):
         return self.np.matmul(self.to_numpy(samples), qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
-        res, counts = self.np.unique(samples, return_counts=True)
-        res, counts = self.np.array(res), self.np.array(counts)
+        res, counts = np.unique(samples, return_counts=True)
         return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
@@ -668,10 +667,10 @@ class NumpyBackend(Backend):
         )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        fprobs = self.np.array(bitflip_probabilities, dtype="float64")
-        sprobs = self.np.random.random(noiseless_samples.shape)
-        flip_0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip_1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        fprobs = self.cast(bitflip_probabilities, dtype="float64")
+        sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
+        flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
@@ -755,7 +754,7 @@ class NumpyBackend(Backend):
         return ev
 
     def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
-        ev = self.np.real(self.np.trace(hamiltonian @ state))
+        ev = self.np.real(self.np.trace(self.cast(hamiltonian @ state)))
         if normalize:
             norm = self.np.real(self.np.trace(state))
             ev = ev / norm

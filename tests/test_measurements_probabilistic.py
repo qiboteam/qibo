@@ -65,6 +65,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
     decimal_frequencies = backend.test_regressions(
         "test_unbalanced_probabilistic_measurement"
     )
+
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
@@ -112,6 +113,7 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(3, p0=probs[2]))
     result = backend.execute_circuit(c, nshots=30)
     freqs = result.frequencies(binary=False)
+    print(freqs)
     targets = backend.test_regressions("test_post_measurement_bitflips_on_circuit")
     assert freqs == targets[i]
 
@@ -145,10 +147,10 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
 
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
-    state = np.zeros(8)
+    state = backend.np.zeros(8)
     state[0] = 1.0
     result = CircuitResult(state, c.measurements, backend)
-    result._samples = np.zeros((10, 3), dtype="int32")
+    result._samples = backend.cast(np.zeros((10, 3)), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)
     targets = backend.test_regressions("test_measurementresult_apply_bitflips")

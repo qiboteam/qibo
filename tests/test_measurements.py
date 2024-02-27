@@ -78,9 +78,6 @@ def test_multiple_qubit_measurement_gate(backend):
     c.add(gates.X(0))
     measure = c.add(gates.M(0, 1))
     result = backend.execute_circuit(c, nshots=100)
-    print(result.frequencies())
-    print(result.probabilities())
-    # print(measure.samples())
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
     assert_result(
