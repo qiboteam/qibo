@@ -1,4 +1,3 @@
-# %%
 import collections
 from itertools import combinations
 from math import log2
@@ -400,96 +399,90 @@ class IBMQNoiseModel(NoiseModel):
         from qibo.noise import IBMQNoiseModel, NoiseModel
 
         nqubits = 4
-        parameters = {
-            "t1" : {"0": 0.1, "1": 0.2, "3": 0.01},
-            "t2" : {"0": 0.01, "1: 0.2, "3": 0.1},
-            "gate_time" : (0.1, 0.2),
-            "excited_population" : 0.1,
-            "depolarizing_error" : (0.1, 0.2),
-            "bitflips_error" : ([0.1 for _ in range(nqubits)], [0.1 for _ in range(4)]),
-            }
 
-        noise_model = IBMQNoiseModel()
-        noise_model.add(parameters)
-
+        # creating circuit
         phases = list(range(nqubits))
         circuit = phase_encoder(phases, rotation="RY")
         circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
         circuit.add(gates.M(qubit) for qubit in range(1, nqubits - 1))
 
+        # creating noise model from dictionary
+        parameters = {
+            "depolarizing_one_qubit" : {"0": 0.1, "2": 0.04, "3": 0.15},
+            "depolarizing_two_qubit": {"0-1": 0.2},
+            "t1" : {"0": 0.1, "1": 0.2, "3": 0.01},
+            "t2" : {"0": 0.01, "1: 0.02, "3": 0.0001},
+            "gate_times" : (0.1, 0.2),
+            "excited_population" : 0.1,
+            "readout_one_qubit" : {"0": (0.1, 0.1), "1": 0.1, "3": [0.1, 0.1]},
+            }
+
+        noise_model = IBMQNoiseModel()
+        noise_model.from_dict(parameters)
         noisy_circuit = noise_model.apply(circuit)
-
-        ## Note that the implementation above is equivalent to the one below
-
-        def _condition_single_qubit_gate(gate):
-            return len(gate.qubits) == 1
-
-        def _condition_two_qubit_gate(gate):
-            return len(gate.qubits) == 2
-
-
-        noise_model = NoiseModel()
-        noise_model.add(
-            DepolarizingError(0.1), condition=self._condition_single_qubit_gate
-        )
-        noise_model.add(DepolarizingError(0.2), gate=gates.CNOT)
-        noise_model.add(
-            ThermalRelaxationError(0.1, 0.01, 0.1, 0.1),
-            qubits=0,
-            condition=_condition_single_qubit_gate
-        )
-        noise_model.add(
-            ThermalRelaxationError(0.2, 0.02, 0.1, 0.1),
-            qubits=1,
-            condition=_condition_single_qubit_gate
-        )
-        noise_model.add(
-            ThermalRelaxationError(0.01, 0.001, 0.1, 0.1),
-            qubits=3,
-            condition=_condition_single_qubit_gate
-        )
-        noise_model.add(
-            ThermalRelaxationError(0.1, 0.01, 0.2, 0.1),
-            qubits=0,
-            condition=_condition_two_qubit_gate
-        )
-        noise_model.add(
-            ThermalRelaxationError(0.2, 0.02, 0.2, 0.1),
-            qubits=1,
-            condition=_condition_two_qubit_gate
-        )
-        noise_model.add(
-            ThermalRelaxationError(0.01, 0.001, 0.2, 0.1),
-            qubits=3,
-            condition=_condition_two_qubit_gate
-        )
-
-        probabilities = [[0.9, 0.1], [0.1, 0.9]]
-        noise_model.add(ReadoutError(probabilities), gate=gates.M)
-
-        noisy_circuit = noise_model.apply(circuit)
-
     """
 
     def __init__(self):
         super().__init__()
 
-    def from_dict(self, parameters):
+    def from_dict(self, parameters: dict):
+        """Method used to pass noise ``parameters`` as inside dictionary.
+
+        Args:
+            parameters (dict): Contains parameters necessary to initialise
+                :class:`qibo.noise.DepolarizingError`, :class:`qibo.noise.ThermalRelaxationError`,
+                and :class:`qibo.noise.ReadoutError`.
+
+                The keys and values of the dictionary parameters are defined below:
+                    - ``depolarizing_one_qubit`` (int or float or dict):  If ``int`` or ``float``,
+                        all qubits share the same single-qubit depolarizing parameter.
+                        If ``dict``, expects qubit indexes as keys and their respective
+                        depolarizing parameter as values.
+                        See :class:`qibo.gates.channels.DepolarizingErrorChannel`
+                        for a detailed definition of depolarizing parameter.
+                    - ``depolarizing_two_qubit`` (int or float or dict):  If ``int`` or ``float``,
+                        all two-qubit gates share the same two-qubit depolarizing parameter
+                        regardless in which pair of qubits the two-qubit gate is acting on.
+                        If ``dict``, expects pair qubit indexes as keys separated by a hiphen
+                         (e.g. "0-1" for gate that has "0" as control and "1" as target)
+                         and their respective depolarizing parameter as values.
+                        See :class:`qibo.gates.channels.DepolarizingErrorChannel`
+                        for a detailed definition of depolarizing parameter.
+                    - ``t1`` (int or float or dict): If ``int`` or ``float``, all qubits share the
+                        same ``t1``. If ``dict``, expects qubit indexes as keys and its
+                        respective ``t1`` as values.
+                        See :class:`qibo.gates.channels.ThermalRelaxationChannel`
+                        for a detailed definition of ``t1``.
+                        Note that ``t1`` and ``t2`` must be passed with the same type.
+                    - ``t1`` (int or float or dict): If ``int`` or ``float``, all qubits share the
+                        same ``t2``. If ``dict``, expects qubit indexes as keys and its
+                        respective ``t2`` as values.
+                        See :class:`qibo.gates.channels.ThermalRelaxationChannel`
+                        for a detailed definition of ``t2``.
+                        Note that ``t2`` and ``t1`` must be passed with the same type.
+        """
         self.parameters = parameters
         t_1 = self.parameters["t1"]
         t_2 = self.parameters["t2"]
-        gate_time_1, gate_time_2 = self.parameters["gate_time"]
+        gate_time_1, gate_time_2 = self.parameters["gate_times"]
         excited_population = self.parameters["excited_population"]
         depolarizing_one_qubit = self.parameters["depolarizing_one_qubit"]
         depolarizing_two_qubit = self.parameters["depolarizing_two_qubit"]
         readout_one_qubit = self.parameters["readout_one_qubit"]
 
-        for qubit_key, lamb in depolarizing_one_qubit.items():
+        if isinstance(depolarizing_one_qubit, (float, int)):
             self.add(
-                DepolarizingError(lamb),
-                qubits=int(qubit_key),
+                DepolarizingError(depolarizing_one_qubit),
                 conditions=_ConditionQubits().condition_gate_single,
             )
+
+        if isinstance(depolarizing_one_qubit, dict):
+            for qubit_key, lamb in depolarizing_one_qubit.items():
+                self.add(
+                    DepolarizingError(lamb),
+                    qubits=int(qubit_key),
+                    conditions=_ConditionQubits().condition_gate_single,
+                )
 
         if isinstance(depolarizing_two_qubit, (float, int)):
             self.add(
@@ -510,21 +503,31 @@ class IBMQNoiseModel(NoiseModel):
                     ],
                 )
 
-        for qubit_key in t_1.keys():
+        if isinstance(t_1, (float, int)) and isinstance(t_2, (float, int)):
             self.add(
-                ThermalRelaxationError(
-                    t_1[qubit_key], t_2[qubit_key], gate_time_1, excited_population
-                ),
-                qubits=int(qubit_key),
+                ThermalRelaxationError(t_1, t_2, gate_time_1, excited_population),
                 conditions=_ConditionQubits().condition_gate_single,
             )
             self.add(
-                ThermalRelaxationError(
-                    t_1[qubit_key], t_2[qubit_key], gate_time_2, excited_population
-                ),
-                qubits=int(qubit_key),
+                ThermalRelaxationError(t_1, t_2, gate_time_2, excited_population),
                 conditions=_ConditionQubits().condition_gate_two,
             )
+        else:
+            for qubit_key in t_1.keys():
+                self.add(
+                    ThermalRelaxationError(
+                        t_1[qubit_key], t_2[qubit_key], gate_time_1, excited_population
+                    ),
+                    qubits=int(qubit_key),
+                    conditions=_ConditionQubits().condition_gate_single,
+                )
+                self.add(
+                    ThermalRelaxationError(
+                        t_1[qubit_key], t_2[qubit_key], gate_time_2, excited_population
+                    ),
+                    qubits=int(qubit_key),
+                    conditions=_ConditionQubits().condition_gate_two,
+                )
 
         if isinstance(readout_one_qubit, (int, float)):
             probabilities = [
