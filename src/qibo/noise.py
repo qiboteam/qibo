@@ -1,3 +1,5 @@
+"""Module defining Error channels and NoiseModel class(es)."""
+
 import collections
 from itertools import combinations
 from math import log2
@@ -29,6 +31,7 @@ class KrausError:
         self.options = ops
 
     def channel(self, qubits, options):
+        """Returns the quantum channel associated to the quantum error."""
         return [
             gates.KrausChannel(q, options)
             for q in combinations(qubits, int(log2(self.rank)))
@@ -59,6 +62,7 @@ class UnitaryError:
         self.options = list(zip(probabilities, unitaries))
 
     def channel(self, qubits, options):
+        """Returns the quantum channel associated to the quantum error."""
         return [
             gates.UnitaryChannel(q, options)
             for q in combinations(qubits, int(log2(self.rank)))
@@ -76,6 +80,7 @@ class PauliError:
         self.options = operators
 
     def channel(self, qubits, options):
+        """Returns the quantum channel associated to the quantum error."""
         return [gates.PauliNoiseChannel(q, options) for q in qubits]
 
 
@@ -287,7 +292,7 @@ class NoiseModel:
         ):
             raise_error(
                 TypeError,
-                f"A element of `conditions` list is not a callable.",
+                "A element of `conditions` list is not a callable.",
             )
 
         if callable(conditions):
@@ -310,7 +315,7 @@ class NoiseModel:
         for gate in circuit.queue:
             errors_list = (
                 self.errors[gate.__class__]
-                if (isinstance(gate, gates.Channel) or isinstance(gate, gates.M))
+                if isinstance(gate, (gates.Channel, gates.M))
                 else self.errors[gate.__class__] + self.errors[None]
             )
 
@@ -353,8 +358,8 @@ class NoiseModel:
                         )
                         and qubits
                     ):
-                        for q in qubits:
-                            noisy_circuit.add(error.channel(q, error.options))
+                        for qubit in qubits:
+                            noisy_circuit.add(error.channel(qubit, error.options))
                     elif isinstance(error, ReadoutError) and qubits:
                         noisy_circuit.add(error.channel(qubits, error.options))
                         noisy_circuit.add(gate)
@@ -422,9 +427,6 @@ class IBMQNoiseModel(NoiseModel):
         noisy_circuit = noise_model.apply(circuit)
     """
 
-    def __init__(self):
-        super().__init__()
-
     def from_dict(self, parameters: dict):
         """Method used to pass noise ``parameters`` as inside dictionary.
 
@@ -464,7 +466,8 @@ class IBMQNoiseModel(NoiseModel):
                 - ``"gate_times"`` (*tuple* or *list*): pair of gate times representing
                     gate times for :class:`ThermalRelaxationError` following, respectively,
                     one- and two-qubit gates.
-                - ``"excited_population"`` (*int* or *float*): See :class:`ThermalRelaxationChannel`.
+                - ``"excited_population"`` (*int* or *float*): See
+                    :class:`ThermalRelaxationChannel`.
                 - ``"readout_one_qubit"`` (*int* or *float* or *dict*): If ``int`` or ``float``,
                     :math:`p(0|1) = p(1|0)`, and all qubits share the same readout error
                     probabilities. If ``dict``, expects qubit indexes as keys and
@@ -472,14 +475,13 @@ class IBMQNoiseModel(NoiseModel):
                     If values are ``tuple`` or ``list`` of length 1 or ``float`` or ``int``,
                     then it is assumed that :math:`p(0|1) = p(1|0)`.
         """
-        self.parameters = parameters
-        t_1 = self.parameters["t1"]
-        t_2 = self.parameters["t2"]
-        gate_time_1, gate_time_2 = self.parameters["gate_times"]
-        excited_population = self.parameters["excited_population"]
-        depolarizing_one_qubit = self.parameters["depolarizing_one_qubit"]
-        depolarizing_two_qubit = self.parameters["depolarizing_two_qubit"]
-        readout_one_qubit = self.parameters["readout_one_qubit"]
+        t_1 = parameters["t1"]
+        t_2 = parameters["t2"]
+        gate_time_1, gate_time_2 = parameters["gate_times"]
+        excited_population = parameters["excited_population"]
+        depolarizing_one_qubit = parameters["depolarizing_one_qubit"]
+        depolarizing_two_qubit = parameters["depolarizing_two_qubit"]
+        readout_one_qubit = parameters["readout_one_qubit"]
 
         if isinstance(depolarizing_one_qubit, (float, int)):
             self.add(
