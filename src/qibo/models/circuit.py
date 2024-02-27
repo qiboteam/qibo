@@ -6,9 +6,9 @@ import numpy as np
 
 import qibo
 from qibo import gates
-from qibo._openqasm import QASMParser
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
+from qibo.models._openqasm import QASMParser
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
