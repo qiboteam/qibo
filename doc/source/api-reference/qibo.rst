@@ -2425,7 +2425,7 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Gate Set Tomography
 -------------------
 
-Gate Set Tomography (GST) is a powerful technique employed in quantum information processing to characterize the behavior of quantum gates on quantum hardware [1, 2]. The primary objective of GST is to provide a robust framework for obtaining an representation of quantum gates within a predefined gate set, even when subjected to noise inherent in quantum hardware.
+Gate Set Tomography (GST) is a powerful technique employed in quantum information processing to characterize the behavior of quantum gates on quantum hardware [1, 2, 3]. The primary objective of GST is to provide a robust framework for obtaining an representation of quantum gates within a predefined gate set, even when subjected to noise inherent in quantum hardware.
 
 By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental in setting up the necessary parameters for Probabilistic Error Cancellation (PEC), a technique employed to enhance the fidelity of quantum computations in the presence of noise.
 
@@ -2434,17 +2434,20 @@ The GST functionalities are encapsulated in the :class:`qibo.tomography.gate_set
 To illustrate the usage of GST functions, we provide examples of how to conduct GST for single qubit gates and two qubit gates. If no gate is specified, then GST serves to calibrate the circuit. 
 
 References:
+
 [1] Blume-Kohout, Robin, et al. "Robust, self-consistent, closed-form tomography of quantum logic gates on a trapped ion qubit." arXiv preprint arXiv:1310.4492 (2013).
+
 [2] Greenbaum, Daniel. "Introduction to quantum gate set tomography." arXiv preprint arXiv:1509.02921 (2015).
+
 [3] Nielsen, Erik, et al. "Gate set tomography." Quantum 5 (2021): 557.
 
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
 Suppose we want to do gate set tomography for three scenarios: (1) Empty circuit
-(single qubit circuit); (2) RX(np.pi/7) gate; and (3) Hadamard gate. This is how
-we use the function ``execute_GST()`` for both gates individually. We will also
-import depolarizing noise as an example.
+(single qubit circuit); (2) :math:`Rx(\frac{\pi}{7})` gate; and (3) Hadamard :math:`H` gate.
+This is how we use the function ``execute_GST()`` for both gates individually.
+We will also import depolarizing noise as an example.
 
 .. testsetup::
 
@@ -2486,16 +2489,16 @@ For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`
 
 ``GST_empty_1qb``:math:`_{jk} = \text{tr}(Q_j \rho_k)`,
 
-``GST_H_1qb``:math:`_{jk} = \text{tr}(Q_j \text{H} \rho_k)`, and
+``GST_H_1qb``:math:`_{jk} = \text{tr}(Q_j H \rho_k)`, and
 
-``GST_RX_1qb``:math:`_{jk} = \text{tr}(Q_j \text{RX}(\frac{\pi}{7}) \rho_k)`.
+``GST_RX_1qb``:math:`_{jk} = \text{tr}(Q_j Rx(\frac{\pi}{7}) \rho_k)`.
 
 Two qubits example
 ^^^^^^^^^^^^^^^^^^
 
 As another example, Suppose we want to do gate set tomography for two 
-scenarios: (1) Empty circuit (two qubit circuit); and (2) CNOT gate.
-This is how we use the function ``execute_GST()`` for both scenarios
+scenarios: (1) Empty circuit (two qubit circuit); and (2) :math:`\text{CNOT}`
+gate. This is how we use the function ``execute_GST()`` for both scenarios
 individually. We will also import depolarizing noise as an example again.
 
 .. testsetup::
@@ -2527,7 +2530,7 @@ individually. We will also import depolarizing noise as an example again.
 **Definitions (two qubits):**
 
 - :math:`Q_j`: The measurement basis associated with index :math:`j` where :math:`j \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{I, X, Y, Z\}^{\otimes 2}`.
-- :math:`\rho_k`: The initialized quantum state associated with index :math:(k` where :math:`k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}`.
+- :math:`\rho_k`: The initialized quantum state associated with index :math:`k` where :math:`k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}`.
 
 In this two qubits example, we have a combination of single qubit and
 two-qubit gate set tomography. The outputs given by ``GST_empty_1qb`` and
