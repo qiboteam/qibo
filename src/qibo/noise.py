@@ -279,7 +279,8 @@ class NoiseModel:
         ):
             raise_error(
                 TypeError,
-                f"`conditions` should be  either a callable or a list of callables. Got {type(conditions)} instead.",
+                "`conditions` should be  either a callable or a list of callables. "
+                + f"Got {type(conditions)} instead.",
             )
 
         if isinstance(conditions, list) and not all(
@@ -295,32 +296,6 @@ class NoiseModel:
 
         self.errors[gate].append((conditions, error, qubits))
 
-    # def composite(self, params):
-    #     """Build a noise model to simulate the noisy behaviour of a quantum computer.
-
-    #     Args:
-    #         params (dict): contains the parameters of the channels organized as follow \n
-    #             {'t1' : (``t1``, ``t2``,..., ``tn``),
-    #             't2' : (``t1``, ``t2``,..., ``tn``),
-    #             'gate time' : (``time1``, ``time2``),
-    #             'excited population' : 0,
-    #             'depolarizing error' : (``lambda1``, ``lambda2``),
-    #             'bitflips error' : ([``p1``, ``p2``,..., ``pm``],[``p1``, ``p2``,..., ``pm``]),
-    #             'idle_qubits' : True}
-    #             where `n` is the number of qubits, and `m` the number of measurement gates.
-    #             The first four parameters are used by the thermal relaxation error.
-    #             The first two  elements are the tuple containing the :math:`T_1` and
-    #             :math:`T_2` parameters; the third one is a tuple which contain the gate times,
-    #             for single and two qubit gates; then we have the excited population parameter.
-    #             The fifth parameter is a tuple containing the depolaraziong errors for single
-    #             and 2 qubit gate. The sisxth parameter is a tuple containg the two arrays for
-    #             bitflips probability errors: the first one implements 0->1 errors, the other
-    #             one 1->0. The last parameter is a boolean variable: if ``True`` the noise
-    #             model takes into account idle qubits.
-    #     """
-
-    #     self.noise_model = CompositeNoiseModel(params)
-
     def apply(self, circuit):
         """Generate a noisy quantum circuit according to the noise model built.
 
@@ -328,7 +303,7 @@ class NoiseModel:
             circuit (:class:`qibo.models.circuit.Circuit`): quantum circuit
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): initial circuit with noise gates
+            :class:`qibo.models.circuit.Circuit`: initial circuit with noise gates
                 added according to the noise model.
         """
 
@@ -339,8 +314,19 @@ class NoiseModel:
                 if (isinstance(gate, gates.Channel) or isinstance(gate, gates.M))
                 else self.errors[gate.__class__] + self.errors[None]
             )
+
             if all(not isinstance(error, ReadoutError) for _, error, _ in errors_list):
                 noisy_circuit.add(gate)
+
+            if gate.name == "measure":
+                readout_error_qubits = [
+                    qubits
+                    for _, error, qubits in errors_list
+                    if isinstance(error, ReadoutError)
+                ]
+                if gate.qubits not in readout_error_qubits:
+                    noisy_circuit.add(gate)
+
             for conditions, error, qubits in errors_list:
                 if conditions is None or all(
                     condition(gate) for condition in conditions
@@ -488,13 +474,6 @@ class IBMQNoiseModel(NoiseModel):
     def __init__(self):
         super().__init__()
 
-    # def _condition_single_qubit_gate(self, gate):
-
-    #     return len(gate.qubits) == 1
-
-    # def _condition_two_qubit_gate(self, gate):
-    #     return len(gate.qubits) == 2
-
     def from_dict(self, parameters):
         self.parameters = parameters
         t_1 = self.parameters["t1"]
@@ -591,7 +570,7 @@ phases = list(range(nqubits))
 circuit = phase_encoder(phases, rotation="RY")
 circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
 circuit += phase_encoder(phases, rotation="RY")
-circuit.add(gates.M(qubit) for qubit in range(0, nqubits - 1))
+circuit.add(gates.M(qubit) for qubit in range(0, nqubits))
 
 noisy_circuit = noise_model.apply(circuit)
 print(noisy_circuit.draw())
