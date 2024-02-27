@@ -1,4 +1,5 @@
 import os
+from importlib import import_module
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
@@ -7,55 +8,57 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow")
+QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibocloud")
 
-def construct_backend(backend, **kwargs):
-    if backend == "qibojit":
-        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
-        platform = kwargs.get("platform")
-        if platform == "cupy":  # pragma: no cover
-            return CupyBackend()
-        elif platform == "cuquantum":  # pragma: no cover
-            return CuQuantumBackend()
-        elif platform == "numba":
-            return NumbaBackend()
-        else:  # pragma: no cover
+class MetaBackend:
+    """Meta-backend class which takes care of loading the qibo backends."""
+
+    @staticmethod
+    def load(backend: str, **kwargs) -> Backend:
+        """Loads the backend.
+
+        Args:
+            backend (str): Name of the backend to load.
+            kwargs (dict): Additional arguments for the non-native qibo backends.
+        Returns:
+            qibo.backends.abstract.Backend: The loaded backend.
+        """
+
+        if backend == "numpy":
+            return NumpyBackend()
+        elif backend == "tensorflow":
+            return TensorflowBackend()
+        elif backend == "clifford":
+            return CliffordBackend(**kwargs)
+        elif backend in QIBO_NON_NATIVE_BACKENDS:
+            module = import_module(backend)
+            return getattr(module, "MetaBackend").load(**kwargs)
+        else:
+            raise_error(
+                ValueError,
+                f"Backend {backend} is not available. To check which  backend is installed use `qibo.list_available_backends()`.",
+            )
+
+    def list_available(self) -> dict:
+        """Lists all the available qibo backends."""
+        available_backends = {}
+        for backend in QIBO_NATIVE_BACKENDS:
             try:
-                return CupyBackend()
-            except (ModuleNotFoundError, ImportError):
-                return NumbaBackend()
-
-    elif backend == "tensorflow":
-        return TensorflowBackend()
-
-    elif backend == "numpy":
-        return NumpyBackend()
-
-    elif backend == "qibolab":  # pragma: no cover
-        from qibolab.backends import QibolabBackend  # pylint: disable=E0401
-
-        return QibolabBackend(**kwargs)
-    elif backend == "clifford":
-        platform = kwargs.get("platform")
-        if platform in ("cupy", "numba", "cuquantum"):
-            platform = construct_backend("qibojit", platform=platform)
-        elif platform == "numpy":
-            platform = construct_backend(platform)
-        return CliffordBackend(platform)
-    elif backend == "qibo-cloud":  # pragma: no cover
-        from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
-            QiboClientBackend,
-        )
-
-        return QiboClientBackend(**kwargs)
-    elif backend == "qiskit":  # pragma: no cover
-        from qibo_cloud_backends.qiskit_client import (  # pylint: disable=E0401
-            QiskitClientBackend,
-        )
-
-        return QiskitClientBackend(**kwargs)
-    else:  # pragma: no cover
-        raise_error(ValueError, f"Backend {backend} is not available.")
+                MetaBackend.load(backend)
+                available = True
+            except:
+                available = False
+            available_backends[backend] = available
+        for backend in QIBO_NON_NATIVE_BACKENDS:
+            try:
+                module = import_module(backend)
+                available = getattr(module, "MetaBackend")().list_available()
+            except:
+                available = False
+            available_backends.update({backend: available})
+        return available_backends
 
 
 class GlobalBackend(NumpyBackend):
