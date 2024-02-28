@@ -187,10 +187,19 @@ def ds_di_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d: np.array,
     i: int,
-    taylor_coef=None,
-    onsite_Z_ops=None,
+    taylor_coef: Optional[list] = None,
+    onsite_Z_ops: Optional[list] = None,
 ):
-    """Return the derivatives of the first 3 polynomial coefficients with respect to onsite Pauli-Z coefficients"""
+    r"""Return the derivatives of the first 3 polynomial coefficients with respect to onsite Pauli-Z coefficients\
+        Args:
+            dbi_object (DoubleBracketIteration): the target dbi object
+            d (np.array): the diagonal operator
+            i (int): the index of onsite-Z coefficient
+            taylor_coef (list): coefficients of `s` in the taylor expansion of math:`\\frac{\\partial ||\sigma(e^{sW}He^{-sW})||^2}{\\partial s}`, from the highest order to the lowest.
+            onsite_Z_ops (list): onsite Z operators of `dbi_object.h`
+        Returns:
+            floats da, db, dc, ds
+    """
     # generate the list of derivatives w.r.t ith Z operator coefficient
     nqubits = int(np.log2(d.shape[0]))
     if onsite_Z_ops is None:
@@ -227,11 +236,18 @@ def ds_di_onsite_Z(
 def gradient_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d: np.array,
-    n_taylor=3,
+    n_taylor=2,
     onsite_Z_ops=None,
     use_ds=False,
 ):
-    """Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients"""
+    r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
+    Args:
+        dbi_object (DoubleBracketIteration): the target dbi object
+        d (np.array): the diagonal operator
+        n_taylor (int): the highest order of the taylore expansion of  w.r.t `s`
+        taylor_coef (list): coefficients of `s` in the taylor expansion of math:`\\frac{\\partial ||\sigma(e^{sW}He^{-sW})||^2}{\\partial s}`
+        use_ds (boolean): if False, ds is set to 0
+    """
     # n is the highest order for calculating s
 
     # initialize gradient
@@ -244,6 +260,7 @@ def gradient_onsite_Z(
         n=n_taylor,
         backup_scheduling=DoubleBracketScheduling.polynomial_approximation,
     )
+
     a, b, c = coef[len(coef) - 3 :]
     for i in range(nqubits):
         da, db, dc, ds = ds_di_onsite_Z(dbi_object, d, i, [a, b, c], onsite_Z_ops)
@@ -263,6 +280,7 @@ def gradient_onsite_Z(
 
 
 def onsite_Z_decomposition(h_matrix: np.array, onsite_Z_ops=None):
+    """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
     if onsite_Z_ops is None:
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)
@@ -274,6 +292,7 @@ def onsite_Z_decomposition(h_matrix: np.array, onsite_Z_ops=None):
 
 
 def generate_onsite_Z_ops(nqubits):
+    """generate the list of Pauli-Z operators of an `nqubit` system in the form of np.array"""
     onsite_Z_str = ["I" * (i) + "Z" + "I" * (nqubits - i - 1) for i in range(nqubits)]
     onsite_Z_ops = [
         SymbolicHamiltonian(str_to_symbolic(Z_i_str)).dense.matrix
@@ -285,18 +304,37 @@ def generate_onsite_Z_ops(nqubits):
 def gradient_descent_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d_coef: list,
-    d: np.array = None,
-    n_taylor: int = 3,
-    onsite_Z_ops=None,
+    d: Optional[np.array] = None,
+    n_taylor: int = 2,
+    onsite_Z_ops: Optional[list] = None,
     lr_min: float = 1e-5,
     lr_max: float = 1,
     max_evals: int = 100,
     space: callable = None,
     optimizer: callable = None,
-    look_ahead: int = 1,
     verbose: bool = False,
     use_ds: bool = True,
 ):
+    """calculate the elements of one gradient descent step on `dbi_object`.
+
+    Args:
+        dbi_object (DoubleBracketIteration): the target dbi object
+        d_coef (list): the initial decomposition of `d` into Pauli-Z operators
+        d (np.array, optional): the initial diagonal operator. Defaults to None.
+        n_taylor (int, optional): the highest order to expand the loss function derivative. Defaults to 2.
+        onsite_Z_ops (list, optional): list of onsite-Z operators. Defaults to None.
+        lr_min (float, optional): the minimal gradient step. Defaults to 1e-5.
+        lr_max (float, optional): the maximal gradient step. Defaults to 1.
+        max_evals (int, optional): the max number of evaluations for `hyperopt` to find the optimal gradient step `lr`. Defaults to 100.
+        space (callable, optional): the search space for `hyperopt`. Defaults to None.
+        optimizer (callable, optional): optimizer for `hyperopt`. Defaults to None.
+        verbose (bool, optional): option to print out the 'hyperopt' progress. Defaults to False.
+        use_ds (bool, optional): if False, ds is set to 0. Defaults to True.
+
+    Returns:
+        the optimal step found, coeffcients of `d` in Pauli-Z basis, matrix of `d`
+
+    """
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
     if onsite_Z_ops is None:
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)

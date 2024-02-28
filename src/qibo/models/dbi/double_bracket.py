@@ -280,6 +280,9 @@ class DoubleBracketIteration:
         scheduling: Optional[DoubleBracketScheduling] = None,
         **kwargs,
     ):
+        """
+        Calculate the optimal step using respective `scheduling` methods.
+        """
         if scheduling is None:
             scheduling = self.scheduling
         if scheduling is DoubleBracketScheduling.grid_search:
