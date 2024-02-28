@@ -160,7 +160,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_evolution_oracle
 
         if self.mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator:
-            assert diagonal_association_evolution_oracle.mode_evolution_oracle is iterated_hamiltonian_evolution_oracle.mode_evolution_oracle
+            assert diagonal_association_evolution_oracle.mode_evolution_oracle.value is EvolutionOracleType. iterated_hamiltonian_evolution_oracle.mode_evolution_oracle.value
             
             if (diagonal_association_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.text_strings or
                     diagonal_association_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation):
