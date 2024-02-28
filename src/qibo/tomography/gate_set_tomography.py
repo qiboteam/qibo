@@ -161,10 +161,9 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
                 backend = GlobalBackend()
 
             result = backend.execute_circuit(circuit, nshots=nshots)
-            observables = [symbols.I, symbols.Z, symbols.Z, symbols.Z]
-            observables_list = list(product(observables, repeat=nqubits))[j]
+            observables = GST_observables(nqubits)[j]
             observable = 1
-            for q, obs in enumerate(observables_list):
+            for q, obs in enumerate(observables):
                 if obs is not symbols.I:
                     observable *= obs(q)
             observable = SymbolicHamiltonian(observable, nqubits=nqubits)
@@ -201,18 +200,6 @@ def execute_GST(
             ValueError,
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
-
-    # Check if invert_register has the correct register(s).
-    valid_registers = [(0,), (1,), (0, 1)]
-    if invert_register is not None:
-        if (
-            not isinstance(invert_register, tuple)
-            or invert_register not in valid_registers
-        ):
-            raise_error(
-                NameError,
-                f"{invert_register} not recognized.",
-            )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
