@@ -260,7 +260,6 @@ class DoubleBracketIteration:
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
         roots = np.roots(list(reversed(trace_coefficients[: n + 1])))
-        print(list(reversed(trace_coefficients[: n + 1])))
         error = 1e-3
         real_positive_roots = [
             np.real(root)
