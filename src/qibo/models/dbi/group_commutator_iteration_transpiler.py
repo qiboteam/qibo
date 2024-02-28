@@ -131,10 +131,14 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 step_duration, diagonal_association
             )
 
-            if self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.numerical:  
-                before_circuit = double_bracket_rotation_step['backwards']
-                after_circuit = double_bracket_rotation_step['forwards']
+            if (
+                self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
+                is EvolutionOracleType.numerical
+            ):
+                before_circuit = double_bracket_rotation_step["backwards"]
+                after_circuit = double_bracket_rotation_step["forwards"]
                 self.h.matrix = before_circuit @ self.h.matrix @ after_circuit
+
 
             elif self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
                 before_circuit = double_bracket_rotation_step['backwards']
@@ -151,12 +155,17 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             else:
                 super().__call__(step, d )  
 
-    def group_commutator(self,
+
+
+    def group_commutator(
+        self,
         s_step: float,
         diagonal_association_evolution_oracle: EvolutionOracle = None,
-        iterated_hamiltonian_evolution_oracle: EvolutionOracle = None):
-    
+        iterated_hamiltonian_evolution_oracle: EvolutionOracle = None,
+    ):
+
         if iterated_hamiltonian_evolution_oracle is None:
+
             iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_evolution_oracle
 
         if self.mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator:
@@ -242,6 +251,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                     iterated_hamiltonian_evolution_oracle.circuit(-s_step)@
                     diagonal_association_evolution_oracle.circuit(-s_step)
                                         ) }
+
 
         else:
             if (
