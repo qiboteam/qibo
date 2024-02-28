@@ -205,7 +205,7 @@ class DoubleBracketIteration:
 
     def polynomial_step(
         self,
-        n: int = 3,
+        n: int = 4,
         n_max: int = 5,
         d: np.array = None,
         backup_scheduling: DoubleBracketScheduling = None,
@@ -214,9 +214,10 @@ class DoubleBracketIteration:
         Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
         e.g. $n=2$: $2\Trace(\sigma(\Gamma_1 + s\Gamma_2 + s^2/2\Gamma_3)\sigma(\Gamma_0 + s\Gamma_1 + s^2/2\Gamma_2))
         Args:
-            n (int, optional): The order to which the loss function is expanded. Defaults to 3.
-            n_max (int, optional): The maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
-            d (np.array, optional): The diagonal operator, default as $\delta(H)$.
+            n (int, optional): the order to which the loss function is expanded. Defaults to 4.
+            n_max (int, optional): maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
+            d (np.array, optional): diagonal operator, default as $\delta(H)$.
+            backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
         """
 
         if d is None:
@@ -259,6 +260,7 @@ class DoubleBracketIteration:
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
         roots = np.roots(list(reversed(trace_coefficients[: n + 1])))
+        print(list(reversed(trace_coefficients[: n + 1])))
         error = 1e-3
         real_positive_roots = [
             np.real(root)
