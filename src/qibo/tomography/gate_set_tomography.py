@@ -1,3 +1,4 @@
+from inspect import signature
 from itertools import product
 
 import numpy as np
@@ -298,3 +299,35 @@ def execute_GST(
             )
             matrix_jk[j, k] = expectation_val
     return matrix_jk
+
+
+def GST(
+    gate_set: tuple | set | list,
+    nshots: int = int(1e4),
+    noise_model=None,
+    invert_register: tuple = None,
+    backend=None,
+):
+    matrices = []
+    for gate in gate_set:
+        init_args = signature(gate).parameters
+        if "q" in init_args:
+            nqubits = 1
+        elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+            nqubits = 2
+        else:
+            raise_error(
+                RuntimeError,
+                f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supporte.",
+            )
+        matrices.append(
+            execute_GST(
+                nqubits=nqubits,
+                gate=gate(*range(nqubits)),
+                nshots=nshots,
+                noise_model=noise_model,
+                invert_register=invert_register,
+                backend=backend,
+            )
+        )
+    return matrices
