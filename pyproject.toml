@@ -68,7 +68,7 @@ ply = "^3.11"
 scikit-learn = "^1.2.1"
 dill = "^0.3.6"
 pytest-cov = "^4.0.0"
-pylint = "^3.0.3"
+pylint = "^3.1.0"
 matplotlib = "^3.7.0"
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
