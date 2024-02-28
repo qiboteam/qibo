@@ -156,19 +156,18 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     else:
         if j == 0:
             return 1.0
-        else:
-            if backend is None:  # pragma: no cover
-                backend = GlobalBackend()
+        if backend is None:  # pragma: no cover
+            backend = GlobalBackend()
 
-            result = backend.execute_circuit(circuit, nshots=nshots)
-            observables = GST_observables(nqubits)[j]
-            observable = 1
-            for q, obs in enumerate(observables):
-                if obs is not symbols.I:
-                    observable *= obs(q)
-            observable = SymbolicHamiltonian(observable, nqubits=nqubits)
-            expectation_val = result.expectation_from_samples(observable)
-            return expectation_val
+        result = backend.execute_circuit(circuit, nshots=nshots)
+        observables = GST_observables(nqubits)[j]
+        observable = 1
+        for q, obs in enumerate(observables):
+            if obs is not symbols.I:
+                observable *= obs(q)
+        observable = SymbolicHamiltonian(observable, nqubits=nqubits)
+        expectation_val = result.expectation_from_samples(observable)
+        return expectation_val
 
 
 def execute_GST(
