@@ -25,11 +25,11 @@ class DoubleBracketGeneratorType(Enum):
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
-    use_hyperopt = auto()
+    hyperopt = auto()
     """Use hyperopt package."""
-    use_grid_search = auto()
+    grid_search = auto()
     """Use greedy grid search."""
-    use_polynomial_approximation = auto()
+    polynomial_approximation = auto()
     """Use polynomial expansion (analytical) of the loss function."""
 
 
@@ -61,7 +61,7 @@ class DoubleBracketIteration:
         self,
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
-        scheduling: DoubleBracketScheduling = DoubleBracketScheduling.use_grid_search,
+        scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
@@ -205,7 +205,7 @@ class DoubleBracketIteration:
 
     def polynomial_step(
         self,
-        n: int = 3,
+        n: int = 4,
         n_max: int = 5,
         d: np.array = None,
         backup_scheduling: DoubleBracketScheduling = None,
@@ -214,16 +214,17 @@ class DoubleBracketIteration:
         Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
         e.g. $n=2$: $2\Trace(\sigma(\Gamma_1 + s\Gamma_2 + s^2/2\Gamma_3)\sigma(\Gamma_0 + s\Gamma_1 + s^2/2\Gamma_2))
         Args:
-            n (int, optional): The order to which the loss function is expanded. Defaults to 3.
-            n_max (int, optional): The maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
-            d (np.array, optional): The diagonal operator, default as $\delta(H)$.
+            n (int, optional): the order to which the loss function is expanded. Defaults to 4.
+            n_max (int, optional): maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
+            d (np.array, optional): diagonal operator, default as $\delta(H)$.
+            backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
         """
 
         if d is None:
             d = self.diagonal_h_matrix
 
         if backup_scheduling is None:
-            backup_scheduling = DoubleBracketScheduling.use_grid_search
+            backup_scheduling = DoubleBracketScheduling.grid_search
 
         # list starting from s^n highest order to s^0
         sigma_gamma_list = np.array(
@@ -246,7 +247,7 @@ class DoubleBracketIteration:
                 power = k + j
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
-        taylor_coefficients = list(reversed(trace_coefficients[:n]))
+        taylor_coefficients = list(reversed(trace_coefficients[: n + 1]))
         roots = np.roots(taylor_coefficients)
         error = 1e-3
         real_positive_roots = [
@@ -259,7 +260,7 @@ class DoubleBracketIteration:
             return min(real_positive_roots), taylor_coefficients
         # solution does not exist, resort to backup scheduling
         elif (
-            backup_scheduling == DoubleBracketScheduling.use_polynomial_approximation
+            backup_scheduling == DoubleBracketScheduling.polynomial_approximation
             and n < n_max + 1
         ):
             return self.polynomial_step(
@@ -281,11 +282,11 @@ class DoubleBracketIteration:
     ):
         if scheduling is None:
             scheduling = self.scheduling
-        if scheduling is DoubleBracketScheduling.use_grid_search:
+        if scheduling is DoubleBracketScheduling.grid_search:
             return self.grid_search_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.use_hyperopt:
+        if scheduling is DoubleBracketScheduling.hyperopt:
             return self.hyperopt_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.use_polynomial_approximation:
+        if scheduling is DoubleBracketScheduling.polynomial_approximation:
             # omit taylor coefficients
             step, _ = self.polynomial_step(d=d, **kwargs)
             return step
