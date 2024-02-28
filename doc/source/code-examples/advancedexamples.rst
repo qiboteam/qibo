@@ -1130,7 +1130,7 @@ Additionally, one can also pass single-qubit readout error probabilities (`reado
 .. testcode::
 
     from qibo import Circuit, gates
-    from qibo.noise import NoiseModel
+    from qibo.noise import IBMQNoiseModel
 
     nqubits = 2
     circuit = Circuit(2, density_matrix=True)

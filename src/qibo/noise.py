@@ -420,7 +420,7 @@ class IBMQNoiseModel(NoiseModel):
             "depolarizing_one_qubit" : {"0": 0.1, "2": 0.04, "3": 0.15},
             "depolarizing_two_qubit": {"0-1": 0.2},
             "t1" : {"0": 0.1, "1": 0.2, "3": 0.01},
-            "t2" : {"0": 0.01, "1: 0.02, "3": 0.0001},
+            "t2" : {"0": 0.01, "1": 0.02, "3": 0.0001},
             "gate_times" : (0.1, 0.2),
             "excited_population" : 0.1,
             "readout_one_qubit" : {"0": (0.1, 0.1), "1": 0.1, "3": [0.1, 0.1]},
