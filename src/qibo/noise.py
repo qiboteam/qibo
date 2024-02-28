@@ -373,7 +373,7 @@ class NoiseModel:
         return noisy_circuit
 
 
-class _ConditionQubits:
+class _Conditions:
     def __init__(self, qubits=None):
         self.qubits = qubits
 
@@ -490,7 +490,7 @@ class IBMQNoiseModel(NoiseModel):
         if isinstance(depolarizing_one_qubit, (float, int)):
             self.add(
                 DepolarizingError(depolarizing_one_qubit),
-                conditions=_ConditionQubits().condition_gate_single,
+                conditions=_Conditions().condition_gate_single,
             )
 
         if isinstance(depolarizing_one_qubit, dict):
@@ -498,13 +498,13 @@ class IBMQNoiseModel(NoiseModel):
                 self.add(
                     DepolarizingError(lamb),
                     qubits=int(qubit_key),
-                    conditions=_ConditionQubits().condition_gate_single,
+                    conditions=_Conditions().condition_gate_single,
                 )
 
         if isinstance(depolarizing_two_qubit, (float, int)):
             self.add(
                 DepolarizingError(depolarizing_two_qubit),
-                conditions=_ConditionQubits().condition_gate_two,
+                conditions=_Conditions().condition_gate_two,
             )
 
         if isinstance(depolarizing_two_qubit, dict):
@@ -515,19 +515,19 @@ class IBMQNoiseModel(NoiseModel):
                     DepolarizingError(lamb),
                     qubits=qubits,
                     conditions=[
-                        _ConditionQubits().condition_gate_two,
-                        _ConditionQubits(qubits).condition_qubits,
+                        _Conditions().condition_gate_two,
+                        _Conditions(qubits).condition_qubits,
                     ],
                 )
 
         if isinstance(t_1, (float, int)) and isinstance(t_2, (float, int)):
             self.add(
                 ThermalRelaxationError(t_1, t_2, gate_time_1, excited_population),
-                conditions=_ConditionQubits().condition_gate_single,
+                conditions=_Conditions().condition_gate_single,
             )
             self.add(
                 ThermalRelaxationError(t_1, t_2, gate_time_2, excited_population),
-                conditions=_ConditionQubits().condition_gate_two,
+                conditions=_Conditions().condition_gate_two,
             )
 
         if isinstance(t_1, dict) and isinstance(t_2, dict):
@@ -537,14 +537,14 @@ class IBMQNoiseModel(NoiseModel):
                         t_1[qubit_key], t_2[qubit_key], gate_time_1, excited_population
                     ),
                     qubits=int(qubit_key),
-                    conditions=_ConditionQubits().condition_gate_single,
+                    conditions=_Conditions().condition_gate_single,
                 )
                 self.add(
                     ThermalRelaxationError(
                         t_1[qubit_key], t_2[qubit_key], gate_time_2, excited_population
                     ),
                     qubits=int(qubit_key),
-                    conditions=_ConditionQubits().condition_gate_two,
+                    conditions=_Conditions().condition_gate_two,
                 )
 
         if isinstance(readout_one_qubit, (int, float)):
