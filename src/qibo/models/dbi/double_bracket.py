@@ -25,11 +25,11 @@ class DoubleBracketGeneratorType(Enum):
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
-    use_hyperopt = auto()
+    hyperopt = auto()
     """Use hyperopt package."""
-    use_grid_search = auto()
+    grid_search = auto()
     """Use greedy grid search."""
-    use_polynomial_approximation = auto()
+    polynomial_approximation = auto()
     """Use polynomial expansion (analytical) of the loss function."""
 
 
@@ -61,7 +61,7 @@ class DoubleBracketIteration:
         self,
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
-        scheduling: DoubleBracketScheduling = DoubleBracketScheduling.use_grid_search,
+        scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
@@ -223,7 +223,7 @@ class DoubleBracketIteration:
             d = self.diagonal_h_matrix
 
         if backup_scheduling is None:
-            backup_scheduling = DoubleBracketScheduling.use_grid_search
+            backup_scheduling = DoubleBracketScheduling.grid_search
 
         def sigma(h: np.array):
             return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
@@ -270,7 +270,7 @@ class DoubleBracketIteration:
             return min(real_positive_roots)
         # solution does not exist, resort to backup scheduling
         elif (
-            backup_scheduling == DoubleBracketScheduling.use_polynomial_approximation
+            backup_scheduling == DoubleBracketScheduling.polynomial_approximation
             and n < n_max + 1
         ):
             return self.polynomial_step(
@@ -287,11 +287,11 @@ class DoubleBracketIteration:
     ):
         if scheduling is None:
             scheduling = self.scheduling
-        if scheduling is DoubleBracketScheduling.use_grid_search:
+        if scheduling is DoubleBracketScheduling.grid_search:
             return self.grid_search_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.use_hyperopt:
+        if scheduling is DoubleBracketScheduling.hyperopt:
             return self.hyperopt_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.use_polynomial_approximation:
+        if scheduling is DoubleBracketScheduling.polynomial_approximation:
             return self.polynomial_step(d=d, **kwargs)
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):

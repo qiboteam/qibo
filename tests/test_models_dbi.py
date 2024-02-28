@@ -112,7 +112,7 @@ def test_energy_fluctuations(backend):
 
 @pytest.mark.parametrize(
     "scheduling",
-    [DoubleBracketScheduling.use_grid_search, DoubleBracketScheduling.use_hyperopt],
+    [DoubleBracketScheduling.grid_search, DoubleBracketScheduling.hyperopt],
 )
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_double_bracket_iteration_scheduling_grid_hyperopt(
@@ -136,7 +136,7 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
 @pytest.mark.parametrize("nqubits", [3, 4, 6])
 @pytest.mark.parametrize("n", [2, 3])
 @pytest.mark.parametrize(
-    "backup_scheduling", [None, DoubleBracketScheduling.use_polynomial_approximation]
+    "backup_scheduling", [None, DoubleBracketScheduling.polynomial_approximation]
 )
 def test_double_bracket_iteration_scheduling_polynomial(
     backend, nqubits, n, backup_scheduling
@@ -146,14 +146,14 @@ def test_double_bracket_iteration_scheduling_polynomial(
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
-        scheduling=DoubleBracketScheduling.use_polynomial_approximation,
+        scheduling=DoubleBracketScheduling.polynomial_approximation,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
         step1 = dbi.polynomial_step(n=n, d=d, backup_scheduling=backup_scheduling)
         dbi(d=d, step=step1)
     step2 = dbi.choose_step(
-        scheduling=DoubleBracketScheduling.use_polynomial_approximation, n=n
+        scheduling=DoubleBracketScheduling.polynomial_approximation, n=n
     )
     dbi(step=step2)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
