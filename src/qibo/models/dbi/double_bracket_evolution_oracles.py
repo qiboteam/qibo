@@ -17,7 +17,7 @@ class EvolutionOracleType(Enum):
 
     hamiltonian_simulation = auto()
     """If you will use SymbolicHamiltonian"""
-
+    
 
 class EvolutionOracle:
     def __init__(
@@ -104,6 +104,7 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         #            assert type(before_circuit) is Circuit, str(type(before_circuit))
 
         self.h = base_evolution_oracle.h
+        self.base_evolution_oracle = base_evolution_oracle
         self.name = name + "(" + base_evolution_oracle.name + ")"
         self.mode_evolution_oracle = base_evolution_oracle.mode_evolution_oracle
         self.before_circuit = before_circuit
