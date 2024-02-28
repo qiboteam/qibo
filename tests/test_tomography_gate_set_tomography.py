@@ -5,6 +5,7 @@ import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import (
+    GST,
     GST_execute_circuit,
     execute_GST,
     measurement_basis,
@@ -552,3 +553,11 @@ def test_GST_one_qubit_empty_circuit_with_noise(backend):
     )
 
     backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
+
+
+def test_GST(backend):
+    gate_set = {gates.SX, gates.Z, gates.CY}
+    lam = 0.5
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    GST(gate_set, noise_model=depol, backend=backend)

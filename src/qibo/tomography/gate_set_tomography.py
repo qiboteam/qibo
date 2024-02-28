@@ -1,5 +1,7 @@
+from functools import cache
 from inspect import signature
 from itertools import product
+from typing import Union
 
 import numpy as np
 
@@ -7,6 +9,25 @@ from qibo import Circuit, gates, symbols
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
+
+
+@cache
+def k_to_gates(nqubits):
+    return list(
+        product(
+            [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)], repeat=nqubits
+        )
+    )
+
+
+@cache
+def j_to_measurements(nqubits):
+    return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
+
+
+@cache
+def GST_observables(nqubits):
+    return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
 def prepare_states(k, nqubits):
@@ -31,12 +52,10 @@ def prepare_states(k, nqubits):
             ValueError,
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
-
-    gates_list = [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)]
-    k_to_gates = list(product(gates_list, repeat=nqubits))[k]
     circ = Circuit(nqubits, density_matrix=True)
-    for q in range(len(k_to_gates)):
-        gate_q = [gate(q) for gate in k_to_gates[q]]
+    gates = k_to_gates(nqubits)[k]
+    for q in range(len(gates)):
+        gate_q = [gate(q) for gate in gates[q]]
         circ.add(gate_q)
     return circ
 
@@ -61,11 +80,10 @@ def measurement_basis(j, circ):
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
-    meas_list = [gates.Z, gates.X, gates.Y, gates.Z]
-    j_to_measurements = list(product(meas_list, repeat=nqubits))[j]
+    measurements = j_to_measurements(nqubits)[j]
     new_circ = circ.copy()
-    for q in range(len(j_to_measurements)):
-        meas_q = j_to_measurements[q]
+    for q in range(len(measurements)):
+        meas_q = measurements[q]
         new_circ.add(gates.M(q, basis=meas_q))
 
     return new_circ
@@ -112,54 +130,6 @@ def reset_register(circuit, invert_register):
     return new_circ.invert()
 
 
-# def reset_register(circuit, invert_register):
-#     """Returns an inverse circuit of the selected register to prepare the zero state \\(|0\rangle\\).
-#         One can then add inverse_circuit to the original circuit by addition:
-#             circ_with_inverse = circ.copy()
-#             circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
-#         where register_to_reset = 0, 1, or [0,1].
-
-#         Args:
-#         circuit (:class:`qibo.models.Circuit`): original circuit
-#         invert_register (string): Qubit(s) to reset:
-#             'sp_0' (qubit 0);
-#             'sp_1' (qubit 1); or
-#             'sp_t' (both qubits)
-#             where 'sp' is an abbreviation for state_preparation.
-#     Returns:
-#         inverse_circuit (:class:`qibo.models.Circuit`): Inverse of the input circuit's register.
-#     """
-
-#     if invert_register == "sp_0" or invert_register == "sp_1":
-#         if invert_register == "sp_0":
-#             register_to_reset = 0
-#         elif invert_register == "sp_1":
-#             register_to_reset = 1
-
-#         new_circ = Circuit(1)
-#         for data in circuit.raw["queue"]:
-#             init_kwargs = data.get("init_kwargs", {})
-#             if data["_target_qubits"][0] == register_to_reset:
-#                 new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
-
-#     elif invert_register == "sp_t":
-#         new_circ = circuit.copy()
-
-#     else:
-#         raise_error(
-#             NameError,
-#             f"{invert_register} not recognized. Input "
-#             "sp_0"
-#             " to reset qubit 0, "
-#             "sp_1"
-#             " to reset qubit 1, or "
-#             "sp_t"
-#             " to reset both qubits.",
-#         )
-
-#     return new_circ.invert()
-
-
 def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
@@ -170,7 +140,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         circuit (:class:`qibo.models.Circuit`): The Qibo circuit to be executed.
         k (int): The index of the state prepared.
         j (int): The index of the measurement basis.
-        nshots (int, optional): Number of shots to execute circuit with.
+        nshots (int, optional): Number of shots to execute the circuit with.
     Returns:
         numpy.float: Expectation value given by either :math:`\\text{tr}(Q_j rho_k) \\` or
             :math:`\\Tr(Q_j O_l rho_k) \\`.
@@ -244,24 +214,6 @@ def execute_GST(
                 f"{invert_register} not recognized.",
             )
 
-    # # Check if invert_register has the correct string.
-    # if invert_register is not None:
-    #     if (
-    #         invert_register != "sp_0"
-    #         and invert_register != "sp_1"
-    #         and invert_register != "sp_t"
-    #     ):
-    #         raise_error(
-    #             NameError,
-    #             f"{invert_register} not recognized. Input "
-    #             "sp_0"
-    #             " to reset qubit 0, "
-    #             "sp_1"
-    #             " to reset qubit 1, or "
-    #             "sp_t"
-    #             " to reset both qubits.",
-    #         )
-
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -279,12 +231,6 @@ def execute_GST(
         circ = prepare_states(k, nqubits)
         if invert_register is not None:
             inverted_circuit = reset_register(circ, invert_register)
-            # if invert_register == "sp_0":
-            #     circ.add(inverted_circuit.on_qubits(0))
-            # elif invert_register == "sp_1":
-            #     circ.add(inverted_circuit.on_qubits(1))
-            # elif invert_register == "sp_t":
-            #     circ.add(inverted_circuit.on_qubits(0, 1))
             circ.add(inverted_circuit.on_qubits(*invert_register))
 
         if gate is not None:
@@ -302,7 +248,7 @@ def execute_GST(
 
 
 def GST(
-    gate_set: tuple | set | list,
+    gate_set: Union[tuple, set, list],
     nshots: int = int(1e4),
     noise_model=None,
     invert_register: tuple = None,
