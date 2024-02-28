@@ -371,8 +371,7 @@ class NumpyBackend(Backend):
         return state
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
-        if initial_state is not None:
-            initial_state = self.cast(initial_state)
+
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -390,6 +389,8 @@ class NumpyBackend(Backend):
                 )
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
+        elif initial_state is not None:
+            initial_state = self.cast(initial_state)
 
         if circuit.repeated_execution:
             if circuit.measurements or circuit.has_collapse:
@@ -626,6 +627,7 @@ class NumpyBackend(Backend):
         return self.ravel(self._order_probabilities(probs, qubits, nqubits))
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
+        state = self.cast(state)
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
@@ -719,9 +721,9 @@ class NumpyBackend(Backend):
         return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
-        state1 = self.cast(state1)
-        state2 = self.cast(state2)
-        return self.np.abs(self.np.sum(self.np.conj(state1) * state2))
+        return self.np.abs(
+            self.np.sum(self.np.conj(self.cast(state1)) * self.cast(state2))
+        )
 
     def calculate_overlap_density_matrix(self, state1, state2):
         state1 = self.cast(state1)
@@ -759,12 +761,12 @@ class NumpyBackend(Backend):
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
+        state = self.cast(state)
         statec = self.np.conj(state)
-        hstate = hamiltonian @ state
+        hstate = self.cast(hamiltonian @ state)
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
-            norm = self.np.sum(self.np.square(self.np.abs(state)))
-            ev = ev / norm
+            ev = ev / self.np.sum(self.np.square(self.np.abs(state)))
         return ev
 
     def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):

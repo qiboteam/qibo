@@ -38,7 +38,7 @@ def test_select_best_dbr_generator(backend, nqubits, step):
         mode=DoubleBracketGeneratorType.single_commutator,
     )
     generate_Z = generate_Z_operators(nqubits)
-    Z_ops = list(generate_Z.values())
+    Z_ops = list(backend.cast(i) for i in generate_Z.values())
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):

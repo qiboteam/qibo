@@ -177,15 +177,6 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.transpose(self.np.conj(eigenvectors), dim0=0, dim1=1)
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_expectation_state(self, hamiltonian, state, normalize):
-        state = self.cast(state)
-        statec = self.np.conj(state)
-        hstate = self.cast(hamiltonian @ state)
-        ev = self.np.real(self.np.sum(statec * hstate))
-        if normalize:
-            ev = ev / self.np.sum(self.np.square(self.np.abs(state)))
-        return ev
-
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
             return self.np.sparse.mm(matrix1, matrix2)  # pylint: disable=E1102
@@ -193,11 +184,6 @@ class PyTorchBackend(NumpyBackend):
 
     def calculate_hamiltonian_state_product(self, matrix, state):
         return self.np.matmul(matrix, state)
-
-    def calculate_overlap(self, state1, state2):
-        return self.np.abs(
-            self.np.sum(self.np.conj(self.cast(state1)) * self.cast(state2))
-        )
 
     def calculate_overlap_density_matrix(self, state1, state2):
         return self.np.trace(
