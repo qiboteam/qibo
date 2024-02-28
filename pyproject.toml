@@ -97,7 +97,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 optional = true
 
 [tool.poetry.group.cloud.dependencies]
-qibo-cloud-backends = ">=0.0.1"
+qibo-cloud-backends = { git = "https://github.com/qiboteam/qibo-cloud-backends.git" }
 
 [tool.pylint.reports]
 output-format = "colorized"
