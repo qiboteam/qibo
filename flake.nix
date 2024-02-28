@@ -46,7 +46,7 @@
                   install.enable = true;
                   install.groups = ["dev"];
                 };
-                version = "3.11";
+                version = "3.12";
               };
             }
           ];
