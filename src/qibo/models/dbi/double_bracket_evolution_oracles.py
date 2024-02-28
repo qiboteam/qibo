@@ -17,7 +17,7 @@ class EvolutionOracleType(Enum):
 
     hamiltonian_simulation = auto()
     """If you will use SymbolicHamiltonian"""
-    
+
 
 class EvolutionOracle:
     def __init__(
@@ -63,12 +63,22 @@ class EvolutionOracle:
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
 
             if self.please_be_verbose:
-                print("Calling circuit in Hamiltonian simulation mode for time t=" +str(t_duration) +" and next running discretization adjustment to reach precision eps = " +str(self.eps_trottersuzuki))
-            return self.discretized_evolution_circuit( t_duration, eps = self.eps_trottersuzuki )
+                print(
+                    "Calling circuit in Hamiltonian simulation mode for time t="
+                    + str(t_duration)
+                    + " and next running discretization adjustment to reach precision eps = "
+                    + str(self.eps_trottersuzuki)
+                )
+            return self.discretized_evolution_circuit(
+                t_duration, eps=self.eps_trottersuzuki
+            )
         else:
-            raise_error(ValueError,
-                    f"You are using an EvolutionOracle type which is not yet supported.")
-    def discretized_evolution_circuit( self, t_duration, eps = None):
+            raise_error(
+                ValueError,
+                f"You are using an EvolutionOracle type which is not yet supported.",
+            )
+
+    def discretized_evolution_circuit(self, t_duration, eps=None):
 
         nmb_trottersuzuki_steps = 3
         if eps is None:
@@ -76,8 +86,12 @@ class EvolutionOracle:
         target_unitary = self.h.exp(t_duration)
 
         from copy import deepcopy
-        proposed_circuit_unitary = np.linalg.matrix_power(deepcopy(self.h.circuit(t_duration/nmb_trottersuzuki_steps)).unitary(), nmb_trottersuzuki_steps)
-        norm_difference = np.linalg.norm( target_unitary - proposed_circuit_unitary)
+
+        proposed_circuit_unitary = np.linalg.matrix_power(
+            deepcopy(self.h.circuit(t_duration / nmb_trottersuzuki_steps)).unitary(),
+            nmb_trottersuzuki_steps,
+        )
+        norm_difference = np.linalg.norm(target_unitary - proposed_circuit_unitary)
 
         if self.please_be_verbose:
             print(nmb_trottersuzuki_steps, norm_difference)
@@ -94,9 +108,11 @@ class EvolutionOracle:
                 print(nmb_trottersuzuki_steps, norm_difference)
         from functools import reduce
 
-        circuit_1_step = deepcopy(self.h.circuit(t_duration/nmb_trottersuzuki_steps))
-        combined_circuit = reduce(Circuit.__add__, [circuit_1_step]*nmb_trottersuzuki_steps)
-        assert np.linalg.norm( combined_circuit.unitary() - target_unitary ) < eps
+        circuit_1_step = deepcopy(self.h.circuit(t_duration / nmb_trottersuzuki_steps))
+        combined_circuit = reduce(
+            Circuit.__add__, [circuit_1_step] * nmb_trottersuzuki_steps
+        )
+        assert np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
         return combined_circuit
 
 
