@@ -236,8 +236,8 @@ def ds_di_onsite_Z(
 def gradient_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d: np.array,
+    onsite_Z_ops,
     n_taylor=2,
-    onsite_Z_ops=None,
     use_ds=False,
 ):
     r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
@@ -245,6 +245,7 @@ def gradient_onsite_Z(
         dbi_object (DoubleBracketIteration): the target dbi object
         d (np.array): the diagonal operator
         n_taylor (int): the highest order of the taylore expansion of  w.r.t `s`
+        onsite_Z_ops (list): list of Pauli-Z operators
         taylor_coef (list): coefficients of `s` in the taylor expansion of math:`\\frac{\\partial ||\sigma(e^{sW}He^{-sW})||^2}{\\partial s}`
         use_ds (boolean): if False, ds is set to 0
     """
