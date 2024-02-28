@@ -33,6 +33,14 @@ def construct_backend(backend, **kwargs):
 
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
+        
+    elif backend == "qibotn":  # pragma: no cover
+        from qibotn.backends import CuTensorNet, QuimbBackend  # pylint: disable=E0401
+ 
+        if platform == "cutensornet":  # pragma: no cover
+            return CuTensorNet(runcard)
+        elif platform == "qutensornet":  # pragma: no cover
+            return QuimbBackend(runcard)
 
         return QibolabBackend(**kwargs)
     elif backend == "clifford":
