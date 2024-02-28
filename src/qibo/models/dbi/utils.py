@@ -78,26 +78,16 @@ def select_best_dbr_generator(
 ):
     """Selects the best double bracket rotation generator from a list and runs the
 
-        Args:
-            dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
-            d_list (list): list of diagonal operators (np.array) to run from.
-            step (float): fixed iteration duration.
-                Defaults to ``None``, uses hyperopt.
-    <<<<<<< HEAD
-            step_min (float): Minimally allowed iteration duration.
-            step_max (float): Maximally allowed iteration duration.
-            max_evals (int): Maximally allowed number of evaluation in hyperopt.
-            compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
-    =======
-            step_min (float): minimally allowed iteration duration.
-            step_max (float): maximally allowed iteration duration.
-            max_evals (int): maximally allowed number of evaluation in hyperopt.
-            compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
-            mode (`DoubleBracketGeneratorType`): DBI generator type used for the selection.
-    >>>>>>> 056830fff9eedef0da2003a638ce4dbd30b6e3b8
+    Args:
+        dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
+        d_list (list): list of diagonal operators (np.array) to run from.
+        step (float): fixed iteration duration.
+            Defaults to ``None``, optimize with `scheduling` method and `choose_step` function.
+        compare_canonical (boolean): if `True`, the diagonalization effect with operators from `d_list` is compared with the canonical bracket.
+        scheduling (`DoubleBracketScheduling`): scheduling method for finding the optimal step.
 
-        Returns:
-            The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
+    Returns:
+        The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
     if scheduling is None:
         scheduling = dbi_object.scheduling
