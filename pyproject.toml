@@ -32,6 +32,7 @@ numpy = "^1.26.4"
 networkx = "^3.2.1"
 cvxpy = { version = "^1.4.2", optional = true }
 tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
+qibo-cloud-backends = { git = "https://github.com/qiboteam/qibo-cloud-backends.git", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -93,12 +94,6 @@ cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 
-[tool.poetry.group.cloud]
-optional = true
-
-[tool.poetry.group.cloud.dependencies]
-qibo-cloud-backends = { git = "https://github.com/qiboteam/qibo-cloud-backends.git" }
-
 [tool.pylint.reports]
 output-format = "colorized"
 
@@ -112,3 +107,6 @@ addopts = [
   '--cov-report=html',
   '--durations=60',
 ]
+
+[tool.poetry.extras]
+cloud = ["qibo-cloud-backends"]
