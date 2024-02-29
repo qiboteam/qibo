@@ -3,6 +3,7 @@
 from typing import Union
 
 import numpy as np
+import scipy
 import torch
 
 from qibo import __version__
@@ -62,6 +63,7 @@ class PyTorchBackend(NumpyBackend):
 
     def set_seed(self, seed):
         self.np.manual_seed(seed)
+        np.random.seed(seed)
 
     def cast(
         self,
@@ -198,10 +200,10 @@ class PyTorchBackend(NumpyBackend):
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
-                [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-                [0, 1, 1, 2, 1, 1, 4, 0, 0, 4],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 4, 0, 0, 0, 4],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
             ]
 
         if name == "test_probabilistic_measurement":
@@ -217,6 +219,6 @@ class PyTorchBackend(NumpyBackend):
         if name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30},
-                {5: 12, 4: 6, 7: 6, 1: 5, 6: 1},
-                {3: 7, 0: 4, 2: 4, 6: 4, 7: 4, 5: 3, 1: 2, 4: 2},
+                {5: 17, 4: 5, 7: 4, 1: 2, 6: 2},
+                {4: 9, 2: 5, 5: 5, 3: 4, 6: 4, 0: 1, 1: 1, 7: 1},
             ]

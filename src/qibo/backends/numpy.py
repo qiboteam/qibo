@@ -764,6 +764,7 @@ class NumpyBackend(Backend):
         return ev
 
     def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
+        state = self.cast(state)
         ev = self.np.real(self.np.trace(self.cast(hamiltonian @ state)))
         if normalize:
             norm = self.np.real(self.np.trace(state))

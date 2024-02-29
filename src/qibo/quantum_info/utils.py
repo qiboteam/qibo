@@ -321,7 +321,7 @@ def hellinger_shot_error(
     hellinger_error = hellinger_fidelity(
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
-    hellinger_error = np.sqrt(hellinger_error / nshots) * np.sum(
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.np.sum(
         np.sqrt(prob_dist_q * (1 - prob_dist_p))
         + np.sqrt(prob_dist_p * (1 - prob_dist_q))
     )

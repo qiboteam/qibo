@@ -107,14 +107,16 @@ def test_ud_eigenvalues(backend, seed):
             magic_decomposition(unitary, backend=backend)
     else:
         ua, ub, ud, va, vb = magic_decomposition(unitary, backend=backend)
-
-        unitary_recon = np.kron(ua, ub) @ ud @ np.kron(va, vb)
+        # Check kron
+        unitary_recon = backend.np.kron(ua, ub) @ ud @ backend.np.kron(va, vb)
         backend.assert_allclose(unitary_recon, unitary)
 
-        ud_bell = np.transpose(np.conj(bell_basis)) @ ud @ bell_basis
-        ud_diag = np.diag(ud_bell)
-        backend.assert_allclose(np.diag(ud_diag), ud_bell, atol=PRECISION_TOL)
-        backend.assert_allclose(np.prod(ud_diag), 1)
+        ud_bell = (
+            backend.np.transpose(backend.np.conj(bell_basis), (1, 0)) @ ud @ bell_basis
+        )
+        ud_diag = backend.np.diag(ud_bell)
+        backend.assert_allclose(backend.np.diag(ud_diag), ud_bell, atol=PRECISION_TOL)
+        backend.assert_allclose(backend.np.prod(ud_diag), 1)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])

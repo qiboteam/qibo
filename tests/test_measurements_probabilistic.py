@@ -113,7 +113,6 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(3, p0=probs[2]))
     result = backend.execute_circuit(c, nshots=30)
     freqs = result.frequencies(binary=False)
-    print(freqs)
     targets = backend.test_regressions("test_post_measurement_bitflips_on_circuit")
     assert freqs == targets[i]
 
