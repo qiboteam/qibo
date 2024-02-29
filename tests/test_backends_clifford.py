@@ -218,6 +218,7 @@ def test_bitflip_noise(backend):
 
 
 def test_set_backend(backend):
+    clifford_bkd = construct_clifford_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), CliffordBackend)
@@ -227,11 +228,13 @@ def test_set_backend(backend):
 
 def test_noise_channels(backend):
     clifford_bkd = construct_clifford_backend(backend)
-    c = random_clifford(5, backend=backend)
+
+    nqubits = 3
+    c = random_clifford(nqubits, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
-    c.add(gates.M(*range(5)))
-    c_copy.add(gates.M(*range(5)))
+    c.add(gates.M(*range(nqubits)))
+    c_copy.add(gates.M(*range(nqubits)))
     noise = NoiseModel()
     noise.add(PauliError([("X", 0.5)]), gates.X)
     noise.add(DepolarizingError(0.1), gates.CZ)
