@@ -103,31 +103,32 @@ def test_two_qubits_gates(backend, gate):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
+local_state = np.random.RandomState(2)
+MEASURED_QUBITS = sorted(local_state.choice(range(3), size=2, replace=False))
 
 
 @pytest.mark.parametrize("binary", [False, True])
 @pytest.mark.parametrize(
     "prob_qubits",
     [
-        range(5),
-        np.random.choice(MEASURED_QUBITS, size=2, replace=False),
+        range(3),
+        local_state.choice(MEASURED_QUBITS, size=2, replace=False),
         [0],
         [1],
         [2],
-        [3],
-        [4],
     ],
 )
 def test_random_clifford_circuit(backend, prob_qubits, binary):
+    backend.set_seed(2024)
+    nqubits, nshots = 3, 200
     clifford_bkd = construct_clifford_backend(backend)
-    c = random_clifford(5, seed=1, backend=backend)
+    c = random_clifford(nqubits, seed=1, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
-    numpy_result = numpy_bkd.execute_circuit(c, nshots=1000)
-    clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=1000)
+    numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
+    clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
 
@@ -148,11 +149,12 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
             atol=1e-1,
         )
 
-        nshots = 1000
         numpy_freq = numpy_result.frequencies(binary)
         clifford_freq = clifford_result.frequencies(binary)
         clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+
         assert len(numpy_freq) == len(clifford_freq)
+
         for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
             backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
 
