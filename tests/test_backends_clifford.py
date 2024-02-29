@@ -17,24 +17,20 @@ from qibo.quantum_info.random_ensembles import random_clifford
 numpy_bkd = NumpyBackend()
 
 
-def construct_clifford_backend(backend):
-    if isinstance(backend, TensorflowBackend):
-        with pytest.raises(NotImplementedError) as excinfo:
-            clifford_backend = CliffordBackend(backend)
-            assert (
-                str(excinfo.value)
-                == "TensorflowBackend for Clifford Simulation is not supported."
-            )
-        pytest.skip("Clifford backend not defined for the tensorflow engine.")
-
-    return CliffordBackend(backend)
-
-
 THETAS_1Q = [
     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 ]
 
 AXES = ["RX", "RY", "RZ"]
+
+
+def construct_clifford_backend(backend):
+    if isinstance(backend, TensorflowBackend):
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend.name)
+        pytest.skip("Clifford backend not defined for the this engine.")
+
+    return CliffordBackend(_get_engine_name(backend))
 
 
 @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
