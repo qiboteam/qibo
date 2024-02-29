@@ -36,12 +36,7 @@ def construct_backend(backend, **kwargs):
 
         return QibolabBackend(**kwargs)
     elif backend == "clifford":
-        platform = kwargs.get("platform")
-        if platform in ("cupy", "numba", "cuquantum"):
-            platform = construct_backend("qibojit", platform=platform)
-        elif platform == "numpy":
-            platform = construct_backend(platform)
-        return CliffordBackend(platform)
+        return CliffordBackend(kwargs["platform"])
     elif backend == "qibo-cloud":  # pragma: no cover
         from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
             QiboClientBackend,
