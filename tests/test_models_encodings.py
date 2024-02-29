@@ -125,17 +125,22 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     # sampling random data in interval [-1, 1]
     sampler = np.random.default_rng(1)
     data = 2 * sampler.random(nqubits) - 1
-    data = backend.cast(data, dtype=data.dtype)
+    data = data.tolist() if kind is not None else backend.cast(data, dtype=data.dtype)
 
-    if kind is not None:
-        data = kind(data)
+    print(type(data), type(data[0]))
+
+    # if kind is not None:
+    #     data = kind(data)
 
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(state)
     state = np.real(state[indexes])
 
-    backend.assert_allclose(state, data / backend.calculate_norm(data, order=2))
+    backend.assert_allclose(
+        state,
+        backend.cast(data, dtype=backend.dtype) / backend.calculate_norm(data, order=2),
+    )
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
