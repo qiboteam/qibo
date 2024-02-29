@@ -17,11 +17,12 @@ from qibo.quantum_info.random_ensembles import random_clifford
 
 
 def construct_clifford_backend(backend):
-    if isinstance(backend, TensorflowBackend):
+    if backend.__class__.__name__ in ["TensorflowBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
-    else:
-        return CliffordBackend(_get_engine_name(backend))
+        pytest.skip("Clifford backend not defined for the this engine.")
+
+    return CliffordBackend(_get_engine_name(backend))
 
 
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
@@ -62,8 +63,7 @@ def test_clifford_from_circuit(backend, measurement):
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
 def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
-    if backend.__class__.__name__ == "TensorflowBackend":
-        pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    clifford_backend = construct_clifford_backend(backend)
 
     clifford = random_clifford(nqubits, seed=seed, backend=backend)
 
@@ -310,22 +310,19 @@ def test_clifford_samples_frequencies(backend, binary):
 
 
 def test_clifford_samples_error(backend):
+    clifford_backend = construct_clifford_backend(backend)
+
     c = random_clifford(1, backend=backend)
-    if isinstance(backend, TensorflowBackend):
-        with pytest.raises(NotImplementedError):
-            clifford_backend = CliffordBackend(backend)
-    else:
-        obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
-        with pytest.raises(RuntimeError) as excinfo:
-            obj.samples()
-            assert str(excinfo.value) == "No measurement provided."
+    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
+    with pytest.raises(RuntimeError) as excinfo:
+        obj.samples()
+        assert str(excinfo.value) == "No measurement provided."
 
 
 @pytest.mark.parametrize("deep", [False, True])
 @pytest.mark.parametrize("nqubits", [1, 10, 100])
 def test_clifford_copy(backend, nqubits, deep):
-    if backend.__class__.__name__ == "TensorflowBackend":
-        pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    clifford_backend = construct_clifford_backend(backend)
 
     circuit = random_clifford(nqubits, backend=backend)
     clifford = Clifford.from_circuit(circuit, engine=_get_engine_name(backend))
@@ -344,7 +341,7 @@ def test_clifford_copy(backend, nqubits, deep):
 
 @pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
 @pytest.mark.parametrize("pauli_1", ["X", "Y", "Z"])
-def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
+def test_one_qubit_paulis_string_product(pauli_1, pauli_2):
     products = {
         "XY": "iZ",
         "YZ": "iX",
@@ -379,7 +376,7 @@ def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
         [["iY", "iX"], "iZ"],
     ],
 )
-def test_string_product(backend, operators, target):
+def test_string_product(operators, target):
     product = _string_product(operators)
     assert product == target
 
