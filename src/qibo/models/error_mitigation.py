@@ -788,13 +788,17 @@ def error_sensitive_circuit(circuit, observable, backend=None):
     comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
     observable.nqubits = num_qubits
     observable_liouville = vectorization(
-        np.transpose(np.conjugate(unitary_matrix)) @ observable.matrix @ unitary_matrix,
+        backend.np.transpose(backend.np.conj(unitary_matrix), (1, 0))
+        @ observable.matrix
+        @ unitary_matrix,
         order="row",
         backend=backend,
     )
     observable_pauli_liouville = comp_to_pauli @ observable_liouville
 
-    index = int(np.where(abs(observable_pauli_liouville) >= 1e-5)[0][0])
+    index = int(
+        backend.np.where(backend.np.abs(observable_pauli_liouville) >= 1e-5)[0][0]
+    )
 
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
 
@@ -809,12 +813,12 @@ def error_sensitive_circuit(circuit, observable, backend=None):
     for i in range(num_qubits):
         observable_i = pauli_gates[observable_pauli[i]]
         random_init = pauli_gates["I"]
-        while np.any(abs(observable_i - pauli_gates["Z"]) > 1e-5) and np.any(
-            abs(observable_i - pauli_gates["I"]) > 1e-5
-        ):
+        while backend.np.any(
+            backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
+        ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
             random_init = random_clifford(1, backend=backend, return_circuit=False)
             observable_i = (
-                np.conjugate(np.transpose(random_init))
+                backend.np.conj(backend.np.transpose(random_init, (1, 0)))
                 @ pauli_gates[observable_pauli[i]]
                 @ random_init
             )

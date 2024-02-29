@@ -6,7 +6,6 @@ import numpy as np
 import torch
 
 from qibo import __version__
-from qibo.backends import einsum_utils
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 
@@ -55,6 +54,8 @@ class PyTorchBackend(NumpyBackend):
         self.np = torch
         self.dtype = torch_dtype_dict[self.dtype]
         self.tensor_types = (self.np.Tensor, np.ndarray)
+        # Transpose function in Torch works in a different way than numpy
+        self.np.transpose = torch.permute
 
     def set_device(self, device):  # pragma: no cover
         self.device = device
@@ -117,9 +118,6 @@ class PyTorchBackend(NumpyBackend):
         return func
         # return self.np.jit.script(func)
 
-    def transpose(self, matrix, transpose_indices):
-        return matrix.permute(*transpose_indices)
-
     def matrix(self, gate):
         npmatrix = super().matrix(gate)
         return self.np.tensor(npmatrix, dtype=self.dtype)
@@ -149,9 +147,6 @@ class PyTorchBackend(NumpyBackend):
     def dimensions(self, x):
         return x.dim()
 
-    def ravel(self, x):
-        return x.reshape(-1)
-
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
         return self.np.norm(state, p=order)
@@ -174,7 +169,7 @@ class PyTorchBackend(NumpyBackend):
                 -1j * a * matrix
             )
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.transpose(self.np.conj(eigenvectors), dim0=0, dim1=1)
+        ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):

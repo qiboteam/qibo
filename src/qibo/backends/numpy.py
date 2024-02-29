@@ -134,14 +134,11 @@ class NumpyBackend(Backend):
             indices = np.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
-            gmatrix = self.transpose(gmatrix, transpose_indices)
+            gmatrix = self.np.transpose(gmatrix, transpose_indices)
             gmatrix = self.np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
         return matrix
-
-    def transpose(self, matrix, transpose_indices):
-        return self.np.transpose(matrix, transpose_indices)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -173,7 +170,7 @@ class NumpyBackend(Backend):
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, targets = einsum_utils.control_order(gate, nqubits)
-            state = self.transpose(state, order)
+            state = self.np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = self.np.reshape(state, (2**ncontrol,) + nactive * (2,))
@@ -184,7 +181,7 @@ class NumpyBackend(Backend):
             state = self.np.concatenate([state[:-1], updates[None]], axis=0)
             state = self.np.reshape(state, nqubits * (2,))
             # Put qubit indices back to their proper places
-            state = self.transpose(state, einsum_utils.reverse_order(order))
+            state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
@@ -203,7 +200,7 @@ class NumpyBackend(Backend):
             n = 2**ncontrol
 
             order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
-            state = self.transpose(state, order)
+            state = self.np.transpose(state, order)
             state = self.np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
             leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
@@ -227,7 +224,7 @@ class NumpyBackend(Backend):
             state10 = self.np.concatenate([state10, state11[None]], axis=0)
             state = self.np.concatenate([state01, state10[None]], axis=0)
             state = self.np.reshape(state, 2 * nqubits * (2,))
-            state = self.transpose(state, einsum_utils.reverse_order(order))
+            state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrixc = self.np.conj(matrix)
@@ -288,7 +285,7 @@ class NumpyBackend(Backend):
         binshot = self.samples_to_binary(shot, len(qubits))[0]
         state = self.np.reshape(state, nqubits * (2,))
         order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
-        state = self.transpose(state, order)
+        state = self.np.transpose(state, order)
         subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
         state = self.np.reshape(state, subshape)[int(shot)]
         if normalize:
@@ -305,7 +302,7 @@ class NumpyBackend(Backend):
         order.extend(q for q in range(nqubits) if q not in qubits)
         order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        state = self.transpose(state, order)
+        state = self.np.transpose(state, order)
         subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
         state = self.np.reshape(state, subshape)[int(shot), int(shot)]
         n = 2 ** (len(state.shape) // 2)
@@ -330,14 +327,14 @@ class NumpyBackend(Backend):
         order = list(range(2 * nqubits - 2))
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
-        zero = self.np.reshape(self.transpose(zero, order), shape)
+        zero = self.np.reshape(self.np.transpose(zero, order), shape)
         state = (1 - p_0 - p_1) * state + p_0 * zero
         return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
     def thermal_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         shape = state.shape
-        state = self.apply_gate(gate, self.ravel(state), 2 * nqubits)
+        state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
 
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
@@ -366,7 +363,7 @@ class NumpyBackend(Backend):
         for qj in qs:
             qj = [qj[qubits.index(i)] for i in range(len(qubits))]
             order += qj
-        identity = self.np.reshape(self.transpose(identity, order), shape)
+        identity = self.np.reshape(self.np.transpose(identity, order), shape)
         state = (1 - lam) * state + lam * identity
         return state
 
@@ -610,10 +607,7 @@ class NumpyBackend(Backend):
                 reduced[i] = i - len(unmeasured)
             else:
                 unmeasured.append(i)
-        return self.transpose(probs, [reduced.get(i) for i in qubits])
-
-    def ravel(self, x):
-        return x.ravel()
+        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = self.np.real(state).dtype
@@ -624,7 +618,7 @@ class NumpyBackend(Backend):
             probs = self.cast(state, dtype=rtype)
         else:
             probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
-        return self.ravel(self._order_probabilities(probs, qubits, nqubits))
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
         state = self.cast(state)
@@ -633,10 +627,10 @@ class NumpyBackend(Backend):
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        state = self.np.reshape(self.transpose(state, order), shape)
+        state = self.np.reshape(self.np.transpose(state, order), shape)
         probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
-        return self.ravel(self._order_probabilities(probs, qubits, nqubits))
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def set_seed(self, seed):
         self.np.random.seed(seed)
@@ -708,7 +702,7 @@ class NumpyBackend(Backend):
         order += tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
 
-        state = self.transpose(state, order)
+        state = self.np.transpose(state, order)
         state = self.np.reshape(state, shape)
         return self.np.einsum("abac->bc", state)
 
