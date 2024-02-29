@@ -4,12 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, set_backend
-from qibo.backends import (
-    CliffordBackend,
-    GlobalBackend,
-    NumpyBackend,
-    TensorflowBackend,
-)
+from qibo.backends import CliffordBackend, GlobalBackend, NumpyBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -17,20 +12,20 @@ from qibo.quantum_info.random_ensembles import random_clifford
 numpy_bkd = NumpyBackend()
 
 
-THETAS_1Q = [
-    th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
-]
-
-AXES = ["RX", "RY", "RZ"]
-
-
 def construct_clifford_backend(backend):
-    if isinstance(backend, TensorflowBackend):
+    if backend.__class__.__name__ in ["TensorflowBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
         pytest.skip("Clifford backend not defined for the this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
+
+
+THETAS_1Q = [
+    th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
+]
+
+AXES = ["RX", "RY", "RZ"]
 
 
 @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
