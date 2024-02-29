@@ -10,6 +10,7 @@ from qibo.backends import (
     NumpyBackend,
     TensorflowBackend,
 )
+from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
@@ -221,12 +222,11 @@ def test_bitflip_noise(backend):
 
 
 def test_set_backend(backend):
-    clifford_bkd = construct_clifford_backend(backend)
-    platform = backend.platform
-    if platform is None:
-        platform = str(backend)
+    platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), type(clifford_bkd))
+    assert isinstance(GlobalBackend(), CliffordBackend)
+    global_platform = GlobalBackend().platform
+    assert global_platform == platform
 
 
 def test_noise_channels(backend):
