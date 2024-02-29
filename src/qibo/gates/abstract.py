@@ -391,7 +391,7 @@ class Gate:
         return backend.apply_gate_density_matrix(self, state, nqubits)
 
     def apply_clifford(self, backend, state, nqubits):
-        return backend.apply_gate_clifford(self, state, nqubits)
+        return backend.apply_gate_clifford(self, state[:-1], nqubits)
 
 
 class SpecialGate(Gate):

@@ -35,11 +35,6 @@ def construct_backend(backend, platform=None):
 
         return QibolabBackend(platform)
     elif backend == "clifford":
-        if platform is not None:  # pragma: no cover
-            if platform in ("cupy", "numba", "cuquantum"):
-                platform = construct_backend("qibojit", platform=platform)
-            else:
-                platform = construct_backend(platform)
         return CliffordBackend(platform)
 
     else:  # pragma: no cover
