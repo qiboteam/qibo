@@ -673,7 +673,7 @@ class NumpyBackend(Backend):
             frequencies, nprobs, nshots % SHOT_BATCH_SIZE
         )
         return collections.Counter(
-            {i: f.item() for i, f in enumerate(frequencies) if f > 0}
+            {i: int(f) for i, f in enumerate(frequencies) if f > 0}
         )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
