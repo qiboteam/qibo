@@ -9,7 +9,6 @@ from qibo.config import log, raise_error
 
 
 def construct_backend(backend, **kwargs):
-    print(backend)
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
