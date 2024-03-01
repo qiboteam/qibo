@@ -11,8 +11,8 @@ def test_backend_qibotn(platform):
     qibo.set_backend(backend="qibotn", platform=platform, runcard=None)
 
     if platform == "qutensornet":
-        qibotn_backend = QuimbBackend(runcard=None)
+        qibotn_backend = QuimbBackend
     else:
-        qibotn_backend = CuTensorNet(runcard=None)
+        qibotn_backend = CuTensorNet
 
-    assert isinstance(GlobalBackend(), type(qibotn_backend))
+    assert isinstance(GlobalBackend(), qibotn_backend)
