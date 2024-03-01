@@ -156,14 +156,14 @@ class DoubleBracketIteration:
             d = self.diagonal_h_matrix
 
         loss_list = [self.loss(step, d=d) for step in space]
-        idx_max_loss = loss_list.index(min(loss_list))
+        idx_max_loss = np.argmin(loss_list)
         return space[idx_max_loss]
 
     def hyperopt_step(
         self,
         step_min: float = 1e-5,
         step_max: float = 1,
-        max_evals: int = 1000,
+        max_evals: int = 500,
         space: callable = None,
         optimizer: callable = None,
         look_ahead: int = 1,
@@ -205,7 +205,7 @@ class DoubleBracketIteration:
 
     def polynomial_step(
         self,
-        n: int = 4,
+        n: int = 2,
         n_max: int = 5,
         d: np.array = None,
         backup_scheduling: DoubleBracketScheduling = None,
@@ -225,6 +225,11 @@ class DoubleBracketIteration:
 
         if backup_scheduling is None:
             backup_scheduling = DoubleBracketScheduling.grid_search
+
+        if n > n_max:
+            raise ValueError(
+                "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
+            )
 
         def sigma(h: np.array):
             return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
@@ -259,7 +264,9 @@ class DoubleBracketIteration:
                 power = k + j
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
-        roots = np.roots(list(reversed(trace_coefficients[: n + 1])))
+        # coefficients from high to low (n:0)
+        coef = list(reversed(trace_coefficients[: n + 1]))
+        roots = np.roots(coef)
         error = 1e-3
         real_positive_roots = [
             np.real(root)
@@ -268,22 +275,29 @@ class DoubleBracketIteration:
         ]
         # solution exists, return minimum s
         if len(real_positive_roots) > 0:
-            return min(real_positive_roots)
-        # solution does not exist, resort to backup scheduling
-        elif (
-            backup_scheduling == DoubleBracketScheduling.polynomial_approximation
-            and n < n_max + 1
-        ):
-            return self.polynomial_step(
-                n=n + 1, d=d, backup_scheduling=backup_scheduling
-            )
+            return min(real_positive_roots), coef
+        # solution does not exist, return None
         else:
-            return self.choose_step(d=d, scheduling=backup_scheduling)
+            return None, coef
+
+        # # solution does not exist, resort to backup scheduling
+        # elif (
+        #     backup_scheduling == DoubleBracketScheduling.polynomial_approximation
+        #     and n < n_max + 1
+        # ):
+        #     return self.polynomial_step(
+        #         n=n + 1, d=d, backup_scheduling=backup_scheduling
+        #     )
+        # else:
+        #     return self.choose_step(d=d, scheduling=backup_scheduling)
 
     def choose_step(
         self,
         d: Optional[np.array] = None,
         scheduling: Optional[DoubleBracketScheduling] = None,
+        backup_scheduling: Optional[
+            DoubleBracketScheduling
+        ] = DoubleBracketScheduling.hyperopt,
         **kwargs,
     ):
         if scheduling is None:
@@ -293,7 +307,23 @@ class DoubleBracketIteration:
         if scheduling is DoubleBracketScheduling.hyperopt:
             return self.hyperopt_step(d=d, **kwargs)
         if scheduling is DoubleBracketScheduling.polynomial_approximation:
-            return self.polynomial_step(d=d, **kwargs)
+            step, coef = self.polynomial_step(d=d, **kwargs)
+            # if no solution
+            if step is None:
+                if (
+                    backup_scheduling
+                    == DoubleBracketScheduling.polynomial_approximation
+                    and coef is not None
+                ):
+                    # if `n` is not provided, try default value
+                    kwargs["n"] = kwargs.get("n", 2)
+                    kwargs["n"] += 1
+                    step, coef = self.polynomial_step(d=d, **kwargs)
+                    # if n==n_max, return None
+                else:
+                    # Issue: cannot pass kwargs
+                    step = self.choose_step(d=d, scheduling=backup_scheduling)
+            return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
