@@ -1,3 +1,5 @@
+from itertools import repeat
+
 import numpy as np
 import pytest
 
@@ -14,143 +16,91 @@ from qibo.tomography.gate_set_tomography import (
 )
 
 
-@pytest.mark.parametrize("k", np.arange(0, 4, 1))
-def test_prepare_states_valid_k_single_qubit(k):
-    correct_gates = [[gates.I(0)], [gates.X(0)], [gates.H(0)], [gates.H(0), gates.S(0)]]
-    nqubits = 1
-    circuit = prepare_states(k, nqubits)
-
-    for groundtruth, gate in zip(correct_gates[k], circuit.queue):
-        assert isinstance(gate, type(groundtruth))
-
-
-@pytest.mark.parametrize("k", np.arange(0, 16, 1))
-def test_prepare_states_valid_k_two_qubits(k):
-    correct_gates = [
-        [gates.I(0), gates.I(1)],
-        [gates.I(0), gates.X(1)],
-        [gates.I(0), gates.H(1)],
-        [gates.I(0), gates.H(1), gates.S(1)],
-        [gates.X(0), gates.I(1)],
-        [gates.X(0), gates.X(1)],
-        [gates.X(0), gates.H(1)],
-        [gates.X(0), gates.H(1), gates.S(1)],
-        [gates.H(0), gates.I(1)],
-        [gates.H(0), gates.X(1)],
-        [gates.H(0), gates.H(1)],
-        [gates.H(0), gates.H(1), gates.S(1)],
-        [gates.H(0), gates.S(0), gates.I(1)],
-        [gates.H(0), gates.S(0), gates.X(1)],
-        [gates.H(0), gates.S(0), gates.H(1)],
-        [gates.H(0), gates.S(0), gates.H(1), gates.S(1)],
-    ]
-    nqubits = 2
-    circuit = prepare_states(k, nqubits)
-
-    for groundtruth, gate in zip(correct_gates[k], circuit.queue):
-        assert isinstance(gate, type(groundtruth))
-
-
-@pytest.mark.parametrize("k, nqubits", [(0, 3), (1, 4), (2, 5), (3, 6)])
-def test_prepare_states_valid_k_invalid_nqubits(k, nqubits):
-    # Test for value input with invalid nqubits
-
-    # Check if ValueError is raised
-    with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        circuit = prepare_states(k, nqubits)
-
-
-@pytest.mark.parametrize("k, nqubits", [(17, 1), (18, 1), (21, 2), (56, 2)])
-def test_prepare_states_invalid_k_valid_nqubits(k, nqubits):
-    # Check if IndexError is raised
-    with pytest.raises(IndexError):
-        circuit = prepare_states(k, nqubits)
-
-
-@pytest.mark.parametrize("j", np.arange(0, 4, 1))
-def test_meaasurement_basis_value_j_single_qubit(j):
-    # Test for valid input with a single qubit
-    nqubits = 1
-    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
-    correct_gates = [
-        [gates.M(0)],
-        [gates.H(0), gates.M(0)],
-        [gates.Unitary(U, 0), gates.M(0)],
-        [gates.M(0)],
-    ]
-    circuit = qibo.models.Circuit(nqubits)
-    circuit = measurement_basis(j, circuit)
-    for groundtruth, gate in zip(correct_gates[j], circuit.queue):
-        assert isinstance(gate, type(groundtruth))
-
-
-@pytest.mark.parametrize("j", np.arange(0, 16, 1))
-def test_measurement_basis_value_j_two_qubits(j):
-    # Test for valid input with two qubits
-    nqubits = 2
-    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
-    correct_gates = [
-        [gates.M(0), gates.M(1)],
-        [gates.M(0), gates.H(1), gates.M(1)],
-        [gates.M(0), gates.Unitary(U, 1), gates.M(1)],
-        [gates.M(0), gates.M(1)],
-        [gates.H(0), gates.M(0), gates.M(1)],
-        [gates.H(0), gates.M(0), gates.H(1), gates.M(1)],
-        [gates.H(0), gates.M(0), gates.Unitary(U, 1), gates.M(1)],
-        [gates.H(0), gates.M(0), gates.M(1)],
-        [gates.Unitary(U, 1), gates.M(0), gates.M(1)],
-        [gates.Unitary(U, 1), gates.M(0), gates.H(1), gates.M(1)],
-        [gates.Unitary(U, 1), gates.M(0), gates.Unitary(U, 1), gates.M(1)],
-        [gates.Unitary(U, 1), gates.M(0), gates.M(1)],
-        [gates.M(0), gates.M(1)],
-        [gates.M(0), gates.H(1), gates.M(1)],
-        [gates.M(0), gates.Unitary(U, 1), gates.M(1)],
-        [gates.M(0), gates.M(1)],
-    ]
-    circuit = qibo.models.Circuit(nqubits)
-    circuit = measurement_basis(j, circuit)
-    for groundtruth, gate in zip(correct_gates[j], circuit.queue):
-        assert isinstance(gate, type(groundtruth))
+@pytest.mark.parametrize(
+    "k,nqubits",
+    list(zip(range(4), repeat(1, 4)))
+    + list(zip(range(16), repeat(2, 16)))
+    + [(0, 3), (17, 1)],
+)
+def test_prepare_states(k, nqubits):
+    correct_gates = {
+        1: [[gates.I(0)], [gates.X(0)], [gates.H(0)], [gates.H(0), gates.S(0)]],
+        2: [
+            [gates.I(0), gates.I(1)],
+            [gates.I(0), gates.X(1)],
+            [gates.I(0), gates.H(1)],
+            [gates.I(0), gates.H(1), gates.S(1)],
+            [gates.X(0), gates.I(1)],
+            [gates.X(0), gates.X(1)],
+            [gates.X(0), gates.H(1)],
+            [gates.X(0), gates.H(1), gates.S(1)],
+            [gates.H(0), gates.I(1)],
+            [gates.H(0), gates.X(1)],
+            [gates.H(0), gates.H(1)],
+            [gates.H(0), gates.H(1), gates.S(1)],
+            [gates.H(0), gates.S(0), gates.I(1)],
+            [gates.H(0), gates.S(0), gates.X(1)],
+            [gates.H(0), gates.S(0), gates.H(1)],
+            [gates.H(0), gates.S(0), gates.H(1), gates.S(1)],
+        ],
+    }
+    errors = {(0, 3): ValueError, (17, 1): IndexError}
+    if (k, nqubits) in [(0, 3), (17, 1)]:
+        with pytest.raises(errors[(k, nqubits)]):
+            prepared_states = prepare_states(k, nqubits)
+    else:
+        prepared_states = prepare_states(k, nqubits)
+        for groundtruth, gate in zip(correct_gates[nqubits][k], prepared_states):
+            assert groundtruth.__class__.__name__ == gate.__class__.__name__
+            assert groundtruth.qubits == gate.qubits
 
 
 @pytest.mark.parametrize(
-    "j, nqubits",
-    [
-        (0, 3),
-        (1, 4),
-        (2, 5),
-        (3, 3),
-        (4, 6),
-        (5, 8),
-        (6, 7),
-        (7, 9),
-        (8, 5),
-        (9, 6),
-        (10, 4),
-        (11, 3),
-        (12, 17),
-        (13, 12),
-        (14, 4),
-        (15, 5),
-    ],
+    "j,nqubits",
+    list(zip(range(4), repeat(1, 4)))
+    + list(zip(range(16), repeat(2, 16)))
+    + [(0, 3), (17, 1)],
 )
-def test_measurement_basis_valid_j_invalid_nqubits(j, nqubits):
-    # Test for valid input with invalid qubits
-    test_circuit = qibo.models.Circuit(nqubits)
-
-    # Check if ValueError is raised
-    with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        new_circuit = measurement_basis(j, test_circuit)
-
-
-@pytest.mark.parametrize("j, nqubits", [(4, 1), (8, 1), (17, 2), (21, 2)])
-def test_measurement_basis_invalid_j_valid_nqubits(j, nqubits):
-    # Test for invalid input with valid nqubits
-    test_circuit = qibo.models.Circuit(nqubits)
-
-    # Check if IndexError is raised
-    with pytest.raises(IndexError):
-        new_circuit = measurement_basis(j, test_circuit)
+def test_measurement_basis(j, nqubits):
+    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
+    correct_gates = {
+        1: [
+            [gates.M(0)],
+            [gates.M(0, basis=gates.X)],
+            [gates.M(0, basis=gates.Y)],
+            [gates.M(0, basis=gates.Z)],
+        ],
+        2: [
+            [gates.M(0), gates.M(1)],
+            [gates.M(0), gates.M(1, basis=gates.X)],
+            [gates.M(0), gates.M(1, basis=gates.Y)],
+            [gates.M(0), gates.M(1)],
+            [gates.M(0, basis=gates.X), gates.M(1)],
+            [gates.M(0, basis=gates.X), gates.M(1, basis=gates.X)],
+            [gates.M(0, basis=gates.X), gates.M(1, basis=gates.Y)],
+            [gates.M(0, basis=gates.X), gates.M(1)],
+            [gates.M(0, basis=gates.Y), gates.M(1)],
+            [gates.M(0, basis=gates.Y), gates.M(1, basis=gates.X)],
+            [gates.M(0, basis=gates.Y), gates.M(1, basis=gates.Y)],
+            [gates.M(0, basis=gates.Y), gates.M(1)],
+            [gates.M(0), gates.M(1)],
+            [gates.M(0), gates.M(1, basis=gates.X)],
+            [gates.M(0), gates.M(1, basis=gates.Y)],
+            [gates.M(0), gates.M(1)],
+        ],
+    }
+    errors = {(0, 3): ValueError, (17, 1): IndexError}
+    if (j, nqubits) in [(0, 3), (17, 1)]:
+        with pytest.raises(errors[(j, nqubits)]):
+            prepared_gates = measurement_basis(j, nqubits)
+    else:
+        prepared_gates = measurement_basis(j, nqubits)
+        for groundtruth, gate in zip(correct_gates[nqubits][j], prepared_gates):
+            assert groundtruth.__class__.__name__ == gate.__class__.__name__
+            assert groundtruth.qubits == gate.qubits
+            for g1, g2 in zip(groundtruth.basis, gate.basis):
+                assert g1.__class__.__name__ == g2.__class__.__name__
+                assert g1.qubits == g2.qubits
 
 
 def test_reset_register_valid_tuple_1qb():

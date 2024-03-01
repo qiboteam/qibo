@@ -30,17 +30,17 @@ def GST_observables(nqubits):
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
+@cache
 def prepare_states(k, nqubits):
     """Prepares a quantum circuit in a specific state indexed by `k`.
 
-        Args:
-        k (int): The index of the state to be prepared.
-            For a single qubit, \\(k \\in \\{0, 1, 2, 3\\} \\equiv
-                \\{| 0 \rangle \\langle 0 |,
-                  | 1 \rangle \\langle 1 |,
-                  | + \rangle \\langle + |,
-                  | y+ \rangle \\langle y+ | \\).
-            For two qubits, \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
+    Args:
+        k (int): The index of the state to be prepared. For a single qubit, \\(k \\in \\{0, 1, 2, 3\\} \\equiv
+            \\{| 0 \\rangle \\langle 0 |,
+              | 1 \\rangle \\langle 1 |,
+              | + \\rangle \\langle + |,
+              | y+ \\rangle \\langle y+ | \\}.
+        For two qubits, \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
         nqubits (int): Number of qubits in the circuit.
 
     Returns:
@@ -50,17 +50,15 @@ def prepare_states(k, nqubits):
     if not nqubits in (1, 2):
         raise_error(
             ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
+            f"nqubits needs to be either 1 or 2, but is {nqubits}.",
         )
     circ = Circuit(nqubits, density_matrix=True)
     gates = k_to_gates(nqubits)[k]
-    for q in range(len(gates)):
-        gate_q = [gate(q) for gate in gates[q]]
-        circ.add(gate_q)
-    return circ
+    return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
-def measurement_basis(j, circ):
+@cache
+def measurement_basis(j, nqubits):
     r"""Implements a measurement basis for circuit indexed by `j`.
 
         Args:
@@ -73,7 +71,6 @@ def measurement_basis(j, circ):
         circuit (:class:`qibo.models.Circuit`): Circuit with measurement basis.
     """
 
-    nqubits = circ.nqubits
     if not nqubits in (1, 2):
         raise_error(
             ValueError,
@@ -81,12 +78,7 @@ def measurement_basis(j, circ):
         )
 
     measurements = j_to_measurements(nqubits)[j]
-    new_circ = circ.copy()
-    for q in range(len(measurements)):
-        meas_q = measurements[q]
-        new_circ.add(gates.M(q, basis=meas_q))
-
-    return new_circ
+    return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
 def reset_register(circuit, invert_register):
@@ -180,17 +172,13 @@ def execute_GST(
 ):
     """Runs gate set tomography for a 1 or 2 qubit gate.
 
-        Args:
+    Args:
         nshots (int, optional): Number of shots used in Gate Set Tomography.
-        gate (:class:`qibo.gates.abstract.Gate`, optional): The gate to perform gate set tomography on.
-            If gate=None, then gate set tomography will be performed for an empty circuit.
-        noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
-            to simulate noisy computation.
+        gate (:class:`qibo.gates.abstract.Gate`, optional): The gate to perform gate set tomography on. If gate=None, then gate set tomography will be performed for an empty circuit.
+        noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
-        ndarray: array with elements ``jk`` equivalent to either :math:`\\text{tr}(Q_{j} \\, \\rho_{k})`
-            or :math:`\\text{tr}(Q_{j} \\, O_{l} \\rho_{k})` where :math:`O_{l}` is the l-th operation
-            in the original circuit.
+        ndarray: array with elements ``jk`` equivalent to either :math:`\\text{tr}(Q_{j} \\, \\rho_{k})` or :math:`\\text{tr}(Q_{j} \\, O_{l} \\rho_{k})` where :math:`O_{l}` is the l-th operation in the original circuit.
     """
 
     # Check if gate is 1 or 2 qubit gate.
@@ -214,7 +202,8 @@ def execute_GST(
     # GST for empty circuit or with gates
     matrix_jk = np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
-        circ = prepare_states(k, nqubits)
+        circ = Circuit(nqubits, density_matrix=True)
+        circ.add(prepare_states(k, nqubits))
         if invert_register is not None:
             inverted_circuit = reset_register(circ, invert_register)
             circ.add(inverted_circuit.on_qubits(*invert_register))
@@ -223,7 +212,9 @@ def execute_GST(
             circ.add(gate)
 
         for j in range(4**nqubits):
-            new_circ = measurement_basis(j, circ)
+            new_circ = circ.copy()
+            measurements = measurement_basis(j, nqubits)
+            new_circ.add(measurements)
             if noise_model is not None and backend.name != "qibolab":
                 new_circ = noise_model.apply(new_circ)
             expectation_val = GST_execute_circuit(
@@ -241,21 +232,25 @@ def GST(
     backend=None,
 ):
     matrices = []
+    if len(gate_set) == 0:
+        gate_set = {None}
     for gate in gate_set:
-        init_args = signature(gate).parameters
-        if "q" in init_args:
-            nqubits = 1
-        elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-            nqubits = 2
-        else:
-            raise_error(
-                RuntimeError,
-                f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supporte.",
-            )
+        if gate is not None:
+            init_args = signature(gate).parameters
+            if "q" in init_args:
+                nqubits = 1
+            elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+                nqubits = 2
+            else:
+                raise_error(
+                    RuntimeError,
+                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supporte.",
+                )
+            gate = gate(*range(nqubits))
         matrices.append(
             execute_GST(
                 nqubits=nqubits,
-                gate=gate(*range(nqubits)),
+                gate=gate,
                 nshots=nshots,
                 noise_model=noise_model,
                 invert_register=invert_register,
