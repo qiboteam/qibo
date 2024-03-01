@@ -1248,13 +1248,13 @@ class Circuit:
                     yield name, int(index)
 
         # Remove comment lines
-        lines = "".join(
-            line for line in qasm_code.split("\n") if line and line[:2] != "//"
-        )
-        lines = (line for line in lines.split(";") if line)
+        lines = [line for line in qasm_code.splitlines() if line and line[:2] != "//"]
 
-        if next(lines) != "OPENQASM 2.0":
-            raise_error(ValueError, "QASM code should start with 'OPENQASM 2.0'.")
+        if not re.search(r"^OPENQASM [0-9]+\.[0-9]+", lines[0]):
+            raise_error(
+                ValueError,
+                "QASM code should start with 'OPENQASM X.X' with X.X indicating the version.",
+            )
 
         qubits = {}  # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
         cregs_size = {}  # Dict[str, int]: map from `creg` name to its size
@@ -1264,11 +1264,14 @@ class Circuit:
         gate_list = (
             []
         )  # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
-        for line in lines:
-            command, args = line.split(None, 1)
-            # remove spaces
-            command = command.replace(" ", "")
-            args = args.replace(" ", "")
+        composite_gates = {}  # composite gates created with the "gate" command
+
+        def parse_line(line):
+            line = line.replace(r"/\s{2,}/g", " ").replace(r"^[\s]+", "")
+            command, *args = line.split(" ")
+            args = " ".join(args)
+            if args[-1] == ";":
+                args = args[:-1]
 
             if command == "include":
                 pass
@@ -1283,7 +1286,7 @@ class Circuit:
                     cregs_size[name] = nqubits
 
             elif command == "measure":
-                args = args.split("->")
+                args = args.replace(" ", "").split("->")
                 if len(args) != 2:
                     raise_error(ValueError, "Invalid QASM measurement:", line)
                 qubit = next(read_args(args[0]))
@@ -1316,6 +1319,39 @@ class Circuit:
                     registers[register] = {idx: qubits[qubit]}
                     gate_list.append((gates.M, register, None))
 
+            elif command == "gate":
+                _name, _qubits, *_ = args.split(" ")
+                _separate_gates = (
+                    re.search(r"\{(.*?)\}", args).group(0)[2:-2].split(";")
+                )
+                _params = re.search(r"\((.*?)\)", _name)
+                _qubits = _qubits.split(",")
+                if _params:
+                    _name = _name[: _params.start()]
+                    _params = _params.group()[1:-1].split(",")
+                composite_gates[_name] = []
+                for g in _separate_gates:
+                    _g_name, _g_qubits = g.split(" ")
+                    _g_params = re.search(r"\((.*?)\)", _g_name)
+                    if _g_params and _params:
+                        _g_name = _g_name[: _g_params.start()]
+                        _g_params = [
+                            f"{{{_params.index(p)}}}"
+                            for p in _g_params.group()[1:-1].split(",")
+                        ]
+                    else:
+                        _g_params = None
+                    _g_qubits = [
+                        f"{{{_qubits.index(q)}}}" for q in _g_qubits.split(",")
+                    ]
+                    pars = "" if not _g_params else f"({','.join(_g_params)})"
+                    composite_gates[_name].append(
+                        {
+                            "gatename": _g_name,
+                            "qubits": ",".join(_g_qubits),
+                            "parameters": pars,
+                        }
+                    )
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
 
@@ -1331,10 +1367,25 @@ class Circuit:
                         }[gatename]
                     )
                 except:
-                    raise_error(
-                        ValueError,
-                        f"QASM command {command} is not recognized.",
-                    )
+                    if gatename in composite_gates:
+                        _q = line.split(" ")[-1].replace(";", "").split(",")
+                        _p = (
+                            re.search(r"\((.*?)\)", line.split(" ")[0])
+                            .group(0)
+                            .split(",")
+                            if len(pieces) == 2
+                            else []
+                        )
+                        for g in composite_gates[gatename]:
+                            parse_line(
+                                f"{g['gatename']}{g['parameters'].format(*_p)} {g['qubits'].format(*_q)}"
+                            )
+                        return
+                    else:
+                        raise_error(
+                            ValueError,
+                            f"QASM command {command} is not recognized.",
+                        )
 
                 if len(pieces) == 1:
                     params = None
@@ -1383,6 +1434,22 @@ class Circuit:
                         )
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gatetype, list(qubit_list), params))
+
+        for line in lines:
+            line = (
+                re.sub(r"^OPENQASM [0-9]+\.[0-9]+;*\s*", "", line)
+                .replace(r"/\s\s+/g", " ")
+                .replace(r"^[\s]+", "")
+                .replace("[\\s]+\n", "")
+                .replace("; ", ";")
+                .replace(", ", ",")
+            )
+            _lines = [line]
+            if len(re.findall(";", line)) > 1 and not line.split(" ")[0] == "gate":
+                _lines = line.split(";")[:-1]
+            for l in _lines:
+                if l != "":
+                    parse_line(l)
 
         # Create measurement gate qubit lists from registers
         for i, (gatetype, register, _) in enumerate(gate_list):

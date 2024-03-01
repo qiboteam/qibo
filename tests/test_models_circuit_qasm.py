@@ -529,7 +529,7 @@ rx(0.123)(0.25)(0) q[0];
 def test_from_qasm_empty_spaces():
     target = """OPENQASM 2.0; qreg q[2];
 creg a[2]; h q[0];x q[1]; cx q[0], q[1];
-measure q[0] -> a[0];measure q[1]->a[1]"""
+measure q[0] -> a[0];measure q[1]->a[1];"""
     c = Circuit.from_qasm(target)
     assert c.nqubits == 2
     assert c.depth == 3
@@ -537,3 +537,26 @@ measure q[0] -> a[0];measure q[1]->a[1]"""
     assert isinstance(c.queue[1], gates.X)
     assert isinstance(c.queue[2], gates.CNOT)
     assert c.measurement_tuples == {"a": (0, 1)}
+
+
+def test_from_qasm_gate_command():
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+gate bob(theta,alpha) q0,q1 { h q1; cx q0,q1; rz(theta) q1; rx(alpha) q0; h q1; }
+gate alice q0,q1 { bob(pi/4,pi) q0,q1; x q0; bob(-pi/4,pi/2) q0,q1; }
+qreg q[3];
+bob(-pi/2,pi) q[0],q[2];
+alice q[1],q[0];"""
+    c = Circuit.from_qasm(target)
+    for i in range(2):
+        assert isinstance(c.queue[0 + 5 * i], gates.H)
+        assert isinstance(c.queue[1 + 5 * i], gates.CNOT)
+        assert isinstance(c.queue[2 + 5 * i], gates.RZ)
+        assert isinstance(c.queue[3 + 5 * i], gates.RX)
+        assert isinstance(c.queue[4 + 5 * i], gates.H)
+    assert isinstance(c.queue[10], gates.X)
+    assert isinstance(c.queue[11], gates.H)
+    assert isinstance(c.queue[12], gates.CNOT)
+    assert isinstance(c.queue[13], gates.RZ)
+    assert isinstance(c.queue[14], gates.RX)
+    assert isinstance(c.queue[15], gates.H)
