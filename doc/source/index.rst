@@ -22,7 +22,7 @@ Components
 
 The main components of ``Qibo`` are presented in :doc:`getting-started/index`
 
-.. image:: qibo_ecosystem.svg
+.. image:: qibo_ecosystem.png
 
 Key features
 ------------

@@ -8,7 +8,7 @@ Qibo provides backends for quantum simulation on classical
 hardware and quantum hardware management and control. In the image below we
 present a schematic view of the currently supported backends.
 
-.. image:: backends.svg
+.. image:: backends.png
 
 Quantum simulation is proposed through dedicated backends for single node
 multi-GPU and multi-threading CPU setups. Quantum hardware control is supported
@@ -35,8 +35,11 @@ We provide multiple simulation backends for Qibo, which are automatically loaded
 if the corresponding packages are installed, following the hierarchy below:
 
 * :ref:`installing-qibojit`: an efficient simulation backend for CPU, GPU and multi-GPU based on just-in-time (JIT) compiled custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
-* :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibojit` instead.
+* `qibotn <https://qibo.science/qibotn/stable/>`_: an interface to Tensor Networks simulation algorithms designed for GPUs and multi-node CPUs. This backend makes possible scaling quantum circuit simulation to a larger number of qubits.
 * :ref:`installing-numpy`: a lightweight quantum simulator shipped with the :ref:`installing-qibo` base package. Use this simulator if your CPU architecture is not supported by the other backends. Please note that the simulation performance is quite poor in comparison to other backends.
+* :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibojit` instead.
+* :ref:`installing-pytorch`: a pure PyTorch implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibojit` instead.
+
 
 The default backend that is used is the first available from the above list.
 The user can switch to a different using the ``qibo.set_backend`` method
@@ -77,3 +80,7 @@ We provide the following hardware control backends for Qibo:
 * `qibosoq <https://qibo.science/qibosoq/stable/>`_: is the server that
   integrates `Qick <https://github.com/openquantumhardware/qick>`_ in the
   Qibolab ecosystem for executing arbitrary circuits and pulse sequences.
+
+* `qibo-cloud-backends <https://qibo.science/qibo-cloud-backends/stable/>`_:
+  provides access to cloud quantum hardware. This module is compatible with labs
+  using Qibo for control and calibration and external vendors.
