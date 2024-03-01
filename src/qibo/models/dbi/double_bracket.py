@@ -230,17 +230,10 @@ class DoubleBracketIteration:
                 "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
             )
 
-        def sigma(h: np.array):
-            return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
-
         # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-        W = self.commutator(d, sigma(self.h.matrix))
-        Gamma_list = [self.h.matrix]
-        sigma_Gamma_list = [sigma(Gamma_list[0])]
-        for _ in range(n + 1):
-            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
-            sigma_Gamma_list.append(sigma(Gamma_list[-1]))
-        sigma_Gamma_list = np.array(sigma_Gamma_list)
+        W = self.commutator(d, self.sigma(self.h.matrix))
+        Gamma_list = self.generate_Gamma_list(n + 2, d)
+        sigma_Gamma_list = list(map(self.sigma, Gamma_list))
         exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
         # coefficients for rotation with [W,H] and H
         c1 = exp_list.reshape(-1, 1, 1) * sigma_Gamma_list[1:]
@@ -337,3 +330,14 @@ class DoubleBracketIteration:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
         return self.h.energy_fluctuation(state)
+
+    def sigma(self, h: np.array):
+        return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
+
+    def generate_Gamma_list(self, n: int, d: np.array):
+        r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+        W = self.commutator(d, self.sigma(self.h.matrix))
+        Gamma_list = [self.h.matrix]
+        for _ in range(n - 1):
+            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
+        return Gamma_list
