@@ -32,7 +32,7 @@ def GST_observables(nqubits):
 
 @cache
 def prepare_states(k, nqubits):
-    """Prepares a quantum circuit in a specific state indexed by `k`.
+    """Prepares the k-th state for a `nqubits`-gate.
 
     Args:
         k (int): The index of the state to be prepared. For a single qubit, \\(k \\in \\{0, 1, 2, 3\\} \\equiv
@@ -41,10 +41,10 @@ def prepare_states(k, nqubits):
               | + \\rangle \\langle + |,
               | y+ \\rangle \\langle y+ | \\}.
         For two qubits, \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
-        nqubits (int): Number of qubits in the circuit.
+        nqubits (int): Number of qubits.
 
     Returns:
-        circuit (:class:`qibo.models.Circuit`): Circuit prepared in the specified state.
+        list(:class:`qibo.gates.abstrac.Gate`): list of the gates that prepare the k-th state.
     """
 
     if not nqubits in (1, 2):
@@ -52,23 +52,22 @@ def prepare_states(k, nqubits):
             ValueError,
             f"nqubits needs to be either 1 or 2, but is {nqubits}.",
         )
-    circ = Circuit(nqubits, density_matrix=True)
     gates = k_to_gates(nqubits)[k]
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
 @cache
 def measurement_basis(j, nqubits):
-    r"""Implements a measurement basis for circuit indexed by `j`.
+    r"""Constructs the j-th measurement basis for a `nqubits`-gate.
 
         Args:
         j (int): The index of the measurement basis.
             For a single qubit, \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
             For two qubits, \(j \in \{0, 1, 2, 3\}^{\otimes 2}\).
-        circuit (:class:`qibo.models.Circuit`): Circuit without measurement basis.
+        nqubits (int): Number of qubits..
 
     Returns:
-        circuit (:class:`qibo.models.Circuit`): Circuit with measurement basis.
+        list(:class:`qibo.gates.abstrac.Gate`): list of the measurements forming the j-th basis.
     """
 
     if not nqubits in (1, 2):
@@ -105,7 +104,7 @@ def reset_register(circuit, invert_register):
         ):
             raise_error(
                 NameError,
-                f"{invert_register} not recognized.",
+                f"Invalid register {invert_register}, please pick one in {valid_registers}.",
             )
 
         elif invert_register == (0,) or invert_register == (1,):
