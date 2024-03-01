@@ -2334,11 +2334,15 @@ class Unitary(ParametrizedGate):
 
                 diag_function = torch.diag
                 all_function = torch.all
+                conj_function = torch.conj
+                transpose_function = torch.transpose
             else:
                 diag_function = np.diag
                 all_function = np.all
+                conj_function = np.conj
+                transpose_function = np.transpose
 
-            product = np.transpose(np.conj(unitary)) @ unitary
+            product = transpose_function(conj_function(unitary), (1, 0)) @ unitary
             diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
             off_diagonals = bool(
                 all_function(
