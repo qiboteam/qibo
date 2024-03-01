@@ -16,11 +16,21 @@ from qibo.tomography.gate_set_tomography import (
 )
 
 
-@pytest.mark.parametrize(
-    "k,nqubits",
+def _compare_gates(g1, g2):
+    assert g1.__class__.__name__ == g2.__class__.__name__
+    assert g1.qubits == g2.qubits
+
+
+INDEX_NQUBITS = (
     list(zip(range(4), repeat(1, 4)))
     + list(zip(range(16), repeat(2, 16)))
-    + [(0, 3), (17, 1)],
+    + [(0, 3), (17, 1)]
+)
+
+
+@pytest.mark.parametrize(
+    "k,nqubits",
+    INDEX_NQUBITS,
 )
 def test_prepare_states(k, nqubits):
     correct_gates = {
@@ -51,18 +61,14 @@ def test_prepare_states(k, nqubits):
     else:
         prepared_states = prepare_states(k, nqubits)
         for groundtruth, gate in zip(correct_gates[nqubits][k], prepared_states):
-            assert groundtruth.__class__.__name__ == gate.__class__.__name__
-            assert groundtruth.qubits == gate.qubits
+            _compare_gates(groundtruth, gate)
 
 
 @pytest.mark.parametrize(
     "j,nqubits",
-    list(zip(range(4), repeat(1, 4)))
-    + list(zip(range(16), repeat(2, 16)))
-    + [(0, 3), (17, 1)],
+    INDEX_NQUBITS,
 )
 def test_measurement_basis(j, nqubits):
-    U = 1 / np.sqrt(2) * np.array([[1, -1j], [1j, -1]])
     correct_gates = {
         1: [
             [gates.M(0)],
@@ -96,11 +102,9 @@ def test_measurement_basis(j, nqubits):
     else:
         prepared_gates = measurement_basis(j, nqubits)
         for groundtruth, gate in zip(correct_gates[nqubits][j], prepared_gates):
-            assert groundtruth.__class__.__name__ == gate.__class__.__name__
-            assert groundtruth.qubits == gate.qubits
+            _compare_gates(groundtruth, gate)
             for g1, g2 in zip(groundtruth.basis, gate.basis):
-                assert g1.__class__.__name__ == g2.__class__.__name__
-                assert g1.qubits == g2.qubits
+                _compare_gates(g1, g2)
 
 
 def test_reset_register_valid_tuple_1qb():
