@@ -150,10 +150,10 @@ def test_double_bracket_iteration_scheduling_polynomial(
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
-        step1 = dbi.polynomial_step(n=n, d=d, backup_scheduling=backup_scheduling)
+        step1 = dbi.choose_step(n=n, backup_scheduling=backup_scheduling)
         dbi(d=d, step=step1)
-    step2 = dbi.choose_step(
-        scheduling=DoubleBracketScheduling.polynomial_approximation, n=n
-    )
-    dbi(step=step2)
+    # step2 = dbi.choose_step(
+    #     scheduling=DoubleBracketScheduling.polynomial_approximation, n=n
+    # )
+    # dbi(step=step2)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm

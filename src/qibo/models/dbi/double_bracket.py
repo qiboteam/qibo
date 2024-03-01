@@ -9,6 +9,8 @@ import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
 
+error = 1e-3
+
 
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
@@ -156,14 +158,14 @@ class DoubleBracketIteration:
             d = self.diagonal_h_matrix
 
         loss_list = [self.loss(step, d=d) for step in space]
-        idx_max_loss = loss_list.index(min(loss_list))
+        idx_max_loss = np.argmin(loss_list)
         return space[idx_max_loss]
 
     def hyperopt_step(
         self,
         step_min: float = 1e-5,
         step_max: float = 1,
-        max_evals: int = 1000,
+        max_evals: int = 500,
         space: callable = None,
         optimizer: callable = None,
         look_ahead: int = 1,
@@ -205,10 +207,9 @@ class DoubleBracketIteration:
 
     def polynomial_step(
         self,
-        n: int = 4,
+        n: int = 2,
         n_max: int = 5,
         d: np.array = None,
-        backup_scheduling: DoubleBracketScheduling = None,
     ):
         r"""
         Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -223,23 +224,19 @@ class DoubleBracketIteration:
         if d is None:
             d = self.diagonal_h_matrix
 
-        if backup_scheduling is None:
-            backup_scheduling = DoubleBracketScheduling.grid_search
+        if n > n_max:
+            raise ValueError(
+                "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
+            )
 
-        # list starting from s^n highest order to s^0
-        sigma_gamma_list = np.array(
-            [self.sigma(self.Gamma(k, d)) for k in range(n + 2)]
-        )
+        # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+        W = self.commutator(d, self.sigma(self.h.matrix))
+        Gamma_list = self.generate_Gamma_list(n + 2, d)
+        sigma_Gamma_list = list(map(self.sigma, Gamma_list))
         exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
         # coefficients for rotation with [W,H] and H
-        c1 = [
-            exp_coef * delta_gamma
-            for exp_coef, delta_gamma in zip(exp_list, sigma_gamma_list[1:])
-        ]
-        c2 = [
-            exp_coef * delta_gamma
-            for exp_coef, delta_gamma in zip(exp_list, sigma_gamma_list[:-1])
-        ]
+        c1 = exp_list.reshape(-1, 1, 1) * sigma_Gamma_list[1:]
+        c2 = exp_list.reshape(-1, 1, 1) * sigma_Gamma_list[:-1]
         # product coefficient
         trace_coefficients = [0] * (2 * n + 1)
         for k in range(n + 1):
@@ -247,9 +244,9 @@ class DoubleBracketIteration:
                 power = k + j
                 product_matrix = c1[k] @ c2[j]
                 trace_coefficients[power] += 2 * np.trace(product_matrix)
-        taylor_coefficients = list(reversed(trace_coefficients[: n + 1]))
-        roots = np.roots(taylor_coefficients)
-        error = 1e-3
+        # coefficients from high to low (n:0)
+        coef = list(reversed(trace_coefficients[: n + 1]))
+        roots = np.roots(coef)
         real_positive_roots = [
             np.real(root)
             for root in roots
@@ -257,27 +254,18 @@ class DoubleBracketIteration:
         ]
         # solution exists, return minimum s
         if len(real_positive_roots) > 0:
-            return min(real_positive_roots), taylor_coefficients
-        # solution does not exist, resort to backup scheduling
-        elif (
-            backup_scheduling == DoubleBracketScheduling.polynomial_approximation
-            and n < n_max + 1
-        ):
-            return self.polynomial_step(
-                n=n + 1, d=d, backup_scheduling=backup_scheduling
-            )
+            return min(real_positive_roots), coef
+        # solution does not exist, return None
         else:
-            print(
-                f"Unable to find roots with current order, resorting to {backup_scheduling}"
-            )
-            return self.choose_step(d=d, scheduling=backup_scheduling), list(
-                reversed(trace_coefficients[: n + 1])
-            )
+            return None, coef
 
     def choose_step(
         self,
         d: Optional[np.array] = None,
         scheduling: Optional[DoubleBracketScheduling] = None,
+        backup_scheduling: Optional[
+            DoubleBracketScheduling
+        ] = DoubleBracketScheduling.hyperopt,
         **kwargs,
     ):
         """
@@ -290,8 +278,22 @@ class DoubleBracketIteration:
         if scheduling is DoubleBracketScheduling.hyperopt:
             return self.hyperopt_step(d=d, **kwargs)
         if scheduling is DoubleBracketScheduling.polynomial_approximation:
-            # omit taylor coefficients
-            step, _ = self.polynomial_step(d=d, **kwargs)
+            step, coef = self.polynomial_step(d=d, **kwargs)
+            # if no solution
+            if step is None:
+                if (
+                    backup_scheduling
+                    == DoubleBracketScheduling.polynomial_approximation
+                    and coef is not None
+                ):
+                    # if `n` is not provided, try default value
+                    kwargs["n"] = kwargs.get("n", 2)
+                    kwargs["n"] += 1
+                    step, coef = self.polynomial_step(d=d, **kwargs)
+                    # if n==n_max, return None
+                else:
+                    # Issue: cannot pass kwargs
+                    step = self.choose_step(d=d, scheduling=backup_scheduling)
             return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
@@ -334,13 +336,22 @@ class DoubleBracketIteration:
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
 
-    def Gamma(self, k: int, d: np.array):
-        r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
-        if k == 0:
-            return self.h.matrix
-        else:
-            W = self.commutator(d, self.sigma(self.h.matrix))
-            result = self.h.matrix
-            for _ in range(k):
-                result = self.commutator(W, result)
-        return result
+    def generate_Gamma_list(self, n: int, d: np.array):
+        r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+        W = self.commutator(d, self.sigma(self.h.matrix))
+        Gamma_list = [self.h.matrix]
+        for _ in range(n - 1):
+            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
+        return Gamma_list
+
+    # def Gamma(self, n: int, d: np.array):
+
+    #     r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+    #     if k == 0:
+    #         return self.h.matrix
+    #     else:
+    #         W = self.commutator(d, self.sigma(self.h.matrix))
+    #         result = self.h.matrix
+    #         for _ in range(k):
+    #             result = self.commutator(W, result)
+    #     return result
