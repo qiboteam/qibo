@@ -1,4 +1,4 @@
-from qibotn.backends import QuimbBackend
+from qibotn.backends.quimb import QuimbBackend
 
 import qibo
 from qibo.backends import GlobalBackend

@@ -9,6 +9,7 @@ from qibo.config import log, raise_error
 
 
 def construct_backend(backend, **kwargs):
+    print(backend)
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
@@ -35,12 +36,15 @@ def construct_backend(backend, **kwargs):
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
     elif backend == "qibotn":  # pragma: no cover
-        from qibotn.backends import CuTensorNet, QuimbBackend  # pylint: disable=E0401
 
         platform = kwargs.get("platform")
         if platform == "cutensornet":  # pragma: no cover
+            from qibotn.backends.cutensornet import CuTensorNet  # pylint: disable=E0401
+
             return CuTensorNet(kwargs["runcard"])
         elif platform == "qutensornet":  # pragma: no cover
+            from qibotn.backends.quimb import QuimbBackend  # pylint: disable=E0401
+
             return QuimbBackend(kwargs["runcard"])
 
         return QibolabBackend(**kwargs)
