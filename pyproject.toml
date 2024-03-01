@@ -97,6 +97,10 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 [tool.pylint.reports]
 output-format = "colorized"
 
+
+[tool.coverage.run]
+omit = [ "src/qibo/noise_model.py" ]
+
 [tool.pytest.ini_options]
 testpaths = ['tests/']
 filterwarnings = ['ignore::RuntimeWarning']
