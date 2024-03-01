@@ -31,8 +31,8 @@ tabulate = "^0.9.0"
 openqasm3 = {version = ">=0.5.0", extras = ["parser"]}
 numpy = "^1.26.4"
 networkx = "^3.2.1"
-cvxpy = {version = "^1.4.2", optional = true}
-tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true}
+cvxpy = { version = "^1.4.2", optional = true }
+tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -68,7 +68,7 @@ pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux'" }
+tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
 
 [tool.poe.tasks]
 test = "pytest"

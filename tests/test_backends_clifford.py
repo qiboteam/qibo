@@ -4,12 +4,8 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, set_backend
-from qibo.backends import (
-    CliffordBackend,
-    GlobalBackend,
-    NumpyBackend,
-    TensorflowBackend,
-)
+from qibo.backends import CliffordBackend, GlobalBackend, NumpyBackend
+from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
@@ -17,15 +13,12 @@ numpy_bkd = NumpyBackend()
 
 
 def construct_clifford_backend(backend):
-    if isinstance(backend, TensorflowBackend):
-        with pytest.raises(NotImplementedError) as excinfo:
-            clifford_backend = CliffordBackend(backend)
-            assert (
-                str(excinfo.value)
-                == "TensorflowBackend for Clifford Simulation is not supported yet."
-            )
-    else:
-        return CliffordBackend(backend)
+    if backend.__class__.__name__ in ["TensorflowBackend", "CuQuantumBackend"]:
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend.name)
+        pytest.skip("Clifford backend not defined for the this engine.")
+
+    return CliffordBackend(_get_engine_name(backend))
 
 
 THETAS_1Q = [
@@ -246,11 +239,11 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    platform = backend.platform
-    if platform is None:
-        platform = str(backend)
+    platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), type(clifford_bkd))
+    assert isinstance(GlobalBackend(), CliffordBackend)
+    global_platform = GlobalBackend().platform
+    assert global_platform == platform
 
 
 def test_noise_channels(backend):
