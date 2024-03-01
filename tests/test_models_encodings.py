@@ -127,11 +127,6 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     data = 2 * sampler.random(nqubits) - 1
     data = data.tolist() if kind is not None else backend.cast(data, dtype=data.dtype)
 
-    print(type(data), type(data[0]))
-
-    # if kind is not None:
-    #     data = kind(data)
-
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(state)
