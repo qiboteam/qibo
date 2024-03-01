@@ -107,6 +107,3 @@ addopts = [
   '--cov-report=html',
   '--durations=60',
 ]
-
-[tool.poetry.extras]
-cloud = ["qibo-cloud-backends"]
