@@ -223,8 +223,6 @@ class DoubleBracketIteration:
         if d is None:
             d = self.diagonal_h_matrix
 
-        if backup_scheduling is None:
-            backup_scheduling = DoubleBracketScheduling.grid_search
 
         if n > n_max:
             raise ValueError(
