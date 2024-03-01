@@ -36,7 +36,7 @@ def construct_backend(backend, **kwargs):
 
     elif backend == "qibotn":  # pragma: no cover
         from qibotn.backends import CuTensorNet, QuimbBackend  # pylint: disable=E0401
-        
+
         platform = kwargs.get("platform")
         if platform == "cutensornet":  # pragma: no cover
             return CuTensorNet(kwargs["runcard"])
