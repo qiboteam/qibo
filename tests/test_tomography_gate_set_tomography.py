@@ -269,6 +269,33 @@ def test_GST_execute_circuit(backend, j, nqubits):
     )
 
 
+@pytest.mark.parametrize(
+    "gate",
+    [
+        None,
+        gates.SX(0),
+        gates.CZ(0, 1),
+        gates.RY(0, theta=2 * np.pi * np.random.rand()),
+        gates.CNOT(1, 0),
+    ],
+)
+def test_execute_GST(backend, gate):
+    if gate is None:
+        nqubits = 1
+        target = backend.zero_state(nqubits)
+    else:
+        target = gate.matrix()
+        nqubits = int(np.log2(target.shape[0]))
+    # define a noise model
+    lam = 1e-2
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    estimate = execute_GST(
+        nqubits=nqubits, gate=gate, noise_model=depol, backend=backend
+    )
+    backend.assert_allclose(target, estimate, atol=1e-2)
+
+
 def test_GST_one_qubit_empty_circuit(backend):
     nqubits = 1
     control_result = execute_GST(
