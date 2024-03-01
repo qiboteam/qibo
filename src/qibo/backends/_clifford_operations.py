@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import cache, reduce
 
 import numpy as np
 from scipy import sparse
@@ -422,6 +422,11 @@ def _random_outcome(state, p, q, nqubits):
     state[p, -1] = outcome
     state[p, nqubits + q] = True
     return state, outcome
+
+
+@cache
+def _get_dim(nqubits):
+    return 2 * nqubits + 1
 
 
 def _get_p(state, q, nqubits):
