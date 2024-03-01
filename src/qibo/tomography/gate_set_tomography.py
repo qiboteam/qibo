@@ -26,8 +26,18 @@ def j_to_measurements(nqubits):
 
 
 @cache
-def GST_observables(nqubits):
+def _observables(nqubits):
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
+
+
+@cache
+def _get_observable(j, nqubits):
+    observables = _observables(nqubits)[j]
+    observable = 1
+    for q, obs in enumerate(observables):
+        if obs is not symbols.I:
+            observable *= obs(q)
+    return SymbolicHamiltonian(observable, nqubits=nqubits)
 
 
 @cache
@@ -145,20 +155,14 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         )
 
     else:
-        if j == 0:
+        if False:  # j == 0:
             return 1.0
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
         result = backend.execute_circuit(circuit, nshots=nshots)
-        observables = GST_observables(nqubits)[j]
-        observable = 1
-        for q, obs in enumerate(observables):
-            if obs is not symbols.I:
-                observable *= obs(q)
-        observable = SymbolicHamiltonian(observable, nqubits=nqubits)
-        expectation_val = result.expectation_from_samples(observable)
-        return expectation_val
+        observable = _get_observable(j, nqubits)
+        return result.expectation_from_samples(observable)
 
 
 def execute_GST(

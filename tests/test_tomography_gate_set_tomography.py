@@ -1,14 +1,16 @@
+import random
 from itertools import repeat
 
 import numpy as np
 import pytest
 
 import qibo
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import (
     GST,
     GST_execute_circuit,
+    _get_observable,
     execute_GST,
     measurement_basis,
     prepare_states,
@@ -221,72 +223,50 @@ def test_reset_register_invalid_tuple(a, b):
         inverse_circuit = reset_register(test_circuit, (a, b))
 
 
-def test_GST_execute_circuit_1qb_j0():
-    np.random.seed(42)
-    nqubits = 1
-    circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.M(0))
-    k = 0
-    j = 0
-    result = GST_execute_circuit(circuit, k, j)
-    assert result == 1.0
+def test_GST_observables():
+    raise NotImplementedError
 
 
-@pytest.mark.parametrize("k, j", [(0, 1), (0, 2), (1, 2), (2, 3)])
-def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
-    nqubits = 1
-    circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.H(0))
-    circuit.add(gates.M(0))
-
-    np.random.seed(42)
-    control_result = GST_execute_circuit(circuit, k, j, backend=backend)
-    np.random.seed(42)
-    test_result = GST_execute_circuit(circuit, k, j, backend=backend)
-
-    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
-
-
-def test_GST_execute_circuit_2qb_j0():
-    np.random.seed(42)
-    nqubits = 2
-    circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.H(0))
-    circuit.add(gates.M(0))
-    circuit.add(gates.M(1))
-    k = 0
-    j = 0
-    result = GST_execute_circuit(circuit, k, j)
-    assert result == 1.0
-
-
-@pytest.mark.parametrize("k, j", [(0, 1)])
-def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
-    nqubits = 2
-    circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.H(0))
-    circuit.add(gates.H(1))
-    circuit.add(gates.M(0))
-    circuit.add(gates.M(1))
-
-    np.random.seed(42)
-    control_result = GST_execute_circuit(circuit, k, j, backend=backend)
-    np.random.seed(42)
-    test_result = GST_execute_circuit(circuit, k, j, backend=backend)
-
-    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
-
-
-@pytest.mark.parametrize("nqubits", [3, 4, 5, 6, 7, 8])
-def test_GST_execute_circuit_wrong_qb(nqubits):
-    circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.M(0))
-    k = 0
-    j = 0
-
-    # Check if ValueError is raised
-    with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        result = GST_execute_circuit(circuit, k, j)
+@pytest.mark.parametrize(
+    "j,nqubits",
+    random.choices(INDEX_NQUBITS[:-2], k=5),
+)
+def test_GST_execute_circuit(backend, j, nqubits):
+    # pick k
+    k = random.choice(range(4**nqubits))
+    # pick a gate
+    gate = random.choice(
+        [
+            None,
+            gates.SX(0),
+            gates.CZ(0, 1),
+            gates.RY(0, theta=2 * np.pi * np.random.rand()),
+            gates.CNOT(1, 0),
+        ]
+    )
+    # define a noise model
+    lam = 0.2
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    # create a test circuit
+    circuit = Circuit(nqubits, density_matrix=True)
+    # prepare j-k settings
+    initial_state = prepare_states(k, nqubits)
+    meas_basis = measurement_basis(j, nqubits)
+    circuit.add(initial_state)
+    if gate is not None:
+        circuit.add(gate)
+    circuit.add(meas_basis)
+    circuit = depol.apply(circuit)
+    result = backend.execute_circuit(circuit, nshots=1000)
+    # build the observable
+    obs = _get_observable(j, nqubits)
+    expv = result.expectation_from_samples(obs)
+    backend.assert_allclose(
+        expv,
+        GST_execute_circuit(circuit, k, j, nshots=1000, backend=backend),
+        atol=1e-1,
+    )
 
 
 def test_GST_one_qubit_empty_circuit(backend):
