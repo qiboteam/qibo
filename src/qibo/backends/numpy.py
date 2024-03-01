@@ -115,30 +115,30 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = self.np.eye(2**rank, dtype=self.dtype)
+        matrix = np.eye(2**rank, dtype=np.complex128)
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
-            gmatrix = self.cast(gate.matrix(self))
+            gmatrix = self.to_numpy(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = self.np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
-            gmatrix = self.np.kron(gmatrix, eye)
+            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=np.complex128)
+            gmatrix = np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
             original_shape = gmatrix.shape
-            gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
+            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
             indices = np.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
-            gmatrix = self.np.transpose(gmatrix, transpose_indices)
-            gmatrix = self.np.reshape(gmatrix, original_shape)
+            gmatrix = np.transpose(gmatrix, transpose_indices)
+            gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
-        return matrix
+        return self.cast(matrix)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
