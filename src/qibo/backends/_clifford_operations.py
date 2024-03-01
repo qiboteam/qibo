@@ -431,15 +431,18 @@ def _get_p(state, q, nqubits):
 # valid for a standard basis measurement only
 def M(state, qubits, nqubits, collapse=False):
     sample = []
-    state_copy = state if collapse else state.copy()
+    if collapse:
+        state = np.unpackbits(state, axis=0)
+    else:
+        state = state.copy()
     for q in qubits:
-        p = _get_p(state_copy, q, nqubits)
+        p = _get_p(state, q, nqubits)
         # random outcome, affects the state
         if len(p) > 0:
-            state_copy, outcome = _random_outcome(state_copy, p, q, nqubits)
+            state, outcome = _random_outcome(state, p, q, nqubits)
         # determined outcome, state unchanged
         else:
-            state_copy, outcome = _determined_outcome(state_copy, q, nqubits)
+            state, outcome = _determined_outcome(state, q, nqubits)
         sample.append(outcome)
     return sample
 
