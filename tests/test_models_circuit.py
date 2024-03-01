@@ -160,8 +160,6 @@ def test_add_measurement():
     assert c.measurement_tuples == {"a": (0, 2), "b": (3,)}
     assert g1.target_qubits == (0, 2)
     assert g2.target_qubits == (3,)
-    with pytest.raises(KeyError):
-        c.add(gates.M(4, register_name="b"))
 
 
 def test_add_measurement_collapse():

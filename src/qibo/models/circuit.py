@@ -8,6 +8,7 @@ import qibo
 from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
+from qibo.models._openqasm import QASMParser
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -660,11 +661,13 @@ class Circuit:
                     nreg = self.queue.nmeasurements - 1
                     gate.register_name = f"register{nreg}"
                 else:
-                    name = gate.register_name
-                    for mgate in self.measurements:
-                        if name == mgate.register_name:
+                    registers = self.measurement_tuples
+                    for register, qubits in registers.items():
+                        intersection = set(qubits).intersection(set(gate.target_qubits))
+                        if len(intersection) > 0:
                             raise_error(
-                                KeyError, f"Register {name} already exists in circuit."
+                                KeyError,
+                                f"Qubits {tuple(intersection)} already measured in register `{register}`.",
                             )
 
                 gate.result.circuit = self
@@ -692,7 +695,13 @@ class Circuit:
     @property
     def measurement_tuples(self):
         # used for testing only
-        return {m.register_name: m.target_qubits for m in self.measurements}
+        registers = {}
+        for m in self.measurements:
+            if m.register_name not in registers:
+                registers[m.register_name] = m.target_qubits
+            else:
+                registers[m.register_name] += m.target_qubits
+        return {name: qubits for name, qubits in registers.items()}
 
     @property
     def ngates(self) -> int:
@@ -1207,258 +1216,8 @@ class Circuit:
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        nqubits, gate_list = cls._parse_qasm(qasm_code)
-        circuit = cls(nqubits, accelerators, density_matrix)
-        for gate, qubits, params in gate_list:
-            if gate == gates.M:
-                circuit.add(gate(*qubits, register_name=params))
-            elif params is None:
-                circuit.add(gate(*qubits))
-            else:
-                # assume parametrized gate
-                circuit.add(gate(*qubits, *params))
-        return circuit
-
-    @staticmethod
-    def _parse_qasm(qasm_code: str):
-        """Extracts circuit information from QASM script.
-
-        Helper method for ``from_qasm``.
-
-        Args:
-            qasm_code: String with the QASM code to parse.
-
-        Returns:
-            nqubits: The total number of qubits in the circuit.
-            gate_list: List that specifies the gates of the circuit.
-                Contains tuples of the form
-                (Qibo gate name, qubit IDs, optional additional parameter).
-                The additional parameter is the ``register_name`` for
-                measurement gates or ``theta`` for parametrized gates.
-        """
-        import re
-
-        def read_args(args):
-            _args = iter(re.split(r"[\[\],]", args))
-            for name in _args:
-                if name:
-                    index = next(_args)
-                    if not index.isdigit():
-                        raise_error(ValueError, "Invalid QASM qubit arguments:", args)
-                    yield name, int(index)
-
-        # Remove comment lines
-        lines = [line for line in qasm_code.splitlines() if line and line[:2] != "//"]
-
-        if not re.search(r"^OPENQASM [0-9]+\.[0-9]+", lines[0]):
-            raise_error(
-                ValueError,
-                "QASM code should start with 'OPENQASM X.X' with X.X indicating the version.",
-            )
-
-        qubits = {}  # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
-        cregs_size = {}  # Dict[str, int]: map from `creg` name to its size
-        registers = (
-            {}
-        )  # Dict[str, List[int]]: map from register names to target qubit ids
-        gate_list = (
-            []
-        )  # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
-        composite_gates = {}  # composite gates created with the "gate" command
-
-        def parse_line(line):
-            line = line.replace(r"/\s{2,}/g", " ").replace(r"^[\s]+", "")
-            command, *args = line.split(" ")
-            args = " ".join(args)
-            if args[-1] == ";":
-                args = args[:-1]
-
-            if command == "include":
-                pass
-
-            elif command == "qreg":
-                for name, nqubits in read_args(args):
-                    for i in range(nqubits):
-                        qubits[(name, i)] = len(qubits)
-
-            elif command == "creg":
-                for name, nqubits in read_args(args):
-                    cregs_size[name] = nqubits
-
-            elif command == "measure":
-                args = args.replace(" ", "").split("->")
-                if len(args) != 2:
-                    raise_error(ValueError, "Invalid QASM measurement:", line)
-                qubit = next(read_args(args[0]))
-                if qubit not in qubits:
-                    raise_error(
-                        ValueError,
-                        f"Qubit {qubit} is not defined in QASM code.",
-                    )
-
-                register, idx = next(read_args(args[1]))
-                if register not in cregs_size:
-                    raise_error(
-                        ValueError,
-                        f"Classical register name {register} is not defined in QASM code.",
-                    )
-                if idx >= cregs_size[register]:
-                    raise_error(
-                        ValueError,
-                        f"Cannot access index {idx} of register {register} "
-                        + f"with {cregs_size[register]} qubits.",
-                    )
-                if register in registers:
-                    if idx in registers[register]:
-                        raise_error(
-                            KeyError,
-                            f"Key {idx} of register {register} has already been used.",
-                        )
-                    registers[register][idx] = qubits[qubit]
-                else:
-                    registers[register] = {idx: qubits[qubit]}
-                    gate_list.append((gates.M, register, None))
-
-            elif command == "gate":
-                _name, _qubits, *_ = args.split(" ")
-                _separate_gates = (
-                    re.search(r"\{(.*?)\}", args).group(0)[2:-2].split(";")
-                )
-                _params = re.search(r"\((.*?)\)", _name)
-                _qubits = _qubits.split(",")
-                if _params:
-                    _name = _name[: _params.start()]
-                    _params = _params.group()[1:-1].split(",")
-                composite_gates[_name] = []
-                for g in _separate_gates:
-                    _g_name, _g_qubits = g.split(" ")
-                    _g_params = re.search(r"\((.*?)\)", _g_name)
-                    if _g_params and _params:
-                        _g_name = _g_name[: _g_params.start()]
-                        _g_params = [
-                            f"{{{_params.index(p)}}}"
-                            for p in _g_params.group()[1:-1].split(",")
-                        ]
-                    else:
-                        _g_params = None
-                    _g_qubits = [
-                        f"{{{_qubits.index(q)}}}" for q in _g_qubits.split(",")
-                    ]
-                    pars = "" if not _g_params else f"({','.join(_g_params)})"
-                    composite_gates[_name].append(
-                        {
-                            "gatename": _g_name,
-                            "qubits": ",".join(_g_qubits),
-                            "parameters": pars,
-                        }
-                    )
-            else:
-                pieces = [x for x in re.split("[()]", command) if x]
-
-                gatename = pieces[0]
-                try:
-                    gatetype = (
-                        getattr(gates, gatename.upper())
-                        if gatename not in ["id", "cx", "ccx"]
-                        else {
-                            "id": gates.I,
-                            "cx": gates.CNOT,
-                            "ccx": gates.TOFFOLI,
-                        }[gatename]
-                    )
-                except:
-                    if gatename in composite_gates:
-                        _q = line.split(" ")[-1].replace(";", "").split(",")
-                        _p = (
-                            re.search(r"\((.*?)\)", line.split(" ")[0])
-                            .group(0)
-                            .split(",")
-                            if len(pieces) == 2
-                            else []
-                        )
-                        for g in composite_gates[gatename]:
-                            parse_line(
-                                f"{g['gatename']}{g['parameters'].format(*_p)} {g['qubits'].format(*_q)}"
-                            )
-                        return
-                    else:
-                        raise_error(
-                            ValueError,
-                            f"QASM command {command} is not recognized.",
-                        )
-
-                if len(pieces) == 1:
-                    params = None
-                    if issubclass(gatetype, gates.ParametrizedGate):
-                        raise_error(
-                            ValueError,
-                            f"Missing parameters for QASM gate {gatename}.",
-                        )
-
-                elif len(pieces) == 2:
-                    if not issubclass(gatetype, gates.ParametrizedGate):
-                        raise_error(ValueError, f"Invalid QASM command {command}.")
-
-                    params = pieces[1].replace(" ", "").split(",")
-                    try:
-                        for i, p in enumerate(params):
-                            denominator = 1
-                            if "/" in p:
-                                p, denominator = p.split("/")
-                            if "pi" in p:
-                                from functools import reduce
-                                from operator import mul
-
-                                s = p.replace("pi", str(np.pi)).split("*")
-                                p = reduce(mul, [float(j) for j in s], 1)
-                            params[i] = float(p) / float(denominator)
-                    except ValueError:
-                        raise_error(
-                            ValueError,
-                            f"Invalid value {params} for gate parameters.",
-                        )
-
-                else:
-                    raise_error(
-                        ValueError,
-                        f"QASM command {command} is not recognized.",
-                    )
-
-                # Add gate to gate list
-                qubit_list = []
-                for qubit in read_args(args):
-                    if qubit not in qubits:
-                        raise_error(
-                            ValueError,
-                            f"Qubit {qubit} is not defined in QASM code.",
-                        )
-                    qubit_list.append(qubits[qubit])
-                gate_list.append((gatetype, list(qubit_list), params))
-
-        for line in lines:
-            line = (
-                re.sub(r"^OPENQASM [0-9]+\.[0-9]+;*\s*", "", line)
-                .replace(r"/\s\s+/g", " ")
-                .replace(r"^[\s]+", "")
-                .replace("[\\s]+\n", "")
-                .replace("; ", ";")
-                .replace(", ", ",")
-            )
-            _lines = [line]
-            if len(re.findall(";", line)) > 1 and not line.split(" ")[0] == "gate":
-                _lines = line.split(";")[:-1]
-            for l in _lines:
-                if l != "":
-                    parse_line(l)
-
-        # Create measurement gate qubit lists from registers
-        for i, (gatetype, register, _) in enumerate(gate_list):
-            if gatetype == gates.M:
-                qubit_list = registers[register]
-                qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
-                gate_list[i] = (gates.M, qubit_list, register)
-
-        return len(qubits), gate_list
+        parser = QASMParser()
+        return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
