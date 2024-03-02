@@ -33,8 +33,8 @@ def test_clifford_from_symplectic_matrix(backend, nqubits):
     clifford_backend = construct_clifford_backend(backend)
 
     symplectic_matrix = clifford_backend.zero_state(nqubits)
-    clifford_1 = Clifford(symplectic_matrix, engine=backend)
-    clifford_2 = Clifford(symplectic_matrix[:-1], engine=backend)
+    clifford_1 = Clifford(symplectic_matrix, engine=_get_engine_name(backend))
+    clifford_2 = Clifford(symplectic_matrix[:-1], engine=_get_engine_name(backend))
 
     for clifford in [clifford_1, clifford_2]:
         backend.assert_allclose(
@@ -316,7 +316,7 @@ def test_clifford_samples_error(backend):
     clifford_backend = construct_clifford_backend(backend)
 
     c = random_clifford(1, backend=backend)
-    obj = Clifford.from_circuit(c, engine=backend)
+    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     with pytest.raises(RuntimeError) as excinfo:
         obj.samples()
         assert str(excinfo.value) == "No measurement provided."
