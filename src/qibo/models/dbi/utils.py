@@ -6,7 +6,7 @@ import numpy as np
 from hyperopt import hp, tpe
 
 from qibo import symbols
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
@@ -38,8 +38,7 @@ def generate_Z_operators(nqubits: int, backend=None):
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
 
-    if backend is None:
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
     # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
