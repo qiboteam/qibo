@@ -28,10 +28,11 @@ cma = "^3.3.0"
 joblib = "^1.2.0"
 hyperopt = "^0.2.7"
 tabulate = "^0.9.0"
+openqasm3 = {version = ">=0.5.0", extras = ["parser"]}
 numpy = "^1.26.4"
 networkx = "^3.2.1"
-cvxpy = {version = "^1.4.2", optional = true}
-tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true}
+cvxpy = { version = "^1.4.2", optional = true }
+tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -67,8 +68,8 @@ pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux'" }
-torch = "^2.2.0"
+tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poe.tasks]
 test = "pytest"
@@ -85,6 +86,7 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.group.cuda12]
 optional = true
@@ -93,9 +95,14 @@ optional = true
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.pylint.reports]
 output-format = "colorized"
+
+
+[tool.coverage.run]
+omit = [ "src/qibo/noise_model.py" ]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']

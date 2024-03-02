@@ -9,10 +9,11 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 
-def construct_backend(backend, platform=None):
+def construct_backend(backend, **kwargs):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
+        platform = kwargs.get("platform")
         if platform == "cupy":  # pragma: no cover
             return CupyBackend()
         elif platform == "cuquantum":  # pragma: no cover
@@ -37,15 +38,33 @@ def construct_backend(backend, platform=None):
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
-        return QibolabBackend(platform)
-    elif backend == "clifford":
-        if platform is not None:  # pragma: no cover
-            if platform in ("cupy", "numba", "cuquantum"):
-                platform = construct_backend("qibojit", platform=platform)
-            else:
-                platform = construct_backend(platform)
-        return CliffordBackend(platform)
+    elif backend == "qibotn":  # pragma: no cover
 
+        platform = kwargs.get("platform")
+        if platform == "cutensornet":  # pragma: no cover
+            from qibotn.backends.cutensornet import CuTensorNet  # pylint: disable=E0401
+
+            return CuTensorNet(kwargs["runcard"])
+        elif platform == "qutensornet":  # pragma: no cover
+            from qibotn.backends.quimb import QuimbBackend  # pylint: disable=E0401
+
+            return QuimbBackend(kwargs["runcard"])
+
+        return QibolabBackend(**kwargs)
+    elif backend == "clifford":
+        return CliffordBackend(kwargs["platform"])
+    elif backend == "qibo-client":  # pragma: no cover
+        from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
+            QiboClientBackend,
+        )
+
+        return QiboClientBackend(**kwargs)
+    elif backend == "qiskit":  # pragma: no cover
+        from qibo_cloud_backends.qiskit_client import (  # pylint: disable=E0401
+            QiskitClientBackend,
+        )
+
+        return QiskitClientBackend(**kwargs)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
@@ -71,7 +90,7 @@ class GlobalBackend(NumpyBackend):
         if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = construct_backend(backend, platform)
+            cls._instance = construct_backend(backend, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
@@ -88,13 +107,13 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None):  # pragma: no cover
+    def set_backend(cls, backend, **kwargs):  # pragma: no cover
         if (
             cls._instance is None
             or cls._instance.name != backend
-            or cls._instance.platform != platform
+            or cls._instance.platform != kwargs.get("platform")
         ):
-            cls._instance = construct_backend(backend, platform)
+            cls._instance = construct_backend(backend, **kwargs)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
@@ -134,8 +153,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None):
-    GlobalBackend.set_backend(backend, platform)
+def set_backend(backend, **kwargs):
+    GlobalBackend.set_backend(backend, **kwargs)
 
 
 def get_precision():

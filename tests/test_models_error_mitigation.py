@@ -166,10 +166,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     else:
         backend.set_threads(1)
 
-    if nqubits == 1:
-        nmeas = 1
-    else:
-        nmeas = nqubits - 1
+    nmeas = 1 if nqubits == 1 else nqubits - 1
     # Define the circuit
     c = get_circuit(nqubits, nmeas)
     # Define the observable
