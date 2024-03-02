@@ -18,7 +18,7 @@ from qibo.quantum_info.random_ensembles import random_clifford
 
 def construct_clifford_backend(backend):
     if (
-        isinstance(backend, (TensorflowBackend, PyTorchBackend)) 
+        isinstance(backend, (TensorflowBackend, PyTorchBackend))
         or backend.__class__.__name__ == "CuQuantumBackend"
     ):
         with pytest.raises(NotImplementedError):
@@ -26,6 +26,7 @@ def construct_clifford_backend(backend):
         pytest.skip("Clifford backend not defined for the this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
+
 
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
 def test_clifford_from_symplectic_matrix(backend, nqubits):
@@ -313,7 +314,7 @@ def test_clifford_samples_frequencies(backend, binary):
 
 def test_clifford_samples_error(backend):
     clifford_backend = construct_clifford_backend(backend)
-    
+
     c = random_clifford(1, backend=backend)
     obj = Clifford.from_circuit(c, engine=backend)
     with pytest.raises(RuntimeError) as excinfo:

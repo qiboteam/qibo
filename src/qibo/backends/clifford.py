@@ -48,7 +48,9 @@ class CliffordBackend(NumpyBackend):
             for method in dir(clifford_operations_cpu):
                 setattr(self.engine, method, getattr(clifford_operations_cpu, method))
         elif engine == "cupy":  # pragma: no cover
-            from qibojit.backends import clifford_operations_gpu  # pylint: disable=C0415
+            from qibojit.backends import (  # pylint: disable=C0415
+                clifford_operations_gpu,
+            )
 
             for method in dir(clifford_operations_gpu):
                 setattr(self.engine, method, getattr(clifford_operations_gpu, method))

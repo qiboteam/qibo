@@ -324,8 +324,8 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         test_frequencies = (
-            Counter({"1": 844, "0": 180}) 
-            if nqubits == 1 
+            Counter({"1": 844, "0": 180})
+            if nqubits == 1
             else Counter({"11": 674, "10": 155, "01": 154, "00": 41})
         )
     elif backend.__class__.__name__ == "PyTorchBackend":

@@ -22,7 +22,7 @@ numpy_bkd = NumpyBackend()
 
 def construct_clifford_backend(backend):
     if (
-        isinstance(backend, (TensorflowBackend, PyTorchBackend)) 
+        isinstance(backend, (TensorflowBackend, PyTorchBackend))
         or backend.__class__.__name__ == "CuQuantumBackend"
     ):
         with pytest.raises(NotImplementedError):
@@ -30,6 +30,7 @@ def construct_clifford_backend(backend):
         pytest.skip("Clifford backend not defined for the this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
+
 
 THETAS_1Q = [
     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
