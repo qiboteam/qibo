@@ -32,7 +32,7 @@ def test_errors(backend):
     comb_sys_out = (False, True) * 2
     comb = random_density_matrix(2**4, backend=backend)
     comb_choi = QuantumNetwork(
-        comb, comb_partition, system_output=comb_sys_out, backend=backend
+        comb, comb_partition, system_input=comb_sys_out, backend=backend
     )
 
     with pytest.raises(TypeError):
@@ -46,7 +46,7 @@ def test_errors(backend):
 
     with pytest.raises(ValueError):
         QuantumNetwork(
-            channel.to_choi(backend=backend), partition=(1, 2), system_output=(1, 2, 3)
+            channel.to_choi(backend=backend), partition=(1, 2), system_input=(1, 2, 3)
         )
 
     with pytest.raises(TypeError):
@@ -75,16 +75,16 @@ def test_errors(backend):
 
     network_2 = network.copy()
     with pytest.raises(ValueError):
-        network_2.system_output = (False,)
+        network_2.system_input = (False,)
         network += network_2
 
     # Multiplying QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
-        network @ network.matrix(backend)
+        network @ network.operator(backend)
 
     # Linking QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
-        network.link_product(network.matrix(backend))
+        network.link_product(network.operator(backend))
 
     with pytest.raises(TypeError):
         network.link_product(network, subscripts=True)
@@ -129,31 +129,31 @@ def test_operational_logic(backend):
 
     # Sum with itself has to match multiplying by int
     backend.assert_allclose(
-        (network + network).matrix(backend), (2 * network).matrix(backend)
+        (network + network).operator(backend), (2 * network).operator(backend)
     )
     backend.assert_allclose(
-        (network_state_pure + network_state_pure).matrix(backend),
-        (2 * network_state_pure).to_full(),
+        (network_state_pure + network_state_pure).operator(backend),
+        (2 * network_state_pure).full(),
     )
 
     # Sum with itself has to match multiplying by float
     backend.assert_allclose(
-        (network + network).matrix(backend), (2.0 * network).matrix(backend)
+        (network + network).operator(backend), (2.0 * network).operator(backend)
     )
     backend.assert_allclose(
-        (network_state_pure + network_state_pure).matrix(backend),
-        (2.0 * network_state_pure).to_full(),
+        (network_state_pure + network_state_pure).operator(backend),
+        (2.0 * network_state_pure).full(),
     )
 
     # Multiplying and dividing by same scalar has to bring back to original network
     backend.assert_allclose(
-        ((2.0 * network) / 2).matrix(backend), network.matrix(backend)
+        ((2.0 * network) / 2).operator(backend), network.operator(backend)
     )
 
     unitary = random_unitary(dims, backend=backend)
     network_unitary = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
     backend.assert_allclose(
-        (network_unitary / 2).matrix(backend), unitary / np.sqrt(2), atol=1e-5
+        (network_unitary / 2).operator(backend), unitary / np.sqrt(2), atol=1e-5
     )
 
 
@@ -169,10 +169,10 @@ def test_parameters(backend):
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
-    backend.assert_allclose(network.matrix(backend=backend).shape, (2, 2, 2, 2))
+    backend.assert_allclose(network.operator(backend=backend).shape, (2, 2, 2, 2))
     backend.assert_allclose(network.dims, 4)
     backend.assert_allclose(network.partition, partition)
-    backend.assert_allclose(network.system_output, (False, True))
+    backend.assert_allclose(network.system_input, (False, True))
 
     assert network.is_causal()
     assert network.is_unital()
@@ -202,7 +202,7 @@ def test_with_states(backend):
 
     backend.assert_allclose(state_output_network, state_output)
     backend.assert_allclose(
-        state_output_link.matrix(backend=backend).reshape((dims, dims)), state_output
+        state_output_link.operator(backend=backend).reshape((dims, dims)), state_output
     )
 
     assert network_state.is_hermitian()
@@ -226,19 +226,19 @@ def test_with_unitaries(backend, subscript):
         unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend
     )
 
-    test = network_1.link_product(network_2, subscript).to_full(backend=backend)
+    test = network_1.link_product(network_2, subscript).full(backend=backend,update=True)
 
     if subscript[1] == subscript[3]:
-        backend.assert_allclose(test, network_3.to_full(backend), atol=1e-8)
+        backend.assert_allclose(test, network_3.full(), atol=1e-8)
 
         backend.assert_allclose(
-            test, (network_1 @ network_2).to_full(backend=backend), atol=1e-8
+            test, (network_1 @ network_2).full(backend=backend), atol=1e-8
         )
 
     if subscript[0] == subscript[4]:
-        backend.assert_allclose(test, network_4.to_full(backend))
+        backend.assert_allclose(test, network_4.full(backend))
 
-        backend.assert_allclose(test, (network_2 @ network_1).to_full(backend=backend))
+        backend.assert_allclose(test, (network_2 @ network_1).full(backend=backend))
 
 
 def test_with_comb(backend):
@@ -252,16 +252,16 @@ def test_with_comb(backend):
     channel = random_density_matrix(2**2, backend=backend)
 
     comb_choi = QuantumNetwork(
-        comb, comb_partition, system_output=comb_sys_out, backend=backend
+        comb, comb_partition, system_input=comb_sys_out, backend=backend
     )
     channel_choi = QuantumNetwork(
-        channel, channel_partition, system_output=channel_sys_out, backend=backend
+        channel, channel_partition, system_input=channel_sys_out, backend=backend
     )
 
-    test = comb_choi.link_product(channel_choi, subscript).to_full(backend)
+    test = comb_choi.link_product(channel_choi, subscript).full(backend,update=True)
     channel_choi2 = comb_choi @ channel_choi
 
-    backend.assert_allclose(test, channel_choi2.to_full(backend), atol=1e-5)
+    backend.assert_allclose(test, channel_choi2.full(backend), atol=1e-5)
 
 
 def test_apply(backend):
@@ -291,3 +291,22 @@ def test_non_hermitian_and_prints(backend):
     assert not network.is_channel()
 
     assert network.__str__() == "J[4 -> 4]"
+
+def test_uility_func():
+    old_shape = (0,10,1,11,2,12,3,13)
+    test_ls = np.ones(old_shape)
+    n = len(test_ls.shape) // 2
+
+    system_input = (False, True, False, True)
+
+    order2op = QuantumNetwork._order_tensor2operator(n , system_input)
+    order2tensor = QuantumNetwork._order_operator2tensor(n , system_input)
+    new_shape = test_ls.transpose(order2op).shape
+
+    for i in range(n):
+        if system_input[i]:
+            assert (new_shape[i] - new_shape[i+n]) == 10
+        else:
+            assert (new_shape[i] - new_shape[i+n]) == -10
+    
+    assert tuple(test_ls.transpose(order2op).transpose(order2tensor).shape) == old_shape
