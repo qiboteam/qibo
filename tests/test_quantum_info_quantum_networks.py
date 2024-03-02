@@ -226,7 +226,9 @@ def test_with_unitaries(backend, subscript):
         unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend
     )
 
-    test = network_1.link_product(network_2, subscript).full(backend=backend,update=True)
+    test = network_1.link_product(network_2, subscript).full(
+        backend=backend, update=True
+    )
 
     if subscript[1] == subscript[3]:
         backend.assert_allclose(test, network_3.full(), atol=1e-8)
@@ -258,7 +260,7 @@ def test_with_comb(backend):
         channel, channel_partition, system_input=channel_sys_out, backend=backend
     )
 
-    test = comb_choi.link_product(channel_choi, subscript).full(backend,update=True)
+    test = comb_choi.link_product(channel_choi, subscript).full(backend, update=True)
     channel_choi2 = comb_choi @ channel_choi
 
     backend.assert_allclose(test, channel_choi2.full(backend), atol=1e-5)
@@ -292,21 +294,22 @@ def test_non_hermitian_and_prints(backend):
 
     assert network.__str__() == "J[4 -> 4]"
 
+
 def test_uility_func():
-    old_shape = (0,10,1,11,2,12,3,13)
+    old_shape = (0, 10, 1, 11, 2, 12, 3, 13)
     test_ls = np.ones(old_shape)
     n = len(test_ls.shape) // 2
 
     system_input = (False, True, False, True)
 
-    order2op = QuantumNetwork._order_tensor2operator(n , system_input)
-    order2tensor = QuantumNetwork._order_operator2tensor(n , system_input)
+    order2op = QuantumNetwork._order_tensor2operator(n, system_input)
+    order2tensor = QuantumNetwork._order_operator2tensor(n, system_input)
     new_shape = test_ls.transpose(order2op).shape
 
     for i in range(n):
         if system_input[i]:
-            assert (new_shape[i] - new_shape[i+n]) == 10
+            assert (new_shape[i] - new_shape[i + n]) == 10
         else:
-            assert (new_shape[i] - new_shape[i+n]) == -10
-    
+            assert (new_shape[i] - new_shape[i + n]) == -10
+
     assert tuple(test_ls.transpose(order2op).transpose(order2tensor).shape) == old_shape
