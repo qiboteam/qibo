@@ -88,7 +88,7 @@ class QuantumNetwork:
         n = len(partition)
         order = cls._order_operator2tensor(n, system_input)
         try:
-            return operator.reshape(list(partition) * 2).transpose(order)
+            return operator.reshape(list(partition) * 2).transpose(order).reshape([dim**2 for dim in partition])
         except:
             raise_error(
                 ValueError,
@@ -812,9 +812,9 @@ def link_product(
         if not isinstance(operand, QuantumNetwork):
             raise_error(TypeError, f"The {i}th operator is not a ``QuantumNetwork``.")
 
-    tensors = (
+    tensors = [
         operand.full() if operand.is_pure() else operand._tensor for operand in operands
-    )
+    ]
 
     # keep track of the `partition` and `system_input` of the network
     _, contracrtion_list = np.einsum_path(
@@ -839,7 +839,7 @@ def link_product(
                 found = True
 
                 partition.append(operands[inds[i]].partition[index])
-                system_input.append(operands[inds[i]].partition[index])
+                system_input.append(operands[inds[i]].system_input[index])
 
             except:
                 continue
