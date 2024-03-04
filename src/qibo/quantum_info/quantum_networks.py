@@ -469,23 +469,15 @@ class QuantumNetwork:
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
-        string_in = ", ".join(
-            [
-                str(self.partition[k])
-                for k in range(len(self.partition))
-                if self.system_input[k]
-            ]
-        )
+        systems = []
 
-        string_out = ", ".join(
-            [
-                str(self.partition[k])
-                for k in range(len(self.partition))
-                if not self.system_input[k]
-            ]
-        )
+        for i, dim in enumerate(self.partition):
+            if self.system_input[i]:
+                systems.append(f'┍{dim}┑')
+            else:
+                systems.append(f'┕{dim}┙')
 
-        return f"J[{string_in} -> {string_out}]"
+        return f"J[{', '.join(systems)}]"
 
     def _run_checks(self, partition, system_input, pure):
         """Checks if all inputs are correct in type and value."""
