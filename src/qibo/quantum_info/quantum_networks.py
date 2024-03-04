@@ -88,7 +88,11 @@ class QuantumNetwork:
         n = len(partition)
         order = cls._order_operator2tensor(n, system_input)
         try:
-            return operator.reshape(list(partition) * 2).transpose(order).reshape([dim**2 for dim in partition])
+            return (
+                operator.reshape(list(partition) * 2)
+                .transpose(order)
+                .reshape([dim**2 for dim in partition])
+            )
         except:
             raise_error(
                 ValueError,
