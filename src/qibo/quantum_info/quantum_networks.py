@@ -473,9 +473,9 @@ class QuantumNetwork:
 
         for i, dim in enumerate(self.partition):
             if self.system_input[i]:
-                systems.append(f'┍{dim}┑')
+                systems.append(f"┍{dim}┑")
             else:
-                systems.append(f'┕{dim}┙')
+                systems.append(f"┕{dim}┙")
 
         return f"J[{', '.join(systems)}]"
 
