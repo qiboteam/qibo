@@ -77,7 +77,7 @@ def measurement_basis(j, nqubits):
         nqubits (int): Number of qubits..
 
     Returns:
-        list(:class:`qibo.gates.abstrac.Gate`): list of the measurements forming the j-th basis.
+        List[:class:`qibo.gates.abstrac.Gate`]: list of the gates forming the :math:`j`-th element of the measurement basis.
     """
 
     if not nqubits in (1, 2):
