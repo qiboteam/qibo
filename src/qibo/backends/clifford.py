@@ -107,9 +107,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): The reshaped state.
         """
-        if pack:
-            state = self.engine.np.packbits(state, axis=0)
-        return self.engine._clifford_pre_execution_reshape(state)
+        return self.engine._clifford_pre_execution_reshape(state, pack)
 
     def _clifford_post_execution_reshape(self, state, nqubits):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
@@ -121,9 +119,6 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): The reshaped state.
         """
-        state = self.engine.np.unpackbits(state, axis=0)[
-            : self.engine._get_dim(nqubits)
-        ]
         return self.engine._clifford_post_execution_reshape(state, nqubits)
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):

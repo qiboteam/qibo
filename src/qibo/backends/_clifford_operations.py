@@ -462,11 +462,14 @@ def cast(x, dtype=None, copy=False):
     return np.array(x, dtype=dtype, copy=copy)
 
 
-def _clifford_pre_execution_reshape(state):
+def _clifford_pre_execution_reshape(state, pack=False):
+    if pack:
+        state = np.packbits(state, axis=0)
     return state
 
 
 def _clifford_post_execution_reshape(state, nqubits):
+    state = np.unpackbits(state, axis=0)[: _get_dim(nqubits)]
     return state
 
 
