@@ -155,7 +155,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         )
 
     else:
-        if False:  # j == 0:
+        if j == 0:
             return 1.0
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
@@ -231,12 +231,23 @@ def GST(
     gate_set: Union[tuple, set, list],
     nshots: int = int(1e4),
     noise_model=None,
+    include_empty: bool = False,
     invert_register: tuple = None,
     backend=None,
 ):
     matrices = []
-    if len(gate_set) == 0:
-        gate_set = {None}
+    if len(gate_set) == 0 or include_empty:
+        for nqubits in range(1, 3):
+            matrices.append(
+                execute_GST(
+                    nqubits=nqubits,
+                    gate=None,
+                    nshots=nshots,
+                    noise_model=noise_model,
+                    invert_register=invert_register,
+                    backend=backend,
+                )
+            )
     for gate in gate_set:
         if gate is not None:
             init_args = signature(gate).parameters

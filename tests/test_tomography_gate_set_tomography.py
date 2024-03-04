@@ -1,11 +1,13 @@
 import random
+from functools import reduce
 from itertools import repeat
 
 import numpy as np
 import pytest
 
 import qibo
-from qibo import Circuit, gates
+from qibo import Circuit, gates, symbols
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import (
     GST,
@@ -107,6 +109,54 @@ def test_measurement_basis(j, nqubits):
             _compare_gates(groundtruth, gate)
             for g1, g2 in zip(groundtruth.basis, gate.basis):
                 _compare_gates(g1, g2)
+
+
+@pytest.mark.parametrize(
+    "j,nqubits",
+    INDEX_NQUBITS,
+)
+def test__get_observable(j, nqubits):
+    correct_observables = {
+        1: [
+            (qibo.symbols.I(0),),
+            (qibo.symbols.Z(0),),
+            (qibo.symbols.Z(0),),
+            (qibo.symbols.Z(0),),
+        ],
+        2: [
+            (qibo.symbols.I(0), qibo.symbols.I(1)),
+            (qibo.symbols.I(0), qibo.symbols.Z(1)),
+            (qibo.symbols.I(0), qibo.symbols.Z(1)),
+            (qibo.symbols.I(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+        ],
+    }
+    correct_observables[1] = [
+        SymbolicHamiltonian(h[0]).form for h in correct_observables[1]
+    ]
+    correct_observables[2] = [
+        SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
+        for h in correct_observables[2]
+    ]
+    errors = {(0, 3): ValueError, (17, 1): IndexError}
+    if (j, nqubits) in [(0, 3), (17, 1)]:
+        with pytest.raises(errors[(j, nqubits)]):
+            prepared_observable = _get_observable(j, nqubits)
+    else:
+        prepared_observable = _get_observable(j, nqubits).form
+        groundtruth = correct_observables[nqubits][j]
+        assert groundtruth == prepared_observable
 
 
 def test_reset_register_valid_tuple_1qb():
@@ -221,10 +271,6 @@ def test_reset_register_invalid_tuple(a, b):
     # Check if NameError is raised
     with pytest.raises(NameError):
         inverse_circuit = reset_register(test_circuit, (a, b))
-
-
-def test_GST_observables():
-    raise NotImplementedError
 
 
 @pytest.mark.parametrize(
@@ -517,8 +563,12 @@ def test_GST_one_qubit_empty_circuit_with_noise(backend):
 
 
 def test_GST(backend):
-    gate_set = {gates.SX, gates.Z, gates.CY}
-    lam = 0.5
+    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
+    target_matrices = [g.matrix() for g in target_gates]
+    gate_set = {g.__class__ for g in target_gates}
+    lam = 0.1
     depol = NoiseModel()
     depol.add(DepolarizingError(lam))
-    GST(gate_set, noise_model=depol, backend=backend)
+    empty_1q, empty_2q, *approx_gates = GST(
+        gate_set, noise_model=depol, include_empty=True, backend=backend
+    )
