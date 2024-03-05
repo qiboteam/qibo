@@ -224,6 +224,7 @@ def test_set_backend(backend):
 
 
 def test_noise_channels(backend):
+    backend.set_seed(2024)
     clifford_bkd = construct_clifford_backend(backend)
 
     noise = NoiseModel()
@@ -234,7 +235,6 @@ def test_noise_channels(backend):
 
     c = random_clifford(nqubits, density_matrix=True, backend=backend)
     c.add(gates.M(*range(nqubits)))
-
     c_copy = c.copy()
 
     c = noise.apply(c)
