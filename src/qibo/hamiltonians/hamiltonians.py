@@ -248,12 +248,11 @@ class Hamiltonian(AbstractHamiltonian):
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.issparse(self.matrix):
-                if self.backend.__class__.__name__ == "PyTorchBackend":
-                    import torch
-
-                    r._eigenvalues = o * torch.flip(self._eigenvalues, [0])
-                else:
-                    r._eigenvalues = o * self._eigenvalues[::-1]
+                r_eigenvalues = (
+                    o * self.backend.np.flip(self._eigenvalues, [0])
+                    if isinstance(self.backend, PyTorchBackend)
+                    else o * self._eigenvalues[::-1]
+                )
         if self._eigenvectors is not None:
             if self.backend.np.real(o) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors

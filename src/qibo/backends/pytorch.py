@@ -145,9 +145,6 @@ class PyTorchBackend(NumpyBackend):
         samples = samples[:, None] >> qrange
         return samples % 2
 
-    def dimensions(self, x):
-        return x.dim()
-
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
         return self.np.norm(state, p=order)
@@ -195,6 +192,28 @@ class PyTorchBackend(NumpyBackend):
             else:
                 state = self.np.cat([state, self.np.zeros_like(state)], dim=q)
         return state
+
+    def calculate_probabilities(self, state, qubits, nqubits):
+        rtype = self.np.real(state).dtype
+        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
+        if len(unmeasured_qubits) == 0:
+            probs = self.cast(state, dtype=rtype)
+        else:
+            probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
+    def _order_probabilities(self, probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        if probs.dim() == 0:
+            return probs
+        unmeasured, reduced = [], {}
+        for i in range(nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":

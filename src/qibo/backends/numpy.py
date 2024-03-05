@@ -115,30 +115,29 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2**rank, dtype=np.complex128)
+        matrix = self.identity_density_matrix(2**rank, normalize=False)
         for gate in fgate.gates:
-            # transfer gate matrix to numpy as it is more efficient for
-            # small tensor calculations
-            # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
-            gmatrix = self.to_numpy(gate.matrix(self))
+            gmatrix = self.cast(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=np.complex128)
-            gmatrix = np.kron(gmatrix, eye)
+            eye = self.identity_density_matrix(
+                2 ** (rank - len(gate.qubits)), normalize=False
+            )
+            gmatrix = self.np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
             original_shape = gmatrix.shape
-            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
+            gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
             indices = np.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
-            gmatrix = np.transpose(gmatrix, transpose_indices)
-            gmatrix = np.reshape(gmatrix, original_shape)
+            gmatrix = self.np.transpose(gmatrix, transpose_indices)
+            gmatrix = self.np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
-        return self.cast(matrix)
+        return matrix
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -524,7 +523,7 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    samples.append("".join([str(s) for s in self.to_numpy(sample)]))
+                    samples.append("".join([str(int(s)) for s in sample]))
                 for gate in circuit.measurements:
                     gate.result.reset()
 
@@ -594,13 +593,8 @@ class NumpyBackend(Backend):
                 return terms
         return terms
 
-    def dimensions(self, x):
-        return x.ndim
-
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
-        if self.dimensions(probs) == 0:
-            return probs
         unmeasured, reduced = [], {}
         for i in range(nqubits):
             if i in qubits:
@@ -613,15 +607,10 @@ class NumpyBackend(Backend):
         rtype = self.np.real(state).dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        # This is necessary to use the same function on pytorch backend
-        if len(unmeasured_qubits) == 0:
-            probs = self.cast(state, dtype=rtype)
-        else:
-            probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+        probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        state = self.cast(state)
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
@@ -654,7 +643,7 @@ class NumpyBackend(Backend):
 
     def calculate_frequencies(self, samples):
         res, counts = np.unique(samples, return_counts=True)
-        return collections.Counter({k: v for k, v in zip(res, counts)})
+        return collections.Counter(zip(res, counts))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)
@@ -755,16 +744,14 @@ class NumpyBackend(Backend):
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
-        state = self.cast(state)
         statec = self.np.conj(state)
-        hstate = self.cast(hamiltonian @ state)
+        hstate = hamiltonian @ state
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
-            ev = ev / self.np.sum(self.np.square(self.np.abs(state)))
+            ev /= self.np.sum(self.np.square(self.np.abs(state)))
         return ev
 
     def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
-        state = self.cast(state)
         ev = self.np.real(self.np.trace(self.cast(hamiltonian @ state)))
         if normalize:
             norm = self.np.real(self.np.trace(state))
@@ -776,7 +763,6 @@ class NumpyBackend(Backend):
 
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))
-        state = self.cast(state)
         if rank == 1:  # vector
             return matrix.dot(state[:, np.newaxis])[:, 0]
         elif rank == 2:  # matrix
