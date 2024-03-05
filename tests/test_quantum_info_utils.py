@@ -168,14 +168,10 @@ def test_hellinger(backend, validate, kind):
     )
 
     prob_p = (
-        kind(prob_p) 
-        if kind is not None 
-        else backend.cast(prob_p, dtype=prob_p.dtype)
+        kind(prob_p) if kind is not None else backend.cast(prob_p, dtype=prob_p.dtype)
     )
     prob_q = (
-        kind(prob_q) 
-        if kind is not None 
-        else backend.cast(prob_q, dtype=prob_q.dtype)
+        kind(prob_q) if kind is not None else backend.cast(prob_q, dtype=prob_q.dtype)
     )
 
     distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
