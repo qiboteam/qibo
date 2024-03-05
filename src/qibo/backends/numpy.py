@@ -115,13 +115,13 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = self.identity_density_matrix(2**rank, normalize=False)
+        matrix = self.identity_density_matrix(rank, normalize=False)
         for gate in fgate.gates:
             gmatrix = self.cast(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = self.identity_density_matrix(
-                2 ** (rank - len(gate.qubits)), normalize=False
+                (rank - len(gate.qubits)), normalize=False
             )
             gmatrix = self.np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
