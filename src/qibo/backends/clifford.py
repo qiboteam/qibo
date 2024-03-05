@@ -122,7 +122,9 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self.engine._clifford_pre_execution_reshape(state)
+        return self.engine._clifford_pre_execution_reshape(  # pylint: disable=protected-access
+            state
+        )
 
     def _clifford_post_execution_reshape(self, state, nqubits):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
@@ -134,7 +136,9 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self.engine._clifford_post_execution_reshape(state, nqubits)
+        return self.engine._clifford_post_execution_reshape(  # pylint: disable=protected-access
+            state, nqubits
+        )
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         """Apply a gate to a symplectic matrix."""
@@ -153,7 +157,9 @@ class CliffordBackend(NumpyBackend):
             state = gate.apply_clifford(self, state, nqubits)
         return state
 
-    def execute_circuit(self, circuit, initial_state=None, nshots: int = 1000):
+    def execute_circuit(  # pylint: disable=R1710
+        self, circuit, initial_state=None, nshots: int = 1000
+    ):
         """Execute a Clifford circuits.
 
         Args:
@@ -174,9 +180,9 @@ class CliffordBackend(NumpyBackend):
                 circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
 
             quad_1, quad_2, quad_3, quad_4, x_phases, z_phases = (
-                self._stim.Tableau.from_circuit(
+                self._stim.Tableau.from_circuit(  # pylint: disable=no-member
                     circuit_stim
-                ).to_numpy()  # pylint: disable=E1101
+                ).to_numpy()
             )
             symplectic_matrix = np.block([[quad_1, quad_2], [quad_3, quad_4]])
             symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
