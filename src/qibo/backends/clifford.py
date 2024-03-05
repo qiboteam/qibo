@@ -169,12 +169,14 @@ class CliffordBackend(NumpyBackend):
         from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
 
         if self.platform == "stim":
-            circuit_stim = self._stim.Circuit()
+            circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
             for gate in circuit.queue:
                 circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
 
             quad_1, quad_2, quad_3, quad_4, x_phases, z_phases = (
-                self._stim.Tableau.from_circuit(circuit_stim).to_numpy()
+                self._stim.Tableau.from_circuit(
+                    circuit_stim
+                ).to_numpy()  # pylint: disable=E1101
             )
             symplectic_matrix = np.block([[quad_1, quad_2], [quad_3, quad_4]])
             symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
