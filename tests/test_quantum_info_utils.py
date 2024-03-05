@@ -167,8 +167,16 @@ def test_hellinger(backend, validate, kind):
         backend.calculate_norm(np.sqrt(prob_p) - np.sqrt(prob_q)) / np.sqrt(2)
     )
 
-    if kind is not None:
-        prob_p, prob_q = list(prob_p), list(prob_q)
+    prob_p = (
+        kind(prob_p) 
+        if kind is not None 
+        else backend.cast(prob_p, dtype=prob_p.dtype)
+    )
+    prob_q = (
+        kind(prob_q) 
+        if kind is not None 
+        else backend.cast(prob_q, dtype=prob_q.dtype)
+    )
 
     distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
     fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
