@@ -234,7 +234,8 @@ def test_set_backend(backend):
     assert global_platform == platform
 
 
-def test_noise_channels(backend):
+@pytest.mark.parametrize("seed", [2024])
+def test_noise_channels(backend, seed):
     clifford_bkd = construct_clifford_backend(backend)
 
     backend.set_seed(seed)
