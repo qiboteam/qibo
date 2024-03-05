@@ -32,7 +32,7 @@ class CliffordBackend(NumpyBackend):
                 import stim  # pylint: disable=C0415
 
                 self._stim = stim
-            except ModuleNotFoundError:
+            except ModuleNotFoundError:  # pragma: no cover
                 raise_error(
                     ModuleNotFoundError,
                     "`engine` was set as `stim`, but module was not found. Please install `stim`.",
