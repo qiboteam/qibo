@@ -8,7 +8,6 @@ from typing import Union
 import numpy as np
 
 from qibo import gates
-from qibo.backends import _clifford_operations
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
@@ -28,12 +27,26 @@ class CliffordBackend(NumpyBackend):
     def __init__(self, engine=None):
         super().__init__()
 
-        if engine is None:
-            from qibo.backends import _check_backend
+        if engine == "stim":
+            try:
+                import stim  # pylint: disable=C0415
 
-            engine = _get_engine_name(_check_backend(engine))
+                self._stim = stim
+            except ModuleNotFoundError:
+                raise_error(
+                    ModuleNotFoundError,
+                    "`engine` was set as `stim`, but module was not found. Please install `stim`.",
+                )
 
-        self.platform = engine
+            engine = "numpy"
+            self.platform = "stim"
+        else:
+            if engine is None:
+                from qibo.backends import _check_backend  # pylint: disable=C0415
+
+                engine = _get_engine_name(_check_backend(engine))
+
+            self.platform = engine
 
         spec = find_spec("qibo.backends._clifford_operations")
         self.engine = module_from_spec(spec)
@@ -49,7 +62,9 @@ class CliffordBackend(NumpyBackend):
             for method in dir(clifford_operations_cpu):
                 setattr(self.engine, method, getattr(clifford_operations_cpu, method))
         elif engine == "cupy":  # pragma: no cover
-            from qibojit.backends import clifford_operations_gpu
+            from qibojit.backends import (  # pylint: disable=C0415
+                clifford_operations_gpu,
+            )
 
             for method in dir(clifford_operations_gpu):
                 setattr(self.engine, method, getattr(clifford_operations_gpu, method))
@@ -90,22 +105,22 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): Symplectic matrix for the zero state.
         """
-        I = self.np.eye(nqubits)
+        identity = self.np.eye(nqubits)
         symplectic_matrix = self.np.zeros(
             (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
         )
-        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(I)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(I)
+        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
 
     def _clifford_pre_execution_reshape(self, state):
         """Reshape the symplectic matrix to the shape needed by the engine before circuit execution.
 
         Args:
-            state (ndarray): The input state.
+            state (ndarray): Input state.
 
         Returns:
-            (ndarray): The reshaped state.
+            ndarray: Reshaped state.
         """
         return self.engine._clifford_pre_execution_reshape(state)
 
@@ -113,15 +128,16 @@ class CliffordBackend(NumpyBackend):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
 
         Args:
-            state (ndarray): The input state.
+            state (ndarray): Input state.
             nqubits (int): Number of qubits.
 
         Returns:
-            (ndarray): The reshaped state.
+            ndarray: Reshaped state.
         """
         return self.engine._clifford_post_execution_reshape(state, nqubits)
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
+        """Apply a gate to a symplectic matrix."""
         operation = getattr(self.engine, gate.__class__.__name__)
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
@@ -150,6 +166,22 @@ class CliffordBackend(NumpyBackend):
         Returns:
             :class:`qibo.quantum_info.clifford.Clifford`: Object storing to the final results.
         """
+        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+
+        if self.platform == "stim":
+            circuit_stim = self._stim.Circuit()
+            for gate in circuit.queue:
+                circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
+
+            symplectic_matrix = self._stim.Tableau.from_circuit(circuit_stim)
+
+            return Clifford(
+                symplectic_matrix,
+                measurements=circuit.measurements,
+                nshots=nshots,
+                _backend=self,
+            )
+
         for gate in circuit.queue:
             if (
                 not gate.clifford
@@ -159,11 +191,9 @@ class CliffordBackend(NumpyBackend):
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
 
         if circuit.repeated_execution and nshots != 1:
-            return self.execute_circuit_repeated(circuit, initial_state, nshots)
+            return self.execute_circuit_repeated(circuit, nshots, initial_state)
 
         try:
-            from qibo.quantum_info.clifford import Clifford
-
             nqubits = circuit.nqubits
 
             state = self.zero_state(nqubits) if initial_state is None else initial_state
@@ -192,7 +222,7 @@ class CliffordBackend(NumpyBackend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots: int = 1000):
+    def execute_circuit_repeated(self, circuit, nshots: int = 1000, initial_state=None):
         """Execute a Clifford circuits ``nshots`` times.
 
         This is used for all the simulations that involve repeated execution.
@@ -209,6 +239,8 @@ class CliffordBackend(NumpyBackend):
         Returns:
             :class:`qibo.quantum_info.clifford.Clifford`: Object storing to the final results.
         """
+        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+
         circuit_copy = circuit.copy()
         samples = []
         for _ in range(nshots):
@@ -218,10 +250,8 @@ class CliffordBackend(NumpyBackend):
             samples.append(res.samples())
         samples = self.np.vstack(samples)
 
-        for m in circuit.measurements:
-            m.result.register_samples(samples[:, m.target_qubits], self)
-
-        from qibo.quantum_info.clifford import Clifford
+        for meas in circuit.measurements:
+            meas.result.register_samples(samples[:, meas.target_qubits], self)
 
         result = Clifford(
             self.zero_state(circuit.nqubits),
@@ -240,7 +270,7 @@ class CliffordBackend(NumpyBackend):
         nqubits: int,
         nshots: int,
         collapse: bool = False,
-    ):
+    ):  # pylint: disable=W0221
         """Sample shots by measuring selected ``qubits`` in symplectic matrix of a ``state``.
 
         Args:
