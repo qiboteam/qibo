@@ -1,9 +1,10 @@
+import math
 from copy import deepcopy
 from itertools import product
 from typing import Optional
 
+import hyperopt
 import numpy as np
-from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.config import raise_error
@@ -150,3 +151,26 @@ def cs_angle_sgn(dbi_object, d):
         )
     )
     return np.sign(norm)
+
+
+def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
+    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
+    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients for rotation with [W,H] and H
+    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
+    # product coefficient
+    trace_coefficients = [0] * (2 * n + 1)
+    for k in range(n + 1):
+        for j in range(n + 1):
+            power = k + j
+            product_matrix = c1[k] @ c2[j]
+            trace_coefficients[power] += 2 * np.trace(product_matrix)
+    # coefficients from high to low (n:0)
+    coef = list(reversed(trace_coefficients[: n + 1]))
+    return coef
