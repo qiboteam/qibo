@@ -223,9 +223,12 @@ def test_set_backend(backend):
     assert global_platform == platform
 
 
-def test_noise_channels(backend):
-    backend.set_seed(2024)
+@pytest.mark.parametrize("seed", [2024])
+def test_noise_channels(backend, seed):
     clifford_bkd = construct_clifford_backend(backend)
+
+    backend.set_seed(seed)
+    clifford_bkd.set_seed(seed)
 
     noise = NoiseModel()
     noise.add(PauliError([("X", 0.5)]), gates.X)
@@ -233,7 +236,7 @@ def test_noise_channels(backend):
 
     nqubits = 3
 
-    c = random_clifford(nqubits, density_matrix=True, backend=backend)
+    c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
     c.add(gates.M(*range(nqubits)))
     c_copy = c.copy()
 
