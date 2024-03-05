@@ -136,32 +136,20 @@ class DoubleBracketIteration:
         self,
         d: Optional[np.array] = None,
         scheduling: Optional[DoubleBracketScheduling] = None,
-        backup_scheduling: Optional[
-            DoubleBracketScheduling
-        ] = DoubleBracketScheduling.hyperopt,
         **kwargs,
     ):
         if scheduling is None:
             scheduling = self.scheduling
-        return scheduling(self, d=d, **kwargs)
-        # if scheduling is DoubleBracketScheduling.polynomial_approximation:
-        #     step, coef = self.polynomial_step(d=d, **kwargs)
-        #     # if no solution
-        #     if step is None:
-        #         if (
-        #             backup_scheduling
-        #             == DoubleBracketScheduling.polynomial_approximation
-        #             and coef is not None
-        #         ):
-        #             # if `n` is not provided, try default value
-        #             kwargs["n"] = kwargs.get("n", 2)
-        #             kwargs["n"] += 1
-        #             step, coef = self.polynomial_step(d=d, **kwargs)
-        #             # if n==n_max, return None
-        #         else:
-        #             # Issue: cannot pass kwargs
-        #             step = self.choose_step(d=d, scheduling=backup_scheduling)
-        #     return step
+        step = scheduling(self, d=d, **kwargs)
+        if (
+            step is None
+            and scheduling == DoubleBracketScheduling.polynomial_approximation
+        ):
+            kwargs["n"] = kwargs.get("n", 3)
+            kwargs["n"] += 1
+            # if n==n_max, return None
+            step = scheduling(self, d=d, **kwargs)
+        return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
