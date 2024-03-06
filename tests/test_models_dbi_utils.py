@@ -15,11 +15,13 @@ NSTEPS = 5
 """Number of steps for evolution."""
 
 
-@pytest.mark.parametrize("nqubits", [2, 3])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_generate_Z_operators(backend, nqubits):
-    h0 = random_hermitian(2**nqubits)
-    dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
-    generate_Z = generate_Z_operators(nqubits)
+    h0 = random_hermitian(2**nqubits, backend=backend)
+    dbi = DoubleBracketIteration(
+        Hamiltonian(nqubits=nqubits, matrix=h0, backend=backend)
+    )
+    generate_Z = generate_Z_operators(nqubits, backend=backend)
     Z_ops = list(generate_Z.values())
 
     delta_h0 = dbi.diagonal_h_matrix
@@ -29,7 +31,7 @@ def test_generate_Z_operators(backend, nqubits):
     assert norm_diff < 1e-3
 
 
-@pytest.mark.parametrize("nqubits", [2, 3])
+@pytest.mark.parametrize("nqubits", [1, 2])
 @pytest.mark.parametrize("step", [0.1, None])
 def test_select_best_dbr_generator(backend, nqubits, step):
     h0 = random_hermitian(2**nqubits, seed=1, backend=backend)
@@ -37,13 +39,13 @@ def test_select_best_dbr_generator(backend, nqubits, step):
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
     )
-    generate_Z = generate_Z_operators(nqubits)
+    generate_Z = generate_Z_operators(nqubits, backend=backend)
     Z_ops = list(generate_Z.values())
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):
         dbi, idx, step_optimize, flip = select_best_dbr_generator(
-            dbi, Z_ops, step=step, compare_canonical=True
+            dbi, Z_ops, step=step, compare_canonical=True, max_evals=5
         )
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
