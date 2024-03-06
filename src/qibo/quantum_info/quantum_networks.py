@@ -172,7 +172,7 @@ class QuantumNetwork:
         operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
 
         return backend.cast(operator, dtype=self._tensor.dtype)
-    
+
     def matrix(self, backend=None):
         return self.operator(backend, full=True).reshape((self.dims, self.dims))
 
@@ -568,6 +568,7 @@ class QuantumNetwork:
                 self._pure = False
 
         return tensor
+
 
 class QuantumComb(QuantumNetwork):
 
