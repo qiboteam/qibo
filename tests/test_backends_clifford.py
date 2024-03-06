@@ -262,3 +262,18 @@ def test_noise_channels(backend, seed):
         clifford_result.probabilities(),
         atol=1e-1,
     )
+
+
+def test_stim(backend):
+    clifford_bkd = construct_clifford_backend(backend)
+    clifford_stim = CliffordBackend(engine="stim")
+
+    nqubits = 3
+    circuit = random_clifford(nqubits, backend=backend)
+
+    result_qibo = clifford_bkd.execute_circuit(circuit)
+    result_stim = clifford_stim.execute_circuit(circuit)
+
+    backend.assert_allclose(
+        result_stim.symplectic_matrix, result_qibo.symplectic_matrix
+    )

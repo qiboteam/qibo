@@ -71,6 +71,7 @@ tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
+stim = "^1.12.0"
 
 [tool.poe.tasks]
 test = "pytest"

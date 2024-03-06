@@ -1570,11 +1570,11 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0dev", optional = true, markers = "extra == \"grpc\""},
     {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "extra == \"grpc\""},
     {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
@@ -2546,9 +2546,9 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.23.3", markers = "python_version > \"3.10\""},
-    {version = ">=1.21.2", markers = "python_version > \"3.9\" and python_version <= \"3.10\""},
     {version = ">1.20", markers = "python_version <= \"3.9\""},
+    {version = ">=1.23.3", markers = "python_version > \"3.10\""},
+    {version = ">=1.21.2", markers = "python_version > \"3.9\""},
 ]
 
 [package.extras]
@@ -4813,6 +4813,49 @@ pure-eval = "*"
 tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
+name = "stim"
+version = "1.12.1"
+description = "A fast library for analyzing with quantum stabilizer circuits."
+optional = false
+python-versions = ">=3.6.0"
+files = [
+    {file = "stim-1.12.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:be50861d1b4219a12264f0bbebb04900ccdd56819f51136283a1e03962d133b1"},
+    {file = "stim-1.12.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4e066aaed805364bf27ffb2bc9d275111f5b0828156f599c2ab82b02f96134e6"},
+    {file = "stim-1.12.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:14cb6400f49387ddc94c599556fec3f97a8f4c7d57300f984f3ca0cec838e00f"},
+    {file = "stim-1.12.1-cp310-cp310-win_amd64.whl", hash = "sha256:0d62aee6b9265268c728eaefa971215454f9c93cf69bf04c24d1e78231124371"},
+    {file = "stim-1.12.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:c2d674621ddce52bb0b0e54aaa2bd390707287454fbb0d6a03dc043eb16f752a"},
+    {file = "stim-1.12.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7c26565a81096fb688190ffbbeae51d60289b49753f6c8dcf2ee9beeafc617a2"},
+    {file = "stim-1.12.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:475d91d3357d6f29baf08550b29e7fe5678c4ab3863e4ba25782e38f5b945790"},
+    {file = "stim-1.12.1-cp311-cp311-win_amd64.whl", hash = "sha256:c07f41ac40a0be6edeea03d50242d273e95d4590461a4b7599bab4e8dd29aa6d"},
+    {file = "stim-1.12.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:ebece3d630362516c39139dae0c321d2a6353fab78884b41a3f436ed923c1876"},
+    {file = "stim-1.12.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:61957d5cbb633a4efe5a9dc21b350fcd03a5767c441137e257517b223ec289be"},
+    {file = "stim-1.12.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1904dd8779dae758eb4fa95f2b881a6c7903a949e709f9b995f115a6f2ac8f86"},
+    {file = "stim-1.12.1-cp312-cp312-win_amd64.whl", hash = "sha256:2bd9e04046e5b398499d74a94a9abacde70c9f2c3442d5f6a5f193f5f137025f"},
+    {file = "stim-1.12.1-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:7cb52db06fe5b1e33f100dd07fbf9f4cf6acb83a40115177cc6b5b483b88cecc"},
+    {file = "stim-1.12.1-cp36-cp36m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6f2d3da1d369e2eae45112caf80d4370a896f2caacfecae25393f030f76ca01b"},
+    {file = "stim-1.12.1-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:78ba6371e3102e4c3dc40cb648c7e7dc4d2b53a8ff41b970253f3883b3bf439b"},
+    {file = "stim-1.12.1-cp36-cp36m-win32.whl", hash = "sha256:10fca3e2a4c07310d94710f29d42a808d0b4e0fbc9b6a80a69d37a6d188b60cb"},
+    {file = "stim-1.12.1-cp36-cp36m-win_amd64.whl", hash = "sha256:ee9d04f820164ac748f8fe999ecdda7dc3d4c0d3564805b522464ab0b1183e1e"},
+    {file = "stim-1.12.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3783158200ec395f9c40ecf4999b84fec7b8b31f9276993785d64847fa64a1f2"},
+    {file = "stim-1.12.1-cp37-cp37m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:48b40f8748f21a12dfa1f40209706dc8dc4d4713d83a61f838361e6309ec97aa"},
+    {file = "stim-1.12.1-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bcde7ba4c91496b4d610df1db5976c3e153411a953e4e4969464cb7303a545f1"},
+    {file = "stim-1.12.1-cp37-cp37m-win32.whl", hash = "sha256:985757b1d25b7b9b626c8cf646178dd931500820991832c82cff7ea0f6fa3665"},
+    {file = "stim-1.12.1-cp37-cp37m-win_amd64.whl", hash = "sha256:cf12de3f5ef03d3c248ff37df920aadec828b2f42c99687f0bdb54646ea9eb3a"},
+    {file = "stim-1.12.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:2e479614da248d95c98656985d2d132ca124259664a35a58f7d03b60cd4708ae"},
+    {file = "stim-1.12.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:c17d95d54d5bd163d22558369e67c1a4daeb21f4724c3cbd7f5dc954e5e90519"},
+    {file = "stim-1.12.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0587aeaa9791bf5b2b64c993c3211213fdfa247afffdbca5e8d6b329f1ee3926"},
+    {file = "stim-1.12.1-cp38-cp38-win_amd64.whl", hash = "sha256:ef6c69f9d222381e241af8f97ffe596a02a27eaa01a223b815b3350279515deb"},
+    {file = "stim-1.12.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fdb3fb321a0d9f576f3655b525f34f1efccaccc57a1c21840b3f0cda0c93dce4"},
+    {file = "stim-1.12.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:bdd744bca925fd4f78dd01a5068ebeb090d30d7bae9c4e379526838b8f5881fc"},
+    {file = "stim-1.12.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f0f2fe8c5a0906a8eb3ee3b3c840026912828e98a0dc44aace800e4d1d1b2b9b"},
+    {file = "stim-1.12.1-cp39-cp39-win_amd64.whl", hash = "sha256:86da45f618d5e8866a5197f10dd74ab23516865da2dbdc95edb54628195f67ff"},
+    {file = "stim-1.12.1.tar.gz", hash = "sha256:71a8b5ee740e07c888a0676a5ca465c94a3e588de907806db303d607106da7b2"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
@@ -5457,4 +5500,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "601a255f88f2e86e9c4e056077e826c72c4de20c2618d6981b39c6842eafcb5b"
+content-hash = "9b1a14610acdd1973b166e3ded5200acbf457c194bca19dd6afa49aff7775e22"
