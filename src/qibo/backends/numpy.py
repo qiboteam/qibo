@@ -638,12 +638,12 @@ class NumpyBackend(Backend):
 
     def samples_to_decimal(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        qrange = (2**qrange)[:, self.np.newaxis]
+        qrange = (2**qrange)[:, None]
         return self.np.matmul(self.to_numpy(samples), qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
         res, counts = np.unique(samples, return_counts=True)
-        return collections.Counter(zip(res, counts))
+        return collections.Counter(dict(zip(res, counts)))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)
