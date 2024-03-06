@@ -60,33 +60,27 @@ class QuantumNetwork:
 
         self._set_parameters()
 
-        self.dims = reduce(
-            mul, self.partition
-        )  # should be after `_set_parameters` to ensure `self.partition` is not `None`
+        if len(self.partition) > 0:
+            self.dims = reduce(
+                mul, self.partition
+            )  # should be after `_set_parameters` to ensure `self.partition` is not `None`
+        else:
+            self.dims = 1
 
     @staticmethod
-    def _order_tensor2operator(n: int, system_input: Union[List[bool], Tuple[bool]]):
+    def _order_tensor2operator(n: int):
         order = list(range(0, n * 2, 2)) + list(range(1, n * 2, 2))
-        for i, is_input in enumerate(system_input):
-            if is_input:
-                order[i] = order[i] + 1
-                order[i + n] = order[i + n] - 1
         return order
 
     @staticmethod
-    def _order_operator2tensor(n: int, system_input: Union[List[bool], Tuple[bool]]):
+    def _order_operator2tensor(n: int):
         order = list(sum(zip(list(range(0, n)), list(range(n, n * 2))), ()))
-        for i, is_input in enumerate(system_input):
-            if is_input:
-                temp = order[i * 2]
-                order[i * 2] = order[i * 2 + 1]
-                order[i * 2 + 1] = temp
         return order
 
     @classmethod
     def _operator2tensor(cls, operator, partition: List[int], system_input: List[bool]):
         n = len(partition)
-        order = cls._order_operator2tensor(n, system_input)
+        order = cls._order_operator2tensor(n)
         try:
             return (
                 operator.reshape(list(partition) * 2)
@@ -173,11 +167,14 @@ class QuantumNetwork:
             tensor = self._tensor
 
         n = len(self.partition)
-        order = self._order_tensor2operator(n, self.system_input)
+        order = self._order_tensor2operator(n)
 
         operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
 
         return backend.cast(operator, dtype=self._tensor.dtype)
+    
+    def matrix(self, backend=None):
+        return self.operator(backend, full=True).reshape((self.dims, self.dims))
 
     def is_pure(self):
         """Returns bool indicading if the Choi operator of the network is pure."""
@@ -207,9 +204,6 @@ class QuantumNetwork:
         Returns:
             bool: Hermiticity condition.
         """
-        if self.is_pure():  # if the input is pure, it is always hermitian
-            return True
-
         if precision_tol < 0.0:
             raise_error(
                 ValueError,
@@ -219,8 +213,11 @@ class QuantumNetwork:
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
 
+        if self.is_pure():  # if the input is pure, it is always hermitian
+            return True
+
         reshaped = self._backend.cast(
-            np.reshape(self.operator(), (self.dims, self.dims)),
+            self.matrix(),
             dtype=self._tensor.dtype,
         )
         mat_diff = self._backend.cast(
@@ -247,7 +244,7 @@ class QuantumNetwork:
             return True
 
         reshaped = self._backend.cast(
-            np.reshape(self.operator(), (self.dims, self.dims)),
+            self.matrix(),
             dtype=self._tensor.dtype,
         )
 
@@ -572,7 +569,6 @@ class QuantumNetwork:
 
         return tensor
 
-
 class QuantumComb(QuantumNetwork):
 
     def __init__(
@@ -787,11 +783,11 @@ def link_product(
     in order to simplify notation.
 
     Args:
-        second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
-            network to be applied to the original network.
         subscripts (str, optional): Specifies the subscript for summation using
             the Einstein summation convention. For more details, please refer to
             `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
+        operands (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
+            network to be contracted.
 
     Returns:
         :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
@@ -821,6 +817,29 @@ def link_product(
     input_str, results_index = einsum_str.split("->")
     inputs = input_str.split(",")
 
+    # Warning if the same index connects two input or two output systems
+    for ind in idx_rm:
+        found = 0
+        for i, script in enumerate(inputs):
+            try:
+                index = script.index(ind)
+                found += 1
+                if found > 1:
+                    if is_input != operands[inds[i]].system_input[index]:
+                        pass
+                    else:
+                        warning(
+                            f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                        )
+                is_input = operands[inds[i]].system_input[index]
+                if found > 2:
+                    warning(
+                        f"Index {ind} is accores multiple times in the input subscripts {input_str}."
+                    )
+            except:
+                continue
+
+    # check output systems
     partition = []
     system_input = []
     for ind in results_index:
@@ -830,7 +849,7 @@ def link_product(
                 index = script.index(ind)
                 if found:
                     warning(
-                        f"Index {ind} is repeated in the output subscripts {results_index}."
+                        f"Index {ind} is repeated in the input subscripts {input_str}."
                     )
                 found = True
 
