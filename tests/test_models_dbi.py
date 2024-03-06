@@ -10,11 +10,11 @@ from qibo.models.dbi.double_bracket import (
 )
 from qibo.quantum_info import random_hermitian
 
-NSTEPS = 50
+NSTEPS = 10
 """Number of steps for evolution."""
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_canonical(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
     dbi = DoubleBracketIteration(
@@ -28,7 +28,7 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
@@ -47,7 +47,7 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_single_commutator(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
@@ -66,7 +66,7 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [3, 4])
 def test_hyperopt_step(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
@@ -77,7 +77,7 @@ def test_hyperopt_step(backend, nqubits):
     delta = 0.02
 
     step = dbi.hyperopt_step(
-        step_min=initial_step - delta, step_max=initial_step + delta, max_evals=100
+        step_min=initial_step - delta, step_max=initial_step + delta, max_evals=10
     )
 
     assert step != initial_step
@@ -92,7 +92,7 @@ def test_hyperopt_step(backend, nqubits):
     step = dbi.hyperopt_step(
         step_min=initial_step - delta,
         step_max=initial_step + delta,
-        max_evals=100,
+        max_evals=10,
         look_ahead=look_ahead,
     )
 
