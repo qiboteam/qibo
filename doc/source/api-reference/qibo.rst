@@ -1615,6 +1615,23 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
+We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
+It is possible to run Clifford circuits using `stim` as an engine:
+
+.. code-block::  python
+    from qibo.backends import CliffordBackend
+    from qibo.quantum_info import Clifford, random_clifford
+
+    clifford_backend = CliffordBackend(engine="stim")
+
+    circuit = random_clifford(nqubits)
+    result = clifford_backend.execute_circuit(circuit)
+
+    ## Note that the execution above is equivalent to the one below
+
+    result = Clifford.from_circuit(circuit, engine="stim")
+
+
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:
     :member-order: bysource
