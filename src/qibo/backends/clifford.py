@@ -28,18 +28,11 @@ class CliffordBackend(NumpyBackend):
         super().__init__()
 
         if engine == "stim":
-            try:
-                import stim  # pylint: disable=C0415
-
-                self._stim = stim
-            except ModuleNotFoundError:  # pragma: no cover
-                raise_error(
-                    ModuleNotFoundError,
-                    "`engine` was set as `stim`, but module was not found. Please install `stim`.",
-                )
+            import stim  # pylint: disable=C0415
 
             engine = "numpy"
             self.platform = "stim"
+            self._stim = stim
         else:
             if engine is None:
                 from qibo.backends import _check_backend  # pylint: disable=C0415
