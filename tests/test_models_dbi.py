@@ -137,7 +137,6 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
 @pytest.mark.parametrize("n", [2, 4])
 def test_double_bracket_iteration_scheduling_polynomial(backend, nqubits, n):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
-    d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
@@ -145,6 +144,7 @@ def test_double_bracket_iteration_scheduling_polynomial(backend, nqubits, n):
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
-        step1 = dbi.choose_step(d=d, n=n)
-        dbi(d=d, step=step1)
+        # by default, d is the diagonal resctriction of H
+        step1 = dbi.choose_step(n=n)
+        dbi(step=step1)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm

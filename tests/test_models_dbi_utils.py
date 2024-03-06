@@ -37,6 +37,7 @@ def test_select_best_dbr_generator(backend, nqubits, step):
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
+        scheduling=DoubleBracketScheduling.grid_search,
     )
     generate_Z = generate_Z_operators(nqubits)
     Z_ops = list(generate_Z.values())
