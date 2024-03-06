@@ -72,25 +72,25 @@ def test_hyperopt_step(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(Hamiltonian(nqubits, h0, backend=backend))
-
+    dbi.scheduling = DoubleBracketScheduling.hyperopt
     # find initial best step with look_ahead = 1
     initial_step = 0.01
     delta = 0.02
 
-    step = dbi.hyperopt_step(
+    step = dbi.choose_step(
         step_min=initial_step - delta, step_max=initial_step + delta, max_evals=100
     )
 
     assert step != initial_step
 
-    # evolve following the optimized first step
+    # evolve following with optimized first step
     for generator in DoubleBracketGeneratorType:
         dbi(mode=generator, step=step, d=d)
 
     # find the following step size with look_ahead
     look_ahead = 3
 
-    step = dbi.hyperopt_step(
+    step = dbi.choose_step(
         step_min=initial_step - delta,
         step_max=initial_step + delta,
         max_evals=100,
@@ -134,13 +134,8 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 6])
-@pytest.mark.parametrize("n", [2, 3])
-@pytest.mark.parametrize(
-    "backup_scheduling", [None, DoubleBracketScheduling.polynomial_approximation]
-)
-def test_double_bracket_iteration_scheduling_polynomial(
-    backend, nqubits, n, backup_scheduling
-):
+@pytest.mark.parametrize("n", [2, 4])
+def test_double_bracket_iteration_scheduling_polynomial(backend, nqubits, n):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
@@ -150,10 +145,6 @@ def test_double_bracket_iteration_scheduling_polynomial(
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
-        step1 = dbi.choose_step(n=n, backup_scheduling=backup_scheduling)
+        step1 = dbi.choose_step(d=d, n=n)
         dbi(d=d, step=step1)
-    # step2 = dbi.choose_step(
-    #     scheduling=DoubleBracketScheduling.polynomial_approximation, n=n
-    # )
-    # dbi(step=step2)
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
