@@ -193,7 +193,7 @@ class NumpyBackend(Backend):
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
-            matrixc = self.np.conj(matrix)
+            matrixc = np.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             n = 2**ncontrol
@@ -226,7 +226,7 @@ class NumpyBackend(Backend):
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            matrixc = self.np.conj(matrix)
+            matrixc = np.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
@@ -678,7 +678,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         axes = 2 * [list(qubits)]
-        rho = self.np.tensordot(state, self.np.conj(state), axes)
+        rho = self.np.tensordot(state, np.conj(state), axes)
         shape = 2 * (2 ** (nqubits - len(qubits)),)
         return self.np.reshape(rho, shape)
 
@@ -704,14 +704,12 @@ class NumpyBackend(Backend):
         return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
-        return self.np.abs(
-            self.np.sum(self.np.conj(self.cast(state1)) * self.cast(state2))
-        )
+        return self.np.abs(self.np.sum(np.conj(self.cast(state1)) * self.cast(state2)))
 
     def calculate_overlap_density_matrix(self, state1, state2):
         state1 = self.cast(state1)
         state2 = self.cast(state2)
-        return self.np.trace(self.np.transpose(self.np.conj(state1)) @ state2)
+        return self.np.trace(self.np.transpose(np.conj(state1)) @ state2)
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
@@ -740,11 +738,11 @@ class NumpyBackend(Backend):
                 from scipy.linalg import expm
             return expm(-1j * a * matrix)
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.transpose(self.np.conj(eigenvectors))
+        ud = self.np.transpose(np.conj(eigenvectors))
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
-        statec = self.np.conj(state)
+        statec = np.conj(state)
         hstate = hamiltonian @ state
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
