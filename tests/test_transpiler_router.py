@@ -297,6 +297,8 @@ def test_sabre_random_circuits(n_gates, look, decay, placer, connectivity):
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
+    circuit_result = transpiled_circuit.execute(nshots=100)
+    assert circuit_result.frequencies() == measurement.result.frequencies()
     assert transpiled_circuit.queue[-1].result is measurement.result
 
 
