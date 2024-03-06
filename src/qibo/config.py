@@ -35,7 +35,7 @@ SHOT_METROPOLIS_THRESHOLD = 100000
 MAX_ITERATIONS = 50
 
 
-def raise_error(exception, message=None, args=None):
+def raise_error(exception, message=None):
     """Raise exception with logging error.
 
     Args:
@@ -43,10 +43,7 @@ def raise_error(exception, message=None, args=None):
         message (str): the error message.
     """
     log.error(message)
-    if args:
-        raise exception(message, args)
-    else:
-        raise exception(message)
+    raise exception(message)
 
 
 def get_batch_size():

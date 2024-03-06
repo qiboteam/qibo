@@ -1128,20 +1128,24 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 
-Realistic noise model
-^^^^^^^^^^^^^^^^^^^^^
+IBMQ noise model
+^^^^^^^^^^^^^^^^
 
-In Qibo, it is possible to build a realistic noise model of a real quantum computer
-by using the :meth:`qibo.noise.NoiseModel.composite()` method.
+In Qibo, it is possible to build noisy circuits based on IBMQ's reported noise model of
+for its quantum computer by using the :class:`qibo.noise.IBMQNoiseModel` class.
 The noise model is built using a combination of the
 :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel`
-channels. After each gate of the original circuit, the function applies a depolarizing
-and a thermal relaxation channel. At the end of the circuit, if the qubit is measured,
+channels. . At the end of the circuit, if the qubit is measured,
 bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal
 relaxation channel for the duration of the idle-time.
 
-For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the
+For more information on the :class:`qibo.noise.IBMQNoiseModel` class, see the
 example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
+
+
+.. autoclass:: qibo.noise.IBMQNoiseModel
+    :members:
+    :member-order: bysource
 
 
 _______________________
@@ -1610,6 +1614,23 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
    stabilizers = clifford.stabilizers()
 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
+
+We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
+It is possible to run Clifford circuits using `stim` as an engine:
+
+.. code-block::  python
+    from qibo.backends import CliffordBackend
+    from qibo.quantum_info import Clifford, random_clifford
+
+    clifford_backend = CliffordBackend(engine="stim")
+
+    circuit = random_clifford(nqubits)
+    result = clifford_backend.execute_circuit(circuit)
+
+    ## Note that the execution above is equivalent to the one below
+
+    result = Clifford.from_circuit(circuit, engine="stim")
+
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:
@@ -2366,6 +2387,8 @@ variable.
     :members:
     :member-order: bysource
 
+.. _Clifford:
+
 Clifford Simulation
 ^^^^^^^^^^^^^^^^^^^
 
@@ -2420,3 +2443,9 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
+
+
+Cloud Backends
+^^^^^^^^^^^^^^
+
+Additional backends, that support the remote execution of quantum circuits through cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin `qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_. For more information please refer to the `official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.

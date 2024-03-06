@@ -22,7 +22,7 @@ Components
 
 The main components of ``Qibo`` are presented in :doc:`getting-started/index`
 
-.. image:: qibo_ecosystem.svg
+.. image:: qibo_ecosystem.png
 
 Key features
 ------------
@@ -88,7 +88,9 @@ Contents
     Qibolab docs <https://qibo.science/qibolab/stable/>
     Qibocal docs <https://qibo.science/qibocal/stable/>
     Qibosoq docs <https://qibo.science/qibosoq/stable/>
-
+    Qibochem docs <https://qibo.science/qibochem/stable/>
+    Qibotn docs <https://qibo.science/qibotn/stable/>
+    Qibo-cloud-backends docs <https://qibo.science/qibo-cloud-backends/stable/>
 
 Indices and tables
 ==================
