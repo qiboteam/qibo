@@ -179,12 +179,12 @@ class CliffordBackend(NumpyBackend):
             for gate in circuit.queue:
                 circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
 
-            quad_1, quad_2, quad_3, quad_4, x_phases, z_phases = (
+            x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
                 self._stim.Tableau.from_circuit(  # pylint: disable=no-member
                     circuit_stim
                 ).to_numpy()
             )
-            symplectic_matrix = np.block([[quad_1, quad_2], [quad_3, quad_4]])
+            symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
             symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
 
             return Clifford(
