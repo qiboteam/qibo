@@ -434,7 +434,7 @@ class Circuit:
                         NotImplementedError,
                         "Cannot create deep copy of fused circuit.",
                     )
-                new_circuit.add(gate.__class__(*gate.init_wargs, **gate.__init__kwargs))
+                new_circuit.add(gate.__class__(*gate.init_args, **gate.__init__kwargs))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
