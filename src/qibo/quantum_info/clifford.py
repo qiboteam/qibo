@@ -30,11 +30,11 @@ class Clifford:
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
-        engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the execution
-            of the :class:`qibo.backends.CliffordBackend`.
-            It accepts all ``qibo`` backends besides the :class:`qibo.backends.TensorflowBackend`,
-            which is not supported. If ``None``, defaults to :class:`qibo.backends.NumpyBackend`
-            Defaults to ``None``.
+        engine (str, optional): engine to use in the execution of the
+            :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
+            ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
+            If ``None``, defaults to the corresponding engine
+            from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
     """
 
     symplectic_matrix: np.ndarray = field(init=False)
@@ -85,12 +85,11 @@ class Clifford:
                 Defaults to ``None``.
             nshots (int, optional): number of measurement shots to perform
                 if ``circuit`` has measurement gates. Defaults to :math:`10^{3}`.
-            engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the
-                execution of the :class:`qibo.backends.CliffordBackend`.
-                It accepts all ``qibo`` backends besides the
-                :class:`qibo.backends.TensorflowBackend`, which is not supported.
-                If ``None``, defaults to :class:`qibo.backends.NumpyBackend`.
-                Defaults to ``None``.
+            engine (str, optional): engine to use in the execution of the
+                :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
+                ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
+                If ``None``, defaults to the corresponding engine
+                from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
