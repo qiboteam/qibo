@@ -1,5 +1,4 @@
 import collections
-import copy
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -435,7 +434,7 @@ class Circuit:
                         NotImplementedError,
                         "Cannot create deep copy of fused circuit.",
                     )
-                new_circuit.add(copy.copy(gate))
+                new_circuit.add(gate.__class__(*gate.init_wargs, **gate.__init__kwargs))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
