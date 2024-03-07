@@ -205,10 +205,10 @@ class TensorflowBackend(NumpyBackend):
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0],
+                [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+                [0, 1, 1, 2, 1, 1, 4, 0, 0, 4],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 4, 0, 0, 0, 4],
             ]
         elif name == "test_probabilistic_measurement":
             if "GPU" in self.device:  # pragma: no cover
@@ -223,6 +223,6 @@ class TensorflowBackend(NumpyBackend):
         elif name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30},
-                {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2},
+                {5: 12, 7: 6, 4: 6, 1: 5, 6: 1},
+                {3: 7, 6: 4, 2: 4, 7: 4, 0: 4, 5: 3, 4: 2, 1: 2},
             ]
