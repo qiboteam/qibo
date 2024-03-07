@@ -365,6 +365,7 @@ def test_hamiltonian_eigenvectors(backend, dtype, dense):
     H3 = H1 * c2
     V3 = backend.to_numpy(H3.eigenvectors())
     U3 = backend.to_numpy(H3._eigenvalues)
+    print(U3)
     backend.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)

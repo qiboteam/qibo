@@ -115,29 +115,30 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = self.identity_density_matrix(rank, normalize=False)
+        matrix = np.eye(2**rank)
         for gate in fgate.gates:
-            gmatrix = self.cast(gate.matrix(self))
+            # transfer gate matrix to numpy as it is more efficient for
+            # small tensor calculations
+            # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
+            gmatrix = self.to_numpy(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = self.identity_density_matrix(
-                (rank - len(gate.qubits)), normalize=False
-            )
-            gmatrix = self.np.kron(gmatrix, eye)
+            eye = np.eye(2 ** (rank - len(gate.qubits)))
+            gmatrix = np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
             original_shape = gmatrix.shape
-            gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
+            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
             indices = np.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
-            gmatrix = self.np.transpose(gmatrix, transpose_indices)
-            gmatrix = self.np.reshape(gmatrix, original_shape)
+            gmatrix = np.transpose(gmatrix, transpose_indices)
+            gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
-        return matrix
+        return self.cast(matrix)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -193,7 +194,7 @@ class NumpyBackend(Backend):
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
-            matrixc = np.conj(matrix)
+            matrixc = self.np.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             n = 2**ncontrol
@@ -226,7 +227,7 @@ class NumpyBackend(Backend):
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            matrixc = np.conj(matrix)
+            matrixc = self.np.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
@@ -236,7 +237,7 @@ class NumpyBackend(Backend):
 
     def apply_gate_half_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, 2 * nqubits * (2,))
+        state = self.np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:  # pragma: no cover
             raise_error(
@@ -246,12 +247,12 @@ class NumpyBackend(Backend):
                 "gates.",
             )
         else:
-            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             left, _ = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
-            state = np.einsum(left, state, matrix)
-        return np.reshape(state, 2 * (2**nqubits,))
+            state = self.np.einsum(left, state, matrix)
+        return self.np.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
@@ -529,7 +530,7 @@ class NumpyBackend(Backend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = np.mean(self.to_numpy(final_states), 0)
+            final_state = self.cast(np.mean(self.to_numpy(final_states), 0))
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
@@ -678,7 +679,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         axes = 2 * [list(qubits)]
-        rho = self.np.tensordot(state, np.conj(state), axes)
+        rho = self.np.tensordot(state, self.np.conj(state), axes)
         shape = 2 * (2 ** (nqubits - len(qubits)),)
         return self.np.reshape(rho, shape)
 

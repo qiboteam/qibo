@@ -73,9 +73,13 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
     # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
     # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries.
-    eigvals, psi_magic = backend.np.linalg.eig(np.round(ut_u, decimals=20))
-    # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-    psi_magic, _ = backend.np.linalg.qr(psi_magic)
+    if backend.__class__.__name__ == "TensorflowBackend":
+        eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
+        psi_magic, _ = np.linalg.qr(psi_magic)
+    else:
+        eigvals, psi_magic = backend.np.linalg.eig(np.round(ut_u, decimals=20))
+        # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
+        psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
     psi = backend.np.matmul(magic_basis, psi_magic)
     return psi, eigvals
@@ -92,7 +96,10 @@ def schmidt_decompose(state, backend=None):
 
     """
     backend = _check_backend(backend)
-    u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
+    if backend.__class__.__name__ == "TensorflowBackend":
+        u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
+    else:
+        u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
     if not np.allclose(d, [1, 0]):  # pragma: no cover
         raise_error(
             ValueError,
@@ -114,7 +121,9 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     """
     backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
-    if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
+    if not np.allclose(
+        backend.to_numpy(psi_magic).imag, np.zeros_like(psi_magic)
+    ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
 
@@ -152,7 +161,10 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend=None):
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
     # this is required so that sum(lambdas) = 0
     # and Ud can be written as exp(-iH)
-    det = backend.np.linalg.det(unitary) ** (1 / 16)
+    if backend.__class__.__name__ == "TensorflowBackend":
+        det = np.linalg.det(unitary) ** (1 / 16)
+    else:
+        det = backend.np.linalg.det(unitary) ** (1 / 16)
     ua *= det
     ub *= det
     va *= det
