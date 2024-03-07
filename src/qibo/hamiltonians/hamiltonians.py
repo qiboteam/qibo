@@ -116,6 +116,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation(self, state, normalize=False):
         if isinstance(state, self.backend.tensor_types):
+            state = self.backend.cast(state)
             shape = tuple(state.shape)
             if len(shape) == 1:  # state vector
                 return self.backend.calculate_expectation_state(self, state, normalize)
@@ -175,6 +176,7 @@ class Hamiltonian(AbstractHamiltonian):
         Return:
             Energy fluctuation value (float).
         """
+        state = self.backend.cast(state)
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)

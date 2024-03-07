@@ -449,7 +449,7 @@ def test_hamiltonian_energy_fluctuation(backend):
     ham = hamiltonians.XXZ(nqubits=2, backend=backend)
     # take ground state and zero state
     ground_state = ham.ground_state()
-    zero_state = np.ones(2**2) / np.sqrt(2**2)
+    zero_state = backend.np.ones(2**2) / np.sqrt(2**2)
     # collect energy fluctuations
     gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
     zs_energy_fluctuation = ham.energy_fluctuation(zero_state)
