@@ -774,7 +774,10 @@ class StochQuantumNetwork:
 
 
 def link_product(
-    subscripts: str = "ij,jk -> ik", *operands: QuantumNetwork, backend=None
+    subscripts: str = "ij,jk -> ik",
+    *operands: QuantumNetwork,
+    backend=None,
+    surpress_warning=False,
 ):
     """Link product between two quantum networks.
 
@@ -819,26 +822,27 @@ def link_product(
     inputs = input_str.split(",")
 
     # Warning if the same index connects two input or two output systems
-    for ind in idx_rm:
-        found = 0
-        for i, script in enumerate(inputs):
-            try:
-                index = script.index(ind)
-                found += 1
-                if found > 1:
-                    if is_input != operands[inds[i]].system_input[index]:
-                        pass
-                    else:
+    if not surpress_warning:
+        for ind in idx_rm:
+            found = 0
+            for i, script in enumerate(inputs):
+                try:
+                    index = script.index(ind)
+                    found += 1
+                    if found > 1:
+                        if is_input != operands[inds[i]].system_input[index]:
+                            pass
+                        else:
+                            warning(
+                                f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                            )
+                    is_input = operands[inds[i]].system_input[index]
+                    if found > 2:
                         warning(
-                            f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                            f"Index {ind} is accores multiple times in the input subscripts {input_str}."
                         )
-                is_input = operands[inds[i]].system_input[index]
-                if found > 2:
-                    warning(
-                        f"Index {ind} is accores multiple times in the input subscripts {input_str}."
-                    )
-            except:
-                continue
+                except:
+                    continue
 
     # check output systems
     partition = []
@@ -863,3 +867,33 @@ def link_product(
     new_tensor = np.einsum(subscripts, *tensors)
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
+
+
+def identity(dim: int, backend=None):
+    """Returns the identity channel.
+
+    Args:
+        dim (int): Dimension of the identity operator.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+            to return the identity operator. If ``None``, defaults to the backend defined
+            when initializing the :class:`qibo.quant
+    """
+
+    return QuantumNetwork.from_nparray(
+        np.eye(dim), [dim, dim], [True, False], pure=True, backend=backend
+    )
+
+
+def trace(dim: int, backend=None):
+    """Returns the trace operator.
+
+    Args:
+        dim (int): Dimension to be traced.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+            to return the identity operator. If ``None``, defaults to the backend defined
+            when initializing the :class:`qibo.quant
+    """
+
+    return QuantumNetwork.from_nparray(
+        np.eye(dim), [dim], [True], pure=False, backend=backend
+    )
