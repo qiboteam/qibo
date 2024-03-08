@@ -43,9 +43,6 @@ class _Queue(list):
     def __init__(self, nqubits):
         super().__init__(self)
         self.nqubits = nqubits
-        self.moments = [nqubits * [None]]
-        self.moment_index = nqubits * [0]
-        self.nmeasurements = 0
 
     def to_fused(self):
         """Transform all gates in queue to :class:`qibo.gates.FusedGate`."""
@@ -88,24 +85,27 @@ class _Queue(list):
                 queue.append(gate.gates[0])
         return queue
 
-    def append(self, gate: gates.Gate):
-        super().append(gate)
-        if gate.qubits:
-            qubits = gate.qubits
-        else:  # special gate acting on all qubits
-            qubits = tuple(range(self.nqubits))
+    def nmeasurements(self):
+        return len([1 for gate in self if isinstance(gate, gates.M)])
 
-        if isinstance(gate, gates.M):
-            self.nmeasurements += 1
+    def moments(self):
+        moments = [self.nqubits * [None]]
+        moment_index = self.nqubits * [0]
+        for gate in self:
+            if gate.qubits:
+                qubits = gate.qubits
+            else:  # special gate acting on all qubits
+                qubits = tuple(range(self.nqubits))
 
-        # calculate moment index for this gate
-        idx = max(self.moment_index[q] for q in qubits)
-        for q in qubits:
-            if idx >= len(self.moments):
-                # Add a moment
-                self.moments.append(len(self.moments[-1]) * [None])
-            self.moments[idx][q] = gate
-            self.moment_index[q] = idx + 1
+            # calculate moment index for this gate
+            idx = max(moment_index[q] for q in qubits)
+            for q in qubits:
+                if idx >= len(moments):
+                    # Add a moment
+                    moments.append(len(moments[-1]) * [None])
+                moments[idx][q] = gate
+                moment_index[q] = idx + 1
+        return moments
 
 
 class Circuit:
@@ -658,7 +658,7 @@ class Circuit:
                 self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
-                    nreg = self.queue.nmeasurements - 1
+                    nreg = self.queue.nmeasurements() - 1
                     gate.register_name = f"register{nreg}"
                 else:
                     registers = self.measurement_tuples
@@ -712,7 +712,7 @@ class Circuit:
     def depth(self) -> int:
         """Circuit depth if each gate is placed at the earliest possible
         position."""
-        return len(self.queue.moments)
+        return len(self.queue.moments())
 
     @property
     def gate_types(self) -> collections.Counter:
