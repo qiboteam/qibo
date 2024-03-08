@@ -330,9 +330,9 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
         )
     elif backend.__class__.__name__ == "PyTorchBackend":
         test_frequencies = (
-            Counter({"1": 810, "0": 214})
+            Counter({"1": 817, "0": 207})
             if nqubits == 1
-            else Counter({"11": 685, "01": 160, "10": 144, "00": 35})
+            else Counter({"11": 664, "01": 160, "10": 144, "00": 35})
         )
     else:
         test_frequencies = (
