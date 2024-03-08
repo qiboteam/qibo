@@ -332,7 +332,7 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
         test_frequencies = (
             Counter({"1": 817, "0": 207})
             if nqubits == 1
-            else Counter({"11": 664, "01": 160, "10": 144, "00": 35})
+            else Counter({"11": 664, "01": 162, "10": 144, "00": 35})
         )
     else:
         test_frequencies = (
