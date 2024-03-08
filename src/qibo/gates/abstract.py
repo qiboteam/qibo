@@ -1,5 +1,4 @@
 import collections
-import json
 from typing import List, Sequence, Tuple
 
 import sympy

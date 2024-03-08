@@ -31,6 +31,16 @@ class _ParametrizedGates(list):
         self.set.add(gate)
         self.nparams += gate.nparams
 
+    def insert(self, pos, gate):
+        super().insert(pos, gate)
+        self.set.add(gate)
+        self.nparams += gate.nparams
+
+    def remove(self, gate):
+        super().remove(gate)
+        self.set.remove(gate)
+        self.nparams -= gate.nparams
+
 
 class _Queue(list):
     """List that holds the queue of gates of a circuit.
@@ -106,6 +116,50 @@ class _Queue(list):
                 self.moments.append(len(self.moments[-1]) * [None])
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
+
+    def insert(self, pos, gate: gates.Gate):
+        super().insert(pos, gate)
+
+        # calculate moment index for this gate
+        self.moments = [self.nqubits * [None]]
+        self.moment_index = self.nqubits * [0]
+        for g in self:
+            if g.qubits:
+                qubits = g.qubits
+            else:  # special gate acting on all qubits
+                qubits = tuple(range(self.nqubits))
+            idx = max(self.moment_index[q] for q in qubits)
+            for q in g.qubits:
+                if idx >= len(self.moments):
+                    # Add a moment
+                    self.moments.append(len(self.moments[-1]) * [None])
+                self.moments[idx][q] = g
+                self.moment_index[q] = idx + 1
+
+    def remove(self, gate):
+        pos = super().index(gate)
+        super().remove(gate)
+
+        if isinstance(gate, gates.M):
+            self.nmeasurements -= 1
+
+        # calculate moment index for this gate
+        self.moments = [self.nqubits * [None]]
+        self.moment_index = self.nqubits * [0]
+        for g in self:
+            if g.qubits:
+                qubits = g.qubits
+            else:  # special gate acting on all qubits
+                qubits = tuple(range(self.nqubits))
+            idx = max(self.moment_index[q] for q in qubits)
+            for q in g.qubits:
+                if idx >= len(self.moments):
+                    # Add a moment
+                    self.moments.append(len(self.moments[-1]) * [None])
+                self.moments[idx][q] = g
+                self.moment_index[q] = idx + 1
+
+        return pos
 
 
 class Circuit:
@@ -183,7 +237,9 @@ class Circuit:
         self.compiled = None
 
         self.has_collapse = False
+        self.collapses = 0
         self.has_unitary_channel = False
+        self.unitary_channels = 0
         self.density_matrix = density_matrix
 
         # for distributed circuits
@@ -594,7 +650,7 @@ class Circuit:
                 noisy_circuit.add(noise_gate)
         return noisy_circuit
 
-    def add(self, gate):
+    def add(self, gate, position=None):
         """Add a gate to a given queue.
 
         Args:
@@ -610,7 +666,11 @@ class Circuit:
         """
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
-                self.add(g)
+                if isinstance(position, int):
+                    self.add(g, position)
+                    position += 1
+                else:
+                    self.add(g)
 
         else:
             if self.accelerators:  # pragma: no cover
@@ -631,10 +691,16 @@ class Circuit:
             if not isinstance(gate, gates.Gate):
                 raise_error(TypeError, f"Unknown gate type {type(gate)}.")
 
-            if self._final_state is not None:
+            if self._final_state is not None and position is None:
                 raise_error(
                     RuntimeError,
                     "Cannot add gates to a circuit after it is executed.",
+                )
+
+            if isinstance(gate, gates.M) and isinstance(position, int):
+                raise_error(
+                    RuntimeError,
+                    "Cannot add Measurement gate at a specific location.",
                 )
 
             for q in gate.target_qubits:
@@ -673,24 +739,112 @@ class Circuit:
                 gate.result.circuit = self
                 if gate.collapse:
                     self.has_collapse = True
+                    self.collapses += 1
                 else:
                     self.measurements.append(gate)
                 return gate.result
 
             else:
-                self.queue.append(gate)
-                for measurement in list(self.measurements):
-                    if set(measurement.qubits) & set(gate.qubits):
-                        measurement.collapse = True
-                        self.has_collapse = True
-                        self.measurements.remove(measurement)
+                if isinstance(position, int) and position < len(self.queue):
+                    self.queue.insert(position, gate)
+                else:
+                    self.queue.append(gate)
+
+                    for measurement in list(self.measurements):
+                        if set(measurement.qubits) & set(gate.qubits):
+                            measurement.collapse = True
+                            self.has_collapse = True
+                            self.collapses += 1
+                            self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
-                self.has_unitary_channel = True
+                self.unitary_channels += 1
+                self.has_unitary_channel = True if self.unitary_channels > 1 else False
+
             if isinstance(gate, gates.ParametrizedGate):
-                self.parametrized_gates.append(gate)
+                if isinstance(position, int):
+                    param_loc = 0
+                    trainable_loc = 0
+                    for g in self.queue[:position]:
+                        if isinstance(g, gates.ParametrizedGate):
+                            param_loc += 1
+                            if g.trainable:
+                                trainable_loc += 1
+
+                    self.parametrized_gates.insert(param_loc, gate)
+                    if gate.trainable:
+                        self.trainable_gates.insert(trainable_loc, gate)
+
+                else:
+                    self.parametrized_gates.append(gate)
+                    if gate.trainable:
+                        self.trainable_gates.append(gate)
+
+    def remove(self, gate, replacement_gates=[]):
+        """Remove and replace a gate from given queue.
+
+        Args:
+            gate (:class:`qibo.gates.Gate`): the gate object to add.
+                See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
+            replacement_gates (list of (:class:`qibo.gates.Gate`)): gates to
+                replace with
+        """
+
+        if isinstance(gate, collections.abc.Iterable):
+            for g in gate:
+                self.remove(g)
+
+        else:
+            if isinstance(gate, gates.M):
+                # The following loop is useful when two circuits are added together:
+                # all the gates in the basis of the measure gates should not
+                # be added to the new circuit, otherwise once the measure gate is added in the circuit
+                # there will be two of the same.
+
+                for base in gate.basis:
+                    if base not in self.queue:
+                        self.remove(base)
+
+                pos = self.queue.remove(gate)
+
+                if gate.collapse:
+                    self.repeated_execution = False
+                else:
+                    self.measurements.remove(gate)
+
+            else:
+                pos = self.queue.remove(gate)
+
+                for q in gate.qubits:
+                    idx = self.queue.moment_index[q] - 1
+                    if self.queue.moments[idx][q] != gate:
+                        # another gate exists after the measurement gate
+                        continue
+                    else:
+                        while idx > 0 and not isinstance(
+                            self.queue.moments[idx][q], gates.M
+                        ):
+                            idx -= 1
+                        mgate = self.queue.moments[idx][q]
+                        mgate.collapse = False
+                        self.collapses -= 1
+                        self.measurements.append(mgate)
+                        self.has_collapse = False if self.collapses == 0 else True
+
+            if isinstance(gate, gates.UnitaryChannel):
+                self.unitary_channels -= 1
+                self.has_unitary_channel = True if self.unitary_channels > 1 else False
+
+            if isinstance(gate, gates.ParametrizedGate):
+                self.parametrized_gates.remove(gate)
                 if gate.trainable:
-                    self.trainable_gates.append(gate)
+                    self.trainable_gates.remove(gate)
+
+            for rep_gate in replacement_gates:
+                self.add(rep_gate, pos)
 
     @property
     def measurement_tuples(self):
