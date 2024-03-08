@@ -106,12 +106,16 @@ class NumpyBackend(Backend):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        return _matrix(2 ** len(gate.target_qubits)) if callable(_matrix) else _matrix
+        if callable(_matrix):
+            _matrix = _matrix(2 ** len(gate.target_qubits))
+
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)(*gate.parameters)
+        matrix = getattr(self.matrices, name)(*gate.parameters)
+        return self.cast(matrix, dtype=matrix.dtype)
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
@@ -157,7 +161,10 @@ class NumpyBackend(Backend):
                 "gate matrix of shape {}.".format(shape),
             )
         zeros = self.np.zeros((2, 2), dtype=self.dtype)
-        part1 = self.np.concatenate([self.np.eye(2, dtype=self.dtype), zeros], axis=0)
+        zeros = self.cast(zeros, dtype=zeros.dtype)
+        identity = self.np.eye(2, dtype=self.dtype)
+        identity = self.cast(identity, dtype=identity.dtype)
+        part1 = self.np.concatenate([identity, zeros], axis=0)
         part2 = self.np.concatenate([zeros, matrix], axis=0)
         return self.np.concatenate([part1, part2], axis=1)
 

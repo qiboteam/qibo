@@ -106,26 +106,20 @@ class PyTorchBackend(NumpyBackend):
     def issparse(self, x):
         if isinstance(x, self.np.Tensor):
             return x.is_sparse
+
         return super().issparse(x)
 
     def to_numpy(self, x):
         if isinstance(x, list):
             return np.asarray([self.to_numpy(i) for i in x])
+
         if isinstance(x, self.np.Tensor):
             return x.numpy(force=True)
+
         return x
 
     def compile(self, func):
         return func
-        # return self.np.jit.script(func)
-
-    def matrix(self, gate):
-        npmatrix = super().matrix(gate)
-        return self.np.tensor(npmatrix, dtype=self.dtype)
-
-    def matrix_parametrized(self, gate):
-        npmatrix = super().matrix_parametrized(gate)
-        return self.np.tensor(npmatrix, dtype=self.dtype)
 
     def sample_shots(self, probabilities, nshots):
         return self.np.multinomial(
