@@ -118,19 +118,10 @@ class PyTorchBackend(NumpyBackend):
 
         return x
 
-    def compile(self, func):
-        return func
-
     def sample_shots(self, probabilities, nshots):
         return self.np.multinomial(
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
-
-    def samples_to_decimal(self, samples, nqubits):
-        samples = self.cast(samples, dtype="int32")
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=torch.int32)
-        qrange = (2**qrange).unsqueeze(1)
-        return self.np.matmul(samples, qrange).squeeze(1)
 
     def samples_to_binary(self, samples, nqubits):
         samples = self.cast(samples, dtype="int32")
@@ -139,15 +130,11 @@ class PyTorchBackend(NumpyBackend):
         samples = samples[:, None] >> qrange
         return samples % 2
 
-    def calculate_norm(self, state, order=2):
-        state = self.cast(state)
-        return self.np.norm(state, p=order)
-
-    def calculate_norm_density_matrix(self, state, order="nuc"):
-        state = self.cast(state)
-        if order == "nuc":
-            return self.np.trace(state)
-        return self.np.norm(state, p=order)
+    def samples_to_decimal(self, samples, nqubits):
+        samples = self.cast(samples, dtype="int32")
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=torch.int32)
+        qrange = (2**qrange).unsqueeze(1)
+        return self.np.matmul(samples, qrange).squeeze(1)
 
     def calculate_eigenvalues(self, matrix, k=6):
         return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable

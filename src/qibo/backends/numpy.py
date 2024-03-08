@@ -705,7 +705,7 @@ class NumpyBackend(Backend):
 
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
-        return self.np.linalg.norm(state, ord=order)
+        return self.np.linalg.norm(state, order)
 
     def calculate_norm_density_matrix(self, state, order="nuc"):
         state = self.cast(state)
