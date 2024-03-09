@@ -163,6 +163,9 @@ class PyTorchBackend(NumpyBackend):
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
+    def calculate_eigenvalues(self, matrix, k=6):
+        return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+
     def calculate_eigenvectors(self, matrix, k=6):
         return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
 
