@@ -7,8 +7,6 @@ from qibo import hamiltonians
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian, random_statevector
 
-from .utils import random_complex
-
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("model", ["TFIM", "XXZ", "Y", "MaxCut"])
@@ -80,21 +78,21 @@ def test_trotter_hamiltonian_operator_add_and_sub(backend, nqubits=3):
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
 def test_trotter_hamiltonian_matmul(backend, nqubits, normalize):
     """Test Trotter Hamiltonian expectation value."""
+    state = random_statevector(2**nqubits, backend=backend)
+
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False, backend=backend)
     dense_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
 
-    state = backend.cast(random_complex((2**nqubits,)))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(trotter_ev, target_ev)
 
-    state = random_complex((2**nqubits,))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(trotter_ev, target_ev)
 
-    trotter_matmul = local_ham @ backend.cast(state)
-    target_matmul = dense_ham @ backend.cast(state)
+    trotter_matmul = local_ham @ state
+    target_matmul = dense_ham @ state
     backend.assert_allclose(trotter_matmul, target_matmul)
 
 

@@ -4,9 +4,10 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
 from qibo.symbols import I, Z
 
-from .utils import random_complex, random_sparse_matrix
+from .utils import random_sparse_matrix
 
 
 def test_hamiltonian_init(backend):
@@ -198,16 +199,15 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
         matrix = random_sparse_matrix(backend, nstates, sparse_type)
         H = hamiltonians.Hamiltonian(nqubits, matrix, backend=backend)
 
-    hm = backend.to_numpy(H.matrix)
-    v = random_complex(2**nqubits, dtype=hm.dtype)
-    m = random_complex((2**nqubits, 2**nqubits), dtype=hm.dtype)
+    hm = H.matrix
+    v = random_statevector(2**nqubits, backend=backend)
+    v = backend.cast(v, dtype=hm.dtype)
+    m = random_density_matrix(2**nqubits, backend=backend)
+    m = backend.cast(m, dtype=hm.dtype)
     Hv = H @ backend.cast(v)
     Hm = H @ backend.cast(m)
-    backend.assert_allclose(Hv, hm.dot(v), atol=1e-7)  # needs atol for cuquantum
-    backend.assert_allclose(Hm, (hm @ m))
-
-    Hstate = H @ backend.cast(v)
-    backend.assert_allclose(Hstate, hm.dot(v))
+    backend.assert_allclose(Hv, hm @ v)  # needs atol for cuquantum
+    backend.assert_allclose(Hm, hm @ m)
 
 
 @pytest.mark.parametrize("density_matrix", [True, False])
@@ -237,12 +237,14 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
 
     matrix = backend.to_numpy(h.matrix)
     if density_matrix:
-        state = random_complex((2**h.nqubits, 2**h.nqubits))
+        state = random_density_matrix(2**h.nqubits, backend=backend)
+        state = backend.to_numpy(state)
         state = state + state.T.conj()
         norm = np.trace(state)
         target_ev = np.trace(matrix.dot(state)).real
     else:
-        state = random_complex(2**h.nqubits)
+        state = random_statevector(2**h.nqubits, backend=backend)
+        state = backend.to_numpy(state)
         norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
@@ -252,7 +254,7 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
 
 def test_hamiltonian_expectation_errors(backend):
     h = hamiltonians.XXZ(nqubits=3, delta=0.5, backend=backend)
-    state = random_complex((4, 4, 4))
+    state = np.random.rand(4, 4, 4) + 1j * np.random.rand(4, 4, 4)
     with pytest.raises(ValueError):
         h.expectation(state)
     with pytest.raises(TypeError):
@@ -290,7 +292,7 @@ def test_hamiltonian_expectation_from_samples(backend):
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs = random_complex((4, 4))
+    obs = random_density_matrix(4, backend=backend)
     h = hamiltonians.Hamiltonian(2, obs, backend=backend)
     with pytest.raises(NotImplementedError):
         h.expectation_from_samples(None, qubit_map=None)

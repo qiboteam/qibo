@@ -5,9 +5,8 @@ import pytest
 import sympy
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
 from qibo.symbols import I, Y, Z
-
-from .utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):
@@ -229,15 +228,11 @@ def test_symbolic_hamiltonian_hamiltonianmatmul(backend, nqubits, calcterms, cal
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms):
-    if density_matrix:
-        # from qibo.core.states import MatrixState
-        shape = (2**nqubits, 2**nqubits)
-        # state = MatrixState.from_tensor(random_complex(shape))
-    else:
-        # from qibo.core.states import VectorState
-        shape = (2**nqubits,)
-        # state = VectorState.from_tensor(random_complex(shape))
-    state = random_complex(shape)
+    state = (
+        random_density_matrix(2**nqubits, backend=backend)
+        if density_matrix
+        else random_statevector(2**nqubits, backend=backend)
+    )
     local_ham = hamiltonians.SymbolicHamiltonian(
         symbolic_tfim(nqubits, h=1.0), backend=backend
     )
@@ -245,7 +240,7 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms
     if calcterms:
         _ = local_ham.terms
     local_matmul = local_ham @ state
-    target_matmul = dense_ham @ backend.cast(state)
+    target_matmul = dense_ham @ state
     backend.assert_allclose(local_matmul, target_matmul)
 
 
@@ -265,12 +260,12 @@ def test_symbolic_hamiltonian_state_expectation(
         _ = local_ham.dense
     dense_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend) + 2
 
-    state = backend.cast(random_complex((2**nqubits,)))
+    state = random_statevector(2**nqubits, backend=backend)
+
     local_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(local_ev, target_ev)
 
-    state = random_complex((2**nqubits,))
     local_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(local_ev, target_ev)
@@ -296,21 +291,19 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
     dense_matrix = np.kron(backend.to_numpy(dense_ham.matrix), np.eye(4))
     dense_ham = hamiltonians.Hamiltonian(5, dense_matrix, backend=backend)
 
+    state = random_statevector(2**5, backend=backend)
+
     if give_nqubits:
-        state = backend.cast(random_complex((2**5,)))
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
         backend.assert_allclose(local_ev, target_ev)
 
-        state = random_complex((2**5,))
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
         backend.assert_allclose(local_ev, target_ev)
     else:
-        state = backend.cast(random_complex((2**5,)))
         with pytest.raises(ValueError):
             local_ev = local_ham.expectation(state)
-        state = random_complex((2**5,))
         with pytest.raises(ValueError):
             local_ev = local_ham.expectation(state)
 
@@ -356,10 +349,12 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcte
     local_ham = hamiltonians.SymbolicHamiltonian(form, backend=backend)
     if calcterms:
         _ = local_ham.terms
-    if density_matrix:
-        state = backend.cast(random_complex((4, 4)))
-    else:
-        state = backend.cast(random_complex((4,)))
+    
+    state = (
+        random_density_matrix(4, backend=backend) 
+        if density_matrix 
+        else random_statevector(4, backend=backend)
+    )
     local_ev = local_ham.expectation(state)
     target_ev = local_ham.dense.expectation(state)
     backend.assert_allclose(local_ev, target_ev)
