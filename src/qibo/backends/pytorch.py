@@ -124,6 +124,18 @@ class PyTorchBackend(NumpyBackend):
                 state = self.np.cat([state, self.np.zeros_like(state)], dim=q)
         return state
 
+    def _order_probabilities(self, probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        if probs.dim() == 0:
+            return probs
+        unmeasured, reduced = [], {}
+        for i in range(nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
+
     def set_seed(self, seed):
         self.np.manual_seed(seed)
         np.random.seed(seed)
@@ -145,6 +157,11 @@ class PyTorchBackend(NumpyBackend):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype=torch.int32)
         qrange = (2**qrange).unsqueeze(1)
         return self.np.matmul(samples, qrange).squeeze(1)
+
+    def calculate_overlap_density_matrix(self, state1, state2):
+        return self.np.trace(
+            self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
+        )
 
     def calculate_eigenvectors(self, matrix, k=6):
         return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
