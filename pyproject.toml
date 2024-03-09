@@ -28,7 +28,7 @@ cma = "^3.3.0"
 joblib = "^1.2.0"
 hyperopt = "^0.2.7"
 tabulate = "^0.9.0"
-openqasm3 = {version = ">=0.5.0", extras = ["parser"]}
+openqasm3 = { version = ">=0.5.0", extras = ["parser"] }
 numpy = "^1.26.4"
 networkx = "^3.2.1"
 cvxpy = { version = "^1.4.2", optional = true }
@@ -99,12 +99,15 @@ cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
+[tool.poetry.extras]
+tensorflow = ["tensorflow"]
+qinfo = ["cvxpy"]
+
 [tool.pylint.reports]
 output-format = "colorized"
 
-
 [tool.coverage.run]
-omit = [ "src/qibo/noise_model.py" ]
+omit = ["src/qibo/noise_model.py"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
