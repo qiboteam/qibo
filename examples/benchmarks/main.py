@@ -53,14 +53,14 @@ def limit_gpu_memory(memory_limit=None):
         print("\nNo GPU memory limiter used.\n")
         return
 
-    print("\nAttempting to limit GPU memory to {}.\n".format(memory_limit))
+    print(f"\nAttempting to limit GPU memory to {memory_limit}.\n")
     gpus = tf.config.list_physical_devices("GPU")
     for gpu in tf.config.list_physical_devices("GPU"):
         config = tf.config.experimental.VirtualDeviceConfiguration(
             memory_limit=memory_limit
         )
         tf.config.experimental.set_virtual_device_configuration(gpu, [config])
-        print("Limiting memory of {} to {}.".format(gpu.name, memory_limit))
+        print(f"Limiting memory of {gpu.name} to {memory_limit}.")
     print()
 
 

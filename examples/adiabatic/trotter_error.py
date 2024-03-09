@@ -61,9 +61,9 @@ def main(nqubits, hfield, T, save):
     ]
     alphas = [1.0, 0.7, 0.4]
     labels = [
-        r"$\delta t ^{}$".format(exponent - 1),
-        r"$\delta t ^{}$".format(exponent),
-        r"$\delta t ^{}$".format(exponent + 1),
+        f"$\\delta t ^{exponent - 1}$",
+        f"$\\delta t ^{exponent}$",
+        f"$\\delta t ^{exponent - 1}$",
     ]
 
     plt.figure(figsize=(7, 4))

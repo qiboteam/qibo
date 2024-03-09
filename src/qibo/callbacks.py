@@ -36,14 +36,13 @@ class Callback:
 
     def __getitem__(self, k):
         if not isinstance(k, (int, slice, list, tuple)):
-            raise_error(IndexError, "Unrecognized type for index {}.".format(k))
+            raise_error(IndexError, f"Unrecognized type for index {k}.")
 
         if isinstance(k, int) and k >= len(self._results):
             raise_error(
                 IndexError,
-                "Attempting to access callbacks {} run but "
-                "the callback has been used in {} executions."
-                "".format(k, len(self._results)),
+                f"Attempting to access callbacks {k} run but "
+                + f"the callback has been used in {len(self._results)} executions.",
             )
 
         return self._results[k]
@@ -308,12 +307,11 @@ class Gap(Callback):
         if not isinstance(mode, (int, str)):
             raise_error(
                 TypeError,
-                "Gap callback mode should be integer or "
-                "string but is {}.".format(type(mode)),
+                f"Gap callback mode should be integer or string but is {type(mode)}.",
             )
         elif isinstance(mode, str) and mode != "gap":
             raise_error(
-                ValueError, "Unsupported mode {} for gap callback." "".format(mode)
+                ValueError, f"Unsupported mode {mode} for gap callback."
             )
         self.mode = mode
         self.check_degenerate = check_degenerate
@@ -350,8 +348,7 @@ class Gap(Callback):
             excited += 1
         if excited > 1:
             log.warning(
-                "The Hamiltonian is degenerate. Using eigenvalue {} "
-                "to calculate gap.".format(excited)
+                f"The Hamiltonian is degenerate. Using eigenvalue {excited} to calculate gap."
             )
         self.append(gap)
         return gap

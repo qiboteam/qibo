@@ -72,7 +72,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 path_angles = (
                     LOCAL_FOLDER
                     / "data"
-                    / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+                    / f"optimal_angles_ry_{nqubits}q_{nlayers}l.npy"
                 )
                 optimal_angles = np.load(path_angles)
             except:
@@ -84,7 +84,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 path_angles = (
                     LOCAL_FOLDER
                     / "data"
-                    / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+                    / f"optimal_angles_rxrzrx_{nqubits}q_{nlayers}l.npy"
                 )
                 optimal_angles = np.load(path_angles)
             except:
@@ -113,7 +113,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             path_angles = (
                 LOCAL_FOLDER
                 / "data"
-                / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+                / f"optimal_angles_ry_{nqubits}q_{nlayers}l.npy"
             )
             np.save(
                 path_angles,
@@ -138,7 +138,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             path_angles = (
                 LOCAL_FOLDER
                 / "data"
-                / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+                / f"optimal_angles_rxrzrx_{nqubits}q_{nlayers}l.npy"
             )
             np.save(
                 path_angles,
@@ -170,14 +170,12 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     ]
 
     print(
-        "Train set | # Clases: {} | # Qubits: {} | # Layers: {} | Accuracy: {}".format(
-            nclasses, nqubits, nlayers, qc.Accuracy(labels_train, predictions_train)
-        )
+        f"Train set | # Clases: {nclasses} | # Qubits: {nqubits} | # Layers: {nlayers} | "
+        + f"Accuracy: {qc.Accuracy(labels_train, predictions_train)}"
     )
     print(
-        "Test set  | # Clases: {} | # Qubits: {} | # Layers: {} | Accuracy: {}".format(
-            nclasses, nqubits, nlayers, qc.Accuracy(labels_test, predictions_test)
-        )
+        f"Test set  | # Clases: {nclasses} | # Qubits: {nqubits} | # Layers: {nlayers} | "
+        + f"Accuracy: {qc.Accuracy(labels_test, predictions_test)}"
     )
 
 

@@ -15,7 +15,7 @@ def main(data, bins, M, shots):
 
     # Generate the probability distribution plots
     fun.paint_prob_distribution(bins, prob_sim, S0, sig, r, T)
-    print("Histogram printed for unary simulation with {} qubits.\n".format(bins))
+    print(f"Histogram printed for unary simulation with {bins} qubits.\n")
 
     # Create circuit to compute the expected payoff
     circuit, S = fun.load_payoff_quantum_sim(bins, S0, sig, r, T, K)
@@ -28,14 +28,14 @@ def main(data, bins, M, shots):
 
     # Finding differences between exact value and quantum approximation
     error = fun.diff_qu_cl(qu_payoff_sim, cl_payoff)
-    print("Exact value of the expected payoff:      {}\n".format(cl_payoff))
-    print("Expected payoff from quantum simulation: {}\n".format(qu_payoff_sim))
-    print("Percentage error: {} %\n".format(error))
+    print(f"Exact value of the expected payoff:      {cl_payoff}\n")
+    print(f"Expected payoff from quantum simulation: {qu_payoff_sim}\n")
+    print(f"Percentage error: {error} %\n")
     print("-" * 60 + "\n")
 
     # Applying amplitude estimation
     a_s, error_s = fun.amplitude_estimation(bins, M, data)
-    print("Amplitude estimation with a total of {} runs.\n".format(M))
+    print(f"Amplitude estimation with a total of {M} runs.\n")
     fun.paint_AE(a_s, error_s, bins, M, data)
     print("Amplitude estimation result plots generated.")
 

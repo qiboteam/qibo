@@ -482,7 +482,7 @@ def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
     ax.plot(x, y, label="PDF", color="black")
     plt.ylabel("Probability")
     plt.xlabel("Option price")
-    plt.title("Option price distribution for {} qubits ".format(bins))
+    plt.title(f"Option price distribution for {bins} qubits ")
     ax.legend()
     fig.tight_layout()
     fig.savefig("Probability_distribution.png")

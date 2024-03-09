@@ -48,9 +48,8 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params, method, maxiter)
     print("-" * 20 + "\n")
     if plot and nqubits >= 14:
         print(
-            "Currently not possible to calculate gap energy for {} qubits."
-            "\n Proceeding to adiabatic evolution without plotting data.\n"
-            "".format(nqubits)
+            f"Currently not possible to calculate gap energy for {nqubits} qubits."
+            + "\n Proceeding to adiabatic evolution without plotting data.\n"
         )
         plot = False
     if plot and method is not None:
@@ -97,9 +96,9 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params, method, maxiter)
     output_dec = (np.abs(final_state) ** 2).argmax()
     max_output = "{0:0{bits}b}".format(output_dec, bits=nqubits)
     max_prob = (np.abs(final_state) ** 2).max()
-    print("Exact cover instance with {} qubits.\n".format(nqubits))
+    print(f"Exact cover instance with {nqubits} qubits.\n")
     if solution:
-        print("Known solution: {}\n".format("".join(solution)))
+        print(f"Known solution: {''.join(solution)}\n")
     print("-" * 20 + "\n")
     print(
         f"Adiabatic evolution with total time {T}, evolution step {dt} and "
