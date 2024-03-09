@@ -111,9 +111,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 method=method,
             )
             path_angles = (
-                LOCAL_FOLDER
-                / "data"
-                / f"optimal_angles_ry_{nqubits}q_{nlayers}l.npy"
+                LOCAL_FOLDER / "data" / f"optimal_angles_ry_{nqubits}q_{nlayers}l.npy"
             )
             np.save(
                 path_angles,

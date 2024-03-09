@@ -310,9 +310,7 @@ class Gap(Callback):
                 f"Gap callback mode should be integer or string but is {type(mode)}.",
             )
         elif isinstance(mode, str) and mode != "gap":
-            raise_error(
-                ValueError, f"Unsupported mode {mode} for gap callback."
-            )
+            raise_error(ValueError, f"Unsupported mode {mode} for gap callback.")
         self.mode = mode
         self.check_degenerate = check_degenerate
         self.evolution = None
