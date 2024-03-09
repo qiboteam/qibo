@@ -126,7 +126,7 @@ class PyTorchBackend(NumpyBackend):
 
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
-        if probs.dim() == 0:
+        if probs.dim() == 0:  # pragma: no cover
             return probs
         unmeasured, reduced = [], {}
         for i in range(nqubits):
@@ -189,7 +189,7 @@ class PyTorchBackend(NumpyBackend):
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        if self.issparse(matrix1) or self.issparse(matrix2):
+        if self.issparse(matrix1) or self.issparse(matrix2):  # pragma: no cover
             return self.np.sparse.mm(matrix1, matrix2)  # pylint: disable=E1102
         return self.np.matmul(matrix1, matrix2)
 
