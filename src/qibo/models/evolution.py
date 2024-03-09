@@ -56,7 +56,7 @@ class StateEvolution:
             ham = hamiltonian(0)
             if not isinstance(ham, AbstractHamiltonian):
                 raise TypeError(
-                    "Hamiltonian type {} not understood." "".format(type(ham))
+                    f"Hamiltonian type {type(ham)} not understood."
                 )
         self.nqubits = ham.nqubits
         self.backend = ham.backend
@@ -70,8 +70,8 @@ class StateEvolution:
                 raise_error(
                     NotImplementedError,
                     "Distributed evolution is only "
-                    "implemented using the Trotter "
-                    "exponential solver.",
+                    + "implemented using the Trotter "
+                    + "exponential solver.",
                 )
             ham.circuit(dt, accelerators)
         self.solver = solvers.get_solver(solver, self.dt, hamiltonian)

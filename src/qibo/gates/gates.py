@@ -1754,7 +1754,7 @@ class GeneralizedfSim(ParametrizedGate):
         if shape != (2, 2):
             raise_error(
                 ValueError,
-                "Invalid rotation shape {} for generalized " "fSim gate".format(shape),
+                f"Invalid rotation shape {shape} for generalized fSim gate",
             )
         ParametrizedGate.parameters.fset(self, x)  # pylint: disable=no-member
 

@@ -199,7 +199,7 @@ class TensorflowBackend(NumpyBackend):
         else:
             raise_error(
                 ValueError,
-                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
             )
 
     def test_regressions(self, name):

@@ -19,8 +19,7 @@ class AdiabaticHamiltonian(ABC):
         if type(h1) != type(h0):
             raise_error(
                 TypeError,
-                "h1 should be of the same type {} of h0 but "
-                "is {}.".format(type(h0), type(h1)),
+                f"h1 should be of the same type {type(h0)} of h0 but is {type(h1)}.",
             )
         if isinstance(h0, hamiltonians.Hamiltonian):
             return BaseAdiabaticHamiltonian(h0, h1)
@@ -29,8 +28,7 @@ class AdiabaticHamiltonian(ABC):
         else:
             raise_error(
                 TypeError,
-                "h0 should be a hamiltonians.Hamiltonian "
-                "object but is {}.".format(type(h0)),
+                f"h0 should be a hamiltonians.Hamiltonian object but is {type(h0)}."
             )
 
     def __init__(self, h0, h1):  # pragma: no cover
@@ -63,11 +61,11 @@ class BaseAdiabaticHamiltonian:
         if h0.nqubits != h1.nqubits:
             raise_error(
                 ValueError,
-                "H0 has {} qubits while H1 has {}." "".format(h0.nqubits, h1.nqubits),
+                f"H0 has {h0.nqubits} qubits while H1 has {h1.nqubits}.",
             )
         self.nqubits = h0.nqubits
         if h0.backend != h1.backend:  # pragma: no cover
-            raise_error(ValueError, "H0 and H1 have different backend.")
+            raise_error(ValueError, "H0 and H1 have different backends.")
         self.backend = h0.backend
         self.h0, self.h1 = h0, h1
         self.schedule = None

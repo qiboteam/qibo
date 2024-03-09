@@ -25,21 +25,19 @@ class HamiltonianTerm:
             if qi < 0:
                 raise_error(
                     ValueError,
-                    "Invalid qubit id {} < 0 was given "
-                    "in Hamiltonian term".format(qi),
+                    f"Invalid qubit id {qi} < 0 was given in Hamiltonian term.",
                 )
         if not isinstance(matrix, np.ndarray):
             raise_error(
-                TypeError, "Invalid type {} of symbol matrix." "".format(type(matrix))
+                TypeError, f"Invalid type {type(matrix)} of symbol matrix."
             )
         dim = int(matrix.shape[0])
         if 2 ** len(q) != dim:
             raise_error(
                 ValueError,
-                "Matrix dimension {} given in Hamiltonian "
-                "term is not compatible with the number "
-                "of target qubits {}."
-                "".format(dim, len(q)),
+                f"Matrix dimension {dim} given in Hamiltonian "
+                + "term is not compatible with the number "
+                + f"of target qubits {len(q)}.",
             )
         self.target_qubits = tuple(q)
         self._gate = None
@@ -79,8 +77,7 @@ class HamiltonianTerm:
             raise_error(
                 ValueError,
                 "Cannot merge HamiltonianTerm acting on "
-                "qubits {} to term on qubits {}."
-                "".format(term.target_qubits, self.target_qubits),
+                + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
         matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
         matrix = np.reshape(matrix, 2 * len(self) * (2,))
@@ -190,7 +187,7 @@ class SymbolicTerm(HamiltonianTerm):
                 elif factor.is_number:
                     self.coefficient *= complex(factor)
                 else:  # pragma: no cover
-                    raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+                    raise_error(TypeError, f"Cannot parse factor {factor}.")
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 

@@ -188,19 +188,18 @@ class AAVQE:
         if nsteps <= 0:  # pragma: no cover
             raise_error(
                 ValueError,
-                "Number of steps nsteps should be positive but is {}."
-                "".format(nsteps),
+                f"Number of steps nsteps should be positive but is {nsteps}.",
             )
         if t_max <= 0:  # pragma: no cover
             raise_error(
                 ValueError,
-                "Maximum time t_max should be positive but is {}." "".format(t_max),
+                f"Maximum time t_max should be positive but is {t_max}.",
             )
         if easy_hamiltonian.nqubits != problem_hamiltonian.nqubits:  # pragma: no cover
             raise_error(
                 ValueError,
-                "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
-                "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits),
+                f"The easy Hamiltonian has {easy_hamiltonian.nqubits} qubits "
+                + f"while problem Hamiltonian has {problem_hamiltonian.nqubits}.",
             )
 
         self.ATOL = bounds_tolerance
@@ -219,7 +218,7 @@ class AAVQE:
             raise_error(
                 ValueError,
                 "Scheduling function must take only one argument,"
-                "but the function proposed takes {}.".format(nparams),
+                + f"but the function proposed takes {nparams}.",
             )
         self.set_schedule(s)
 
@@ -228,10 +227,10 @@ class AAVQE:
         # check boundary conditions
         s0 = func(0)
         if abs(s0) > self.ATOL:  # pragma: no cover
-            raise_error(ValueError, "s(0) should be 0 but it is {}.".format(s0))
+            raise_error(ValueError, f"s(0) should be 0 but it is {s0}.")
         s1 = func(1)
         if abs(s1 - 1) > self.ATOL:  # pragma: no cover
-            raise_error(ValueError, "s(1) should be 1 but it is {}.".format(s1))
+            raise_error(ValueError, f"s(1) should be 1 but it is {s1}.")
         self._schedule = func
 
     def schedule(self, t):
@@ -241,13 +240,13 @@ class AAVQE:
         if (t - self._t_max) > self.ATOL_TIME:  # pragma: no cover
             raise_error(
                 ValueError,
-                "t cannot be greater than {}, but it is {}.".format(self._t_max, t),
+                f"t cannot be greater than {self._t_max}, but it is {t}.",
             )
 
         s = self._schedule(t / self._t_max)
         if (abs(s) - 1) > self.ATOL:  # pragma: no cover
             raise_error(
-                ValueError, "s cannot be greater than 1 but it is {}.".format(s)
+                ValueError, f"s cannot be greater than 1 but it is {s}."
             )
         return s
 
@@ -256,7 +255,7 @@ class AAVQE:
         if (t - self._t_max) > self.ATOL:  # pragma: no cover
             raise_error(
                 ValueError,
-                "t cannot be greater than {}, but it is {}.".format(self._t_max, t),
+                f"t cannot be greater than {self._t_max}, but it is {t}.",
             )
         # boundary conditions  s(0)=0, s(total_time)=1
         st = self.schedule(t)
@@ -361,7 +360,7 @@ class QAOA:
         # problem hamiltonian
         if not isinstance(hamiltonian, AbstractHamiltonian):
             raise_error(
-                TypeError, "Invalid Hamiltonian type {}." "".format(type(hamiltonian))
+                TypeError, f"Invalid Hamiltonian type {type(hamiltonian)}."
             )
         self.hamiltonian = hamiltonian
         self.nqubits = hamiltonian.nqubits
@@ -377,16 +376,14 @@ class QAOA:
             if type(mixer) != type(hamiltonian):
                 raise_error(
                     TypeError,
-                    "Given Hamiltonian is of type {} "
-                    "while mixer is of type {}."
-                    "".format(type(hamiltonian), type(mixer)),
+                    f"Given Hamiltonian is of type {type(hamiltonian)} "
+                    + f"while mixer is of type {type(mixer)}.",
                 )
             if mixer.nqubits != hamiltonian.nqubits:
                 raise_error(
                     ValueError,
-                    "Given Hamiltonian acts on {} qubits "
-                    "while mixer acts on {}."
-                    "".format(hamiltonian.nqubits, mixer.nqubits),
+                    f"Given Hamiltonian acts on {hamiltonian.nqubits} qubits "
+                    + f"while mixer acts on {mixer.nqubits}.",
                 )
             self.mixer = mixer
 
@@ -398,8 +395,8 @@ class QAOA:
             raise_error(
                 NotImplementedError,
                 "Distributed QAOA is implemented "
-                "only with SymbolicHamiltonian and "
-                "exponential solver.",
+                + "only with SymbolicHamiltonian and "
+                + "exponential solver.",
             )
         if isinstance(self.hamiltonian, self.hamiltonians.SymbolicHamiltonian):
             self.hamiltonian.circuit(1e-2, accelerators)
@@ -534,8 +531,8 @@ class QAOA:
             raise_error(
                 ValueError,
                 "Initial guess for the parameters must "
-                "contain an even number of values but "
-                "contains {}.".format(len(initial_p)),
+                + "contain an even number of values but "
+                + "contains {len(initial_p)}.",
             )
 
         def _loss(params, qaoa, hamiltonian, state):

@@ -38,7 +38,7 @@ class Symbol(sympy.Symbol):
     """
 
     def __new__(cls, q, matrix=None, name="Symbol", commutative=False, **assumptions):
-        name = "{}{}".format(name, q)
+        name = f"{name}{q}"
         assumptions["commutative"] = commutative
         return super().__new__(cls=cls, name=name, **assumptions)
 
@@ -64,7 +64,7 @@ class Symbol(sympy.Symbol):
             )
         ):
             raise_error(
-                TypeError, "Invalid type {} of symbol matrix." "".format(type(matrix))
+                TypeError, f"Invalid type {type(matrix)} of symbol matrix."
             )
         self.matrix = matrix
 

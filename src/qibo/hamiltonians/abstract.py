@@ -17,11 +17,11 @@ class AbstractHamiltonian:
     def nqubits(self, n):
         if not isinstance(n, int):
             raise_error(
-                RuntimeError, "nqubits must be an integer but is " "{}.".format(type(n))
+                RuntimeError, f"nqubits must be an integer but is {type(n)}."
             )
         if n < 1:
             raise_error(
-                ValueError, "nqubits must be a positive integer but is " "{}".format(n)
+                ValueError, f"nqubits must be a positive integer but is {n}"
             )
         self._nqubits = n
 

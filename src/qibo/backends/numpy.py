@@ -158,7 +158,7 @@ class NumpyBackend(Backend):
             raise_error(
                 ValueError,
                 "Cannot use ``control_unitary`` method on "
-                "gate matrix of shape {}.".format(shape),
+                + f"gate matrix of shape {shape}.",
             )
         zeros = self.np.zeros((2, 2), dtype=self.dtype)
         zeros = self.cast(zeros, dtype=zeros.dtype)
