@@ -28,9 +28,7 @@ class HamiltonianTerm:
                     f"Invalid qubit id {qi} < 0 was given in Hamiltonian term.",
                 )
         if not isinstance(matrix, np.ndarray):
-            raise_error(
-                TypeError, f"Invalid type {type(matrix)} of symbol matrix."
-            )
+            raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
         dim = int(matrix.shape[0])
         if 2 ** len(q) != dim:
             raise_error(

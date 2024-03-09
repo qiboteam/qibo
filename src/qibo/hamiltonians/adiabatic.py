@@ -28,7 +28,7 @@ class AdiabaticHamiltonian(ABC):
         else:
             raise_error(
                 TypeError,
-                f"h0 should be a hamiltonians.Hamiltonian object but is {type(h0)}."
+                f"h0 should be a hamiltonians.Hamiltonian object but is {type(h0)}.",
             )
 
     def __init__(self, h0, h1):  # pragma: no cover

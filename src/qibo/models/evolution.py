@@ -55,9 +55,7 @@ class StateEvolution:
         else:
             ham = hamiltonian(0)
             if not isinstance(ham, AbstractHamiltonian):
-                raise TypeError(
-                    f"Hamiltonian type {type(ham)} not understood."
-                )
+                raise TypeError(f"Hamiltonian type {type(ham)} not understood.")
         self.nqubits = ham.nqubits
         self.backend = ham.backend
         if dt <= 0:

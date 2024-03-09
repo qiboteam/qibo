@@ -245,9 +245,7 @@ class AAVQE:
 
         s = self._schedule(t / self._t_max)
         if (abs(s) - 1) > self.ATOL:  # pragma: no cover
-            raise_error(
-                ValueError, f"s cannot be greater than 1 but it is {s}."
-            )
+            raise_error(ValueError, f"s cannot be greater than 1 but it is {s}.")
         return s
 
     def hamiltonian(self, t):
@@ -359,9 +357,7 @@ class QAOA:
         self.params = None
         # problem hamiltonian
         if not isinstance(hamiltonian, AbstractHamiltonian):
-            raise_error(
-                TypeError, f"Invalid Hamiltonian type {type(hamiltonian)}."
-            )
+            raise_error(TypeError, f"Invalid Hamiltonian type {type(hamiltonian)}.")
         self.hamiltonian = hamiltonian
         self.nqubits = hamiltonian.nqubits
         # mixer hamiltonian (default = -sum(sigma_x))
