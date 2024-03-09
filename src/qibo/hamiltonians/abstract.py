@@ -16,13 +16,9 @@ class AbstractHamiltonian:
     @nqubits.setter
     def nqubits(self, n):
         if not isinstance(n, int):
-            raise_error(
-                RuntimeError, f"nqubits must be an integer but is {type(n)}."
-            )
+            raise_error(RuntimeError, f"nqubits must be an integer but is {type(n)}.")
         if n < 1:
-            raise_error(
-                ValueError, f"nqubits must be a positive integer but is {n}"
-            )
+            raise_error(ValueError, f"nqubits must be a positive integer but is {n}")
         self._nqubits = n
 
     @abstractmethod

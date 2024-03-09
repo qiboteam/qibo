@@ -63,9 +63,7 @@ class Symbol(sympy.Symbol):
                 ),
             )
         ):
-            raise_error(
-                TypeError, f"Invalid type {type(matrix)} of symbol matrix."
-            )
+            raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
         self.matrix = matrix
 
     def __getstate__(self):
