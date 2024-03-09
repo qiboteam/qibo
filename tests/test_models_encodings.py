@@ -132,9 +132,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     indexes = np.flatnonzero(state)
     state = backend.np.real(state[indexes])
 
-    backend.assert_allclose(
-        state, backend.cast(data) / backend.calculate_norm(data, 2)
-    )
+    backend.assert_allclose(state, backend.cast(data) / backend.calculate_norm(data, 2))
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])

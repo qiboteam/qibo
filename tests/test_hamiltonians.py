@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
+from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.symbols import I, Z
 
 from .utils import random_sparse_matrix

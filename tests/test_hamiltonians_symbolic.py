@@ -5,7 +5,7 @@ import pytest
 import sympy
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
+from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.symbols import I, Y, Z
 
 
@@ -349,10 +349,10 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcte
     local_ham = hamiltonians.SymbolicHamiltonian(form, backend=backend)
     if calcterms:
         _ = local_ham.terms
-    
+
     state = (
-        random_density_matrix(4, backend=backend) 
-        if density_matrix 
+        random_density_matrix(4, backend=backend)
+        if density_matrix
         else random_statevector(4, backend=backend)
     )
     local_ev = local_ham.expectation(state)
