@@ -136,6 +136,16 @@ class PyTorchBackend(NumpyBackend):
                 unmeasured.append(i)
         return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
+    def calculate_probabilities(self, state, qubits, nqubits):
+        rtype = self.np.real(state).dtype
+        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
+        if len(unmeasured_qubits) == 0:
+            probs = self.cast(state, dtype=rtype)
+        else:
+            probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
     def set_seed(self, seed):
         self.np.manual_seed(seed)
         np.random.seed(seed)
