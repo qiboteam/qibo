@@ -124,28 +124,6 @@ class PyTorchBackend(NumpyBackend):
                 state = self.np.cat([state, self.np.zeros_like(state)], dim=q)
         return state
 
-    def _order_probabilities(self, probs, qubits, nqubits):
-        """Arrange probabilities according to the given ``qubits`` ordering."""
-        if probs.dim() == 0:
-            return probs
-        unmeasured, reduced = [], {}
-        for i in range(nqubits):
-            if i in qubits:
-                reduced[i] = i - len(unmeasured)
-            else:
-                unmeasured.append(i)
-        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
-
-    def calculate_probabilities(self, state, qubits, nqubits):
-        rtype = self.np.real(state).dtype
-        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        if len(unmeasured_qubits) == 0:
-            probs = self.cast(state, dtype=rtype)
-        else:
-            probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
-        return self._order_probabilities(probs, qubits, nqubits).ravel()
-
     def set_seed(self, seed):
         self.np.manual_seed(seed)
         np.random.seed(seed)
@@ -168,14 +146,6 @@ class PyTorchBackend(NumpyBackend):
         qrange = (2**qrange).unsqueeze(1)
         return self.np.matmul(samples, qrange).squeeze(1)
 
-    def calculate_overlap_density_matrix(self, state1, state2):
-        return self.np.trace(
-            self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
-        )
-
-    def calculate_eigenvalues(self, matrix, k=6):
-        return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
-
     def calculate_eigenvectors(self, matrix, k=6):
         return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
 
@@ -188,13 +158,13 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_hamiltonian_state_product(self, matrix, state):
-        return self.np.matmul(matrix, state)
-
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
             return self.np.sparse.mm(matrix1, matrix2)  # pylint: disable=E1102
         return self.np.matmul(matrix1, matrix2)
+
+    def calculate_hamiltonian_state_product(self, matrix, state):
+        return self.np.matmul(matrix, state)
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":

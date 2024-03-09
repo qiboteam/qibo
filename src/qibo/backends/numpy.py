@@ -776,7 +776,7 @@ class NumpyBackend(Backend):
         else:
             raise_error(
                 ValueError,
-                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
             )
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
