@@ -6,6 +6,7 @@ import numpy as np
 from hyperopt import hp, tpe
 
 from qibo import symbols
+from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
@@ -13,7 +14,7 @@ from qibo.models.dbi.double_bracket import (
 )
 
 
-def generate_Z_operators(nqubits: int):
+def generate_Z_operators(nqubits: int, backend=None):
     """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
     Return: Dictionary with operator names (str) as keys and operators (np.array) as values
 
@@ -36,6 +37,8 @@ def generate_Z_operators(nqubits: int):
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
+
+    backend = _check_backend(backend)
     # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
@@ -46,7 +49,9 @@ def generate_Z_operators(nqubits: int):
             op_name = "".join(zi_string_combination)
             tensor_op = str_to_symbolic(op_name)
             # append in output_dict
-            output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
+            output_dict[op_name] = SymbolicHamiltonian(
+                tensor_op, backend=backend
+            ).dense.matrix
     return output_dict
 
 
