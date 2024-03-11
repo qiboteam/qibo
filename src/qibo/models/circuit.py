@@ -87,7 +87,7 @@ class _Queue(list):
 
     @property
     def nmeasurements(self):
-        return len([1 for gate in self if isinstance(gate, gates.M)])
+        return len(list(filter(lambda gate: isinstance(gate, gates.M), self)))
 
     @property
     def moments(self):
