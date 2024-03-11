@@ -94,7 +94,7 @@ class _Queue(list):
         moments = [self.nqubits * [None]]
         moment_index = self.nqubits * [0]
         for gate in self:
-            if gate.qubits:
+            if not isinstance(gate, gates.CallbackGate):
                 qubits = gate.qubits
             else:  # special gate acting on all qubits
                 qubits = tuple(range(self.nqubits))
