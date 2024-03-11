@@ -32,7 +32,7 @@ def test_queue_class():
     ]
     for g in gatelist:
         queue.append(g)
-    assert queue.moments() == [
+    assert queue.moments == [
         [gatelist[0], gatelist[1], gatelist[3], gatelist[5]],
         [gatelist[2], gatelist[4], gatelist[4], None],
     ]

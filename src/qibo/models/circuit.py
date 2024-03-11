@@ -85,9 +85,11 @@ class _Queue(list):
                 queue.append(gate.gates[0])
         return queue
 
+    @property
     def nmeasurements(self):
         return len([1 for gate in self if isinstance(gate, gates.M)])
 
+    @property
     def moments(self):
         moments = [self.nqubits * [None]]
         moment_index = self.nqubits * [0]
@@ -658,7 +660,7 @@ class Circuit:
                 self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
-                    nreg = self.queue.nmeasurements() - 1
+                    nreg = self.queue.nmeasurements - 1
                     gate.register_name = f"register{nreg}"
                 else:
                     registers = self.measurement_tuples
@@ -712,7 +714,7 @@ class Circuit:
     def depth(self) -> int:
         """Circuit depth if each gate is placed at the earliest possible
         position."""
-        return len(self.queue.moments())
+        return len(self.queue.moments)
 
     @property
     def gate_types(self) -> collections.Counter:
