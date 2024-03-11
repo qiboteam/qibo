@@ -94,10 +94,11 @@ class _Queue(list):
         moments = [self.nqubits * [None]]
         moment_index = self.nqubits * [0]
         for gate in self:
-            if not isinstance(gate, gates.CallbackGate):
-                qubits = gate.qubits
-            else:  # special gate acting on all qubits
-                qubits = tuple(range(self.nqubits))
+            qubits = (
+                gate.qubits
+                if not isinstance(gate, gates.CallbackGate)
+                else tuple(range(self.nqubits))  # special gate acting on all qubits
+            )
 
             # calculate moment index for this gate
             idx = max(moment_index[q] for q in qubits)
