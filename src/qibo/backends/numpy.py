@@ -650,7 +650,7 @@ class NumpyBackend(Backend):
         return self.np.matmul(self.to_numpy(samples), qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
-        res, counts = np.unique(samples, return_counts=True)
+        res, counts = self.np.unique(samples, return_counts=True)
         return collections.Counter(dict(zip(res, counts)))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
