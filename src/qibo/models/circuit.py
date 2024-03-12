@@ -43,9 +43,6 @@ class _Queue(list):
     def __init__(self, nqubits):
         super().__init__(self)
         self.nqubits = nqubits
-        self.moments = [nqubits * [None]]
-        self.moment_index = nqubits * [0]
-        self.nmeasurements = 0
 
     def to_fused(self):
         """Transform all gates in queue to :class:`qibo.gates.FusedGate`."""
@@ -88,24 +85,30 @@ class _Queue(list):
                 queue.append(gate.gates[0])
         return queue
 
-    def append(self, gate: gates.Gate):
-        super().append(gate)
-        if gate.qubits:
-            qubits = gate.qubits
-        else:  # special gate acting on all qubits
-            qubits = tuple(range(self.nqubits))
+    @property
+    def nmeasurements(self):
+        return len(list(filter(lambda gate: isinstance(gate, gates.M), self)))
 
-        if isinstance(gate, gates.M):
-            self.nmeasurements += 1
+    @property
+    def moments(self):
+        moments = [self.nqubits * [None]]
+        moment_index = self.nqubits * [0]
+        for gate in self:
+            qubits = (
+                gate.qubits
+                if not isinstance(gate, gates.CallbackGate)
+                else tuple(range(self.nqubits))  # special gate acting on all qubits
+            )
 
-        # calculate moment index for this gate
-        idx = max(self.moment_index[q] for q in qubits)
-        for q in qubits:
-            if idx >= len(self.moments):
-                # Add a moment
-                self.moments.append(len(self.moments[-1]) * [None])
-            self.moments[idx][q] = gate
-            self.moment_index[q] = idx + 1
+            # calculate moment index for this gate
+            idx = max(moment_index[q] for q in qubits)
+            for q in qubits:
+                if idx >= len(moments):
+                    # Add a moment
+                    moments.append(len(moments[-1]) * [None])
+                moments[idx][q] = gate
+                moment_index[q] = idx + 1
+        return moments
 
 
 class Circuit:
