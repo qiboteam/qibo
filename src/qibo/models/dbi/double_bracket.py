@@ -82,6 +82,7 @@ class DoubleBracketIteration:
         self.mode = mode
         self.scheduling = scheduling
         self.cost = cost
+        self.cost_str = cost.name
         self.state = state
 
     def __call__(

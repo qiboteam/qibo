@@ -111,7 +111,7 @@ def polynomial_step(
         backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
     """
     if cost is None:
-        cost = dbi_object.cost
+        cost = dbi_object.cost.name
     if d is None:
         d = dbi_object.diagonal_h_matrix
 
