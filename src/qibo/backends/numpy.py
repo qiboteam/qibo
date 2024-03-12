@@ -652,7 +652,7 @@ class NumpyBackend(Backend):
         return self.np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
-        # Samples are a list of strings so there is no advantage in using Torch or other backends
+        # Samples are a list of strings so there is no advantage in using other backends
         res, counts = np.unique(samples, return_counts=True)
         return collections.Counter(dict(zip(res, counts)))
 

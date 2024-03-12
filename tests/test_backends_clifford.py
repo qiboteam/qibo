@@ -172,6 +172,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_collapsing_measurements(backend, seed):
+    backend.set_seed(2024)
     clifford_bkd = construct_clifford_backend(backend)
     gate_queue = random_clifford(
         3, density_matrix=True, seed=seed, backend=backend
