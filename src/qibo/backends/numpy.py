@@ -279,11 +279,11 @@ class NumpyBackend(Backend):
     def _append_zeros(self, state, qubits, results):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
-            state = self.np.expand_dims(state, axis=q)
+            state = self.np.expand_dims(state, q)
             if r:
-                state = self.np.concatenate([self.np.zeros_like(state), state], axis=q)
+                state = self.np.concatenate([self.np.zeros_like(state), state], q)
             else:
-                state = self.np.concatenate([state, self.np.zeros_like(state)], axis=q)
+                state = self.np.concatenate([state, self.np.zeros_like(state)], q)
         return state
 
     def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
@@ -641,13 +641,15 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        return self.np.mod(self.np.right_shift(samples[:, self.np.newaxis], qrange), 2)
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
+        return self.np.mod(
+            self.np.right_shift(self.cast(samples[:, None], dtype="int32"), qrange), 2
+        )
 
     def samples_to_decimal(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
         qrange = (2**qrange)[:, None]
-        return self.np.matmul(self.to_numpy(samples), qrange)[:, 0]
+        return self.np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
         res, counts = np.unique(samples, return_counts=True)
