@@ -128,12 +128,17 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
     backend.set_seed(2024)
     nqubits, nshots = 3, 200
     clifford_bkd = construct_clifford_backend(backend)
+
     c = random_clifford(nqubits, seed=1, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
+
+    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
+
+    clifford_bkd.set_seed(2024)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
