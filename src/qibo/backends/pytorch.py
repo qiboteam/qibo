@@ -148,11 +148,6 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    # def calculate_overlap_density_matrix(self, state1, state2):
-    #     return self.np.trace(
-    #         self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
-    #     )
-
     def calculate_eigenvalues(self, matrix, k=6):
         return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
 
