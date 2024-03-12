@@ -474,7 +474,7 @@ class NumpyBackend(Backend):
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
         and samples. Note that this method is called only if a unitary channel
         is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
-        if some collapsing measuremnt is performed.
+        if some collapsing measurement is performed.
         """
 
         if (
@@ -652,6 +652,7 @@ class NumpyBackend(Backend):
         return self.np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
+        # Samples are a list of strings so there is no advantage in using Torch or other backends
         res, counts = np.unique(samples, return_counts=True)
         return collections.Counter(dict(zip(res, counts)))
 
