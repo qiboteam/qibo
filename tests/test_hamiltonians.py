@@ -177,6 +177,11 @@ def test_hamiltonian_matmul(backend, sparse_type):
         backend.assert_allclose((H1 @ H2).matrix, (m1 @ m2))
         backend.assert_allclose((H2 @ H1).matrix, (m2 @ m1))
 
+    try:
+        H1 @ np.zeros(3 * (2**nqubits,), dtype=m1.dtype)
+    except Exception as error:
+        print(error)
+
     with pytest.raises(ValueError):
         H1 @ np.zeros(3 * (2**nqubits,), dtype=m1.dtype)
     with pytest.raises(NotImplementedError):

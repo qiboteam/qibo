@@ -718,9 +718,9 @@ class NumpyBackend(Backend):
         return self.np.abs(self.np.sum(np.conj(self.cast(state1)) * self.cast(state2)))
 
     def calculate_overlap_density_matrix(self, state1, state2):
-        state1 = self.cast(state1)
-        state2 = self.cast(state2)
-        return self.np.trace(self.np.transpose(np.conj(state1)) @ state2)
+        return self.np.trace(
+            self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
+        )
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
@@ -767,20 +767,18 @@ class NumpyBackend(Backend):
             ev = ev / norm
         return ev
 
+    # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        return self.np.dot(matrix1, matrix2)
+        return matrix1 @ matrix2
 
+    # TODO: remove this method
     def calculate_hamiltonian_state_product(self, matrix, state):
-        rank = len(tuple(state.shape))
-        if rank == 1:  # vector
-            return matrix.dot(state[:, np.newaxis])[:, 0]
-        elif rank == 2:  # matrix
-            return matrix.dot(state)
-        else:
+        if len(tuple(state.shape)) > 2:
             raise_error(
                 ValueError,
-                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
+                f"Cannot multiply Hamiltonian with rank-{len(tuple(state.shape))} tensor.",
             )
+        return matrix @ state
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):

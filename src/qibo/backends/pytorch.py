@@ -148,10 +148,10 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_overlap_density_matrix(self, state1, state2):
-        return self.np.trace(
-            self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
-        )
+    # def calculate_overlap_density_matrix(self, state1, state2):
+    #     return self.np.trace(
+    #         self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
+    #     )
 
     def calculate_eigenvalues(self, matrix, k=6):
         return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
@@ -167,14 +167,6 @@ class PyTorchBackend(NumpyBackend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
-
-    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        if self.issparse(matrix1) or self.issparse(matrix2):  # pragma: no cover
-            return self.np.sparse.mm(matrix1, matrix2)  # pylint: disable=E1102
-        return self.np.matmul(matrix1, matrix2)
-
-    def calculate_hamiltonian_state_product(self, matrix, state):
-        return self.np.matmul(matrix, state)
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
