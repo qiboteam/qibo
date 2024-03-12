@@ -7,6 +7,15 @@ import numpy as np
 
 error = 1e-3
 
+def variance(A, state):
+    """Calculates the variance of a matrix A with respect to a state: Var($A$) = $\langle\mu|A^2|\mu\rangle-\langle\mu|A|\mu\rangle^2$"""
+    B = A@A
+    return B[state,state]-A[state,state]**2
+
+def covariance(A, B, state):
+    """Calculates the covariance of two matrices A and B with respect to a state: Cov($A,B$) = $\langle\mu|AB|\mu\rangle-\langle\mu|A|\mu\rangle\langle\mu|B|\mu\rangle$"""
+    C = A@B
+    return C[state,state]-A[state,state]*B[state,state]
 
 def grid_search_step(
     dbi_object,
@@ -64,7 +73,7 @@ def hyperopt_step(
         d: diagonal operator for generating double-bracket iterations.
 
     Returns:
-        (float): optimized best iteration step (minimizing off-diagonal norm).
+        (float): optimized best iteration step (minimizing loss function).
     """
     if space is None:
         space = hyperopt.hp.uniform
@@ -90,6 +99,7 @@ def polynomial_step(
     n_max: int = 5,
     d: np.array = None,
     coef: Optional[list] = None,
+    cost: str = None,
 ):
     r"""
     Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -100,7 +110,8 @@ def polynomial_step(
         d (np.array, optional): diagonal operator, default as $\delta(H)$.
         backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
     """
-
+    if cost is None:
+        cost = dbi_object.cost
     if d is None:
         d = dbi_object.diagonal_h_matrix
 
@@ -109,7 +120,15 @@ def polynomial_step(
             "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
         )
     if coef is None:
-        coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n)
+        if cost == "off_diagonal_norm":
+            coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n)
+        elif cost == "least_squares":
+            coef = least_squares_polynomial_expansion_coef(dbi_object, d, n)
+        elif cost == "energy_fluctuation":
+            coef = energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, dbi_object.state)
+        else:
+            raise ValueError(f"Cost function {cost} not recognized.")
+    
     roots = np.roots(coef)
     real_positive_roots = [
         np.real(root) for root in roots if np.imag(root) < error and np.real(root) > 0
@@ -142,4 +161,31 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
             trace_coefficients[power] += 2 * np.trace(product_matrix)
     # coefficients from high to low (n:0)
     coef = list(reversed(trace_coefficients[: n + 1]))
+    return coef
+
+def least_squares_polynomial_expansion_coef(dbi_object, d, n):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
+    Gamma_list = dbi_object.generate_Gamma_list(n, d)
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients
+    coef = np.empty(n)
+    for i in range(n):
+        coef[i] = exp_list[i]*np.trace(d@Gamma_list[i+1])
+    
+    return coef
+
+#TODO: add a general expansion formula not stopping at 3rd order
+def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    Gamma_list = dbi_object.generate_Gamma_list(n, d)
+    # coefficients
+    coef = np.empty(3)
+    coef[0] = 2*covariance(Gamma_list[0], Gamma_list[1],state)
+    coef[1] = 2*variance(Gamma_list[1],state)
+    coef[2] = covariance(Gamma_list[0], Gamma_list[3],state)+3*covariance(Gamma_list[1], Gamma_list[2],state)
     return coef

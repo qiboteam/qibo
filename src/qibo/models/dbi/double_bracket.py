@@ -35,6 +35,15 @@ class DoubleBracketScheduling(Enum):
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
 
+class DoubleBracketCostFunction(Enum):
+    """Define the DBI cost function."""
+
+    off_diagonal_norm = auto()
+    """Use off-diagonal norm as cost function."""
+    least_squares = auto()
+    """Use least squares as cost function."""
+    energy_fluctuation = auto()
+    """Use energy fluctuation as cost function."""
 
 class DoubleBracketIteration:
     """
@@ -65,11 +74,15 @@ class DoubleBracketIteration:
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
+        cost: DoubleBracketCostFunction = DoubleBracketCostFunction.off_diagonal_norm,
+        state: int = 0,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
         self.scheduling = scheduling
+        self.cost = cost
+        self.state = state
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -126,6 +139,14 @@ class DoubleBracketIteration:
         return np.sqrt(
             np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h)))
         )
+    @property
+    def least_squares(self,d: np.array):
+        """Least squares cost function."""
+        H = self.backend.cast(
+            np.matrix(self.backend.to_numpy(self.h)).getH()
+        )
+        D = d
+        return -(np.linalg.trace(H@D)-0.5(np.linalg.norm(H)**2+np.linalg.norm(D)**2))
 
     @property
     def backend(self):
@@ -166,8 +187,13 @@ class DoubleBracketIteration:
         for _ in range(look_ahead):
             self.__call__(mode=self.mode, step=step, d=d)
 
-        # off_diagonal_norm's value after the steps
-        loss = self.off_diagonal_norm
+        # loss values depending on the cost function
+        if self.cost == DoubleBracketCostFunction.off_diagonal_norm:
+            loss = self.off_diagonal_norm
+        elif self.cost == DoubleBracketCostFunction.least_squares:
+            loss = self.least_squares(d=d)
+        else:
+            loss = self.energy_fluctuation(self.state)
 
         # set back the initial configuration
         self.h = h_copy
