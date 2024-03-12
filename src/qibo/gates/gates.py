@@ -1201,11 +1201,26 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if isinstance(theta, (float, int)) and (theta % np.pi).is_integer():
-            self.clifford = True
+        self.update_clifford_condition(theta)
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def update_clifford_condition(self, theta):
+        """Update Clifford boolean condition according to the given angle ``theta``."""
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
+        else:
+            self.clifford = False
+
+    @property
+    def parameters(self):
+        return self._parameters
+
+    @parameters.setter
+    def parameters(self, value):
+        self._parameters = value
+        self.update_clifford_condition(value)
 
     def _dagger(self) -> "Gate":
         """"""
