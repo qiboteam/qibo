@@ -764,7 +764,7 @@ class NumpyBackend(Backend):
         ev = self.np.real(self.np.trace(self.cast(hamiltonian @ state)))
         if normalize:
             norm = self.np.real(self.np.trace(state))
-            ev = ev / norm
+            ev /= norm
         return ev
 
     # TODO: remove this method
