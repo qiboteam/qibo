@@ -539,7 +539,7 @@ class NumpyBackend(Backend):
             assert circuit.has_collapse
             final_state = self.cast(np.mean(self.to_numpy(final_states), 0))
             if circuit.measurements:
-                qubits = [q for m in circuit.measurements for q in m.target_qubits]
+                # qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
                     final_state,
                     circuit.measurements,

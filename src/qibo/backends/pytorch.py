@@ -117,16 +117,6 @@ class PyTorchBackend(NumpyBackend):
 
         return x
 
-    # def _append_zeros(self, state, qubits, results):
-    #     """Helper method for collapse."""
-    #     for q, r in zip(qubits, results):
-    #         state = self.np.unsqueeze(state, dim=q)
-    #         if r:
-    #             state = self.np.cat([self.np.zeros_like(state), state], dim=q)
-    #         else:
-    #             state = self.np.cat([state, self.np.zeros_like(state)], dim=q)
-    #     return state
-
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
         if probs.dim() == 0:  # pragma: no cover
@@ -157,19 +147,6 @@ class PyTorchBackend(NumpyBackend):
         return self.np.multinomial(
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
-
-    # def samples_to_binary(self, samples, nqubits):
-    #     samples = self.cast(samples, dtype="int32")
-    #     qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
-    #     samples = samples.int()
-    #     samples = samples[:, None] >> qrange
-    #     return samples % 2
-
-    # def samples_to_decimal(self, samples, nqubits):
-    #     samples = self.cast(samples, dtype="int32")
-    #     qrange = self.np.arange(nqubits - 1, -1, -1, dtype=torch.int32)
-    #     qrange = (2**qrange).unsqueeze(1)
-    #     return self.np.matmul(samples, qrange).squeeze(1)
 
     def calculate_overlap_density_matrix(self, state1, state2):
         return self.np.trace(
