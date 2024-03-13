@@ -1093,11 +1093,9 @@ def _create_S(q):
     return gates.S(q)
 
 
-
 @cache
 def _create_CZ(cq, tq):
     return gates.CZ(cq, tq)
-
 
 
 @cache
