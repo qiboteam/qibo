@@ -362,8 +362,12 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    xi, xh = symplectic_matrix[i, :nqubits], symplectic_matrix[h, :nqubits]
-    zi, zh = symplectic_matrix[i, nqubits:-1], symplectic_matrix[h, nqubits:-1]
+    symplectic_matrix = _pack_for_measurements(symplectic_matrix, nqubits)
+    dim = int((symplectic_matrix.shape[1] - 1) / 2)
+    xi, zi = symplectic_matrix[i, :dim], symplectic_matrix[i, dim:-1]
+    xh, zh = symplectic_matrix[h, :dim], symplectic_matrix[h, dim:-1]
+    # xi, xh = symplectic_matrix[i, :nqubits], symplectic_matrix[h, :nqubits]
+    # zi, zh = symplectic_matrix[i, nqubits:-1], symplectic_matrix[h, nqubits:-1]
     exponents = _exponent(xi, zi, xh, zh)
     ind = (
         2 * symplectic_matrix[h, -1]
@@ -380,13 +384,13 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
         xi_xh = reduce(np.logical_xor, xi_xh)
         zi_zh = reduce(np.logical_xor, zi_zh)
         symplectic_matrix[h[0], -1] = r
-        symplectic_matrix[h[0], :nqubits] = xi_xh
-        symplectic_matrix[h[0], nqubits:-1] = zi_zh
+        symplectic_matrix[h[0], :dim] = xi_xh
+        symplectic_matrix[h[0], dim:-1] = zi_zh
     else:
         symplectic_matrix[h, -1] = r
-        symplectic_matrix[h, :nqubits] = xi_xh
-        symplectic_matrix[h, nqubits:-1] = zi_zh
-    return symplectic_matrix
+        symplectic_matrix[h, :dim] = xi_xh
+        symplectic_matrix[h, dim:-1] = zi_zh
+    return _unpack_for_measurements(symplectic_matrix, nqubits)
 
 
 def _determined_outcome(state, q, nqubits):
@@ -431,6 +435,20 @@ def _get_dim(nqubits):
 
 def _get_p(state, q, nqubits):
     return state[nqubits:-1, q].nonzero()[0]
+
+
+def _pack_for_measurements(state, nqubits):
+    r, x, z = _get_rxz(state, nqubits)
+    x = np.packbits(x, axis=1)
+    z = np.packbits(z, axis=1)
+    return np.hstack((x, z, r[:, None]))
+
+
+def _unpack_for_measurements(state, nqubits):
+    xz = np.unpackbits(state[:, :-1], axis=1)
+    padding_size = int((xz.shape[1] - _get_dim(nqubits)) / 2) + 1
+    x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
+    return np.hstack((x, z, state[:, -1][:, None]))
 
 
 # valid for a standard basis measurement only
