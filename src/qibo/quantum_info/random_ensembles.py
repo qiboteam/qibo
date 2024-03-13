@@ -1093,39 +1093,16 @@ def _create_S(q):
     return gates.S(q)
 
 
-def _create_S_layer(init_args, queue):
-    # for q in init_args:
-    #    l.put(_create_S(q))
-    # print("S: ", l.qsize())
-    queue.put_nowait([_create_S(q) for q in init_args])
-
 
 @cache
 def _create_CZ(cq, tq):
     return gates.CZ(cq, tq)
 
 
-def _create_CZ_layer(init_args, queue):
-    # for cq, tq in init_args:
-    #    l.put(_create_CZ(cq, tq))
-    # print("CZ: ",l.qsize())
-    queue.put_nowait([_create_CZ(cq, tq) for cq, tq in init_args])
-
 
 @cache
 def _create_CNOT(cq, tq):
     return gates.CNOT(cq, tq)
-
-
-def _create_CNOT_layer(init_args, queue):
-    # for cq, tq in init_args:
-    #    l.put(_create_CNOT(cq, tq))
-    # print("CNOT: ", l.qsize())
-    queue.put_nowait([_create_CNOT(cq, tq) for cq, tq in init_args])
-
-
-def _create_layer(func, init_args):
-    return func(init_args)
 
 
 def _operator_from_hadamard_free_group(
