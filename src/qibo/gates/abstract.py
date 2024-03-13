@@ -48,9 +48,9 @@ class Gate:
 
         self.clifford = False
         self.unitary = False
-        self._target_qubits = tuple()
-        self._control_qubits = set()
-        self._parameters = tuple()
+        self._target_qubits = ()
+        self._control_qubits = ()
+        self._parameters = ()
         config.ALLOW_SWITCHERS = False
 
         self.symbolic_parameters = {}
@@ -158,7 +158,7 @@ class Gate:
 
     def _set_control_qubits(self, qubits: Sequence[int]):
         """Helper method for setting control qubits."""
-        self._control_qubits = set(qubits)
+        self._control_qubits = qubits
         if len(self._control_qubits) != len(qubits):
             repeated = self._find_repeated(qubits)
             raise_error(
@@ -204,7 +204,7 @@ class Gate:
     def _check_control_target_overlap(self):
         """Checks that there are no qubits that are both target and
         controls."""
-        common = set(self._target_qubits) & self._control_qubits
+        common = set(self._target_qubits) & set(self._control_qubits)
         if common:
             raise_error(
                 ValueError,
