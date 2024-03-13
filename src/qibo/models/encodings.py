@@ -1,6 +1,7 @@
 """Module with functions that encode classical data into quantum circuits."""
 
 import math
+from inspect import signature
 from typing import Optional, Union
 
 import numpy as np
@@ -9,6 +10,7 @@ from scipy.stats import rv_continuous
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
+from qibo.quantum_info.random_ensembles import _ProbabilityDistributionGaussianLoader
 
 
 def comp_basis_encoder(
@@ -249,6 +251,94 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
     return circuit
 
 
+def entangling_layer(
+    nqubits: int,
+    architecture: str = "diagonal",
+    entangling_gate: Union[str, gates.Gate] = "CNOT",
+    closed_boundary: bool = False,
+):
+
+    if not isinstance(nqubits, int):
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+
+    if nqubits <= 0.0:
+        raise_error(
+            ValueError, f"nqubits must be a positive integer, but it is {nqubits}."
+        )
+
+    if not isinstance(architecture, str):
+        raise_error(
+            TypeError,
+            f"``architecture`` must be type str, but it is type {type(architecture)}.",
+        )
+
+    if architecture not in ["diagonal", "shifted", "even-layer", "odd-layer"]:
+        raise_error(
+            NotImplementedError,
+            f"``architecture`` {architecture} not found.",
+        )
+
+    if not isinstance(entangling_gate, (str, gates.Gate)):
+        raise_error(
+            TypeError,
+            "``entangling_gate`` must be either str or ``qibo.gates.Gate``, "
+            + f"but it is type {type(entangling_gate)}.",
+        )
+
+    if not isinstance(closed_boundary, bool):
+        raise_error(
+            TypeError,
+            f"closed_boundary must be type bool, but it is type {type(closed_boundary)}.",
+        )
+
+    if isinstance(entangling_gate, str):
+        gate = getattr(gates, entangling_gate)
+
+    if isinstance(gate, gates.GeneralizedfSim):
+        raise_error(
+            ValueError, "This function does not support the ``GeneralizedfSim`` gate."
+        )
+
+    # Finds the number of correct number of parameters to initialize the gate class.
+    # If gate is parametrized, sets all angles to 0.0
+    parameters = list(signature(gate).parameters)
+    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
+    circuit = Circuit(nqubits)
+
+    if architecture == "diagonal":
+        circuit.add(
+            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            for qubit in range(nqubits - 1)
+        )
+    elif architecture == "even-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+    elif architecture == "odd-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+    else:
+        circuit.add(
+            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+
+    if closed_boundary:
+        circuit.add(_parametrized_two_qubit_gate(nqubits - 1, 0, parameters))
+
+    return circuit
+
+
 def _generate_rbs_pairs(nqubits: int, architecture: str):
     """Generating list of indexes representing the RBS connections
 
@@ -334,13 +424,9 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     return phases
 
 
-class _ProbabilityDistributionGaussianLoader(rv_continuous):
-    """Probability density function for sampling phases of
-    the RBS gates as a function of circuit depth."""
+def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
+    """Returns two-qubit gate initialized with or without phases."""
+    if params is not None:
+        return gate(q0, q1, *params)
 
-    def _pdf(self, theta: float, depth: int):
-        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
-
-        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
-
-        return amplitude * probability / 4
+    return gate(q0, q1)
