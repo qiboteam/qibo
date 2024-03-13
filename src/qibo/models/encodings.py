@@ -257,6 +257,24 @@ def entangling_layer(
     entangling_gate: Union[str, gates.Gate] = "CNOT",
     closed_boundary: bool = False,
 ):
+    """Creates a layer of two-qubit, entangling gates.
+
+    If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        architecture (str, optional): Architecture of the entangling layer.
+            Options are ``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+            Defaults to ``"diagonal"``.
+        entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
+            in the entangling layer. If ``entangling_gate`` is a parametrized gate,
+            all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
+        closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
+            to the entangling layer. Defaults to ``False``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
+    """
 
     if not isinstance(nqubits, int):
         raise_error(
@@ -302,8 +320,12 @@ def entangling_layer(
         )
 
     # Finds the number of correct number of parameters to initialize the gate class.
-    # If gate is parametrized, sets all angles to 0.0
     parameters = list(signature(gate).parameters)
+
+    if "q2" in parameters:
+        raise_error(ValueError, f"This function does not accept three-qubit gates.")
+
+    # If gate is parametrized, sets all angles to 0.0
     parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
 
     circuit = Circuit(nqubits)
