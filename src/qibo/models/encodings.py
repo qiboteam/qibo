@@ -5,12 +5,10 @@ from inspect import signature
 from typing import Optional, Union
 
 import numpy as np
-from scipy.stats import rv_continuous
 
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
-from qibo.quantum_info.random_ensembles import _ProbabilityDistributionGaussianLoader
 
 
 def comp_basis_encoder(
@@ -229,6 +227,10 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        _ProbabilityDistributionGaussianLoader,
+    )
+
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
@@ -298,32 +300,31 @@ def entangling_layer(
             f"``architecture`` {architecture} not found.",
         )
 
-    if not isinstance(entangling_gate, (str, gates.Gate)):
-        raise_error(
-            TypeError,
-            "``entangling_gate`` must be either str or ``qibo.gates.Gate``, "
-            + f"but it is type {type(entangling_gate)}.",
-        )
-
     if not isinstance(closed_boundary, bool):
         raise_error(
             TypeError,
             f"closed_boundary must be type bool, but it is type {type(closed_boundary)}.",
         )
 
-    if isinstance(entangling_gate, str):
-        gate = getattr(gates, entangling_gate)
+    gate = (
+        getattr(gates, entangling_gate)
+        if isinstance(entangling_gate, str)
+        else entangling_gate
+    )
 
-    if isinstance(gate, gates.GeneralizedfSim):
+    if gate.__name__ == "GeneralizedfSim":
         raise_error(
-            ValueError, "This function does not support the ``GeneralizedfSim`` gate."
+            NotImplementedError,
+            "This function does not support the ``GeneralizedfSim`` gate.",
         )
 
     # Finds the number of correct number of parameters to initialize the gate class.
     parameters = list(signature(gate).parameters)
 
     if "q2" in parameters:
-        raise_error(ValueError, f"This function does not accept three-qubit gates.")
+        raise_error(
+            NotImplementedError, f"This function does not accept three-qubit gates."
+        )
 
     # If gate is parametrized, sets all angles to 0.0
     parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
@@ -332,31 +333,31 @@ def entangling_layer(
 
     if architecture == "diagonal":
         circuit.add(
-            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in range(nqubits - 1)
         )
     elif architecture == "even-layer":
         circuit.add(
-            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in range(0, nqubits - 1, 2)
         )
     elif architecture == "odd-layer":
         circuit.add(
-            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in range(1, nqubits - 1, 2)
         )
     else:
         circuit.add(
-            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in range(0, nqubits - 1, 2)
         )
         circuit.add(
-            _parametrized_two_qubit_gate(qubit, qubit + 1, parameters)
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in range(1, nqubits - 1, 2)
         )
 
     if closed_boundary:
-        circuit.add(_parametrized_two_qubit_gate(nqubits - 1, 0, parameters))
+        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
 
     return circuit
 
