@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, set_backend
+from qibo import Circuit, gates, get_backend, set_backend
 from qibo.backends import (
     CliffordBackend,
     GlobalBackend,
@@ -30,6 +30,26 @@ def construct_clifford_backend(backend):
         pytest.skip("Clifford backend not defined for the this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
+
+
+def test_set_backend(backend):
+    clifford_bkd = construct_clifford_backend(backend)
+    platform = _get_engine_name(backend)
+    set_backend("clifford", platform=platform)
+    assert isinstance(GlobalBackend(), CliffordBackend)
+    global_platform = GlobalBackend().platform
+    assert global_platform == platform
+
+
+def test_global_backend(backend):
+    construct_clifford_backend(backend)
+    set_backend(backend.name, platform=backend.platform)
+    clifford_bkd = CliffordBackend()
+    target = (
+        GlobalBackend().name if backend.name == "numpy" else GlobalBackend().platform
+    )
+    assert clifford_bkd.platform == target
+    set_backend("numpy")
 
 
 THETAS_1Q = [
@@ -238,15 +258,6 @@ def test_bitflip_noise(backend):
     backend.assert_allclose(
         clifford_res.probabilities(qubits), numpy_res.probabilities(qubits), atol=1e-1
     )
-
-
-def test_set_backend(backend):
-    clifford_bkd = construct_clifford_backend(backend)
-    platform = _get_engine_name(backend)
-    set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().platform
-    assert global_platform == platform
 
 
 @pytest.mark.parametrize("seed", [2024])
