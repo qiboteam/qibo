@@ -177,11 +177,6 @@ def test_hamiltonian_matmul(backend, sparse_type):
         backend.assert_allclose((H1 @ H2).matrix, (m1 @ m2))
         backend.assert_allclose((H2 @ H1).matrix, (m2 @ m1))
 
-    try:
-        H1 @ np.zeros(3 * (2**nqubits,), dtype=m1.dtype)
-    except Exception as error:
-        print(error)
-
     with pytest.raises(ValueError):
         H1 @ np.zeros(3 * (2**nqubits,), dtype=m1.dtype)
     with pytest.raises(NotImplementedError):
@@ -372,7 +367,6 @@ def test_hamiltonian_eigenvectors(backend, dtype, dense):
     H3 = H1 * c2
     V3 = backend.to_numpy(H3.eigenvectors())
     U3 = backend.to_numpy(H3._eigenvalues)
-    print(U3)
     backend.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)

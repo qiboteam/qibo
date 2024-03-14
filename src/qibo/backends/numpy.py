@@ -280,7 +280,7 @@ class NumpyBackend(Backend):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
             state = self.np.expand_dims(state, q)
-            if r:
+            if len(r):
                 state = self.np.concatenate([self.np.zeros_like(state), state], q)
             else:
                 state = self.np.concatenate([state, self.np.zeros_like(state)], q)
@@ -539,7 +539,6 @@ class NumpyBackend(Backend):
             assert circuit.has_collapse
             final_state = self.cast(np.mean(self.to_numpy(final_states), 0))
             if circuit.measurements:
-                # qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
                     final_state,
                     circuit.measurements,

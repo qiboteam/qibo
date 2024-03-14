@@ -27,7 +27,7 @@ def construct_clifford_backend(backend):
     ):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
-        pytest.skip("Clifford backend not defined for the this engine.")
+        pytest.skip("Clifford backend not defined for this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
 
