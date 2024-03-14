@@ -479,6 +479,8 @@ def M(state, qubits, nqubits, collapse=False):
         else:
             state, outcome = _determined_outcome(state, q, nqubits)
         sample.append(outcome)
+    if collapse:
+        state = _packbits(state, axis=0)
     return sample
 
 
