@@ -1,5 +1,6 @@
 """Module with functions that create random quantum and classical objects."""
 
+import math
 import warnings
 from typing import Optional, Union
 
@@ -18,6 +19,18 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_stinespring,
     vectorization,
 )
+
+
+class _ProbabilityDistributionGaussianLoader(rv_continuous):
+    """Probability density function for sampling phases of
+    the RBS gates as a function of circuit depth."""
+
+    def _pdf(self, theta: float, depth: int):
+        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
+
+        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
+
+        return amplitude * probability / 4
 
 
 class _probability_distribution_sin(rv_continuous):  # pragma: no cover
@@ -226,7 +239,8 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -1178,11 +1192,11 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
     if order == "row":
-        operator = np.kron(
+        operator = backend.np.kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = np.kron(
+        operator = backend.np.kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 

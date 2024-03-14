@@ -237,10 +237,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
@@ -321,7 +321,7 @@ def hellinger_shot_error(
     hellinger_error = hellinger_fidelity(
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
-    hellinger_error = np.sqrt(hellinger_error / nshots) * np.sum(
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.np.sum(
         np.sqrt(prob_dist_q * (1 - prob_dist_p))
         + np.sqrt(prob_dist_p * (1 - prob_dist_q))
     )

@@ -386,6 +386,14 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
+Entangling layer
+""""""""""""""""
+
+Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+
+.. autofunction:: qibo.models.encodings.entangling_layer
+
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -2367,7 +2375,7 @@ The user can switch backends using
     qibo.set_backend("numpy")
 
 before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``tensorflow``, ``numpy``.
+from ``qibojit``, ``pytorch``, ``tensorflow``, ``numpy``.
 
 Some backends support different platforms. For example, the qibojit backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
@@ -2448,4 +2456,8 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Cloud Backends
 ^^^^^^^^^^^^^^
 
-Additional backends, that support the remote execution of quantum circuits through cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin `qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_. For more information please refer to the `official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.
+Additional backends that support the remote execution of quantum circuits through
+cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin
+`qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_.
+For more information please refer to the
+`official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.
