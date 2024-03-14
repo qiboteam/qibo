@@ -18,7 +18,9 @@ def test_measurement_collapse(backend, nqubits, targets):
         c.add(gates.H(q))
     r = c.add(gates.M(*targets, collapse=True))
     c.add(gates.M(*targets))
-    outcome = backend.execute_circuit(c, backend.cast(initial_state, copy=True), nshots=1)
+    outcome = backend.execute_circuit(
+        c, backend.cast(initial_state, copy=True), nshots=1
+    )
     samples = r.samples()[0]
     backend.assert_allclose(samples, outcome.samples()[0])
 

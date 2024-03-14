@@ -643,9 +643,7 @@ class NumpyBackend(Backend):
     def samples_to_binary(self, samples, nqubits):
         qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
         samples = self.to_numpy(samples)
-        return np.mod(
-            np.right_shift(samples[:, None], qrange), 2
-        )
+        return np.mod(np.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
