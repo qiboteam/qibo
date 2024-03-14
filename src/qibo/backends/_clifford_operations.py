@@ -431,10 +431,18 @@ def _get_p(state, q, nqubits):
     return state[nqubits:-1, q].nonzero()[0]
 
 
+def _packbits(array, axis):
+    return np.packbits(array, axis=axis)
+
+
+def _unpackbits(array, axis):
+    return np.unpackbits(array, axis=axis)
+
+
 def _pack_for_measurements(state, nqubits):
     r, x, z = _get_rxz(state, nqubits)
-    x = np.packbits(x, axis=1)
-    z = np.packbits(z, axis=1)
+    x = _packbits(x, axis=1)
+    z = _packbits(z, axis=1)
     return np.hstack((x, z, r[:, None]))
 
 
@@ -449,7 +457,7 @@ def _get_packed_dim(shape):
 
 
 def _unpack_for_measurements(state, nqubits):
-    xz = np.unpackbits(state[:, :-1], axis=1)
+    xz = _unpackbits(state[:, :-1], axis=1)
     padding_size = _get_pad_size(xz.shape[1], nqubits)
     x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
     return np.hstack((x, z, state[:, -1][:, None]))
@@ -459,7 +467,7 @@ def _unpack_for_measurements(state, nqubits):
 def M(state, qubits, nqubits, collapse=False):
     sample = []
     if collapse:
-        state = np.unpackbits(state, axis=0)[: _get_dim(nqubits)]
+        state = _unpackbits(state, axis=0)[: _get_dim(nqubits)]
     else:
         state = state.copy()
     for q in qubits:
@@ -486,12 +494,12 @@ def cast(x, dtype=None, copy=False):
 
 def _clifford_pre_execution_reshape(state, pack=False):
     if pack:
-        state = np.packbits(state, axis=0)
+        state = _packbits(state, axis=0)
     return state
 
 
 def _clifford_post_execution_reshape(state, nqubits):
-    state = np.unpackbits(state, axis=0)[: _get_dim(nqubits)]
+    state = _unpackbits(state, axis=0)[: _get_dim(nqubits)]
     return state
 
 
