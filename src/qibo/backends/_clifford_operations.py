@@ -366,8 +366,6 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     dim = int((symplectic_matrix.shape[1] - 1) / 2)
     xi, zi = symplectic_matrix[i, :dim], symplectic_matrix[i, dim:-1]
     xh, zh = symplectic_matrix[h, :dim], symplectic_matrix[h, dim:-1]
-    # xi, xh = symplectic_matrix[i, :nqubits], symplectic_matrix[h, :nqubits]
-    # zi, zh = symplectic_matrix[i, nqubits:-1], symplectic_matrix[h, nqubits:-1]
     exponents = _exponent(xi, zi, xh, zh)
     ind = (
         2 * symplectic_matrix[h, -1]
