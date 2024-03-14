@@ -341,16 +341,10 @@ def _exponent(x1, z1, x2, z2):
     Returns:
         (np.array): The calculated exponents.
     """
-    x1_ = x1.astype(np.int8)
-    x2_ = x2.astype(np.int8)
-    z1_ = z1.astype(np.int8)
-    z2_ = z2.astype(np.int8)
-    return (
-        2 * (x1_ * x2_ * (z2_ - z1_) + z1_ * z2_ * (x1_ - x2_)) - x1_ * z2_ + x2_ * z1_
-    )
+    return 2 * (x1 * x2 * (z2 - z1) + z1 * z2 * (x1 - x2)) - x1 * z2 + x2 * z1
 
 
-def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
+def _rowsum(symplectic_matrix, h, i, dim, determined=False):
     """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
 
     Args:
@@ -362,8 +356,6 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    symplectic_matrix = _pack_for_measurements(symplectic_matrix, nqubits)
-    dim = int((symplectic_matrix.shape[1] - 1) / 2)
     xi, zi = symplectic_matrix[i, :dim], symplectic_matrix[i, dim:-1]
     xh, zh = symplectic_matrix[h, :dim], symplectic_matrix[h, dim:-1]
     exponents = _exponent(xi, zi, xh, zh)
@@ -372,8 +364,8 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
         + 2 * symplectic_matrix[i, -1]
         + np.sum(exponents, axis=-1)
     ) % 4 == 0
-    r = np.ones(h.shape[0], dtype=bool)
-    r[ind] = False
+    r = np.ones(h.shape[0], dtype=np.uint8)
+    r[ind] = 0
 
     xi_xh = xi ^ xh
     zi_zh = zi ^ zh
@@ -388,41 +380,45 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
         symplectic_matrix[h, -1] = r
         symplectic_matrix[h, :dim] = xi_xh
         symplectic_matrix[h, dim:-1] = zi_zh
-    return _unpack_for_measurements(symplectic_matrix, nqubits)
+    return symplectic_matrix
 
 
 def _determined_outcome(state, q, nqubits):
-    state[-1, :] = False
+    state[-1, :] = 0
     idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
+    state = _pack_for_measurements(state, nqubits)
     state = _rowsum(
         state,
         2 * nqubits * np.ones(idx.shape, dtype=np.uint),
-        idx.astype(np.uint),
-        nqubits,
+        idx,
+        _get_packed_dim(state.shape[1]),
         True,
     )
-    return state, np.uint(state[-1, -1])
+    state = _unpack_for_measurements(state, nqubits)
+    return state, state[-1, -1]
 
 
 def _random_outcome(state, p, q, nqubits):
     p = p[0] + nqubits
     tmp = state[p, q].copy()
-    state[p, q] = False
+    state[p, q] = 0
     h = state[:-1, q].nonzero()[0]
     state[p, q] = tmp
     if h.shape[0] > 0:
+        state = _pack_for_measurements(state, nqubits)
         state = _rowsum(
             state,
             h.astype(np.uint),
             p * np.ones(h.shape[0], dtype=np.uint),
-            nqubits,
+            _get_packed_dim(state.shape[1]),
             False,
         )
+        state = _unpack_for_measurements(state, nqubits)
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
-    state[p, :] = False
+    state[p, :] = 0
     state[p, -1] = outcome
-    state[p, nqubits + q] = True
+    state[p, nqubits + q] = 1
     return state, outcome
 
 
@@ -442,9 +438,19 @@ def _pack_for_measurements(state, nqubits):
     return np.hstack((x, z, r[:, None]))
 
 
+@cache
+def _get_pad_size(shape, nqubits):
+    return int((shape - _get_dim(nqubits)) / 2) + 1
+
+
+@cache
+def _get_packed_dim(shape):
+    return int((shape - 1) / 2)
+
+
 def _unpack_for_measurements(state, nqubits):
     xz = np.unpackbits(state[:, :-1], axis=1)
-    padding_size = int((xz.shape[1] - _get_dim(nqubits)) / 2) + 1
+    padding_size = _get_pad_size(xz.shape[1], nqubits)
     x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
     return np.hstack((x, z, state[:, -1][:, None]))
 
@@ -453,7 +459,7 @@ def _unpack_for_measurements(state, nqubits):
 def M(state, qubits, nqubits, collapse=False):
     sample = []
     if collapse:
-        state = np.unpackbits(state, axis=0)
+        state = np.unpackbits(state, axis=0)[: _get_dim(nqubits)]
     else:
         state = state.copy()
     for q in qubits:
