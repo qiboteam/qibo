@@ -29,7 +29,7 @@ class H(Gate):
         self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -58,7 +58,7 @@ class X(Gate):
         self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -171,7 +171,7 @@ class Y(Gate):
         self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -215,7 +215,7 @@ class Z(Gate):
         self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -256,7 +256,7 @@ class SX(Gate):
         self.draw_label = "SX"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -303,7 +303,7 @@ class SXDG(Gate):
         self.draw_label = "SXDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -350,7 +350,7 @@ class S(Gate):
         self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -382,7 +382,7 @@ class SDG(Gate):
         self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -468,7 +468,7 @@ class I(Gate):
         self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -502,6 +502,14 @@ class Align(Gate):
         self.target_qubits = tuple(q)
 
 
+def is_clifford_given_angle(angle):
+    """Helper function to update Clifford boolean condition according to the given angle ``theta``."""
+    if isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer():
+        return True
+    else:
+        return False
+
+
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
@@ -519,32 +527,20 @@ class _Rn_(ParametrizedGate):
         self._controlled_gate = None
         self.target_qubits = (q,)
         self.unitary = True
+        self._clifford = is_clifford_given_angle(theta)
 
         self.initparams = theta
         if isinstance(theta, Parameter):
             theta = theta()
 
-        self.update_clifford_condition(theta)
-
-        self._parameters = theta
+        self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
-    def update_clifford_condition(self, theta):
-        """Update Clifford boolean condition according to the given angle ``theta``."""
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
-            self.clifford = True
-        else:
-            self.clifford = False
-
     @property
-    def parameters(self):
-        return self._parameters
-
-    @parameters.setter
-    def parameters(self, value):
-        self._parameters = value
-        self.update_clifford_condition(value)
+    def clifford(self):
+        self._clifford = is_clifford_given_angle(self.parameters[0])
+        return self._clifford
 
     def _dagger(self) -> "Gate":
         """"""
@@ -989,7 +985,7 @@ class CNOT(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -1026,7 +1022,7 @@ class CY(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -1072,7 +1068,7 @@ class CZ(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -1200,27 +1196,15 @@ class _CRn_(ParametrizedGate):
         self.target_qubits = (q1,)
         self.parameters = theta
         self.unitary = True
-
-        self.update_clifford_condition(theta)
+        self._clifford = is_clifford_given_angle(theta)
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
-    def update_clifford_condition(self, theta):
-        """Update Clifford boolean condition according to the given angle ``theta``."""
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
-            self.clifford = True
-        else:
-            self.clifford = False
-
     @property
-    def parameters(self):
-        return self._parameters
-
-    @parameters.setter
-    def parameters(self, value):
-        self._parameters = value
-        self.update_clifford_condition(value)
+    def clifford(self):
+        self._clifford = is_clifford_given_angle(self.parameters[0])
+        return self._clifford
 
     def _dagger(self) -> "Gate":
         """"""
@@ -1514,7 +1498,7 @@ class SWAP(Gate):
         self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -1546,7 +1530,7 @@ class iSWAP(Gate):
         self.draw_label = "i"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -1638,7 +1622,7 @@ class FSWAP(Gate):
         self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     @property
@@ -2188,7 +2172,7 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
+        self._clifford = True
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
