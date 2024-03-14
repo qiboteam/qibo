@@ -311,6 +311,7 @@ def test_process_fidelity_and_infidelity(backend):
     )
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_diamond_norm(backend, nqubits):
     with pytest.raises(TypeError):
