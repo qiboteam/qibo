@@ -280,7 +280,7 @@ class NumpyBackend(Backend):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
             state = self.np.expand_dims(state, q)
-            if len(r):
+            if r:
                 state = self.np.concatenate([self.np.zeros_like(state), state], q)
             else:
                 state = self.np.concatenate([state, self.np.zeros_like(state)], q)
