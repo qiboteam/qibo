@@ -503,11 +503,8 @@ class Align(Gate):
 
 
 def is_clifford_given_angle(angle):
-    """Helper function to update Clifford boolean condition according to the given angle ``theta``."""
-    if isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer():
-        return True
-    else:
-        return False
+    """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
+    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
 
 
 class _Rn_(ParametrizedGate):
@@ -538,8 +535,7 @@ class _Rn_(ParametrizedGate):
 
     @property
     def clifford(self):
-        self._clifford = is_clifford_given_angle(self.parameters[0])
-        return self._clifford
+        return is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> "Gate":
         """"""
