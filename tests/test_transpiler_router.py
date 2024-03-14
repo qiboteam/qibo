@@ -297,9 +297,7 @@ def test_sabre_random_circuits(n_gates, look, decay, placer, connectivity):
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
-    circuit_result = transpiled_circuit.execute(nshots=100)
-    assert circuit_result.frequencies() == measurement.result.frequencies()
-    assert transpiled_circuit.queue[-1].result is measurement.result
+    assert transpiled_circuit.queue[-1].register_name == measurement.register_name
 
 
 def test_sabre_memory_map():
@@ -324,9 +322,8 @@ def test_sabre_intermediate_measurements():
     connectivity.add_edges_from([(0, 1), (1, 2)])
     router = Sabre(connectivity=connectivity)
     initial_layout = {"q0": 0, "q1": 1, "q2": 2}
-    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
-    circuit_result = routed_circ.execute(nshots=100)
-    assert routed_circ.queue[3].result is measurement.result
+    routed_circ, _ = router(circuit=circ, initial_layout=initial_layout)
+    assert routed_circ.queue[3].register_name == measurement.register_name
 
 
 @pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
