@@ -18,7 +18,7 @@ def test_measurement_collapse(backend, nqubits, targets):
         c.add(gates.H(q))
     r = c.add(gates.M(*targets, collapse=True))
     c.add(gates.M(*targets))
-    outcome = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
+    outcome = backend.execute_circuit(c, backend.cast(initial_state, copy=True), nshots=1)
     samples = r.samples()[0]
     backend.assert_allclose(samples, outcome.samples()[0])
 
@@ -128,7 +128,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
                 c, initial_state=np.copy(initial_state), nshots=1
             )
             final_states.append(final_state.state())
-        final_states = np.asarray(final_states).mean(0)
+        final_states = backend.np.mean(backend.cast(final_states), 0)
     else:
         final_states = backend.execute_circuit(
             c, initial_state=np.copy(initial_state), nshots=20
@@ -160,7 +160,9 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     c.add(gates.RY(0, theta=np.pi * r.symbols[0] / 3))
     c.add(gates.RY(2, theta=np.pi * r.symbols[0] / 4))
     c.add(gates.M(0, 1, 2, 3))
-    result = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=30)
+    result = backend.execute_circuit(
+        c, initial_state=backend.cast(initial_state, copy=True), nshots=30
+    )
     final_samples = result.samples(binary=False)
 
     backend.set_seed(123)

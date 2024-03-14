@@ -526,8 +526,8 @@ alice q[1],q[0];"""
         gate.append(bob(-np.pi / 4, np.pi / 2, q0, q1))
         return gate
 
-    backend.assert_allclose(c.queue[0].matrix(), bob(-np.pi / 2, np.pi, 0, 2).matrix())
-    backend.assert_allclose(c.queue[1].matrix(), alice(1, 0).matrix())
+    backend.assert_allclose(c.queue[0].matrix(backend), bob(-np.pi / 2, np.pi, 0, 2).matrix(backend))
+    backend.assert_allclose(c.queue[1].matrix(backend), alice(1, 0).matrix(backend))
 
 
 def test_from_qasm_unsupported_statement():
