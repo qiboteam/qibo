@@ -286,4 +286,7 @@ def test_GST(backend):
         gate_set, noise_model=depol, include_empty=True, backend=backend
     )
     for target, estimate in zip(target_matrices, approx_gates):
-        backend.assert_allclose(target, estimate, atol=1e-6)
+        transf = empty_1q if estimate.shape[0] == 4 else empty_2q
+        backend.assert_allclose(
+            target, transf.conj().T @ (estimate @ transf), atol=1e-6
+        )
