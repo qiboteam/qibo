@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, get_backend, set_backend
+from qibo import Circuit, gates, set_backend
 from qibo.backends import (
     CliffordBackend,
     GlobalBackend,
