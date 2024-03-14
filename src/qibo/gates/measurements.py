@@ -127,7 +127,7 @@ class M(Gate):
                 )
             return tuple(probs[q] if q in probs else 0.0 for q in qubits)
 
-        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+        raise_error(TypeError, f"Invalid type {probs} of bitflip map.")
 
     def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:
         """Creates dictionary with bitflip probabilities."""
