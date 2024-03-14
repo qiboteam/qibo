@@ -36,7 +36,7 @@ class MeasurementSymbol(sympy.Symbol):
     _counter = 0
 
     def __new__(cls, *args, **kwargs):
-        name = "m{}".format(cls._counter)
+        name = f"m{cls._counter}"
         cls._counter += 1
         return super().__new__(cls=cls, name=name)
 

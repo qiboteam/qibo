@@ -97,7 +97,7 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
         gatename, theta, targets = pieces
     else:  # pragma: no cover
         # case not tested because it fails
-        raise RuntimeError("Cirq gate parsing failed with {}.".format(pieces))
+        raise RuntimeError(f"Cirq gate parsing failed with {pieces}.")
 
     qubits = list(int(x) for x in targets.replace(" ", "").split(","))
     targets = (qubits.pop(),)
