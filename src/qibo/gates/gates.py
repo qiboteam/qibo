@@ -527,7 +527,6 @@ class _Rn_(ParametrizedGate):
         self._controlled_gate = None
         self.target_qubits = (q,)
         self.unitary = True
-        self._clifford = is_clifford_given_angle(theta)
 
         self.initparams = theta
         if isinstance(theta, Parameter):
@@ -1196,7 +1195,6 @@ class _CRn_(ParametrizedGate):
         self.target_qubits = (q1,)
         self.parameters = theta
         self.unitary = True
-        self._clifford = is_clifford_given_angle(theta)
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
