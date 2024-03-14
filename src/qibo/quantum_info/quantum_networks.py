@@ -1,7 +1,7 @@
 """Module defining the `QuantumNetwork` class and adjacent functions."""
 
-import re
 from functools import reduce
+from logging import warning
 from operator import mul
 from typing import List, Optional, Tuple, Union
 
@@ -44,24 +44,106 @@ class QuantumNetwork:
 
     def __init__(
         self,
-        matrix,
-        partition: Union[List[int], Tuple[int]],
-        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
+        tensor,
+        partition: Optional[Union[List[int], Tuple[int]]] = None,
+        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
         pure: bool = False,
         backend=None,
     ):
-        self._run_checks(partition, system_output, pure)
+        self._run_checks(partition, system_input, pure)
 
-        self._matrix = matrix
+        self._tensor = tensor
         self.partition = partition
-        self.system_output = system_output
+        self.system_input = system_input
         self._pure = pure
         self._backend = backend
-        self.dims = reduce(mul, self.partition)
 
-        self._set_tensor_and_parameters()
+        self._set_parameters()
 
-    def matrix(self, backend=None):
+        if len(self.partition) > 0:
+            self.dims = reduce(
+                mul, self.partition
+            )  # should be after `_set_parameters` to ensure `self.partition` is not `None`
+        else:
+            self.dims = 1
+
+    @staticmethod
+    def _order_tensor2operator(n: int):
+        order = list(range(0, n * 2, 2)) + list(range(1, n * 2, 2))
+        return order
+
+    @staticmethod
+    def _order_operator2tensor(n: int):
+        order = list(sum(zip(list(range(0, n)), list(range(n, n * 2))), ()))
+        return order
+
+    @classmethod
+    def _operator2tensor(cls, operator, partition: List[int], system_input: List[bool]):
+        n = len(partition)
+        order = cls._order_operator2tensor(n)
+        try:
+            return (
+                operator.reshape(list(partition) * 2)
+                .transpose(order)
+                .reshape([dim**2 for dim in partition])
+            )
+        except:
+            raise_error(
+                ValueError,
+                "``partition`` does not match the shape of the input matrix. "
+                + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
+            )
+
+    @classmethod
+    def from_nparray(
+        cls,
+        arr: np.ndarray,
+        partition: Optional[Union[List[int], Tuple[int]]] = None,
+        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
+        pure: bool = False,
+        backend=None,
+    ):
+
+        if pure:
+            if partition is None:
+                partition = arr.shape
+                tensor = arr
+            else:
+                try:
+                    tensor = arr.reshape(partition)
+                except:
+                    raise_error(
+                        ValueError,
+                        "``partition`` does not match the shape of the input matrix. "
+                        + f"Cannot reshape matrix of size {arr.shape} to partition {partition}",
+                    )
+        else:
+            # check if arr is a valid choi operator
+            len_sys = len(arr.shape)
+            if (len_sys % 2 != 0) or (
+                arr.shape[: len_sys // 2] != arr.shape[len_sys // 2 :]
+            ):
+                raise_error(
+                    ValueError,
+                    "The opertor must be a square operator where the first half of the shape is the same as the second half of the shape. "
+                    + f"However, the shape of the input is {arr.shape}. "
+                    + "If the input is pure, set `pure=True`.",
+                )
+
+            if partition is None:
+                partition = arr.shape[: len_sys // 2]
+
+            tensor = cls._operator2tensor(arr, partition, system_input)
+
+        return cls(
+            tensor,
+            partition=partition,
+            system_input=system_input,
+            pure=pure,
+            backend=backend,
+        )
+
+    def operator(self, backend=None, full=False):
         """Returns the Choi operator of the quantum network in matrix form.
 
         Args:
@@ -76,7 +158,23 @@ class QuantumNetwork:
         if backend is None:  # pragma: no cover
             backend = self._backend
 
-        return backend.cast(self._matrix, dtype=self._matrix.dtype)
+        if self.is_pure() and not full:
+            return backend.cast(self._tensor, dtype=self._tensor.dtype)
+
+        if self.is_pure():
+            tensor = self.full(backend)
+        else:
+            tensor = self._tensor
+
+        n = len(self.partition)
+        order = self._order_tensor2operator(n)
+
+        operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
+
+        return backend.cast(operator, dtype=self._tensor.dtype)
+
+    def matrix(self, backend=None):
+        return self.operator(backend, full=True).reshape((self.dims, self.dims))
 
     def is_pure(self):
         """Returns bool indicading if the Choi operator of the network is pure."""
@@ -115,112 +213,17 @@ class QuantumNetwork:
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
 
-        self._matrix = self._full()
-        self._pure = False
+        if self.is_pure():  # if the input is pure, it is always hermitian
+            return True
 
         reshaped = self._backend.cast(
-            np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
+            self.matrix(),
+            dtype=self._tensor.dtype,
         )
-        reshaped = self._backend.cast(
+        mat_diff = self._backend.cast(
             np.transpose(np.conj(reshaped)) - reshaped, dtype=reshaped.dtype
         )
-        norm = self._backend.calculate_norm_density_matrix(reshaped, order=order)
-
-        return float(norm) <= precision_tol
-
-    def is_unital(
-        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
-    ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is unital.
-
-        Unitality is calculated as distance between the partial trace of :math:`\\mathcal{E}`
-        and the Identity operator :math:`I`, with respect to a given norm.
-        Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
-
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-
-        Args:
-            order (str or int, optional): order of the norm. Defaults to ``None``.
-            precision_tol (float, optional): threshold :math:`\\epsilon` that defines
-                if Choi operator of the network is :math:`\\epsilon`-close to unitality
-                in the norm given by ``order``. Defaults to :math:`10^{-8}`.
-
-        Returns:
-            bool: Unitality condition.
-        """
-        if precision_tol < 0.0:
-            raise_error(
-                ValueError,
-                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
-            )
-
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
-            order = "euclidean"
-
-        self._matrix = self._full()
-        self._pure = False
-
-        partial_trace = np.einsum("jkjl -> kl", self._matrix)
-        identity = self._backend.cast(
-            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
-        )
-
-        norm = self._backend.calculate_norm_density_matrix(
-            partial_trace - identity,
-            order=order,
-        )
-
-        return float(norm) <= precision_tol
-
-    def is_causal(
-        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
-    ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network satisfies the causal order condition.
-
-        Causality is calculated as distance between partial trace of :math:`\\mathcal{E}`
-        and the Identity operator :math:`I`, with respect to a given norm.
-        Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
-
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-
-        Args:
-            order (str or int, optional): order of the norm. Defaults to ``None``.
-            precision_tol (float, optional): threshold :math:`\\epsilon` that defines
-                if Choi operator of the network is :math:`\\epsilon`-close to causality
-                in the norm given by ``order``. Defaults to :math:`10^{-8}`.
-
-        Returns:
-            bool: Causal order condition.
-        """
-        if precision_tol < 0.0:
-            raise_error(
-                ValueError,
-                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
-            )
-
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
-            order = "euclidean"
-
-        self._matrix = self._full()
-        self._pure = False
-
-        partial_trace = np.einsum("jklk -> jl", self._matrix)
-        identity = self._backend.cast(
-            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
-        )
-
-        norm = self._backend.calculate_norm_density_matrix(
-            partial_trace - identity,
-            order=order,
-        )
+        norm = self._backend.calculate_norm_density_matrix(mat_diff, order=order)
 
         return float(norm) <= precision_tol
 
@@ -237,69 +240,22 @@ class QuantumNetwork:
         Returns:
             bool: Positive-semidefinite condition.
         """
-        self._matrix = self._full()
-        self._pure = False
+        if self.is_pure():  # if the input is pure, it is always positive semidefinite
+            return True
 
-        reshaped = np.reshape(self._matrix, (self.dims, self.dims))
+        reshaped = self._backend.cast(
+            self.matrix(),
+            dtype=self._tensor.dtype,
+        )
 
         if self.is_hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
         else:
-            if self._backend.__class__.__name__ in [
-                "CupyBackend",
-                "CuQuantumBackend",
-            ]:  # pragma: no cover
-                reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
-            eigenvalues = np.linalg.eigvals(reshaped)
+            return False
 
         return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
 
-    def is_channel(
-        self,
-        order: Optional[Union[int, str]] = None,
-        precision_tol_causal: float = 1e-8,
-        precision_tol_psd: float = 1e-8,
-    ):
-        """Returns bool indicating if Choi operator :math:`\\mathcal{E}` is a channel.
-
-        Args:
-            order (int or str, optional): order of the norm used to calculate causality.
-                Defaults to ``None``.
-            precision_tol_causal (float, optional): threshold :math:`\\epsilon` that defines if
-                Choi operator of the network is :math:`\\epsilon`-close to causality in the norm
-                given by ``order``. Defaults to :math:`10^{-8}`.
-            precision_tol_psd (float, optional): threshold value used to check if eigenvalues of
-                the Choi operator :math:`\\mathcal{E}` are such that
-                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= \\textup{precision_tol_psd}`.
-                Note that this parameter can be set to negative values.
-                Defaults to :math:`0.0`.
-
-        Returns:
-            bool: Channel condition.
-        """
-        return self.is_causal(
-            order, precision_tol_causal
-        ) and self.is_positive_semidefinite(precision_tol_psd)
-
-    def apply(self, state):
-        """Apply the Choi operator :math:`\\mathcal{E}` to ``state`` :math:`\\varrho`.
-
-        It is assumed that ``state`` :math:`\\varrho` is a density matrix.
-
-        Args:
-            state (ndarray): density matrix of a ``state``.
-
-        Returns:
-            ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
-        """
-        matrix = np.copy(self._matrix)
-
-        if self.is_pure():
-            return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
-
-        return np.einsum("jklm,km -> jl", matrix, state)
-
-    def link_product(self, second_network, subscripts: str = "ij,jk -> ik"):
+    def link_product(self, subscripts: str, second_network):
         """Link product between two quantum networks.
 
         The link product is not commutative. Here, we assume that
@@ -318,83 +274,18 @@ class QuantumNetwork:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
                 from the link product between two quantum networks.
         """
-        if not isinstance(second_network, QuantumNetwork):
-            raise_error(
-                TypeError,
-                "It is not possible to implement link product of a "
-                + "``QuantumNetwork`` with a non-``QuantumNetwork``.",
-            )
 
-        if not isinstance(subscripts, str):
-            raise_error(
-                TypeError,
-                f"subscripts must be type str, but it is type {type(subscripts)}.",
-            )
-
-        subscripts = subscripts.replace(" ", "")
-        pattern_two, pattern_four = self._check_subscript_pattern(subscripts)
-        channel_subscripts = pattern_two and subscripts[1] == subscripts[3]
-        inv_subscripts = pattern_two and subscripts[0] == subscripts[4]
-        super_subscripts = (
-            pattern_four
-            and subscripts[1] == subscripts[5]
-            and subscripts[2] == subscripts[6]
-        )
-
-        if not channel_subscripts and not inv_subscripts and not super_subscripts:
-            raise_error(
-                NotImplementedError,
-                "Subscripts do not match any implemented pattern.",
-            )
-
-        first_matrix = self._full()
-        second_matrix = second_network._full()  # pylint: disable=W0212
-
-        if super_subscripts:
-            cexpr = "jklmnopq,klop->jmnq"
-            return QuantumNetwork(
-                np.einsum(cexpr, first_matrix, second_matrix),
-                [self.partition[0] + self.partition[-1]],
-            )
-
-        cexpr = "jkab,klbc->jlac"
-
-        if inv_subscripts:
-            return QuantumNetwork(
-                np.einsum(cexpr, second_matrix, first_matrix),
-                [second_network.partition[0], self.partition[1]],
-            )
-
-        return QuantumNetwork(
-            np.einsum(cexpr, first_matrix, second_matrix),
-            [self.partition[0], second_network.partition[1]],
-        )
+        return link_product(subscripts, self, second_network, backend=self._backend)
 
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
         return self.__class__(
-            np.copy(self._matrix),
+            np.copy(self._tensor),
             partition=self.partition,
-            system_output=self.system_output,
+            system_output=self.system_input,
             pure=self._pure,
             backend=self._backend,
         )
-
-    def to_full(self, backend=None):
-        """Convert the internal representation to the full Choi operator of the network.
-
-        Returns:
-            (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): The full representation
-            of the Quantum network.
-        """
-        if backend is None:  # pragma: no cover
-            backend = self._backend
-
-        if self.is_pure():
-            self._matrix = self._full()
-            self._pure = False
-
-        return self.matrix(backend)
 
     def __add__(self, second_network):
         """Add two Quantum Networks by adding their Choi operators.
@@ -416,23 +307,23 @@ class QuantumNetwork:
                 + f"and and object of type ``{type(second_network)}``.",
             )
 
-        if self._full().shape != second_network._full().shape:
+        if self.full().shape != second_network.full().shape:
             raise_error(
                 ValueError,
-                f"The Choi operators must have the same shape, but {self._matrix.shape} != "
-                + f"{second_network.matrix(second_network._backend).shape}.",
+                f"The Choi operators must have the same shape, but {self.full().shape} != "
+                + f"{second_network.full().shape}.",
             )
 
-        if self.system_output != second_network.system_output:
-            raise_error(ValueError, "The networks must have the same output system.")
+        if self.system_input != second_network.system_input:
+            raise_error(ValueError, "The networks must have the same input systems.")
 
-        new_first_matrix = self._full()
-        new_second_matrix = second_network._full()
+        new_first_tensor = self.full()
+        new_second_tensor = second_network.full()
 
         return QuantumNetwork(
-            new_first_matrix + new_second_matrix,
+            new_first_tensor + new_second_tensor,
             self.partition,
-            self.system_output,
+            self.system_input,
             pure=False,
             backend=self._backend,
         )
@@ -460,19 +351,19 @@ class QuantumNetwork:
 
         if self.is_pure() and number > 0.0:
             return QuantumNetwork(
-                np.sqrt(number) * self.matrix(backend=self._backend),
+                np.sqrt(number) * self.operator(backend=self._backend),
                 partition=self.partition,
-                system_output=self.system_output,
+                system_input=self.system_input,
                 pure=True,
                 backend=self._backend,
             )
 
-        matrix = self._full()
+        tensor = self.full()
 
         return QuantumNetwork(
-            number * matrix,
+            number * tensor,
             partition=self.partition,
-            system_output=self.system_output,
+            system_input=self.system_input,
             pure=False,
             backend=self._backend,
         )
@@ -505,9 +396,9 @@ class QuantumNetwork:
         number = np.sqrt(number) if self.is_pure() and number > 0.0 else number
 
         return QuantumNetwork(
-            self.matrix(backend=self._backend) / number,
+            self.operator(backend=self._backend) / number,
             partition=self.partition,
-            system_output=self.system_output,
+            system_input=self.system_input,
             pure=self.is_pure(),
             backend=self._backend,
         )
@@ -571,29 +462,21 @@ class QuantumNetwork:
                 + "Use `link_product` method to specify the subscript.",
             )
 
-        return self.link_product(second_network, subscripts=subscripts)
+        return self.link_product(subscripts, second_network)
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
-        string_in = ", ".join(
-            [
-                str(self.partition[k])
-                for k in range(len(self.partition))
-                if not self.system_output[k]
-            ]
-        )
+        systems = []
 
-        string_out = ", ".join(
-            [
-                str(self.partition[k])
-                for k in range(len(self.partition))
-                if self.system_output[k]
-            ]
-        )
+        for i, dim in enumerate(self.partition):
+            if self.system_input[i]:
+                systems.append(f"┍{dim}┑")
+            else:
+                systems.append(f"┕{dim}┙")
 
-        return f"J[{string_in} -> {string_out}]"
+        return f"J[{', '.join(systems)}]"
 
-    def _run_checks(self, partition, system_output, pure):
+    def _run_checks(self, partition, system_input, pure):
         """Checks if all inputs are correct in type and value."""
         if not isinstance(partition, (list, tuple)):
             raise_error(
@@ -616,11 +499,11 @@ class QuantumNetwork:
                 + "but contains non-positive integers.",
             )
 
-        if system_output is not None and len(system_output) != len(partition):
+        if system_input is not None and len(system_input) != len(partition):
             raise_error(
                 ValueError,
-                "``len(system_output)`` must be the same as ``len(partition)``, "
-                + f"but {len(system_output)} != {len(partition)}.",
+                "``len(system_input)`` must be the same as ``len(partition)``, "
+                + f"but {len(system_input)} != {len(partition)}.",
             )
 
         if not isinstance(pure, bool):
@@ -629,52 +512,388 @@ class QuantumNetwork:
                 f"``pure`` must be type ``bool``, but it is type ``{type(pure)}``.",
             )
 
-    def _set_tensor_and_parameters(self):
-        """Sets tensor based on inputs."""
+    @staticmethod
+    def _check_system_input(system_input, partition) -> Tuple[bool]:
+        """
+        If `system_input` not defined, assume the network follows the order of a quantum Comb.
+        """
+
+        if system_input is None:
+            system_input = [
+                False,
+            ] * len(partition)
+            for k in range(len(partition) // 2):
+                system_input[k * 2] = True
+        return tuple(system_input)
+
+    def _set_parameters(self):
+        """Standarize the parameters."""
         self._backend = _check_backend(self._backend)
 
-        if isinstance(self.partition, list):
-            self.partition = tuple(self.partition)
+        self.partition = tuple(self.partition)
+
+        self.system_input = self._check_system_input(self.system_input, self.partition)
 
         try:
             if self._pure:
-                self._matrix = np.reshape(self._matrix, self.partition)
+                self._tensor = np.reshape(self._tensor, self.partition)
             else:
-                matrix_partition = self.partition * 2
-                self._matrix = np.reshape(self._matrix, matrix_partition)
+                matrix_partition = [d**2 for d in self.partition]
+                self._tensor = np.reshape(self._tensor, matrix_partition)
         except:
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshape matrix of size {self._matrix.shape} to partition {self.partition}",
+                + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
             )
 
-        if self.system_output is None:
-            self.system_output = [
-                True,
-            ] * len(self.partition)
-            for k in range(len(self.partition) // 2):
-                self.system_output[k * 2] = False
-            self.system_output = tuple(self.system_output)
-        else:
-            self.system_output = tuple(self.system_output)
+    def full(self, backend=None, update=False):
+        """Convert the internal representation to the full tensor of the network.
 
-    def _full(self):
-        """Reshapes input matrix based on purity."""
-        matrix = np.copy(self._matrix)
+        Returns:
+            ndarray: The full reprentation of the quantum network.
+        """
+        if backend is None:  # pragma: no cover
+            backend = self._backend
+        tensor = np.copy(self._tensor)
+
         if self.is_pure():
-            matrix = np.einsum("jk,lm -> kjml", matrix, np.conj(matrix))
+            """Reshapes input matrix based on purity."""
+            tensor.reshape([self.dims])
+            tensor = np.tensordot(tensor, np.conj(tensor), axes=0)
+            tensor = self._operator2tensor(tensor, self.partition, self.system_input)
 
-            return matrix
+            if update:
+                self._tensor = tensor
+                self._pure = False
 
-        return matrix
+        return tensor
 
-    def _check_subscript_pattern(self, subscripts: str):
-        """Checks if input subscript match any implemented pattern."""
-        braket = "[a-z]"
-        pattern_two = re.compile(braket * 2 + "," + braket * 2 + "->" + braket * 2)
-        pattern_four = re.compile(braket * 4 + "," + braket * 2 + "->" + braket * 2)
 
-        return bool(re.match(pattern_two, subscripts)), bool(
-            re.match(pattern_four, subscripts)
+class QuantumComb(QuantumNetwork):
+
+    def __init__(
+        self,
+        tensor,
+        partition: Optional[Union[List[int], Tuple[int]]] = None,
+        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
+        pure: bool = False,
+        backend=None,
+    ):
+        if partition == None:
+            if pure:
+                partition = tensor.shape
+            else:
+                partition = (int(np.sqrt(d)) for d in tensor.shape)
+        if len(partition) % 2 != 0:
+            raise_error(
+                ValueError,
+                "A quantum comb should only contain equal number of input and output systems. "
+                + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
+            )
+        if system_output is not None:
+            warning("system_output is ignored for QuantumComb")
+
+        super().__init__(
+            tensor, partition, [False, True] * (len(partition) // 2), pure, backend
         )
+
+    def is_causal(
+        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
+    ):
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network satisfies the causal order condition.
+
+        Causality is calculated as distance between partial trace of :math:`\\mathcal{E}`
+        and the Identity operator :math:`I`, with respect to a given norm.
+        Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
+
+        For specifications on the other  possible values of the
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+
+        Args:
+            order (str or int, optional): order of the norm. Defaults to ``None``.
+            precision_tol (float, optional): threshold :math:`\\epsilon` that defines
+                if Choi operator of the network is :math:`\\epsilon`-close to causality
+                in the norm given by ``order``. Defaults to :math:`10^{-8}`.
+
+        Returns:
+            bool: Causal order condition.
+        """
+        if precision_tol < 0.0:
+            raise_error(
+                ValueError,
+                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
+            )
+
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
+        self._tensor = self.full()
+        self._pure = False
+
+        partial_trace = np.einsum("jklk -> jl", self._tensor)
+        identity = self._backend.cast(
+            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
+        )
+
+        norm = self._backend.calculate_norm_density_matrix(
+            partial_trace - identity,
+            order=order,
+        )
+
+        return float(norm) <= precision_tol
+
+
+class QuantumChannel(QuantumNetwork):
+
+    def __init__(
+        self,
+        tensor,
+        partition: Optional[Union[List[int], Tuple[int]]] = None,
+        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
+        pure: bool = False,
+        backend=None,
+    ):
+        if len(partition) > 2:
+            raise_error(
+                ValueError,
+                "A quantum channel should only contain one input system and one output system. "
+                + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
+            )
+
+        if len(partition) == 1 or partition == None:
+            if system_output == None:  # Assume the input is a quantum state
+                partition = (1, partition[0])
+            elif len(system_output) == 1:
+                if system_output:
+                    partition = (1, partition[0])
+                else:
+                    partition = (partition[0], 1)
+
+        super().__init__(tensor, partition, [False, True], pure, backend)
+
+    def is_unital(
+        self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
+    ):
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is unital.
+
+        Unitality is calculated as distance between the partial trace of :math:`\\mathcal{E}`
+        and the Identity operator :math:`I`, with respect to a given norm.
+        Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
+
+        For specifications on the other  possible values of the
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+
+        Args:
+            order (str or int, optional): order of the norm. Defaults to ``None``.
+            precision_tol (float, optional): threshold :math:`\\epsilon` that defines
+                if Choi operator of the network is :math:`\\epsilon`-close to unitality
+                in the norm given by ``order``. Defaults to :math:`10^{-8}`.
+
+        Returns:
+            bool: Unitality condition.
+        """
+        if precision_tol < 0.0:
+            raise_error(
+                ValueError,
+                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
+            )
+
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
+        self._tensor = self.full()
+        self._pure = False
+
+        partial_trace = np.einsum("jkjl -> kl", self._tensor)
+        identity = self._backend.cast(
+            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
+        )
+
+        norm = self._backend.calculate_norm_density_matrix(
+            partial_trace - identity,
+            order=order,
+        )
+
+        return float(norm) <= precision_tol
+
+    def is_channel(
+        self,
+        order: Optional[Union[int, str]] = None,
+        precision_tol_causal: float = 1e-8,
+        precision_tol_psd: float = 1e-8,
+    ):
+        """Returns bool indicating if Choi operator :math:`\\mathcal{E}` is a channel.
+
+        Args:
+            order (int or str, optional): order of the norm used to calculate causality.
+                Defaults to ``None``.
+            precision_tol_causal (float, optional): threshold :math:`\\epsilon` that defines if
+                Choi operator of the network is :math:`\\epsilon`-close to causality in the norm
+                given by ``order``. Defaults to :math:`10^{-8}`.
+            precision_tol_psd (float, optional): threshold value used to check if eigenvalues of
+                the Choi operator :math:`\\mathcal{E}` are such that
+                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= \\textup{precision_tol_psd}`.
+                Note that this parameter can be set to negative values.
+                Defaults to :math:`0.0`.
+
+        Returns:
+            bool: Channel condition.
+        """
+        return self.is_causal(
+            order, precision_tol_causal
+        ) and self.is_positive_semidefinite(precision_tol_psd)
+
+    def apply(self, state):
+        """Apply the Choi operator :math:`\\mathcal{E}` to ``state`` :math:`\\varrho`.
+
+        It is assumed that ``state`` :math:`\\varrho` is a density matrix.
+
+        Args:
+            state (ndarray): density matrix of a ``state``.
+
+        Returns:
+            ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
+        """
+        matrix = np.copy(self._tensor)
+
+        if self.is_pure():
+            return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
+
+        return np.einsum("jklm,km -> jl", matrix, state)
+
+
+class StochQuantumNetwork:
+    pass
+
+
+def link_product(
+    subscripts: str = "ij,jk -> ik",
+    *operands: QuantumNetwork,
+    backend=None,
+    surpress_warning=False,
+):
+    """Link product between two quantum networks.
+
+    The link product is not commutative. Here, we assume that
+    :math:`A.\\textup{link_product}(B)` means "applying :math:`B` to :math:`A`".
+    However, the ``link_product`` is associative, so we override the `@` operation
+    in order to simplify notation.
+
+    Args:
+        subscripts (str, optional): Specifies the subscript for summation using
+            the Einstein summation convention. For more details, please refer to
+            `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
+        operands (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
+            network to be contracted.
+
+    Returns:
+        :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
+            from the link product between two quantum networks.
+    """
+
+    if not isinstance(subscripts, str):
+        raise_error(
+            TypeError,
+            f"subscripts must be type str, but it is type {type(subscripts)}.",
+        )
+
+    for i, operand in enumerate(operands):
+        if not isinstance(operand, QuantumNetwork):
+            raise_error(TypeError, f"The {i}th operator is not a ``QuantumNetwork``.")
+
+    tensors = [
+        operand.full() if operand.is_pure() else operand._tensor for operand in operands
+    ]
+
+    # keep track of the `partition` and `system_input` of the network
+    _, contracrtion_list = np.einsum_path(
+        subscripts, *tensors, optimize=False, einsum_call=True
+    )
+
+    inds, idx_rm, einsum_str, remaining, blas = contracrtion_list[0]
+    input_str, results_index = einsum_str.split("->")
+    inputs = input_str.split(",")
+
+    # Warning if the same index connects two input or two output systems
+    if not surpress_warning:
+        for ind in idx_rm:
+            found = 0
+            for i, script in enumerate(inputs):
+                try:
+                    index = script.index(ind)
+                    found += 1
+                    if found > 1:
+                        if is_input != operands[inds[i]].system_input[index]:
+                            pass
+                        else:
+                            warning(
+                                f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                            )
+                    is_input = operands[inds[i]].system_input[index]
+                    if found > 2:
+                        warning(
+                            f"Index {ind} is accores multiple times in the input subscripts {input_str}."
+                        )
+                except:
+                    continue
+
+    # check output systems
+    partition = []
+    system_input = []
+    for ind in results_index:
+        found = False
+        for i, script in enumerate(inputs):
+            try:
+                index = script.index(ind)
+                if found:
+                    warning(
+                        f"Index {ind} is repeated in the input subscripts {input_str}."
+                    )
+                found = True
+
+                partition.append(operands[inds[i]].partition[index])
+                system_input.append(operands[inds[i]].system_input[index])
+
+            except:
+                continue
+
+    new_tensor = np.einsum(subscripts, *tensors)
+
+    return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
+
+
+def identity(dim: int, backend=None):
+    """Returns the identity channel.
+
+    Args:
+        dim (int): Dimension of the identity operator.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+            to return the identity operator. If ``None``, defaults to the backend defined
+            when initializing the :class:`qibo.quant
+    """
+
+    return QuantumNetwork.from_nparray(
+        np.eye(dim), [dim, dim], [True, False], pure=True, backend=backend
+    )
+
+
+def trace(dim: int, backend=None):
+    """Returns the trace operator.
+
+    Args:
+        dim (int): Dimension to be traced.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+            to return the identity operator. If ``None``, defaults to the backend defined
+            when initializing the :class:`qibo.quant
+    """
+
+    return QuantumNetwork.from_nparray(
+        np.eye(dim), [dim], [True], pure=False, backend=backend
+    )
