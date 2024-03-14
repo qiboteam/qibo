@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
+from qibo.backends import PyTorchBackend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -115,6 +116,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation(self, state, normalize=False):
         if isinstance(state, self.backend.tensor_types):
+            state = self.backend.cast(state)
             shape = tuple(state.shape)
             if len(shape) == 1:  # state vector
                 return self.backend.calculate_expectation_state(self, state, normalize)
@@ -174,6 +176,7 @@ class Hamiltonian(AbstractHamiltonian):
         Return:
             Energy fluctuation value (float).
         """
+        state = self.backend.cast(state)
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
@@ -242,11 +245,13 @@ class Hamiltonian(AbstractHamiltonian):
             )
         new_matrix = self.matrix * o
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+        o = self.backend.cast(o)
         if self._eigenvalues is not None:
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.issparse(self.matrix):
-                r._eigenvalues = o * self._eigenvalues[::-1]
+                axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
+                r._eigenvalues = o * self.backend.np.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
             if self.backend.np.real(o) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors

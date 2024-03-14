@@ -325,7 +325,7 @@ class MeasurementOutcomes:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = np.concatenate(
+                self._samples = self.backend.np.concatenate(
                     [gate.result.samples() for gate in self.measurements], axis=1
                 )
             else:
@@ -353,7 +353,7 @@ class MeasurementOutcomes:
                 qubit_map = {
                     q: i for i, q in enumerate(self.measurement_gate.target_qubits)
                 }
-                self._samples = np.array(samples, dtype="int32")
+                self._samples = self.backend.cast(samples, "int32")
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                     gate.result.register_samples(

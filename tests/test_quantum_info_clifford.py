@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import CliffordBackend, TensorflowBackend
+from qibo.backends import CliffordBackend, PyTorchBackend, TensorflowBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
@@ -17,7 +17,10 @@ from qibo.quantum_info.random_ensembles import random_clifford
 
 
 def construct_clifford_backend(backend):
-    if backend.__class__.__name__ in ["TensorflowBackend", "CuQuantumBackend"]:
+    if (
+        isinstance(backend, (TensorflowBackend, PyTorchBackend))
+        or backend.__class__.__name__ == "CuQuantumBackend"
+    ):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
         pytest.skip("Clifford backend not defined for the this engine.")
@@ -28,12 +31,10 @@ def construct_clifford_backend(backend):
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
 def test_clifford_from_symplectic_matrix(backend, nqubits):
     clifford_backend = construct_clifford_backend(backend)
-    if not clifford_backend:
-        return
-    engine = _get_engine_name(backend)
+
     symplectic_matrix = clifford_backend.zero_state(nqubits)
-    clifford_1 = Clifford(symplectic_matrix, engine=engine)
-    clifford_2 = Clifford(symplectic_matrix[:-1], engine=engine)
+    clifford_1 = Clifford(symplectic_matrix, engine=_get_engine_name(backend))
+    clifford_2 = Clifford(symplectic_matrix[:-1], engine=_get_engine_name(backend))
 
     for clifford in [clifford_1, clifford_2]:
         backend.assert_allclose(
@@ -115,6 +116,8 @@ def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
 def test_clifford_initialization(backend, nqubits):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    elif backend.__class__.__name__ == "PyTorchBackend":
+        pytest.skip("CliffordBackend not defined for PyTorch engine.")
 
     clifford_backend = construct_clifford_backend(backend)
 
