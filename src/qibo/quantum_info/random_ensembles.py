@@ -1,5 +1,6 @@
 """Module with functions that create random quantum and classical objects."""
 
+import math
 import warnings
 from typing import Optional, Union
 
@@ -18,6 +19,18 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_stinespring,
     vectorization,
 )
+
+
+class _ProbabilityDistributionGaussianLoader(rv_continuous):
+    """Probability density function for sampling phases of
+    the RBS gates as a function of circuit depth."""
+
+    def _pdf(self, theta: float, depth: int):
+        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
+
+        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
+
+        return amplitude * probability / 4
 
 
 class _probability_distribution_sin(rv_continuous):  # pragma: no cover
