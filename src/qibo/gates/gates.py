@@ -1197,8 +1197,7 @@ class _CRn_(ParametrizedGate):
 
     @property
     def clifford(self):
-        self._clifford = is_clifford_given_angle(self.parameters[0])
-        return self._clifford
+        return is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> "Gate":
         """"""
