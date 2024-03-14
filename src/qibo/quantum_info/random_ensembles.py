@@ -239,7 +239,8 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -1191,11 +1192,11 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
     if order == "row":
-        operator = np.kron(
+        operator = backend.np.kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = np.kron(
+        operator = backend.np.kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 
