@@ -1,5 +1,6 @@
 import numpy as np
 
+from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 
@@ -102,6 +103,12 @@ def parameter_shift(
 
     # inheriting hamiltonian's backend
     backend = hamiltonian.backend
+    # TODO: make this work wih pytorch backend
+    if isinstance(backend, PyTorchBackend):
+        raise_error(
+            NotImplementedError,
+            "PyTorchBackend for the parameter shift rule is not supported.",
+        )
 
     # getting the gate's type
     gate = circuit.associate_gates_with_parameters()[parameter_index]

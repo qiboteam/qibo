@@ -17,7 +17,7 @@ def read_file(file_name, instance):
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
     """
-    file = open("../data3sat/{q}bit/n{q}i{i}.txt".format(q=file_name, i=instance))
+    file = open(f"../data3sat/{file_name}bit/n{file_name}i{instance}.txt")
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
     clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]
@@ -100,7 +100,7 @@ def plot(qubits, ground, first, gap, dt, T):
     plt.title("Energy during adiabatic evolution")
     ax.legend()
     fig.tight_layout()
-    fig.savefig("{}_qubits_energy.png".format(qubits), dpi=300, bbox_inches="tight")
+    fig.savefig(f"{qubits}_qubits_energy.png", dpi=300, bbox_inches="tight")
     fig, ax = plt.subplots()
     ax.plot(times, gap, label="gap energy", color="C0")
     plt.ylabel("energy")
@@ -108,4 +108,4 @@ def plot(qubits, ground, first, gap, dt, T):
     plt.title("Energy during adiabatic evolution")
     ax.legend()
     fig.tight_layout()
-    fig.savefig("{}_qubits_gap.png".format(qubits), dpi=300, bbox_inches="tight")
+    fig.savefig(f"{qubits}_qubits_gap.png", dpi=300, bbox_inches="tight")

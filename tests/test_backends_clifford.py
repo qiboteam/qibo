@@ -1,10 +1,18 @@
+"""Tests for Clifford backend."""
+
 from itertools import product
 
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates, set_backend
-from qibo.backends import CliffordBackend, GlobalBackend, NumpyBackend
+from qibo.backends import (
+    CliffordBackend,
+    GlobalBackend,
+    NumpyBackend,
+    PyTorchBackend,
+    TensorflowBackend,
+)
 from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -13,12 +21,35 @@ numpy_bkd = NumpyBackend()
 
 
 def construct_clifford_backend(backend):
-    if backend.__class__.__name__ in ["TensorflowBackend", "CuQuantumBackend"]:
+    if (
+        isinstance(backend, (TensorflowBackend, PyTorchBackend))
+        or backend.__class__.__name__ == "CuQuantumBackend"
+    ):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)
-        pytest.skip("Clifford backend not defined for the this engine.")
+        pytest.skip("Clifford backend not defined for this engine.")
 
     return CliffordBackend(_get_engine_name(backend))
+
+
+def test_set_backend(backend):
+    clifford_bkd = construct_clifford_backend(backend)
+    platform = _get_engine_name(backend)
+    set_backend("clifford", platform=platform)
+    assert isinstance(GlobalBackend(), CliffordBackend)
+    global_platform = GlobalBackend().platform
+    assert global_platform == platform
+
+
+def test_global_backend(backend):
+    construct_clifford_backend(backend)
+    set_backend(backend.name, platform=backend.platform)
+    clifford_bkd = CliffordBackend()
+    target = (
+        GlobalBackend().name if backend.name == "numpy" else GlobalBackend().platform
+    )
+    assert clifford_bkd.platform == target
+    set_backend("numpy")
 
 
 THETAS_1Q = [
@@ -117,12 +148,17 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
     backend.set_seed(2024)
     nqubits, nshots = 3, 200
     clifford_bkd = construct_clifford_backend(backend)
+
     c = random_clifford(nqubits, seed=1, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
+
+    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
+
+    clifford_bkd.set_seed(2024)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
@@ -154,10 +190,15 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
             backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
 
 
-def test_collapsing_measurements(backend):
+@pytest.mark.parametrize("seed", [2024])
+def test_collapsing_measurements(backend, seed):
+    backend.set_seed(2024)
     clifford_bkd = construct_clifford_backend(backend)
-    gate_queue = random_clifford(3, density_matrix=True, backend=backend).queue
-    measured_qubits = np.random.choice(range(3), size=2, replace=False)
+    gate_queue = random_clifford(
+        3, density_matrix=True, seed=seed, backend=backend
+    ).queue
+    local_state = np.random.default_rng(seed)
+    measured_qubits = local_state.choice(range(3), size=2, replace=False)
     c1 = Circuit(3)
     c2 = Circuit(3, density_matrix=True)
     for i, g in enumerate(gate_queue):
@@ -169,8 +210,13 @@ def test_collapsing_measurements(backend):
             c2.add(g)
     c1.add(gates.M(*range(3)))
     c2.add(gates.M(*range(3)))
-    clifford_res = clifford_bkd.execute_circuit(c1, nshots=1000)
-    numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
+
+    clifford_bkd.set_seed(seed)
+    clifford_res = clifford_bkd.execute_circuit(c1, nshots=100)
+
+    numpy_bkd.set_seed(seed)
+    numpy_res = numpy_bkd.execute_circuit(c2, nshots=100)
+
     backend.assert_allclose(
         clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
     )
@@ -214,20 +260,11 @@ def test_bitflip_noise(backend):
     )
 
 
-def test_set_backend(backend):
-    clifford_bkd = construct_clifford_backend(backend)
-    platform = _get_engine_name(backend)
-    set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().platform
-    assert global_platform == platform
-
-
 @pytest.mark.parametrize("seed", [2024])
 def test_noise_channels(backend, seed):
-    clifford_bkd = construct_clifford_backend(backend)
-
     backend.set_seed(seed)
+
+    clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
     noise = NoiseModel()
@@ -243,6 +280,7 @@ def test_noise_channels(backend, seed):
     c = noise.apply(c)
     c_copy = noise.apply(c_copy)
 
+    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c)
     clifford_result = clifford_bkd.execute_circuit(c_copy)
 
