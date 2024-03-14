@@ -251,9 +251,9 @@ def test_set_backend(backend):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_noise_channels(backend, seed):
-    clifford_bkd = construct_clifford_backend(backend)
-
     backend.set_seed(seed)
+
+    clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
     noise = NoiseModel()
@@ -269,6 +269,7 @@ def test_noise_channels(backend, seed):
     c = noise.apply(c)
     c_copy = noise.apply(c_copy)
 
+    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c)
     clifford_result = clifford_bkd.execute_circuit(c_copy)
 

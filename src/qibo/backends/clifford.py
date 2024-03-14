@@ -144,7 +144,9 @@ class CliffordBackend(NumpyBackend):
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
-        index = np.random.choice(range(len(probabilities)), size=1, p=probabilities)[0]
+        index = self.np.random.choice(
+            range(len(probabilities)), size=1, p=probabilities
+        )[0]
         if index != len(channel.gates):
             gate = channel.gates[index]
             state = gate.apply_clifford(self, state, nqubits)
