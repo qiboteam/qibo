@@ -386,6 +386,14 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
+Entangling layer
+""""""""""""""""
+
+Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+
+.. autofunction:: qibo.models.encodings.entangling_layer
+
+
 .. _error-mitigation:
 
 Error Mitigation
