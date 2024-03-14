@@ -19,8 +19,10 @@ def test_parametrizedgates_class():
 
 
 def test_queue_class():
+    from qibo.callbacks import EntanglementEntropy
     from qibo.models.circuit import _Queue
 
+    entropy = EntanglementEntropy([0])
     queue = _Queue(4)
     gatelist = [
         gates.H(0),
@@ -29,12 +31,14 @@ def test_queue_class():
         gates.H(2),
         gates.CNOT(1, 2),
         gates.Y(3),
+        gates.CallbackGate(entropy),
     ]
     for g in gatelist:
         queue.append(g)
     assert queue.moments == [
         [gatelist[0], gatelist[1], gatelist[3], gatelist[5]],
         [gatelist[2], gatelist[4], gatelist[4], None],
+        [gatelist[6] for _ in range(4)],
     ]
 
 

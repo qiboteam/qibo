@@ -1,10 +1,10 @@
 """Module with functions that encode classical data into quantum circuits."""
 
 import math
+from inspect import signature
 from typing import Optional, Union
 
 import numpy as np
-from scipy.stats import rv_continuous
 
 from qibo import gates
 from qibo.config import raise_error
@@ -227,6 +227,10 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        _ProbabilityDistributionGaussianLoader,
+    )
+
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
@@ -245,6 +249,115 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
         phases.extend(sampler.rvs(depth=depth, size=len(row)))
 
     circuit.set_parameters(phases)
+
+    return circuit
+
+
+def entangling_layer(
+    nqubits: int,
+    architecture: str = "diagonal",
+    entangling_gate: Union[str, gates.Gate] = "CNOT",
+    closed_boundary: bool = False,
+):
+    """Creates a layer of two-qubit, entangling gates.
+
+    If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        architecture (str, optional): Architecture of the entangling layer.
+            Options are ``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+            Defaults to ``"diagonal"``.
+        entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
+            in the entangling layer. If ``entangling_gate`` is a parametrized gate,
+            all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
+        closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
+            to the entangling layer. Defaults to ``False``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
+    """
+
+    if not isinstance(nqubits, int):
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+
+    if nqubits <= 0.0:
+        raise_error(
+            ValueError, f"nqubits must be a positive integer, but it is {nqubits}."
+        )
+
+    if not isinstance(architecture, str):
+        raise_error(
+            TypeError,
+            f"``architecture`` must be type str, but it is type {type(architecture)}.",
+        )
+
+    if architecture not in ["diagonal", "shifted", "even-layer", "odd-layer"]:
+        raise_error(
+            NotImplementedError,
+            f"``architecture`` {architecture} not found.",
+        )
+
+    if not isinstance(closed_boundary, bool):
+        raise_error(
+            TypeError,
+            f"closed_boundary must be type bool, but it is type {type(closed_boundary)}.",
+        )
+
+    gate = (
+        getattr(gates, entangling_gate)
+        if isinstance(entangling_gate, str)
+        else entangling_gate
+    )
+
+    if gate.__name__ == "GeneralizedfSim":
+        raise_error(
+            NotImplementedError,
+            "This function does not support the ``GeneralizedfSim`` gate.",
+        )
+
+    # Finds the number of correct number of parameters to initialize the gate class.
+    parameters = list(signature(gate).parameters)
+
+    if "q2" in parameters:
+        raise_error(
+            NotImplementedError, f"This function does not accept three-qubit gates."
+        )
+
+    # If gate is parametrized, sets all angles to 0.0
+    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
+    circuit = Circuit(nqubits)
+
+    if architecture == "diagonal":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(nqubits - 1)
+        )
+    elif architecture == "even-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+    elif architecture == "odd-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+    else:
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+
+    if closed_boundary:
+        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
 
     return circuit
 
@@ -334,13 +447,9 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     return phases
 
 
-class _ProbabilityDistributionGaussianLoader(rv_continuous):
-    """Probability density function for sampling phases of
-    the RBS gates as a function of circuit depth."""
+def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
+    """Returns two-qubit gate initialized with or without phases."""
+    if params is not None:
+        return gate(q0, q1, *params)
 
-    def _pdf(self, theta: float, depth: int):
-        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
-
-        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
-
-        return amplitude * probability / 4
+    return gate(q0, q1)
