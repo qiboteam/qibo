@@ -33,6 +33,7 @@ numpy = "^1.26.4"
 networkx = "^3.2.1"
 cvxpy = { version = "^1.4.2", optional = true }
 tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
+torch = { version = "^2.1.1", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -67,8 +68,9 @@ dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
+torch = "^2.1.1"
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
 

@@ -63,9 +63,8 @@ def _DistributedQFT(nqubits, accelerators=None):
         if icrit < circuit.nglobal:  # pylint: disable=E1101
             raise_error(
                 NotImplementedError,
-                "Cannot implement QFT for {} qubits "
-                "using {} global qubits."
-                "".format(nqubits, circuit.nglobal),
+                f"Cannot implement QFT for {nqubits} qubits "
+                + f"using {circuit.nglobal} global qubits.",
             )  # pylint: disable=E1101
 
     for i1 in range(nqubits):
