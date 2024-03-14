@@ -1689,3 +1689,28 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
 
 
 ###############################################################################
+
+####################### Test Clifford updates #################################
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.RX(0, 0),
+        gates.RY(0, 0),
+        gates.RZ(0, 0),
+        gates.CRX(0, 1, 0),
+        gates.CRY(0, 1, 0),
+        gates.CRZ(0, 1, 0),
+    ],
+)
+def test_clifford_condition_update(backend, gate):
+    """Test clifford condition update if setting new angle into the rotations."""
+    assert gate.clifford == True
+    gate.parameters = 0.5
+    assert gate.clifford == False
+    gate.parameters = np.pi
+    assert gate.clifford == True
+
+
+###############################################################################
