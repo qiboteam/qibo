@@ -503,7 +503,7 @@ class Align(Gate):
 
 
 def is_clifford_given_angle(angle):
-    """Helper function to update Clifford boolean condition according to the given angle ``theta``."""
+    """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
     if isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer():
         return True
     else:
