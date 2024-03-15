@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import GlobalBackend, _check_backend
+from qibo.backends import GlobalBackend, _check_backend_and_local_state, _check_backend
 from qibo.config import raise_error
 
 
@@ -110,6 +110,7 @@ def ZNE(
     insertion_gate="CNOT",
     readout=None,
     qubit_map=None,
+    seed=None,
     backend=None,
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
@@ -136,7 +137,11 @@ def ZNE(
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. 
+            Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -148,7 +153,7 @@ def ZNE(
         1. K. Temme, S. Bravyi et al, *Error mitigation for short-depth quantum circuits*.
            `arXiv:1612.02058 [quant-ph] <https://arxiv.org/abs/1612.02058>`_.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if readout is None:
         readout = {}
@@ -165,6 +170,7 @@ def ZNE(
             nshots,
             readout,
             qubit_map,
+            seed=local_state,
             backend=backend,
         )
         expected_values.append(val)
@@ -178,6 +184,7 @@ def sample_training_circuit_cdr(
     circuit,
     replacement_gates: list = None,
     sigma: float = 0.5,
+    seed=None,
     backend=None,
 ):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
@@ -190,6 +197,9 @@ def sample_training_circuit_cdr(
             form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
             ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
         sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -197,7 +207,7 @@ def sample_training_circuit_cdr(
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
@@ -221,7 +231,7 @@ def sample_training_circuit_cdr(
         distance.append(
             np.linalg.norm(
                 gate.matrix(backend)
-                - [rep_gate.matrix(backend) for rep_gate in rep_gates],
+                - backend.cast([rep_gate.matrix(backend) for rep_gate in rep_gates]),
                 ord="fro",
                 axis=(1, 2),
             )
@@ -229,20 +239,23 @@ def sample_training_circuit_cdr(
 
     distance = np.vstack(distance)
     prob = np.exp(-(distance**2) / sigma**2)
+    prob = backend.cast(prob, dtype=prob.dtype)
 
-    index = np.random.choice(
+    index = local_state.choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
-        p=prob.sum(-1) / prob.sum(),
+        p=backend.to_numpy(backend.np.sum(prob, -1) / backend.np.sum(prob)),
     )
 
     gates_to_replace = np.array([gates_to_replace[i] for i in index])
     prob = [prob[i] for i in index]
+    prob = backend.cast(prob, dtype=prob[0].dtype)
+    prob = backend.to_numpy(prob)
 
     replacement = np.array([replacement[i] for i in index])
     replacement = [
-        replacement[i][np.random.choice(range(len(p)), size=1, p=p / p.sum())[0]]
+        replacement[i][local_state.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
         for i, p in enumerate(prob)
     ]
     replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
@@ -264,6 +277,7 @@ def CDR(
     full_output: bool = False,
     readout=None,
     qubit_map=None,
+    seed=None,
     backend=None,
 ):
     """Runs the Clifford Data Regression error mitigation method.
@@ -287,7 +301,11 @@ def CDR(
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. 
+            Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -302,13 +320,14 @@ def CDR(
         1. P. Czarnik, A. Arrasmith et al, *Error mitigation with Clifford quantum-circuit data*.
            `arXiv:2005.10189 [quant-ph] <https://arxiv.org/abs/2005.10189>`_.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if readout is None:
         readout = {}
 
     training_circuits = [
-        sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
+        sample_training_circuit_cdr(circuit, seed=local_state, backend=backend)
+        for _ in range(n_training_samples)
     ]
 
     train_val = {"noise-free": [], "noisy": []}
@@ -317,18 +336,18 @@ def CDR(
         val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         val = get_expectation_val_with_readout_mitigation(
-            circ, observable, noise_model, nshots, readout, qubit_map, backend=backend
+            circ, observable, noise_model, nshots, readout, qubit_map, seed=local_state, backend=backend
         )
         train_val["noisy"].append(val)
 
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
 
     val = get_expectation_val_with_readout_mitigation(
-        circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
+        circuit, observable, noise_model, nshots, readout, qubit_map, seed=local_state, backend=backend
     )
     mit_val = model(val, *optimal_params)
 
-    if full_output is True:
+    if full_output:
         return mit_val, val, optimal_params, train_val
 
     return mit_val
@@ -346,6 +365,7 @@ def vnCDR(
     full_output: bool = False,
     readout=None,
     qubit_map=None,
+    seed=None,
     backend=None,
 ):
     """Runs the variable-noise Clifford Data Regression error mitigation method.
@@ -374,6 +394,9 @@ def vnCDR(
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -389,13 +412,14 @@ def vnCDR(
         1. A. Lowe, MH. Gordon et al, *Unified approach to data-driven quantum error mitigation*.
            `arXiv:2011.01157 [quant-ph] <https://arxiv.org/abs/2011.01157>`_.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if readout is None:
         readout = {}
 
     training_circuits = [
-        sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
+        sample_training_circuit_cdr(circuit, seed=local_state, backend=backend) 
+        for _ in range(n_training_samples)
     ]
     train_val = {"noise-free": [], "noisy": []}
 
@@ -412,13 +436,14 @@ def vnCDR(
                 nshots,
                 readout,
                 qubit_map,
+                seed=local_state,
                 backend=backend,
             )
             train_val["noisy"].append(val)
 
     noisy_array = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
 
-    params = np.random.rand(len(noise_levels))
+    params = local_state.random(len(noise_levels))
     optimal_params = curve_fit(model, noisy_array.T, train_val["noise-free"], p0=params)
 
     val = []
@@ -431,13 +456,14 @@ def vnCDR(
             nshots,
             readout,
             qubit_map,
+            seed=local_state,
             backend=backend,
         )
         val.append(expval)
 
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
 
-    if full_output is True:
+    if full_output:
         return mit_val, val, optimal_params, train_val
 
     return mit_val
@@ -567,9 +593,14 @@ def apply_randomized_readout_mitigation(
     nshots: int = 10000,
     ncircuits: int = 10,
     qubit_map=None,
+    seed=None,
     backend=None,
 ):
-    """Readout mitigation method that transforms the bias in an expectation value into a measurable multiplicative factor. This factor can be eliminated at the expense of increased sampling complexity for the observable.
+    """Readout mitigation method that transforms the bias in an expectation value into a 
+    measurable multiplicative factor. 
+    
+    This factor can be eliminated at the expense of increased sampling complexity 
+    for the observable.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
@@ -578,7 +609,11 @@ def apply_randomized_readout_mitigation(
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
             ``int(nshots / ncircuits)`` shots. Defaults to 10.
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. 
+            Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -589,7 +624,8 @@ def apply_randomized_readout_mitigation(
 
 
     Reference:
-        1. Ewout van den Berg, Zlatko K. Minev et al, *Model-free readout-error mitigation for quantum expectation values*.
+        1. Ewout van den Berg, Zlatko K. Minev et al, 
+        *Model-free readout-error mitigation for quantum expectation values*.
            `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
@@ -597,7 +633,7 @@ def apply_randomized_readout_mitigation(
         random_pauli,
     )
 
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     meas_qubits = circuit.measurements[0].qubits
     nshots_r = int(nshots / ncircuits)
@@ -607,7 +643,7 @@ def apply_randomized_readout_mitigation(
         circuit_c.queue.pop()
         cal_circuit = Circuit(circuit.nqubits, density_matrix=True)
 
-        x_gate = random_pauli(circuit.nqubits, 1, subset=["I", "X"]).queue
+        x_gate = random_pauli(circuit.nqubits, 1, subset=["I", "X"], seed=local_state).queue
 
         error_map = {}
         for j, gate in enumerate(x_gate):
@@ -646,6 +682,7 @@ def get_expectation_val_with_readout_mitigation(
     nshots: int = 10000,
     readout=None,
     qubit_map=None,
+    seed=None,
     backend=None,
 ):
     """
@@ -662,21 +699,25 @@ def get_expectation_val_with_readout_mitigation(
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. 
+            Defaults to ``None``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (qibo.backends.abstract.Backend, optional): the backend to be used in the execution.
             If None, it uses the global backend. Defaults to ``None``.
 
     Returns:
         float: the mitigated expectation value of the observable.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if readout is None:  # pragma: no cover
         readout = {}
 
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-            circuit, noise_model, nshots, readout["ncircuits"], backend
+            circuit, noise_model, nshots, readout["ncircuits"], seed=local_state, backend=backend
         )
     else:
         circuit_result = _execute_circuit(
@@ -699,12 +740,16 @@ def get_expectation_val_with_readout_mitigation(
 
 def sample_clifford_training_circuit(
     circuit,
+    seed=None,
     backend=None,
 ):
     """Samples a training circuit for CDR by susbtituting all the non-Clifford gates.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): circuit to sample from.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -716,7 +761,7 @@ def sample_clifford_training_circuit(
         random_clifford,
     )
 
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     non_clifford_gates_indices = [
         i
@@ -733,7 +778,7 @@ def sample_clifford_training_circuit(
         if isinstance(gate, gates.M):
             for q in gate.qubits:
                 gate_rand = gates.Unitary(
-                    random_clifford(1, backend=backend, return_circuit=False),
+                    random_clifford(1, return_circuit=False, seed=local_state, backend=backend),
                     q,
                 )
                 gate_rand.clifford = True
@@ -743,7 +788,7 @@ def sample_clifford_training_circuit(
             if i in non_clifford_gates_indices:
                 gate = gates.Unitary(
                     random_clifford(
-                        len(gate.qubits), backend=backend, return_circuit=False
+                        len(gate.qubits), return_circuit=False, seed=local_state, backend=backend
                     ),
                     *gate.qubits,
                 )
@@ -753,13 +798,17 @@ def sample_clifford_training_circuit(
     return sampled_circuit
 
 
-def error_sensitive_circuit(circuit, observable, backend=None):
+def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     """
     Generates a Clifford circuit that preserves the same circuit frame as the input circuit, and stabilizes the specified Pauli observable.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
-        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): Pauli observable to be measured.
+        observable (:class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`): 
+            Pauli observable to be measured.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -773,15 +822,16 @@ def error_sensitive_circuit(circuit, observable, backend=None):
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
+    from qibo import matrices  # pylint: disable=import-outside-toplevel
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
         comp_basis_to_pauli,
         random_clifford,
         vectorization,
     )
 
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    sampled_circuit = sample_clifford_training_circuit(circuit, backend=backend)
+    sampled_circuit = sample_clifford_training_circuit(circuit, seed=local_state, backend=backend)
     unitary_matrix = sampled_circuit.unitary(backend=backend)
     num_qubits = sampled_circuit.nqubits
 
@@ -803,10 +853,10 @@ def error_sensitive_circuit(circuit, observable, backend=None):
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
 
     pauli_gates = {
-        "I": backend.cast(gates.I(0).matrix(backend=backend)),
-        "X": backend.cast(gates.X(0).matrix(backend=backend)),
-        "Y": backend.cast(gates.Y(0).matrix(backend=backend)),
-        "Z": backend.cast(gates.Z(0).matrix(backend=backend)),
+        "I": backend.cast(matrices.I, dtype=matrices.I.dtype),
+        "X": backend.cast(matrices.X, dtype=matrices.X.dtype),
+        "Y": backend.cast(matrices.Y, dtype=matrices.Y.dtype),
+        "Z": backend.cast(matrices.Z, dtype=matrices.Z.dtype),
     }
 
     adjustment_gates = []
@@ -816,7 +866,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
         while backend.np.any(
             backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
         ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
-            random_init = random_clifford(1, backend=backend, return_circuit=False)
+            random_init = random_clifford(1, return_circuit=False, seed=local_state, backend=backend)
             observable_i = (
                 backend.np.conj(backend.np.transpose(random_init, (1, 0)))
                 @ pauli_gates[observable_pauli[i]]
@@ -846,6 +896,7 @@ def ICS(
     nshots=int(1e4),
     n_training_samples=10,
     full_output=False,
+    seed=None,
     backend=None,
 ):
     """
@@ -860,12 +911,16 @@ def ICS(
             *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
-        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used. 
+            Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
         nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
         n_training_samples (int, optional): the number of training samples. Defaults to 10.
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (qibo.backends.abstract.Backend, optional): the backend to be used in the execution.
             If None, it uses the global backend. Defaults to ``None``.
 
@@ -881,7 +936,7 @@ def ICS(
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if readout is None:
         readout = {}
@@ -890,7 +945,7 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, backend=backend)[0]
+        error_sensitive_circuit(circuit, observable, seed=local_state, backend=backend)[0]
         for _ in range(n_training_samples)
     ]
 
@@ -908,6 +963,7 @@ def ICS(
             nshots,
             readout,
             qubit_map,
+            seed=local_state,
             backend=backend,
         )
 
@@ -919,7 +975,7 @@ def ICS(
     dep_param_std = np.std(lambda_list)
 
     noisy_expectation = get_expectation_val_with_readout_mitigation(
-        circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
+        circuit, observable, noise_model, nshots, readout, qubit_map, seed=local_state, backend=backend
     )
     one_dep_squared = (1 - dep_param) ** 2
     dep_std_squared = dep_param_std**2
