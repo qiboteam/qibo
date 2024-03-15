@@ -576,7 +576,8 @@ class QuantumComb(QuantumNetwork):
         self,
         tensor,
         partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
+        *,
+        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
         pure: bool = False,
         backend=None,
     ):
@@ -591,11 +592,11 @@ class QuantumComb(QuantumNetwork):
                 "A quantum comb should only contain equal number of input and output systems. "
                 + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
             )
-        if system_output is not None:
+        if system_input is not None:
             warning("system_output is ignored for QuantumComb")
 
         super().__init__(
-            tensor, partition, [False, True] * (len(partition) // 2), pure, backend
+            tensor, partition, [True, False] * (len(partition) // 2), pure, backend
         )
 
     def is_causal(
@@ -622,29 +623,37 @@ class QuantumComb(QuantumNetwork):
         Returns:
             bool: Causal order condition.
         """
-        if precision_tol < 0.0:
-            raise_error(
-                ValueError,
-                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
-            )
+        dim_out = self.partition[-1]
+        dim_in = self.partition[-2]
 
-        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
-            order = "euclidean"
+        reduced = np.tensordot(self.full(), trace(dim_out).full(), axes=1)
+        print(reduced)
+        sub_comb = np.tensordot(reduced, trace(dim_in).full(), axes=1)
+        print(sub_comb)
 
-        self._tensor = self.full()
-        self._pure = False
+        expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
+        print(expected)
+        norm = self._backend.calculate_norm((reduced - expected), order=order)
+        if norm > precision_tol:
+            return False
+        elif len(self.partition) == 2:
+            return True
+        else:
+            return QuantumComb(
+                sub_comb, self.partition[:-2], pure=False, backend=self._backend
+            ).is_causal(order, precision_tol)
 
-        partial_trace = np.einsum("jklk -> jl", self._tensor)
-        identity = self._backend.cast(
-            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
-        )
-
-        norm = self._backend.calculate_norm_density_matrix(
-            partial_trace - identity,
-            order=order,
-        )
-
-        return float(norm) <= precision_tol
+    @classmethod
+    def from_nparray(
+        cls, tensor, partition=None, pure=False, backend=None, inverse=False
+    ):
+        comb = super().from_nparray(tensor, partition, None, pure, backend)
+        if (
+            inverse
+        ):  # Convert mathmetical convention of Choi operator to physical convention
+            comb.partition = comb.partition[::-1]
+            comb._tensor = np.transpose(comb._tensor)
+        return comb
 
 
 class QuantumChannel(QuantumNetwork):
@@ -778,6 +787,7 @@ def link_product(
     *operands: QuantumNetwork,
     backend=None,
     surpress_warning=False,
+    casting: bool = True,
 ):
     """Link product between two quantum networks.
 
@@ -865,6 +875,17 @@ def link_product(
                 continue
 
     new_tensor = np.einsum(subscripts, *tensors)
+
+    if casting:
+        try:
+            network = QuantumChannel(new_tensor, partition, backend=backend)
+            return network
+        except:
+            try:
+                network = QuantumComb(new_tensor, partition, backend=backend)
+                return network
+            except:
+                pass
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
 
