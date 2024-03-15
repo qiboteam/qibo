@@ -82,7 +82,6 @@ class DoubleBracketIteration:
         self.mode = mode
         self.scheduling = scheduling
         self.cost = cost
-        self.cost_str = cost.name
         self.state = state
 
     def __call__(
@@ -100,7 +99,7 @@ class DoubleBracketIteration:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
+                1.0j*step,
                 self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
@@ -115,6 +114,7 @@ class DoubleBracketIteration:
         operator_dagger = self.backend.cast(
             np.matrix(self.backend.to_numpy(operator)).getH()
         )
+
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
 
     @staticmethod
@@ -140,19 +140,16 @@ class DoubleBracketIteration:
         return np.sqrt(
             np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h)))
         )
-    @property
-    def least_squares(self,d: np.array):
-        """Least squares cost function."""
-        H = self.backend.cast(
-            np.matrix(self.backend.to_numpy(self.h)).getH()
-        )
-        D = d
-        return -(np.linalg.trace(H@D)-0.5(np.linalg.norm(H)**2+np.linalg.norm(D)**2))
 
     @property
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    def least_squares(self, D: np.array):
+        """Least squares cost function."""
+        H = self.h.matrix
+        return -np.real(np.trace(H@D)-0.5*(np.linalg.norm(H)**2+np.linalg.norm(D)**2))
 
     def choose_step(
         self,
@@ -192,7 +189,7 @@ class DoubleBracketIteration:
         if self.cost == DoubleBracketCostFunction.off_diagonal_norm:
             loss = self.off_diagonal_norm
         elif self.cost == DoubleBracketCostFunction.least_squares:
-            loss = self.least_squares(d=d)
+            loss = self.least_squares(d)
         else:
             loss = self.energy_fluctuation(self.state)
 
@@ -213,7 +210,9 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        return self.h.energy_fluctuation(state)
+        state_vector = np.zeros(len(self.h.matrix))
+        state_vector[state] = 1.0
+        return np.real(self.h.energy_fluctuation(state_vector))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
