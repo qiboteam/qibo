@@ -202,6 +202,7 @@ def _check_backend(backend):
 
     return backend
 
+
 def _check_backend_and_local_state(seed, backend):
     if (
         seed is not None
