@@ -736,7 +736,7 @@ def sample_clifford_training_circuit(
                     random_clifford(1, backend=backend, return_circuit=False),
                     q,
                 )
-                gate_rand.clifford = True
+                gate_rand._clifford = True
                 sampled_circuit.add(gate_rand)
             sampled_circuit.add(gate)
         else:
@@ -747,7 +747,7 @@ def sample_clifford_training_circuit(
                     ),
                     *gate.qubits,
                 )
-                gate.clifford = True
+                gate._clifford = True
             sampled_circuit.add(gate)
 
     return sampled_circuit
@@ -824,7 +824,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
             )
 
         adjustment_gate = gates.Unitary(random_init, i)
-        adjustment_gate.clifford = True
+        adjustment_gate._clifford = True
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
