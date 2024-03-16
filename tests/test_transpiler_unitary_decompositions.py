@@ -142,7 +142,7 @@ def test_cnot_decomposition(backend):
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz)
     c = Circuit(2)
-    c.add(cnot_decomposition(0, 1, hx, hy, hz))
+    c.add(cnot_decomposition(0, 1, hx, hy, hz, backend))
     final_matrix = c.unitary(backend)
     backend.assert_allclose(final_matrix, target_matrix, atol=PRECISION_TOL)
 
@@ -151,7 +151,7 @@ def test_cnot_decomposition_light(backend):
     hx, hy = np.random.random(2)
     target_matrix = bell_unitary(hx, hy, 0)
     c = Circuit(2)
-    c.add(cnot_decomposition_light(0, 1, hx, hy))
+    c.add(cnot_decomposition_light(0, 1, hx, hy, backend))
     final_matrix = c.unitary(backend)
     backend.assert_allclose(final_matrix, target_matrix, atol=PRECISION_TOL)
 
