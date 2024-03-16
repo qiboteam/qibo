@@ -80,7 +80,7 @@ def test_v_decomposition(backend, seed):
             calculate_psi(unitary, backend=backend)
     else:
         psi, _ = calculate_psi(unitary, backend=backend)
-        va, vb = calculate_single_qubit_unitaries(psi)
+        va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
         assert_single_qubits(backend, psi, va, vb)
 
 
@@ -94,7 +94,9 @@ def test_u_decomposition(backend, seed):
     else:
         psi, eigvals = calculate_psi(unitary, backend=backend)
         psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
-        ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde)
+        ua_dagger, ub_dagger = calculate_single_qubit_unitaries(
+            psi_tilde, backend=backend
+        )
         assert_single_qubits(backend, psi_tilde, ua_dagger, ub_dagger)
 
 

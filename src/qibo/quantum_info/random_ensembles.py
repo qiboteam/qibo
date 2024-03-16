@@ -7,7 +7,7 @@ from typing import Optional, Union
 import numpy as np
 from scipy.stats import rv_continuous
 
-from qibo import Circuit, gates
+from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend, _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
@@ -810,7 +810,11 @@ def random_pauli(
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    complete_set = {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
+    complete_set = (
+        {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
+        if return_circuit
+        else {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    )
 
     if subset is None:
         subset = complete_set
@@ -839,13 +843,9 @@ def random_pauli(
                 if subset[column_item] != gates.I:
                     gate_grid.add(subset[column_item](qubit))
     else:
-        gate_grid = np.array(
-            [
-                [subset[column_item](qubit).matrix(backend) for column_item in row]
-                for qubit, row in zip(qubits, indexes)
-            ]
+        gate_grid = backend.cast(
+            [[subset[column_item] for column_item in row] for row in indexes]
         )
-        gate_grid = backend.cast(gate_grid, dtype=gate_grid.dtype)
 
     return gate_grid
 
