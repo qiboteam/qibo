@@ -391,6 +391,12 @@ Entangling layer
 
 Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
 
+.. image:: ../_static/entangling_layer.png
+   :width: 1867px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
 .. autofunction:: qibo.models.encodings.entangling_layer
 
 
