@@ -390,12 +390,26 @@ Entangling layer
 """"""""""""""""
 
 Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+With the exception of :class:`qibo.gates.gates.GeneralizedfSim`, 
+can be set to any of the two-qubit gates implemented in ``qibo``.
+If the chosen gate is parametrized, all phases are set to :math:`0.0`.
+Note that these phases can be updated a posterior by using 
+:meth:`qibo.models.Circuit.set_parameters`.
+There are four possible choices of layer ``architechture``: 
+``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+For instance, we show below an example for each architecture and ``nqubits = 6``.
+
 
 .. image:: ../_static/entangling_layer.png
-   :width: 1867px
+   :width: 2500px
    :height: 1552px
    :scale: 30 %
    :align: center
+
+
+If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
+with the last qubit as the control qubit and the first qubit as a target qubit.
+
 
 .. autofunction:: qibo.models.encodings.entangling_layer
 
@@ -1633,6 +1647,7 @@ We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ pac
 It is possible to run Clifford circuits using `stim` as an engine:
 
 .. code-block::  python
+
     from qibo.backends import CliffordBackend
     from qibo.quantum_info import Clifford, random_clifford
 
