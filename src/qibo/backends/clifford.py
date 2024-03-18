@@ -299,12 +299,12 @@ class CliffordBackend(NumpyBackend):
         if collapse:
             samples = [
                 self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)
-            ]  # parallelize?
+            ]  
             samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
             samples = [
                 self.engine.M(state, qubits, nqubits) for _ in range(nshots)
-            ]  # parallelize?
+            ]  
 
         return self.engine.cast(samples, dtype=int)
 
