@@ -426,6 +426,7 @@ def _random_outcome(state, p, q, nqubits):
 def _get_dim(nqubits):
     return 2 * nqubits + 1
 
+
 @cache
 def _get_packed_size(n):
     return np.ceil(n / 8).astype(int)
@@ -467,8 +468,8 @@ def _init_state_for_measurements(state, nqubits, collapse):
         return _unpackbits(state, axis=0)[: _get_dim(nqubits)]
     else:
         return state.copy()
-    
-    
+
+
 # valid for a standard basis measurement only
 def M(state, qubits, nqubits, collapse=False):
     sample = []
