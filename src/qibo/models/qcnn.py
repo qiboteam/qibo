@@ -59,6 +59,21 @@ class QuantumCNN:
         twoqubitansatz=None,
         copy_init_state=None,
     ):
+        """
+        Initializes the QuantumCNN object.
+
+        Args:
+            nqubits (int): The number of qubits in the QCNN.
+            nlayers (int): The number of layers in the QCNN.
+            nclasses (int, optional): The number of classes for the classification task. Defaults to 2.
+            params (np.ndarray, optional): The initial parameters for the QCNN. If None, random parameters are generated. Defaults to None.
+            twoqubitansatz (qibo.core.circuit.Circuit, optional): A two-qubit ansatz for the convolutional layers. If None, a default ansatz is used. Defaults to None.
+            copy_init_state (bool, optional): Whether to copy the initial state for each shot in the simulation. If None, the behavior depends on the backend. Defaults to None.
+
+        Raises:
+            ValueError: If nqubits is not larger than 1.
+        """
+
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
@@ -262,9 +277,6 @@ class QuantumCNN:
         """
         Args:
             theta: list or numpy.array with the biases and the angles to be used in the circuit.
-            nlayers: int number of layers of the varitional circuit ansatz.
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit.
-                if False, parameterized Ry gates are used in the circuit (default=False).
         Returns:
             Circuit implementing the variational ansatz for angles "theta".
         """
@@ -318,7 +330,6 @@ class QuantumCNN:
         """
         Args:
             theta: list or numpy.array with the biases and the angles to be used in the circuit.
-            nlayers: int number of layers of the varitional circuit ansatz.
             data: numpy.array data[page][word]  (this is an array of kets).
             labels: list or numpy.array with the labels of the quantum states to be classified.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
