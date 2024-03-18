@@ -1,0 +1,44 @@
+import re
+
+import numpy as np
+import qulacs
+from qulacs import Observable, QuantumCircuitSimulator, converter
+
+from qibo import __version__
+from qibo.backends import NumpyBackend
+from qibo.result import QuantumState
+
+
+class QulacsBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "qulacs"
+        self.versions = {"qibo": __version__, "qulacs": qulacs.__version__}
+
+    def circuit_to_qulacs(self, circuit: "qibo.Circuit") -> qulacs.QuantumCircuit:
+        qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
+        return converter.convert_QASM_to_qulacs_circuit(qasm_str.splitlines())
+
+    def execute_circuit(
+        self,
+        circuit: "qibo.Circuit",
+        initial_state: np.ndarray = None,
+        nshots: int = 1000,
+    ):
+        circ = self.circuit_to_qulacs(circuit)
+        state = (
+            qulacs.DensityMatrix(circuit.nqubits)
+            if circuit.density_matrix
+            else qulacs.QuantumState(circuit.nqubits)
+        )
+        sim = QuantumCircuitSimulator(circ, state)
+        if initial_state is not None:
+            sim.initialize_state(initial_state)
+        sim.simulate()
+        state = state.get_matrix() if circuit.density_matrix else state.get_vector()
+        if len(circuit.measurements) > 0:
+            return CircuitResult(
+                state, circuit.measurements, backend=self, nshots=nshots
+            )
+        return QuantumState(state, backend=self)
