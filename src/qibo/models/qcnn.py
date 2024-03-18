@@ -1,3 +1,8 @@
+""" This module implements a Quantum Convolutional Neural Network (QCNN) for classification tasks. The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_ for the identification of quantum phases.
+
+The QuantumCNN class in this module provides methods to construct the QCNN.
+"""
+
 import numpy as np
 
 from qibo import gates, get_backend
