@@ -67,6 +67,8 @@ def construct_backend(backend, **kwargs):
         )
 
         return QiskitClientBackend(**kwargs)
+    elif backend == "qulacs":
+        return QulacsBackend()
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
