@@ -4,7 +4,12 @@ from typing import List
 import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.gates.abstract import Gate, ParametrizedGate
+from qibo.gates.abstract import (
+    REQUIRED_FIELDS,
+    REQUIRED_FIELDS_INIT_KWARGS,
+    Gate,
+    ParametrizedGate,
+)
 from qibo.parameter import Parameter
 
 
@@ -2357,3 +2362,32 @@ class Unitary(ParametrizedGate):
     def _dagger(self):
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
+    @property
+    def raw(self) -> dict:
+        """Serialize to dictionary.
+
+        The values used in the serialization should be compatible with a
+        JSON dump (or any other one supporting a minimal set of scalar
+        types). Though the specific implementation is up to the specific
+        gate.
+        """
+        encoded = self.__dict__
+
+        encoded_simple = {
+            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
+        }
+
+        encoded_simple["init_kwargs"] = {
+            key: value
+            for key, value in encoded_simple["init_kwargs"].items()
+            if key in REQUIRED_FIELDS_INIT_KWARGS
+        }
+
+        for value in encoded_simple:
+            if isinstance(encoded[value], set):
+                encoded_simple[value] = list(encoded_simple[value])
+
+        encoded_simple["_class"] = type(self).__name__
+
+        return encoded_simple
