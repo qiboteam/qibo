@@ -4204,7 +4204,7 @@ tests = ["coverage", "pytest", "pytest-cov"]
 name = "qulacs"
 version = "0.6.3"
 description = "Quantum circuit simulator for research"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "qulacs-0.6.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:3fc1c9e39d25e5e6b119c2b963e65da0854f1dd4df803acc7a22fa5b1f58e1e6"},
@@ -5698,4 +5698,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "ee98dae84087ac9258636f21f7214bf8db1325ddda9765856a20b5f6e8a3c76c"
+content-hash = "a72cac5347d155374424fb286e5ad65867804eaecae65549e8cc1cdd5d813ec9"

@@ -73,6 +73,7 @@ torch = "^2.1.1"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
+qulacs = "^0.6.3"
 
 [tool.poe.tasks]
 test = "pytest"
