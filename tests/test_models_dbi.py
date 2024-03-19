@@ -112,10 +112,14 @@ def test_energy_fluctuations(backend):
 
 @pytest.mark.parametrize(
     "scheduling",
-    [DoubleBracketScheduling.grid_search, DoubleBracketScheduling.hyperopt],
+    [
+        DoubleBracketScheduling.grid_search,
+        DoubleBracketScheduling.hyperopt,
+        DoubleBracketScheduling.simulated_annealing,
+    ],
 )
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_double_bracket_iteration_scheduling_grid_hyperopt(
+def test_double_bracket_iteration_scheduling_grid_hyperopt_annealing(
     backend, nqubits, scheduling
 ):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)

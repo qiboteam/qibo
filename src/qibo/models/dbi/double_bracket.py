@@ -10,6 +10,7 @@ from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
+    simulated_annealing_step,
 )
 
 
@@ -34,6 +35,9 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
+    simulated_annealing = simulated_annealing_step
+    """Use simulated annealing algorithm"""
+
 
 class DoubleBracketCostFunction(Enum):
     """Define the DBI cost function."""
@@ -44,6 +48,7 @@ class DoubleBracketCostFunction(Enum):
     """Use least squares as cost function."""
     energy_fluctuation = auto()
     """Use energy fluctuation as cost function."""
+
 
 class DoubleBracketIteration:
     """
@@ -99,7 +104,7 @@ class DoubleBracketIteration:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
-                1.0j*step,
+                1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
@@ -149,7 +154,9 @@ class DoubleBracketIteration:
     def least_squares(self, D: np.array):
         """Least squares cost function."""
         H = self.h.matrix
-        return -np.real(np.trace(H@D)-0.5*(np.linalg.norm(H)**2+np.linalg.norm(D)**2))
+        return -np.real(
+            np.trace(H @ D) - 0.5 * (np.linalg.norm(H) ** 2 + np.linalg.norm(D) ** 2)
+        )
 
     def choose_step(
         self,
