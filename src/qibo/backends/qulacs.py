@@ -2,8 +2,11 @@ import re
 
 import numpy as np
 import qulacs
-from qulacs import Observable, QuantumCircuitSimulator, converter
-from qulacs.circuit import QuantumCircuitOptimizer
+from qulacs import (  # pylint: disable=no-name-in-module
+    QuantumCircuitSimulator,
+    converter,
+)
+from qulacs.circuit import QuantumCircuitOptimizer  # pylint: disable=no-name-in-module
 
 from qibo import __version__
 from qibo.backends import NumpyBackend
@@ -18,7 +21,9 @@ class QulacsBackend(NumpyBackend):
         self.versions = {"qibo": __version__, "qulacs": qulacs.__version__}
         self.device = "CPU"
 
-    def circuit_to_qulacs(self, circuit: "qibo.Circuit") -> qulacs.QuantumCircuit:
+    def circuit_to_qulacs(
+        self, circuit: "qibo.Circuit"
+    ) -> qulacs.QuantumCircuit:  # pylint: disable=no-member
         qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
         qasm_str = re.sub(r"creg\s.+;", "", qasm_str)
         qasm_str = re.sub(r"measure\s.+;", "", qasm_str)
@@ -33,9 +38,9 @@ class QulacsBackend(NumpyBackend):
     ):
         circ = self.circuit_to_qulacs(circuit)
         state = (
-            qulacs.DensityMatrix(circuit.nqubits)
+            qulacs.DensityMatrix(circuit.nqubits)  # pylint: disable=no-member
             if circuit.density_matrix
-            else qulacs.QuantumState(circuit.nqubits)
+            else qulacs.QuantumState(circuit.nqubits)  # pylint: disable=no-member
         )
         sim = QuantumCircuitSimulator(circ, state)
         if initial_state is not None:
