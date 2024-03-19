@@ -286,12 +286,18 @@ def test_GST(backend):
     depol = NoiseModel()
     depol.add(DepolarizingError(lam))
     empty_1q, empty_2q, *approx_gates = GST(
-        gate_set, nshots=int(1e6), noise_model=depol, include_empty=True, backend=backend
+        gate_set,
+        nshots=int(1e6),
+        noise_model=depol,
+        include_empty=True,
+        backend=backend,
     )
     for target, estimate in zip(target_matrices, approx_gates):
         transf = empty_1q if estimate.shape[0] == 4 else empty_2q
         T_matrix = T if estimate.shape[0] == 4 else np.kron(T, T)
-        estimated_matrix = T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix)
+        estimated_matrix = (
+            T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix)
+        )
         backend.assert_allclose(
             target,
             estimated_matrix,
