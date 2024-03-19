@@ -397,7 +397,7 @@ Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
 There are four possible choices of layer ``architechture``:
 ``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
-For instance, we show below an example for each architecture and ``nqubits = 6``.
+For instance, we show below an example of each architecture for ``nqubits = 6``.
 
 
 .. image:: ../_static/entangling_layer.png
