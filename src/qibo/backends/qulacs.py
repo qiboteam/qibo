@@ -46,7 +46,15 @@ class QulacsBackend(NumpyBackend):
         if initial_state is not None:
             sim.initialize_state(initial_state)
         sim.simulate()
-        state = state.get_matrix() if circuit.density_matrix else state.get_vector()
+        if circuit.density_matrix:
+            dim = 2**circuit.nqubits
+            state = (
+                state.get_matrix()
+                .reshape(2 * circuit.nqubits * (2,))
+                .T.reshape(dim, dim)
+            )
+        else:
+            state = state.get_vector().reshape(circuit.nqubits * (2,)).T.ravel()
         if len(circuit.measurements) > 0:
             return CircuitResult(
                 state, circuit.measurements, backend=self, nshots=nshots

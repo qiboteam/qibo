@@ -9,8 +9,9 @@ from qibo.quantum_info import random_clifford
 numpy_bkd = NumpyBackend()
 
 
-def test_qulacs():
-    c = random_clifford(3, backend=numpy_bkd)
+@pytest.mark.parametrize("density_matrix", [True, False])
+def test_qulacs(density_matrix):
+    c = random_clifford(3, backend=numpy_bkd, density_matrix=density_matrix)
     measured_qubits = random.sample([0, 1, 2], 2)
     c.add(gates.M(*measured_qubits))
     qulacs_bkd = QulacsBackend()
