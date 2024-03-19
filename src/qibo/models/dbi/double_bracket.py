@@ -135,7 +135,7 @@ class DoubleBracketIteration:
         self,
         step_min: float = 1e-5,
         step_max: float = 1,
-        num_evals: int = 100,
+        max_evals: int = 100,
         space: Optional[np.array] = None,
         d: Optional[np.array] = None,
     ):
@@ -145,15 +145,14 @@ class DoubleBracketIteration:
         Args:
             step_min: lower bound of the search grid;
             step_max: upper bound of the search grid;
-            mnum_evals: number of iterations between step_min and step_max;
+            max_evals: number of iterations between step_min and step_max;
             d: diagonal operator for generating double-bracket iterations.
 
         Returns:
             (float): optimized best iteration step (minimizing off-diagonal norm).
         """
         if space is None:
-            space = np.linspace(step_min, step_max, num_evals)
-
+            space = np.linspace(step_min, step_max, max_evals)
         if d is None:
             d = self.diagonal_h_matrix
 
