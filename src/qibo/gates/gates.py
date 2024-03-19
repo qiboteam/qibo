@@ -29,8 +29,11 @@ class H(Gate):
         self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -58,8 +61,11 @@ class X(Gate):
         self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -171,8 +177,11 @@ class Y(Gate):
         self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -215,8 +224,11 @@ class Z(Gate):
         self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -256,8 +268,11 @@ class SX(Gate):
         self.draw_label = "SX"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -303,8 +318,11 @@ class SXDG(Gate):
         self.draw_label = "SXDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -350,8 +368,11 @@ class S(Gate):
         self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -382,8 +403,11 @@ class SDG(Gate):
         self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -468,8 +492,11 @@ class I(Gate):
         self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -980,8 +1007,11 @@ class CNOT(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1017,8 +1047,11 @@ class CY(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1063,8 +1096,11 @@ class CZ(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1491,8 +1527,11 @@ class SWAP(Gate):
         self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1523,8 +1562,11 @@ class iSWAP(Gate):
         self.draw_label = "i"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1615,8 +1657,11 @@ class FSWAP(Gate):
         self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -2165,8 +2210,11 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
@@ -2322,6 +2370,7 @@ class Unitary(ParametrizedGate):
         self.name = "Unitary" if name is None else name
         self.draw_label = "U"
         self.target_qubits = tuple(q)
+        self._clifford = False
 
         # TODO: Check that given ``unitary`` has proper shape?
         self.parameter_names = "u"
@@ -2367,6 +2416,14 @@ class Unitary(ParametrizedGate):
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
+
+    @property
+    def clifford(self):
+        return self._clifford
+
+    @clifford.setter
+    def clifford(self, value):
+        self._clifford = value
 
     def on_qubits(self, qubit_map):
         args = [self.init_args[0]]

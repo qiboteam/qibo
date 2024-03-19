@@ -46,7 +46,6 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
-        self._clifford = False
         self.unitary = False
         self._target_qubits = tuple()
         self._control_qubits = set()
@@ -62,7 +61,7 @@ class Gate:
     @property
     def clifford(self):
         """Return boolean value representing if a Gate is Clifford or not."""
-        return self._clifford
+        return False
 
     @property
     def raw(self) -> dict:
