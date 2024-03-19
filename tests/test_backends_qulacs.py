@@ -9,14 +9,13 @@ from qibo.quantum_info import random_clifford
 numpy_bkd = NumpyBackend()
 
 
-@pytest.mark.parametrize("optimize", [True, False])
-def test_qulacs(optimize):
+def test_qulacs():
     c = random_clifford(3, backend=numpy_bkd)
     measured_qubits = random.sample([0, 1, 2], 2)
     c.add(gates.M(*measured_qubits))
     qulacs_bkd = QulacsBackend()
     nshots = 1000
-    qulacs_res = qulacs_bkd.execute_circuit(c, nshots=nshots, optimize=optimize)
+    qulacs_res = qulacs_bkd.execute_circuit(c, nshots=nshots)
     numpy_res = numpy_bkd.execute_circuit(c, nshots=nshots)
     numpy_bkd.assert_allclose(numpy_res.probabilities(), qulacs_res.probabilities())
     numpy_freq = numpy_res.frequencies(binary=True)

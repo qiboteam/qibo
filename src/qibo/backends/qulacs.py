@@ -16,17 +16,13 @@ class QulacsBackend(NumpyBackend):
         super().__init__()
         self.name = "qulacs"
         self.versions = {"qibo": __version__, "qulacs": qulacs.__version__}
+        self.device = "CPU"
 
-    def circuit_to_qulacs(
-        self, circuit: "qibo.Circuit", optimize: bool = False
-    ) -> qulacs.QuantumCircuit:
+    def circuit_to_qulacs(self, circuit: "qibo.Circuit") -> qulacs.QuantumCircuit:
         qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
         qasm_str = re.sub(r"creg\s.+;", "", qasm_str)
         qasm_str = re.sub(r"measure\s.+;", "", qasm_str)
         circ = converter.convert_QASM_to_qulacs_circuit(qasm_str.splitlines())
-        if optimize:
-            opt = QuantumCircuitOptimizer()
-            opt.optimize(circ)
         return circ
 
     def execute_circuit(
@@ -34,9 +30,8 @@ class QulacsBackend(NumpyBackend):
         circuit: "qibo.Circuit",
         initial_state: np.ndarray = None,
         nshots: int = 1000,
-        optimize: bool = False,
     ):
-        circ = self.circuit_to_qulacs(circuit, optimize=optimize)
+        circ = self.circuit_to_qulacs(circuit)
         state = (
             qulacs.DensityMatrix(circuit.nqubits)
             if circuit.density_matrix
