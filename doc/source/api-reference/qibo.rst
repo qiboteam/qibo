@@ -391,7 +391,7 @@ Entangling layer
 
 Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
 With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
-can be set to any of the two-qubit gates implemented in ``qibo``.
+any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
 If the chosen gate is parametrized, all phases are set to :math:`0.0`.
 Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
