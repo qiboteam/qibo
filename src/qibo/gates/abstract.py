@@ -204,7 +204,7 @@ class Gate:
     def _check_control_target_overlap(self):
         """Checks that there are no qubits that are both target and
         controls."""
-        control_and_target =  self._control_qubits + self._target_qubits
+        control_and_target = self._control_qubits + self._target_qubits
         common = len(set(control_and_target)) != len(control_and_target)
         if common:
             raise_error(
