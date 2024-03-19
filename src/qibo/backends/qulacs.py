@@ -33,7 +33,6 @@ class QulacsBackend(NumpyBackend):
     def execute_circuit(
         self,
         circuit: "qibo.Circuit",
-        initial_state: np.ndarray = None,
         nshots: int = 1000,
     ):
         circ = self.circuit_to_qulacs(circuit)
@@ -43,8 +42,6 @@ class QulacsBackend(NumpyBackend):
             else qulacs.QuantumState(circuit.nqubits)  # pylint: disable=no-member
         )
         sim = QuantumCircuitSimulator(circ, state)
-        if initial_state is not None:
-            sim.initialize_state(initial_state)
         sim.simulate()
         if circuit.density_matrix:
             dim = 2**circuit.nqubits

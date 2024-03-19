@@ -18,11 +18,6 @@ def test_qulacs(density_matrix, with_measurements):
         c.add(gates.M(*measured_qubits))
     qulacs_bkd = QulacsBackend()
     nshots = 1000
-    initial_state = (
-        random_density_matrix(3, backend=numpy_bkd)
-        if density_matrix
-        else random_statevector(3, backend=numpy_bkd)
-    )
     qulacs_res = qulacs_bkd.execute_circuit(c, nshots=nshots)
     numpy_res = numpy_bkd.execute_circuit(c, nshots=nshots)
     numpy_bkd.assert_allclose(numpy_res.probabilities(), qulacs_res.probabilities())
