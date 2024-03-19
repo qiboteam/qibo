@@ -1,6 +1,6 @@
+from collections import OrderedDict
 from functools import reduce
 from itertools import repeat
-from collections import OrderedDict
 
 import numpy as np
 import pytest
@@ -275,7 +275,7 @@ def test_reset_register_invalid_tuple(a, b):
 
 
 def test_GST(backend):
-    T = np.array([[1,1,1,1],[0,0,1,0],[0,0,0,1],[1,-1,0,0]])
+    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
     target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
     target_matrices = [g.matrix() for g in target_gates]
     # superoperator representation of the target gates in the pauli basis
@@ -292,6 +292,8 @@ def test_GST(backend):
         transf = empty_1q if estimate.shape[0] == 4 else empty_2q
         T_matrix = T if estimate.shape[0] == 4 else np.kron(T, T)
         backend.assert_allclose(
-            target, T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix), atol=1e-6
-            #target, transf.conj().T @ (estimate @ transf), atol=1e-6
+            target,
+            T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix),
+            atol=1e-6,
+            # target, transf.conj().T @ (estimate @ transf), atol=1e-6
         )
