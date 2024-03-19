@@ -209,7 +209,7 @@ class Gate:
         if common:
             raise_error(
                 ValueError,
-                f"{common} qubits are both targets and controls "
+                f"{set(self._target_qubits) & set(self._control_qubits)} qubits are both targets and controls "
                 + f"for gate {self.__class__.__name__}.",
             )
 
