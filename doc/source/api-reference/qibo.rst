@@ -271,9 +271,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/comp_basis_encoder.png
-   :width: 3400px
-   :height: 2000px
-   :scale: 25 %
+   :width: 400
+   :height: 250
    :align: center
 
 
@@ -307,9 +306,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/phase_encoder.png
-   :width: 1333px
-   :height: 1552px
-   :scale: 30 %
+   :width: 300
+   :height: 300
    :align: center
 
 
@@ -346,9 +344,8 @@ For example, to encode a :math:`8`-dimensional data, one could use the so-called
 *tree* architechture below:
 
 .. image:: ../_static/unary_encoder_tree.png
-   :width: 1333px
-   :height: 1552px
-   :scale: 30 %
+   :width: 400
+   :height: 500
    :align: center
 
 where the first gate is the :class:`qibo.gates.X`
@@ -361,9 +358,8 @@ On the other hand, the same encoding could be performed using the so-called
 *diagonal* (also known as *ladder*) architecture below:
 
 .. image:: ../_static/unary_encoder_ladder.png
-   :width: 1867px
-   :height: 1552px
-   :scale: 30 %
+   :width: 700
+   :height: 550
    :align: center
 
 This architecture leads to a choice of angles based on
@@ -401,9 +397,8 @@ For instance, we show below an example of each architecture for ``nqubits = 6``.
 
 
 .. image:: ../_static/entangling_layer.png
-   :width: 2500px
-   :height: 1552px
-   :scale: 30 %
+   :width: 700
+   :height: 450
    :align: center
 
 
