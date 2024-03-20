@@ -529,7 +529,7 @@ class Align(Gate):
         self.target_qubits = tuple(q)
 
 
-def is_clifford_given_angle(angle):
+def _is_clifford_given_angle(angle):
     """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
     return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
 
