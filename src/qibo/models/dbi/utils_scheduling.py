@@ -198,7 +198,7 @@ def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
     # coefficients
     coef = np.empty(3)
     coef[0] = np.real(2*covariance(Gamma_list[0], Gamma_list[1],state))
-    coef[1] = np.real(2*variance(Gamma_list[1],state))
+    coef[1] = np.real(2*variance(Gamma_list[1],state)+2*covariance(Gamma_list[0],Gamma_list[2],state))
     coef[2] = np.real(covariance(Gamma_list[0], Gamma_list[3],state)+3*covariance(Gamma_list[1], Gamma_list[2],state))
     coef = list(reversed(coef))
     return coef
