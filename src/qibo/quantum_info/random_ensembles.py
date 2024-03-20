@@ -2,6 +2,7 @@
 
 import math
 import warnings
+from functools import cache
 from typing import Optional, Union
 
 import numpy as np
@@ -1101,6 +1102,21 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     return hadamards, permutations
 
 
+@cache
+def _create_S(q):
+    return gates.S(q)
+
+
+@cache
+def _create_CZ(cq, tq):
+    return gates.CZ(cq, tq)
+
+
+@cache
+def _create_CNOT(cq, tq):
+    return gates.CNOT(cq, tq)
+
+
 def _operator_from_hadamard_free_group(
     gamma_matrix, delta_matrix, density_matrix: bool = False, pauli_operator=None
 ):
@@ -1138,19 +1154,19 @@ def _operator_from_hadamard_free_group(
     if pauli_operator is not None:
         circuit += pauli_operator
 
-    for qubit, gamma in enumerate(np.diag(gamma_matrix)):
-        if gamma == 1:
-            circuit.add(gates.S(qubit))
+    idx = np.tril_indices(nqubits, k=-1)
+    gamma_ones = gamma_matrix[idx].nonzero()[0]
+    delta_ones = delta_matrix[idx].nonzero()[0]
 
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            if gamma_matrix[k, j] == 1:
-                circuit.add(gates.CZ(j, k))
+    S_gates = [_create_S(q) for q in np.diag(gamma_matrix).nonzero()[0]]
+    CZ_gates = [
+        _create_CZ(cq, tq) for cq, tq in zip(idx[1][gamma_ones], idx[0][gamma_ones])
+    ]
+    CNOT_gates = [
+        _create_CNOT(cq, tq) for cq, tq in zip(idx[1][delta_ones], idx[0][delta_ones])
+    ]
 
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            if delta_matrix[k, j] == 1:
-                circuit.add(gates.CNOT(j, k))
+    circuit.add(S_gates + CZ_gates + CNOT_gates)
 
     return circuit
 
