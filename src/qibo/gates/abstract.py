@@ -48,9 +48,9 @@ class Gate:
 
         self.clifford = False
         self.unitary = False
-        self._target_qubits = tuple()
-        self._control_qubits = set()
-        self._parameters = tuple()
+        self._target_qubits = ()
+        self._control_qubits = ()
+        self._parameters = ()
         config.ALLOW_SWITCHERS = False
 
         self.symbolic_parameters = {}
@@ -158,13 +158,13 @@ class Gate:
 
     def _set_control_qubits(self, qubits: Sequence[int]):
         """Helper method for setting control qubits."""
-        self._control_qubits = set(qubits)
-        if len(self._control_qubits) != len(qubits):
+        if len(set(qubits)) != len(qubits):
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
                 f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
+        self._control_qubits = qubits
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
@@ -204,11 +204,12 @@ class Gate:
     def _check_control_target_overlap(self):
         """Checks that there are no qubits that are both target and
         controls."""
-        common = set(self._target_qubits) & self._control_qubits
+        control_and_target = self._control_qubits + self._target_qubits
+        common = len(set(control_and_target)) != len(control_and_target)
         if common:
             raise_error(
                 ValueError,
-                f"{common} qubits are both targets and controls "
+                f"{set(self._target_qubits) & set(self._control_qubits)} qubits are both targets and controls "
                 + f"for gate {self.__class__.__name__}.",
             )
 
