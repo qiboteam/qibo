@@ -397,7 +397,7 @@ For instance, we show below an example of each architecture for ``nqubits = 6``.
 
 
 .. image:: ../_static/entangling_layer.png
-   :width: 700
+   :width: 800
    :height: 450
    :align: center
 
