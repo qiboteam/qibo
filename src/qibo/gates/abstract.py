@@ -46,7 +46,6 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
-        self.clifford = False
         self.unitary = False
         self._target_qubits = ()
         self._control_qubits = ()
@@ -58,6 +57,11 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
+
+    @property
+    def clifford(self):
+        """Return boolean value representing if a Gate is Clifford or not."""
+        return False
 
     @property
     def raw(self) -> dict:
