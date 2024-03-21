@@ -923,6 +923,13 @@ Toffoli
     :members:
     :member-order: bysource
 
+CCZ
+"""
+
+.. autoclass:: qibo.gates.CCZ
+    :members:
+    :member-order: bysource
+
 Deutsch
 """""""
 
