@@ -51,12 +51,8 @@ class PyTorchBackend(NumpyBackend):
         self.np.right_shift = self.np.bitwise_right_shift
 
     def _torch_dtype(self, dtype):
-        if dtype == "int":
+        if dtype == "float":
             dtype += "32"
-        elif dtype == "float":
-            dtype += "32"
-        elif dtype == "complex":
-            dtype += "64"
         return getattr(self.np, dtype)
 
     def set_device(self, device):  # pragma: no cover
