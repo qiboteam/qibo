@@ -1206,6 +1206,39 @@ def test_toffoli(backend, applyx):
     assert gates.TOFFOLI(0, 1, 2).unitary
 
 
+def test_ccz(backend):
+    nqubits = 3
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.CCZ(0, 1, 2)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, -1],
+        ],
+        dtype=np.complex128,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+
+    assert gates.CCZ(0, 1, 2).qasm_label == "ccz"
+    assert not gates.CCZ(0, 1, 2).clifford
+    assert gates.CCZ(0, 1, 2).unitary
+
+
 def test_deutsch(backend):
     theta = 0.1234
     nqubits = 3
