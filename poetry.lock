@@ -4133,8 +4133,8 @@ scipy = "^1.10.1"
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "HEAD"
-resolved_reference = "5af642977fd66a4268608fbe2986e55160a88fe4"
+reference = "ccz"
+resolved_reference = "82a0bf0976a44ec54d1d46b82b716aabdf9c5d25"
 
 [[package]]
 name = "qibotn"
@@ -5557,4 +5557,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "b167edb192763e8c70eeef729e281f4ebbef8bdee41eb4d8692e3784babfe75e"
+content-hash = "55c0840ff1101c940cc076d63aec414b437415dc62a067ac169181ad1438ca70"
