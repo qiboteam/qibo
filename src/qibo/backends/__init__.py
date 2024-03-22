@@ -145,6 +145,7 @@ class QiboMatrices:
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
         self.TOFFOLI = self.matrices.TOFFOLI
+        self.CCZ = self.matrices.CCZ
 
 
 matrices = QiboMatrices()

@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
 
@@ -1237,6 +1237,13 @@ def test_ccz(backend):
     assert gates.CCZ(0, 1, 2).qasm_label == "ccz"
     assert not gates.CCZ(0, 1, 2).clifford
     assert gates.CCZ(0, 1, 2).unitary
+
+    # test decomposition
+    decomposition = Circuit(3)
+    decomposition.add(gates.CCZ(0, 1, 2).decompose())
+    decomposition = decomposition.unitary(backend)
+
+    backend.assert_allclose(decomposition, backend.cast(matrices.CCZ), atol=1e-10)
 
 
 def test_deutsch(backend):
