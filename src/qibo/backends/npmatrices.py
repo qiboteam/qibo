@@ -446,6 +446,22 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    @cached_property
+    def CCZ(self):
+        return self._cast(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, -1],
+            ],
+            dtype=self.dtype,
+        )
+
     def DEUTSCH(self, theta):
         sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
         cos = self.np.cos(theta) + 0j
