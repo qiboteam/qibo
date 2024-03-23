@@ -5,6 +5,7 @@ from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.pytorch import PyTorchBackend
+from qibo.backends.qulacs import QulacsBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
@@ -66,6 +67,8 @@ def construct_backend(backend, **kwargs):
         )
 
         return QiskitClientBackend(**kwargs)
+    elif backend == "qulacs":
+        return QulacsBackend()
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
