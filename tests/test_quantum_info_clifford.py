@@ -4,7 +4,7 @@ from functools import reduce
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates
+from qibo import Circuit, gates, matrices
 from qibo.backends import CliffordBackend, PyTorchBackend, TensorflowBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.quantum_info._clifford_utils import (
@@ -152,9 +152,10 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
     obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
-            reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
+            reduce(np.kron, [getattr(matrices, gate) for gate in generator])
             for generator in ["XII", "IZI", "IIZ"]
         ]
+        true_generators = backend.cast(true_generators, dtype=true_generators[0].dtype)
     else:
         true_generators = ["XII", "IZI", "IIZ"]
     true_phases = [1, 1, -1]
@@ -181,12 +182,13 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
             "-IIZ",
             "III",
         ]:
-            tmp = reduce(
-                np.kron, [getattr(gates, s)(0).matrix() for s in stab.replace("-", "")]
-            )
+            tmp = reduce(np.kron, [getattr(matrices, s) for s in stab.replace("-", "")])
             if "-" in stab:
                 tmp *= -1
             true_stabilizers.append(tmp)
+        true_stabilizers = backend.cast(
+            true_stabilizers, dtype=true_stabilizers[0].dtype
+        )
     elif not symplectic and not return_array:
         true_stabilizers = [
             "-XZZ",
@@ -220,10 +222,10 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
     obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
-            reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
+            reduce(np.kron, [getattr(matrices, gate) for gate in generator])
             for generator in ["ZII", "IXI", "IIX"]
         ]
-        true_generators = backend.cast(true_generators)
+        true_generators = backend.cast(true_generators, dtype=true_generators[0].dtype)
     else:
         true_generators = ["ZII", "IXI", "IIX"]
     true_phases = [1, 1, 1]
@@ -252,11 +254,14 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
         ]:
             tmp = reduce(
                 np.kron,
-                [getattr(gates, s)(0).matrix() for s in destab.replace("-", "")],
+                [getattr(matrices, s) for s in destab.replace("-", "")],
             )
             if "-" in destab:
                 tmp *= -1
             true_destabilizers.append(tmp)
+        true_destabilizers = backend.cast(
+            true_destabilizers, dtype=true_destabilizers[0].dtype
+        )
     elif not symplectic and not return_array:
         true_destabilizers = [
             "ZXX",

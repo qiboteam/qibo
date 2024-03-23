@@ -9,7 +9,6 @@ from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
-    _probability_distribution_sin,
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,

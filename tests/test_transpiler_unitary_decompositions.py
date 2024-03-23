@@ -80,7 +80,7 @@ def test_v_decomposition(backend, seed):
             calculate_psi(unitary, backend=backend)
     else:
         psi, _ = calculate_psi(unitary, backend=backend)
-        va, vb = calculate_single_qubit_unitaries(psi)
+        va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
         assert_single_qubits(backend, psi, va, vb)
 
 
@@ -94,7 +94,9 @@ def test_u_decomposition(backend, seed):
     else:
         psi, eigvals = calculate_psi(unitary, backend=backend)
         psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
-        ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde)
+        ua_dagger, ub_dagger = calculate_single_qubit_unitaries(
+            psi_tilde, backend=backend
+        )
         assert_single_qubits(backend, psi_tilde, ua_dagger, ub_dagger)
 
 
@@ -140,7 +142,7 @@ def test_cnot_decomposition(backend):
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz)
     c = Circuit(2)
-    c.add(cnot_decomposition(0, 1, hx, hy, hz))
+    c.add(cnot_decomposition(0, 1, hx, hy, hz, backend))
     final_matrix = c.unitary(backend)
     backend.assert_allclose(final_matrix, target_matrix, atol=PRECISION_TOL)
 
@@ -149,7 +151,7 @@ def test_cnot_decomposition_light(backend):
     hx, hy = np.random.random(2)
     target_matrix = bell_unitary(hx, hy, 0)
     c = Circuit(2)
-    c.add(cnot_decomposition_light(0, 1, hx, hy))
+    c.add(cnot_decomposition_light(0, 1, hx, hy, backend))
     final_matrix = c.unitary(backend)
     backend.assert_allclose(final_matrix, target_matrix, atol=PRECISION_TOL)
 
