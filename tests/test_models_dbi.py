@@ -5,6 +5,7 @@ import pytest
 
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
+    DoubleBracketCostFunction,
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
     DoubleBracketScheduling,
@@ -107,15 +108,19 @@ def test_energy_fluctuations(backend):
     state = np.array([1, 0])
     dbi = DoubleBracketIteration(Hamiltonian(1, matrix=h0, backend=backend))
     energy_fluctuation = dbi.energy_fluctuation(state=state)
-    assert energy_fluctuation == 0
+    assert energy_fluctuation == 1.0
 
 
 @pytest.mark.parametrize(
     "scheduling",
-    [DoubleBracketScheduling.grid_search, DoubleBracketScheduling.hyperopt],
+    [
+        DoubleBracketScheduling.grid_search,
+        DoubleBracketScheduling.hyperopt,
+        DoubleBracketScheduling.simulated_annealing,
+    ],
 )
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_double_bracket_iteration_scheduling_grid_hyperopt(
+def test_double_bracket_iteration_scheduling_grid_hyperopt_annealing(
     backend, nqubits, scheduling
 ):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
@@ -135,13 +140,21 @@ def test_double_bracket_iteration_scheduling_grid_hyperopt(
 
 @pytest.mark.parametrize("nqubits", [3, 4, 6])
 @pytest.mark.parametrize("n", [2, 4])
-def test_double_bracket_iteration_scheduling_polynomial(backend, nqubits, n):
+@pytest.mark.parametrize(
+    "cost",
+    [
+        DoubleBracketCostFunction.least_squares,
+        DoubleBracketCostFunction.off_diagonal_norm,
+    ],
+)
+def test_double_bracket_iteration_scheduling_polynomial(backend, nqubits, n, cost):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
         scheduling=DoubleBracketScheduling.polynomial_approximation,
+        cost=cost,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
