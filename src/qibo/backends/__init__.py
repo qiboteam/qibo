@@ -9,8 +9,8 @@ from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow")
-QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibocloud")
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
+QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibocloud", "qibotn")
 
 
 class MetaBackend:
@@ -194,3 +194,11 @@ def _check_backend(backend):
         return GlobalBackend()
 
     return backend
+
+
+def list_available_backends():
+    return MetaBackend().list_available()
+
+
+def construct_backend(backend, **kwargs):
+    return MetaBackend.load(backend, **kwargs)
