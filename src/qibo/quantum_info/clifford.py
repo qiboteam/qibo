@@ -8,7 +8,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import Circuit
-from qibo.backends import Backend, CliffordBackend
+from qibo.backends import CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
@@ -30,11 +30,11 @@ class Clifford:
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
-        engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the execution
-            of the :class:`qibo.backends.CliffordBackend`.
-            It accepts all ``qibo`` backends besides the :class:`qibo.backends.TensorflowBackend`,
-            which is not supported. If ``None``, defaults to :class:`qibo.backends.NumpyBackend`
-            Defaults to ``None``.
+        engine (str, optional): engine to use in the execution of the
+            :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
+            ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
+            If ``None``, defaults to the corresponding engine
+            from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
     """
 
     symplectic_matrix: np.ndarray = field(init=False)
@@ -42,7 +42,7 @@ class Clifford:
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
-    engine: Optional[Backend] = None
+    engine: Optional[str] = None
 
     _backend: Optional[CliffordBackend] = None
     _measurement_gate = None
@@ -54,10 +54,8 @@ class Clifford:
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
             self.measurements = clifford.measurements
-            self.engine = clifford.engine
             self._samples = clifford._samples
             self._measurement_gate = clifford._measurement_gate
-            self._backend = clifford._backend
         else:
             # adding the scratch row if not provided
             self.symplectic_matrix = self.data
@@ -66,7 +64,9 @@ class Clifford:
                     (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
+        if self._backend is None:
             self._backend = CliffordBackend(self.engine)
+        self.engine = self._backend.engine
 
     @classmethod
     def from_circuit(
@@ -74,7 +74,7 @@ class Clifford:
         circuit: Circuit,
         initial_state: Optional[np.ndarray] = None,
         nshots: int = 1000,
-        engine: Optional[Backend] = None,
+        engine: Optional[str] = None,
     ):
         """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by executing the input circuit.
 
@@ -85,12 +85,11 @@ class Clifford:
                 Defaults to ``None``.
             nshots (int, optional): number of measurement shots to perform
                 if ``circuit`` has measurement gates. Defaults to :math:`10^{3}`.
-            engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the
-                execution of the :class:`qibo.backends.CliffordBackend`.
-                It accepts all ``qibo`` backends besides the
-                :class:`qibo.backends.TensorflowBackend`, which is not supported.
-                If ``None``, defaults to :class:`qibo.backends.NumpyBackend`.
-                Defaults to ``None``.
+            engine (str, optional): engine to use in the execution of the
+                :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
+                ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
+                If ``None``, defaults to the corresponding engine
+                from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
@@ -361,7 +360,7 @@ class Clifford:
         for s in samples:
             probs[int(s)] += 1
 
-        probs = self.engine.cast(probs) / len(samples)
+        probs = self.engine.cast(probs, float) / len(samples)
 
         return self._backend.calculate_probabilities(
             self.engine.np.sqrt(probs), qubits, len(measured_qubits)
@@ -389,7 +388,11 @@ class Clifford:
         )
 
         return self.__class__(
-            symplectic_matrix, self.nqubits, self.measurements, self.nshots, self.engine
+            symplectic_matrix,
+            self.nqubits,
+            self.measurements,
+            self.nshots,
+            _backend=self._backend,
         )
 
     def _construct_operators(self, generators: list, phases: list):

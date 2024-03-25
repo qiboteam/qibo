@@ -29,8 +29,11 @@ class H(Gate):
         self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -58,8 +61,11 @@ class X(Gate):
         self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -171,8 +177,11 @@ class Y(Gate):
         self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -215,8 +224,11 @@ class Z(Gate):
         self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -256,8 +268,11 @@ class SX(Gate):
         self.draw_label = "SX"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -271,7 +286,11 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        return [RX(self.init_args[0], np.pi / 2, trainable=False)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -299,8 +318,11 @@ class SXDG(Gate):
         self.draw_label = "SXDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -314,7 +336,11 @@ class SXDG(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`(\\sqrt{X})^{\\dagger} = e^{-i \\pi / 4} \\, \\text{RX}(-\\pi / 2)`.
         """
-        return [RX(self.init_args[0], -np.pi / 2, trainable=False)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -342,8 +368,11 @@ class S(Gate):
         self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -374,8 +403,11 @@ class SDG(Gate):
         self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -460,8 +492,11 @@ class I(Gate):
         self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -494,6 +529,11 @@ class Align(Gate):
         self.target_qubits = tuple(q)
 
 
+def _is_clifford_given_angle(angle):
+    """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
+    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
+
+
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
@@ -516,12 +556,13 @@ class _Rn_(ParametrizedGate):
         if isinstance(theta, Parameter):
             theta = theta()
 
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
-            self.clifford = True
-
         self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def clifford(self):
+        return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> "Gate":
         """"""
@@ -892,14 +933,11 @@ class U3(_Un_):
         where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
         :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
         """
-        q = self.init_args[0]
-        return [
-            RZ(q, self.init_kwargs["lam"]),
-            SX(q),
-            RZ(q, self.init_kwargs["theta"] + math.pi),
-            SX(q),
-            RZ(q, self.init_kwargs["phi"] + math.pi),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class U1q(_Un_):
@@ -969,8 +1007,11 @@ class CNOT(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1006,8 +1047,11 @@ class CY(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1020,8 +1064,11 @@ class CY(Gate):
         the target qubit, followed by :class:`qibo.gates.CNOT`, followed
         by a :class:`qibo.gates.S` in the target qubit.
         """
-        q0, q1 = self.init_args
-        return [SDG(q1), CNOT(q0, q1), S(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class CZ(Gate):
@@ -1049,8 +1096,11 @@ class CZ(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1063,8 +1113,11 @@ class CZ(Gate):
         the target qubit, followed by :class:`qibo.gates.CNOT`, followed
         by another :class:`qibo.gates.H` in the target qubit
         """
-        q0, q1 = self.init_args
-        return [H(q1), CNOT(q0, q1), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class CSX(Gate):
@@ -1100,8 +1153,11 @@ class CSX(Gate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.init_args
-        return [H(q1), CU1(q0, q1, np.pi / 2), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -1141,8 +1197,11 @@ class CSXDG(Gate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.init_args
-        return [H(q1), CU1(q0, q1, -np.pi / 2), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -1169,11 +1228,12 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if isinstance(theta, (float, int)) and (theta % np.pi).is_integer():
-            self.clifford = True
-
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def clifford(self):
+        return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> "Gate":
         """"""
@@ -1467,8 +1527,11 @@ class SWAP(Gate):
         self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1499,8 +1562,11 @@ class iSWAP(Gate):
         self.draw_label = "i"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1508,7 +1574,7 @@ class iSWAP(Gate):
 
 
 class SiSWAP(Gate):
-    """The :math:`\\sqrt{\\text{iSWAP}}}` gate.
+    """The :math:`\\sqrt{\\text{iSWAP}}` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1532,6 +1598,39 @@ class SiSWAP(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
         self.unitary = True
+
+    def _dagger(self) -> "Gate":
+        return SiSWAPDG(*self.qubits)
+
+
+class SiSWAPDG(Gate):
+    """The :math:`\\left(\\sqrt{\\text{iSWAP}}\\right)^{\\dagger}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1/\\sqrt{2} & -i/\\sqrt{2} & 0 \\\\
+        0 & -i/\\sqrt{2} & 1/\\sqrt{2} & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "siswapdg"
+        self.draw_label = "sidg"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.unitary = True
+
+    def _dagger(self) -> "Gate":
+        return SiSWAP(*self.qubits)
 
 
 class FSWAP(Gate):
@@ -1558,8 +1657,11 @@ class FSWAP(Gate):
         self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     @property
     def qasm_label(self):
@@ -1704,7 +1806,7 @@ class GeneralizedfSim(ParametrizedGate):
         if shape != (2, 2):
             raise_error(
                 ValueError,
-                "Invalid rotation shape {} for generalized " "fSim gate".format(shape),
+                f"Invalid rotation shape {shape} for generalized fSim gate",
             )
         ParametrizedGate.parameters.fset(self, x)  # pylint: disable=no-member
 
@@ -1868,9 +1970,11 @@ class RZX(_Rnn_):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class RXXYY(_Rnn_):
@@ -1909,22 +2013,11 @@ class RXXYY(_Rnn_):
         the original gate due to a phase difference in
         :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            RZ(q1, -np.pi / 2),
-            S(q0),
-            SX(q1),
-            RZ(q1, np.pi / 2),
-            CNOT(q1, q0),
-            RY(q0, -theta / 2),
-            RY(q1, -theta / 2),
-            CNOT(q1, q0),
-            SDG(q0),
-            RZ(q1, -np.pi / 2),
-            SX(q1).dagger(),
-            RZ(q1, np.pi / 2),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class MS(ParametrizedGate):
@@ -2029,18 +2122,13 @@ class GIVENS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposition of Givens gate according to `ArXiv:2106.13839
-        <https://arxiv.org/abs/2106.13839>`_."""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            CNOT(q0, q1),
-            RY(q0, theta),
-            CNOT(q1, q0),
-            RY(q0, -theta),
-            CNOT(q1, q0),
-            CNOT(q0, q1),
-        ]
+        """Decomposition of RBS gate according to `ArXiv:2109.09685
+        <https://arxiv.org/abs/2109.09685>`_."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class RBS(ParametrizedGate):
@@ -2090,18 +2178,11 @@ class RBS(ParametrizedGate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of RBS gate according to `ArXiv:2109.09685
         <https://arxiv.org/abs/2109.09685>`_."""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            H(q0),
-            CNOT(q0, q1),
-            H(q1),
-            RY(q0, theta),
-            RY(q1, -theta),
-            H(q1),
-            CNOT(q0, q1),
-            H(q0),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class ECR(Gate):
@@ -2129,8 +2210,11 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
@@ -2142,9 +2226,11 @@ class ECR(Gate):
             \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
                 \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0})
         """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
 
-        q0, q1 = self.target_qubits
-        return [S(q0), SX(q1), CNOT(q0, q1), X(q0)]
+        return standard_decompositions(self)
 
 
 class TOFFOLI(Gate):
@@ -2284,6 +2370,7 @@ class Unitary(ParametrizedGate):
         self.name = "Unitary" if name is None else name
         self.draw_label = "U"
         self.target_qubits = tuple(q)
+        self._clifford = False
 
         # TODO: Check that given ``unitary`` has proper shape?
         self.parameter_names = "u"
@@ -2297,14 +2384,31 @@ class Unitary(ParametrizedGate):
             "trainable": trainable,
         }
 
-        # checking unitarity without invoking any backend
         if check_unitary:
-            product = np.transpose(np.conj(unitary)) @ unitary
-            sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
-            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+            if unitary.__class__.__name__ == "Tensor":
+                import torch  # pylint: disable=C0145
 
-            self.unitary = True if sums and diagonal else False
-            del sums, diagonal, product
+                diag_function = torch.diag
+                all_function = torch.all
+                conj_function = torch.conj
+                transpose_function = torch.transpose
+            else:
+                diag_function = np.diag
+                all_function = np.all
+                conj_function = np.conj
+                transpose_function = np.transpose
+
+            product = transpose_function(conj_function(unitary), (1, 0)) @ unitary
+            diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
+            off_diagonals = bool(
+                all_function(
+                    np.abs(product - diag_function(diag_function(product)))
+                    < PRECISION_TOL
+                )
+            )
+
+            self.unitary = True if diagonals and off_diagonals else False
+            del diagonals, off_diagonals, product
 
     @Gate.parameters.setter
     def parameters(self, x):
@@ -2312,6 +2416,14 @@ class Unitary(ParametrizedGate):
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
+
+    @property
+    def clifford(self):
+        return self._clifford
+
+    @clifford.setter
+    def clifford(self, value):
+        self._clifford = value
 
     def on_qubits(self, qubit_map):
         args = [self.init_args[0]]

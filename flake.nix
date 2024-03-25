@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
     nixpkgs-python.url = "github:cachix/nixpkgs-python";
@@ -35,26 +35,8 @@
             {
               packages = with pkgs; [
                 pre-commit
-                (python3Packages.buildPythonPackage
-                  (let
-                    pname = "poethepoet";
-                    version = "0.24.1";
-                  in {
-                    inherit pname version;
-                    src = fetchPypi {
-                      inherit pname version;
-                      sha256 = "sha256-OvpEtPxzJ98N2RLtoBJgSgcq8rtNJD+w5B6Oyo2r+e0=";
-                      python = "py3";
-                      dist = "py3";
-                      format = "wheel";
-                    };
-                    format = "wheel";
-                    propagatedBuildInputs = [
-                      # Specify dependencies
-                      pkgs.python3Packages.pastel
-                      pkgs.python3Packages.tomli
-                    ];
-                  }))
+                poethepoet
+                stdenv.cc.cc.lib
               ];
 
               languages.python = {
@@ -62,7 +44,6 @@
                 poetry = {
                   enable = true;
                   install.enable = true;
-                  install.allExtras = true;
                   install.groups = ["dev"];
                 };
                 version = "3.11";

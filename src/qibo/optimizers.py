@@ -86,16 +86,16 @@ def optimize(
             )
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
-        if backend is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
+
         return sgd(loss, initial_parameters, args, options, compile, backend)
     else:
-        if backend is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
+
         return newtonian(
             loss,
             initial_parameters,

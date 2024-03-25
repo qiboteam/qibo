@@ -10,9 +10,12 @@ from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler._exceptions import TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer, Placer, Router
 from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.placer import Trivial, assert_placement
-from qibo.transpiler.router import ConnectivityError, assert_connectivity
-from qibo.transpiler.star_connectivity import StarConnectivity
+from qibo.transpiler.placer import StarConnectivityPlacer, Trivial, assert_placement
+from qibo.transpiler.router import (
+    ConnectivityError,
+    StarConnectivityRouter,
+    assert_connectivity,
+)
 from qibo.transpiler.unroller import (
     DecompositionError,
     NativeGates,
@@ -203,9 +206,9 @@ class Passes:
         # preprocessing
         default_passes.append(Preprocessing(connectivity=self.connectivity))
         # default placer pass
-        default_passes.append(Trivial(connectivity=self.connectivity))
+        default_passes.append(StarConnectivityPlacer())
         # default router pass
-        default_passes.append(StarConnectivity())
+        default_passes.append(StarConnectivityRouter())
         # default unroller pass
         default_passes.append(Unroller(native_gates=self.native_gates))
 

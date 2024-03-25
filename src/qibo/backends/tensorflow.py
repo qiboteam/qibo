@@ -20,145 +20,11 @@ class TensorflowMatrices(NumpyMatrices):
         self.tf = tf
         self.np = tnp
 
-    def RX(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        isin = -1j * self.np.sin(theta / 2.0)
-        return self.tf.cast([[cos, isin], [isin, cos]], dtype=self.dtype)
-
-    def RY(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        sin = self.np.sin(theta / 2.0) + 0j
-        return self.tf.cast([[cos, -sin], [sin, cos]], dtype=self.dtype)
-
-    def RZ(self, theta):
-        phase = self.np.exp(0.5j * theta)
-        return self.tf.cast([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
-
-    def U1(self, theta):
-        phase = self.np.exp(1j * theta)
-        return self.tf.cast([[1, 0], [0, phase]], dtype=self.dtype)
-
-    def U2(self, phi, lam):
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return self.tf.cast(
-            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
-            dtype=self.dtype,
-        ) / self.np.sqrt(2)
-
-    def U3(self, theta, phi, lam):
-        cost = self.np.cos(theta / 2)
-        sint = self.np.sin(theta / 2)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return self.tf.cast(
-            [
-                [self.np.conj(eplus) * cost, -self.np.conj(eminus) * sint],
-                [eminus * sint, eplus * cost],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CRX(self, theta):
-        r = self.RX(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CRY(self, theta):
-        r = self.RY(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CRZ(self, theta):
-        r = self.RZ(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CU1(self, theta):
-        r = self.U1(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CU2(self, phi, lam):
-        r = self.U2(phi, lam)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def CU3(self, theta, phi, lam):
-        r = self.U3(theta, phi, lam)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
-
-    def fSim(self, theta, phi):
-        cost = self.np.cos(theta) + 0j
-        isint = -1j * self.np.sin(theta)
-        phase = self.np.exp(-1j * phi)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, cost, isint, 0],
-                [0, isint, cost, 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
-
-    def GeneralizedfSim(self, u, phi):
-        phase = self.np.exp(-1j * phi)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, u[0, 0], u[0, 1], 0],
-                [0, u[1, 0], u[1, 1], 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
+    def _cast(self, x, dtype):
+        return self.tf.cast(x, dtype=dtype)
 
     def Unitary(self, u):
-        return self.tf.cast(u, dtype=self.dtype)
+        return self._cast(u, dtype=self.dtype)
 
 
 class TensorflowBackend(NumpyBackend):
@@ -333,16 +199,16 @@ class TensorflowBackend(NumpyBackend):
         else:
             raise_error(
                 ValueError,
-                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
             )
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0],
+                [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+                [0, 1, 1, 2, 1, 1, 4, 0, 0, 4],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 4, 0, 0, 0, 4],
             ]
         elif name == "test_probabilistic_measurement":
             if "GPU" in self.device:  # pragma: no cover
@@ -357,6 +223,6 @@ class TensorflowBackend(NumpyBackend):
         elif name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30},
-                {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2},
+                {5: 12, 7: 6, 4: 6, 1: 5, 6: 1},
+                {3: 7, 6: 4, 2: 4, 7: 4, 0: 4, 5: 3, 4: 2, 1: 2},
             ]

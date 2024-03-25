@@ -1,13 +1,15 @@
 """Module with functions that create random quantum and classical objects."""
 
+import math
 import warnings
+from functools import cache
 from typing import Optional, Union
 
 import numpy as np
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
-from qibo.backends import GlobalBackend, NumpyBackend
+from qibo.backends import NumpyBackend, _check_backend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
@@ -18,6 +20,18 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_stinespring,
     vectorization,
 )
+
+
+class _ProbabilityDistributionGaussianLoader(rv_continuous):
+    """Probability density function for sampling phases of
+    the RBS gates as a function of circuit depth."""
+
+    def _pdf(self, theta: float, depth: int):
+        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
+
+        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
+
+        return amplitude * probability / 4
 
 
 class _probability_distribution_sin(rv_continuous):  # pragma: no cover
@@ -32,10 +46,10 @@ class _probability_distribution_sin(rv_continuous):  # pragma: no cover
 
 
 def uniform_sampling_U3(ngates: int, seed=None, backend=None):
-    """Samples parameters for Haar-random :math:`U_{3}`s (:class:`qibo.gates.U3`).
+    """Samples parameters for Haar-random :class:`qibo.gates.U3`.
 
     Args:
-        ngates (int): Total number of :math:`U_{3}`s to be sampled.
+        ngates (int): Total number of :math:`U_{3}` gates to be sampled.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
@@ -44,7 +58,7 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
             Defaults to ``None``.
 
     Returns:
-        (ndarray): array of shape (``ngates``, :math:`3`).
+        ndarray: array of shape (``ngates``, :math:`3`).
     """
     if not isinstance(ngates, int):
         raise_error(
@@ -226,7 +240,8 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -384,7 +399,7 @@ def random_quantum_channel(
     return super_op
 
 
-def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
+def random_statevector(dims: int, seed=None, backend=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -396,10 +411,6 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
 
     Args:
         dims (int): dimension of the matrix.
-        haar (bool, optional): if ``True``, statevector is created by sampling a
-            Haar random unitary :math:`U_{\\text{haar}}` and acting with it on a
-            random computational basis state :math:`\\ket{k}`, i.e.
-            :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -414,9 +425,6 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     if dims <= 0:
         raise_error(ValueError, "dim must be of type int and >= 1")
 
-    if not isinstance(haar, bool):
-        raise_error(TypeError, f"haar must be type bool, but it is type {type(haar)}.")
-
     if (
         seed is not None
         and not isinstance(seed, int)
@@ -426,23 +434,12 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
-
-    if not haar:
-        # sample real and imag parts of complex amplitude in [-1, 1]
-        state = 1j * (2 * local_state.random(dims) - 1)
-        state += 2 * local_state.random(dims) - 1
-        state /= np.linalg.norm(state)
-        state = backend.cast(state, dtype=state.dtype)
-    else:
-        # select a random column of a haar random unitary
-        k = local_state.integers(low=0, high=dims)
-        state = random_unitary(dims, measure="haar", seed=seed, backend=backend)[:, k]
+    state = local_state.standard_normal(dims).astype(complex)
+    state += 1.0j * local_state.standard_normal(dims)
+    state /= np.linalg.norm(state)
+    state = backend.cast(state, dtype=state.dtype)
 
     return state
 
@@ -566,7 +563,7 @@ def random_density_matrix(
                 random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
             )
             state = np.dot(state, np.transpose(np.conj(state)))
-            state = state / np.trace(state)
+            state /= np.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
@@ -597,7 +594,7 @@ def random_clifford(
     Args:
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
-            object. If ``False``, returns an ``ndarray`` object. Defaults to ``False``.
+            object. If ``False``, returns an ``ndarray`` object. Defaults to ``True``.
         density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
             the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
@@ -1105,6 +1102,21 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     return hadamards, permutations
 
 
+@cache
+def _create_S(q):
+    return gates.S(q)
+
+
+@cache
+def _create_CZ(cq, tq):
+    return gates.CZ(cq, tq)
+
+
+@cache
+def _create_CNOT(cq, tq):
+    return gates.CNOT(cq, tq)
+
+
 def _operator_from_hadamard_free_group(
     gamma_matrix, delta_matrix, density_matrix: bool = False, pauli_operator=None
 ):
@@ -1142,19 +1154,19 @@ def _operator_from_hadamard_free_group(
     if pauli_operator is not None:
         circuit += pauli_operator
 
-    for qubit, gamma in enumerate(np.diag(gamma_matrix)):
-        if gamma == 1:
-            circuit.add(gates.S(qubit))
+    idx = np.tril_indices(nqubits, k=-1)
+    gamma_ones = gamma_matrix[idx].nonzero()[0]
+    delta_ones = delta_matrix[idx].nonzero()[0]
 
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            if gamma_matrix[k, j] == 1:
-                circuit.add(gates.CZ(j, k))
+    S_gates = [_create_S(q) for q in np.diag(gamma_matrix).nonzero()[0]]
+    CZ_gates = [
+        _create_CZ(cq, tq) for cq, tq in zip(idx[1][gamma_ones], idx[0][gamma_ones])
+    ]
+    CNOT_gates = [
+        _create_CNOT(cq, tq) for cq, tq in zip(idx[1][delta_ones], idx[0][delta_ones])
+    ]
 
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            if delta_matrix[k, j] == 1:
-                circuit.add(gates.CNOT(j, k))
+    circuit.add(S_gates + CZ_gates + CNOT_gates)
 
     return circuit
 
@@ -1196,11 +1208,11 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
     if order == "row":
-        operator = np.kron(
+        operator = backend.np.kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = np.kron(
+        operator = backend.np.kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 
@@ -1219,8 +1231,7 @@ def _set_backend_and_local_state(seed, backend):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if seed is None or isinstance(seed, int):
         if backend.__class__.__name__ in [

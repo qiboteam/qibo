@@ -43,6 +43,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
+    "sphinx.ext.viewcode",
     "recommonmark",
     "nbsphinx",
 ]
