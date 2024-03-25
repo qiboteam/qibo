@@ -308,7 +308,9 @@ def simulated_annealing_step(
     for _ in range(max_iter):
         candidate_s = max(
             step_min,
-            min(current_s + np.random.uniform(-s_jump_range, s_jump_range, step_max)),
+            min(
+                current_s + np.random.uniform(-1 * s_jump_range, s_jump_range, step_max)
+            ),
         )
         candidate_loss = dbi_object.loss(d=d, step=candidate_s)
 
