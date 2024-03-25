@@ -197,7 +197,7 @@ class DoubleBracketIteration:
             loss = self.off_diagonal_norm
         elif self.cost == DoubleBracketCostFunction.least_squares:
             loss = self.least_squares(d)
-        else:
+        elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
             loss = self.energy_fluctuation(self.state)
 
         # set back the initial configuration
@@ -205,18 +205,20 @@ class DoubleBracketIteration:
 
         return loss
 
-    def energy_fluctuation(self, state):
+    def energy_fluctuation(self, state=None):
         """
         Evaluate energy fluctuation
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+            \\Xi(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
 
         for a given state :math:`|\\mu\\rangle`.
 
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
+        if state is None:
+            state = self.state
         state_vector = np.zeros(len(self.h.matrix))
         state_vector[state] = 1.0
         return np.real(self.h.energy_fluctuation(state_vector))
