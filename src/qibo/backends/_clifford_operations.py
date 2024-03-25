@@ -424,16 +424,14 @@ def _random_outcome(state, p, q, nqubits):
 
 @cache
 def _get_dim(nqubits):
+    """Returns the dimension of the symplectic matrix for a given number of qubits."""
     return 2 * nqubits + 1
 
 
 @cache
 def _get_packed_size(n):
+    """Returns the size of an arry of `n` booleans after packing."""
     return np.ceil(n / 8).astype(int)
-
-
-def _get_p(state, q, nqubits):
-    return state[nqubits:-1, q].nonzero()[0]
 
 
 def _packbits(array, axis):
@@ -445,6 +443,7 @@ def _unpackbits(array, axis):
 
 
 def _pack_for_measurements(state, nqubits):
+    """Prepares the state for measurements by packing the rows of the X and Z sections of the symplectic matrix."""
     r, x, z = _get_rxz(state, nqubits)
     x = _packbits(x, axis=1)
     z = _packbits(z, axis=1)
@@ -452,11 +451,13 @@ def _pack_for_measurements(state, nqubits):
 
 
 @cache
-def _get_pad_size(nqubits):
-    return 8 - (nqubits % 8)
+def _get_pad_size(n):
+    """Returns the size of the pad added to an array of original dimension `n` after unpacking."""
+    return 8 - (n % 8)
 
 
 def _unpack_for_measurements(state, nqubits):
+    """Unpacks the symplectc matrix that was packed for measurements."""
     xz = _unpackbits(state[:, :-1], axis=1)
     padding_size = _get_pad_size(nqubits)
     x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
