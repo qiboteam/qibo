@@ -66,7 +66,6 @@ def hyperopt_step(
     space: callable = None,
     optimizer: callable = None,
     look_ahead: int = 1,
-    verbose: bool = False,
     d: Optional[np.array] = None,
 ):
     """
@@ -79,7 +78,6 @@ def hyperopt_step(
         space: see hyperopt.hp possibilities;
         optimizer: see hyperopt algorithms;
         look_ahead: number of iteration steps to compute the loss function;
-        verbose: level of verbosity;
         d: diagonal operator for generating double-bracket iterations.
 
     Returns:
@@ -99,7 +97,6 @@ def hyperopt_step(
         space=space,
         algo=optimizer.suggest,
         max_evals=max_evals,
-        verbose=verbose,
     )
     return best["step"]
 
@@ -182,7 +179,7 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     return coef
 
 
-def least_squares_polynomial_expansion_coef(dbi_object, d, n):
+def least_squares_polynomial_expansion_coef(dbi_object, d: np.array = None, n: int = 3):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
@@ -197,7 +194,9 @@ def least_squares_polynomial_expansion_coef(dbi_object, d, n):
 
 
 # TODO: add a general expansion formula not stopping at 3rd order
-def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
+def energy_fluctuation_polynomial_expansion_coef(
+    dbi_object, d: np.array = None, n: int = 3, state=0
+):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
@@ -214,7 +213,7 @@ def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
     return coef
 
 
-def dGamma_diDiagonal(dbi_object, d, H, n, i, dGamma, Gamma_list):
+def dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list):
     # Derivative of gamma with respect to diagonal elements of D (full-diagonal ansatz)
     A = np.zeros(d.shape)
     A[i, i] = 1
@@ -236,7 +235,7 @@ def dpolynomial_diDiagonal(dbi_object, d, H, i):
         np.trace(Gamma_list[0] @ A) + np.trace(dGamma[0] @ d + Gamma_list[1] @ A) * s
     )
     for n in range(2, 4):
-        dGamma.append(dGamma_diDiagonal(dbi_object, d, H, n, i, dGamma, Gamma_list))
+        dGamma.append(dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list))
         derivative += np.real(
             np.trace(dGamma[-1] @ d + Gamma_list[n] @ A) * s**n / math.factorial(n)
         )
@@ -257,21 +256,21 @@ def gradient_ascent(dbi_object, d, step, iterations):
     H = dbi_object.h.matrix
     loss = np.zeros(iterations + 1)
     grad = np.zeros((iterations, len(d)))
-    dbi_new = deepcopy(dbi_object)
+    dbi_eval = deepcopy(dbi_object)
     s = polynomial_step(dbi_object, n=3, d=d)
-    dbi_new(s, d=d)
-    loss[0] = dbi_new(d)
+    dbi_eval(s, d=d)
+    loss[0] = dbi_eval(d)
     diagonals = np.empty((len(d), iterations + 1))
     diagonals[:, 0] = np.diag(d)
 
     for i in range(iterations):
-        dbi_new = deepcopy(dbi_object)
+        dbi_eval = deepcopy(dbi_object)
         grad[i, :] = gradientDiagonal(dbi_object, d, H)
         for j in range(len(d)):
             d[j, j] = d[j, j] - step * grad[i, j]
         s = polynomial_step(dbi_object, n=3, d=d)
-        dbi_new(s, d=d)
-        loss[i + 1] = dbi_new.least_squares(d)
+        dbi_eval(s, d=d)
+        loss[i + 1] = dbi_eval.least_squares(d)
         diagonals[:, i + 1] = np.diag(d)
 
     return d, loss, grad, diagonals
@@ -289,7 +288,6 @@ def simulated_annealing_step(
     cooling_rate=0.85,
     min_temp=1e-5,
     max_iter=200,
-    verbose=False,
 ):
 
     if d is None:
@@ -300,9 +298,6 @@ def simulated_annealing_step(
         s_jump_range = (step_max - step_min) / s_jump_range_divident
     current_s = initial_s
     current_loss = dbi_object.loss(d=d, step=current_s)
-    if verbose:
-        print("initial_s", current_s)
-        print("initial loss", current_loss)
     temp = initial_temp
 
     for _ in range(max_iter):
@@ -321,14 +316,6 @@ def simulated_annealing_step(
         if delta_loss < 0 or np.random.rand() < math.exp(-delta_loss / temp):
             current_s = candidate_s
             current_loss = candidate_loss
-            if verbose:
-                print(
-                    f"Iter {_} s {candidate_s} accepted with loss {candidate_loss} and prob {math.exp(-delta_loss / temp)} at temp {temp}"
-                )
-        elif verbose:
-            print(
-                f"Iter {_} s {candidate_s} loss {candidate_loss} not accepted with prob {math.exp(-delta_loss / temp)}"
-            )
         # Cool down
         temp *= cooling_rate
         if temp < min_temp:
