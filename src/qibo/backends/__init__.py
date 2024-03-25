@@ -31,6 +31,8 @@ class MetaBackend:
             return NumpyBackend()
         elif backend == "tensorflow":
             return TensorflowBackend()
+        elif backend == "pytorch":
+            return PyTorchBackend()
         elif backend == "clifford":
             return CliffordBackend(**kwargs)
         elif backend in QIBO_NON_NATIVE_BACKENDS:
@@ -83,12 +85,12 @@ class GlobalBackend(NumpyBackend):
         if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = construct_backend(backend, platform=platform)
+            cls._instance = MetaBackend.load(backend, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
                 try:
-                    cls._instance = construct_backend(**kwargs)
+                    cls._instance = MetaBackend.load(**kwargs)
                     break
                 except (ModuleNotFoundError, ImportError):
                     pass
@@ -106,7 +108,7 @@ class GlobalBackend(NumpyBackend):
             or cls._instance.name != backend
             or cls._instance.platform != kwargs.get("platform")
         ):
-            cls._instance = construct_backend(backend, **kwargs)
+            cls._instance = MetaBackend.load(backend, **kwargs)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
