@@ -175,4 +175,3 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     # coefficients from high to low (n:0)
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
-
