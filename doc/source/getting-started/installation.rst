@@ -18,7 +18,7 @@ distributed with pypi* for the packages listed above.
 +------------------+------+---------+------------+
 
 .. note::
-      All packages are supported for Python >= 3.7.
+      All packages are supported for Python >= 3.9.
 
 
 Backend installation
@@ -38,7 +38,7 @@ Installing with pip
 """""""""""""""""""
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-Make sure you have Python 3.7 or greater, then use ``pip`` to install ``qibo`` with:
+Make sure you have Python 3.9 or greater, then use ``pip`` to install ``qibo`` with:
 
 .. code-block:: bash
 
@@ -237,30 +237,27 @@ please do:
 
 _______________________
 
-.. _docker:
 
-Using the code with docker
---------------------------
+.. _installing-pytorch:
 
-We provide docker images for tag release of the code using GitHub Packages. The
-docker images contain a pre-configured linux environment with the Qibo
-framework installed with the specific tag version.
+pytorch
+^^^^^^^
 
-Please refer to the download and authentication instructions from the `Qibo GitHub Packages`_.
+If the `PyTorch <https://pytorch.org/>`_ package is installed Qibo
+will detect and provide to the user the possibility to use ``pytorch``
+backend.
 
-In order to start the docker image in interactive mode please use docker
-standard syntax, for example:
+In order to switch to the ``pytorch`` backend please do:
 
-.. code::
+.. code-block::  python
 
-    docker run -it ghcr.io/qiboteam/qibo:<tag_version> bash
+      import qibo
+      qibo.set_backend("pytorch")
 
-This will open a bash shell with the Qibo environment already activated, with
-all binaries and scripts from the Qibo framework.
+In order to install the package, we recommend the installation using:
 
-.. _Qibo GitHub Packages: https://github.com/qiboteam/qibo/pkgs/container/qibo
+.. code-block:: bash
 
+      pip install qibo torch
 
-.. note::
-      The docker image contains the basic ``qibo`` package with the lightweight
-      ``numpy`` backend for simulation.
+_______________________
