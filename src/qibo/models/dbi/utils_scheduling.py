@@ -155,7 +155,8 @@ def polynomial_step(
     else:
         return None
 
-def d_ansatz(params, type = 'Full'):
+
+def d_ansatz(params, type="Full"):
     r"""
     Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
     Args:
@@ -164,19 +165,19 @@ def d_ansatz(params, type = 'Full'):
         (Full being each entry parametrized and Pauli being a linear combination of Z_i matrix).
     """
 
-    if type == 'Full':
+    if type == "Full":
         d = np.zeros((len(params), len(params)))
         for i in range(len(params)):
             d[i, i] = params[i]
 
-    if type == 'Pauli':
-        d = np.zeros((2**len(params), 2**len(params)))
+    if type == "Pauli":
+        d = np.zeros((2 ** len(params), 2 ** len(params)))
         Z = np.array([[1, 0], [0, -1]])
         for i in range(len(params)):
             I1 = np.eye(2**i)
-            I2 = np.eye(2**(len(params)-i-1))
-            d += params[i]*np.kron(I1,np.kron(Z,I2))
-    
+            I2 = np.eye(2 ** (len(params) - i - 1))
+            d += params[i] * np.kron(I1, np.kron(Z, I2))
+
     return d
 
 
@@ -238,7 +239,7 @@ def energy_fluctuation_polynomial_expansion_coef(
 
 
 # D GRADIENTS
-def dGamma_diDiagonal(dbi_object, d, H, n, i,dGamma, Gamma_list):
+def dGamma_diDiagonal(dbi_object, d, H, n, i, dGamma, Gamma_list):
     # Derivative of gamma with respect to diagonal elements of D (full-diagonal ansatz)
     A = np.zeros(d.shape)
     A[i, i] = 1
@@ -267,43 +268,49 @@ def dpolynomial_diDiagonal(dbi_object, d, H, i):
 
     return derivative
 
-def gradientDiagonal(dbi_object, params, H, analytic = True, ansatz = 'Full', h = 1e-4):
+
+def gradientDiagonal(dbi_object, params, H, analytic=True, ansatz="Full", h=1e-4):
     # Gradient of potential function with respect to diagonal elements of D (full-diagonal ansatz)
     grad = np.zeros(len(params))
     d = d_ansatz(params, ansatz)
     if analytic == True:
         for i in range(len(params)):
-            derivative = dpolynomial_diDiagonal(dbi_object,d,H,i)
-            grad[i] = d[i,i]-derivative
+            derivative = dpolynomial_diDiagonal(dbi_object, d, H, i)
+            grad[i] = d[i, i] - derivative
     else:
         for i in range(len(params)):
             params_new = deepcopy(params)
             params_new[i] += h
             d_new = d_ansatz(params_new, ansatz)
-            grad[i] = (dbi_object.least_squares(d_new)-dbi_object.least_squares(d))/h
+            grad[i] = (
+                dbi_object.least_squares(d_new) - dbi_object.least_squares(d)
+            ) / h
     return grad
 
-def gradient_ascent(dbi_object, params, step, iterations, analytic = True, ansatz = 'Full'):
+
+def gradient_ascent(dbi_object, params, step, iterations, analytic=True, ansatz="Full"):
     H = dbi_object.h.matrix
-    d = d_ansatz(params,ansatz)
-    loss = np.zeros(iterations+1)
-    grad = np.zeros((iterations,len(params)))
+    d = d_ansatz(params, ansatz)
+    loss = np.zeros(iterations + 1)
+    grad = np.zeros((iterations, len(params)))
     dbi_new = deepcopy(dbi_object)
-    s = polynomial_step(dbi_object, n = 3, d=d)
-    dbi_new(s,d=d)
+    s = polynomial_step(dbi_object, n=3, d=d)
+    dbi_new(s, d=d)
     loss[0] = dbi_new.least_squares(d)
-    params_hist = np.empty((len(params),iterations+1))
-    params_hist[:,0] = params
+    params_hist = np.empty((len(params), iterations + 1))
+    params_hist[:, 0] = params
 
     for i in range(iterations):
         dbi_new = deepcopy(dbi_object)
-        grad[i,:] = gradientDiagonal(dbi_object, params, H, analytic=analytic, ansatz=ansatz)
+        grad[i, :] = gradientDiagonal(
+            dbi_object, params, H, analytic=analytic, ansatz=ansatz
+        )
         for j in range(len(params)):
-            params[j] = params[j] - step*grad[i,j]
-        d = d_ansatz(params,ansatz)     
-        s = polynomial_step(dbi_object, n = 3, d=d)
-        dbi_new(s,d=d)
-        loss[i+1] = dbi_new.least_squares(d)
-        params_hist[:,i+1] = params
-        
-    return d,loss,grad,params_hist
+            params[j] = params[j] - step * grad[i, j]
+        d = d_ansatz(params, ansatz)
+        s = polynomial_step(dbi_object, n=3, d=d)
+        dbi_new(s, d=d)
+        loss[i + 1] = dbi_new.least_squares(d)
+        params_hist[:, i + 1] = params
+
+    return d, loss, grad, params_hist
