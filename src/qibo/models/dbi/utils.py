@@ -96,14 +96,13 @@ def select_best_dbr_generator(
     """
     if scheduling is None:
         scheduling = dbi_object.scheduling
-    norms_off_diagonal_restriction = [
-        dbi_object.off_diagonal_norm for _ in range(len(d_list))
-    ]
-    optimal_steps, flip_list = [], []
+    norms_off_diagonal_restriction = [dbi_object.off_diagonal_norm] * (len(d_list) + 1)
+    optimal_steps = np.zeros(len(d_list) + 1)
+    flip_list = np.ones(len(d_list) + 1)
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list.append(cs_angle_sgn(dbi_eval, d))
+        flip_list[i] = cs_angle_sgn(dbi_eval, d)
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.choose_step(
@@ -112,11 +111,10 @@ def select_best_dbr_generator(
             else:
                 step_best = step
             dbi_eval(step=step_best, d=flip_list[i] * d)
-            optimal_steps.append(step_best)
+            optimal_steps[i] = step_best
             norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
-        flip_list.append(1)
         dbi_eval = deepcopy(dbi_object)
         dbi_eval.mode = DoubleBracketGeneratorType.canonical
         if step is None:
@@ -124,8 +122,8 @@ def select_best_dbr_generator(
         else:
             step_best = step
         dbi_eval(step=step_best)
-        optimal_steps.append(step_best)
-        norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
+        optimal_steps[-1] = step_best
+        norms_off_diagonal_restriction[-1] = dbi_eval.off_diagonal_norm
     # find best d
     idx_max_loss = np.argmin(norms_off_diagonal_restriction)
     flip = flip_list[idx_max_loss]
@@ -175,6 +173,7 @@ def dGamma_di_onsite_Z(
     else:
         Z_i = onsite_Z_ops[i]
     dGamma_di = [np.zeros((2**nqubits, 2**nqubits))] * (n + 1)
+    Gamma_list = dbi_object.generate_Gamma_list(n=n + 2, d=d)
     W = dbi_object.commutator(d, dbi_object.h.matrix)
     dW_di = dbi_object.commutator(Z_i, dbi_object.h.matrix)
     for k in range(n + 1):
@@ -184,7 +183,7 @@ def dGamma_di_onsite_Z(
             dGamma_di[k] = dW_di
         else:
             dGamma_di[k] = dbi_object.commutator(
-                dW_di, dbi_object.Gamma(k - 1, d)
+                dW_di, Gamma_list[k - 1]
             ) + dbi_object.commutator(W, dGamma_di[k - 1])
     return dGamma_di
 
@@ -193,6 +192,7 @@ def ds_di_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d: np.array,
     i: int,
+    n: int = 3,
     taylor_coef: Optional[list] = None,
     onsite_Z_ops: Optional[list] = None,
 ):
@@ -210,15 +210,14 @@ def ds_di_onsite_Z(
     nqubits = int(np.log2(d.shape[0]))
     if onsite_Z_ops is None:
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)
-    dGamma_di = dGamma_di_onsite_Z(dbi_object, 3, i, d, onsite_Z_ops=onsite_Z_ops)
+    dGamma_di = dGamma_di_onsite_Z(dbi_object, n=4, i=i, d=d, onsite_Z_ops=onsite_Z_ops)
+    Gamma_list = dbi_object.generate_Gamma_list(n=4, d=d)
 
     def derivative_product(k1, k2):
         r"""Calculate the derivative of a product $\sigma(\Gamma(n1,i))@\sigma(\Gamma(n2,i))"""
         return dbi_object.sigma(dGamma_di[k1]) @ dbi_object.sigma(
-            dbi_object.Gamma(k2, d)
-        ) + dbi_object.sigma(
-            dbi_object.sigma(dbi_object.Gamma(k1, d))
-        ) @ dbi_object.sigma(
+            Gamma_list[k2]
+        ) + dbi_object.sigma(dbi_object.sigma(Gamma_list[k1])) @ dbi_object.sigma(
             dGamma_di[k2]
         )
 
@@ -242,9 +241,10 @@ def ds_di_onsite_Z(
 def gradient_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d: np.array,
-    onsite_Z_ops,
-    n_taylor=2,
+    onsite_Z_ops: list,
     use_ds=False,
+    n=3,
+    **kwargs,
 ):
     r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
     Args:
@@ -262,15 +262,17 @@ def gradient_onsite_Z(
     if onsite_Z_ops is None:
         onsite_Z_ops = generate_onsite_Z_ops(nqubits)
     grad = np.zeros(nqubits)
-    s, coef = dbi_object.polynomial_step(
+    coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n=n)
+    s = dbi_object.choose_step(
         d=d,
-        n=n_taylor,
-        backup_scheduling=DoubleBracketScheduling.polynomial_approximation,
+        **kwargs,
     )
 
     a, b, c = coef[len(coef) - 3 :]
     for i in range(nqubits):
-        da, db, dc, ds = ds_di_onsite_Z(dbi_object, d, i, [a, b, c], onsite_Z_ops)
+        da, db, dc, ds = ds_di_onsite_Z(
+            dbi_object, d=d, i=i, n=n, taylor_coef=[a, b, c], onsite_Z_ops=onsite_Z_ops
+        )
         if use_ds is True:
             ds = 0
         grad[i] = (
@@ -312,7 +314,7 @@ def gradient_descent_onsite_Z(
     dbi_object: DoubleBracketIteration,
     d_coef: list,
     d: Optional[np.array] = None,
-    n_taylor: int = 2,
+    n: int = 2,
     onsite_Z_ops: Optional[list] = None,
     lr_min: float = 1e-5,
     lr_max: float = 1,
@@ -348,7 +350,7 @@ def gradient_descent_onsite_Z(
     if d is None:
         d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
     grad, s = gradient_onsite_Z(
-        dbi_object, d, n_taylor=n_taylor, onsite_Z_ops=onsite_Z_ops, use_ds=use_ds
+        dbi_object, d, n=n, onsite_Z_ops=onsite_Z_ops, use_ds=use_ds
     )
     # optimize gradient descent step with hyperopt
     if space is None:

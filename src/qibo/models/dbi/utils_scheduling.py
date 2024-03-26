@@ -294,6 +294,8 @@ def simulated_annealing_step(
         d = dbi_object.diagonal_h_matrix
     if initial_s is None:
         initial_s = polynomial_step(dbi_object=dbi_object, d=d, n=4)
+        if initial_s is None:
+            initial_s = step_min
     if s_jump_range is None:
         s_jump_range = (step_max - step_min) / s_jump_range_divident
     current_s = initial_s
@@ -304,7 +306,7 @@ def simulated_annealing_step(
         candidate_s = max(
             step_min,
             min(
-                current_s + np.random.uniform(-1 * s_jump_range, s_jump_range, step_max)
+                current_s + np.random.uniform(-1 * s_jump_range, s_jump_range), step_max
             ),
         )
         candidate_loss = dbi_object.loss(d=d, step=candidate_s)
