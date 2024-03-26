@@ -1,3 +1,4 @@
+import math
 from copy import deepcopy
 from itertools import product
 from typing import Optional
@@ -6,6 +7,7 @@ import hyperopt
 import numpy as np
 
 from qibo import symbols
+from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
@@ -14,7 +16,7 @@ from qibo.models.dbi.double_bracket import (
 )
 
 
-def generate_Z_operators(nqubits: int):
+def generate_Z_operators(nqubits: int, backend=None):
     """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
     Return: Dictionary with operator names (str) as keys and operators (np.array) as values
 
@@ -37,6 +39,8 @@ def generate_Z_operators(nqubits: int):
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
+
+    backend = _check_backend(backend)
     # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
@@ -47,7 +51,9 @@ def generate_Z_operators(nqubits: int):
             op_name = "".join(zi_string_combination)
             tensor_op = str_to_symbolic(op_name)
             # append in output_dict
-            output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
+            output_dict[op_name] = SymbolicHamiltonian(
+                tensor_op, backend=backend
+            ).dense.matrix
     return output_dict
 
 
@@ -374,3 +380,26 @@ def diagonal_min_max(matrix: np.array):
     D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
     D = np.diag(D)
     return D
+
+
+def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
+    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
+    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients for rotation with [W,H] and H
+    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
+    # product coefficient
+    trace_coefficients = [0] * (2 * n + 1)
+    for k in range(n + 1):
+        for j in range(n + 1):
+            power = k + j
+            product_matrix = c1[k] @ c2[j]
+            trace_coefficients[power] += 2 * np.trace(product_matrix)
+    # coefficients from high to low (n:0)
+    coef = list(reversed(trace_coefficients[: n + 1]))
+    return coef

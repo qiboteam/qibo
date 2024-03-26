@@ -1,15 +1,17 @@
-import math
 from copy import deepcopy
 from enum import Enum, auto
-from functools import partial
 from typing import Optional
 
 import hyperopt
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
-
-error = 1e-3
+from qibo.models.dbi.utils_scheduling import (
+    grid_search_step,
+    hyperopt_step,
+    polynomial_step,
+    simulated_annealing_step,
+)
 
 
 class DoubleBracketGeneratorType(Enum):
@@ -27,12 +29,25 @@ class DoubleBracketGeneratorType(Enum):
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
-    hyperopt = auto()
+    hyperopt = hyperopt_step
     """Use hyperopt package."""
-    grid_search = auto()
+    grid_search = grid_search_step
     """Use greedy grid search."""
-    polynomial_approximation = auto()
+    polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
+    simulated_annealing = simulated_annealing_step
+    """Use simulated annealing algorithm"""
+
+
+class DoubleBracketCostFunction(Enum):
+    """Define the DBI cost function."""
+
+    off_diagonal_norm = auto()
+    """Use off-diagonal norm as cost function."""
+    least_squares = auto()
+    """Use least squares as cost function."""
+    energy_fluctuation = auto()
+    """Use energy fluctuation as cost function."""
 
 
 class DoubleBracketIteration:
@@ -64,11 +79,15 @@ class DoubleBracketIteration:
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
+        cost: DoubleBracketCostFunction = DoubleBracketCostFunction.off_diagonal_norm,
+        state: int = 0,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
         self.scheduling = scheduling
+        self.cost = cost
+        self.state = state
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -100,6 +119,7 @@ class DoubleBracketIteration:
         operator_dagger = self.backend.cast(
             np.matrix(self.backend.to_numpy(operator)).getH()
         )
+
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
 
     @staticmethod
@@ -131,141 +151,17 @@ class DoubleBracketIteration:
         """Get Hamiltonian's backend."""
         return self.h0.backend
 
-    def grid_search_step(
-        self,
-        step_min: float = 1e-5,
-        step_max: float = 1,
-        num_evals: int = 100,
-        space: Optional[np.array] = None,
-        d: Optional[np.array] = None,
-    ):
-        """
-        Greedy optimization of the iteration step.
-
-        Args:
-            step_min: lower bound of the search grid;
-            step_max: upper bound of the search grid;
-            mnum_evals: number of iterations between step_min and step_max;
-            d: diagonal operator for generating double-bracket iterations.
-
-        Returns:
-            (float): optimized best iteration step (minimizing off-diagonal norm).
-        """
-        if space is None:
-            space = np.linspace(step_min, step_max, num_evals)
-
-        if d is None:
-            d = self.diagonal_h_matrix
-
-        loss_list = [self.loss(step, d=d) for step in space]
-        idx_max_loss = np.argmin(loss_list)
-        return space[idx_max_loss]
-
-    def hyperopt_step(
-        self,
-        step_min: float = 1e-5,
-        step_max: float = 1,
-        max_evals: int = 500,
-        space: callable = None,
-        optimizer: callable = None,
-        look_ahead: int = 1,
-        verbose: bool = False,
-        d: Optional[np.array] = None,
-    ):
-        """
-        Optimize iteration step using hyperopt.
-
-        Args:
-            step_min: lower bound of the search grid;
-            step_max: upper bound of the search grid;
-            max_evals: maximum number of iterations done by the hyperoptimizer;
-            space: see hyperopt.hp possibilities;
-            optimizer: see hyperopt algorithms;
-            look_ahead: number of iteration steps to compute the loss function;
-            verbose: level of verbosity;
-            d: diagonal operator for generating double-bracket iterations.
-
-        Returns:
-            (float): optimized best iteration step (minimizing off-diagonal norm).
-        """
-        if space is None:
-            space = hyperopt.hp.uniform
-        if optimizer is None:
-            optimizer = hyperopt.tpe
-        if d is None:
-            d = self.diagonal_h_matrix
-
-        space = space("step", step_min, step_max)
-        best = hyperopt.fmin(
-            fn=partial(self.loss, d=d, look_ahead=look_ahead),
-            space=space,
-            algo=optimizer.suggest,
-            max_evals=max_evals,
-            verbose=verbose,
+    def least_squares(self, D: np.array):
+        """Least squares cost function."""
+        H = self.h.matrix
+        return -np.real(
+            np.trace(H @ D) - 0.5 * (np.linalg.norm(H) ** 2 + np.linalg.norm(D) ** 2)
         )
-        return best["step"]
-
-    def polynomial_step(
-        self,
-        n: int = 2,
-        n_max: int = 5,
-        d: np.array = None,
-    ):
-        r"""
-        Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
-        e.g. $n=2$: $2\Trace(\sigma(\Gamma_1 + s\Gamma_2 + s^2/2\Gamma_3)\sigma(\Gamma_0 + s\Gamma_1 + s^2/2\Gamma_2))
-        Args:
-            n (int, optional): the order to which the loss function is expanded. Defaults to 4.
-            n_max (int, optional): maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
-            d (np.array, optional): diagonal operator, default as $\delta(H)$.
-            backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
-        """
-
-        if d is None:
-            d = self.diagonal_h_matrix
-
-        if n > n_max:
-            raise ValueError(
-                "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
-            )
-
-        # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-        W = self.commutator(d, self.sigma(self.h.matrix))
-        Gamma_list = self.generate_Gamma_list(n + 2, d)
-        sigma_Gamma_list = list(map(self.sigma, Gamma_list))
-        exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
-        # coefficients for rotation with [W,H] and H
-        c1 = exp_list.reshape(-1, 1, 1) * sigma_Gamma_list[1:]
-        c2 = exp_list.reshape(-1, 1, 1) * sigma_Gamma_list[:-1]
-        # product coefficient
-        trace_coefficients = [0] * (2 * n + 1)
-        for k in range(n + 1):
-            for j in range(n + 1):
-                power = k + j
-                product_matrix = c1[k] @ c2[j]
-                trace_coefficients[power] += 2 * np.trace(product_matrix)
-        # coefficients from high to low (n:0)
-        coef = list(reversed(trace_coefficients[: n + 1]))
-        roots = np.roots(coef)
-        real_positive_roots = [
-            np.real(root)
-            for root in roots
-            if np.imag(root) < error and np.real(root) > 0
-        ]
-        # solution exists, return minimum s
-        if len(real_positive_roots) > 0:
-            return min(real_positive_roots), coef
-        # solution does not exist, return None
-        else:
-            return None, coef
 
     def choose_step(
         self,
         d: Optional[np.array] = None,
         scheduling: Optional[DoubleBracketScheduling] = None,
-        backup_scheduling: Optional[
-            DoubleBracketScheduling
-        ] = DoubleBracketScheduling.hyperopt,
         **kwargs,
     ):
         """
@@ -273,28 +169,16 @@ class DoubleBracketIteration:
         """
         if scheduling is None:
             scheduling = self.scheduling
-        if scheduling is DoubleBracketScheduling.grid_search:
-            return self.grid_search_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.hyperopt:
-            return self.hyperopt_step(d=d, **kwargs)
-        if scheduling is DoubleBracketScheduling.polynomial_approximation:
-            step, coef = self.polynomial_step(d=d, **kwargs)
-            # if no solution
-            if step is None:
-                if (
-                    backup_scheduling
-                    == DoubleBracketScheduling.polynomial_approximation
-                    and coef is not None
-                ):
-                    # if `n` is not provided, try default value
-                    kwargs["n"] = kwargs.get("n", 2)
-                    kwargs["n"] += 1
-                    step, coef = self.polynomial_step(d=d, **kwargs)
-                    # if n==n_max, return None
-                else:
-                    # Issue: cannot pass kwargs
-                    step = self.choose_step(d=d, scheduling=backup_scheduling)
-            return step
+        step = scheduling(self, d=d, **kwargs)
+        if (
+            step is None
+            and scheduling == DoubleBracketScheduling.polynomial_approximation
+        ):
+            kwargs["n"] = kwargs.get("n", 3)
+            kwargs["n"] += 1
+            # if n==n_max, return None
+            step = scheduling(self, d=d, **kwargs)
+        return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
@@ -311,27 +195,36 @@ class DoubleBracketIteration:
         for _ in range(look_ahead):
             self.__call__(mode=self.mode, step=step, d=d)
 
-        # off_diagonal_norm's value after the steps
-        loss = self.off_diagonal_norm
+        # loss values depending on the cost function
+        if self.cost == DoubleBracketCostFunction.off_diagonal_norm:
+            loss = self.off_diagonal_norm
+        elif self.cost == DoubleBracketCostFunction.least_squares:
+            loss = self.least_squares(d)
+        elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
+            loss = self.energy_fluctuation(self.state)
 
         # set back the initial configuration
         self.h = h_copy
 
         return loss
 
-    def energy_fluctuation(self, state):
+    def energy_fluctuation(self, state=None):
         """
         Evaluate energy fluctuation
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+            \\Xi(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
 
         for a given state :math:`|\\mu\\rangle`.
 
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        return self.h.energy_fluctuation(state)
+        if state is None:
+            state = self.state
+        state_vector = np.zeros(len(self.h.matrix))
+        state_vector[state] = 1.0
+        return np.real(self.h.energy_fluctuation(state_vector))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
@@ -343,15 +236,3 @@ class DoubleBracketIteration:
         for _ in range(n - 1):
             Gamma_list.append(self.commutator(W, Gamma_list[-1]))
         return Gamma_list
-
-    # def Gamma(self, n: int, d: np.array):
-
-    #     r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
-    #     if k == 0:
-    #         return self.h.matrix
-    #     else:
-    #         W = self.commutator(d, self.sigma(self.h.matrix))
-    #         result = self.h.matrix
-    #         for _ in range(k):
-    #             result = self.commutator(W, result)
-    #     return result
