@@ -7,8 +7,8 @@ import hyperopt
 import numpy as np
 
 from qibo import symbols
-from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.backends import _check_backend
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
@@ -16,7 +16,7 @@ from qibo.models.dbi.double_bracket import (
 )
 
 
-def generate_Z_operators(nqubits: int):
+def generate_Z_operators(nqubits: int, backend=None):
     """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
     Return: Dictionary with operator names (str) as keys and operators (np.array) as values
 
@@ -39,17 +39,21 @@ def generate_Z_operators(nqubits: int):
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
+
+    backend = _check_backend(backend)
     # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
 
-    for op_string_tup in combination_strings:
+    for zi_string_combination in combination_strings:
         # except for the identity
-        if "Z" in op_string_tup:
-            op_name = "".join(op_string_tup)
+        if "Z" in zi_string_combination:
+            op_name = "".join(zi_string_combination)
             tensor_op = str_to_symbolic(op_name)
             # append in output_dict
-            output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
+            output_dict[op_name] = SymbolicHamiltonian(
+                tensor_op, backend=backend
+            ).dense.matrix
     return output_dict
 
 
@@ -77,7 +81,7 @@ def select_best_dbr_generator(
     scheduling: DoubleBracketScheduling = None,
     **kwargs,
 ):
-    """Selects the best double bracket rotation generator from a list and runs the
+    """Selects the best double bracket rotation generator from a list and execute the rotation.
 
     Args:
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
@@ -95,12 +99,11 @@ def select_best_dbr_generator(
     norms_off_diagonal_restriction = [
         dbi_object.off_diagonal_norm for _ in range(len(d_list))
     ]
-    optimal_steps = [0 for _ in range(len(d_list))]
-    flip_list = [1 for _ in range(len(d_list))]
+    optimal_steps, flip_list = [], []
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list[i] = cs_angle_sgn(dbi_eval, d)
+        flip_list.append(cs_angle_sgn(dbi_eval, d))
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.choose_step(
@@ -109,7 +112,7 @@ def select_best_dbr_generator(
             else:
                 step_best = step
             dbi_eval(step=step_best, d=flip_list[i] * d)
-            optimal_steps[i] = step_best
+            optimal_steps.append(step_best)
             norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
@@ -124,9 +127,7 @@ def select_best_dbr_generator(
         optimal_steps.append(step_best)
         norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
     # find best d
-    idx_max_loss = norms_off_diagonal_restriction.index(
-        min(norms_off_diagonal_restriction)
-    )
+    idx_max_loss = np.argmin(norms_off_diagonal_restriction)
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
     dbi_eval = deepcopy(dbi_object)
@@ -174,4 +175,3 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     # coefficients from high to low (n:0)
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
-

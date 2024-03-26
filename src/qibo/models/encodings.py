@@ -1,10 +1,10 @@
 """Module with functions that encode classical data into quantum circuits."""
 
 import math
+from inspect import signature
 from typing import Optional, Union
 
 import numpy as np
-from scipy.stats import rv_continuous
 
 from qibo import gates
 from qibo.config import raise_error
@@ -70,28 +70,52 @@ def comp_basis_encoder(
     return circuit
 
 
-def unary_encoder(data, architecture: str = "tree"):
-    """Creates circuit that performs the unary encoding of ``data``.
-
-    Given a classical ``data`` array :math:`\\mathbf{x} \\in \\mathbb{R}^{d}` such that
-
-    .. math::
-        \\mathbf{x} = (x_{1}, x_{2}, \\dots, x_{d}) \\, ,
-
-    this function generate the circuit that prepares the following quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}`:
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k} \\, ,
-
-    with :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
+def phase_encoder(data, rotation: str = "RY"):
+    """Creates circuit that performs the phase encoding of ``data``.
 
     Args:
-        data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
+        rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
+            If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
+            If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
+            Defaults to ``"RY"``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in phase encoding.
+    """
+    if isinstance(data, list):
+        data = np.array(data)
+
+    if len(data.shape) != 1:
+        raise_error(
+            TypeError,
+            f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
+        )
+
+    if not isinstance(rotation, str):
+        raise_error(
+            TypeError,
+            f"``rotation`` must be type str, but it is type {type(rotation)}.",
+        )
+
+    if rotation not in ["RX", "RY", "RZ"]:
+        raise_error(ValueError, f"``rotation`` {rotation} not found.")
+
+    nqubits = len(data)
+    gate = getattr(gates, rotation.upper())
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
+    circuit.set_parameters(data)
+
+    return circuit
+
+
+def unary_encoder(data, architecture: str = "tree"):
+    """Creates circuit that performs the (deterministic) unary encoding of ``data``.
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array of data to be loaded.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
@@ -99,11 +123,10 @@ def unary_encoder(data, architecture: str = "tree"):
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
-
-    References:
-        1. S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*.
-        `arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
     """
+    if isinstance(data, list):
+        data = np.array(data)
+
     if len(data.shape) != 1:
         raise_error(
             TypeError,
@@ -143,26 +166,12 @@ def unary_encoder(data, architecture: str = "tree"):
 def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed=None):
     """Creates a circuit that performs the unary encoding of a random Gaussian state.
 
-    Given :math:`d` qubits, encodes the quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}` such that
-
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k}
-
-    where :math:`x_{k}` are independent Gaussian random variables,
-    :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` is a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
-
-    At depth :math:`h`, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
+    At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
     gates :math:`RBS(\\theta_{k})` are sampled from the following probability density function:
 
     .. math::
-        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})}
-            \\abs{\\sin(\\theta) \\, \\cos(\\theta)}^{2^{h-1} - 1} \\, ,
+        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})} \\,
+            \\left|\\sin(\\theta) \\, \\cos(\\theta)\\right|^{2^{h-1} - 1} \\, ,
 
     where :math:`\\Gamma(\\cdot)` is the
     `Gamma function <https://en.wikipedia.org/wiki/Gamma_function>`_.
@@ -218,6 +227,10 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        _ProbabilityDistributionGaussianLoader,
+    )
+
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
@@ -236,6 +249,115 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
         phases.extend(sampler.rvs(depth=depth, size=len(row)))
 
     circuit.set_parameters(phases)
+
+    return circuit
+
+
+def entangling_layer(
+    nqubits: int,
+    architecture: str = "diagonal",
+    entangling_gate: Union[str, gates.Gate] = "CNOT",
+    closed_boundary: bool = False,
+):
+    """Creates a layer of two-qubit, entangling gates.
+
+    If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        architecture (str, optional): Architecture of the entangling layer.
+            Options are ``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+            Defaults to ``"diagonal"``.
+        entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
+            in the entangling layer. If ``entangling_gate`` is a parametrized gate,
+            all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
+        closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
+            to the entangling layer. Defaults to ``False``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
+    """
+
+    if not isinstance(nqubits, int):
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+
+    if nqubits <= 0.0:
+        raise_error(
+            ValueError, f"nqubits must be a positive integer, but it is {nqubits}."
+        )
+
+    if not isinstance(architecture, str):
+        raise_error(
+            TypeError,
+            f"``architecture`` must be type str, but it is type {type(architecture)}.",
+        )
+
+    if architecture not in ["diagonal", "shifted", "even-layer", "odd-layer"]:
+        raise_error(
+            NotImplementedError,
+            f"``architecture`` {architecture} not found.",
+        )
+
+    if not isinstance(closed_boundary, bool):
+        raise_error(
+            TypeError,
+            f"closed_boundary must be type bool, but it is type {type(closed_boundary)}.",
+        )
+
+    gate = (
+        getattr(gates, entangling_gate)
+        if isinstance(entangling_gate, str)
+        else entangling_gate
+    )
+
+    if gate.__name__ == "GeneralizedfSim":
+        raise_error(
+            NotImplementedError,
+            "This function does not support the ``GeneralizedfSim`` gate.",
+        )
+
+    # Finds the number of correct number of parameters to initialize the gate class.
+    parameters = list(signature(gate).parameters)
+
+    if "q2" in parameters:
+        raise_error(
+            NotImplementedError, f"This function does not accept three-qubit gates."
+        )
+
+    # If gate is parametrized, sets all angles to 0.0
+    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
+    circuit = Circuit(nqubits)
+
+    if architecture == "diagonal":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(nqubits - 1)
+        )
+    elif architecture == "even-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+    elif architecture == "odd-layer":
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+    else:
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(0, nqubits - 1, 2)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in range(1, nqubits - 1, 2)
+        )
+
+    if closed_boundary:
+        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
 
     return circuit
 
@@ -325,13 +447,9 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     return phases
 
 
-class _ProbabilityDistributionGaussianLoader(rv_continuous):
-    """Probability density function for sampling phases of
-    the RBS gates as a function of circuit depth."""
+def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
+    """Returns two-qubit gate initialized with or without phases."""
+    if params is not None:
+        return gate(q0, q1, *params)
 
-    def _pdf(self, theta: float, depth: int):
-        amplitude = 2 * math.gamma(2 ** (depth - 1)) / math.gamma(2 ** (depth - 2)) ** 2
-
-        probability = abs(math.sin(theta) * math.cos(theta)) ** (2 ** (depth - 1) - 1)
-
-        return amplitude * probability / 4
+    return gate(q0, q1)

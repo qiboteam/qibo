@@ -10,6 +10,7 @@ from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
+    simulated_annealing_step,
 )
 
 
@@ -34,6 +35,9 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
+    simulated_annealing = simulated_annealing_step
+    """Use simulated annealing algorithm"""
+
 
 class DoubleBracketCostFunction(Enum):
     """Define the DBI cost function."""
@@ -44,6 +48,7 @@ class DoubleBracketCostFunction(Enum):
     """Use least squares as cost function."""
     energy_fluctuation = auto()
     """Use energy fluctuation as cost function."""
+
 
 class DoubleBracketIteration:
     """
@@ -99,7 +104,7 @@ class DoubleBracketIteration:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
-                1.0j*step,
+                1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
@@ -133,7 +138,7 @@ class DoubleBracketIteration:
 
     @property
     def off_diagonal_norm(self):
-        r"""Hilbert Schmidt norm of off-diagonal part of H matrix: \Tr(\sqrt{A^\dag A})"""
+        r"""Hilbert Schmidt norm of off-diagonal part of H matrix, namely :math:`\\text{Tr}(\\sqrt{A^{\\dagger} A})`."""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
@@ -149,7 +154,9 @@ class DoubleBracketIteration:
     def least_squares(self, D: np.array):
         """Least squares cost function."""
         H = self.h.matrix
-        return -np.real(np.trace(H@D)-0.5*(np.linalg.norm(H)**2+np.linalg.norm(D)**2))
+        return -np.real(
+            np.trace(H @ D) - 0.5 * (np.linalg.norm(H) ** 2 + np.linalg.norm(D) ** 2)
+        )
 
     def choose_step(
         self,
@@ -190,7 +197,7 @@ class DoubleBracketIteration:
             loss = self.off_diagonal_norm
         elif self.cost == DoubleBracketCostFunction.least_squares:
             loss = self.least_squares(d)
-        else:
+        elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
             loss = self.energy_fluctuation(self.state)
 
         # set back the initial configuration
@@ -198,18 +205,20 @@ class DoubleBracketIteration:
 
         return loss
 
-    def energy_fluctuation(self, state):
+    def energy_fluctuation(self, state=None):
         """
         Evaluate energy fluctuation
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+            \\Xi(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
 
         for a given state :math:`|\\mu\\rangle`.
 
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
+        if state is None:
+            state = self.state
         state_vector = np.zeros(len(self.h.matrix))
         state_vector[state] = 1.0
         return np.real(self.h.energy_fluctuation(state_vector))

@@ -1,26 +1,30 @@
 import math
+from copy import deepcopy
 from functools import partial
 from typing import Optional
-from copy import deepcopy
+
 import hyperopt
 import numpy as np
 
-
 error = 1e-3
+
 
 def commutator(A, B):
     """Compute commutator between two arrays."""
-    return A@B-B@A
+    return A @ B - B @ A
+
 
 def variance(A, state):
-    """Calculates the variance of a matrix A with respect to a state: Var($A$) = $\langle\mu|A^2|\mu\rangle-\langle\mu|A|\mu\rangle^2$"""
-    B = A@A
-    return B[state,state]-A[state,state]**2
+    """Calculates the variance of a matrix A with respect to a state: Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
+    B = A @ A
+    return B[state, state] - A[state, state] ** 2
+
 
 def covariance(A, B, state):
-    """Calculates the covariance of two matrices A and B with respect to a state: Cov($A,B$) = $\langle\mu|AB|\mu\rangle-\langle\mu|A|\mu\rangle\langle\mu|B|\mu\rangle$"""
-    C = A@B+B@A
-    return C[state,state]-2*A[state,state]*B[state,state]
+    """Calculates the covariance of two matrices A and B with respect to a state: Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$"""
+    C = A @ B + B @ A
+    return C[state, state] - 2 * A[state, state] * B[state, state]
+
 
 def grid_search_step(
     dbi_object,
@@ -49,7 +53,7 @@ def grid_search_step(
         d = dbi_object.diagonal_h_matrix
 
     loss_list = [dbi_object.loss(step, d=d) for step in space]
-    
+
     idx_max_loss = np.argmin(loss_list)
     return space[idx_max_loss]
 
@@ -62,7 +66,6 @@ def hyperopt_step(
     space: callable = None,
     optimizer: callable = None,
     look_ahead: int = 1,
-    verbose: bool = False,
     d: Optional[np.array] = None,
 ):
     """
@@ -75,7 +78,6 @@ def hyperopt_step(
         space: see hyperopt.hp possibilities;
         optimizer: see hyperopt algorithms;
         look_ahead: number of iteration steps to compute the loss function;
-        verbose: level of verbosity;
         d: diagonal operator for generating double-bracket iterations.
 
     Returns:
@@ -89,14 +91,12 @@ def hyperopt_step(
         d = dbi_object.diagonal_h_matrix
 
     space = space("step", step_min, step_max)
-    
-    
+
     best = hyperopt.fmin(
-    fn=partial(dbi_object.loss, d=d, look_ahead=look_ahead),
-    space=space,
-    algo=optimizer.suggest,
-    max_evals=max_evals,
-    verbose=verbose,
+        fn=partial(dbi_object.loss, d=d, look_ahead=look_ahead),
+        space=space,
+        algo=optimizer.suggest,
+        max_evals=max_evals,
     )
     return best["step"]
 
@@ -120,7 +120,7 @@ def polynomial_step(
     """
     if cost is None:
         cost = dbi_object.cost.name
-        
+
     if d is None:
         d = dbi_object.diagonal_h_matrix
 
@@ -134,10 +134,12 @@ def polynomial_step(
         elif cost == "least_squares":
             coef = least_squares_polynomial_expansion_coef(dbi_object, d, n)
         elif cost == "energy_fluctuation":
-            coef = energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, dbi_object.state)
+            coef = energy_fluctuation_polynomial_expansion_coef(
+                dbi_object, d, n, dbi_object.state
+            )
         else:
             raise ValueError(f"Cost function {cost} not recognized.")
-    
+
     roots = np.roots(coef)
     real_positive_roots = [
         np.real(root) for root in roots if np.imag(root) < error and np.real(root) > 0
@@ -200,30 +202,37 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
 
-def least_squares_polynomial_expansion_coef(dbi_object, d, n):
+
+def least_squares_polynomial_expansion_coef(dbi_object, d: np.array = None, n: int = 3):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n+1, d)
+    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients
     coef = np.empty(n)
     for i in range(n):
-        coef[i] = np.real(exp_list[i]*np.trace(d@Gamma_list[i+1]))
+        coef[i] = np.real(exp_list[i] * np.trace(d @ Gamma_list[i + 1]))
     coef = list(reversed(coef))
     return coef
 
-#TODO: add a general expansion formula not stopping at 3rd order
-def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
+
+# TODO: add a general expansion formula not stopping at 3rd order
+def energy_fluctuation_polynomial_expansion_coef(
+    dbi_object, d: np.array = None, n: int = 3, state=0
+):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n+1, d)
+    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
     # coefficients
     coef = np.empty(3)
-    coef[0] = np.real(2*covariance(Gamma_list[0], Gamma_list[1],state))
-    coef[1] = np.real(2*variance(Gamma_list[1],state)+2*covariance(Gamma_list[0],Gamma_list[2],state))
-    coef[2] = np.real(covariance(Gamma_list[0], Gamma_list[3],state)+3*covariance(Gamma_list[1], Gamma_list[2],state))
+    coef[0] = np.real(2 * covariance(Gamma_list[0], Gamma_list[1], state))
+    coef[1] = np.real(2 * variance(Gamma_list[1], state))
+    coef[2] = np.real(
+        covariance(Gamma_list[0], Gamma_list[3], state)
+        + 3 * covariance(Gamma_list[1], Gamma_list[2], state)
+    )
     coef = list(reversed(coef))
     return coef
 
@@ -232,24 +241,29 @@ def energy_fluctuation_polynomial_expansion_coef(dbi_object, d, n, state):
 def dGamma_diDiagonal(dbi_object, d, H, n, i,dGamma, Gamma_list):
     # Derivative of gamma with respect to diagonal elements of D (full-diagonal ansatz)
     A = np.zeros(d.shape)
-    A[i,i] = 1
-    B = commutator(commutator(A,H),Gamma_list[n-1])
-    W = commutator(d,H)
-    return B + commutator(W,dGamma[-1])
+    A[i, i] = 1
+    B = commutator(commutator(A, H), Gamma_list[n - 1])
+    W = commutator(d, H)
+    return B + commutator(W, dGamma[-1])
 
-def dpolynomial_diDiagonal(dbi_object, d,H,i):
+
+def dpolynomial_diDiagonal(dbi_object, d, H, i):
     # Derivative of polynomial approximation of potential function with respect to diagonal elements of d (full-diagonal ansatz)
     # Formula can be expanded easily to any order, with n=3 corresponding to cubic approximation
     derivative = 0
     s = polynomial_step(dbi_object, n=3, d=d)
     A = np.zeros(d.shape)
     Gamma_list = dbi_object.generate_Gamma_list(4, d)
-    A[i,i] = 1
-    dGamma = [commutator(A,H)]
-    derivative += np.real(np.trace(Gamma_list[0]@A)+np.trace(dGamma[0]@d+Gamma_list[1]@A)*s)
-    for n in range(2,4):
-        dGamma.append(dGamma_diDiagonal(dbi_object,d,H,n,i,dGamma,Gamma_list))
-        derivative += np.real(np.trace(dGamma[-1]@d + Gamma_list[n]@A)*s**n/math.factorial(n))
+    A[i, i] = 1
+    dGamma = [commutator(A, H)]
+    derivative += np.real(
+        np.trace(Gamma_list[0] @ A) + np.trace(dGamma[0] @ d + Gamma_list[1] @ A) * s
+    )
+    for n in range(2, 4):
+        dGamma.append(dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list))
+        derivative += np.real(
+            np.trace(dGamma[-1] @ d + Gamma_list[n] @ A) * s**n / math.factorial(n)
+        )
 
     return derivative
 
