@@ -91,3 +91,20 @@ def test_gate_matrix():
     qibo.set_backend("numpy")
     gate = qibo.gates.H(0)
     matrix = gate.matrix
+
+
+def test_check_backend(backend):
+    # testing when backend is not None
+    test = qibo.backends._check_backend(backend)
+
+    assert test.name == backend.name
+    assert test.__class__ == backend.__class__
+
+    # testing when backend is None
+    test = None
+    test = qibo.backends._check_backend(test)
+
+    target = qibo.backends.GlobalBackend()
+
+    assert test.name == target.name
+    assert test.__class__ == target.__class__

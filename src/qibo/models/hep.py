@@ -41,12 +41,9 @@ class qPDF:
         self.circuit, self.rotation, self.nparams = ansatz_function(layers, nqubits)
 
         # load backend
-        if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            self.backend = GlobalBackend()
-        else:
-            self.backend = backend
+        self.backend = _check_backend(backend)
 
         # load hamiltonian
         if multi_output:

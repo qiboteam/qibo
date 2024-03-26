@@ -264,10 +264,10 @@ class IQAE:
         Returns:
             A :class:`qibo.models.iqae.IterativeAmplitudeEstimationResult` results object.
         """
-        if backend is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
+
         # Initializing all parameters
         k = [0]
         # uppercase_k=4k+2

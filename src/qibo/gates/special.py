@@ -1,4 +1,4 @@
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
@@ -104,8 +104,7 @@ class FusedGate(SpecialGate):
         Returns:
             ndarray: Matrix representation of special gate.
         """
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix_fused(self)
 
