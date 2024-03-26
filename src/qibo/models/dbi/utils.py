@@ -1,9 +1,10 @@
+import math
 from copy import deepcopy
 from itertools import product
 from typing import Optional
 
+import hyperopt
 import numpy as np
-from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.backends import _check_backend
@@ -11,6 +12,7 @@ from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
+    DoubleBracketScheduling,
 )
 
 
@@ -75,10 +77,9 @@ def select_best_dbr_generator(
     dbi_object: DoubleBracketIteration,
     d_list: list,
     step: Optional[float] = None,
-    step_min: float = 1e-5,
-    step_max: float = 1,
-    max_evals: int = 200,
     compare_canonical: bool = True,
+    scheduling: DoubleBracketScheduling = None,
+    **kwargs,
 ):
     """Selects the best double bracket rotation generator from a list and execute the rotation.
 
@@ -86,15 +87,15 @@ def select_best_dbr_generator(
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
         d_list (list): list of diagonal operators (np.array) to run from.
         step (float): fixed iteration duration.
-            Defaults to ``None``, uses hyperopt.
-        step_min (float): minimally allowed iteration duration.
-        step_max (float): maximally allowed iteration duration.
-        max_evals (int): maximally allowed number of evaluation in hyperopt.
-        compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+            Defaults to ``None``, optimize with `scheduling` method and `choose_step` function.
+        compare_canonical (boolean): if `True`, the diagonalization effect with operators from `d_list` is compared with the canonical bracket.
+        scheduling (`DoubleBracketScheduling`): scheduling method for finding the optimal step.
 
     Returns:
         The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
+    if scheduling is None:
+        scheduling = dbi_object.scheduling
     norms_off_diagonal_restriction = [
         dbi_object.off_diagonal_norm for _ in range(len(d_list))
     ]
@@ -105,13 +106,8 @@ def select_best_dbr_generator(
         flip_list.append(cs_angle_sgn(dbi_eval, d))
         if flip_list[i] != 0:
             if step is None:
-                step_best = dbi_eval.hyperopt_step(
-                    d=flip_list[i] * d,
-                    step_min=step_min,
-                    step_max=step_max,
-                    space=hp.uniform,
-                    optimizer=tpe,
-                    max_evals=max_evals,
+                step_best = dbi_eval.choose_step(
+                    d=flip_list[i] * d, scheduling=scheduling, **kwargs
                 )
             else:
                 step_best = step
@@ -124,13 +120,7 @@ def select_best_dbr_generator(
         dbi_eval = deepcopy(dbi_object)
         dbi_eval.mode = DoubleBracketGeneratorType.canonical
         if step is None:
-            step_best = dbi_eval.hyperopt_step(
-                step_min=step_min,
-                step_max=step_max,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=max_evals,
-            )
+            step_best = dbi_eval.choose_step(scheduling=scheduling, **kwargs)
         else:
             step_best = step
         dbi_eval(step=step_best)
@@ -162,3 +152,26 @@ def cs_angle_sgn(dbi_object, d):
         )
     )
     return np.sign(norm)
+
+
+def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
+    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
+    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients for rotation with [W,H] and H
+    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
+    # product coefficient
+    trace_coefficients = [0] * (2 * n + 1)
+    for k in range(n + 1):
+        for j in range(n + 1):
+            power = k + j
+            product_matrix = c1[k] @ c2[j]
+            trace_coefficients[power] += 2 * np.trace(product_matrix)
+    # coefficients from high to low (n:0)
+    coef = list(reversed(trace_coefficients[: n + 1]))
+    return coef
