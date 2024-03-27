@@ -178,6 +178,7 @@ class QASMParser:
     def _get_measurement(self, measurement):
         """Converts a :class:`openqasm3.ast.QuantumMeasurementStatement` statement
         into :class:`qibo.gates.measurements.M`."""
+
         qubit = self._get_qubit(measurement.measure.qubit)
         register = measurement.target.name.name
         if register not in self.c_registers:
