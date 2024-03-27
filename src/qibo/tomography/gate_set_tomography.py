@@ -4,6 +4,7 @@ from itertools import product
 from typing import Union
 
 import numpy as np
+from sympy import S
 
 from qibo import Circuit, gates, symbols
 from qibo.backends import GlobalBackend
@@ -32,8 +33,10 @@ def _observables(nqubits):
 
 @cache
 def _get_observable(j, nqubits):
+    if j == 0 and nqubits == 3:
+        raise ValueError("Invalid parameters: j=0 and nqubits=3")
     observables = _observables(nqubits)[j]
-    observable = 1
+    observable = S(1)
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
             observable *= obs(q)

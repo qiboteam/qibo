@@ -4,6 +4,7 @@ from itertools import repeat
 
 import numpy as np
 import pytest
+from sympy import S
 
 import qibo
 from qibo import Circuit, gates, symbols
@@ -119,25 +120,25 @@ def test_measurement_basis(j, nqubits):
 def test__get_observable(j, nqubits):
     correct_observables = {
         1: [
-            (qibo.symbols.I(0),),
+            (S(1),),
             (qibo.symbols.Z(0),),
             (qibo.symbols.Z(0),),
             (qibo.symbols.Z(0),),
         ],
         2: [
-            (qibo.symbols.I(0), qibo.symbols.I(1)),
-            (qibo.symbols.I(0), qibo.symbols.Z(1)),
-            (qibo.symbols.I(0), qibo.symbols.Z(1)),
-            (qibo.symbols.I(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (S(1), S(1)),
+            (S(1), qibo.symbols.Z(1)),
+            (S(1), qibo.symbols.Z(1)),
+            (S(1), qibo.symbols.Z(1)),
+            (qibo.symbols.Z(0), S(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (qibo.symbols.Z(0), S(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.I(1)),
+            (qibo.symbols.Z(0), S(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
             (qibo.symbols.Z(0), qibo.symbols.Z(1)),
