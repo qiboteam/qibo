@@ -13,7 +13,7 @@ from qibo.hamiltonians import SymbolicHamiltonian
 
 
 @cache
-def k_to_gates(nqubits):
+def _gates(nqubits):
     return list(
         product(
             [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)], repeat=nqubits
@@ -22,7 +22,7 @@ def k_to_gates(nqubits):
 
 
 @cache
-def j_to_measurements(nqubits):
+def _measurements(nqubits):
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
@@ -44,7 +44,7 @@ def _get_observable(j, nqubits):
 
 
 @cache
-def prepare_states(k, nqubits):
+def _prepare_state(k, nqubits):
     """Prepares the k-th state for a `nqubits`-gate.
 
     Args:
@@ -65,12 +65,12 @@ def prepare_states(k, nqubits):
             ValueError,
             f"nqubits needs to be either 1 or 2, but is {nqubits}.",
         )
-    gates = k_to_gates(nqubits)[k]
+    gates = _gates(nqubits)[k]
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
 @cache
-def measurement_basis(j, nqubits):
+def _measurement_basis(j, nqubits):
     r"""Constructs the j-th measurement basis for a `nqubits`-gate.
 
         Args:
@@ -89,7 +89,7 @@ def measurement_basis(j, nqubits):
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
         )
 
-    measurements = j_to_measurements(nqubits)[j]
+    measurements = _measurements(nqubits)[j]
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
@@ -134,7 +134,7 @@ def reset_register(circuit, invert_register):
     return new_circ.invert()
 
 
-def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
+def _expectation_value(circuit, k, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
         should already have noise models implemented, if any, prior to using this
@@ -168,7 +168,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         return result.expectation_from_samples(observable)
 
 
-def execute_GST(
+def _estimate_jk_element(
     nqubits=None,
     gate=None,
     nshots=int(1e4),
@@ -209,7 +209,7 @@ def execute_GST(
     matrix_jk = np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
-        circ.add(prepare_states(k, nqubits))
+        circ.add(_prepare_state(k, nqubits))
         if invert_register is not None:
             inverted_circuit = reset_register(circ, invert_register)
             circ.add(inverted_circuit.on_qubits(*invert_register))
@@ -219,11 +219,11 @@ def execute_GST(
 
         for j in range(4**nqubits):
             new_circ = circ.copy()
-            measurements = measurement_basis(j, nqubits)
+            measurements = _measurement_basis(j, nqubits)
             new_circ.add(measurements)
             if noise_model is not None and backend.name != "qibolab":
                 new_circ = noise_model.apply(new_circ)
-            expectation_val = GST_execute_circuit(
+            expectation_val = _expectation_value(
                 new_circ, k, j, nshots, backend=backend
             )
             matrix_jk[j, k] = expectation_val
@@ -242,7 +242,7 @@ def GST(
     if len(gate_set) == 0 or include_empty:
         for nqubits in range(1, 3):
             matrices.append(
-                execute_GST(
+                _estimate_jk_element(
                     nqubits=nqubits,
                     gate=None,
                     nshots=nshots,
@@ -265,7 +265,7 @@ def GST(
                 )
             gate = gate(*range(nqubits))
         matrices.append(
-            execute_GST(
+            _estimate_jk_element(
                 nqubits=nqubits,
                 gate=gate,
                 nshots=nshots,

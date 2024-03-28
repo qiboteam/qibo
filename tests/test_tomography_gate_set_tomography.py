@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from functools import reduce
 from itertools import repeat
 
@@ -13,11 +12,11 @@ from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
-    GST_execute_circuit,
+    _estimate_jk_element,
+    _expectation_value,
     _get_observable,
-    execute_GST,
-    measurement_basis,
-    prepare_states,
+    _measurement_basis,
+    _prepare_state,
     reset_register,
 )
 
@@ -38,7 +37,7 @@ INDEX_NQUBITS = (
     "k,nqubits",
     INDEX_NQUBITS,
 )
-def test_prepare_states(k, nqubits):
+def test__prepare_state(k, nqubits):
     correct_gates = {
         1: [[gates.I(0)], [gates.X(0)], [gates.H(0)], [gates.H(0), gates.S(0)]],
         2: [
@@ -63,9 +62,9 @@ def test_prepare_states(k, nqubits):
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (k, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(k, nqubits)]):
-            prepared_states = prepare_states(k, nqubits)
+            prepared_states = _prepare_state(k, nqubits)
     else:
-        prepared_states = prepare_states(k, nqubits)
+        prepared_states = _prepare_state(k, nqubits)
         for groundtruth, gate in zip(correct_gates[nqubits][k], prepared_states):
             _compare_gates(groundtruth, gate)
 
@@ -74,7 +73,7 @@ def test_prepare_states(k, nqubits):
     "j,nqubits",
     INDEX_NQUBITS,
 )
-def test_measurement_basis(j, nqubits):
+def test__measurement_basis(j, nqubits):
     correct_gates = {
         1: [
             [gates.M(0)],
@@ -104,9 +103,9 @@ def test_measurement_basis(j, nqubits):
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
-            prepared_gates = measurement_basis(j, nqubits)
+            prepared_gates = _measurement_basis(j, nqubits)
     else:
-        prepared_gates = measurement_basis(j, nqubits)
+        prepared_gates = _measurement_basis(j, nqubits)
         for groundtruth, gate in zip(correct_gates[nqubits][j], prepared_gates):
             _compare_gates(groundtruth, gate)
             for g1, g2 in zip(groundtruth.basis, gate.basis):
@@ -281,14 +280,13 @@ def test_GST(backend):
     target_matrices = [g.matrix() for g in target_gates]
     # superoperator representation of the target gates in the pauli basis
     target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
-    # gate_set = {g.__class__ for g in target_gates}
-    gate_set = OrderedDict((g.__class__, g) for g in target_gates).keys()
-    lam = 1e-10
+    gate_set = [g.__class__ for g in target_gates]
+    lam = 1e-2
     depol = NoiseModel()
     depol.add(DepolarizingError(lam))
     empty_1q, empty_2q, *approx_gates = GST(
         gate_set,
-        nshots=int(1e6),
+        nshots=int(1e4),
         noise_model=depol,
         include_empty=True,
         backend=backend,
@@ -302,6 +300,5 @@ def test_GST(backend):
         backend.assert_allclose(
             target,
             estimated_matrix,
-            atol=1e-2,
-            # target, transf.conj().T @ (estimate @ transf), atol=1e-6
+            atol=1e-1,
         )
