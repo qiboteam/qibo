@@ -2463,11 +2463,137 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
     circuit = random_clifford(nqubits)
     result = Clifford.from_circuit(circuit)
 
-
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
 
+.. _Gate Set Tomography:
+
+Gate Set Tomography
+-------------------
+
+Gate Set Tomography (GST) is a powerful technique employed in quantum information processing to characterize the behavior of quantum gates on quantum hardware [1, 2, 3]. The primary objective of GST is to provide a robust framework for obtaining an representation of quantum gates within a predefined gate set, even when subjected to noise inherent in quantum hardware.
+
+By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental in setting up the necessary parameters for Probabilistic Error Cancellation (PEC), a technique employed to enhance the fidelity of quantum computations in the presence of noise.
+
+The GST functionalities are encapsulated in the :class:`qibo.tomography.gate_set_tomography` module, providing users with versatile tools to perform gate set tomography on quantum circuits. This module includes functions for calibrating an empty circuit, as well as conducting gate set tomography for one and two qubits.
+
+To illustrate the usage of GST functions, we provide examples of how to conduct GST for single qubit gates and two qubit gates. If no gate is specified, then GST serves to calibrate the circuit.
+
+References:
+
+[1] Blume-Kohout, Robin, et al. "Robust, self-consistent, closed-form tomography of quantum logic gates on a trapped ion qubit." arXiv preprint arXiv:1310.4492 (2013).
+
+[2] Greenbaum, Daniel. "Introduction to quantum gate set tomography." arXiv preprint arXiv:1509.02921 (2015).
+
+[3] Nielsen, Erik, et al. "Gate set tomography." Quantum 5 (2021): 557.
+
+Single qubit example
+^^^^^^^^^^^^^^^^^^^^
+
+Suppose we want to do gate set tomography for three scenarios: (1) Empty circuit
+(single qubit circuit); (2) :math:`Rx(\frac{\pi}{7})` gate; and (3) Hadamard :math:`H` gate.
+This is how we use the function ``execute_GST()`` for both gates individually.
+We will also import depolarizing noise as an example.
+
+.. testsetup::
+
+    import qibo
+    from qibo import Circuit, gates
+    from qibo.noise import DepolarizingError, NoiseModel
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+    )
+
+.. code-block::  python
+
+
+    # Create noise model
+    lam = 0.4
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+
+    # Perform gate set tomography without any operator for calibration
+    GST_empty_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
+
+    # Perform gate set tomography for the Hadamard gate
+    gate_Hadamard = gates.H(0)
+    GST_H_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
+
+    # Do gate set tomography for Rx(pi/7) gate
+    gate_RX = gates.RX(0, np.pi/7)
+    GST_RX_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
+
+**Definitions (single qubit):**
+
+- :math:`Q_j`: The measurement basis associated with index :math:`j` where :math:`j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}`.
+- :math:`\rho_k`: The initialized quantum state associated with index :math:`k` where :math:`k \in \{0, 1, 2, 3\} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}`.
+
+For this single qubit gate set tomography, the outputs given by ``GST_empty_1qb`` ``GST_H_1qb`` and ``GST_RX_1qb`` are 4 by 4 matrices. Each matrix has elements indexed by :math:`j` and :math:`k` given respectively as
+
+``GST_empty_1qb``:math:`_{jk} = \text{tr}(Q_j \rho_k)`,
+
+``GST_H_1qb``:math:`_{jk} = \text{tr}(Q_j H \rho_k)`, and
+
+``GST_RX_1qb``:math:`_{jk} = \text{tr}(Q_j Rx(\frac{\pi}{7}) \rho_k)`.
+
+Two qubits example
+^^^^^^^^^^^^^^^^^^
+
+As another example, Suppose we want to do gate set tomography for two
+scenarios: (1) Empty circuit (two qubit circuit); and (2) :math:`\text{CNOT}`
+gate. This is how we use the function ``execute_GST()`` for both scenarios
+individually. We will also import depolarizing noise as an example again.
+
+.. testsetup::
+
+    import qibo
+    from qibo import Circuit, gates
+    from qibo.noise import DepolarizingError, NoiseModel
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        execute_GST,
+        measurement_basis,
+        prepare_states,
+    )
+
+.. code-block::  python
+
+    # Create noise model
+    lam = 0.4
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+
+    # Perform gate set tomography without any operator for calibration (two qubits)
+    GST_empty_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol)
+
+    # Do gate set tomography for CNOT gate
+    gate_CNOT = gates.CNOT(0,1)
+    GST_CNOT_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
+
+**Definitions (two qubits):**
+
+- :math:`Q_j`: The measurement basis associated with index :math:`j` where :math:`j \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{I, X, Y, Z\}^{\otimes 2}`.
+- :math:`\rho_k`: The initialized quantum state associated with index :math:`k` where :math:`k \in \{0, 1, 2, 3\}^{\otimes 2} \equiv \{| 0 \rangle \langle 0 |, | 1 \rangle \langle 1 |, | + \rangle \langle + |, | y+ \rangle \langle y+ |\}^{\otimes 2}`.
+
+In this two qubits example, we have a combination of single qubit and
+two-qubit gate set tomography. The outputs given by ``GST_empty_1qb`` and
+``GST_H_1qb`` are 4 by 4 matrices. Their description is identical to that
+in the previous example. On the other hand, the outputs given by
+``GST_empty_2qb`` and ``GST_CNOT_2qb`` are 16 by 16 matrices and have elements
+indexed by :math:`j` and :math:`k` given respectively as
+
+``GST_empty_2qb``:math:`_{jk} = \text{tr}(Q_j \rho_k)` and
+
+``GST_CNOT_2qb``:math:`_{jk} = \text{tr}(Q_j \text{CNOT} \rho_k)`.
+
+
+.. autoclass:: qibo.tomography.gate_set_tomography
+    :members:
+    :member-order: bysource
 
 Cloud Backends
 ^^^^^^^^^^^^^^
