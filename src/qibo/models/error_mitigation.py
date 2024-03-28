@@ -205,7 +205,7 @@ def sample_training_circuit_cdr(
     gates_to_replace = []
     for i, gate in enumerate(circuit.queue):
         if isinstance(gate, gates.RZ):
-            if gate.init_kwargs["theta"] % (np.pi / 2) != 0.0:
+            if not gate.clifford:
                 gates_to_replace.append((i, gate))
 
     if not gates_to_replace:
