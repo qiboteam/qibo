@@ -42,7 +42,7 @@ class VQE:
         self,
         initial_state,
         method="Powell",
-        loss=var_loss,
+        loss=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -82,7 +82,8 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
-
+        if loss is None:
+            loss = var_loss
         if compile:
             loss = self.hamiltonian.backend.compile(loss)
         else:
