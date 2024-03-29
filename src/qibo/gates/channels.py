@@ -2,7 +2,7 @@
 
 from itertools import product
 from math import exp, sqrt
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -418,7 +418,7 @@ class PauliNoiseChannel(UnitaryChannel):
     """
 
     def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
-        if not isinstance(qubits, Union[int, list, tuple]):
+        if isinstance(qubits, int):
             qubits = (qubits,)
 
         probabilities, paulis = [], []
