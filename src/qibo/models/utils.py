@@ -207,3 +207,10 @@ def fourier_coefficients(
     # Shift the filtered coefficients back
     filtered_coeffs = np.fft.ifftshift(shifted_filtered_coeffs)
     return filtered_coeffs
+
+
+def var_loss(params, circuit, hamiltonian):
+    circuit.set_parameters(params)
+    result = hamiltonian.backend.execute_circuit(circuit)
+    final_state = result.state()
+    return hamiltonian.expectation(final_state)

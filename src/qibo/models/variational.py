@@ -1,8 +1,8 @@
 import numpy as np
 
 from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian
 from qibo.models.evolution import StateEvolution
+from qibo.models.utils import var_loss
 
 
 class VQE:
@@ -42,6 +42,7 @@ class VQE:
         self,
         initial_state,
         method="Powell",
+        loss=var_loss,
         jac=None,
         hess=None,
         hessp=None,
@@ -81,16 +82,10 @@ class VQE:
             and for ``'sgd'`` the options used during the optimization.
         """
 
-        def _loss(params, circuit, hamiltonian):
-            circuit.set_parameters(params)
-            result = hamiltonian.backend.execute_circuit(circuit)
-            final_state = result.state()
-            return hamiltonian.expectation(final_state)
-
         if compile:
-            loss = self.hamiltonian.backend.compile(_loss)
+            loss = self.hamiltonian.backend.compile(loss)
         else:
-            loss = _loss
+            loss = loss
 
         if method == "cma":
             # TODO: check if we can use this shortcut
@@ -643,8 +638,6 @@ class FALQON(QAOA):
             The corresponding best parameters.
             extra: variable with historical data for the energy and callbacks.
         """
-        import numpy as np
-
         parameters = np.array([delta_t, 0])
 
         def _loss(params, falqon, hamiltonian):
