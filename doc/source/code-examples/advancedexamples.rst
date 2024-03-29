@@ -2154,7 +2154,7 @@ In some cases the empty circuit matrix :math:`E` can also be useful, and can be 
 
 .. testcode::
 
-   empty_1q, empty_2q, estimated_gates = GST(
+   empty_1q, empty_2q, *estimated_gates = GST(
        gate_set = gate_set,
        nshots = 10000,
        noise_model = noise_model,
