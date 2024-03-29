@@ -2111,3 +2111,54 @@ In this case circuits will first be transpiled to respect the 5-qubit star conne
 Then all gates will be converted to native. The :class:`qibo.transpiler.unroller.Unroller` transpiler used in this example assumes Z, RZ, GPI2 or U3 as
 the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives. In this case we restricted the two-qubit gate set to CZ only.
 The final_layout contains the final logical-physical qubit mapping.
+
+.. _gst_example:
+
+How to perform Gate Set Tomography?
+-----------------------------------
+
+In order to obtain an estimated representation of a set of quantum gates in a particular noisy environment, qibo provides a GST routine in its tomography module.
+
+Let's first define the set of gates we want to estimate:
+
+.. testcode::
+
+   from qibo import gates
+
+   gate_set = {gates.X, gates.H, gates.CZ}
+
+For simulation purposes we can define a noise model. Naturally this is not needed when running on real quantum hardware, which is intrinsically noisy. For example, we can suppose that the three gates we want to estimate are going to be noisy:
+
+.. testcode::
+
+   from qibo.noise import NoiseModel, DepolarizingError
+
+   noise_model = NoiseModel()
+   noise_model.add(DepolarizingError(1e-3), gates.X)
+   noise_model.add(DepolarizingError(1e-2), gates.H)
+   noise_model.add(DepolarizingError(3e-2), gates.CZ)
+
+Then the estimated representation of the gates in this noisy environment can be extracted by running the GST:
+
+.. testcode::
+
+   from qibo.tomography import GST
+
+   estimated_gates = GST(
+       gate_set = gate_set,
+       nshots = 10000,
+       noise_model = noise_model
+   )
+
+In some cases the empty circuit matrix :math:`E` can also be useful, and can be returned by setting the ``include_empty`` argument to ``True``:
+
+.. testcode::
+
+   empty_1q, empty_2q, estimated_gates = GST(
+       gate_set = gate_set,
+       nshots = 10000,
+       noise_model = noise_model,
+       include_empty = True,
+   )
+
+where ``empty_1q`` and ``empty_2q`` correspond to the single and two qubits empty matrices respectively.
