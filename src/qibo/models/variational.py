@@ -62,6 +62,7 @@ class VQE:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
+            loss (callable): loss function, the default one is :func:`qibo.models.utils.var_loss`.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -261,6 +262,7 @@ class AAVQE:
         self,
         params,
         method="BFGS",
+        loss=var_loss,
         jac=None,
         hess=None,
         hessp=None,
