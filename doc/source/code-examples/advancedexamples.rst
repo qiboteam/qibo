@@ -999,7 +999,7 @@ Here is an example on how to use a noise model:
       noise.add(PauliError([("X", 0.5)]), gates.H, 1)
       noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
       is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
-      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, condition=is_sqrt_x)
+      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, conditions=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
@@ -1115,68 +1115,90 @@ be used for both errors.
 
 .. _noise-hardware-example:
 
-Simulating quantum hardware
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Simulating IBMQ's quantum hardware
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Qibo can perform a simulation of a real quantum computer using the :meth:`qibo.noise.NoiseModel.composite` method of the :class:`qibo.noise.NoiseModel` class. This is possible by passing the circuit instance that we want to simulate and the noise channels' parameters as a dictionary.
-In this model, the user must set the relaxation times ``t1`` and ``t2`` for each qubit, an approximated `gate time` and `depolarizing error` for each one-qubit gate and two-qubits gate and bitflips probabilities for each qubit which is measured.
+Qibo can perform a simulation of a real quantum computer using the
+:class:`qibo.noise.IBMQNoiseModel` class.
+It is possible by passing the circuit instance that we want to simulate
+and the noise channels' parameters as a dictionary.
+In this model, the user must set the relaxation times ``t1`` and ``t2`` for each qubit,
+an approximated `gate times`, and depolarizing errors for each one-qubit (`depolarizing_one_qubit`)
+and two-qubit (`depolarizing_two_qubit`) gates.
+Additionally, one can also pass single-qubit readout error probabilities (`readout_one_qubit`).
 
 .. testcode::
 
-      from qibo import gates, models
-      from qibo.noise import NoiseModel
+    from qibo import Circuit, gates
+    from qibo.noise import IBMQNoiseModel
 
-      c = models.Circuit(2,density_matrix=True)
-      c.add([gates.H(0), gates.X(1) ,gates.Z(0), gates.X(0), gates.CNOT(0,1),
-         gates.CNOT(1, 0),gates.X(1),gates.Z(1), gates.M(0,1)])
+    nqubits = 2
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(
+        [
+            gates.H(0),
+            gates.X(1),
+            gates.Z(0),
+            gates.X(0),
+            gates.CNOT(0,1),
+            gates.CNOT(1, 0),
+            gates.X(1),
+            gates.Z(1),
+            gates.M(0),
+            gates.M(1),
+        ]
+    )
 
-      print("raw circuit:")
-      print(c.draw())
+    print("raw circuit:")
+    print(circuit.draw())
 
-      par = {"t1" : (250*1e-06, 240*1e-06),
-             "t2" : (150*1e-06, 160*1e-06),
-             "gate_time" : (200*1e-9, 400*1e-9),
-             "excited_population" : 0,
-             "depolarizing_error" : (4.000e-4, 1.500e-4),
-             "bitflips_error" : ([0.022, 0.015], [0.034, 0.041]),
-             "idle_qubits" : 1
-            }
-      noise= NoiseModel()
-      noise.composite(par)
-      noisy_circ=noise.apply(c)
+    parameters = {
+        "t1": {"0": 250*1e-06, "1": 240*1e-06},
+        "t2": {"0": 150*1e-06, "1": 160*1e-06},
+        "gate_times" : (200*1e-9, 400*1e-9),
+        "excited_population" : 0,
+        "depolarizing_one_qubit" : 4.000e-4,
+        "depolarizing_two_qubit": 1.500e-4,
+        "readout_one_qubit" : {"0": (0.022, 0.034), "1": (0.015, 0.041)},
+        }
 
-      print("noisy circuit:")
-      print(noisy_circ.draw())
+    noise_model = IBMQNoiseModel()
+    noise_model.from_dict(parameters)
+    noisy_circuit = noise_model.apply(circuit)
+
+    print("noisy circuit:")
+    print(noisy_circuit.draw())
 
 .. testoutput::
    :hide:
 
    ...
 
-``noisy_circ`` is the new circuit containing the error gate channels.
+``noisy_circuit`` is the new circuit containing the error gate channels.
 
-It is possible to learn the parameters of the noise model that best describe a frequency distribution obtained by running a circuit on quantum hardware. To do this,
-assuming we have a ``result`` object after running a circuit with a certain number of shots,
+.. #TODO: rewrite this optimization example after the fit function is moded to `qibo.optimizers`
+.. It is possible to learn the parameters of the noise model that best describe a frequency distribution obtained by running a circuit on quantum hardware. To do this,
+.. assuming we have a ``result`` object after running a circuit with a certain number of shots,
 
-.. testcode::
+.. .. testcode::
 
-      noise = NoiseModel()
-      params = {"idle_qubits" : True}
-      noise.composite(params)
+..       noise = NoiseModel()
+..       params = {"idle_qubits" : True}
+..       noise.composite(params)
 
-      result =  noisy_circ(nshots=1000)
+..       result =  noisy_circ(nshots=1000)
 
-      noise.noise_model.fit(c, result)
+..       noise.noise_model.fit(c, result)
 
-      print(noise.noise_model.params)
-      print(noise.noise_model.hellinger)
+..       print(noise.noise_model.params)
+..       print(noise.noise_model.hellinger)
 
-.. testoutput::
-   :hide:
+.. .. testoutput::
+..    :hide:
 
-   ...
+..    ...
 
-where ``noise.params`` is a dictionary with the parameters obatined after the optimization and ``noise.hellinger`` is the corresponding Hellinger fidelity.
+.. where ``noise.params`` is a dictionary with the parameters obatined after the optimization and ``noise.hellinger`` is the corresponding Hellinger fidelity.
 
 
 How to perform error mitigation?

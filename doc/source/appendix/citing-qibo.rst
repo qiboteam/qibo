@@ -69,8 +69,28 @@ Peer-Reviewed Articles
 * S. Efthymiou, A. Orgaz-Fuertes, R. Carobene, J. Cereijo, A. Pasquale, S.
   Ramos-Calderer, S. Bordoni, D. Fuentes-Ruiz, A. Candido, E. Pedicillo, M.
   Robbiati, Y.P. Tan, J. Wilkens, I. Roth, J.I. Latorre, S. Carrazza, *Qibolab:
-  an open-source hybrid quantum operating system* (2023), (`arXiv:2308.06313`_).
+  an open-source hybrid quantum operating system* (2023),
+  `doi:10.22331/q-2024-02-12-1247`_, (`arXiv:2308.06313`_).
 
+  In *BibTeX* format:
+
+  .. code-block:: text
+
+    @article{qibolab_paper,
+        doi       = {10.22331/q-2024-02-12-1247},
+        url       = {https://doi.org/10.22331/q-2024-02-12-1247},
+        title     = {Qibolab: an open-source hybrid quantum operating system},
+        author    = {Efthymiou, Stavros and Orgaz-Fuertes, Alvaro and Carobene, Rodolfo and Cereijo, Juan and Pasquale, Andrea and Ramos-Calderer, Sergi and Bordoni, Simone and Fuentes-Ruiz, David and Candido, Alessandro and Pedicillo, Edoardo and Robbiati, Matteo and Tan, Yuanzheng Paul and Wilkens, Jadwiga and Roth, Ingo and Latorre, Jos{\'{e}} Ignacio and Carrazza, Stefano},
+        journal   = {{Quantum}},
+        issn      = {2521-327X},
+        publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+        volume    = {8},
+        pages     = {1247},
+        month     = feb,
+        year      = {2024}
+    }
+
+.. _`doi:10.22331/q-2024-02-12-1247`: https://doi.org/10.22331/q-2024-02-12-1247
 .. _`arXiv:2308.06313`: https://arxiv.org/abs/2308.06313
 
 * R. Carobene, A. Candido, J. Serrano, A.O-Fuertes, A. Giachero, S. Carrazza,

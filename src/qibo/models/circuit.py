@@ -8,6 +8,7 @@ import qibo
 from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
+from qibo.models._openqasm import QASMParser
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -42,9 +43,6 @@ class _Queue(list):
     def __init__(self, nqubits):
         super().__init__(self)
         self.nqubits = nqubits
-        self.moments = [nqubits * [None]]
-        self.moment_index = nqubits * [0]
-        self.nmeasurements = 0
 
     def to_fused(self):
         """Transform all gates in queue to :class:`qibo.gates.FusedGate`."""
@@ -87,24 +85,30 @@ class _Queue(list):
                 queue.append(gate.gates[0])
         return queue
 
-    def append(self, gate: gates.Gate):
-        super().append(gate)
-        if gate.qubits:
-            qubits = gate.qubits
-        else:  # special gate acting on all qubits
-            qubits = tuple(range(self.nqubits))
+    @property
+    def nmeasurements(self):
+        return len(list(filter(lambda gate: isinstance(gate, gates.M), self)))
 
-        if isinstance(gate, gates.M):
-            self.nmeasurements += 1
+    @property
+    def moments(self):
+        moments = [self.nqubits * [None]]
+        moment_index = self.nqubits * [0]
+        for gate in self:
+            qubits = (
+                gate.qubits
+                if not isinstance(gate, gates.CallbackGate)
+                else tuple(range(self.nqubits))  # special gate acting on all qubits
+            )
 
-        # calculate moment index for this gate
-        idx = max(self.moment_index[q] for q in qubits)
-        for q in qubits:
-            if idx >= len(self.moments):
-                # Add a moment
-                self.moments.append(len(self.moments[-1]) * [None])
-            self.moments[idx][q] = gate
-            self.moment_index[q] = idx + 1
+            # calculate moment index for this gate
+            idx = max(moment_index[q] for q in qubits)
+            for q in qubits:
+                if idx >= len(moments):
+                    # Add a moment
+                    moments.append(len(moments[-1]) * [None])
+                moments[idx][q] = gate
+                moment_index[q] = idx + 1
+        return moments
 
 
 class Circuit:
@@ -434,7 +438,10 @@ class Circuit:
                         NotImplementedError,
                         "Cannot create deep copy of fused circuit.",
                     )
-                new_circuit.add(copy.copy(gate))
+                if isinstance(gate, gates.M):
+                    new_circuit.add(gate.__class__(*gate.init_args, **gate.init_kwargs))
+                else:
+                    new_circuit.add(copy.copy(gate))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
@@ -660,11 +667,13 @@ class Circuit:
                     nreg = self.queue.nmeasurements - 1
                     gate.register_name = f"register{nreg}"
                 else:
-                    name = gate.register_name
-                    for mgate in self.measurements:
-                        if name == mgate.register_name:
+                    registers = self.measurement_tuples
+                    for register, qubits in registers.items():
+                        intersection = set(qubits).intersection(set(gate.target_qubits))
+                        if len(intersection) > 0:
                             raise_error(
-                                KeyError, f"Register {name} already exists in circuit."
+                                KeyError,
+                                f"Qubits {tuple(intersection)} already measured in register `{register}`.",
                             )
 
                 gate.result.circuit = self
@@ -692,7 +701,13 @@ class Circuit:
     @property
     def measurement_tuples(self):
         # used for testing only
-        return {m.register_name: m.target_qubits for m in self.measurements}
+        registers = {}
+        for m in self.measurements:
+            if m.register_name not in registers:
+                registers[m.register_name] = m.target_qubits
+            else:
+                registers[m.register_name] += m.target_qubits
+        return {name: qubits for name, qubits in registers.items()}
 
     @property
     def ngates(self) -> int:
@@ -1000,14 +1015,13 @@ class Circuit:
     def unitary(self, backend=None):
         """Creates the unitary matrix corresponding to all circuit gates.
 
-        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by
-        multiplying all circuit gates.
+        This is a :math:`2^{n} \\times 2^{n}`` matrix obtained by
+        multiplying all circuit gates, where :math:`n` is ``nqubits``.
         """
 
-        if backend is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
@@ -1050,10 +1064,10 @@ class Circuit:
                     NotImplementedError,
                     "Circuit compilation is not available with callbacks.",
                 )
-        if backend is None:
-            from qibo.backends import GlobalBackend
 
-            backend = GlobalBackend()
+        from qibo.backends import _check_backend
+
+        backend = _check_backend(backend)
 
         from qibo.result import CircuitResult, QuantumState
 
@@ -1208,191 +1222,8 @@ class Circuit:
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        nqubits, gate_list = cls._parse_qasm(qasm_code)
-        circuit = cls(nqubits, accelerators, density_matrix)
-        for gate, qubits, params in gate_list:
-            if gate == gates.M:
-                circuit.add(gate(*qubits, register_name=params))
-            elif params is None:
-                circuit.add(gate(*qubits))
-            else:
-                # assume parametrized gate
-                circuit.add(gate(*qubits, *params))
-        return circuit
-
-    @staticmethod
-    def _parse_qasm(qasm_code: str):
-        """Extracts circuit information from QASM script.
-
-        Helper method for ``from_qasm``.
-
-        Args:
-            qasm_code: String with the QASM code to parse.
-
-        Returns:
-            nqubits: The total number of qubits in the circuit.
-            gate_list: List that specifies the gates of the circuit.
-                Contains tuples of the form
-                (Qibo gate name, qubit IDs, optional additional parameter).
-                The additional parameter is the ``register_name`` for
-                measurement gates or ``theta`` for parametrized gates.
-        """
-        import re
-
-        def read_args(args):
-            _args = iter(re.split(r"[\[\],]", args))
-            for name in _args:
-                if name:
-                    index = next(_args)
-                    if not index.isdigit():
-                        raise_error(ValueError, "Invalid QASM qubit arguments:", args)
-                    yield name, int(index)
-
-        # Remove comment lines
-        lines = "".join(
-            line for line in qasm_code.split("\n") if line and line[:2] != "//"
-        )
-        lines = (line for line in lines.split(";") if line)
-
-        if next(lines) != "OPENQASM 2.0":
-            raise_error(ValueError, "QASM code should start with 'OPENQASM 2.0'.")
-
-        qubits = {}  # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
-        cregs_size = {}  # Dict[str, int]: map from `creg` name to its size
-        registers = (
-            {}
-        )  # Dict[str, List[int]]: map from register names to target qubit ids
-        gate_list = (
-            []
-        )  # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
-        for line in lines:
-            command, args = line.split(None, 1)
-            # remove spaces
-            command = command.replace(" ", "")
-            args = args.replace(" ", "")
-
-            if command == "include":
-                pass
-
-            elif command == "qreg":
-                for name, nqubits in read_args(args):
-                    for i in range(nqubits):
-                        qubits[(name, i)] = len(qubits)
-
-            elif command == "creg":
-                for name, nqubits in read_args(args):
-                    cregs_size[name] = nqubits
-
-            elif command == "measure":
-                args = args.split("->")
-                if len(args) != 2:
-                    raise_error(ValueError, "Invalid QASM measurement:", line)
-                qubit = next(read_args(args[0]))
-                if qubit not in qubits:
-                    raise_error(
-                        ValueError,
-                        f"Qubit {qubit} is not defined in QASM code.",
-                    )
-
-                register, idx = next(read_args(args[1]))
-                if register not in cregs_size:
-                    raise_error(
-                        ValueError,
-                        f"Classical register name {register} is not defined in QASM code.",
-                    )
-                if idx >= cregs_size[register]:
-                    raise_error(
-                        ValueError,
-                        f"Cannot access index {idx} of register {register} "
-                        + f"with {cregs_size[register]} qubits.",
-                    )
-                if register in registers:
-                    if idx in registers[register]:
-                        raise_error(
-                            KeyError,
-                            f"Key {idx} of register {register} has already been used.",
-                        )
-                    registers[register][idx] = qubits[qubit]
-                else:
-                    registers[register] = {idx: qubits[qubit]}
-                    gate_list.append((gates.M, register, None))
-
-            else:
-                pieces = [x for x in re.split("[()]", command) if x]
-
-                gatename = pieces[0]
-                try:
-                    gatetype = (
-                        getattr(gates, gatename.upper())
-                        if gatename not in ["id", "cx", "ccx"]
-                        else {
-                            "id": gates.I,
-                            "cx": gates.CNOT,
-                            "ccx": gates.TOFFOLI,
-                        }[gatename]
-                    )
-                except:
-                    raise_error(
-                        ValueError,
-                        f"QASM command {command} is not recognized.",
-                    )
-
-                if len(pieces) == 1:
-                    params = None
-                    if issubclass(gatetype, gates.ParametrizedGate):
-                        raise_error(
-                            ValueError,
-                            f"Missing parameters for QASM gate {gatename}.",
-                        )
-
-                elif len(pieces) == 2:
-                    if not issubclass(gatetype, gates.ParametrizedGate):
-                        raise_error(ValueError, f"Invalid QASM command {command}.")
-
-                    params = pieces[1].replace(" ", "").split(",")
-                    try:
-                        for i, p in enumerate(params):
-                            denominator = 1
-                            if "/" in p:
-                                p, denominator = p.split("/")
-                            if "pi" in p:
-                                from functools import reduce
-                                from operator import mul
-
-                                s = p.replace("pi", str(np.pi)).split("*")
-                                p = reduce(mul, [float(j) for j in s], 1)
-                            params[i] = float(p) / float(denominator)
-                    except ValueError:
-                        raise_error(
-                            ValueError,
-                            f"Invalid value {params} for gate parameters.",
-                        )
-
-                else:
-                    raise_error(
-                        ValueError,
-                        f"QASM command {command} is not recognized.",
-                    )
-
-                # Add gate to gate list
-                qubit_list = []
-                for qubit in read_args(args):
-                    if qubit not in qubits:
-                        raise_error(
-                            ValueError,
-                            f"Qubit {qubit} is not defined in QASM code.",
-                        )
-                    qubit_list.append(qubits[qubit])
-                gate_list.append((gatetype, list(qubit_list), params))
-
-        # Create measurement gate qubit lists from registers
-        for i, (gatetype, register, _) in enumerate(gate_list):
-            if gatetype == gates.M:
-                qubit_list = registers[register]
-                qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
-                gate_list[i] = (gates.M, qubit_list, register)
-
-        return len(qubits), gate_list
+        parser = QASMParser()
+        return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""

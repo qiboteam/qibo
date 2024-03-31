@@ -237,6 +237,7 @@ def test_custom_passes_restict(gates, placer, routing):
         final_layout=final_layout,
         native_gates=NativeGates.default(),
     )
+    assert transpiled_circ.wire_names == ["q1", "q2", "q3"]
 
 
 def test_custom_passes_multiple_placer():
