@@ -673,16 +673,6 @@ class Circuit:
                             raise_error(
                                 KeyError, f"Register {name} already exists in circuit."
                             )
-                    """
-                    registers = self.measurement_tuples
-                    for register, qubits in registers.items():
-                        intersection = set(qubits).intersection(set(gate.target_qubits))
-                        if len(intersection) > 0:
-                            raise_error(
-                                KeyError,
-                                f"Qubits {tuple(intersection)} already measured in register `{register}`.",
-                            )
-                    """
 
                 gate.result.circuit = self
                 if gate.collapse:

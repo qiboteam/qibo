@@ -177,7 +177,6 @@ class MeasurementOutcomes:
         self.nshots = nshots
 
         self._measurement_gate = None
-        self._measurement_registers = None
         self._probs = probabilities
         self._samples = samples
         self._frequencies = None
@@ -256,8 +255,8 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                register: gate.result.frequencies(binary)
-                for register, gate in self._measurement_registers
+                gate.register_name: gate.result.frequencies(binary)
+                for gate in self.measurements
             }
 
         if binary:
@@ -363,8 +362,8 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                register: gate.result.samples(binary)
-                for register, gate in self._measurement_registers
+                gate.register_name: gate.result.samples(binary)
+                for gate in self.measurements
             }
 
         if binary:
@@ -388,18 +387,6 @@ class MeasurementOutcomes:
                     self._measurement_gate.add(gate)
 
         return self._measurement_gate
-
-    def measurement_registers(self):
-        if self._measurement_registers is None:
-            registers = {}
-            for gate in self.measurements:
-                if gate.register_name in registers:
-                    registers[gate.register_name].add(gate)
-                else:
-                    registers[gate.register_name] = gate
-            self._measurement_registers = registers
-
-        return self._measurement_registers
 
     def apply_bitflips(self, p0: float, p1: Optional[float] = None):
         """Apply bitflips to the measurements with probabilities `p0` and `p1`
