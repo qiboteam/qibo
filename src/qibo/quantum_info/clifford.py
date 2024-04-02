@@ -273,8 +273,8 @@ class Clifford:
 
         if registers:
             return {
-                register: gate.result.samples(binary)
-                for register, gate in self._measurement_registers
+                gate.register_name: gate.result.samples(binary)
+                for gate in self.measurements
             }
 
         if binary:
