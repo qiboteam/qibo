@@ -302,3 +302,24 @@ def test_GST(backend):
             estimated_matrix,
             atol=1e-1,
         )
+
+
+def test_GST_invalid_gate(backend):
+    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+    target_gates = [gates.TOFFOLI(0, 1, 2)]
+    target_matrices = [g.matrix() for g in target_gates]
+    # superoperator representation of the target gates in the pauli basis
+    target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
+    gate_set = [g.__class__ for g in target_gates]
+    lam = 1e-2
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    # Check if RuntimeError is raised
+    with pytest.raises(RuntimeError):
+        empty_1q, empty_2q, *approx_gates = GST(
+        gate_set,
+        nshots=int(1e4),
+        noise_model=depol,
+        include_empty=True,
+        backend=backend,
+        )
