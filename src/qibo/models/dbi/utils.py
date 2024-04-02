@@ -158,7 +158,7 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
+    W = dbi_object.commutator(d, dbi_object.h.matrix)
     Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
     sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])

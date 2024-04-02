@@ -6,11 +6,23 @@ import hyperopt
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
+
+class DoubleBracketCost(Enum):
+    """Define the DBI cost function."""
+
+    off_diagonal_norm = auto()
+    """Use off-diagonal norm as cost function."""
+    least_squares = auto()
+    """Use least squares as cost function."""
+    energy_fluctuation = auto()
+    """Use energy fluctuation as cost function."""
+
+
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
-    simulated_annealing_step,
+    #simulated_annealing_step,
 )
 
 
@@ -35,19 +47,11 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
-    simulated_annealing = simulated_annealing_step
+    #simulated_annealing = simulated_annealing_step
     """Use simulated annealing algorithm"""
 
 
-class DoubleBracketCostFunction(Enum):
-    """Define the DBI cost function."""
 
-    off_diagonal_norm = auto()
-    """Use off-diagonal norm as cost function."""
-    least_squares = auto()
-    """Use least squares as cost function."""
-    energy_fluctuation = auto()
-    """Use energy fluctuation as cost function."""
 
 
 class DoubleBracketIteration:
@@ -79,8 +83,8 @@ class DoubleBracketIteration:
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
-        cost: DoubleBracketCostFunction = DoubleBracketCostFunction.off_diagonal_norm,
-        state: int = 0,
+        cost: DoubleBracketCost = DoubleBracketCost.off_diagonal_norm,
+        state: np.array = None,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
@@ -151,11 +155,11 @@ class DoubleBracketIteration:
         """Get Hamiltonian's backend."""
         return self.h0.backend
 
-    def least_squares(self, D: np.array):
-        """Least squares cost function."""
-        H = self.h.matrix
-        return -np.real(
-            np.trace(H @ D) - 0.5 * (np.linalg.norm(H) ** 2 + np.linalg.norm(D) ** 2)
+    def least_squares(self, d: np.array):
+        """Least squares cost function. (without the constant term norm(H))"""
+        h = self.h.matrix
+        return np.real(
+            0.5 * np.linalg.norm(d) ** 2 - np.trace(h @ d)
         )
 
     def choose_step(
@@ -193,11 +197,11 @@ class DoubleBracketIteration:
             self.__call__(mode=self.mode, step=step, d=d)
 
         # loss values depending on the cost function
-        if self.cost == DoubleBracketCostFunction.off_diagonal_norm:
+        if self.cost == DoubleBracketCost.off_diagonal_norm:
             loss = self.off_diagonal_norm
-        elif self.cost == DoubleBracketCostFunction.least_squares:
+        elif self.cost == DoubleBracketCost.least_squares:
             loss = self.least_squares(d)
-        elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
+        elif self.cost == DoubleBracketCost.energy_fluctuation:
             loss = self.energy_fluctuation(self.state)
 
         # set back the initial configuration
@@ -205,7 +209,7 @@ class DoubleBracketIteration:
 
         return loss
 
-    def energy_fluctuation(self, state=None):
+    def energy_fluctuation(self, state):
         """
         Evaluate energy fluctuation
 
@@ -217,19 +221,16 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        if state is None:
-            state = self.state
-        state_vector = np.zeros(len(self.h.matrix))
-        state_vector[state] = 1.0
-        return np.real(self.h.energy_fluctuation(state_vector))
+
+        return np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
 
     def generate_Gamma_list(self, n: int, d: np.array):
         r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
-        W = self.commutator(d, self.sigma(self.h.matrix))
-        Gamma_list = [self.h.matrix]
+        w = self.commutator(d, self.sigma(self.h.matrix))
+        gamma_list = [self.h.matrix]
         for _ in range(n - 1):
-            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
-        return Gamma_list
+            gamma_list.append(self.commutator(w, gamma_list[-1]))
+        return gamma_list
