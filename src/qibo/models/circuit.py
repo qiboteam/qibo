@@ -667,6 +667,13 @@ class Circuit:
                     nreg = self.queue.nmeasurements - 1
                     gate.register_name = f"register{nreg}"
                 else:
+                    name = gate.register_name
+                    for mgate in self.measurements:
+                        if name == mgate.register_name:
+                            raise_error(
+                                KeyError, f"Register {name} already exists in circuit."
+                            )
+                    """
                     registers = self.measurement_tuples
                     for register, qubits in registers.items():
                         intersection = set(qubits).intersection(set(gate.target_qubits))
@@ -675,6 +682,7 @@ class Circuit:
                                 KeyError,
                                 f"Qubits {tuple(intersection)} already measured in register `{register}`.",
                             )
+                    """
 
                 gate.result.circuit = self
                 if gate.collapse:

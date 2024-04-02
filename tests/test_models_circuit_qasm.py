@@ -192,7 +192,6 @@ cry(0.3) q[2],q[1];"""
     "measurements",
     [
         [gates.M(0, 1)],
-        [gates.M(0, register_name="register0"), gates.M(1, register_name="register0")],
     ],
 )
 def test_measurements(measurements):
