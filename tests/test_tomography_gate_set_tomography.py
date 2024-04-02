@@ -317,9 +317,9 @@ def test_GST_invalid_gate(backend):
     # Check if RuntimeError is raised
     with pytest.raises(RuntimeError):
         empty_1q, empty_2q, *approx_gates = GST(
-        gate_set,
-        nshots=int(1e4),
-        noise_model=depol,
-        include_empty=True,
-        backend=backend,
+            gate_set,
+            nshots=int(1e4),
+            noise_model=depol,
+            include_empty=True,
+            backend=backend,
         )
