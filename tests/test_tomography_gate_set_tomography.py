@@ -160,6 +160,72 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
+def test_expectation_value(backend):
+    nqubits = 3
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.TOFFOLI(0, 1, 2))
+    k = 1
+    j = 1
+    with pytest.raises(ValueError):
+        expectation_val = _expectation_value(
+            test_circuit, 
+            k, 
+            j, 
+            nshots=int(1e4), 
+            backend=backend,
+            )
+
+
+def test_estimate_jk_element_invalid_qb_gate(backend):
+    nqubits = 3
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        matrix_jk = _estimate_jk_element(
+            nqubits=nqubits, 
+            gate=gates.TOFFOLI(0, 1, 2), 
+            nshots=int(1e4), 
+            invert_register=None, 
+            noise_model=None, 
+            backend=backend,
+            )
+
+
+def test_estimate_jk_element_mismatched_inputs(backend):
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_gate = gates.CNOT(0,1)
+    with pytest.raises(ValueError):
+        matrix_jk = _estimate_jk_element(
+            nqubits=nqubits, 
+            gate=test_gate, 
+            nshots=int(1e4), 
+            invert_register=None, 
+            noise_model=None, 
+            backend=backend,
+            )
+
+
+def test_estimate_jk_element_with_invert_register(backend):
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    matrix_jk = _estimate_jk_element(
+        nqubits=nqubits, 
+        gate=None, nshots=int(1e6), 
+        invert_register=(0,), 
+        noise_model=None, 
+        backend=backend,
+        )
+    groundtruth = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1]])
+    backend.assert_allclose(
+            matrix_jk,
+            groundtruth,
+            atol=1e-2,
+        )
+
+
 def test_reset_register_valid_tuple_1qb():
     # Test for valid tuple
     nqubits = 1
