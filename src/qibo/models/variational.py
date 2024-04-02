@@ -42,7 +42,7 @@ class VQE:
         self,
         initial_state,
         method="Powell",
-        _loss=None,  # TODO: Change variable name
+        loss_func=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -82,20 +82,20 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
-        if _loss is None:
-            _loss = var_loss
+        if loss_func is None:
+            loss_func = var_loss
         if compile:
-            loss = self.hamiltonian.backend.compile(_loss)
+            loss = self.hamiltonian.backend.compile(loss_func)
         else:
-            loss = _loss
+            loss = loss_func
 
         if method == "cma":
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
-            loss = lambda p, c, h: dtype(_loss(p, c, h))
+            loss = lambda p, c, h: dtype(loss_func(p, c, h))
         elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
+            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
