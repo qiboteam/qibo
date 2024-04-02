@@ -261,7 +261,7 @@ def dpolynomial_diDiagonal(dbi_object, d, H, i):
         np.trace(Gamma_list[0] @ A) + np.trace(dGamma[0] @ d + Gamma_list[1] @ A) * s
     )
     for n in range(2, 4):
-        dGamma.append(dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list))
+        dGamma.append(dGamma_diDiagonal(dbi_object, d, H, n, i, dGamma, Gamma_list))
         derivative += np.real(
             np.trace(dGamma[-1] @ d + Gamma_list[n] @ A) * s**n / math.factorial(n)
         )
