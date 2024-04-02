@@ -2,10 +2,11 @@ import math
 from copy import deepcopy
 from functools import partial
 from typing import Optional
-from qibo.models.dbi.double_bracket import DoubleBracketCost
 
 import hyperopt
 import numpy as np
+
+from qibo.models.dbi.double_bracket import DoubleBracketCost
 
 error = 1e-3
 
@@ -171,14 +172,14 @@ def d_ansatz(params, type="Full"):
         for i in range(len(params)):
             d[i, i] = params[i]
 
-    if type == 'Pauli':
-        d = np.zeros((2**len(params), 2**len(params)))
+    if type == "Pauli":
+        d = np.zeros((2 ** len(params), 2 ** len(params)))
         z = np.array([[1, 0], [0, -1]])
         for i in range(len(params)):
             i1 = np.eye(2**i)
-            i2 = np.eye(2**(len(params)-i-1))
-            d += params[i]*np.kron(i1,np.kron(z,i2))
-    
+            i2 = np.eye(2 ** (len(params) - i - 1))
+            d += params[i] * np.kron(i1, np.kron(z, i2))
+
     return d
 
 
@@ -186,7 +187,7 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    
+
     gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
     sigma_Gamma_list = list(map(dbi_object.sigma, gamma_list))
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
@@ -278,7 +279,8 @@ def dpolynomial_diDiagonal(dbi_object, d, h, i):
     dD_di[i, i] = 1
     dGamma = [commutator(dD_di, h)]
     derivative += np.real(
-        np.trace(gamma_list[0] @ dD_di) + np.trace(dGamma[0] @ d + gamma_list[1] @ dD_di) * s
+        np.trace(gamma_list[0] @ dD_di)
+        + np.trace(dGamma[0] @ d + gamma_list[1] @ dD_di) * s
     )
     for n in range(2, 4):
         dGamma.append(dGamma_diDiagonal(d, h, n, i, dGamma, gamma_list))
@@ -288,7 +290,10 @@ def dpolynomial_diDiagonal(dbi_object, d, h, i):
 
     return derivative
 
-def gradientDiagonalEntries(dbi_object, params, h, analytic = True, ansatz = 'Full', delta = 1e-4):
+
+def gradientDiagonalEntries(
+    dbi_object, params, h, analytic=True, ansatz="Full", delta=1e-4
+):
     r"""
     Gradient of the DBI with respect to the parametrization of D. If analytic is True, the analytical gradient of the polynomial expansion of the DBI is used.
     Args:
@@ -306,17 +311,22 @@ def gradientDiagonalEntries(dbi_object, params, h, analytic = True, ansatz = 'Fu
     d = d_ansatz(params, ansatz)
     if analytic == True:
         for i in range(len(params)):
-            derivative = dpolynomial_diDiagonal(dbi_object,d,h,i)
-            grad[i] = d[i,i]-derivative
+            derivative = dpolynomial_diDiagonal(dbi_object, d, h, i)
+            grad[i] = d[i, i] - derivative
     else:
         for i in range(len(params)):
             params_new = deepcopy(params)
             params_new[i] += delta
             d_new = d_ansatz(params_new, ansatz)
-            grad[i] = (dbi_object.least_squares(d_new)-dbi_object.least_squares(d))/delta
+            grad[i] = (
+                dbi_object.least_squares(d_new) - dbi_object.least_squares(d)
+            ) / delta
     return grad
 
-def gradient_descent(dbi_object, params, iterations, lr = 1e-2, analytic = True, ansatz = 'Full'):
+
+def gradient_descent(
+    dbi_object, params, iterations, lr=1e-2, analytic=True, ansatz="Full"
+):
     r"""
     Optimizes the D operator using gradient descent evaluated at the at the rotaion angle found using the polynomial expansion.
     Args:
@@ -334,9 +344,9 @@ def gradient_descent(dbi_object, params, iterations, lr = 1e-2, analytic = True,
     """
 
     h = dbi_object.h.matrix
-    d = d_ansatz(params,ansatz)
-    loss = np.zeros(iterations+1)
-    grad = np.zeros((iterations,len(params)))
+    d = d_ansatz(params, ansatz)
+    loss = np.zeros(iterations + 1)
+    grad = np.zeros((iterations, len(params)))
     dbi_new = deepcopy(dbi_object)
     s = polynomial_step(dbi_object, n=3, d=d)
     dbi_new(s, d=d)
@@ -346,13 +356,15 @@ def gradient_descent(dbi_object, params, iterations, lr = 1e-2, analytic = True,
 
     for i in range(iterations):
         dbi_new = deepcopy(dbi_object)
-        grad[i,:] = gradientDiagonalEntries(dbi_object, params, h, analytic=analytic, ansatz=ansatz)
+        grad[i, :] = gradientDiagonalEntries(
+            dbi_object, params, h, analytic=analytic, ansatz=ansatz
+        )
         for j in range(len(params)):
-            params[j] = params[j] - lr*grad[i,j]
-        d = d_ansatz(params, ansatz)     
-        s = polynomial_step(dbi_object, n = 3, d=d)
-        dbi_new(s,d=d)
-        loss[i+1] = dbi_new.least_squares(d)
-        params_hist[:,i+1] = params
-        
-    return d,loss,grad,params_hist
+            params[j] = params[j] - lr * grad[i, j]
+        d = d_ansatz(params, ansatz)
+        s = polynomial_step(dbi_object, n=3, d=d)
+        dbi_new(s, d=d)
+        loss[i + 1] = dbi_new.least_squares(d)
+        params_hist[:, i + 1] = params
+
+    return d, loss, grad, params_hist

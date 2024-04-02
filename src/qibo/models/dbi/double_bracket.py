@@ -7,6 +7,7 @@ import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
 
+
 class DoubleBracketCost(Enum):
     """Define the DBI cost function."""
 
@@ -18,11 +19,10 @@ class DoubleBracketCost(Enum):
     """Use energy fluctuation as cost function."""
 
 
-from qibo.models.dbi.utils_scheduling import (
+from qibo.models.dbi.utils_scheduling import (  # simulated_annealing_step,
     grid_search_step,
     hyperopt_step,
     polynomial_step,
-    #simulated_annealing_step,
 )
 
 
@@ -47,11 +47,8 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
-    #simulated_annealing = simulated_annealing_step
+    # simulated_annealing = simulated_annealing_step
     """Use simulated annealing algorithm"""
-
-
-
 
 
 class DoubleBracketIteration:
@@ -158,9 +155,7 @@ class DoubleBracketIteration:
     def least_squares(self, d: np.array):
         """Least squares cost function. (without the constant term norm(H))"""
         h = self.h.matrix
-        return np.real(
-            0.5 * np.linalg.norm(d) ** 2 - np.trace(h @ d)
-        )
+        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h @ d))
 
     def choose_step(
         self,
