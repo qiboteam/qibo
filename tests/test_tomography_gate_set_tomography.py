@@ -173,7 +173,7 @@ def test_expectation_value(backend):
             j, 
             nshots=int(1e4), 
             backend=backend,
-            )
+        )
 
 
 def test_estimate_jk_element_invalid_qb_gate(backend):
@@ -188,7 +188,7 @@ def test_estimate_jk_element_invalid_qb_gate(backend):
             invert_register=None, 
             noise_model=None, 
             backend=backend,
-            )
+        )
 
 
 def test_estimate_jk_element_mismatched_inputs(backend):
@@ -204,7 +204,7 @@ def test_estimate_jk_element_mismatched_inputs(backend):
             invert_register=None, 
             noise_model=None, 
             backend=backend,
-            )
+        )
 
 
 def test_estimate_jk_element_with_invert_register(backend):
@@ -217,7 +217,7 @@ def test_estimate_jk_element_with_invert_register(backend):
         invert_register=(0,), 
         noise_model=None, 
         backend=backend,
-        )
+    )
     groundtruth = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1]])
     backend.assert_allclose(
             matrix_jk,
