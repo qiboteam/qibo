@@ -106,12 +106,9 @@ def test_energy_fluctuations(backend):
     h0 = np.array([[1, 0], [0, -1]])
     h0 = backend.cast(h0, dtype=backend.dtype)
 
-    state = np.array([1, 0])
-    state = backend.cast(state, dtype=backend.dtype)
-
     dbi = DoubleBracketIteration(Hamiltonian(1, matrix=h0, backend=backend))
-    energy_fluctuation = dbi.energy_fluctuation(state=state)
-    assert energy_fluctuation == 1.0
+    energy_fluctuation = dbi.energy_fluctuation()
+    assert energy_fluctuation == 0.0
 
 
 @pytest.mark.parametrize(
