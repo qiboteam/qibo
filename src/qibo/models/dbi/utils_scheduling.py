@@ -156,7 +156,8 @@ def polynomial_step(
     else:
         return None
 
-def d_ansatz(params, type = 'Full'):
+
+def d_ansatz(params, type="Full"):
     r"""
     Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
     Args:
@@ -165,7 +166,7 @@ def d_ansatz(params, type = 'Full'):
         (Full being each entry parametrized and Pauli being a linear combination of Z_i matrix).
     """
 
-    if type == 'Full':
+    if type == "Full":
         d = np.zeros((len(params), len(params)))
         for i in range(len(params)):
             d[i, i] = params[i]
@@ -337,11 +338,11 @@ def gradient_descent(dbi_object, params, iterations, lr = 1e-2, analytic = True,
     loss = np.zeros(iterations+1)
     grad = np.zeros((iterations,len(params)))
     dbi_new = deepcopy(dbi_object)
-    s = polynomial_step(dbi_object, n = 3, d=d)
-    dbi_new(s,d=d)
+    s = polynomial_step(dbi_object, n=3, d=d)
+    dbi_new(s, d=d)
     loss[0] = dbi_new.least_squares(d)
-    params_hist = np.empty((len(params),iterations+1))
-    params_hist[:,0] = params
+    params_hist = np.empty((len(params), iterations + 1))
+    params_hist[:, 0] = params
 
     for i in range(iterations):
         dbi_new = deepcopy(dbi_object)
