@@ -42,7 +42,7 @@ class VQE:
         self,
         initial_state,
         method="Powell",
-        loss=None,
+        _loss=None,  # TODO: Change variable name
         jac=None,
         hess=None,
         hessp=None,
@@ -82,12 +82,12 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
-        if loss is None:
-            loss = var_loss
+        if _loss is None:
+            _loss = var_loss
         if compile:
-            loss = self.hamiltonian.backend.compile(loss)
+            loss = self.hamiltonian.backend.compile(_loss)
         else:
-            loss = loss
+            loss = _loss
 
         if method == "cma":
             # TODO: check if we can use this shortcut
@@ -650,7 +650,7 @@ class FALQON(QAOA):
 
         energy = [np.inf]
         callback_result = []
-        for it in range(1, max_layers + 1):
+        for _ in range(1, max_layers + 1):
             beta = self.hamiltonian.backend.to_numpy(
                 _loss(parameters, self, self.evol_hamiltonian)
             )

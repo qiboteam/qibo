@@ -62,6 +62,7 @@ class DoubleBracketIteration:
             np.matrix(self.backend.to_numpy(operator)).getH()
         )
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        return operator
 
     def eval_operator(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
