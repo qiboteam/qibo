@@ -2,7 +2,7 @@ import numpy as np
 
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
-from qibo.models.utils import var_loss
+from qibo.models.utils import vqe_loss
 
 
 class VQE:
@@ -62,7 +62,7 @@ class VQE:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            loss (callable): loss function, the default one is :func:`qibo.models.utils.var_loss`.
+            loss (callable): loss function, the default one is :func:`qibo.models.utils.vqe_loss`.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -83,7 +83,7 @@ class VQE:
             and for ``'sgd'`` the options used during the optimization.
         """
         if loss_func is None:
-            loss_func = var_loss
+            loss_func = vqe_loss
         if compile:
             loss = self.hamiltonian.backend.compile(loss_func)
         else:
@@ -263,7 +263,6 @@ class AAVQE:
         self,
         params,
         method="BFGS",
-        loss=var_loss,
         jac=None,
         hess=None,
         hessp=None,

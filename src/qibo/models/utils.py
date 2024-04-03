@@ -209,7 +209,7 @@ def fourier_coefficients(
     return filtered_coeffs
 
 
-def var_loss(params, circuit, hamiltonian):
+def vqe_loss(params, circuit, hamiltonian):
     circuit.set_parameters(params)
     result = hamiltonian.backend.execute_circuit(circuit)
     final_state = result.state()
