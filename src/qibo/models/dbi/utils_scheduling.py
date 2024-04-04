@@ -9,6 +9,8 @@ from qibo.models.dbi.utils import off_diagonal_norm_polynomial_expansion_coef, l
 import hyperopt
 import numpy as np
 
+from qibo.models.dbi.double_bracket import DoubleBracketCost
+
 error = 1e-3
 
 
