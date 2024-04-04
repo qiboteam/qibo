@@ -175,3 +175,55 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     # coefficients from high to low (n:0)
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
+
+def least_squares_polynomial_expansion_coef(dbi_object, d: np.array = None, n: int = 3):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients
+    coef = np.empty(n)
+    for i in range(n):
+        coef[i] = np.real(exp_list[i] * np.trace(d @ gamma_list[i + 1]))
+    coef = list(reversed(coef))
+    return coef
+
+
+# TODO: add a general expansion formula not stopping at 3rd order
+def energy_fluctuation_polynomial_expansion_coef(
+    dbi_object, d: np.array = None, n: int = 3, state=0
+):
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    # coefficients
+    coef = np.empty(3)
+    coef[0] = np.real(2 * covariance(gamma_list[0], gamma_list[1], state))
+    coef[1] = np.real(2 * variance(gamma_list[1], state))
+    coef[2] = np.real(
+        covariance(gamma_list[0], gamma_list[3], state)
+        + 3 * covariance(gamma_list[1], gamma_list[2], state)
+    )
+    coef = list(reversed(coef))
+    return coef
+
+def commutator(a, b):
+    """Compute commutator between two arrays."""
+    return a @ b - b @ a
+
+
+def variance(a, state):
+    """Calculates the variance of a matrix A with respect to a state:
+      Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
+    b = a @ a
+    return state.conj().T @ b @state -  (state.conj().T @ a @state)**2
+
+
+def covariance(a, b, state):
+    """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
+    applied to two operators A and B with respect to a state: 
+    Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$"""
+    c = a @ b + b @ a
+    return state.conj().T @ c @state - 2 * state.conj().T @ a @state * state.conj().T @ b @state

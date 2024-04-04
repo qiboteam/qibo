@@ -2,7 +2,6 @@ from copy import deepcopy
 from enum import Enum, auto
 from typing import Optional
 
-import hyperopt
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
@@ -17,7 +16,7 @@ class DoubleBracketCost(Enum):
     energy_fluctuation = auto()
     """Use energy fluctuation as cost function."""
 
-
+# This is needed due to mutual dependencies between double_bracket.py and utils_scheduling.py
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
@@ -84,14 +83,14 @@ class DoubleBracketIteration:
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
         cost: DoubleBracketCost = DoubleBracketCost.off_diagonal_norm,
-        state: np.array = None,
+        ref_state: np.array = None,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
         self.scheduling = scheduling
         self.cost = cost
-        self.state = state
+        self.ref_state = ref_state
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -197,12 +196,12 @@ class DoubleBracketIteration:
             self.__call__(mode=self.mode, step=step, d=d)
 
         # loss values depending on the cost function
-        if self.cost == DoubleBracketCost.off_diagonal_norm:
+        if self.cost is DoubleBracketCost.off_diagonal_norm:
             loss = self.off_diagonal_norm
-        elif self.cost == DoubleBracketCost.least_squares:
+        elif self.cost is DoubleBracketCost.least_squares:
             loss = self.least_squares(d)
-        elif self.cost == DoubleBracketCost.energy_fluctuation:
-            loss = self.energy_fluctuation(self.state)
+        elif self.cost is DoubleBracketCost.energy_fluctuation:
+            loss = self.energy_fluctuation(self.ref_state)
 
         # set back the initial configuration
         self.h = h_copy
