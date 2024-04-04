@@ -1,6 +1,6 @@
 import math
 from copy import deepcopy
-from itertools import product
+from itertools import combinations, product
 from typing import Optional
 
 import hyperopt
@@ -152,26 +152,21 @@ def cs_angle_sgn(dbi_object, d):
     return np.sign(norm)
 
 
-def dGamma_di_onsite_Z(
-    dbi_object: DoubleBracketIteration, n: int, i: int, d: np.array, onsite_Z_ops=None
+def dGamma_di_Pauli(
+    dbi_object: DoubleBracketIteration, n: int, Z_i: np.array, d: np.array
 ):
     """Computes the derivatives $\frac{\\partial \\Gamma_n}{\\partial \alpha_i}$ where the diagonal operator $D=\\sum \alpha_i Z_i$.
 
     Args:
         dbi_object (DoubleBracketIteration): the target dbi object
         n (int): the number of nested commutators in `Gamma`
-        i (int): the index of onsite-Z coefficient
+        i (int/tupple): the index of onsite-Z coefficient
         d (np.array): the diagonal operator
 
     Returns:
         (list): [dGamma_0_di, dGamma_1_di, ..., dGamma_n_di]
     """
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
-    if onsite_Z_ops is None:
-        Z_i_str = "I" * (i) + "Z" + "I" * (nqubits - i - 1)
-        Z_i = SymbolicHamiltonian(str_to_symbolic(Z_i_str)).dense.matrix
-    else:
-        Z_i = onsite_Z_ops[i]
     dGamma_di = [np.zeros((2**nqubits, 2**nqubits))] * (n + 1)
     Gamma_list = dbi_object.generate_Gamma_list(n=n + 2, d=d)
     W = dbi_object.commutator(d, dbi_object.h.matrix)
@@ -188,13 +183,11 @@ def dGamma_di_onsite_Z(
     return dGamma_di
 
 
-def ds_di_onsite_Z(
+def ds_di_Pauli(
     dbi_object: DoubleBracketIteration,
     d: np.array,
-    i: int,
-    n: int = 3,
+    Z_i: np.array,
     taylor_coef: Optional[list] = None,
-    onsite_Z_ops: Optional[list] = None,
 ):
     r"""Return the derivatives of the first 3 polynomial coefficients with respect to onsite Pauli-Z coefficients\
         Args:
@@ -207,10 +200,7 @@ def ds_di_onsite_Z(
             floats da, db, dc, ds
     """
     # generate the list of derivatives w.r.t ith Z operator coefficient
-    nqubits = int(np.log2(d.shape[0]))
-    if onsite_Z_ops is None:
-        onsite_Z_ops = generate_onsite_Z_ops(nqubits)
-    dGamma_di = dGamma_di_onsite_Z(dbi_object, n=4, i=i, d=d, onsite_Z_ops=onsite_Z_ops)
+    dGamma_di = dGamma_di_Pauli(dbi_object, n=4, Z_i=Z_i, d=d)
     Gamma_list = dbi_object.generate_Gamma_list(n=4, d=d)
 
     def derivative_product(k1, k2):
@@ -238,10 +228,10 @@ def ds_di_onsite_Z(
     return da, db, dc, ds
 
 
-def gradient_onsite_Z(
+def gradient_Pauli(
     dbi_object: DoubleBracketIteration,
     d: np.array,
-    onsite_Z_ops: list,
+    pauli_operator_dict: dict,
     use_ds=False,
     n=3,
     **kwargs,
@@ -257,11 +247,10 @@ def gradient_onsite_Z(
     """
     # n is the highest order for calculating s
 
-    # initialize gradient
-    nqubits = int(np.log2(d.shape[0]))
-    if onsite_Z_ops is None:
-        onsite_Z_ops = generate_onsite_Z_ops(nqubits)
-    grad = np.zeros(nqubits)
+    # pauli_index is the list of positions \mu
+    pauli_operators = list(pauli_operator_dict.values())
+    num_paul = len(pauli_operators)
+    grad = np.zeros(num_paul)
     coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n=n)
     s = dbi_object.choose_step(
         d=d,
@@ -269,9 +258,10 @@ def gradient_onsite_Z(
     )
 
     a, b, c = coef[len(coef) - 3 :]
-    for i in range(nqubits):
-        da, db, dc, ds = ds_di_onsite_Z(
-            dbi_object, d=d, i=i, n=n, taylor_coef=[a, b, c], onsite_Z_ops=onsite_Z_ops
+
+    for i, operator in enumerate(pauli_operators):
+        da, db, dc, ds = ds_di_Pauli(
+            dbi_object, d=d, Z_i=operator, taylor_coef=[a, b, c]
         )
         if use_ds is True:
             ds = 0
@@ -288,33 +278,44 @@ def gradient_onsite_Z(
     return grad, s
 
 
-def onsite_Z_decomposition(h_matrix: np.array, onsite_Z_ops=None):
+def decompose_into_Pauli_basis(h_matrix: np.array, pauli_operators: list):
     """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
-    if onsite_Z_ops is None:
-        onsite_Z_ops = generate_onsite_Z_ops(nqubits)
+
     decomposition = []
-    for Z_i in onsite_Z_ops:
+    for Z_i in pauli_operators:
         expect = np.trace(h_matrix @ Z_i) / 2**nqubits
         decomposition.append(expect)
     return decomposition
 
 
-def generate_onsite_Z_ops(nqubits):
-    """generate the list of Pauli-Z operators of an `nqubit` system in the form of np.array"""
-    onsite_Z_str = ["I" * (i) + "Z" + "I" * (nqubits - i - 1) for i in range(nqubits)]
-    onsite_Z_ops = [
-        SymbolicHamiltonian(str_to_symbolic(Z_i_str)).dense.matrix
-        for Z_i_str in onsite_Z_str
+def generate_pauli_index(nqubits, order):
+    if order == 1:
+        return list(range(nqubits))
+    elif order > 1:
+        indices = list(range(nqubits))
+        return indices + [
+            comb for i in range(2, order + 1) for comb in combinations(indices, i)
+        ]
+    else:
+        raise ValueError("Order must be a positive integer")
+
+
+def generate_pauli_operator_dict(nqubits: int, parameterization_order: int):
+    pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
+    pauli_operators = [
+        generate_Pauli_operators(nqubits, symbols.Z, index) for index in pauli_index
     ]
-    return onsite_Z_ops
+    return {index: operator for index, operator in zip(pauli_index, pauli_operators)}
 
 
-def gradient_descent_onsite_Z(
+def gradient_descent_pauli(
     dbi_object: DoubleBracketIteration,
     d_coef: list,
     d: Optional[np.array] = None,
-    n: int = 2,
+    pauli_operator_dict: dict = None,
+    parameterization_order: int = 1,
+    n: int = 3,
     onsite_Z_ops: Optional[list] = None,
     lr_min: float = 1e-5,
     lr_max: float = 1,
@@ -345,12 +346,13 @@ def gradient_descent_onsite_Z(
 
     """
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
-    if onsite_Z_ops is None:
-        onsite_Z_ops = generate_onsite_Z_ops(nqubits)
-    if d is None:
-        d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
-    grad, s = gradient_onsite_Z(
-        dbi_object, d, n=n, onsite_Z_ops=onsite_Z_ops, use_ds=use_ds
+    if pauli_operator_dict is None:
+        pauli_operator_dict = generate_pauli_operator_dict(
+            nqubits, parameterization_order
+        )
+
+    grad, s = gradient_Pauli(
+        dbi_object, d, n=n, pauli_operator_dict=pauli_operator_dict, use_ds=use_ds
     )
     # optimize gradient descent step with hyperopt
     if space is None:
@@ -360,7 +362,12 @@ def gradient_descent_onsite_Z(
 
     def func_loss_to_lr(lr):
         d_coef_eval = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
-        d_eval = sum([d_coef_eval[i] * onsite_Z_ops[i] for i in range(nqubits)])
+        d_eval = sum(
+            [
+                d_coef_eval[i] * list(pauli_operator_dict.values())[i]
+                for i in range(nqubits)
+            ]
+        )
         return dbi_object.loss(step=s, d=d_eval)
 
     best = hyperopt.fmin(
@@ -373,7 +380,7 @@ def gradient_descent_onsite_Z(
     lr = best["lr"]
 
     d_coef = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
-    d = sum([d_coef[i] * onsite_Z_ops[i] for i in range(nqubits)])
+    d = sum([d_coef[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)])
     return s, d_coef, d
 
 
@@ -405,3 +412,14 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     # coefficients from high to low (n:0)
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
+
+
+def generate_Pauli_operators(nqubits, symbols_pauli, positions):
+    # generate matrix of an nqubit-pauli operator with `symbols_pauli` at `positions`
+    if isinstance(positions, int):
+        return SymbolicHamiltonian(
+            symbols_pauli(positions), nqubits=nqubits
+        ).dense.matrix
+    else:
+        terms = [symbols_pauli(pos) for pos in positions]
+        return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix
