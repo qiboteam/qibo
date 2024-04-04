@@ -430,7 +430,7 @@ def _get_dim(nqubits):
 
 @cache
 def _get_packed_size(n):
-    """Returns the size of an arry of `n` booleans after packing."""
+    """Returns the size of an array of `n` booleans after packing."""
     return np.ceil(n / 8).astype(int)
 
 
