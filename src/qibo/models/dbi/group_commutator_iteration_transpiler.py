@@ -20,15 +20,14 @@ class DoubleBracketRotationType(Enum):
 
     group_commutator = auto()
     """Use group commutator approximation"""
-    group_commutator_other_sorting = auto()
-    """Use group commutator approximation"""
 
     group_commutator_reduced = auto()
     """Use group commutator approximation with a reduction using symmetry
 
     """
-
     ## Reserving for later development
+    exact_GWW = auto()
+    """ $e^{-s [\Delta(H),H]}$"""
     group_commutator_imperfect = auto()
     """Use group commutator approximation"""
 
@@ -78,244 +77,103 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
     def __call__(
         self,
-        step_duration: float = None,
-        diagonal_association: EvolutionOracle = None,
-        mode_double_bracket_rotation: DoubleBracketRotationType = None,
+        step_duration: float,
+        diagonal_association: EvolutionOracle,
+        mode_dbr: DoubleBracketRotationType = None,
     ):
 
         # Set rotation type
-        if mode_double_bracket_rotation is None:
-            mode_double_bracket_rotation = self.mode_double_bracket_rotation
+        if mode_dbr is None:
+            mode_dbr = self.mode_double_bracket_rotation
 
-        # Setup diagonal association
-        if diagonal_association is None:
-            if (
-                self.mode_diagonal_association
-                is DoubleBracketDiagonalAssociationType.dephasing
-            ):
-                raise_error(
-                    NotImplementedError,
-                    "diagonal_h_matrix is np.array but need to cast to SymbolicHamiltonian; need to find a way to take the diagonal of the internal matrix self. h and create a SymbolicHamiltonian out of that",
-                )
-                diagonal_association = EvolutionOracle(
-                    SymbolicHamiltonian(self.diagonal_h_matrix),
-                    "Dephasing",
-                    mode_evolution_oracle=self.input_hamiltonian_evolution_oracle.mode_evolution_oracle,
-                )
-            else:
-                raise_error(
-                    ValueError,
-                    f"Cannot use group_commutator without specifying the diagonal association. Did you want to set to canonical mode?",
-                )
-
-        else:
-            self.mode_diagonal_association = (
-                DoubleBracketDiagonalAssociationType.prescribed
-            )
-
-        # Perform the rotation
-        if (
-            self.mode_double_bracket_rotation
-            is DoubleBracketRotationType.single_commutator
-        ):
+        if (mode_dbr is DoubleBracketRotationType.single_commutator):
             raise_error(
-                NotImplementedError,
-                "Keeping track of single commutator DBRs not implemented",
+                ValueError,
+                "single_commutator DBR mode doesn't make sense with EvolutionOracle",
             )
-            double_bracket_rotation_step = self.single_commutator_query_list(
-                step, diagonal_association
-            )
-        else:
-            # This will run the appropriate group commutator step
-            double_bracket_rotation_step = self.group_commutator(
-                step_duration, diagonal_association
-            )
+        
+        # This will run the appropriate group commutator step
+        double_bracket_rotation_step = self.group_commutator(step_duration, diagonal_association)
+        before_circuit = double_bracket_rotation_step["backwards"]
+        after_circuit = double_bracket_rotation_step["forwards"]
 
-            if (
-                self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.numerical
-            ):
-                before_circuit = double_bracket_rotation_step["backwards"]
-                after_circuit = double_bracket_rotation_step["forwards"]
-                self.h.matrix = before_circuit @ self.h.matrix @ after_circuit
-
-            elif (
-                self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.hamiltonian_simulation
-            ):
-                before_circuit = double_bracket_rotation_step["backwards"]
-                after_circuit = double_bracket_rotation_step["forwards"]
-                self.iterated_hamiltonian_evolution_oracle = (
-                    FrameShiftedEvolutionOracle(
-                        deepcopy(self.iterated_hamiltonian_evolution_oracle),
-                        str(step_duration),
-                        before_circuit,
-                        after_circuit,
-                    )
+        if (
+            self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
+            is EvolutionOracleType.numerical
+        ):
+            self.h.matrix = before_circuit @ self.h.matrix @ after_circuit
+        
+        elif (
+            self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
+            is EvolutionOracleType.hamiltonian_simulation
+        ):
+            self.iterated_hamiltonian_evolution_oracle = (
+                FrameShiftedEvolutionOracle(
+                    deepcopy(self.iterated_hamiltonian_evolution_oracle),
+                    str(step_duration),
+                    before_circuit,
+                    after_circuit,
                 )
+            )
+            self.h.matrix = before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
 
-            elif self.mode_evolution_oracle is EvolutionOracleType.text_strings:
-                raise_error(NotImplementedError)
-            else:
-                super().__call__(step, d)
+        elif self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+            raise_error(NotImplementedError)
+        else:
+            super().__call__(step, d)
 
     def group_commutator(
         self,
         s_step: float,
-        diagonal_association_evolution_oracle: EvolutionOracle = None,
-        iterated_hamiltonian_evolution_oracle: EvolutionOracle = None,
+        eo1: EvolutionOracle,
+        eo2: EvolutionOracle = None,
+        mode_dbr: DoubleBracketRotationType = None
     ):
+ 
+        if eo2 is None:
+            eo2 = self.iterated_hamiltonian_evolution_oracle
 
-        if iterated_hamiltonian_evolution_oracle is None:
+        assert eo1.mode_evolution_oracle.value is eo2.mode_evolution_oracle.value
 
-            iterated_hamiltonian_evolution_oracle = (
-                self.iterated_hamiltonian_evolution_oracle
-            )
+        eo_mode = eo1.mode_evolution_oracle
 
-        if (
-            self.mode_double_bracket_rotation
-            is DoubleBracketRotationType.group_commutator
-        ):
-            assert (
-                diagonal_association_evolution_oracle.mode_evolution_oracle.value
-                is self.iterated_hamiltonian_evolution_oracle.mode_evolution_oracle.value
-            )
-
-            if (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.text_strings
-                or diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.hamiltonian_simulation
-            ):
-                return {
-                    "forwards": (
-                        iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        + diagonal_association_evolution_oracle.circuit(s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        + diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        + diagonal_association_evolution_oracle.circuit(-s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                    ),
-                }
-            elif (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.numerical
-            ):
-                return {
-                    "forwards": (
-                        iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        @ diagonal_association_evolution_oracle.circuit(s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        @ diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        @ diagonal_association_evolution_oracle.circuit(-s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                    ),
-                }
-        elif (
-            self.mode_double_bracket_rotation
-            is DoubleBracketRotationType.group_commutator_other_sorting
-        ):
-            assert (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is iterated_hamiltonian_evolution_oracle.mode_evolution_oracle
-            )
-
-            if (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.text_strings
-                or diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.hamiltonian_simulation
-            ):
-                return {
-                    "forwards": (
-                        iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        + diagonal_association_evolution_oracle.circuit(-s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        + diagonal_association_evolution_oracle.circuit(s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(-s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        + diagonal_association_evolution_oracle.circuit(s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                    ),
-                }
-            elif (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.numerical
-            ):
-                return {
-                    "forwards": (
-                        iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        @ diagonal_association_evolution_oracle.circuit(-s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        @ diagonal_association_evolution_oracle.circuit(s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(-s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        @ diagonal_association_evolution_oracle.circuit(s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                    ),
-                }
-        elif (
-            self.mode_double_bracket_rotation
-            is DoubleBracketRotationType.group_commutator_reduced
-        ):
-            if (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.text_strings
-                or diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.hamiltonian_simulation
-            ):
-                return {
-                    "forwards": (
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        + diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        + iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        + diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                }
-            elif (
-                diagonal_association_evolution_oracle.mode_evolution_oracle
-                is EvolutionOracleType.numerical
-            ):
-                return {
-                    "forwards": (
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(s_step)
-                        @ diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                    "backwards": (  # in general an evolution oracle might have imperfect time reversal
-                        diagonal_association_evolution_oracle.circuit(s_step)
-                        @ iterated_hamiltonian_evolution_oracle.circuit(-s_step)
-                        @ diagonal_association_evolution_oracle.circuit(-s_step)
-                    ),
-                }
-
+        if mode_dbr is None:
+            gc_type = self.mode_double_bracket_rotation
         else:
-            if (
-                self.mode_double_bracket_rotation
-                is DoubleBracketRotationType.single_commutator
-            ):
-                raise_error(
-                    ValueError,
-                    "You are in the group commutator query list but your dbr mode is a perfect bracket and not an approximation by means of a group commutator!",
-                )
-            else:
-                raise_error(
-                    ValueError,
-                    "You are in the group commutator query list but your dbr mode is not recognized",
-                )
+            gc_type = mode_dbr
+
+        if gc_type is DoubleBracketRotationType.single_commutator:
+            raise_error(
+                ValueError,
+                "You are trying to get the group commutator query list but your dbr mode is single_commutator and not an approximation by means of a product formula!",
+            )
+
+        if gc_type is DoubleBracketRotationType.group_commutator:  
+            query_list_forward = [ eo1.circuit(-s_step), eo2.circuit(s_step), eo1.circuit(s_step), eo2.circuit(-s_step) ]
+            query_list_backward = [ eo2.circuit(s_step), eo1.circuit(-s_step), eo2.circuit(-s_step), eo1.circuit(s_step) ]
+        elif gc_type is DoubleBracketRotationType.group_commutator_reduced:  
+            query_list_forward = [ eo2.circuit(s_step), eo1.circuit(s_step), eo2.circuit(-s_step) ]
+            query_list_backward = [ eo2.circuit(s_step), eo1.circuit(-s_step), eo2.circuit(-s_step) ] 
+        else:
+            raise_error(
+                ValueError,
+                "You are in the group commutator query list but your dbr mode is not recognized")
+        
+        from functools import reduce
+        if eo_mode is EvolutionOracleType.text_strings:
+            return {
+                    "forwards": reduce(str.__add__, query_list_forward),
+                    "backwards": reduce(str.__add__, query_list_backward)
+                }
+        elif eo_mode is EvolutionOracleType.hamiltonian_simulation:
+            return {
+                "forwards": reduce(Circuit.__add__, query_list_forward[::-1]),
+                "backwards": reduce(Circuit.__add__, query_list_backward[::-1])
+                }
+        elif eo_mode is EvolutionOracleType.numerical:
+            return {
+                    "forwards": reduce(np.array.__matmul__, query_list_forward),
+                    "backwards": reduce(np.array.__matmul__, query_list_backward)
+                }
+        else:
+            raise_error(ValueError, "Your EvolutionOracleType is not recognized")
