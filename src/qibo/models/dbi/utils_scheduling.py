@@ -1,15 +1,15 @@
-import math
-from copy import deepcopy
 from functools import partial
 from typing import Optional
-from enum import Enum, auto
-from qibo.models.dbi.double_bracket import DoubleBracketCost
-from qibo.models.dbi.utils import off_diagonal_norm_polynomial_expansion_coef, least_squares_polynomial_expansion_coef, energy_fluctuation_polynomial_expansion_coef
 
 import hyperopt
 import numpy as np
 
 from qibo.models.dbi.double_bracket import DoubleBracketCost
+from qibo.models.dbi.utils import (
+    energy_fluctuation_polynomial_expansion_coef,
+    least_squares_polynomial_expansion_coef,
+    off_diagonal_norm_polynomial_expansion_coef,
+)
 
 error = 1e-3
 
@@ -142,4 +142,3 @@ def polynomial_step(
     # solution does not exist, return None
     else:
         return None
-

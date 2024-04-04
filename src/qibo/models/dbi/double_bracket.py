@@ -17,6 +17,7 @@ class DoubleBracketCost(Enum):
     energy_fluctuation = auto()
     """Use energy fluctuation as cost function."""
 
+
 # This is needed due to mutual dependencies between double_bracket.py and utils_scheduling.py
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,

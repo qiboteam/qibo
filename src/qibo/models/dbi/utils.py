@@ -176,6 +176,7 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     coef = list(reversed(trace_coefficients[: n + 1]))
     return coef
 
+
 def least_squares_polynomial_expansion_coef(dbi_object, d: np.array = None, n: int = 3):
     if d is None:
         d = dbi_object.diagonal_h_matrix
@@ -209,6 +210,7 @@ def energy_fluctuation_polynomial_expansion_coef(
     coef = list(reversed(coef))
     return coef
 
+
 def commutator(a, b):
     """Compute commutator between two arrays."""
     return a @ b - b @ a
@@ -216,14 +218,18 @@ def commutator(a, b):
 
 def variance(a, state):
     """Calculates the variance of a matrix A with respect to a state:
-      Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
+    Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
     b = a @ a
-    return state.conj().T @ b @state -  (state.conj().T @ a @state)**2
+    return state.conj().T @ b @ state - (state.conj().T @ a @ state) ** 2
 
 
 def covariance(a, b, state):
     """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
-    applied to two operators A and B with respect to a state: 
-    Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$"""
+    applied to two operators A and B with respect to a state:
+    Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$
+    """
     c = a @ b + b @ a
-    return state.conj().T @ c @state - 2 * state.conj().T @ a @state * state.conj().T @ b @state
+    return (
+        state.conj().T @ c @ state
+        - 2 * state.conj().T @ a @ state * state.conj().T @ b @ state
+    )
