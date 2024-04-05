@@ -57,14 +57,14 @@ class DoubleBracketIteration:
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
-        operator = self.eval_operator(step, mode, d)
+        operator = self.eval_dbr_unitary(step, mode, d)
         operator_dagger = self.backend.cast(
             np.matrix(self.backend.to_numpy(operator)).getH()
         )
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
         return operator
 
-    def eval_operator(
+    def eval_dbr_unitary(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
         if mode is None:
