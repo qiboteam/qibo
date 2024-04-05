@@ -70,6 +70,8 @@ from qibo import symbols
 from numpy.linalg import norm
 @pytest.mark.parametrize("nqubits", [3])
 def test_dbi_evolution_oracle(t_step, eps):    
+    from qibo.hamiltonians import SymbolicHamiltonian
+    from qibo import symbols
     h_x = SymbolicHamiltonian( symbols.X(0) + symbols.Z(0) * symbols.X(1) + symbols.Y(2) 
                               + symbols.Y(1) * symbols.Y(2), nqubits = 3 )
     d_0 = SymbolicHamiltonian(symbols.Z(0), nqubits = 3 )
