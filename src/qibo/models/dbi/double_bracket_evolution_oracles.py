@@ -69,7 +69,7 @@ class EvolutionOracle:
                     + " and next running discretization adjustment to reach precision eps = "
                     + str(self.eps_trottersuzuki)
                 )
-            return self.discretized_evolution_circuit(
+            return self.discretized_evolution_circuit_binary_search(
                 t_duration, eps=self.eps_trottersuzuki
             )
         else:
