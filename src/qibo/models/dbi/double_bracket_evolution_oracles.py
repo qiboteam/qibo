@@ -149,10 +149,6 @@ class EvolutionOracle:
         combined_circuit = reduce(
             Circuit.__add__, [circuit_1_step] * nmb_trottersuzuki_steps
         )
-        print("number of steps required", mid)
-        print("unitary: ", combined_circuit.unitary())
-        print("error:", np.linalg.norm(combined_circuit.unitary() - target_unitary))
-        print("eps tolerance level:< ", eps)
         assert np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
         return combined_circuit
 
