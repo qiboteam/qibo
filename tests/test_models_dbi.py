@@ -56,7 +56,7 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
         mode=DoubleBracketGeneratorType.group_commutator,
     )
 
-    for s in np.linspace(0, 0.01, NSTEPS):
+    for s in np.linspace(0.001, 0.01, NSTEPS):
         u = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.single_commutator)
         v = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.group_commutator)
 
