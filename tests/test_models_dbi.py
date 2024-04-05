@@ -57,8 +57,8 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
     )
 
     for s in np.linspace(0, 0.01, NSTEPS):
-        u = dbi.eval_dbr_unitary(s, mode=DoubleBracketRotationType.single_commutator)
-        v = dbi.eval_dbr_unitary(s, mode=DoubleBracketRotationType.group_commutator)
+        u = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.single_commutator)
+        v = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.group_commutator)
 
         assert np.linalg.norm(u - v) < 10 * s ** (1.49)(
             np.linalg.norm(h0) + np.linalg.norm(d)
