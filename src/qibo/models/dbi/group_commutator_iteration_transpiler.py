@@ -124,11 +124,12 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
     def group_commutator(
         self,
-        s_step: float,
+        t_step: float,
         eo1: EvolutionOracle,
         eo2: EvolutionOracle = None,
         mode_dbr: DoubleBracketRotationType = None
     ):
+        s_step = np.sqrt(t_step)
  
         if eo2 is None:
             eo2 = self.iterated_hamiltonian_evolution_oracle
