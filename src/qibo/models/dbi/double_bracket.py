@@ -89,6 +89,16 @@ class DoubleBracketIteration:
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
+        operator = self.eval_operator(step, mode, d)
+        operator_dagger = self.backend.cast(
+            np.matrix(self.backend.to_numpy(operator)).getH()
+        )
+        self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        return operator
+
+    def eval_operator(
+        self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
+    ):
         if mode is None:
             mode = self.mode
 
@@ -113,11 +123,8 @@ class DoubleBracketIteration:
                 @ self.h.exp(np.sqrt(step))
                 @ self.backend.calculate_matrix_exp(np.sqrt(step), d)
             )
-        operator_dagger = self.backend.cast(
-            np.matrix(self.backend.to_numpy(operator)).getH()
-        )
 
-        self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        return operator
 
     @staticmethod
     def commutator(a, b):
