@@ -10,9 +10,9 @@ from qibo.models.dbi.double_bracket import (
     DoubleBracketIteration,
     DoubleBracketScheduling,
 )
-from qibo.quantum_info import random_hermitian
 from qibo.models.dbi.double_bracket_evolution_oracles import EvolutionOracle
 from qibo.models.dbi.group_commutator_iteration_transpiler import *
+from qibo.quantum_info import random_hermitian
 
 NSTEPS = 1
 seed = 10
@@ -76,18 +76,26 @@ def test_dbi_evolution_oracle(backend,nqubits,t_step, eps):
     from qibo.hamiltonians import SymbolicHamiltonian
     from qibo import symbols
     from numpy.linalg import norm
-    h_input = SymbolicHamiltonian( symbols.X(0) + symbols.Z(0) * symbols.X(1) + symbols.Y(2) 
-                              + symbols.Y(1) * symbols.Y(2)+ symbols.Z(0), nqubits = 3, backend = backend )
+    h_x = SymbolicHamiltonian(
+        symbols.X(0)
+        + symbols.Z(0) * symbols.X(1)
+        + symbols.Y(2)
+        + symbols.Y(1) * symbols.Y(2),
+        nqubits=3,
+    )
+    d_0 = SymbolicHamiltonian(symbols.Z(0), nqubits=3)
+    h_input = h_x + d_0
 
-    evolution_oracle = EvolutionOracle(h_input, "ZX",
-                        mode_evolution_oracle = EvolutionOracleType.hamiltonian_simulation)
-    
+    evolution_oracle = EvolutionOracle(
+        h_input, "ZX", mode_evolution_oracle=EvolutionOracleType.hamiltonian_simulation
+    )
+
     evolution_oracle.eps_trottersuzuki = eps
-    
+
     U_hamiltonian_simulation = evolution_oracle.circuit(t_step).unitary()
     V_target = h_input.exp(t_step)
-    
-    assert norm(U_hamiltonian_simulation-V_target) < eps
+
+    assert norm(U_hamiltonian_simulation - V_target) < eps
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
