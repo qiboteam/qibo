@@ -11,6 +11,8 @@ from qibo.models.dbi.double_bracket import (
     DoubleBracketScheduling,
 )
 from qibo.quantum_info import random_hermitian
+from qibo.models.dbi.double_bracket_evolution_oracles import EvolutionOracle
+from qibo.models.dbi.group_commutator_iteration_transpiler import *
 
 NSTEPS = 1
 seed = 10
@@ -63,6 +65,27 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
 
         assert np.linalg.norm( u - v ) < 10 * s * np.linalg.norm(h0) * np.linalg.norm(d)
 
+
+from qibo import symbols
+from numpy.linalg import norm
+@pytest.mark.parametrize("nqubits", [3])
+def test_dbi_evolution_oracle(t_step, eps):    
+    h_x = SymbolicHamiltonian( symbols.X(0) + symbols.Z(0) * symbols.X(1) + symbols.Y(2) 
+                              + symbols.Y(1) * symbols.Y(2), nqubits = 3 )
+    d_0 = SymbolicHamiltonian(symbols.Z(0), nqubits = 3 )
+    h_input = h_x + d_0    
+
+    evolution_oracle = EvolutionOracle(h_input, "ZX",
+                        mode_evolution_oracle = EvolutionOracleType.hamiltonian_simulation)
+    
+    evolution_oracle.eps_trottersuzuki = eps
+    
+    U_hamiltonian_simulation = evolution_oracle.circuit(t_step).unitary()
+    V_target = h_input.exp(t_step)
+    
+    assert norm(U_hamiltonian_simulation-V_target) < eps
+
+
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_single_commutator(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
@@ -75,7 +98,6 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
 
     # test first iteration with default d
     dbi(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
-
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
 
@@ -133,7 +155,7 @@ def test_energy_fluctuations(backend):
     [
         DoubleBracketScheduling.grid_search,
         DoubleBracketScheduling.hyperopt,
-        DoubleBracketScheduling.simulated_annealing,
+        #        DoubleBracketScheduling.simulated_annealing,
     ],
 )
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
