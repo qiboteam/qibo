@@ -72,14 +72,12 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [3])
-def test_dbi_evolution_oracle(t_step, eps):    
+def test_dbi_evolution_oracle(backend,nqubits,t_step, eps):    
     from qibo.hamiltonians import SymbolicHamiltonian
     from qibo import symbols
     from numpy.linalg import norm
-    h_x = SymbolicHamiltonian( symbols.X(0) + symbols.Z(0) * symbols.X(1) + symbols.Y(2) 
-                              + symbols.Y(1) * symbols.Y(2), nqubits = 3 )
-    d_0 = SymbolicHamiltonian(symbols.Z(0), nqubits = 3 )
-    h_input = h_x + d_0    
+    h_input = SymbolicHamiltonian( symbols.X(0) + symbols.Z(0) * symbols.X(1) + symbols.Y(2) 
+                              + symbols.Y(1) * symbols.Y(2)+ symbols.Z(0), nqubits = 3, backend = backend )
 
     evolution_oracle = EvolutionOracle(h_input, "ZX",
                         mode_evolution_oracle = EvolutionOracleType.hamiltonian_simulation)

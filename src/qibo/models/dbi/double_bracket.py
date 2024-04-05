@@ -11,7 +11,7 @@ from qibo.models.dbi.utils_scheduling import (
     hyperopt_step,
     polynomial_step,
 )
-
+from qibo.config import raise_error
 
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
@@ -137,7 +137,8 @@ class DoubleBracketIteration:
                 @ self.h.exp(np.sqrt(step))
                 @ self.backend.calculate_matrix_exp(np.sqrt(step), d)
             )
-
+        else:
+            raise_error(ValueError, f"Mode { mode } not recognized.")
         return operator
 
     @staticmethod
