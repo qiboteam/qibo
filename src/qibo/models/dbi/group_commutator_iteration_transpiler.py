@@ -27,7 +27,7 @@ class DoubleBracketRotationType(Enum):
     """
     ## Reserving for later development
     exact_GWW = auto()
-    """ $e^{-s [\Delta(H),H]}$"""
+    r""" $e^{-s [\Delta(H),H]}$"""
     group_commutator_imperfect = auto()
     """Use group commutator approximation"""
 
@@ -86,14 +86,16 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         if mode_dbr is None:
             mode_dbr = self.mode_double_bracket_rotation
 
-        if (mode_dbr is DoubleBracketRotationType.single_commutator):
+        if mode_dbr is DoubleBracketRotationType.single_commutator:
             raise_error(
                 ValueError,
                 "single_commutator DBR mode doesn't make sense with EvolutionOracle",
             )
-        
+
         # This will run the appropriate group commutator step
-        double_bracket_rotation_step = self.group_commutator(step_duration, diagonal_association)
+        double_bracket_rotation_step = self.group_commutator(
+            step_duration, diagonal_association
+        )
         before_circuit = double_bracket_rotation_step["backwards"]
         after_circuit = double_bracket_rotation_step["forwards"]
 
@@ -102,20 +104,20 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             is EvolutionOracleType.numerical
         ):
             self.h.matrix = before_circuit @ self.h.matrix @ after_circuit
-        
+
         elif (
             self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
             is EvolutionOracleType.hamiltonian_simulation
         ):
-            self.iterated_hamiltonian_evolution_oracle = (
-                FrameShiftedEvolutionOracle(
-                    deepcopy(self.iterated_hamiltonian_evolution_oracle),
-                    str(step_duration),
-                    before_circuit,
-                    after_circuit,
-                )
+            self.iterated_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle(
+                deepcopy(self.iterated_hamiltonian_evolution_oracle),
+                str(step_duration),
+                before_circuit,
+                after_circuit,
             )
-            self.h.matrix = before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
+            self.h.matrix = (
+                before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
+            )
 
         elif self.mode_evolution_oracle is EvolutionOracleType.text_strings:
             raise_error(NotImplementedError)
@@ -127,10 +129,10 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         t_step: float,
         eo1: EvolutionOracle,
         eo2: EvolutionOracle = None,
-        mode_dbr: DoubleBracketRotationType = None
+        mode_dbr: DoubleBracketRotationType = None,
     ):
         s_step = np.sqrt(t_step)
- 
+
         if eo2 is None:
             eo2 = self.iterated_hamiltonian_evolution_oracle
 
@@ -149,32 +151,52 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 "You are trying to get the group commutator query list but your dbr mode is single_commutator and not an approximation by means of a product formula!",
             )
 
-        if gc_type is DoubleBracketRotationType.group_commutator:  
-            query_list_forward = [ eo1.circuit(-s_step), eo2.circuit(s_step), eo1.circuit(s_step), eo2.circuit(-s_step) ]
-            query_list_backward = [ eo2.circuit(s_step), eo1.circuit(-s_step), eo2.circuit(-s_step), eo1.circuit(s_step) ]
-        elif gc_type is DoubleBracketRotationType.group_commutator_reduced:  
-            query_list_forward = [ eo2.circuit(s_step), eo1.circuit(s_step), eo2.circuit(-s_step) ]
-            query_list_backward = [ eo2.circuit(s_step), eo1.circuit(-s_step), eo2.circuit(-s_step) ] 
+        if gc_type is DoubleBracketRotationType.group_commutator:
+            query_list_forward = [
+                eo1.circuit(-s_step),
+                eo2.circuit(s_step),
+                eo1.circuit(s_step),
+                eo2.circuit(-s_step),
+            ]
+            query_list_backward = [
+                eo2.circuit(s_step),
+                eo1.circuit(-s_step),
+                eo2.circuit(-s_step),
+                eo1.circuit(s_step),
+            ]
+        elif gc_type is DoubleBracketRotationType.group_commutator_reduced:
+            query_list_forward = [
+                eo2.circuit(s_step),
+                eo1.circuit(s_step),
+                eo2.circuit(-s_step),
+            ]
+            query_list_backward = [
+                eo2.circuit(s_step),
+                eo1.circuit(-s_step),
+                eo2.circuit(-s_step),
+            ]
         else:
             raise_error(
                 ValueError,
-                "You are in the group commutator query list but your dbr mode is not recognized")
-        
+                "You are in the group commutator query list but your dbr mode is not recognized",
+            )
+
         from functools import reduce
+
         if eo_mode is EvolutionOracleType.text_strings:
             return {
-                    "forwards": reduce(str.__add__, query_list_forward),
-                    "backwards": reduce(str.__add__, query_list_backward)
-                }
+                "forwards": reduce(str.__add__, query_list_forward),
+                "backwards": reduce(str.__add__, query_list_backward),
+            }
         elif eo_mode is EvolutionOracleType.hamiltonian_simulation:
             return {
                 "forwards": reduce(Circuit.__add__, query_list_forward[::-1]),
-                "backwards": reduce(Circuit.__add__, query_list_backward[::-1])
-                }
+                "backwards": reduce(Circuit.__add__, query_list_backward[::-1]),
+            }
         elif eo_mode is EvolutionOracleType.numerical:
             return {
-                    "forwards": reduce(np.array.__matmul__, query_list_forward),
-                    "backwards": reduce(np.array.__matmul__, query_list_backward)
-                }
+                "forwards": reduce(np.array.__matmul__, query_list_forward),
+                "backwards": reduce(np.array.__matmul__, query_list_backward),
+            }
         else:
             raise_error(ValueError, "Your EvolutionOracleType is not recognized")
