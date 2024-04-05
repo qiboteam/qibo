@@ -50,8 +50,10 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
+
 @pytest.mark.parametrize("nqubits", [3])
 def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
+    r"""The bound is $$||e^{-[D,H]}-GC||\le s^{3/2}(||[H,[D,H]||+||[D,[D,H]]||$$"""
     h0 = random_hermitian(2**nqubits, backend=backend)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
@@ -59,11 +61,14 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
         mode=DoubleBracketGeneratorType.group_commutator,
     )
 
-    for s in np.linspace(0,.01,NSTEPS):
-        u = dbi.eval_dbr_unitary(s,mode = DoubleBracketRotationType.single_commutator)
-        v = dbi.eval_dbr_unitary(s, mode = DoubleBracketRotationType.group_commutator)
+    for s in np.linspace(0, 0.01, NSTEPS):
+        u = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.single_commutator)
+        v = dbi.eval_dbr_unitary(s, mode=DoubleBracketGeneratorType.group_commutator)
 
-        assert np.linalg.norm( u - v ) < 10 * s * np.linalg.norm(h0) * np.linalg.norm(d)
+        assert np.linalg.norm(u - v) < 10 * s ** (1.49)(
+            np.linalg.norm(h0) + np.linalg.norm(d)
+        ) * np.linalg.norm(h0) * np.linalg.norm(d)
+
 
 
 @pytest.mark.parametrize("nqubits", [3])
