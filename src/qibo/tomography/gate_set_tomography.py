@@ -168,7 +168,7 @@ def _expectation_value(circuit, k, j, nshots=int(1e4), backend=None):
         return result.expectation_from_samples(observable)
 
 
-def _estimate_jk_element(
+def _gate_tomography(
     nqubits=None,
     gate=None,
     nshots=int(1e4),
@@ -242,7 +242,7 @@ def GST(
     if len(gate_set) == 0 or include_empty:
         for nqubits in range(1, 3):
             matrices.append(
-                _estimate_jk_element(
+                _gate_tomography(
                     nqubits=nqubits,
                     gate=None,
                     nshots=nshots,
@@ -265,7 +265,7 @@ def GST(
                 )
             gate = gate(*range(nqubits))
         matrices.append(
-            _estimate_jk_element(
+            _gate_tomography(
                 nqubits=nqubits,
                 gate=gate,
                 nshots=nshots,

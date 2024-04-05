@@ -2368,7 +2368,7 @@ References:
 
 .. autofunction:: qibo.tomography.gate_set_tomography.GST
 
-.. autofunction:: qibo.tomography.gate_set_tomography._estimate_jk_element
+.. autofunction:: qibo.tomography.gate_set_tomography._gate_tomography
 
 .. autofunction:: qibo.tomography.gate_set_tomography._expectation_value
 
