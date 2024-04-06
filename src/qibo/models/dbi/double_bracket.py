@@ -5,13 +5,14 @@ from typing import Optional
 import hyperopt
 import numpy as np
 
+from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
 )
-from qibo.config import raise_error
+
 
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""

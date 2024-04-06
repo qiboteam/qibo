@@ -69,7 +69,7 @@ class EvolutionOracle:
                     + " and next running discretization adjustment to reach precision eps = "
                     + str(self.eps_trottersuzuki)
                 )
-            return self.discretized_evolution_circuit(
+            return self.discretized_evolution_circuit_binary_search(
                 t_duration, eps=self.eps_trottersuzuki
             )
         else:
@@ -106,6 +106,41 @@ class EvolutionOracle:
             norm_difference = np.linalg.norm(target_unitary - proposed_circuit_unitary)
             if self.please_be_verbose:
                 print(nmb_trottersuzuki_steps, norm_difference)
+        from functools import reduce
+
+        circuit_1_step = deepcopy(self.h.circuit(t_duration / nmb_trottersuzuki_steps))
+        combined_circuit = reduce(
+            Circuit.__add__, [circuit_1_step] * nmb_trottersuzuki_steps
+        )
+        assert np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
+        return combined_circuit
+
+    def discretized_evolution_circuit_binary_search(self, t_duration, eps=None):
+        nmb_trottersuzuki_steps = 3  # this is the smallest size
+        nmb_trottersuzki_steps_right = 50  # this is the largest size for binary search
+        if eps is None:
+            eps = self.eps_trottersuzuki
+        target_unitary = self.h.exp(t_duration)
+
+        from copy import deepcopy
+
+        def check_accuracy(n_steps):
+            proposed_circuit_unitary = np.linalg.matrix_power(
+                deepcopy(self.h).circuit(t_duration / n_steps).unitary(),
+                n_steps,
+            )
+            norm_difference = np.linalg.norm(target_unitary - proposed_circuit_unitary)
+            if self.please_be_verbose:
+                print(n_steps, norm_difference)
+            return norm_difference < eps
+
+        while nmb_trottersuzuki_steps < nmb_trottersuzki_steps_right:
+            mid = (nmb_trottersuzuki_steps + nmb_trottersuzki_steps_right) // 2
+            if check_accuracy(mid):
+                nmb_trottersuzki_steps_right = mid
+            else:
+                nmb_trottersuzuki_steps = mid + 1
+
         from functools import reduce
 
         circuit_1_step = deepcopy(self.h.circuit(t_duration / nmb_trottersuzuki_steps))

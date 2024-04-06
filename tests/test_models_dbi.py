@@ -62,20 +62,25 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
     )
 
     for s in np.linspace(0.001, 0.01, NSTEPS):
-        u = dbi.eval_dbr_unitary(s,d=d, mode=DoubleBracketGeneratorType.single_commutator)
-        v = dbi.eval_dbr_unitary(s,d=d, mode=DoubleBracketGeneratorType.group_commutator)
+        u = dbi.eval_dbr_unitary(
+            s, d=d, mode=DoubleBracketGeneratorType.single_commutator
+        )
+        v = dbi.eval_dbr_unitary(
+            s, d=d, mode=DoubleBracketGeneratorType.group_commutator
+        )
 
         assert np.linalg.norm(u - v) < 10 * s**1.49 * (
             np.linalg.norm(h0) + np.linalg.norm(d)
         ) * np.linalg.norm(h0) * np.linalg.norm(d)
 
 
-
 @pytest.mark.parametrize("nqubits", [3])
-def test_dbi_evolution_oracle(backend,nqubits,t_step, eps):    
-    from qibo.hamiltonians import SymbolicHamiltonian
-    from qibo import symbols
+def test_dbi_evolution_oracle(backend, nqubits, t_step, eps):
     from numpy.linalg import norm
+
+    from qibo import symbols
+    from qibo.hamiltonians import SymbolicHamiltonian
+
     h_x = SymbolicHamiltonian(
         symbols.X(0)
         + symbols.Z(0) * symbols.X(1)
