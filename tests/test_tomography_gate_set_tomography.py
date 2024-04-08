@@ -13,7 +13,7 @@ from qibo.quantum_info import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
     _expectation_value,
-    _gate_tomography,
+    _gate_set_tomography,
     _get_observable,
     _measurement_basis,
     _prepare_state,
@@ -176,12 +176,15 @@ def test_expectation_value(backend):
         )
 
 
-def test_gate_tomography_invalid_qb_gate(backend):
+pytest.mark.parametrize(
+    "")
+
+def test_gate_set_tomography_invalid_qb_gate(backend):
     nqubits = 3
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.TOFFOLI(0, 1, 2))
     with pytest.raises(ValueError):
-        matrix_jk = _gate_tomography(
+        matrix_jk = _gate_set_tomography(
             nqubits=nqubits,
             gate=gates.TOFFOLI(0, 1, 2),
             nshots=int(1e4),
@@ -191,13 +194,13 @@ def test_gate_tomography_invalid_qb_gate(backend):
         )
 
 
-def test_gate_tomography_mismatched_inputs(backend):
+def test_gate_set_tomography_mismatched_inputs(backend):
     nqubits = 1
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
     test_gate = gates.CNOT(0, 1)
     with pytest.raises(ValueError):
-        matrix_jk = _gate_tomography(
+        matrix_jk = _gate_set_tomography(
             nqubits=nqubits,
             gate=test_gate,
             nshots=int(1e4),
@@ -207,11 +210,11 @@ def test_gate_tomography_mismatched_inputs(backend):
         )
 
 
-def test_gate_tomography_with_invert_register(backend):
+def test_gate_set_tomography_with_invert_register(backend):
     nqubits = 1
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
-    matrix_jk = _gate_tomography(
+    matrix_jk = _gate_set_tomography(
         nqubits=nqubits,
         gate=None,
         nshots=int(1e6),
