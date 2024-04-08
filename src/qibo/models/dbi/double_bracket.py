@@ -100,10 +100,10 @@ class DoubleBracketIteration:
 
             sqrt_step = np.sqrt(step)
             operator = (
-                self.h.exp(-sqrt_step)
-                @ self.backend.calculate_matrix_exp(sqrt_step, d)
-                @ self.h.exp(sqrt_step)
+                self.h.exp(sqrt_step)
                 @ self.backend.calculate_matrix_exp(-sqrt_step, d)
+                @ self.h.exp(-sqrt_step)
+                @ self.backend.calculate_matrix_exp(sqrt_step, d)
             )
         return operator
 
