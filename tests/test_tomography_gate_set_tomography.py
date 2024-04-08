@@ -343,7 +343,9 @@ def test_reset_register_invalid_tuple(a, b):
         inverse_circuit = reset_register(test_circuit, (a, b))
 
 
-def test_GST(backend):
+
+
+def test_GST_non_Pauli_Liouville(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
     target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
     target_matrices = [g.matrix() for g in target_gates]
@@ -358,6 +360,7 @@ def test_GST(backend):
         nshots=int(1e4),
         noise_model=depol,
         include_empty=True,
+        Pauli_Liouville=False,
         backend=backend,
     )
     for target, estimate in zip(target_matrices, approx_gates):
@@ -366,6 +369,34 @@ def test_GST(backend):
         estimated_matrix = (
             T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix)
         )
+        backend.assert_allclose(
+            target,
+            estimated_matrix,
+            atol=1e-1,
+        )
+
+
+def test_GST_Pauli_Liouville_true(backend):
+    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
+    target_matrices = [g.matrix() for g in target_gates]
+    # superoperator representation of the target gates in the pauli basis
+    target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
+    gate_set = [g.__class__ for g in target_gates]
+    lam = 1e-2
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    empty_1q, empty_2q, *approx_gates = GST(
+        gate_set,
+        nshots=int(1e4),
+        noise_model=depol,
+        include_empty=True,
+        Pauli_Liouville=True,
+        backend=backend,
+    )
+    for target, estimate in zip(target_matrices, approx_gates):
+        transf = empty_1q if estimate.shape[0] == 4 else empty_2q
+        estimated_matrix = estimate
         backend.assert_allclose(
             target,
             estimated_matrix,
