@@ -1,3 +1,5 @@
+from typing import Optional
+
 from qibo.models.dbi.utils import *
 
 
