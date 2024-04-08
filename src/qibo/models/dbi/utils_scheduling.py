@@ -1,29 +1,17 @@
 import math
-from copy import deepcopy
 from functools import partial
 from typing import Optional
 
 import hyperopt
 import numpy as np
 
+from qibo.models.dbi.utils_analytical import (
+    energy_fluctuation_polynomial_expansion_coef,
+    least_squares_polynomial_expansion_coef,
+    off_diagonal_norm_polynomial_expansion_coef,
+)
+
 error = 1e-3
-
-
-def commutator(A, B):
-    """Compute commutator between two arrays."""
-    return A @ B - B @ A
-
-
-def variance(A, state):
-    """Calculates the variance of a matrix A with respect to a state: Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
-    B = A @ A
-    return B[state, state] - A[state, state] ** 2
-
-
-def covariance(A, B, state):
-    """Calculates the covariance of two matrices A and B with respect to a state: Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$"""
-    C = A @ B + B @ A
-    return C[state, state] - 2 * A[state, state] * B[state, state]
 
 
 def grid_search_step(
@@ -156,126 +144,6 @@ def polynomial_step(
         return None
 
 
-def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
-    if d is None:
-        d = dbi_object.diagonal_h_matrix
-    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    W = dbi_object.commutator(d, dbi_object.sigma(dbi_object.h.matrix))
-    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
-    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
-    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
-    # coefficients for rotation with [W,H] and H
-    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
-    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
-    # product coefficient
-    trace_coefficients = [0] * (2 * n + 1)
-    for k in range(n + 1):
-        for j in range(n + 1):
-            power = k + j
-            product_matrix = c1[k] @ c2[j]
-            trace_coefficients[power] += 2 * np.trace(product_matrix)
-    # coefficients from high to low (n:0)
-    coef = list(reversed(trace_coefficients[: n + 1]))
-    return coef
-
-
-def least_squares_polynomial_expansion_coef(dbi_object, d: np.array = None, n: int = 3):
-    if d is None:
-        d = dbi_object.diagonal_h_matrix
-    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
-    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
-    # coefficients
-    coef = np.empty(n)
-    for i in range(n):
-        coef[i] = np.real(exp_list[i] * np.trace(d @ Gamma_list[i + 1]))
-    coef = list(reversed(coef))
-    return coef
-
-
-# TODO: add a general expansion formula not stopping at 3rd order
-def energy_fluctuation_polynomial_expansion_coef(
-    dbi_object, d: np.array = None, n: int = 3, state=0
-):
-    if d is None:
-        d = dbi_object.diagonal_h_matrix
-    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
-    # coefficients
-    coef = np.empty(3)
-    coef[0] = np.real(2 * covariance(Gamma_list[0], Gamma_list[1], state))
-    coef[1] = np.real(2 * variance(Gamma_list[1], state))
-    coef[2] = np.real(
-        covariance(Gamma_list[0], Gamma_list[3], state)
-        + 3 * covariance(Gamma_list[1], Gamma_list[2], state)
-    )
-    coef = list(reversed(coef))
-    return coef
-
-
-def dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list):
-    # Derivative of gamma with respect to diagonal elements of D (full-diagonal ansatz)
-    A = np.zeros(d.shape)
-    A[i, i] = 1
-    B = commutator(commutator(A, H), Gamma_list[n - 1])
-    W = commutator(d, H)
-    return B + commutator(W, dGamma[-1])
-
-
-def dpolynomial_diDiagonal(dbi_object, d, H, i):
-    # Derivative of polynomial approximation of potential function with respect to diagonal elements of d (full-diagonal ansatz)
-    # Formula can be expanded easily to any order, with n=3 corresponding to cubic approximation
-    derivative = 0
-    s = polynomial_step(dbi_object, n=3, d=d)
-    A = np.zeros(d.shape)
-    Gamma_list = dbi_object.generate_Gamma_list(4, d)
-    A[i, i] = 1
-    dGamma = [commutator(A, H)]
-    derivative += np.real(
-        np.trace(Gamma_list[0] @ A) + np.trace(dGamma[0] @ d + Gamma_list[1] @ A) * s
-    )
-    for n in range(2, 4):
-        dGamma.append(dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list))
-        derivative += np.real(
-            np.trace(dGamma[-1] @ d + Gamma_list[n] @ A) * s**n / math.factorial(n)
-        )
-
-    return derivative
-
-
-def gradientDiagonal(dbi_object, d, H):
-    # Gradient of potential function with respect to diagonal elements of D (full-diagonal ansatz)
-    grad = np.zeros(len(d))
-    for i in range(len(d)):
-        derivative = dpolynomial_diDiagonal(dbi_object, d, H, i)
-        grad[i] = d[i, i] - derivative
-    return grad
-
-
-def gradient_ascent(dbi_object, d, step, iterations):
-    H = dbi_object.h.matrix
-    loss = np.zeros(iterations + 1)
-    grad = np.zeros((iterations, len(d)))
-    dbi_eval = deepcopy(dbi_object)
-    s = polynomial_step(dbi_object, n=3, d=d)
-    dbi_eval(s, d=d)
-    loss[0] = dbi_eval(d)
-    diagonals = np.empty((len(d), iterations + 1))
-    diagonals[:, 0] = np.diag(d)
-
-    for i in range(iterations):
-        dbi_eval = deepcopy(dbi_object)
-        grad[i, :] = gradientDiagonal(dbi_object, d, H)
-        for j in range(len(d)):
-            d[j, j] = d[j, j] - step * grad[i, j]
-        s = polynomial_step(dbi_object, n=3, d=d)
-        dbi_eval(s, d=d)
-        loss[i + 1] = dbi_eval.least_squares(d)
-        diagonals[:, i + 1] = np.diag(d)
-
-    return d, loss, grad, diagonals
-
-
 def simulated_annealing_step(
     dbi_object,
     d: Optional[np.array] = None,
@@ -289,6 +157,41 @@ def simulated_annealing_step(
     min_temp=1e-5,
     max_iter=200,
 ):
+    """
+    Perform a single step of simulated annealing optimization.
+
+    Parameters:
+        dbi_object: DBI object
+            The object representing the problem to be optimized.
+        d: Optional[np.array], optional
+            The diagonal matrix 'd' used in optimization. If None, it uses the diagonal
+            matrix 'diagonal_h_matrix' from dbi_object.
+        initial_s: float or None, optional
+            Initial value for 's', the step size. If None, it is initialized using
+            polynomial_step function with 'n=4'. If 'polynomial_step' returns None,
+            'initial_s' is set to 'step_min'.
+        step_min: float, optional
+            Minimum value for the step size 's'.
+        step_max: float, optional
+            Maximum value for the step size 's'.
+        s_jump_range: float or None, optional
+            Range for the random jump in step size. If None, it's calculated based on
+            'step_min', 'step_max', and 's_jump_range_divident'.
+        s_jump_range_divident: int, optional
+            Dividend to determine the range for random jump in step size.
+        initial_temp: float, optional
+            Initial temperature for simulated annealing.
+        cooling_rate: float, optional
+            Rate at which temperature decreases in simulated annealing.
+        min_temp: float, optional
+            Minimum temperature threshold for termination of simulated annealing.
+        max_iter: int, optional
+            Maximum number of iterations for simulated annealing.
+
+    Returns:
+        float:
+            The optimized step size 's'.
+    """
 
     if d is None:
         d = dbi_object.diagonal_h_matrix

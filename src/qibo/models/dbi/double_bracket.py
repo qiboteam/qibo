@@ -2,7 +2,6 @@ from copy import deepcopy
 from enum import Enum, auto
 from typing import Optional
 
-import hyperopt
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
