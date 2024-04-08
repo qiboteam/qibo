@@ -175,8 +175,8 @@ def test_expectation_value(backend):
         )
 
 
-pytest.mark.parametrize(
-    "")
+pytest.mark.parametrize("")
+
 
 def test_gate_set_tomography_invalid_qb_gate(backend):
     nqubits = 3
@@ -341,8 +341,6 @@ def test_reset_register_invalid_tuple(a, b):
     # Check if NameError is raised
     with pytest.raises(NameError):
         inverse_circuit = reset_register(test_circuit, (a, b))
-
-
 
 
 def test_GST_non_Pauli_Liouville(backend):

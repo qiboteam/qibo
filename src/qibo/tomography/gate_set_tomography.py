@@ -57,7 +57,7 @@ def _observables(nqubits):
 
 @cache
 def _get_observable(j, nqubits):
-    """Returns a list of gates used for the function _get_observable().
+    r"""Returns a list of gates used for the function _get_observable().
 
     Args:
         j (int): The index of the measurement basis.
@@ -83,7 +83,7 @@ def _prepare_state(k, nqubits):
     """Prepares the k-th state for a `nqubits`-gate.
 
     Args:
-        k (int): The index of the state to be prepared. For a single qubit, 
+        k (int): The index of the state to be prepared. For a single qubit,
 
         .. math::
             \\(k \\in \\{0, 1, 2, 3\\} \\equiv
@@ -92,11 +92,11 @@ def _prepare_state(k, nqubits):
                   | + \\rangle \\langle + |,
                   | y+ \\rangle \\langle y+ | \\}.
 
-        For two qubits, 
-        
+        For two qubits,
+
         .. math::
             \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
-        
+
         nqubits (int): Number of qubits.
 
     Returns:
@@ -169,7 +169,7 @@ def reset_register(circuit, invert_register):
             # for data in circuit.raw["queue"]:
             #     init_kwargs = data.get("init_kwargs", {})
             #     if data["_target_qubits"][0] == register_to_reset:
-                    # new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
+            # new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
             for gate in circuit.queue:
                 if register_to_reset in gate.target_qubits:
                     new_circ.add(gate.__class__(0, **gate.init_kwargs))
@@ -268,9 +268,7 @@ def _gate_set_tomography(
             new_circ.add(measurements)
             if noise_model is not None and backend.name != "qibolab":
                 new_circ = noise_model.apply(new_circ)
-            expectation_val = _expectation_value(
-                new_circ, j, nshots, backend=backend
-            )
+            expectation_val = _expectation_value(new_circ, j, nshots, backend=backend)
             matrix_jk[j, k] = expectation_val
     return matrix_jk
 
@@ -288,17 +286,17 @@ def GST(
     empty_matrices = []
     for nqubits in range(1, 3):
         empty_matrix = _gate_set_tomography(
-                nqubits=nqubits,
-                gate=None,
-                nshots=nshots,
-                noise_model=noise_model,
-                invert_register=invert_register,
-                backend=backend,
-            )
+            nqubits=nqubits,
+            gate=None,
+            nshots=nshots,
+            noise_model=noise_model,
+            invert_register=invert_register,
+            backend=backend,
+        )
         empty_matrices.append(empty_matrix)
         if include_empty:
             matrices.append(empty_matrix)
-    
+
     for gate in gate_set:
         if gate is not None:
             init_args = signature(gate).parameters
@@ -312,7 +310,7 @@ def GST(
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
             gate = gate(*range(nqubits))
-        
+
         if Pauli_Liouville is False:
             matrices.append(
                 _gate_set_tomography(
@@ -326,17 +324,20 @@ def GST(
             )
         elif Pauli_Liouville is True:
             T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-            matrix = _gate_set_tomography(nqubits=nqubits,
-                                          gate=gate,
-                                          nshots=nshots,
-                                          noise_model=noise_model,
-                                          invert_register=invert_register,
-                                          backend=backend,
-                                        )
+            matrix = _gate_set_tomography(
+                nqubits=nqubits,
+                gate=gate,
+                nshots=nshots,
+                noise_model=noise_model,
+                invert_register=invert_register,
+                backend=backend,
+            )
             T_matrix = T if matrix.shape[0] == 4 else np.kron(T, T)
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
 
-            Pauli_Liouville_form = T_matrix @ np.linalg.inv(empty) @ matrix @ np.linalg.inv(T_matrix)
+            Pauli_Liouville_form = (
+                T_matrix @ np.linalg.inv(empty) @ matrix @ np.linalg.inv(T_matrix)
+            )
             matrices.append(Pauli_Liouville_form)
-            
+
     return matrices
