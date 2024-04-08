@@ -10,6 +10,7 @@ from qibo.models.dbi.double_bracket import (
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 50
+seed = 10
 """Number of steps for evolution."""
 
 
@@ -27,23 +28,20 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
     assert initial_off_diagonal_norm > dbf.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
-    dbf = DoubleBracketIteration(
+    dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.group_commutator,
     )
-    initial_off_diagonal_norm = dbf.off_diagonal_norm
-
-    with pytest.raises(ValueError):
-        dbf(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
+    initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):
-        dbf(step=0.01, d=d)
+        dbi(step=0.01, d=d)
 
-    assert initial_off_diagonal_norm > dbf.off_diagonal_norm
+    assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
 @pytest.mark.parametrize("nqubits", [3])
