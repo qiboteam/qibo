@@ -10,7 +10,7 @@ from qibo.models.dbi.double_bracket import (
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 50
-seed = 10
+SEED = 10
 """Number of steps for evolution."""
 
 
