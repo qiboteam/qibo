@@ -83,12 +83,20 @@ def _prepare_state(k, nqubits):
     """Prepares the k-th state for a `nqubits`-gate.
 
     Args:
-        k (int): The index of the state to be prepared. For a single qubit, \\(k \\in \\{0, 1, 2, 3\\} \\equiv
-            \\{| 0 \\rangle \\langle 0 |,
-              | 1 \\rangle \\langle 1 |,
-              | + \\rangle \\langle + |,
-              | y+ \\rangle \\langle y+ | \\}.
-        For two qubits, \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
+        k (int): The index of the state to be prepared. For a single qubit, 
+
+        .. math::
+            \\(k \\in \\{0, 1, 2, 3\\} \\equiv
+                \\{| 0 \\rangle \\langle 0 |,
+                  | 1 \\rangle \\langle 1 |,
+                  | + \\rangle \\langle + |,
+                  | y+ \\rangle \\langle y+ | \\}.
+
+        For two qubits, 
+        
+        .. math::
+            \\(k \\in \\{0, 1, 2, 3\\}^{\\otimes 2}\\).
+        
         nqubits (int): Number of qubits.
 
     Returns:
@@ -155,13 +163,16 @@ def reset_register(circuit, invert_register):
                 f"Invalid register {invert_register}, please pick one in {valid_registers}.",
             )
 
-        elif invert_register == (0,) or invert_register == (1,):
+        elif len(invert_register) == 1:
             register_to_reset = invert_register[0]
             new_circ = Circuit(1)
-            for data in circuit.raw["queue"]:
-                init_kwargs = data.get("init_kwargs", {})
-                if data["_target_qubits"][0] == register_to_reset:
-                    new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
+            # for data in circuit.raw["queue"]:
+            #     init_kwargs = data.get("init_kwargs", {})
+            #     if data["_target_qubits"][0] == register_to_reset:
+                    # new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
+            for gate in circuit.queue:
+                if register_to_reset in gate.target_qubits:
+                    new_circ.add(gate.__class__(0, **gate.init_kwargs))
 
         else:
             new_circ = circuit.copy()
@@ -202,8 +213,8 @@ def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
         return result.expectation_from_samples(observable)
 
 
-def _gate_tomography(
-    nqubits=None,
+def _gate_set_tomography(
+    nqubits,
     gate=None,
     nshots=int(1e4),
     invert_register=None,
