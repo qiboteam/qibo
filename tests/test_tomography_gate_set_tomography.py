@@ -169,7 +169,6 @@ def test_expectation_value(backend):
     with pytest.raises(ValueError):
         expectation_val = _expectation_value(
             test_circuit,
-            k,
             j,
             nshots=int(1e4),
             backend=backend,
