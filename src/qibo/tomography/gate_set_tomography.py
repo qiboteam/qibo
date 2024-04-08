@@ -134,7 +134,7 @@ def reset_register(circuit, invert_register):
     return new_circ.invert()
 
 
-def _expectation_value(circuit, k, j, nshots=int(1e4), backend=None):
+def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
         should already have noise models implemented, if any, prior to using this
@@ -142,12 +142,11 @@ def _expectation_value(circuit, k, j, nshots=int(1e4), backend=None):
 
         Args:
         circuit (:class:`qibo.models.Circuit`): The Qibo circuit to be executed.
-        k (int): The index of the state prepared.
         j (int): The index of the measurement basis.
         nshots (int, optional): Number of shots to execute the circuit with.
     Returns:
         numpy.float: Expectation value given by either :math:`\\text{tr}(Q_j rho_k) \\` or
-            :math:`\\Tr(Q_j O_l rho_k) \\`.
+            :math:`\\Tr(Q_j O_l rho_k) \\`, where k is the index of the state prepared.
     """
 
     nqubits = circuit.nqubits
