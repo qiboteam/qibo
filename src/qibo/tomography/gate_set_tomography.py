@@ -14,6 +14,14 @@ from qibo.hamiltonians import SymbolicHamiltonian
 
 @cache
 def _gates(nqubits):
+    """Returns a list of gates used in state preparation.
+
+    Args:
+        nqubits (int): Number of qubits for the circuit.
+    Returns:
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates used in state preparation.
+    """
+
     return list(
         product(
             [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)], repeat=nqubits
@@ -23,16 +31,43 @@ def _gates(nqubits):
 
 @cache
 def _measurements(nqubits):
+    """Returns a list of gates used for measurement bases.
+
+    Args:
+        nqubits (int): Number of qubits for the circuit.
+    Returns:
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates used for measurement bases.
+    """
+
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
 @cache
 def _observables(nqubits):
+    """Returns a list of gates used for the function _get_observable().
+
+    Args:
+        nqubits (int): Number of qubits for the circuit.
+    Returns:
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates used for the function _get_observable().
+    """
+
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
 @cache
 def _get_observable(j, nqubits):
+    """Returns a list of gates used for the function _get_observable().
+
+    Args:
+        j (int): The index of the measurement basis.
+            For a single qubit, \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
+            For two qubits, \(j \in \{0, 1, 2, 3\}^{\otimes 2}\).
+        nqubits (int): Number of qubits.
+    Returns:
+        list(:class:`qibo.hamiltonians.SymbolicHamiltonian`): Symbolic hamiltonian of the observable.
+    """
+
     if j == 0 and nqubits == 3:
         raise ValueError("Invalid parameters: j=0 and nqubits=3")
     observables = _observables(nqubits)[j]
@@ -77,10 +112,10 @@ def _measurement_basis(j, nqubits):
         j (int): The index of the measurement basis.
             For a single qubit, \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
             For two qubits, \(j \in \{0, 1, 2, 3\}^{\otimes 2}\).
-        nqubits (int): Number of qubits..
+        nqubits (int): Number of qubits.
 
     Returns:
-        List[:class:`qibo.gates.abstrac.Gate`]: list of gates forming the :math:`j`-th element of the Pauli measurement basis.
+        List[:class:`qibo.gates.abstract.Gate`]: list of gates forming the :math:`j`-th element of the Pauli measurement basis.
     """
 
     if not nqubits in (1, 2):
