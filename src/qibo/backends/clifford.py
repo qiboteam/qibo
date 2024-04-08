@@ -106,7 +106,7 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
 
-    def _clifford_pre_execution_reshape(self, state, pack=False):
+    def _clifford_pre_execution_reshape(self, state, pack: bool = False):
         """Reshape the symplectic matrix to the shape needed by the engine before circuit execution.
 
         Args:
@@ -119,7 +119,7 @@ class CliffordBackend(NumpyBackend):
             state, pack
         )
 
-    def _clifford_post_execution_reshape(self, state, nqubits):
+    def _clifford_post_execution_reshape(self, state, nqubits: int):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
 
         Args:

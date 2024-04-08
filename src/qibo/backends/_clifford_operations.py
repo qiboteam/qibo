@@ -329,7 +329,7 @@ def ECR(symplectic_matrix, control_q, target_q, nqubits):
     return X(symplectic_matrix, control_q, nqubits)
 
 
-def _exponent(x1, z1, x2, z2):
+def _exponent(x1: np.array, z1: np.array, x2: np.array, z2: np.array) -> np.array:
     """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
 
     Args:
@@ -499,13 +499,31 @@ def cast(x, dtype=None, copy=False):
     return np.array(x, dtype=dtype, copy=copy)
 
 
-def _clifford_pre_execution_reshape(state, pack=False):
+def _clifford_pre_execution_reshape(state, pack: bool = False):
+    """Reshape and packing applied to the symplectic matrix before execution to prepare the state in the form needed by each engine.
+
+    Args:
+        state (np.array): Input state.
+        pack (bool): Whether to pack the bits of the symplectic matrix.
+
+    Returns:
+        (np.array) The packed and reshaped state.
+    """
     if pack:
         state = _packbits(state, axis=0)
     return state
 
 
-def _clifford_post_execution_reshape(state, nqubits):
+def _clifford_post_execution_reshape(state, nqubits: int):
+    """Reshape and unpacking applied to the state after execution to retrieve the standard symplectic matrix form.
+
+    Args:
+        state (np.array): Input state.
+        nqubits (int): Number of qubits.
+
+    Returns:
+        (np.array) The unpacked and reshaped state.
+    """
     state = _unpackbits(state, axis=0)[: _get_dim(nqubits)]
     return state
 
