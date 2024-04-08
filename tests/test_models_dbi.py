@@ -30,7 +30,7 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
 
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=SEED)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
