@@ -115,11 +115,9 @@ def select_best_dbr_generator(
         dbi_object(step=step)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
-        # print(f'canonical step {step}, loss {dbi_object.off_diagonal_norm}')
         dbi_object.h = deepcopy(h_before)
         dbi_object.mode = generator_type
     # find best d
-    # print(norms_off_diagonal_restriction)
     idx_max_loss = norms_off_diagonal_restriction.index(
         min(norms_off_diagonal_restriction)
     )
