@@ -269,33 +269,36 @@ def _gate_set_tomography(
             if noise_model is not None and backend.name != "qibolab":
                 new_circ = noise_model.apply(new_circ)
             expectation_val = _expectation_value(
-                new_circ, k, j, nshots, backend=backend
+                new_circ, j, nshots, backend=backend
             )
             matrix_jk[j, k] = expectation_val
     return matrix_jk
 
 
 def GST(
-    gate_set: Union[tuple, set, list],
-    nshots: int = int(1e4),
+    gate_set=Union[tuple, set, list],
+    nshots=int(1e4),
     noise_model=None,
-    include_empty: bool = False,
-    invert_register: tuple = None,
+    include_empty=False,
+    invert_register=None,
+    Pauli_Liouville=False,
     backend=None,
 ):
     matrices = []
-    if len(gate_set) == 0 or include_empty:
-        for nqubits in range(1, 3):
-            matrices.append(
-                _gate_tomography(
-                    nqubits=nqubits,
-                    gate=None,
-                    nshots=nshots,
-                    noise_model=noise_model,
-                    invert_register=invert_register,
-                    backend=backend,
-                )
+    empty_matrices = []
+    for nqubits in range(1, 3):
+        empty_matrix = _gate_set_tomography(
+                nqubits=nqubits,
+                gate=None,
+                nshots=nshots,
+                noise_model=noise_model,
+                invert_register=invert_register,
+                backend=backend,
             )
+        empty_matrices.append(empty_matrix)
+        if include_empty:
+            matrices.append(empty_matrix)
+    
     for gate in gate_set:
         if gate is not None:
             init_args = signature(gate).parameters
@@ -309,14 +312,31 @@ def GST(
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
             gate = gate(*range(nqubits))
-        matrices.append(
-            _gate_tomography(
-                nqubits=nqubits,
-                gate=gate,
-                nshots=nshots,
-                noise_model=noise_model,
-                invert_register=invert_register,
-                backend=backend,
+        
+        if Pauli_Liouville is False:
+            matrices.append(
+                _gate_set_tomography(
+                    nqubits=nqubits,
+                    gate=gate,
+                    nshots=nshots,
+                    noise_model=noise_model,
+                    invert_register=invert_register,
+                    backend=backend,
+                )
             )
-        )
+        elif Pauli_Liouville is True:
+            T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+            matrix = _gate_set_tomography(nqubits=nqubits,
+                                          gate=gate,
+                                          nshots=nshots,
+                                          noise_model=noise_model,
+                                          invert_register=invert_register,
+                                          backend=backend,
+                                        )
+            T_matrix = T if matrix.shape[0] == 4 else np.kron(T, T)
+            empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
+
+            Pauli_Liouville_form = T_matrix @ np.linalg.inv(empty) @ matrix @ np.linalg.inv(T_matrix)
+            matrices.append(Pauli_Liouville_form)
+            
     return matrices
