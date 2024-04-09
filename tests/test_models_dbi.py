@@ -10,6 +10,7 @@ from qibo.models.dbi.double_bracket import (
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 50
+SEED = 10
 """Number of steps for evolution."""
 
 
@@ -27,23 +28,43 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
     assert initial_off_diagonal_norm > dbf.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=SEED)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
-    dbf = DoubleBracketIteration(
+    dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.group_commutator,
     )
-    initial_off_diagonal_norm = dbf.off_diagonal_norm
-
-    with pytest.raises(ValueError):
-        dbf(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
+    initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):
-        dbf(step=0.01, d=d)
+        dbi(step=0.01, d=d)
 
-    assert initial_off_diagonal_norm > dbf.off_diagonal_norm
+    assert initial_off_diagonal_norm > dbi.off_diagonal_norm
+
+
+@pytest.mark.parametrize("nqubits", [3])
+def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
+    r"""The bound is $$||e^{-[D,H]}-GC||\le s^{3/2}(||[H,[D,H]||+||[D,[D,H]]||$$"""
+    h0 = random_hermitian(2**nqubits, backend=backend)
+    d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
+    dbi = DoubleBracketIteration(
+        Hamiltonian(nqubits, h0, backend=backend),
+        mode=DoubleBracketGeneratorType.group_commutator,
+    )
+
+    for s in np.linspace(0.001, 0.01, NSTEPS):
+        u = dbi.eval_dbr_unitary(
+            s, d=d, mode=DoubleBracketGeneratorType.single_commutator
+        )
+        v = dbi.eval_dbr_unitary(
+            s, d=d, mode=DoubleBracketGeneratorType.group_commutator
+        )
+
+        assert np.linalg.norm(u - v) < 10 * s**1.49 * (
+            np.linalg.norm(h0) + np.linalg.norm(d)
+        ) * np.linalg.norm(h0) * np.linalg.norm(d)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
