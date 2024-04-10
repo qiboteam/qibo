@@ -4316,7 +4316,7 @@ cuda = ["cupy-cuda11x (>=11.6.0,<12.0.0)", "cuquantum-python-cu11 (>=23.3.0,<24.
 type = "git"
 url = "https://github.com/qiboteam/qibotn.git"
 reference = "list_backends"
-resolved_reference = "ed74bef094cbdf84534d3b4bcb12e071b3df2831"
+resolved_reference = "72f4841e5cd2718a0a50e6915328e5413cac9c63"
 
 [[package]]
 name = "qiskit"
