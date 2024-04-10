@@ -104,7 +104,7 @@ qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
 [tool.poetry.extras]
 tensorflow = ["tensorflow"]
 torch = ["torch"]
-qinfo = ["cvxpy", "stim"]
+qinfo = ["stim"]
 
 [tool.pylint.main]
 ignored-modules = ["cvxpy"]
