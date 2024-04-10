@@ -34,6 +34,8 @@ class MetaBackend:
         elif backend == "pytorch":
             return PyTorchBackend()
         elif backend == "clifford":
+            engine = kwargs.pop("platform", None)
+            kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
         elif backend in QIBO_NON_NATIVE_BACKENDS:
             module = import_module(backend)
