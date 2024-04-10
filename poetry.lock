@@ -5332,9 +5332,11 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
+qinfo = []
 tensorflow = ["tensorflow"]
+torch = ["torch"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "7bdcae41ddf56e64fe52a31706d4bad43cd677430391c59edac75c9545be46d3"
+content-hash = "edaaab66cd0c3f98db4af68f896107166fe63d8542f7324daa5f940545fd57a8"
