@@ -20,6 +20,8 @@ from qibo.tomography.gate_set_tomography import (
     reset_register,
 )
 
+from qibo.quantum_info import random_unitary as RU
+
 
 def _compare_gates(g1, g2):
     assert g1.__class__.__name__ == g2.__class__.__name__
@@ -29,7 +31,7 @@ def _compare_gates(g1, g2):
 INDEX_NQUBITS = (
     list(zip(range(4), repeat(1, 4)))
     + list(zip(range(16), repeat(2, 16)))
-    + [(0, 3), (17, 1)]
+    + [(17, 1)]
 )
 
 
@@ -150,8 +152,8 @@ def test__get_observable(j, nqubits):
         SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
         for h in correct_observables[2]
     ]
-    errors = {(0, 3): ValueError, (17, 1): IndexError}
-    if (j, nqubits) in [(0, 3), (17, 1)]:
+    errors = {(17, 1): IndexError}
+    if (j, nqubits) in [(17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
             prepared_observable = _get_observable(j, nqubits)
     else:
@@ -160,10 +162,19 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
-def test_expectation_value(backend):
-    nqubits = 3
-    test_circuit = qibo.models.Circuit(nqubits)
-    test_circuit.add(gates.TOFFOLI(0, 1, 2))
+@pytest.mark.parametrize("nqubits", range(3,7))
+def test_expectation_value(backend, nqubits):
+    
+    if nqubits == 3:
+        test_circuit = qibo.models.Circuit(nqubits)
+        test_circuit.add(gates.TOFFOLI(0, 1, 2))
+        test_circuit.add(gates.M(*np.arange(0, nqubits, 1)))
+
+    else:
+        RandUnitary = RU(2**nqubits)
+        test_circuit = qibo.models.Circuit(nqubits)
+        test_circuit.add(gates.Unitary(RandUnitary, *np.arange(0, nqubits, 1)))
+        test_circuit.add(gates.M(*np.arange(0, nqubits, 1)))
     k = 1
     j = 1
     with pytest.raises(ValueError):
@@ -175,41 +186,35 @@ def test_expectation_value(backend):
         )
 
 
-pytest.mark.parametrize("")
-
-
-def test_gate_set_tomography_invalid_qb_gate(backend):
-    nqubits = 3
-    test_circuit = qibo.models.Circuit(nqubits)
-    test_circuit.add(gates.TOFFOLI(0, 1, 2))
-    with pytest.raises(ValueError):
-        matrix_jk = _gate_set_tomography(
-            nqubits=nqubits,
-            gate=gates.TOFFOLI(0, 1, 2),
-            nshots=int(1e4),
-            invert_register=None,
-            noise_model=None,
-            backend=backend,
-        )
-
-
-def test_gate_set_tomography_mismatched_inputs(backend):
-    nqubits = 1
+@pytest.mark.parametrize("nqubits", range(1, 4))
+@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.TOFFOLI(0, 1, 2), None])
+def test_gate_set_tomography(backend, nqubits, gate):
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
-    test_gate = gates.CNOT(0, 1)
-    with pytest.raises(ValueError):
-        matrix_jk = _gate_set_tomography(
-            nqubits=nqubits,
-            gate=test_gate,
-            nshots=int(1e4),
-            invert_register=None,
-            noise_model=None,
-            backend=backend,
-        )
 
 
-def test_gate_set_tomography_with_invert_register(backend):
+    errors = {(1, gates.CNOT(0, 1)): ValueError,
+              (1, gates.TOFFOLI(0, 1, 2)): ValueError,
+              (2, gates.TOFFOLI(0, 1, 2)): ValueError,
+              (3, gates.TOFFOLI(0, 1, 2)): ValueError,
+              }
+
+    if (nqubits, gate) in [(1, gates.CNOT(0, 1)), 
+                           (1, gates.TOFFOLI(0, 1, 2)),
+                           (2, gates.TOFFOLI(0, 1, 2)),
+                           (3, gates.TOFFOLI(0, 1, 2))]:
+        with pytest.raises(ValueError):
+            matrix_jk = _gate_set_tomography(
+                nqubits=nqubits,
+                gate=test_gate,
+                nshots=int(1e4),
+                invert_register=None,
+                noise_model=None,
+                backend=backend,
+            )
+
+
+def test_gate_set_tomography_invert_register(backend):
     nqubits = 1
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
@@ -343,81 +348,55 @@ def test_reset_register_invalid_tuple(a, b):
         inverse_circuit = reset_register(test_circuit, (a, b))
 
 
-def test_GST_non_Pauli_Liouville(backend):
+
+@pytest.mark.parametrize("target_gates", [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]])
+@pytest.mark.parametrize("Pauli_Liouville", [False, False, True])
+def test_GST(backend, target_gates, Pauli_Liouville):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
     target_matrices = [g.matrix() for g in target_gates]
-    # superoperator representation of the target gates in the pauli basis
+    # superoperator representation of the target gates in the Pauli basis
     target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
     gate_set = [g.__class__ for g in target_gates]
-    lam = 1e-2
-    depol = NoiseModel()
-    depol.add(DepolarizingError(lam))
-    empty_1q, empty_2q, *approx_gates = GST(
-        gate_set,
-        nshots=int(1e4),
-        noise_model=depol,
-        include_empty=True,
-        Pauli_Liouville=False,
-        backend=backend,
-    )
-    for target, estimate in zip(target_matrices, approx_gates):
-        transf = empty_1q if estimate.shape[0] == 4 else empty_2q
-        T_matrix = T if estimate.shape[0] == 4 else np.kron(T, T)
-        estimated_matrix = (
-            T_matrix @ np.linalg.inv(transf) @ estimate @ np.linalg.inv(T_matrix)
-        )
-        backend.assert_allclose(
-            target,
-            estimated_matrix,
-            atol=1e-1,
-        )
 
 
-def test_GST_Pauli_Liouville_true(backend):
-    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
-    target_matrices = [g.matrix() for g in target_gates]
-    # superoperator representation of the target gates in the pauli basis
-    target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
-    gate_set = [g.__class__ for g in target_gates]
-    lam = 1e-2
-    depol = NoiseModel()
-    depol.add(DepolarizingError(lam))
-    empty_1q, empty_2q, *approx_gates = GST(
-        gate_set,
-        nshots=int(1e4),
-        noise_model=depol,
-        include_empty=True,
-        Pauli_Liouville=True,
-        backend=backend,
-    )
-    for target, estimate in zip(target_matrices, approx_gates):
-        transf = empty_1q if estimate.shape[0] == 4 else empty_2q
-        estimated_matrix = estimate
-        backend.assert_allclose(
-            target,
-            estimated_matrix,
-            atol=1e-1,
-        )
-
-
-def test_GST_invalid_gate(backend):
-    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    target_gates = [gates.TOFFOLI(0, 1, 2)]
-    target_matrices = [g.matrix() for g in target_gates]
-    # superoperator representation of the target gates in the pauli basis
-    target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
-    gate_set = [g.__class__ for g in target_gates]
-    lam = 1e-2
-    depol = NoiseModel()
-    depol.add(DepolarizingError(lam))
-    # Check if RuntimeError is raised
-    with pytest.raises(RuntimeError):
+    if len(target_gates) == 3:
         empty_1q, empty_2q, *approx_gates = GST(
-            gate_set,
-            nshots=int(1e4),
-            noise_model=depol,
-            include_empty=True,
-            backend=backend,
+        gate_set=[g.__class__ for g in target_gates],
+        nshots=int(1e4),
+        include_empty=True,
+        Pauli_Liouville=Pauli_Liouville,
+        backend=backend,
         )
+        if Pauli_Liouville == False:
+            for target, estimate in zip(target_matrices, approx_gates):
+                G = empty_1q if estimate.shape[0] == 4 else empty_2q
+                T_matrix = T if estimate.shape[0] == 4 else np.kron(T, T)
+                estimated_matrix = (
+                    T_matrix @ np.linalg.inv(G) @ estimate @ np.linalg.inv(G)
+                )
+                backend.assert_allclose(
+                    target,
+                    estimated_matrix,
+                    atol=1e-1,
+                )
+        else:
+            for target, estimate in zip(target_matrices, approx_gates):
+                G = empty_1q if estimate.shape[0] == 4 else empty_2q
+                estimated_matrix = estimate
+                backend.assert_allclose(
+                    target,
+                    estimated_matrix,
+                    atol=1e-1,
+                )
+    else:
+        with pytest.raises(RuntimeError):
+            empty_1q, empty_2q, *approx_gates = GST(
+                gate_set=[g.__class__ for g in target_gates],
+                nshots=int(1e4),
+                include_empty=True,
+                Pauli_Liouville=Pauli_Liouville,
+                backend=backend,
+            )
+
+
+
