@@ -1,5 +1,4 @@
-"""Submodule with distances, metrics, and measures for quantum states and
-channels."""
+"""Distances, metrics, and measures for quantum states and channels."""
 
 from typing import Optional, Union
 
@@ -11,7 +10,9 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by.
+    """Purity of a quantum state :math:`\\rho`.
+
+    This is given by
 
     .. math::
         \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
@@ -45,8 +46,9 @@ def purity(state):
 
 
 def impurity(state):
-    """Impurity of quantum state :math:`\\rho`, which is given by
-    :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
+    """Impurity of quantum state :math:`\\rho`.
+
+    This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
     is defined in :func:`qibo.quantum_info.purity`.
 
     Args:
@@ -286,7 +288,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
 def infidelity(state, target, check_hermitian: bool = False, backend=None):
     """Infidelity between ``state`` :math:`\\rho` and ``target`` state
-    :math:`\\sigma`, which is given by.
+    :math:`\\sigma`, which is given by
 
     .. math::
         1 - F(\\rho, \\, \\sigma) \\, ,
@@ -311,7 +313,7 @@ def infidelity(state, target, check_hermitian: bool = False, backend=None):
 
 def bures_angle(state, target, check_hermitian: bool = False, backend=None):
     """Calculates the Bures angle :math:`D_{A}` between a ``state``
-    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by.
+    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
         D_{A}(\\rho, \\, \\sigma) = \\text{arccos}\\left(\\sqrt{F(\\rho, \\, \\sigma)}\\right) \\, ,
@@ -340,7 +342,7 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
 
 def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     """Calculates the Bures distance :math:`D_{B}` between a ``state``
-    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by.
+    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
         D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)}
@@ -369,7 +371,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
 
 def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
     """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and
-    a ``target`` unitary channel :math:`U`. The process fidelity is defined as.
+    a ``target`` unitary channel :math:`U`. The process fidelity is defined as
 
     .. math::
         F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
@@ -432,7 +434,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
 def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
     """Process infidelity between quantum channel :math:`\\mathcal{E}` and a
-    ``target`` unitary channel :math:`U`. The process infidelity is defined as.
+    ``target`` unitary channel :math:`U`. The process infidelity is defined as
 
     .. math::
         1 - F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) \\, ,
@@ -464,7 +466,7 @@ def average_gate_fidelity(
 ):
     """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
     and a ``target`` unitary channel :math:`U`. The average gate fidelity is
-    defined as.
+    defined as
 
     .. math::
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
@@ -503,7 +505,7 @@ def average_gate_fidelity(
 
 def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     """Gate error between a quantum ``channel`` :math:`\\mathcal{E}` and a
-    ``target`` unitary channel :math:`U`, which is defined as.
+    ``target`` unitary channel :math:`U`, which is defined as
 
     .. math::
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
@@ -534,7 +536,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
 
 def diamond_norm(channel, target=None, backend=None, **kwargs):
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
-    ``channel`` :math:`\\mathcal{E}`, which is given by.
+    ``channel`` :math:`\\mathcal{E}`, which is given by
 
     .. math::
         \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\otimes I_{d^{2}}\\right)(\\rho) \\|_{1} \\, ,
@@ -667,7 +669,7 @@ def expressibility(
     backend=None,
 ):
     """Returns the expressibility :math:`\\|A\\|` of a parametrized circuit,
-    where.
+    where
 
     .. math::
         A = \\int_{\\text{Haar}} d\\psi \\, \\left(|\\psi\\rangle\\right.\\left.
