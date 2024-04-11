@@ -575,7 +575,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy  # pylint: disable=C0415
+    import cvxpy
 
     if target is not None:
         if channel.shape != target.shape:
