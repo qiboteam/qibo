@@ -57,7 +57,7 @@ def _observables(nqubits):
 
 @cache
 def _get_observable(j, nqubits):
-    """Returns a list of gates used for the function _get_observable(). Here, 
+    """Returns a list of gates used for the function _get_observable(). Here,
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
@@ -82,7 +82,7 @@ def _get_observable(j, nqubits):
 
 @cache
 def _prepare_state(k, nqubits):
-    """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit, where 
+    """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit, where
 
     .. math::
         k \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ 0\\rangle\\langle0|, |1\\rangle\\langle1|,
@@ -137,7 +137,7 @@ def reset_register(circuit, invert_register):
             circ_with_inverse = circ.copy()
             circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
         where register_to_reset = (0,), (1,) , or (0, 1).
-        Note that this function is mainly used for the gate set tomography of basis operations, should 
+        Note that this function is mainly used for the gate set tomography of basis operations, should
         the basis operations include qubit resets as seen in Ref. [5]. Also, note that the reset_register
         may not work with qubits which have been entangled. One might choose to do a swap with a fresh ancilla
         instead of implementing ``reset_register``.
@@ -188,7 +188,7 @@ def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
         function.
 
         The function returns the expectation value given by either
-        :math:`\\text{tr}(M_j rho_k)` or :math:`\\Tr(M_j O_l rho_k)`, 
+        :math:`\\text{tr}(M_j rho_k)` or :math:`\\Tr(M_j O_l rho_k)`,
         where :math:`k` is the index of the state prepared (which is not necessary
         in this function since it has been used earlier), :math:`j` is the index
         of the measurement basis, and :math:`O_l` is the :math:`i`-th gate of
@@ -229,8 +229,8 @@ def _gate_set_tomography(
     backend=None,
 ):
     """Runs gate set tomography for a 1 or 2 qubit gate to obtain a :math:`4^n` by :math:`4^n` matrix (where :math:`n`
-    is the number of qubits in the circuit). This matrix needs to be processed further to get the Pauli-Liouville 
-    representation of the `gate`. The matrix has elements :math:`\\text{tr}(M_{j} \\, \\rho_{k})` or 
+    is the number of qubits in the circuit). This matrix needs to be processed further to get the Pauli-Liouville
+    representation of the `gate`. The matrix has elements :math:`\\text{tr}(M_{j} \\, \\rho_{k})` or
     :math:`\\text{tr}(M_{j} \\, O_{l} \\rho_{k})` depending on whether the gate :math:`O_l` is present.
 
     Args:
@@ -293,7 +293,7 @@ def GST(
     backend=None,
 ):
     """This is a wrapper function that runs gate set tomography for a list of gates. One can choose to output the gate set tomography
-    for each gate in the Pauli-Liouville representation or not. 
+    for each gate in the Pauli-Liouville representation or not.
 
 
     Args:
@@ -301,8 +301,8 @@ def GST(
         nshots (int, optional): Number of shots used in Gate Set Tomography.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
         include_empty (bool, optional): If ``False``, only perform gate set tomography for the list of gates in ``gate_set``.
-            If ``True``, perform gate set tomography for the list of gates in ``gate_set`` and also empty circuits. 
-        invert_register (bool, optional): If ``True``, one needs to specify which qubit(s) to reset. 
+            If ``True``, perform gate set tomography for the list of gates in ``gate_set`` and also empty circuits.
+        invert_register (bool, optional): If ``True``, one needs to specify which qubit(s) to reset.
         Pauli_Liouville (bool, optional): If ``True``, returns gate set tomography of the gates in the Pauli-Liouville representation.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:

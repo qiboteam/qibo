@@ -9,6 +9,7 @@ import qibo
 from qibo import Circuit, gates, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
+from qibo.quantum_info import random_unitary as RU
 from qibo.quantum_info import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
@@ -20,8 +21,6 @@ from qibo.tomography.gate_set_tomography import (
     reset_register,
 )
 
-from qibo.quantum_info import random_unitary as RU
-
 
 def _compare_gates(g1, g2):
     assert g1.__class__.__name__ == g2.__class__.__name__
@@ -29,9 +28,7 @@ def _compare_gates(g1, g2):
 
 
 INDEX_NQUBITS = (
-    list(zip(range(4), repeat(1, 4)))
-    + list(zip(range(16), repeat(2, 16)))
-    + [(17, 1)]
+    list(zip(range(4), repeat(1, 4))) + list(zip(range(16), repeat(2, 16))) + [(17, 1)]
 )
 
 
@@ -162,9 +159,9 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
-@pytest.mark.parametrize("nqubits", range(3,7))
+@pytest.mark.parametrize("nqubits", range(3, 7))
 def test_expectation_value(backend, nqubits):
-    
+
     if nqubits == 3:
         test_circuit = qibo.models.Circuit(nqubits)
         test_circuit.add(gates.TOFFOLI(0, 1, 2))
@@ -192,17 +189,19 @@ def test_gate_set_tomography(backend, nqubits, gate):
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
 
+    errors = {
+        (1, gates.CNOT(0, 1)): ValueError,
+        (1, gates.TOFFOLI(0, 1, 2)): ValueError,
+        (2, gates.TOFFOLI(0, 1, 2)): ValueError,
+        (3, gates.TOFFOLI(0, 1, 2)): ValueError,
+    }
 
-    errors = {(1, gates.CNOT(0, 1)): ValueError,
-              (1, gates.TOFFOLI(0, 1, 2)): ValueError,
-              (2, gates.TOFFOLI(0, 1, 2)): ValueError,
-              (3, gates.TOFFOLI(0, 1, 2)): ValueError,
-              }
-
-    if (nqubits, gate) in [(1, gates.CNOT(0, 1)), 
-                           (1, gates.TOFFOLI(0, 1, 2)),
-                           (2, gates.TOFFOLI(0, 1, 2)),
-                           (3, gates.TOFFOLI(0, 1, 2))]:
+    if (nqubits, gate) in [
+        (1, gates.CNOT(0, 1)),
+        (1, gates.TOFFOLI(0, 1, 2)),
+        (2, gates.TOFFOLI(0, 1, 2)),
+        (3, gates.TOFFOLI(0, 1, 2)),
+    ]:
         with pytest.raises(ValueError):
             matrix_jk = _gate_set_tomography(
                 nqubits=nqubits,
@@ -348,8 +347,10 @@ def test_reset_register_invalid_tuple(a, b):
         inverse_circuit = reset_register(test_circuit, (a, b))
 
 
-
-@pytest.mark.parametrize("target_gates", [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]])
+@pytest.mark.parametrize(
+    "target_gates",
+    [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]],
+)
 @pytest.mark.parametrize("Pauli_Liouville", [False, False, True])
 def test_GST(backend, target_gates, Pauli_Liouville):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
@@ -358,14 +359,13 @@ def test_GST(backend, target_gates, Pauli_Liouville):
     target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
     gate_set = [g.__class__ for g in target_gates]
 
-
     if len(target_gates) == 3:
         empty_1q, empty_2q, *approx_gates = GST(
-        gate_set=[g.__class__ for g in target_gates],
-        nshots=int(1e4),
-        include_empty=True,
-        Pauli_Liouville=Pauli_Liouville,
-        backend=backend,
+            gate_set=[g.__class__ for g in target_gates],
+            nshots=int(1e4),
+            include_empty=True,
+            Pauli_Liouville=Pauli_Liouville,
+            backend=backend,
         )
         if Pauli_Liouville == False:
             for target, estimate in zip(target_matrices, approx_gates):
@@ -397,6 +397,3 @@ def test_GST(backend, target_gates, Pauli_Liouville):
                 Pauli_Liouville=Pauli_Liouville,
                 backend=backend,
             )
-
-
-

@@ -2341,7 +2341,7 @@ Gate Set Tomography (GST) is a powerful technique employed in quantum informatio
 
 By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental, for instance, in setting up the necessary parameters for Probabilistic Error Cancellation (PEC).
 
-In practice, given a set of operators (or gates), :math:`\{O_0, O_1, \dots, O_n\}`, a set of initial states :math:`\{\rho\}_k`, and a set of measurement bases :math:`\{M\}_j`, one performs GST by choosing an initial state :math:`\rho_k`, applies the gate :math:`O_l \in \{O_0, O_1, \dots, O_l\}`, measures in :math:`M_j` basis to obtain the following matrix: 
+In practice, given a set of operators (or gates), :math:`\{O_0, O_1, \dots, O_n\}`, a set of initial states :math:`\{\rho\}_k`, and a set of measurement bases :math:`\{M\}_j`, one performs GST by choosing an initial state :math:`\rho_k`, applies the gate :math:`O_l \in \{O_0, O_1, \dots, O_l\}`, measures in :math:`M_j` basis to obtain the following matrix:
 
 .. math::
    \{\tilde{O}_l\}_{jk} = \text{tr}(M_j\,O_l\,\rho_k)
@@ -2356,7 +2356,7 @@ which is essentially initializing the initial states :math:`\{\rho\}_k` and meas
 .. math::
     T = \begin{pmatrix} 1 & 1 & 1 & 1 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 1 & -1 & 0 & 0 \end{pmatrix}
 
-The matrix :math:`T` is a specific matrix where :math:`\rho_k \in \{ |0\rangle\langle0|, |1\rangle\langle1|, |+\rangle\langle +|, |y+\rangle\langle y+| \}^{\otimes n}` and :math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4] where :math:`n` represents the number of qubits. Finally, the Pauli-Liouville representation can be recovered as 
+The matrix :math:`T` is a specific matrix where :math:`\rho_k \in \{ |0\rangle\langle0|, |1\rangle\langle1|, |+\rangle\langle +|, |y+\rangle\langle y+| \}^{\otimes n}` and :math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4] where :math:`n` represents the number of qubits. Finally, the Pauli-Liouville representation can be recovered as
 
 .. math::
     O_l^{PL} = T\,g^{-1}\,\tilde{O_l}\,T^{-1}
