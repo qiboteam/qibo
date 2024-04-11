@@ -34,7 +34,6 @@ INDEX_NQUBITS = (
 )
 
 
-
 @pytest.mark.parametrize(
     "k,nqubits",
     INDEX_NQUBITS,
