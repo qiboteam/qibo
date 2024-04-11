@@ -28,8 +28,11 @@ def _compare_gates(g1, g2):
 
 
 INDEX_NQUBITS = (
-    list(zip(range(4), repeat(1, 4))) + list(zip(range(16), repeat(2, 16))) + [(17, 1)]
+    list(zip(range(4), repeat(1, 4)))
+    + list(zip(range(16), repeat(2, 16)))
+    + [(0, 3), (17, 1)]
 )
+
 
 
 @pytest.mark.parametrize(
@@ -149,8 +152,8 @@ def test__get_observable(j, nqubits):
         SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
         for h in correct_observables[2]
     ]
-    errors = {(17, 1): IndexError}
-    if (j, nqubits) in [(17, 1)]:
+    errors = {(0, 3): ValueError, (17, 1): IndexError}
+    if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
             prepared_observable = _get_observable(j, nqubits)
     else:
