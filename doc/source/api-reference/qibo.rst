@@ -2341,22 +2341,25 @@ Gate Set Tomography (GST) is a powerful technique employed in quantum informatio
 
 By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental, for instance, in setting up the necessary parameters for Probabilistic Error Cancellation (PEC).
 
-In practice, given a set of quantum gates :math:`\{G_0,G_1,\dots,G_n\}`, three collections of: state preparations :math:`\{\rho\}_k`, measurement bases :math:`\{M\}_j` and observables :math:`\{O\}_j`, are combined to obtain an estimate of the matrix element :math:`\{\tilde{G}_i\}_{j,k}` of each gate in the superoperator representation. In particular, each entry of the matrix is obtained by calculating the expectation value:
+In practice, given a set of gates, :math:`\{G_0,G_1,\dots,G_n\}`, a set of initial states :math:`\{\rho\}_k`, and a set of measurement bases :math:`\{M\}_j`, one performs GST by choosing an initial state :math:`\rho_k`, applies the gate :math:`G_i \in {G_0,G_1,\dots,G_n\}`, measures in :math:`M_j` basis to obtain the following matrix: 
 
 .. math::
    \{\tilde{G}_i\}_{j,k} = \text{tr}(M_j\,G_i\,\rho_k)
 
-Note, however, that the gate representation obtained this way is not directly the canonical Pauli-Liouville representation. In order to recover that, a further transformation is needed. Indeed, defined the two matrices:
+Note that :math:`\{\tilde{G}_i\}_{j,k}` is not yet given in the Pauli-Liouville representation, more commonly known as the Pauli Transfer Matrix notation. To obtain the Pauli-Liouville representation, one needs to obtain two matrices, :math:`\{\tilde{E}\}_{j,k}` and :math:`T`, where
 
 .. math::
-   \{E\}_{j,k} = \text{tr}(M_j\,\rho_k), \quad T = \begin{pmatrix} x & x & x & x \\ x & x & x & x \\ x & x & x & x \\ x & x & x & x \end{pmatrix}
+   \tilde{E}_{j,k} = \text{tr}(M_j\,\rho_k)
 
-the Pauli-Liouville representation can be recovered as:
+which is essentially initializing the initial states :math:`\{\rho\}_k` and measuring in basis :math:`M_j` without any gates, and
 
 .. math::
-   G_i^{PL} = T\,E^{-1}\,\tilde{G_i}\,T^{-1}
+    T = \begin{pmatrix} 1 & 1 & 1 & 1 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 1 & -1 & 0 & 0 \end{pmatrix}
 
-In qibo the :meth:`qibo.tomography.gate_set_tomography.GST` function implements the GST routine for constructing the estimated representation of both one and two qubits gates. Refer to the :ref:`advanced code example<gst_example>` for more details on its usage.
+The matrix :math:`T` is an analytically obtained matrix where :math:`\rho_k \in \{ |0\rangle, |1\rangle, |+\rangle, |y+\rangle \}` and :math:`M_j \in \{ I, X, Y, Z\}` [4]. Finally, the Pauli-Liouville representation can be recovered as 
+
+.. math::
+    G_i^{PL} = T\,E^{-1}\,\tilde{G_i}\,T^{-1}
 
 References:
 
@@ -2365,6 +2368,8 @@ References:
 [2] Greenbaum, Daniel. "Introduction to quantum gate set tomography." arXiv preprint arXiv:1509.02921 (2015).
 
 [3] Nielsen, Erik, et al. "Gate set tomography." Quantum 5 (2021): 557.
+
+[4] Endo, Suguru, Simon C. Benjamin, and Ying Li. "Practical quantum error mitigation for near-future applications." Physical Review X 8.3 (2018): 031027.
 
 .. autofunction:: qibo.tomography.gate_set_tomography.GST
 
