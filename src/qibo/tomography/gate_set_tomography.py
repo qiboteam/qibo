@@ -69,11 +69,13 @@ def _get_observable(j, nqubits):
         list(:class:`qibo.hamiltonians.SymbolicHamiltonian`): Symbolic hamiltonian of the observable.
     """
 
-    # if j == 0 and nqubits == 3:
-    #     raise ValueError("Invalid parameters: j=0 and nqubits=3")
+    if j == 0 and nqubits >= 3:
+        raise_error(
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
+        )
     observables = _observables(nqubits)[j]
     observable = S(1)
-    # observable = 1
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
             observable *= obs(q)
