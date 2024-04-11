@@ -2356,7 +2356,7 @@ which is essentially initializing the initial states :math:`\{\rho\}_k` and meas
 .. math::
     T = \begin{pmatrix} 1 & 1 & 1 & 1 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 1 & -1 & 0 & 0 \end{pmatrix}
 
-The matrix :math:`T` is an analytically obtained matrix where :math:`\rho_k \in \{ |0\rangle, |1\rangle, |+\rangle, |y+\rangle \}` and :math:`M_j \in \{ I, X, Y, Z\}` [4]. Finally, the Pauli-Liouville representation can be recovered as 
+The matrix :math:`T` is a specific matrix where :math:`\rho_k \in \{ |0\rangle, |1\rangle, |+\rangle, |y+\rangle \}^{\otimes n}` and :math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4] where :math:`n` represents the number of qubits. Finally, the Pauli-Liouville representation can be recovered as 
 
 .. math::
     G_i^{PL} = T\,E^{-1}\,\tilde{G_i}\,T^{-1}
