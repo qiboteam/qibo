@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, list_available_backends, set_backend
 
 ####################### Test `matrix` #######################
 GATES = [
@@ -122,3 +122,16 @@ def test_plus_density_matrix(backend):
     matrix = backend.plus_density_matrix(4)
     target_matrix = np.ones((16, 16)) / 16
     backend.assert_allclose(matrix, target_matrix)
+
+
+def test_list_available_backends():
+    available_backends = {
+        "numpy": True,
+        "tensorflow": True,
+        "pytorch": True,
+        "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
+        "qibolab": False,
+        "qibocloud": False,
+        "qibotn": False,
+    }
+    assert available_backends == list_available_backends()

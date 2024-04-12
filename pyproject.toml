@@ -104,12 +104,6 @@ tensorflow = ["tensorflow"]
 torch = ["torch"]
 qinfo = ["cvxpy", "stim"]
 
-[tool.poetry.group.cloud]
-optional = true
-
-[tool.poetry.group.cloud.dependencies]
-qibo-cloud-backends = { git = "https://github.com/qiboteam/qibo-cloud-backends.git", branch = "list_backends"}
-
 [tool.pylint.reports]
 output-format = "colorized"
 
