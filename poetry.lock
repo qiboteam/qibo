@@ -1196,8 +1196,11 @@ name = "docutils"
 version = "0.19"
 description = "Docutils -- Python Documentation Utilities"
 optional = false
-python-versions = "*"
-files = []
+python-versions = ">=3.7"
+files = [
+    {file = "docutils-0.19-py3-none-any.whl", hash = "sha256:5e1de4d849fee02c63b040a4a3fd567f4ab104defd8a5511fbbc24a8a017efbc"},
+    {file = "docutils-0.19.tar.gz", hash = "sha256:33995a6753c30b7f577febfc2c50411fec6aac7f7ffeb7c4cfe5991072dcf9e6"},
+]
 
 [[package]]
 name = "duet"
@@ -4164,91 +4167,6 @@ reference = "list_backends"
 resolved_reference = "72f4841e5cd2718a0a50e6915328e5413cac9c63"
 
 [[package]]
-name = "qiskit"
-version = "1.0.2"
-description = "An open-source SDK for working with quantum computers at the level of extended quantum circuits, operators, and primitives."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "qiskit-1.0.2-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:c78b9488b867f7a121a946db9d453c22e21dab6f00e092defb8010c1a0ec871b"},
-    {file = "qiskit-1.0.2-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:a900f04a0c6349a37aaabbf5a0b1be9fe92c19a6a049e3dcf0aaae0e971d79f2"},
-    {file = "qiskit-1.0.2-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:cfe7589d0f61a4a575028cc9d3503fe3965e6cf1df58ace4659d49dc9ce11897"},
-    {file = "qiskit-1.0.2-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:baa4051027bd121efba758db0b48bf6f67ffb74c70bea74fc072c4ccd9fac01a"},
-    {file = "qiskit-1.0.2-cp38-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:5ca533c878b36bfd53a92641cbf552ce4f48821924b107140dfb6e242eeb9425"},
-    {file = "qiskit-1.0.2-cp38-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:100577d7ee452918e814bcd54f90e3794fdcfdfa32936c1cee2c7fc917485c31"},
-    {file = "qiskit-1.0.2-cp38-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:186535c0dca89476cbef63420cdb297a8bc73f4444d6c7a49ec9639fb48647c2"},
-    {file = "qiskit-1.0.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:99f2a8d7ccdc3b7c31ed59e8d83d2da2ca6d2b204d158dd758ad19c9d9c27858"},
-    {file = "qiskit-1.0.2-cp38-abi3-win32.whl", hash = "sha256:bf215feeec065398a611b6d6c8bb7b04131b110fbf68ed0967e841d62fb7cb4f"},
-    {file = "qiskit-1.0.2-cp38-abi3-win_amd64.whl", hash = "sha256:9f3195eb746f59715837cdbfeaf6b2624f7176248b99faa71add1d9e7ce9fe8f"},
-    {file = "qiskit-1.0.2.tar.gz", hash = "sha256:f0480adb1379a5799dde6571d4f717f58909c24100125b6f6addaf123613aee2"},
-]
-
-[package.dependencies]
-dill = ">=0.3"
-numpy = ">=1.17,<2"
-python-dateutil = ">=2.8.0"
-rustworkx = ">=0.14.0"
-scipy = ">=1.5"
-stevedore = ">=3.0.0"
-symengine = ">=0.11"
-sympy = ">=1.3"
-typing-extensions = "*"
-
-[package.extras]
-all = ["qiskit[crosstalk-pass,csp-layout-pass,qasm3-import,visualization]"]
-crosstalk-pass = ["z3-solver (>=4.7)"]
-csp-layout-pass = ["python-constraint (>=1.4)"]
-qasm3-import = ["qiskit-qasm3-import (>=0.1.0)"]
-visualization = ["Pillow (>=4.2.1)", "matplotlib (>=3.3)", "pydot", "pylatexenc (>=1.4)", "seaborn (>=0.9.0)"]
-
-[[package]]
-name = "qiskit-ibm-provider"
-version = "0.10.0"
-description = "Qiskit IBM Quantum Provider for accessing the quantum devices and simulators at IBM"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "qiskit-ibm-provider-0.10.0.tar.gz", hash = "sha256:99dc9fd48bee2e7ed633bc739e0935c91859f1c4b77080a31089ae92e6f110f1"},
-    {file = "qiskit_ibm_provider-0.10.0-py3-none-any.whl", hash = "sha256:2e5c6fedeba1308b009d4733a4e8433a5b4d190aed5981dd7f4512ec04433298"},
-]
-
-[package.dependencies]
-numpy = ">=1.13"
-python-dateutil = ">=2.8.0"
-qiskit = ">=0.45.0"
-requests = ">=2.19"
-requests-ntlm = ">=1.1.0"
-typing-extensions = ">=4.3"
-urllib3 = ">=1.21.1"
-websocket-client = ">=1.5.1"
-websockets = ">=10.0"
-
-[package.extras]
-visualization = ["ipython (>=5.0.0)", "ipyvue (>=1.8.5)", "ipyvuetify (>=1.1)", "ipywidgets (<8.0.0)", "matplotlib (>=2.1)", "plotly (>=4.4)", "pyperclip (>=1.7)", "seaborn (>=0.9.0)", "traitlets (!=5.0.5)"]
-
-[[package]]
-name = "qiskit-ibm-runtime"
-version = "0.22.0"
-description = "IBM Quantum client for Qiskit Runtime."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "qiskit-ibm-runtime-0.22.0.tar.gz", hash = "sha256:880e3bdda0afec3b14cd866b355939f17bff484062aa3746235a4f2fccba9707"},
-    {file = "qiskit_ibm_runtime-0.22.0-py3-none-any.whl", hash = "sha256:91ee9dfd121da0bb32aecf14d6e8db93a32c472c5a73456986d5cdb61f6db2b4"},
-]
-
-[package.dependencies]
-ibm-platform-services = ">=0.22.6"
-numpy = ">=1.13"
-pydantic = "*"
-python-dateutil = ">=2.8.0"
-qiskit = ">=1.0.0"
-requests = ">=2.19"
-requests-ntlm = ">=1.1.0"
-urllib3 = ">=1.21.1"
-websocket-client = ">=1.5.1"
-
-[[package]]
 name = "quimb"
 version = "1.8.0"
 description = "Quantum information and many-body library."
@@ -5736,8 +5654,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-<<<<<<< HEAD
-content-hash = "299011c459c43a472dd1036795b73fe48b43d89b83ff1fe6c25830a33bfd2e99"
-=======
-content-hash = "9ab7099d019909fa9b32a0ed777027d33440016ac7178f1a1d9ca01b94664066"
->>>>>>> c4556672b (test: added test for list available backends)
+content-hash = "9369ed8169b8482da1c5af42799f81355ac0d78586a99a1bc80b4ed425f30581"
