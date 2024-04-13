@@ -4,7 +4,11 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.quantum_info.quantum_networks import QuantumNetwork
+from qibo.quantum_info.quantum_networks import (
+    QuantumChannel,
+    QuantumComb,
+    QuantumNetwork,
+)
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_gaussian_matrix,
@@ -18,7 +22,13 @@ def test_errors(backend):
     nqubits = len(channel.target_qubits)
     dims = 2**nqubits
     partition = (dims, dims)
-    network = QuantumNetwork(
+    network = QuantumNetwork.from_nparray(
+        channel.to_choi(backend=backend), partition, backend=backend
+    )
+    quantum_comb = QuantumComb.from_nparray(
+        channel.to_choi(backend=backend), partition, backend=backend
+    )
+    quantum_channel = QuantumChannel.from_nparray(
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
@@ -56,10 +66,13 @@ def test_errors(backend):
         network.is_hermitian(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.is_unital(precision_tol=-1e-8)
+        network.is_positive_semidefinite(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.is_causal(precision_tol=-1e-8)
+        quantum_comb.is_causal(precision_tol=-1e-8)
+
+    with pytest.raises(ValueError):
+        quantum_channel.is_unital(precision_tol=-1e-8)
 
     with pytest.raises(TypeError):
         network + 1
@@ -90,9 +103,6 @@ def test_errors(backend):
         network.link_product(network, subscripts=True)
 
     with pytest.raises(NotImplementedError):
-        network.link_product(network, subscripts="jk,lm->no")
-
-    with pytest.raises(NotImplementedError):
         net @ net
 
     with pytest.raises(NotImplementedError):
@@ -120,7 +130,7 @@ def test_operational_logic(backend):
     nqubits = len(channel.target_qubits)
     dims = 2**nqubits
     partition = (dims, dims)
-    network = QuantumNetwork(
+    network = QuantumNetwork.from_nparray(
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
@@ -133,7 +143,7 @@ def test_operational_logic(backend):
     )
     backend.assert_allclose(
         (network_state_pure + network_state_pure).operator(backend),
-        (2 * network_state_pure).full(),
+        (2 * network_state_pure).operator(backend, full=True),
     )
 
     # Sum with itself has to match multiplying by float
@@ -142,7 +152,7 @@ def test_operational_logic(backend):
     )
     backend.assert_allclose(
         (network_state_pure + network_state_pure).operator(backend),
-        (2.0 * network_state_pure).full(),
+        (2.0 * network_state_pure).operator(backend, full=True),
     )
 
     # Multiplying and dividing by same scalar has to bring back to original network
@@ -165,20 +175,26 @@ def test_parameters(backend):
     dims = 2**nqubits
     partition = (dims, dims)
 
-    network = QuantumNetwork(
+    network = QuantumNetwork.from_nparray(
+        channel.to_choi(backend=backend), partition, backend=backend
+    )
+    quantum_comb = QuantumComb.from_nparray(
+        channel.to_choi(backend=backend), partition, backend=backend
+    )
+    quantum_channel = QuantumChannel.from_nparray(
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
     backend.assert_allclose(network.operator(backend=backend).shape, (2, 2, 2, 2))
     backend.assert_allclose(network.dims, 4)
     backend.assert_allclose(network.partition, partition)
-    backend.assert_allclose(network.system_input, (False, True))
+    backend.assert_allclose(network.system_input, (True, False))
 
-    assert network.is_causal()
-    assert network.is_unital()
+    assert quantum_comb.is_causal()
+    assert quantum_channel.is_unital()
     assert network.is_hermitian()
     assert network.is_positive_semidefinite()
-    assert network.is_channel()
+    assert quantum_channel.is_channel()
 
 
 def test_with_states(backend):
@@ -186,24 +202,20 @@ def test_with_states(backend):
     dims = 2**nqubits
 
     state = random_density_matrix(dims, backend=backend)
-    network_state = QuantumNetwork(state, (1, 2), backend=backend)
+    network_state = QuantumChannel.from_nparray(state, backend=backend)
 
     lamb = float(np.random.rand())
     channel = gates.DepolarizingChannel(0, lamb)
-    network_channel = QuantumNetwork(
-        channel.to_choi(backend=backend), (dims, dims), backend=backend
+    network_channel = QuantumChannel.from_nparray(
+        channel.to_choi(backend=backend), (dims, dims), backend=backend, inverse=True
     )
 
     state_output = channel.apply_density_matrix(backend, state, nqubits)
     state_output_network = network_channel.apply(state)
-    state_output_link = network_state.link_product(
-        network_channel, subscripts="ij,jk -> ik"
-    )
+    state_output_link = network_state.link_product("ij,kj -> ik", network_channel)
 
     backend.assert_allclose(state_output_network, state_output)
-    backend.assert_allclose(
-        state_output_link.operator(backend=backend).reshape((dims, dims)), state_output
-    )
+    backend.assert_allclose(state_output_link.matrix(backend=backend), state_output)
 
     assert network_state.is_hermitian()
     assert network_state.is_positive_semidefinite()
@@ -217,16 +229,20 @@ def test_with_unitaries(backend, subscript):
     unitary_1 = random_unitary(dims, backend=backend)
     unitary_2 = random_unitary(dims, backend=backend)
 
-    network_1 = QuantumNetwork(unitary_1, (dims, dims), pure=True, backend=backend)
-    network_2 = QuantumNetwork(unitary_2, (dims, dims), pure=True, backend=backend)
-    network_3 = QuantumNetwork(
-        unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
+    network_1 = QuantumComb.from_nparray(
+        unitary_1, (dims, dims), pure=True, backend=backend, inverse=True
     )
-    network_4 = QuantumNetwork(
-        unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend
+    network_2 = QuantumComb.from_nparray(
+        unitary_2, (dims, dims), pure=True, backend=backend, inverse=True
+    )
+    network_3 = QuantumComb.from_nparray(
+        unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend, inverse=True
+    )
+    network_4 = QuantumComb.from_nparray(
+        unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend, inverse=True
     )
 
-    test = network_1.link_product(network_2, subscript).full(
+    test = network_1.link_product(subscript, network_2).full(
         backend=backend, update=True
     )
 
@@ -260,7 +276,7 @@ def test_with_comb(backend):
         channel, channel_partition, system_input=channel_sys_out, backend=backend
     )
 
-    test = comb_choi.link_product(channel_choi, subscript).full(backend, update=True)
+    test = comb_choi.link_product(subscript, channel_choi).full(backend, update=True)
     channel_choi2 = comb_choi @ channel_choi
 
     backend.assert_allclose(test, channel_choi2.full(backend), atol=1e-5)
@@ -272,7 +288,7 @@ def test_apply(backend):
 
     state = random_density_matrix(dims, backend=backend)
     unitary = random_unitary(dims, backend=backend)
-    network = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
+    network = QuantumChannel(unitary, (dims, dims), pure=True, backend=backend)
 
     applied = network.apply(state)
     target = unitary @ state @ np.transpose(np.conj(unitary))
@@ -292,7 +308,7 @@ def test_non_hermitian_and_prints(backend):
     assert not network.is_positive_semidefinite()
     # assert not network.is_channel()
 
-    assert network.__str__() == "J[4 -> 4]"
+    assert network.__str__() == "J[┍4┑, ┕4┙]"
 
 
 def test_uility_func():
@@ -300,16 +316,16 @@ def test_uility_func():
     test_ls = np.ones(old_shape)
     n = len(test_ls.shape) // 2
 
+    order2op = QuantumNetwork._order_tensor2operator(n)
+    order2tensor = QuantumNetwork._order_operator2tensor(n)
+
     system_input = (False, True, False, True)
 
-    order2op = QuantumNetwork._order_tensor2operator(n, system_input)
-    order2tensor = QuantumNetwork._order_operator2tensor(n, system_input)
     new_shape = test_ls.transpose(order2op).shape
-
     for i in range(n):
-        if system_input[i]:
-            assert (new_shape[i] - new_shape[i + n]) == 10
-        else:
-            assert (new_shape[i] - new_shape[i + n]) == -10
+        # if system_input[i]:
+        assert (new_shape[i] - new_shape[i + n]) == -10
+        # else:
+        #     assert (new_shape[i] - new_shape[i + n]) == -10
 
     assert tuple(test_ls.transpose(order2op).transpose(order2tensor).shape) == old_shape

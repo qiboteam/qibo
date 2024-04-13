@@ -32,9 +32,9 @@ class QuantumNetwork:
     Args:
         matrix (ndarray): input Choi operator.
         partition (List[int] or Tuple[int]): partition of ``matrix``.
-        system_output (List[bool] or Tuple[bool], optional): mask on the output system of the
+        system_input (List[bool] or Tuple[bool], optional): mask on the output system of the
             Choi operator. If ``None``, defaults to
-            ``(False,True,False,True,...)``, where ``len(system_output)=len(partition)``.
+            ``(False,True,False,True,...)``, where ``len(system_input)=len(partition)``.
             Defaults to ``None``.
         pure (bool, optional): ``True`` when ``matrix`` is a "pure" representation (e.g. a pure
             state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
@@ -241,6 +241,12 @@ class QuantumNetwork:
         Returns:
             bool: Positive-semidefinite condition.
         """
+        if precision_tol < 0.0:
+            raise_error(
+                ValueError,
+                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
+            )
+
         if self.is_pure():  # if the input is pure, it is always positive semidefinite
             return True
 
@@ -283,7 +289,17 @@ class QuantumNetwork:
         return self.__class__(
             np.copy(self._tensor),
             partition=self.partition,
-            system_output=self.system_input,
+            system_input=self.system_input,
+            pure=self._pure,
+            backend=self._backend,
+        )
+
+    def conj(self):
+        """Returns the conjugate of the quantum network."""
+        return self.__class__(
+            np.conj(self._tensor),
+            partition=self.partition,
+            system_input=self.system_input,
             pure=self._pure,
             backend=self._backend,
         )
@@ -352,7 +368,7 @@ class QuantumNetwork:
 
         if self.is_pure() and number > 0.0:
             return QuantumNetwork(
-                np.sqrt(number) * self.operator(backend=self._backend),
+                np.sqrt(number) * self._tensor,
                 partition=self.partition,
                 system_input=self.system_input,
                 pure=True,
@@ -397,7 +413,7 @@ class QuantumNetwork:
         number = np.sqrt(number) if self.is_pure() and number > 0.0 else number
 
         return QuantumNetwork(
-            self.operator(backend=self._backend) / number,
+            self._tensor / number,
             partition=self.partition,
             system_input=self.system_input,
             pure=self.is_pure(),
@@ -594,7 +610,7 @@ class QuantumComb(QuantumNetwork):
                 + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
             )
         if system_input is not None:
-            warning("system_output is ignored for QuantumComb")
+            warning("system_input is ignored for QuantumComb")
 
         super().__init__(
             tensor, partition, [True, False] * (len(partition) // 2), pure, backend
@@ -624,16 +640,19 @@ class QuantumComb(QuantumNetwork):
         Returns:
             bool: Causal order condition.
         """
+        if precision_tol < 0.0:
+            raise_error(
+                ValueError,
+                f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
+            )
+
         dim_out = self.partition[-1]
         dim_in = self.partition[-2]
 
         reduced = np.tensordot(self.full(), trace(dim_out).full(), axes=1)
-        print(reduced)
         sub_comb = np.tensordot(reduced, trace(dim_in).full(), axes=1)
-        print(sub_comb)
-
         expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
-        print(expected)
+
         norm = self._backend.calculate_norm((reduced - expected), order=order)
         if norm > precision_tol:
             return False
@@ -657,13 +676,13 @@ class QuantumComb(QuantumNetwork):
         return comb
 
 
-class QuantumChannel(QuantumNetwork):
+class QuantumChannel(QuantumComb):
 
     def __init__(
         self,
         tensor,
         partition: Optional[Union[List[int], Tuple[int]]] = None,
-        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
+        system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
         pure: bool = False,
         backend=None,
     ):
@@ -675,15 +694,15 @@ class QuantumChannel(QuantumNetwork):
             )
 
         if len(partition) == 1 or partition == None:
-            if system_output == None:  # Assume the input is a quantum state
+            if system_input == None:  # Assume the input is a quantum state
                 partition = (1, partition[0])
-            elif len(system_output) == 1:
-                if system_output:
+            elif len(system_input) == 1:
+                if system_input:
                     partition = (1, partition[0])
                 else:
                     partition = (partition[0], 1)
 
-        super().__init__(tensor, partition, [False, True], pure, backend)
+        super().__init__(tensor, partition, pure=pure, backend=backend)
 
     def is_unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
@@ -717,6 +736,18 @@ class QuantumChannel(QuantumNetwork):
 
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
+
+        reduced = np.tensordot(self.full(), trace(self.partition[1]).full(), axes=1)
+        sub_comb = np.tensordot(reduced, trace(self.partition[0]).full(), axes=1)
+        expected = np.tensordot(
+            sub_comb, trace(self.partition[0]).full() / self.partition[0], axes=0
+        )
+
+        norm = self._backend.calculate_norm((reduced - expected), order=order)
+        if norm > precision_tol:
+            return False
+        elif len(self.partition) == 2:
+            return True
 
         self._tensor = self.full()
         self._pure = False
@@ -771,12 +802,12 @@ class QuantumChannel(QuantumNetwork):
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        matrix = np.copy(self._tensor)
+        operator = np.copy(self.operator())
 
         if self.is_pure():
-            return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
+            return np.einsum("kj,ml,jl -> km", operator, np.conj(operator), state)
 
-        return np.einsum("jklm,km -> jl", matrix, state)
+        return np.einsum("jklm, km", operator, state)
 
 
 class StochQuantumNetwork:
@@ -876,17 +907,6 @@ def link_product(
                 continue
 
     new_tensor = np.einsum(subscripts, *tensors)
-
-    if casting:
-        try:
-            network = QuantumChannel(new_tensor, partition, backend=backend)
-            return network
-        except:
-            try:
-                network = QuantumComb(new_tensor, partition, backend=backend)
-                return network
-            except:
-                pass
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
 
