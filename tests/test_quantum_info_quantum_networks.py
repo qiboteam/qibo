@@ -8,6 +8,9 @@ from qibo.quantum_info.quantum_networks import (
     QuantumChannel,
     QuantumComb,
     QuantumNetwork,
+    identity,
+    link_product,
+    trace,
 )
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
@@ -269,10 +272,10 @@ def test_with_comb(backend):
     comb = random_density_matrix(2**4, backend=backend)
     channel = random_density_matrix(2**2, backend=backend)
 
-    comb_choi = QuantumNetwork(
+    comb_choi = QuantumNetwork.from_nparray(
         comb, comb_partition, system_input=comb_sys_out, backend=backend
     )
-    channel_choi = QuantumNetwork(
+    channel_choi = QuantumNetwork.from_nparray(
         channel, channel_partition, system_input=channel_sys_out, backend=backend
     )
 
@@ -288,7 +291,9 @@ def test_apply(backend):
 
     state = random_density_matrix(dims, backend=backend)
     unitary = random_unitary(dims, backend=backend)
-    network = QuantumChannel(unitary, (dims, dims), pure=True, backend=backend)
+    network = QuantumChannel.from_nparray(
+        unitary, (dims, dims), pure=True, backend=backend
+    )
 
     applied = network.apply(state)
     target = unitary @ state @ np.transpose(np.conj(unitary))
@@ -301,7 +306,9 @@ def test_non_hermitian_and_prints(backend):
     dims = 2**nqubits
 
     matrix = random_gaussian_matrix(dims**2, backend=backend)
-    network = QuantumNetwork(matrix, (dims, dims), pure=False, backend=backend)
+    network = QuantumNetwork.from_nparray(
+        matrix, (dims, dims), pure=False, backend=backend
+    )
 
     assert not network.is_hermitian()
     # assert not network.is_causal()
@@ -312,6 +319,8 @@ def test_non_hermitian_and_prints(backend):
 
 
 def test_uility_func():
+    # _order_tensor2operator should convert
+    # (a0,a1,b0,b1,...) to (a0,b0,..., a1,b1,...)
     old_shape = (0, 10, 1, 11, 2, 12, 3, 13)
     test_ls = np.ones(old_shape)
     n = len(test_ls.shape) // 2
@@ -319,13 +328,25 @@ def test_uility_func():
     order2op = QuantumNetwork._order_tensor2operator(n)
     order2tensor = QuantumNetwork._order_operator2tensor(n)
 
-    system_input = (False, True, False, True)
-
     new_shape = test_ls.transpose(order2op).shape
     for i in range(n):
-        # if system_input[i]:
         assert (new_shape[i] - new_shape[i + n]) == -10
-        # else:
-        #     assert (new_shape[i] - new_shape[i + n]) == -10
 
     assert tuple(test_ls.transpose(order2op).transpose(order2tensor).shape) == old_shape
+
+
+def test_predefined(backend):
+    id = identity(2)
+    tr = trace(2)
+
+    backend.assert_allclose(
+        id.matrix(backend=backend),
+        np.array([[1, 0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 1]]),
+        atol=1e-8,
+    )
+
+    traced = link_product("ij,j", id, tr)
+
+    backend.assert_allclose(
+        tr.matrix(backend=backend), traced.matrix(backend=backend), atol=1e-8
+    )

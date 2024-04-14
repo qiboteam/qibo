@@ -13,30 +13,30 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
-    """This class stores the Choi operator of the quantum network as a tensor,
-    which is an unique representation of the quantum network.
+    """This class stores the representation of the quantum network as a tensor.
+    This is a unique representation of the quantum network.
 
     A minimum quantum network is a quantum channel, which is a quantum network of the form
     :math:`J[n \\to m]`, where :math:`n` is the dimension of the input system ,
     and :math:`m` is the dimension of the output system.
-    A quantum state is a quantum network of the form :math:`J[1 \\to n]`,
+    A quantum state is a quantum network of the form :math:`J: 1 \\to n`,
     such that the input system is trivial.
-    An observable is a quantum network of the form :math:`J[n \\to 1]`,
+    An observable is a quantum network of the form :math:`J: n \\to 1`,
     such that the output system is trivial.
 
     A quantum network may contain multiple input and output systems.
-    For example, a "quantum comb" is a quantum network of the form :math:`J[n', n \\to m, m']`,
-    which convert a quantum channel of the form :math:`J[n \\to m]`
-    to a quantum channel of the form :math:`J[n' \\to m']`.
+    For example, a "quantum comb" is a quantum network of the form :math:`J: n', n \\to m, m'`,
+    which convert a quantum channel of the form :math:`J: n \\to m`
+    to a quantum channel of the form :math:`J: n' \\to m'`.
 
     Args:
-        matrix (ndarray): input Choi operator.
-        partition (List[int] or Tuple[int]): partition of ``matrix``.
+        tensor (ndarray): input Choi operator.
+        partition (List[int] or Tuple[int]): partition of ``tensor``.
         system_input (List[bool] or Tuple[bool], optional): mask on the output system of the
             Choi operator. If ``None``, defaults to
-            ``(False,True,False,True,...)``, where ``len(system_input)=len(partition)``.
+            ``(True,False,True,False,...)``, where ``len(system_input)=len(partition)``.
             Defaults to ``None``.
-        pure (bool, optional): ``True`` when ``matrix`` is a "pure" representation (e.g. a pure
+        pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
             state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
             calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
@@ -104,6 +104,28 @@ class QuantumNetwork:
         pure: bool = False,
         backend=None,
     ):
+        """Construct a :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object from a numpy array.
+        This method converts a Choi operator to the internal representation of :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`.
+
+        The input array can be a pure state, a Choi operator, a unitary operator, etc.
+
+        Args:
+            arr (ndarray): input numpy array.
+            partition (List[int] or Tuple[int], optional): partition of ``arr``. If ``None``,
+                defaults to the shape of ``arr``. Defaults to ``None``.
+            system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
+                Choi operator. If ``None``, defaults to
+                ``(True,False,True,False...)``, where ``len(system_input)=len(partition)``.
+                Defaults to ``None``.
+            pure (bool, optional): ``True`` when ``arr`` is a "pure" representation (e.g. a pure
+                state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+                calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`:
+        """
 
         if pure:
             if partition is None:
@@ -145,16 +167,20 @@ class QuantumNetwork:
         )
 
     def operator(self, backend=None, full=False):
-        """Returns the Choi operator of the quantum network in matrix form.
+        """Returns the Choi operator of the quantum network.
+        The shape of the returned operator is :math:`(*self.partition, *self.partition)`.
 
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
                 to return the Choi operator. If ``None``, defaults to the backend defined
                 when initializing the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`
                 object. Defaults to ``None``.
+            full (bool, optional): If this is ``False``, and the network is pure, the method
+                will only return the eigenvector (unique when the network is pure).
+                If ``True``, returns the full tensor of the quantum network. Defaults to ``False``.
 
         Returns:
-            ndarray: Choi matrix of the quantum network.
+            ndarray: Choi operator of the quantum network.
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
@@ -175,6 +201,18 @@ class QuantumNetwork:
         return backend.cast(operator, dtype=self._tensor.dtype)
 
     def matrix(self, backend=None):
+        """Returns the Choi operator of the quantum network in the matrix form.
+        The shape of the returned operator is :math:`(self.dims, self.dims)`.
+
+        Args:
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
+                to return the Choi operator. If ``None``, defaults to the backend defined
+                when initializing the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`
+                object. Defaults to ``None``.
+
+        Returns:
+            ndarray: Choi operator of the quantum network.
+        """
         return self.operator(backend, full=True).reshape((self.dims, self.dims))
 
     def is_pure(self):
@@ -184,10 +222,10 @@ class QuantumNetwork:
     def is_hermitian(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is Hermitian.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network is Hermitian.
 
-        Hermicity is calculated as distance between :math:`\\mathcal{E}` and
-        :math:`\\mathcal{E}^{\\dagger}` with respect to a given norm.
+        Hermicity is calculated as distance between :math:`\\mathcal{J}` and
+        :math:`\\mathcal{J}^{\\dagger}` with respect to a given norm.
         Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
 
         For specifications on the other  possible values of the
@@ -229,12 +267,12 @@ class QuantumNetwork:
         return float(norm) <= precision_tol
 
     def is_positive_semidefinite(self, precision_tol: float = 1e-8):
-        """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the network is positive-semidefinite.
+        """Returns bool indicating if Choi operator :math:`\\mathcal{J}` of the network is positive-semidefinite.
 
         Args:
             precision_tol (float, optional): threshold value used to check if eigenvalues of
-                the Choi operator :math:`\\mathcal{E}` are such that
-                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= - \\textup{precision_tol}`.
+                the Choi operator :math:`\\mathcal{J}` are such that
+                :math:`\\textup{eigenvalues}(\\mathcal{J}) >= - \\textup{precision_tol}`.
                 Note that this parameter can be set to negative values.
                 Defaults to :math:`0.0`.
 
@@ -271,11 +309,11 @@ class QuantumNetwork:
         in order to simplify notation.
 
         Args:
-            second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
-                network to be applied to the original network.
             subscripts (str, optional): Specifies the subscript for summation using
                 the Einstein summation convention. For more details, please refer to
                 `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
+            second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
+                network to be applied to the original network.
 
         Returns:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
@@ -588,6 +626,25 @@ class QuantumNetwork:
 
 
 class QuantumComb(QuantumNetwork):
+    """Quantum comb is a quantum network such that the systems follows a sequential order.
+    It is also called the 'non-Markovian quantum process' in many literatures.
+
+    A quantum channel is a special case of quantum comb, where there are only one input
+    system and one output system.
+
+    Args:
+        tensor (ndarray): the tensor representations of the quantum Comb.
+        partition (List[int] or Tuple[int]): partition of ``matrix``.
+        system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
+            Choi operator. If ``None``, defaults to
+            ``(True,False,True,False,...)``, where ``len(system_input)=len(partition)``.
+            Defaults to ``None``.
+        pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
+            state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+    """
 
     def __init__(
         self,
@@ -619,17 +676,11 @@ class QuantumComb(QuantumNetwork):
     def is_causal(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network satisfies the causal order condition.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network satisfies the causal order condition.
 
-        Causality is calculated as distance between partial trace of :math:`\\mathcal{E}`
-        and the Identity operator :math:`I`, with respect to a given norm.
-        Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
-
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        Causality is calculated based on a recursive constrains.
+        This method reduce a n-comb to a (n-1)-comb at each step, and checks if the reduced comb is independent on the
+        last output system.
 
         Args:
             order (str or int, optional): order of the norm. Defaults to ``None``.
@@ -833,7 +884,7 @@ def link_product(
             the Einstein summation convention. For more details, please refer to
             `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
         operands (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
-            network to be contracted.
+            networks to be contracted.
 
     Returns:
         :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
@@ -921,8 +972,8 @@ def identity(dim: int, backend=None):
             when initializing the :class:`qibo.quant
     """
 
-    return QuantumNetwork.from_nparray(
-        np.eye(dim), [dim, dim], [True, False], pure=True, backend=backend
+    return QuantumChannel.from_nparray(
+        np.eye(dim), [dim, dim], pure=True, backend=backend
     )
 
 
