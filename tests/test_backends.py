@@ -127,11 +127,11 @@ def test_plus_density_matrix(backend):
 def test_list_available_backends():
     available_backends = {
         "numpy": True,
-        "tensorflow": True,
+        "tensorflow": False,
         "pytorch": True,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
         "qibocloud": False,
-        "qibotn": False,
+        "qibotn": {"cutensornet": False, "qutensornet": True},
     }
     assert available_backends == list_available_backends()
