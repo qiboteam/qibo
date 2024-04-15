@@ -25,7 +25,7 @@ def covariance(a, b, state):
     applied to two operators A and B with respect to a state:
     Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$
     """
-        
+
     c = a @ b + b @ a
     return (
         state.conj().T @ c @ state

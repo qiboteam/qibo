@@ -6,6 +6,7 @@ import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
 
+
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
 
@@ -28,12 +29,14 @@ class DoubleBracketCost(Enum):
     energy_fluctuation = auto()
     """Use energy fluctuation as cost function."""
 
+
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
     simulated_annealing_step,
 )
+
 
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
@@ -46,7 +49,8 @@ class DoubleBracketScheduling(Enum):
     """Use polynomial expansion (analytical) of the loss function."""
     simulated_annealing = simulated_annealing_step
     """Use simulated annealing algorithm"""
-    
+
+
 class DoubleBracketIteration:
     """
     Class implementing the Double Bracket iteration algorithm.
@@ -215,10 +219,10 @@ class DoubleBracketIteration:
         """
         h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
         h2 = h_np @ h_np
-        a = state.conj()@ h2 @ state
-        b = state.conj()@ h_np @ state
-        return (np.sqrt(np.real((a - b ** 2)))).item()
-        r#eturn np.real(self.h.energy_fluctuation(state))
+        a = state.conj() @ h2 @ state
+        b = state.conj() @ h_np @ state
+        return (np.sqrt(np.real(a - b**2))).item()
+        r  # eturn np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))

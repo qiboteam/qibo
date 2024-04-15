@@ -143,6 +143,7 @@ def polynomial_step(
     else:
         return None
 
+
 def simulated_annealing_step(
     dbi_object,
     d: Optional[np.array] = None,

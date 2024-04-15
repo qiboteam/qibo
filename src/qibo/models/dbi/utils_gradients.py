@@ -39,8 +39,8 @@ def d_ansatz(params: np.array, d_type: d_ansatz_type):
 
         op_list = [params[i] * symbols.Z(i) for i in range(len(params))]
         symbolHam = op_list[0]
-        for i in range(len(params)-1):
-            symbolHam += op_list[i+1]
+        for i in range(len(params) - 1):
+            symbolHam += op_list[i + 1]
 
         d = SymbolicHamiltonian(symbolHam, nqubits=len(params))
         d = d.dense.matrix
@@ -192,7 +192,7 @@ def gradient_descent_dbr_d_ansatz(
         d = d_ansatz(params, d_type)
         s = polynomial_step(dbi_new, n=3, d=d)
         dbi_new(s, d=d)
-        loss[i + 1] = dbi_new.loss(0.0,d=d)
+        loss[i + 1] = dbi_new.loss(0.0, d=d)
         params_hist[:, i + 1] = params
 
     return d, loss, grad, params_hist
