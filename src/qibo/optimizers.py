@@ -214,10 +214,12 @@ def newtonian(
 
 
 def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
-    """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
+    """Stochastic Gradient Descent (SGD) optimizer using Tensorflow or PyTorch backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
-    for a list of the available optimizers.
+    for a list of the available optimizers for Tensorflow.
+    See `torch.optim <https://pytorch.org/docs/stable/optim.html>`_ for a list of the available
+    optimizers for PyTorch.
 
     Args:
         loss (callable): Loss as a function of variational parameters to be
@@ -234,8 +236,10 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
-    if not backend.name == "tensorflow":
-        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
+    if not backend.name in ("tensorflow", "pytorch"):
+        raise_error(
+            RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend."
+        )
 
     sgd_options = {
         "nepochs": 1000000,

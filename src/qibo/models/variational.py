@@ -1,7 +1,4 @@
-import numpy as np
-
 from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian
 from qibo.models.evolution import StateEvolution
 
 
@@ -96,7 +93,10 @@ class VQE:
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
-            loss = lambda p, c, h: dtype(_loss(p, c, h))
+            if str(dtype) == "torch.float64":
+                loss = lambda p, c, h: _loss(p, c, h).item()
+            else:
+                loss = lambda p, c, h: dtype(_loss(p, c, h))
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
