@@ -127,7 +127,7 @@ def test_plus_density_matrix(backend):
 def test_list_available_backends():
     available_backends = {
         "numpy": True,
-        "tensorflow": False,
+        "tensorflow": True,
         "pytorch": True,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
