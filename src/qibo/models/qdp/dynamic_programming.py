@@ -157,6 +157,10 @@ class quantum_dynamic_programming:
         """Resets the entire quantum circuit."""
         self.c = models.Circuit(self.num_work_qubits + self.num_instruction_qubits)
 
+    def return_circuit(self):
+        """Return the whole circuit"""
+        return self.c
+
 class density_matrix_exponentiation(quantum_dynamic_programming):
     """
     Subclass of quantum_dynamic_programming for density matrix exponentiation.
