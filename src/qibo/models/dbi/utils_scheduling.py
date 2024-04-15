@@ -5,7 +5,7 @@ import hyperopt
 import numpy as np
 
 from qibo.models.dbi.double_bracket import DoubleBracketCost
-from qibo.models.dbi.utils import (
+from qibo.models.dbi.utils_analytical import (
     energy_fluctuation_polynomial_expansion_coef,
     least_squares_polynomial_expansion_coef,
     off_diagonal_norm_polynomial_expansion_coef,
@@ -123,7 +123,7 @@ def polynomial_step(
             coef = least_squares_polynomial_expansion_coef(dbi_object, d, n)
         elif cost is DoubleBracketCost.energy_fluctuation:
             coef = energy_fluctuation_polynomial_expansion_coef(
-                dbi_object, d, n, dbi_object.state
+                dbi_object, d, n, dbi_object.ref_state
             )
         else:
             raise ValueError(f"Cost function {cost} not recognized.")
@@ -142,3 +142,87 @@ def polynomial_step(
     # solution does not exist, return None
     else:
         return None
+
+def simulated_annealing_step(
+    dbi_object,
+    d: Optional[np.array] = None,
+    initial_s=None,
+    step_min=1e-5,
+    step_max=1,
+    s_jump_range=None,
+    s_jump_range_divident=5,
+    initial_temp=1,
+    cooling_rate=0.85,
+    min_temp=1e-5,
+    max_iter=200,
+):
+    """
+    Perform a single step of simulated annealing optimization.
+
+    Parameters:
+        dbi_object: DBI object
+            The object representing the problem to be optimized.
+        d: Optional[np.array], optional
+            The diagonal matrix 'd' used in optimization. If None, it uses the diagonal
+            matrix 'diagonal_h_matrix' from dbi_object.
+        initial_s: float or None, optional
+            Initial value for 's', the step size. If None, it is initialized using
+            polynomial_step function with 'n=4'. If 'polynomial_step' returns None,
+            'initial_s' is set to 'step_min'.
+        step_min: float, optional
+            Minimum value for the step size 's'.
+        step_max: float, optional
+            Maximum value for the step size 's'.
+        s_jump_range: float or None, optional
+            Range for the random jump in step size. If None, it's calculated based on
+            'step_min', 'step_max', and 's_jump_range_divident'.
+        s_jump_range_divident: int, optional
+            Dividend to determine the range for random jump in step size.
+        initial_temp: float, optional
+            Initial temperature for simulated annealing.
+        cooling_rate: float, optional
+            Rate at which temperature decreases in simulated annealing.
+        min_temp: float, optional
+            Minimum temperature threshold for termination of simulated annealing.
+        max_iter: int, optional
+            Maximum number of iterations for simulated annealing.
+
+    Returns:
+        float:
+            The optimized step size 's'.
+    """
+
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    if initial_s is None:
+        initial_s = polynomial_step(dbi_object=dbi_object, d=d, n=4)
+        if initial_s is None:
+            initial_s = step_min
+    if s_jump_range is None:
+        s_jump_range = (step_max - step_min) / s_jump_range_divident
+    current_s = initial_s
+    current_loss = dbi_object.loss(d=d, step=current_s)
+    temp = initial_temp
+
+    for _ in range(max_iter):
+        candidate_s = max(
+            step_min,
+            min(
+                current_s + np.random.uniform(-1 * s_jump_range, s_jump_range), step_max
+            ),
+        )
+        candidate_loss = dbi_object.loss(d=d, step=candidate_s)
+
+        # Calculate change in loss
+        delta_loss = candidate_loss - current_loss
+
+        # Determine if the candidate solution is an improvement
+        if delta_loss < 0 or np.random.rand() < math.exp(-delta_loss / temp):
+            current_s = candidate_s
+            current_loss = candidate_loss
+        # Cool down
+        temp *= cooling_rate
+        if temp < min_temp:
+            break
+
+    return current_s

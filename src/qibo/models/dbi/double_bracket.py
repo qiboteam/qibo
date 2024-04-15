@@ -6,26 +6,6 @@ import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
 
-
-class DoubleBracketCost(Enum):
-    """Define the DBI cost function."""
-
-    off_diagonal_norm = auto()
-    """Use off-diagonal norm as cost function."""
-    least_squares = auto()
-    """Use least squares as cost function."""
-    energy_fluctuation = auto()
-    """Use energy fluctuation as cost function."""
-
-
-# This is needed due to mutual dependencies between double_bracket.py and utils_scheduling.py
-from qibo.models.dbi.utils_scheduling import (
-    grid_search_step,
-    hyperopt_step,
-    polynomial_step,
-)
-
-
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
 
@@ -38,6 +18,23 @@ class DoubleBracketGeneratorType(Enum):
     # TODO: add double commutator (does it converge?)
 
 
+class DoubleBracketCost(Enum):
+    """Define the DBI cost function."""
+
+    off_diagonal_norm = auto()
+    """Use off-diagonal norm as cost function."""
+    least_squares = auto()
+    """Use least squares as cost function."""
+    energy_fluctuation = auto()
+    """Use energy fluctuation as cost function."""
+
+from qibo.models.dbi.utils_scheduling import (
+    grid_search_step,
+    hyperopt_step,
+    polynomial_step,
+    simulated_annealing_step,
+)
+
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
@@ -47,10 +44,9 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
-    # simulated_annealing = simulated_annealing_step
+    simulated_annealing = simulated_annealing_step
     """Use simulated annealing algorithm"""
-
-
+    
 class DoubleBracketIteration:
     """
     Class implementing the Double Bracket iteration algorithm.
@@ -154,8 +150,9 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function. (without the constant term norm(H))"""
-        h = self.h.matrix
-        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h @ d))
+        h_np = np.diag(np.diag(self.backend.to_numpy(self.h.matrix)))
+
+        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
 
     def choose_step(
         self,
@@ -168,7 +165,7 @@ class DoubleBracketIteration:
         step = scheduling(self, d=d, **kwargs)
         if (
             step is None
-            and scheduling == DoubleBracketScheduling.polynomial_approximation
+            and scheduling is DoubleBracketScheduling.polynomial_approximation
         ):
             kwargs["n"] = kwargs.get("n", 3)
             kwargs["n"] += 1
@@ -216,8 +213,12 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-
-        return np.real(self.h.energy_fluctuation(state))
+        h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
+        h2 = h_np @ h_np
+        a = state.conj()@ h2 @ state
+        b = state.conj()@ h_np @ state
+        return (np.sqrt(np.real((a - b ** 2)))).item()
+        r#eturn np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))

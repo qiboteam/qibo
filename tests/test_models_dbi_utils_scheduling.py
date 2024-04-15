@@ -13,13 +13,13 @@ from qibo.models.dbi.utils_scheduling import polynomial_step
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 1
-seed = 10
+SEED = 10
 """Number of steps for evolution."""
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_polynomial_fail_cases(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=SEED)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,

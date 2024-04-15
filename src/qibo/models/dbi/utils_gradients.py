@@ -18,7 +18,7 @@ class d_ansatz_type(Enum):
     # ising = auto() # for future implementation
 
 
-def d_ansatz(params: np.array, d_type: d_ansatz_type == d_ansatz_type.element_wise):
+def d_ansatz(params: np.array, d_type: d_ansatz_type):
     r"""
     Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
     If $\alpha_i$ are our parameters and d the number of qubits then:
@@ -37,11 +37,13 @@ def d_ansatz(params: np.array, d_type: d_ansatz_type == d_ansatz_type.element_wi
 
     elif d_type is d_ansatz_type.local_1:
 
-        op_list = [params[i] * symbols.Z(i) for i in len(params)]
-        from functools import reduce
+        op_list = [params[i] * symbols.Z(i) for i in range(len(params))]
+        symbolHam = op_list[0]
+        for i in range(len(params)-1):
+            symbolHam += op_list[i+1]
 
-        d = SymbolicHamiltonian(reduce(symbols.Z.add, op_list), nqubits=len(params))
-        d.dense.matrix
+        d = SymbolicHamiltonian(symbolHam, nqubits=len(params))
+        d = d.dense.matrix
     else:
         raise ValueError(f"Parameterization type {type} not recognized.")
 
@@ -137,7 +139,7 @@ def gradientDiagonalEntries(
             params_new = deepcopy(params)
             params_new[i] += delta
             d_new = d_ansatz(params_new, d_type)
-            grad[i] = (dbi_object.cost(d_new) - dbi_object.cost(d)) / delta
+            grad[i] = (dbi_object.loss(0.0, d_new) - dbi_object.loss(0.0, d)) / delta
     return grad
 
 
@@ -176,21 +178,21 @@ def gradient_descent_dbr_d_ansatz(
     dbi_new = deepcopy(dbi_object)
     s = polynomial_step(dbi_object, n=3, d=d)
     dbi_new(s, d=d)
-    loss[0] = dbi_new.least_squares(d)
+    loss[0] = dbi_new.loss(0.0, d)
     params_hist = np.empty((len(params), nmb_iterations + 1))
     params_hist[:, 0] = params
 
     for i in range(nmb_iterations):
         dbi_new = deepcopy(dbi_object)
         grad[i, :] = gradientDiagonalEntries(
-            dbi_object, params, h, analytic=analytic, ansatz=d_type
+            dbi_object, params, h, analytic=analytic, d_type=d_type
         )
         for j in range(len(params)):
             params[j] = params[j] - lr * grad[i, j]
         d = d_ansatz(params, d_type)
-        s = polynomial_step(dbi_new, n=5, d=d)
+        s = polynomial_step(dbi_new, n=3, d=d)
         dbi_new(s, d=d)
-        loss[i + 1] = dbi_new.cost(d)
+        loss[i + 1] = dbi_new.loss(0.0,d=d)
         params_hist[:, i + 1] = params
 
     return d, loss, grad, params_hist
