@@ -1,13 +1,3 @@
-"""
-This module contains a class representing a quantum dynamic programming algorithm
-and its subclass for density matrix exponentiation.
-
-Classes:
-    - QDP_memory_type: Enumerated type representing memory types for quantum dynamic programming.
-    - quantum_dynamic_programming: Class representing a quantum dynamic programming algorithm.
-    - density_matrix_exponentiation: Subclass of quantum_dynamic_programming for density matrix exponentiation.
-"""
-
 from abc import abstractmethod
 from enum import Enum, auto
 import numpy as np
@@ -58,6 +48,49 @@ class quantum_dynamic_programming:
         """
         return self.memory_call_circuit(num_instruction_qubits_per_query)
 
+    @abstractmethod
+    def memory_usage_query_circuit(self):
+        """
+        Defines the memory usage query circuit.
+        """
+        raise_error(NotImplementedError)
+
+    def instruction_qubits_initialization(self):
+        """Initializes the instruction qubits."""
+        pass
+
+    def QME(self, register, QME_rotation_gate):
+        """
+        Performs quantum measurement emulation.
+
+        Args:
+            register (int): The register index.
+            rotation_gate (callable): The rotation gate about an axis parallel 
+            to the instruction qubit(s).
+        """
+        import random
+        coin_flip = random.choice([0, 1])
+        if coin_flip == 0:
+            QME_gate = QME_rotation_gate(np.pi, register) 
+        elif coin_flip == 1:
+            QME_gate = gates.I(register)
+        self.c.add(QME_gate)
+
+    def trace_instruction_qubit(self):
+        """Traces the instruction qubit."""
+        for qubit in self.list_id_current_instruction_reg:
+            self.c.add(gates.M(qubit))
+
+    def instruction_reg_delegation(self):
+        """
+        Uses a work qubit as an instruction qubit.
+        """
+        pass
+
+    def increment_current_instruction_register(self):
+        """Increments the current instruction register index."""
+        self.id_current_instruction_reg += 1
+
     def memory_call_circuit(self, num_instruction_qubits_per_query):
         """
         Executes the memory call circuit based on the selected memory type.
@@ -91,68 +124,35 @@ class quantum_dynamic_programming:
                 self.QME(self.id_current_instruction_reg, self.QME_rotation_gate)
                 self.instruction_reg_delegation()
 
+    @abstractmethod
     def single_register_reset(self, register):
         """
         Resets a single register.
 
         Args:
             register (int): The register index.
-        """
-        self.c.add(gates.reset(register))
 
+        Example reset code:
+            self.c.add(gates.reset(register))
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def all_register_reset(self):
+        #todo: find way to do reset
         """
         Resets all instruction registers.
+
+        Example reset code:
+            for qubit in self.num_instruction_qubits:
+                self.c.add(gates.reset(qubit))
+            self.id_current_instruction_reg = 0
         """
-        for qubit in self.num_instruction_qubits:
-            self.c.add(gates.reset(qubit))
-        self.id_current_instruction_reg = 0
+        raise_error(NotImplementedError)
 
     def circuit_reset(self):
         """Resets the entire quantum circuit."""
         self.c = models.Circuit(self.num_work_qubits + self.num_instruction_qubits)
-
-    def increment_current_instruction_register(self):
-        """Increments the current instruction register index."""
-        self.id_current_instruction_reg += 1
-
-    @abstractmethod
-    def memory_usage_query_circuit(self):
-        """
-        Defines the memory usage query circuit.
-        """
-        raise_error(NotImplementedError)
-
-    def instruction_qubits_initialization(self):
-        """Initializes the instruction qubits."""
-        pass
-
-    def QME(self, register, rotation_gate):
-        """
-        Performs quantum measurement emulation.
-
-        Args:
-            register (int): The register index.
-            rotation_gate (callable): The rotation gate.
-        """
-        import random
-        coin_flip = random.choice([0, 1])
-        if coin_flip == 0:
-            QME_gate = rotation_gate(np.pi, register)  # nu is the vector parallel to rho
-        elif coin_flip == 1:
-            QME_gate = gates.I(register)
-        self.c.add(QME_gate)
-
-    def trace_instruction_qubit(self):
-        """Traces the instruction qubit."""
-        for qubit in self.list_id_current_instruction_reg:
-            self.c.add(gates.M(qubit))
-
-    def instruction_reg_delegation(self):
-        """
-        Uses a work qubit as an instruction qubit.
-        """
-        pass
 
 class density_matrix_exponentiation(quantum_dynamic_programming):
     """
