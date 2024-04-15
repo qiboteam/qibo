@@ -22,7 +22,7 @@ class quantum_dynamic_programming:
         number_muq_per_call (int): Number of memory units per call.
         QME_rotation_gate (callable): Optional. Rotation gate for quantum measurement emulation.
     """
-    def __init__(self, num_work_qubits, num_instruction_qubits, number_muq_per_call, QME_rotation_gate=None, circuit = None):
+    def __init__(self, num_work_qubits, num_instruction_qubits, number_muq_per_call, QME_rotation_gate=None):
         self.num_work_qubits = int(num_work_qubits)
         self.num_instruction_qubits = int(num_instruction_qubits)
 
@@ -33,10 +33,7 @@ class quantum_dynamic_programming:
 
         self.M = number_muq_per_call
         self.memory_type = QDP_memory_type.default
-        if circuit is None:
-            self.c = models.Circuit(self.num_work_qubits + self.num_instruction_qubits)
-        else:
-            self.c = circuit
+        self.c = models.Circuit(self.num_work_qubits + self.num_instruction_qubits)
         self.QME_rotation_gate = QME_rotation_gate
 
     def __call__(self, num_instruction_qubits_per_query):
@@ -169,7 +166,7 @@ class density_matrix_exponentiation(quantum_dynamic_programming):
         number_muq_per_call (int): Number of memory units per call.
     """
     def __init__(self, theta, N, num_work_qubits, num_instruction_qubits, number_muq_per_call):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call,circuit=None)
+        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call)
         self.theta = theta  # overall rotation angle
         self.N = N  # number of steps
         self.delta = theta / N  # small rotation angle
