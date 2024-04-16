@@ -236,10 +236,6 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
-    if not backend.name in ("tensorflow", "pytorch"):
-        raise_error(
-            RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend."
-        )
 
     sgd_options = {
         "nepochs": 1000000,
@@ -250,7 +246,41 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
     if options is not None:
         sgd_options.update(options)
 
-    # proceed with the training
+    if backend.name == "tensorflow":
+        return _sgd_tf(loss, initial_parameters, args, sgd_options, compile, backend)
+    elif backend.name == "pytorch":
+        if compile:
+            log.warning(
+                "PyTorch does not support compilation of the optimization graph."
+            )
+        return _sgd_torch(loss, initial_parameters, args, sgd_options, backend)
+    else:
+        raise_error(
+            RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend."
+        )
+
+
+def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
+
+    vparams = backend.np.tensor(initial_parameters, requires_grad=True)
+    optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
+        params=[vparams], lr=sgd_options["learning_rate"]
+    )
+
+    for e in range(sgd_options["nepochs"]):
+        optimizer.zero_grad()
+        l = loss(vparams, *args)
+        l.backward()
+        optimizer.step()
+
+        if e % sgd_options["nmessage"] == 1:
+            log.info("ite %d : loss %f", e, l.item())
+
+    return loss(vparams, *args).item(), vparams.detach().numpy(), sgd_options
+
+
+def _sgd_tf(loss, initial_parameters, args, sgd_options, compile, backend):
+
     vparams = backend.tf.Variable(initial_parameters)
     optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"]
