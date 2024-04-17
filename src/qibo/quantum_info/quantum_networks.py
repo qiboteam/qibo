@@ -705,7 +705,7 @@ class QuantumComb(QuantumNetwork):
         expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
 
         if order == None:
-            norm = self._backend.calculate_norm(reduced - expected)
+            norm = self._backend.calculate_norm(reduced - expected, order=2)
         else:
             norm = self._backend.calculate_norm(reduced - expected, order=order)
         if norm > precision_tol:
