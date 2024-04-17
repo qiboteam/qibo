@@ -704,7 +704,10 @@ class QuantumComb(QuantumNetwork):
         sub_comb = np.tensordot(reduced, trace(dim_in).full(), axes=1)
         expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
 
-        norm = self._backend.calculate_norm((reduced - expected), order=order)
+        if order == None:
+            norm = self._backend.calculate_norm(reduced - expected)
+        else:
+            norm = self._backend.calculate_norm(reduced - expected, order=order)
         if norm > precision_tol:
             return False
         elif len(self.partition) == 2:
