@@ -271,9 +271,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/comp_basis_encoder.png
-   :width: 3400px
-   :height: 2000px
-   :scale: 25 %
+   :width: 400
+   :height: 250
    :align: center
 
 
@@ -307,9 +306,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/phase_encoder.png
-   :width: 1333px
-   :height: 1552px
-   :scale: 30 %
+   :width: 300
+   :height: 300
    :align: center
 
 
@@ -346,9 +344,8 @@ For example, to encode a :math:`8`-dimensional data, one could use the so-called
 *tree* architechture below:
 
 .. image:: ../_static/unary_encoder_tree.png
-   :width: 1333px
-   :height: 1552px
-   :scale: 30 %
+   :width: 400
+   :height: 500
    :align: center
 
 where the first gate is the :class:`qibo.gates.X`
@@ -361,9 +358,8 @@ On the other hand, the same encoding could be performed using the so-called
 *diagonal* (also known as *ladder*) architecture below:
 
 .. image:: ../_static/unary_encoder_ladder.png
-   :width: 1867px
-   :height: 1552px
-   :scale: 30 %
+   :width: 700
+   :height: 550
    :align: center
 
 This architecture leads to a choice of angles based on
@@ -390,6 +386,25 @@ Entangling layer
 """"""""""""""""
 
 Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
+any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
+If the chosen gate is parametrized, all phases are set to :math:`0.0`.
+Note that these phases can be updated a posterior by using
+:meth:`qibo.models.Circuit.set_parameters`.
+There are four possible choices of layer ``architecture``:
+``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+For instance, we show below an example of each architecture for ``nqubits = 6``.
+
+
+.. image:: ../_static/entangling_layer.png
+   :width: 800
+   :height: 450
+   :align: center
+
+
+If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
+with the last qubit as the control qubit and the first qubit as a target qubit.
+
 
 .. autofunction:: qibo.models.encodings.entangling_layer
 
@@ -1627,6 +1642,7 @@ We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ pac
 It is possible to run Clifford circuits using `stim` as an engine:
 
 .. code-block::  python
+
     from qibo.backends import CliffordBackend
     from qibo.quantum_info import Clifford, random_clifford
 
@@ -2375,7 +2391,7 @@ The user can switch backends using
     qibo.set_backend("numpy")
 
 before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``tensorflow``, ``numpy``.
+from ``qibojit``, ``pytorch``, ``tensorflow``, ``numpy``.
 
 Some backends support different platforms. For example, the qibojit backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
@@ -2456,4 +2472,8 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Cloud Backends
 ^^^^^^^^^^^^^^
 
-Additional backends, that support the remote execution of quantum circuits through cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin `qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_. For more information please refer to the `official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.
+Additional backends that support the remote execution of quantum circuits through
+cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin
+`qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_.
+For more information please refer to the
+`official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.

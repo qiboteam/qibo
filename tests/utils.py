@@ -2,13 +2,6 @@ import numpy as np
 from scipy import sparse
 
 
-def random_complex(shape, dtype=None):
-    x = np.random.random(shape) + 1j * np.random.random(shape)
-    if dtype is None:
-        return x
-    return x.astype(dtype)
-
-
 def random_sparse_matrix(backend, n, sparse_type=None):
     if backend.name == "tensorflow":
         nonzero = int(0.1 * n * n)

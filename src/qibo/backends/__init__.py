@@ -4,6 +4,7 @@ from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
+from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
@@ -27,6 +28,9 @@ def construct_backend(backend, **kwargs):
 
     elif backend == "tensorflow":
         return TensorflowBackend()
+
+    elif backend == "pytorch":
+        return PyTorchBackend()
 
     elif backend == "numpy":
         return NumpyBackend()
@@ -76,6 +80,7 @@ class GlobalBackend(NumpyBackend):
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "tensorflow"},
         {"backend": "numpy"},
+        {"backend": "pytorch"},
     ]
 
     def __new__(cls):

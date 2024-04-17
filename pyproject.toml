@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.7"
+version = "0.2.8"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -33,6 +33,7 @@ numpy = "^1.26.4"
 networkx = "^3.2.1"
 cvxpy = { version = "^1.4.2", optional = true }
 tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
+torch = { version = "^2.1.1", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -63,12 +64,12 @@ cirq = "^1.1.0"
 cvxpy = "^1.3.1"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
-dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
+torch = "^2.1.1"
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
 
@@ -100,7 +101,8 @@ qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]
 tensorflow = ["tensorflow"]
-qinfo = ["cvxpy"]
+torch = ["torch"]
+qinfo = ["cvxpy", "stim"]
 
 [tool.pylint.reports]
 output-format = "colorized"

@@ -101,6 +101,8 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
+    if backend.name == "pytorch":
+        pytest.skip("Skipping VQE test for pytorch backend.")
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
     if method != "sgd" and backend.name == "tensorflow":
@@ -138,7 +140,7 @@ def test_vqe(backend, method, options, compile, filename):
         assert_regression_fixture(backend, params, filename)
 
     # test energy fluctuation
-    state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
+    state = backend.np.ones(2**nqubits) / np.sqrt(2**nqubits)
     energy_fluctuation = v.energy_fluctuation(state)
     assert energy_fluctuation >= 0
     backend.set_threads(n_threads)
@@ -305,6 +307,8 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
+    if backend.name == "pytorch":
+        pytest.skip("Skipping VQE test for pytorch backend.")
     nqubits = 4
     layers = 1
     circuit = models.Circuit(nqubits)

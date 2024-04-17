@@ -215,8 +215,6 @@ def test_sample_training_circuit(nqubits):
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
     c.add(gates.M(q) for q in range(nqubits))
 
-    for j in range(len(c.queue)):
-        c.queue[j].clifford = True
     with pytest.raises(ValueError):
         sample_training_circuit_cdr(c)
     with pytest.raises(ValueError):

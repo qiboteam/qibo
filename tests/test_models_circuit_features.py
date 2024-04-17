@@ -328,12 +328,17 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
             if nqubits == 1
             else Counter({"11": 674, "10": 155, "01": 154, "00": 41})
         )
+    elif backend.__class__.__name__ == "PyTorchBackend":
+        test_frequencies = (
+            Counter({"1": 817, "0": 207})
+            if nqubits == 1
+            else Counter({"11": 664, "01": 162, "10": 166, "00": 32})
+        )
     else:
         test_frequencies = (
             Counter({"1": 790, "0": 234})
             if nqubits == 1
             else Counter({"11": 618, "10": 169, "01": 185, "00": 52})
         )
-
     for key in dict(test_frequencies).keys():
         backend.assert_allclose(result.frequencies()[key], test_frequencies[key])
