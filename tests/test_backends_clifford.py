@@ -9,6 +9,7 @@ from qibo import Circuit, gates, set_backend
 from qibo.backends import (
     CliffordBackend,
     GlobalBackend,
+    JaxBackend,
     NumpyBackend,
     PyTorchBackend,
     TensorflowBackend,
@@ -22,7 +23,7 @@ numpy_bkd = NumpyBackend()
 
 def construct_clifford_backend(backend):
     if (
-        isinstance(backend, (TensorflowBackend, PyTorchBackend))
+        isinstance(backend, (TensorflowBackend, PyTorchBackend, JaxBackend))
         or backend.__class__.__name__ == "CuQuantumBackend"
     ):
         with pytest.raises(NotImplementedError):

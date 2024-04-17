@@ -2,6 +2,7 @@ import os
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
+from qibo.backends.jax import JaxBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.pytorch import PyTorchBackend
@@ -34,6 +35,9 @@ def construct_backend(backend, **kwargs):
 
     elif backend == "numpy":
         return NumpyBackend()
+
+    elif backend == "jax":
+        return JaxBackend()
 
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
