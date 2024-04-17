@@ -589,6 +589,8 @@ class QuantumNetwork:
 
         self.system_input = self._check_system_input(self.system_input, self.partition)
 
+        self._einsum = self._backend.np.einsum
+
         try:
             if self._pure:
                 self._tensor = np.reshape(self._tensor, self.partition)
@@ -806,7 +808,7 @@ class QuantumChannel(QuantumComb):
         self._tensor = self.full()
         self._pure = False
 
-        partial_trace = np.einsum("jkjl -> kl", self._tensor)
+        partial_trace = self._einsum("jkjl -> kl", self._tensor)
         identity = self._backend.cast(
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
@@ -859,9 +861,9 @@ class QuantumChannel(QuantumComb):
         operator = np.copy(self.operator())
 
         if self.is_pure():
-            return np.einsum("kj,ml,jl -> km", operator, np.conj(operator), state)
+            return self._einsum("kj,ml,jl -> km", operator, np.conj(operator), state)
 
-        return np.einsum("jklm, km", operator, state)
+        return self._einsum("jklm, km", operator, state)
 
 
 class StochQuantumNetwork:
@@ -960,7 +962,7 @@ def link_product(
             except:
                 continue
 
-    new_tensor = np.einsum(subscripts, *tensors)
+    new_tensor = self._einsum(subscripts, *tensors)
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
 
