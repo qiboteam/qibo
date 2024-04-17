@@ -699,6 +699,9 @@ class QuantumComb(QuantumNetwork):
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
         dim_out = self.partition[-1]
         dim_in = self.partition[-2]
 
@@ -706,10 +709,8 @@ class QuantumComb(QuantumNetwork):
         sub_comb = np.tensordot(reduced, trace(dim_in).full(), axes=1)
         expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
 
-        if order == None:
-            norm = self._backend.calculate_norm(reduced - expected, order=2)
-        else:
-            norm = self._backend.calculate_norm(reduced - expected, order=order)
+        norm = self._backend.calculate_norm(reduced - expected, order=order)
+
         if norm > precision_tol:
             return False
         elif len(self.partition) == 2:
@@ -962,7 +963,7 @@ def link_product(
             except:
                 continue
 
-    new_tensor = self._einsum(subscripts, *tensors)
+    new_tensor = np.einsum(subscripts, *tensors)
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
 
