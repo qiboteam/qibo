@@ -7,6 +7,7 @@ from operator import mul
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import tensorflow as tf
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
@@ -83,6 +84,12 @@ class QuantumNetwork:
         n = len(partition)
         order = cls._order_operator2tensor(n)
         try:
+            if isinstance(operator, tf.Tensor):
+                return (
+                    operator.reshape(list(partition) * 2)
+                    .permute(order)
+                    .reshape([dim**2 for dim in partition])
+                )
             return (
                 operator.reshape(list(partition) * 2)
                 .transpose(order)
@@ -196,7 +203,10 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor2operator(n)
 
-        operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
+        if backend.__class__.__name__ == "TensorflowBackend":
+            opertor = tensor.reshape(np.repeat(self.partition, 2)).permute(order)
+        else:
+            operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
 
         return backend.cast(operator, dtype=self._tensor.dtype)
 
