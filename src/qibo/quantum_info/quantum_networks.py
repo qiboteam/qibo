@@ -7,7 +7,6 @@ from operator import mul
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
-import tensorflow as tf
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
@@ -84,17 +83,16 @@ class QuantumNetwork:
         n = len(partition)
         order = cls._order_operator2tensor(n)
         try:
-            if isinstance(operator, tf.Tensor):
-                return (
-                    operator.reshape(list(partition) * 2)
-                    .permute(order)
-                    .reshape([dim**2 for dim in partition])
-                )
             return (
                 operator.reshape(list(partition) * 2)
                 .transpose(order)
                 .reshape([dim**2 for dim in partition])
             )
+            # return (
+            #     operator.reshape(list(partition) * 2)
+            #     .permute(order)
+            #     .reshape([dim**2 for dim in partition])
+            # )
         except:
             raise_error(
                 ValueError,
@@ -203,10 +201,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor2operator(n)
 
-        if backend.__class__.__name__ == "TensorflowBackend":
-            opertor = tensor.reshape(np.repeat(self.partition, 2)).permute(order)
-        else:
-            operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
+        operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
 
         return backend.cast(operator, dtype=self._tensor.dtype)
 
@@ -600,6 +595,7 @@ class QuantumNetwork:
         self.system_input = self._check_system_input(self.system_input, self.partition)
 
         self._einsum = self._backend.np.einsum
+        self._tensordot = self._backend.np.tensordot
 
         try:
             if self._pure:
@@ -627,7 +623,7 @@ class QuantumNetwork:
         if self.is_pure():
             """Reshapes input matrix based on purity."""
             tensor.reshape([self.dims])
-            tensor = np.tensordot(tensor, np.conj(tensor), axes=0)
+            tensor = self._tensordot(tensor, np.conj(tensor), axes=0)
             tensor = self._operator2tensor(tensor, self.partition, self.system_input)
 
             if update:
@@ -715,9 +711,9 @@ class QuantumComb(QuantumNetwork):
         dim_out = self.partition[-1]
         dim_in = self.partition[-2]
 
-        reduced = np.tensordot(self.full(), trace(dim_out).full(), axes=1)
-        sub_comb = np.tensordot(reduced, trace(dim_in).full(), axes=1)
-        expected = np.tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
+        reduced = self._tensordot(self.full(), trace(dim_out).full(), axes=1)
+        sub_comb = self._tensordot(reduced, trace(dim_in).full(), axes=1)
+        expected = self._tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
 
         norm = self._backend.calculate_norm(reduced - expected, order=order)
 
@@ -804,9 +800,9 @@ class QuantumChannel(QuantumComb):
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
 
-        reduced = np.tensordot(self.full(), trace(self.partition[1]).full(), axes=1)
-        sub_comb = np.tensordot(reduced, trace(self.partition[0]).full(), axes=1)
-        expected = np.tensordot(
+        reduced = self._tensordot(self.full(), trace(self.partition[1]).full(), axes=1)
+        sub_comb = self._tensordot(reduced, trace(self.partition[0]).full(), axes=1)
+        expected = self._tensordot(
             sub_comb, trace(self.partition[0]).full() / self.partition[0], axes=0
         )
 
