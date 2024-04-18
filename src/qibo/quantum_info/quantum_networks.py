@@ -717,7 +717,7 @@ class QuantumComb(QuantumNetwork):
 
         norm = self._backend.calculate_norm(reduced - expected, order=order)
 
-        if norm > precision_tol:
+        if float(norm) > precision_tol:
             return False
         elif len(self.partition) == 2:
             return True
@@ -807,7 +807,7 @@ class QuantumChannel(QuantumComb):
         )
 
         norm = self._backend.calculate_norm((reduced - expected), order=order)
-        if norm > precision_tol:
+        if float(norm) > precision_tol:
             return False
         elif len(self.partition) == 2:
             return True
