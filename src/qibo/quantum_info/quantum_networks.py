@@ -10,7 +10,6 @@ import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
-from tests.conftest import backend
 
 
 class QuantumNetwork:
