@@ -636,7 +636,10 @@ class QuantumNetwork:
 
 class QuantumComb(QuantumNetwork):
     """Quantum comb is a quantum network such that the systems follows a sequential order.
-    It is also called the 'non-Markovian quantum process' in many literatures.
+    It is also called the *non-Markovian quantum process* in many literatures.
+    Specifically, a quantum comb is a quantum network of the form :math:`J[┍i1┑,┕o1┙,┍i2┑,┕o2┙, ...]`,
+    where the the process first take an input state from system :math:`i1`, then output a state to system :math:`o1`, and so on.
+    This is a non-Markovian process as the output of the system :math:`o2` may depend on what happened in systems :math:`i1`, and :math:`o1`.
 
     A quantum channel is a special case of quantum comb, where there are only one input
     system and one output system.
@@ -755,6 +758,29 @@ class QuantumComb(QuantumNetwork):
 
 
 class QuantumChannel(QuantumComb):
+    """Quantum channel is a special case of quantum comb, where there are only one input
+    and one output.
+    This class includes all quantum chnanels, including unitary operators, quantum states, etc.
+    To construct a `QuantumChannel` object, one can use the `QuantumNetwork.from_nparray` method.
+    **Note**: if one try to construct a quantum network from a unitary operator or Choi operator, the first
+    system will be the output. However, here we assume the first system is the input system. It is
+    important to specify `inverse=True` when constructing by `QuantumNetwork.from_nparray`.
+
+    Args:
+        tensor (ndarray): the tensor representations of the quantum Comb.
+            partition (List[int] or Tuple[int]): partition of ``matrix``. If not provided and
+            `system_input` is `None`, assume the input is a quantum state, whose input is a trivial
+            system. If `system_input` is set to `True`, assume the input is an observable, whose
+            output is a trivial system.
+        system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
+            Choi operator. If ``None`` the default is ``(True,False)``.
+            Defaults to ``None``.
+        pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
+            state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+    """
 
     def __init__(
         self,
