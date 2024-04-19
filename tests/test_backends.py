@@ -1,3 +1,5 @@
+import platform
+
 import numpy as np
 import pytest
 
@@ -125,9 +127,10 @@ def test_plus_density_matrix(backend):
 
 
 def test_list_available_backends():
+    tensorflow = False if platform.system() == "Windows" else True
     available_backends = {
         "numpy": True,
-        "tensorflow": True,
+        "tensorflow": tensorflow,
         "pytorch": True,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
