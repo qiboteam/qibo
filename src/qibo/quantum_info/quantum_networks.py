@@ -10,6 +10,7 @@ import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
+from tests.conftest import backend
 
 
 class QuantumNetwork:
@@ -615,11 +616,16 @@ class QuantumNetwork:
         if backend is None:  # pragma: no cover
             backend = self._backend
         tensor = np.copy(self._tensor)
+        tensor = backend.cast(tensor, dtype=self._tensor.dtype)
+        conj = backend.np.conj
 
         if self.is_pure():
             """Reshapes input matrix based on purity."""
             tensor.reshape(self.dims)
-            tensor = self._tensordot(tensor, np.conj(tensor), axes=0)
+            if self._backend.__class__.__name__ == "PyTorchBackend":
+                tensor = self._tensordot(tensor, conj(tensor), dims=0)
+            else:
+                tensor = self._tensordot(tensor, conj(tensor), axes=0)
             tensor = self._operator2tensor(tensor, self.partition, self.system_input)
 
             if update:
@@ -704,12 +710,26 @@ class QuantumComb(QuantumNetwork):
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
 
+        backend = self._backend
+
         dim_out = self.partition[-1]
         dim_in = self.partition[-2]
 
-        reduced = self._tensordot(self.full(), trace(dim_out).full(), axes=1)
-        sub_comb = self._tensordot(reduced, trace(dim_in).full(), axes=1)
-        expected = self._tensordot(sub_comb, trace(dim_in).full() / dim_in, axes=0)
+        trace_out = backend.cast(
+            trace(dim_out, backend=backend).full(), dtype=self._tensor.dtype
+        )
+        trace_in = backend.cast(
+            trace(dim_in, backend=backend).full(), dtype=self._tensor.dtype
+        )
+
+        if self._backend.__class__.__name__ == "PyTorchBackend":
+            reduced = self._tensordot(self.full(), trace_out, dims=1)
+            sub_comb = self._tensordot(reduced, trace_in, dims=1)
+            expected = self._tensordot(sub_comb, trace_in / dim_in, dims=0)
+        else:
+            reduced = self._tensordot(self.full(), trace_out, axes=1)
+            sub_comb = self._tensordot(reduced, trace_in, axes=1)
+            expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
 
         norm = self._backend.calculate_norm(reduced - expected, order=order)
 
@@ -796,11 +816,26 @@ class QuantumChannel(QuantumComb):
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
 
-        reduced = self._tensordot(self.full(), trace(self.partition[1]).full(), axes=1)
-        sub_comb = self._tensordot(reduced, trace(self.partition[0]).full(), axes=1)
-        expected = self._tensordot(
-            sub_comb, trace(self.partition[0]).full() / self.partition[0], axes=0
+        backend = self._backend
+
+        dim_out = self.partition[-1]
+        dim_in = self.partition[-2]
+
+        trace_out = backend.cast(
+            trace(dim_out, backend=backend).full(), dtype=self._tensor.dtype
         )
+        trace_in = backend.cast(
+            trace(dim_in, backend=backend).full(), dtype=self._tensor.dtype
+        )
+
+        if self._backend.__class__.__name__ == "PyTorchBackend":
+            reduced = self._tensordot(self.full(), trace_in, dims=0)
+            sub_comb = self._tensordot(reduced, trace_out, dims=0)
+            expected = self._tensordot(sub_comb, trace_out / dim_out, dims=1)
+        else:
+            reduced = self._tensordot(self.full(), trace_in, axes=0)
+            sub_comb = self._tensordot(reduced, trace_out, axes=0)
+            expected = self._tensordot(sub_comb, trace_out / dim_out, axes=1)
 
         norm = self._backend.calculate_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:
@@ -861,10 +896,11 @@ class QuantumChannel(QuantumComb):
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        operator = np.copy(self.operator())
+        operator = self.copy().operator()
+        conj = self._backend.np.conj
 
         if self.is_pure():
-            return self._einsum("ij,lk,il", operator, np.conj(operator), state)
+            return self._einsum("ij,lk,il", operator, conj(operator), state)
 
         return self._einsum("ijkl, jl", operator, state)
 

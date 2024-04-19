@@ -311,9 +311,7 @@ def test_non_hermitian_and_prints(backend):
     )
 
     assert not network.is_hermitian()
-    # assert not network.is_causal()
     assert not network.is_positive_semidefinite()
-    # assert not network.is_channel()
 
     assert network.__str__() == "J[┍4┑, ┕4┙]"
 
@@ -336,12 +334,16 @@ def test_uility_func():
 
 
 def test_predefined(backend):
-    id = identity(2)
-    tr = trace(2)
+    id = identity(2, backend=backend)
+    id_mat = id.matrix()
+    tr = trace(2, backend=backend)
 
     backend.assert_allclose(
-        id.matrix(backend=backend),
-        np.array([[1, 0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 1]]),
+        id_mat,
+        backend.cast(
+            np.array([[1, 0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 1]]),
+            dtype=id_mat.dtype,
+        ),
         atol=1e-8,
     )
 
