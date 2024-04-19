@@ -195,7 +195,9 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor2operator(n)
 
-        operator = np.transpose(tensor.reshape(np.repeat(self.partition, 2)), order)
+        operator = np.transpose(
+            tensor.reshape(tuple(np.repeat(self.partition, 2))), order
+        )
 
         return backend.cast(operator, dtype=self._tensor.dtype)
 
@@ -616,7 +618,7 @@ class QuantumNetwork:
 
         if self.is_pure():
             """Reshapes input matrix based on purity."""
-            tensor.reshape([self.dims])
+            tensor.reshape(self.dims)
             tensor = self._tensordot(tensor, np.conj(tensor), axes=0)
             tensor = self._operator2tensor(tensor, self.partition, self.system_input)
 
