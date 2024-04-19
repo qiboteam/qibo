@@ -215,7 +215,7 @@ def test_with_states(backend):
 
     state_output = channel.apply_density_matrix(backend, state, nqubits)
     state_output_network = network_channel.apply(state)
-    state_output_link = network_state.link_product("ij,kj -> ik", network_channel)
+    state_output_link = network_state.link_product("ij,jk -> ik", network_channel)
 
     backend.assert_allclose(state_output_network, state_output)
     backend.assert_allclose(state_output_link.matrix(backend=backend), state_output)
@@ -292,7 +292,7 @@ def test_apply(backend):
     state = random_density_matrix(dims, backend=backend)
     unitary = random_unitary(dims, backend=backend)
     network = QuantumChannel.from_nparray(
-        unitary, (dims, dims), pure=True, backend=backend
+        unitary, (dims, dims), pure=True, backend=backend, inverse=True
     )
 
     applied = network.apply(state)

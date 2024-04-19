@@ -83,7 +83,7 @@ class QuantumNetwork:
         n = len(partition)
         order = cls._order_operator2tensor(n)
 
-        tensor = operator.reshape(list(partition) * 2).transpose(order)
+        tensor = np.transpose(operator.reshape(list(partition) * 2), order)
 
         try:
             return tensor.reshape([dim**2 for dim in partition])
@@ -195,7 +195,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor2operator(n)
 
-        operator = tensor.reshape(np.repeat(self.partition, 2)).transpose(order)
+        operator = np.transpose(tensor.reshape(np.repeat(self.partition, 2)), order)
 
         return backend.cast(operator, dtype=self._tensor.dtype)
 
@@ -862,9 +862,9 @@ class QuantumChannel(QuantumComb):
         operator = np.copy(self.operator())
 
         if self.is_pure():
-            return self._einsum("kj,ml,jl -> km", operator, np.conj(operator), state)
+            return self._einsum("ij,lk,il", operator, np.conj(operator), state)
 
-        return self._einsum("jklm, km", operator, state)
+        return self._einsum("ijkl, jl", operator, state)
 
 
 class StochQuantumNetwork:
