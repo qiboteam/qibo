@@ -134,7 +134,7 @@ def test_list_available_backends():
         "pytorch": True,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
-        "qibocloud": False,
+        "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
     }
     assert available_backends == list_available_backends()
