@@ -10,7 +10,7 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
-QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibocloud", "qibotn")
+QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
 
 
 class MetaBackend:
@@ -38,7 +38,7 @@ class MetaBackend:
             kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
         elif backend in QIBO_NON_NATIVE_BACKENDS:
-            module = import_module(backend)
+            module = import_module(backend.replace("-", "_"))
             return getattr(module, "MetaBackend").load(**kwargs)
         else:
             raise_error(
