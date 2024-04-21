@@ -126,6 +126,16 @@ def test_errors(backend):
     with pytest.raises(ValueError):
         QuantumNetwork(matrix, (1, 2), backend=backend)
 
+    with pytest.raises(ValueError):
+        QuantumNetwork.from_nparray(matrix, (1, 2), pure=True, backend=backend)
+
+    vec = np.random.rand(4)
+    with pytest.raises(ValueError):
+        QuantumNetwork.from_nparray(vec, backend=backend)
+
+    with pytest.raises(ValueError):
+        QuantumComb.from_nparray(vec, pure=True, backend=backend)
+
 
 def test_operational_logic(backend):
     lamb = float(np.random.rand())
@@ -167,6 +177,11 @@ def test_operational_logic(backend):
     network_unitary = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
     backend.assert_allclose(
         (network_unitary / 2).operator(backend), unitary / np.sqrt(2), atol=1e-5
+    )
+
+    # Complex conjugate of a network has to match the complex conjugate of the operator
+    backend.assert_allclose(
+        network.conj().operator(backend), backend.np.conj(network.operator(backend))
     )
 
 
@@ -261,6 +276,11 @@ def test_with_unitaries(backend, subscript):
 
         backend.assert_allclose(test, (network_2 @ network_1).full(backend=backend))
 
+    # Check properties for pure states
+    assert network_1.is_causal()
+    assert network_1.is_hermitian()
+    assert network_1.is_positive_semidefinite()
+
 
 def test_with_comb(backend):
     subscript = "jklm,kl->jm"
@@ -352,3 +372,10 @@ def test_predefined(backend):
     backend.assert_allclose(
         tr.matrix(backend=backend), traced.matrix(backend=backend), atol=1e-8
     )
+
+
+def test_default_construction(backend):
+    vec = np.random.rand(4)
+    QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
+    QuantumComb.from_nparray(vec, (4, 1), pure=True, backend=backend)
+    QuantumChannel.from_nparray(vec, pure=True, backend=backend)

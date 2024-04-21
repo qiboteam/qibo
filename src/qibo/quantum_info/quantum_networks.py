@@ -61,12 +61,7 @@ class QuantumNetwork:
 
         self._set_parameters()
 
-        if len(self.partition) > 0:
-            self.dims = reduce(
-                mul, self.partition
-            )  # should be after `_set_parameters` to ensure `self.partition` is not `None`
-        else:
-            self.dims = 1
+        self.dims = reduce(mul, self.partition)
 
     @staticmethod
     def _order_tensor2operator(n: int):
