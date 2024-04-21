@@ -61,7 +61,10 @@ class QuantumNetwork:
 
         self._set_parameters()
 
-        self.dims = reduce(mul, self.partition)
+        if len(self.partition) > 0:
+            self.dims = reduce(mul, self.partition)
+        else:
+            self.dims = 1
 
     @staticmethod
     def _order_tensor2operator(n: int):
@@ -74,13 +77,12 @@ class QuantumNetwork:
         return order
 
     @classmethod
-    def _operator2tensor(cls, operator, partition: List[int], system_input: List[bool]):
+    def _operator2tensor(cls, operator, partition: List[int]):
         n = len(partition)
         order = cls._order_operator2tensor(n)
 
-        tensor = np.transpose(operator.reshape(list(partition) * 2), order)
-
         try:
+            tensor = np.transpose(operator.reshape(list(partition) * 2), order)
             return tensor.reshape([dim**2 for dim in partition])
         except:
             raise_error(
@@ -150,7 +152,7 @@ class QuantumNetwork:
             if partition is None:
                 partition = arr.shape[: len_sys // 2]
 
-            tensor = cls._operator2tensor(arr, partition, system_input)
+            tensor = cls._operator2tensor(arr, partition)
 
         return cls(
             tensor,
@@ -620,7 +622,7 @@ class QuantumNetwork:
                 tensor = self._tensordot(tensor, conj(tensor), dims=0)
             else:
                 tensor = self._tensordot(tensor, conj(tensor), axes=0)
-            tensor = self._operator2tensor(tensor, self.partition, self.system_input)
+            tensor = self._operator2tensor(tensor, self.partition)
 
             if update:
                 self._tensor = tensor

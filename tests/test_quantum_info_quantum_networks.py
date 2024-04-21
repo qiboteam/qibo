@@ -136,6 +136,23 @@ def test_errors(backend):
     with pytest.raises(ValueError):
         QuantumComb.from_nparray(vec, pure=True, backend=backend)
 
+    with pytest.raises(TypeError):
+        link_product(1, quantum_comb)
+
+    with pytest.raises(TypeError):
+        link_product("ij, i", quantum_comb, matrix)
+
+    # raise warning
+    link_product("ii", quantum_channel)
+    link_product("ij, kj", network_state, quantum_channel)
+    link_product("ij, jj", network_state, quantum_channel)
+
+
+def test_class_methods(backend):
+    matrix = random_density_matrix(2**2, backend=backend)
+    with pytest.raises(ValueError):
+        QuantumNetwork._operator2tensor(matrix, (3,))
+
 
 def test_operational_logic(backend):
     lamb = float(np.random.rand())
@@ -265,10 +282,12 @@ def test_with_unitaries(backend, subscript):
     )
 
     if subscript[1] == subscript[3]:
-        backend.assert_allclose(test, network_3.full(), atol=1e-8)
+        backend.assert_allclose(
+            test, network_3.full(backend=backend, update=True), atol=1e-8
+        )
 
         backend.assert_allclose(
-            test, (network_1 @ network_2).full(backend=backend), atol=1e-8
+            test, (network_1 @ network_2).full(backend=backend, update=True), atol=1e-8
         )
 
     if subscript[0] == subscript[4]:
@@ -375,7 +394,18 @@ def test_predefined(backend):
 
 
 def test_default_construction(backend):
-    vec = np.random.rand(4)
-    QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
-    QuantumComb.from_nparray(vec, (4, 1), pure=True, backend=backend)
-    QuantumChannel.from_nparray(vec, pure=True, backend=backend)
+    vec = np.random.rand(4).reshape([4, 1])
+    network = QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
+    assert network.partition == (4, 1)
+    assert network.system_input == (True, False)
+    comb1 = QuantumComb.from_nparray(vec, (4, 1), pure=True, backend=backend)
+    assert comb1.system_input == (True, False)
+    comb2 = QuantumComb.from_nparray(vec, pure=True, backend=backend)
+    assert comb2.partition == (4, 1)
+    assert comb2.system_input == (True, False)
+    comb3 = QuantumComb(vec, system_input=(True, True), pure=True, backend=backend)
+    assert comb3.partition == (4, 1)
+    assert comb3.system_input == (True, False)
+    channel = QuantumChannel.from_nparray(vec, pure=True, backend=backend)
+    assert channel.partition == (4, 1)
+    assert channel.system_input == (True, False)
