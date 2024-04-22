@@ -180,6 +180,8 @@ class Passes:
             Defaults to :math:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): list of physical qubits to be used.
             If "None" all qubits are used. Defaults to ``None``.
+        int_qubit_name (bool, optional): if `True` the `final_layout` keys are
+            cast to integers.
     """
 
     def __init__(
@@ -188,6 +190,7 @@ class Passes:
         connectivity: nx.Graph = None,
         native_gates: NativeGates = NativeGates.default(),
         on_qubits: list = None,
+        int_qubit_names: bool = False,
     ):
         if on_qubits is not None:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
@@ -195,6 +198,7 @@ class Passes:
         self.native_gates = native_gates
         self.passes = self.default() if passes is None else passes
         self.initial_layout = None
+        self.int_qubit_names = int_qubit_names
 
     def default(self):
         """Return the default transpiler pipeline for the required hardware connectivity."""
@@ -247,6 +251,9 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
+        # TODO: use directly integers keys
+        if self.int_qubit_names:
+            final_layout = {int(key[1:]): value for key, value in final_layout.items()}
         return circuit, final_layout
 
     def is_satisfied(self, circuit: Circuit):
