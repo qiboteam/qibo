@@ -534,7 +534,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
-def diamond_norm(channel, target=None, backend=None, **kwargs):
+def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no cover
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
