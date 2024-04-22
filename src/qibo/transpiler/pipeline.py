@@ -194,6 +194,7 @@ class Passes:
         self.connectivity = connectivity
         self.native_gates = native_gates
         self.passes = self.default() if passes is None else passes
+        self.initial_layout = None
 
     def default(self):
         """Return the default transpiler pipeline for the required hardware connectivity."""
@@ -215,8 +216,7 @@ class Passes:
         return default_passes
 
     def __call__(self, circuit):
-        self.initial_layout = None
-        final_layout = None
+        final_layout = self.initial_layout
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
@@ -247,7 +247,6 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
-
         return circuit, final_layout
 
     def is_satisfied(self, circuit: Circuit):
