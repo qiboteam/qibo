@@ -14,11 +14,14 @@ class TorchMatrices(NumpyMatrices):
         import torch  # pylint: disable=import-outside-toplevel
 
         super().__init__(dtype)
-        self.torch = torch
+        self.np = torch
         self.dtype = dtype
 
     def _cast(self, x, dtype):
-        return self.torch.as_tensor(x, dtype=dtype)
+        return self.np.as_tensor(x, dtype=dtype)
+
+    def _cast_parameter(self, x):
+        return self.np.tensor(x)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)

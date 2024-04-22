@@ -270,6 +270,7 @@ def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
     for e in range(sgd_options["nepochs"]):
         optimizer.zero_grad()
         l = loss(vparams, *args)
+        print("Loss_gradient: ", l.requires_grad)
         l.backward()
         optimizer.step()
 
