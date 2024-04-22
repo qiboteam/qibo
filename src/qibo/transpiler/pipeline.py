@@ -220,6 +220,11 @@ class Passes:
         return default_passes
 
     def __call__(self, circuit):
+        """
+        This function returns the compiled circuits and the dictionary mapping
+        physical (keys) to logical (values) qubit. If `int_qubit_name` is `True`
+        each key `i` correspond to the `i-th` qubit in the graph.
+        """
         final_layout = self.initial_layout
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
