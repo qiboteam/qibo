@@ -3,7 +3,7 @@ import platform
 import numpy as np
 import pytest
 
-from qibo import gates, list_available_backends, set_backend
+from qibo import construct_backend, gates, list_available_backends, set_backend
 
 ####################### Test `matrix` #######################
 GATES = [
@@ -124,6 +124,17 @@ def test_plus_density_matrix(backend):
     matrix = backend.plus_density_matrix(4)
     target_matrix = np.ones((16, 16)) / 16
     backend.assert_allclose(matrix, target_matrix)
+
+
+def test_set_backend_error():
+    with pytest.raises(ValueError):
+        set_backend("non-existing-backend")
+
+
+def test_construct_backend(backend):
+    assert isinstance(
+        construct_backend(backend.name, platform=backend.platform), backend.__class__
+    )
 
 
 def test_list_available_backends():
