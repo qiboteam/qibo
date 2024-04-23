@@ -1,4 +1,5 @@
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
+
 import numpy as np
 import pytest
 

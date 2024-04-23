@@ -1,11 +1,12 @@
 """Define quantum channels."""
+
 from itertools import product
 from math import exp, sqrt
 from typing import Optional, Tuple
 
 import numpy as np
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
@@ -38,6 +39,9 @@ class Channel(Gate):
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
+
+    def apply_clifford(self, backend, state, nqubits):
+        return backend.apply_channel(self, state, nqubits)
 
     def to_choi(self, nqubits: Optional[int] = None, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
@@ -76,8 +80,7 @@ class Channel(Gate):
             vectorization,
         )
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
 
@@ -124,8 +127,7 @@ class Channel(Gate):
             choi_to_liouville,
         )
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         super_op = self.to_choi(nqubits=nqubits, order=order, backend=backend)
         super_op = choi_to_liouville(super_op, order=order, backend=backend)
@@ -162,8 +164,7 @@ class Channel(Gate):
 
         from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         super_op = self.to_liouville(nqubits=nqubits, backend=backend)
 
@@ -250,11 +251,11 @@ class KrausChannel(Channel):
         self.draw_label = "K"
 
         # Check qubits type
-        if isinstance(qubits, int) is True:
+        if isinstance(qubits, int):
             qubits = [(qubits,)] * len(operators)
-        elif isinstance(qubits, tuple) is True:
+        elif isinstance(qubits, tuple):
             qubits = [qubits] * len(operators)
-        elif isinstance(qubits, list) is False:
+        elif not isinstance(qubits, list):
             raise_error(
                 TypeError,
                 "``qubits`` must be of type int or tuple or int. "
@@ -263,7 +264,7 @@ class KrausChannel(Channel):
         elif not all(isinstance(q, (tuple)) for q in qubits):
             raise_error(TypeError, "All elements of ``qubits`` list must be tuples.")
 
-        if isinstance(operators[0], Gate) is True:
+        if isinstance(operators[0], Gate):
             if qubits:
                 operators = [
                     operators[k].on_qubits(
@@ -417,7 +418,7 @@ class PauliNoiseChannel(UnitaryChannel):
     """
 
     def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
-        if isinstance(qubits, int) is True:
+        if isinstance(qubits, int):
             qubits = (qubits,)
 
         probabilities, paulis = [], []
@@ -465,7 +466,7 @@ class DepolarizingChannel(PauliNoiseChannel):
     """
 
     def __init__(self, qubits, lam: float):
-        if isinstance(qubits, int) is True:
+        if isinstance(qubits, int):
             qubits = (qubits,)
 
         num_qubits = len(qubits)
@@ -559,15 +560,15 @@ class ThermalRelaxationChannel(KrausChannel):
             raise_error(
                 ValueError, f"Invalid excited state population {excited_population}."
             )
-        if time < 0:
+        if time < 0.0:
             raise_error(ValueError, f"Invalid gate time: {time} < 0.")
-        if t_1 <= 0:
+        if t_1 <= 0.0:
             raise_error(
-                ValueError, f"Invalid t_1 relaxation time parameter: {t_1} <= 0."
+                ValueError, f"Invalid t_1 relaxation time parameter: {t_1} <= 0.0."
             )
-        if t_2 <= 0:
+        if t_2 <= 0.0:
             raise_error(
-                ValueError, f"Invalid t_2 relaxation time parameter: {t_2} <= 0."
+                ValueError, f"Invalid t_2 relaxation time parameter: {t_2} <= 0.0."
             )
         if t_2 > 2 * t_1:
             raise_error(
@@ -760,8 +761,11 @@ class ReadoutErrorChannel(KrausChannel):
         ):
             raise_error(ValueError, "all rows of probabilities must sum to 1.")
 
-        if isinstance(qubits, int) is True:
+        if isinstance(qubits, int):
             qubits = (qubits,)
+
+        if isinstance(probabilities, list):
+            probabilities = np.array(probabilities)
 
         dim = len(probabilities)
         operators = []

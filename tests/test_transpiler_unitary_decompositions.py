@@ -107,14 +107,18 @@ def test_ud_eigenvalues(backend, seed):
             magic_decomposition(unitary, backend=backend)
     else:
         ua, ub, ud, va, vb = magic_decomposition(unitary, backend=backend)
-
-        unitary_recon = np.kron(ua, ub) @ ud @ np.kron(va, vb)
+        # Check kron
+        unitary_recon = backend.np.kron(ua, ub) @ ud @ backend.np.kron(va, vb)
         backend.assert_allclose(unitary_recon, unitary)
 
-        ud_bell = np.transpose(np.conj(bell_basis)) @ ud @ bell_basis
-        ud_diag = np.diag(ud_bell)
-        backend.assert_allclose(np.diag(ud_diag), ud_bell, atol=PRECISION_TOL)
-        backend.assert_allclose(np.prod(ud_diag), 1)
+        ud_bell = (
+            backend.np.transpose(backend.np.conj(backend.cast(bell_basis)), (1, 0))
+            @ ud
+            @ backend.cast(bell_basis)
+        )
+        ud_diag = backend.np.diag(ud_bell)
+        backend.assert_allclose(backend.np.diag(ud_diag), ud_bell, atol=PRECISION_TOL)
+        backend.assert_allclose(backend.np.prod(ud_diag), 1)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
@@ -189,9 +193,9 @@ def test_two_qubit_decomposition_bell_unitary(backend, hz_zero):
     hx, hy, hz = (2 * np.random.random(3) - 1) * np.pi
     if hz_zero:
         hz = 0
-    unitary = bell_unitary(hx, hy, hz)
+    unitary = backend.cast(bell_unitary(hx, hy, hz))
     c = Circuit(2)
-    c.add(two_qubit_decomposition(0, 1, unitary))
+    c.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
     final_matrix = c.unitary(backend)
     backend.assert_allclose(final_matrix, unitary, atol=PRECISION_TOL)
 

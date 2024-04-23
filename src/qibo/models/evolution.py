@@ -1,4 +1,5 @@
 """Models for time evolution of state vectors."""
+
 from qibo import optimizers, solvers
 from qibo.callbacks import Gap, Norm
 from qibo.config import log, raise_error
@@ -54,9 +55,7 @@ class StateEvolution:
         else:
             ham = hamiltonian(0)
             if not isinstance(ham, AbstractHamiltonian):
-                raise TypeError(
-                    "Hamiltonian type {} not understood." "".format(type(ham))
-                )
+                raise TypeError(f"Hamiltonian type {type(ham)} not understood.")
         self.nqubits = ham.nqubits
         self.backend = ham.backend
         if dt <= 0:
@@ -69,8 +68,8 @@ class StateEvolution:
                 raise_error(
                     NotImplementedError,
                     "Distributed evolution is only "
-                    "implemented using the Trotter "
-                    "exponential solver.",
+                    + "implemented using the Trotter "
+                    + "exponential solver.",
                 )
             ham.circuit(dt, accelerators)
         self.solver = solvers.get_solver(solver, self.dt, hamiltonian)

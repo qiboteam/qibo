@@ -4,7 +4,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
-from qibo.backends import CliffordBackend, GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -46,11 +46,10 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
-        self.clifford = False
         self.unitary = False
-        self._target_qubits = tuple()
-        self._control_qubits = set()
-        self._parameters = tuple()
+        self._target_qubits = ()
+        self._control_qubits = ()
+        self._parameters = ()
         config.ALLOW_SWITCHERS = False
 
         self.symbolic_parameters = {}
@@ -58,6 +57,11 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
+
+    @property
+    def clifford(self):
+        """Return boolean value representing if a Gate is Clifford or not."""
+        return False
 
     @property
     def raw(self) -> dict:
@@ -158,13 +162,13 @@ class Gate:
 
     def _set_control_qubits(self, qubits: Sequence[int]):
         """Helper method for setting control qubits."""
-        self._control_qubits = set(qubits)
-        if len(self._control_qubits) != len(qubits):
+        if len(set(qubits)) != len(qubits):
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
                 f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
+        self._control_qubits = qubits
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
@@ -204,11 +208,12 @@ class Gate:
     def _check_control_target_overlap(self):
         """Checks that there are no qubits that are both target and
         controls."""
-        common = set(self._target_qubits) & self._control_qubits
+        control_and_target = self._control_qubits + self._target_qubits
+        common = len(set(control_and_target)) != len(control_and_target)
         if common:
             raise_error(
                 ValueError,
-                f"{common} qubits are both targets and controls "
+                f"{set(self._target_qubits) & set(self._control_qubits)} qubits are both targets and controls "
                 + f"for gate {self.__class__.__name__}.",
             )
 
@@ -358,11 +363,10 @@ class Gate:
             ndarray: Matrix representation of gate.
 
         .. note::
-            ``Gate.matrix`` was an defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
+            ``Gate.matrix`` was defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
             From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
         """
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix(self)
 
@@ -392,7 +396,7 @@ class Gate:
         return backend.apply_gate_density_matrix(self, state, nqubits)
 
     def apply_clifford(self, backend, state, nqubits):
-        return backend.apply_gate_clifford(self, state, nqubits)
+        return backend.apply_gate_clifford(self, state[:-1], nqubits)
 
 
 class SpecialGate(Gate):
@@ -481,7 +485,6 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
     def matrix(self, backend=None):
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)

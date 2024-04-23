@@ -247,8 +247,125 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+Computational Basis Encoder
+"""""""""""""""""""""""""""
+
+Given a bitstring :math:`b` of length :math:`n`, this encoder generates a layer of Pauli-:math:`X`
+gates that creates the quantum state :math:`|\,b\,\rangle`.
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import comp_basis_encoder
+
+.. testcode::
+
+    b = "101"
+    circuit_1 = comp_basis_encoder(b)
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.X(0))
+    circuit_2.add(gates.X(2))
+
+
+.. image:: ../_static/comp_basis_encoder.png
+   :width: 400
+   :height: 250
+   :align: center
+
+
+.. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
+Phase Encoder
+"""""""""""""
+
+Encodes data of length :math:`n` into the phases of :math:`n` qubits.
+
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import phase_encoder
+
+.. testcode::
+
+    nqubits = 3
+    phases = np.random.rand(nqubits)
+
+    circuit_1 = phase_encoder(phases, rotation="RX")
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
+
+
+.. image:: ../_static/phase_encoder.png
+   :width: 300
+   :height: 300
+   :align: center
+
+
+.. autofunction:: qibo.models.encodings.phase_encoder
+
+
 Unary Encoder
 """""""""""""
+
+Given a classical ``data`` array :math:`\mathbf{x} \in \mathbb{R}^{d}` such that
+
+.. math::
+    \mathbf{x} = (x_{1}, x_{2}, \dots, x_{d}) \, ,
+
+this function generate the circuit that prepares the following quantum state
+:math:`\ket{\psi} \in \mathcal{H}`:
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \sum_{k=1}^{d} \, x_{k} \, \ket{k} \, ,
+
+with :math:`\mathcal{H} \cong \mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
+and :math:`\|\cdot\|_{\textup{HS}}` being the Hilbert-Schmidt norm.
+
+Here, :math:`\ket{k}` is a unary representation of the number :math:`k`.
+For instance, for :math:`d = 3`, the final state would be
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \left( x_{1} \ket{001} + x_{2} \ket{010} + x_{3} \ket{100} \right) \, .
+
+There are multiple circuit architechtures that lead to unary encoding of classical data.
+For example, to encode a :math:`8`-dimensional data, one could use the so-called
+*tree* architechture below:
+
+.. image:: ../_static/unary_encoder_tree.png
+   :width: 400
+   :height: 500
+   :align: center
+
+where the first gate is the :class:`qibo.gates.X`
+and the parametrized gates are the :class:`qibo.gates.RBS`.
+To know how the angles :math:`\{\theta_{k}\}_{[k]}` are calculated for this architecture,
+please refer to S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*,
+`arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
+
+On the other hand, the same encoding could be performed using the so-called
+*diagonal* (also known as *ladder*) architecture below:
+
+.. image:: ../_static/unary_encoder_ladder.png
+   :width: 700
+   :height: 550
+   :align: center
+
+This architecture leads to a choice of angles based on
+`spherical coordinates in a d-dimensional hypersphere
+<https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates>`_.
+
 
 .. autofunction:: qibo.models.encodings.unary_encoder
 
@@ -256,7 +373,40 @@ Unary Encoder
 Unary Encoder for Random Gaussian States
 """"""""""""""""""""""""""""""""""""""""
 
+Performs the same unary encoder as :class:`qibo.models.encodings.unary_encoder`
+using the *tree* architecture , with the difference being that now each entry
+of the :math:`d`-dimensional array is sampled from a Gaussian distribution
+:math:`\mathcal{N}(0, 1)`.
+
+
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
+
+Entangling layer
+""""""""""""""""
+
+Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
+any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
+If the chosen gate is parametrized, all phases are set to :math:`0.0`.
+Note that these phases can be updated a posterior by using
+:meth:`qibo.models.Circuit.set_parameters`.
+There are four possible choices of layer ``architecture``:
+``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+For instance, we show below an example of each architecture for ``nqubits = 6``.
+
+
+.. image:: ../_static/entangling_layer.png
+   :width: 800
+   :height: 450
+   :align: center
+
+
+If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
+with the last qubit as the control qubit and the first qubit as a target qubit.
+
+
+.. autofunction:: qibo.models.encodings.entangling_layer
 
 
 .. _error-mitigation:
@@ -279,7 +429,7 @@ and both can be used as standalone functions or in combination with the other
 general mitigation methods by setting the paramter `readout`.
 
 
-Calibration Matrix
+Response Matrix
 """"""""""""""""""
 Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the
 application of the corresponding sequence of :math:`X` gates
@@ -288,7 +438,7 @@ In the presence of readout errors, we will measure for each state :math:`i` some
 frequencies :math:`F_i^{noisy}` different from the ideal ones
 :math:`F_i^{ideal}=\delta_{i,j}`.
 
-The effect of the error is modeled by the matrix composed of the noisy frequencies as
+The effect of the error is modeled by the response matrix composed of the noisy frequencies as
 columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
 
 .. math::
@@ -297,14 +447,31 @@ columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that
 and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}`
 can be used to recover the noise-free frequencies.
 
-.. autofunction:: qibo.models.error_mitigation.calibration_matrix
+The calibration matrix :math:`M_{\text{cal}}` lacks stochasticity, resulting in a 'negative probability' issue.
+The distributions that arise after applying :math:`M_{\text{cal}}` are quasiprobabilities;
+the individual elements can be negative surpass 1, provided they sum to 1.
+It is posible to use Iterative Bayesian Unfolding (IBU) to preserve non-negativity.
+See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
 
 
-.. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
+
+.. autofunction:: qibo.models.error_mitigation.get_response_matrix
 
 
-Randomized
-""""""""""
+.. autofunction:: qibo.models.error_mitigation.iterative_bayesian_unfolding
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_resp_mat_readout_mitigation
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+
+
+.. autofunction:: qibo.models.error_mitigation.get_expectation_val_with_readout_mitigation
+
+
+Randomized readout mitigation
+""""""""""""""""""""""""""""""
 This approach converts the effect of any noise map :math:`A` into a single multiplication
 factor for each Pauli observable, that is, diagonalizes the measurement channel.
 The multiplication factor :math:`\lambda` can be directly measured even without
@@ -320,7 +487,7 @@ factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
-Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE)
+Given a noisy circuit :math:`C` and an observable :math:`A`, Zero Noise Extrapolation (ZNE)
 consists in running :math:`n+1` versions of the circuit with different noise levels
 :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable
 :math:`E_j=\langle A\rangle_j`.
@@ -381,7 +548,7 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 .. autofunction:: qibo.models.error_mitigation.CDR
 
 
-.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit_cdr
 
 
 Variable Noise CDR (vnCDR)
@@ -415,6 +582,34 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
 
 .. autofunction:: qibo.models.error_mitigation.vnCDR
 
+
+Importance Clifford Sampling (ICS)
+""""""""""""""""""""""""""""""""""
+
+In the Importance Clifford Sampling (ICS) method, a set of :math:`n` circuits
+:math:`S_n=\{C_i\}_{i=1,..,n}` that stabilizes a given Pauli observable is generated starting from the original circuit
+:math:`C_0` by replacing all the non-Clifford gates with Clifford ones.
+Given an observable :math:`A`, all the circuits of :math:`S_n` are both simulated
+to obtain the correspondent expected values of :math:`A` in noise-free condition
+:math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy
+expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally, a theoretically inspired model :math:`f` is learned using the training data.
+
+The mitigated expected value of :math:`A` at the end of :math:`C_0` is then
+obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three
+Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)`
+(which is Clifford only for :math:`\theta=\frac{n\pi}{2}`).
+By default the set of Clifford gates used for substitution is
+:math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`.
+See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.ICS
+
+
+.. autofunction:: qibo.models.error_mitigation.sample_clifford_training_circuit
 
 _______________________
 
@@ -642,6 +837,13 @@ iSwap (iSWAP)
     :members:
     :member-order: bysource
 
+Square root of iSwap (SiSWAP)
+"""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SiSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
@@ -804,7 +1006,7 @@ U1q
 
     - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
     - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
-    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
 _______________________
@@ -949,20 +1151,24 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 
-Realistic noise model
-^^^^^^^^^^^^^^^^^^^^^
+IBMQ noise model
+^^^^^^^^^^^^^^^^
 
-In Qibo, it is possible to build a realistic noise model of a real quantum computer
-by using the :meth:`qibo.noise.NoiseModel.composite()` method.
+In Qibo, it is possible to build noisy circuits based on IBMQ's reported noise model of
+for its quantum computer by using the :class:`qibo.noise.IBMQNoiseModel` class.
 The noise model is built using a combination of the
 :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel`
-channels. After each gate of the original circuit, the function applies a depolarizing
-and a thermal relaxation channel. At the end of the circuit, if the qubit is measured,
+channels. . At the end of the circuit, if the qubit is measured,
 bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal
 relaxation channel for the duration of the idle-time.
 
-For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the
+For more information on the :class:`qibo.noise.IBMQNoiseModel` class, see the
 example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
+
+
+.. autoclass:: qibo.noise.IBMQNoiseModel
+    :members:
+    :member-order: bysource
 
 
 _______________________
@@ -1413,12 +1619,12 @@ passing a symplectic matrix to the constructor.
 .. testsetup::
 
    from qibo.quantum_info import Clifford
-   from qibo.backends import CliffordBackend, NumpyBackend
+   from qibo.backends import CliffordBackend
 
    # construct the |00...0> state
-   backend = CliffordBackend(NumpyBackend())
+   backend = CliffordBackend("numpy")
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
+   clifford = Clifford(symplectic_matrix, engine="numpy")
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
@@ -1432,9 +1638,159 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
+We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
+It is possible to run Clifford circuits using `stim` as an engine:
+
+.. code-block::  python
+
+    from qibo.backends import CliffordBackend
+    from qibo.quantum_info import Clifford, random_clifford
+
+    clifford_backend = CliffordBackend(engine="stim")
+
+    circuit = random_clifford(nqubits)
+    result = clifford_backend.execute_circuit(circuit)
+
+    ## Note that the execution above is equivalent to the one below
+
+    result = Clifford.from_circuit(circuit, engine="stim")
+
+
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:
     :member-order: bysource
+
+
+Entanglement measures
+^^^^^^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entanglement measures.
+
+
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
+Entanglement fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
+
+
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Entropy measures
+^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entropy measures.
+
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Classical relative entropy
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_entropy
+
+
+Classical Rényi entropy
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
+Classical Rényi relative entropy
+""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
+
+
+Classical Tsallis entropy
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+
+von Neumann entropy
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+
+Relative von Neumann entropy
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and either ``state`` or ``target`` is non-Hermitian,
+    an error will be raised when using `cupy` backend.
+
+
+Rényi entropy
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.renyi_entropy
+
+
+Relative Rényi entropy
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_renyi_entropy
+
+
+Tsallis entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.tsallis_entropy
+
+
+Entanglement entropy
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if
+    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and the reduced density matrix is non-Hermitian, an error will be raised
+    when using `cupy` backend.
 
 
 Metrics
@@ -1455,57 +1811,17 @@ Impurity
 .. autofunction:: qibo.quantum_info.impurity
 
 
-Concurrence
-"""""""""""
-
-.. autofunction:: qibo.quantum_info.concurrence
-
-
-Entanglement of formation
-"""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_of_formation
-
-
-Entropy
-"""""""
-
-.. autofunction:: qibo.quantum_info.entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
-
-Entanglement entropy
-""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
-
 Trace distance
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if difference
+    ``check_hermitian`` flag allows the user to choose if the function will check if difference
     between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and,
+    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
     more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be
+    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
     raised when using `cupy` backend.
 
 
@@ -1539,12 +1855,6 @@ Bures distance
 .. autofunction:: qibo.quantum_info.bures_distance
 
 
-Entanglement fidelity
-"""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_fidelity
-
-
 Process fidelity
 """"""""""""""""
 
@@ -1575,18 +1885,6 @@ Diamond Norm
 .. autofunction:: qibo.quantum_info.diamond_norm
 
 
-Meyer-Wallach entanglement
-""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
-
-
-Entanglement capability
-"""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entangling_capability
-
-
 Expressibility of parameterized quantum circuits
 """"""""""""""""""""""""""""""""""""""""""""""""
 
@@ -1597,6 +1895,21 @@ Frame Potential
 """""""""""""""
 
 .. autofunction:: qibo.quantum_info.frame_potential
+
+
+Quantum Networks
+^^^^^^^^^^^^^^^^
+
+Quantum network is an object that unifies the representation of quantum states, channels,
+observables, and higher-order quantum operators.
+
+For more details, see G. Chiribella *et al.*, *Theoretical framework for quantum networks*,
+`Physical Review A 80.2 (2009): 022339
+<https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`_.
+
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumNetwork
+    :members:
+    :member-order: bysource
 
 
 Random Ensembles
@@ -1977,16 +2290,16 @@ Hamming weight
 .. autofunction:: qibo.quantum_info.hamming_weight
 
 
+Hamming distance
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_distance
+
+
 Hadamard Transform
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hadamard_transform
-
-
-Shannon entropy
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.shannon_entropy
 
 
 Hellinger distance
@@ -1997,6 +2310,12 @@ Hellinger distance
 
 Hellinger fidelity
 """"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_fidelity
+
+
+Hellinger shot error
+""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hellinger_fidelity
 
@@ -2072,7 +2391,7 @@ The user can switch backends using
     qibo.set_backend("numpy")
 
 before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``tensorflow``, ``numpy``.
+from ``qibojit``, ``pytorch``, ``tensorflow``, ``numpy``.
 
 Some backends support different platforms. For example, the qibojit backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
@@ -2091,6 +2410,8 @@ variable.
 .. autoclass:: qibo.backends.abstract.Backend
     :members:
     :member-order: bysource
+
+.. _Clifford:
 
 Clifford Simulation
 ^^^^^^^^^^^^^^^^^^^
@@ -2146,3 +2467,13 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
+
+
+Cloud Backends
+^^^^^^^^^^^^^^
+
+Additional backends that support the remote execution of quantum circuits through
+cloud service providers, such as IBM and QRC-TII, are provided by the optional qibo plugin
+`qibo-cloud-backends <https://github.com/qiboteam/qibo-cloud-backends>`_.
+For more information please refer to the
+`official documentation <https://qibo.science/qibo-cloud-backends/stable/>`_.

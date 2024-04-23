@@ -1,6 +1,7 @@
 """
 Benchmark Variational Quantum Eigensolver.
 """
+
 import argparse
 import time
 

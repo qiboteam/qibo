@@ -4,20 +4,24 @@ from functools import reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
 from qibo import matrices
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def hamming_weight(bitstring, return_indexes: bool = False):
+def hamming_weight(
+    bitstring: Union[int, str, list, tuple], return_indexes: bool = False
+):
     """Calculates the Hamming weight of a bitstring.
 
+    The Hamming weight of a bistring is the number of :math:'1's that the bistring contains.
+
     Args:
-        bitstring (int or str or tuple or list or ndarray): bitstring to calculate the
+        bitstring (int or str or tuple or list): bitstring to calculate the
             weight, either in binary or integer representation.
         return_indexes (bool, optional): If ``True``, returns the indexes of the
             non-zero elements. Defaults to ``False``.
@@ -31,6 +35,13 @@ def hamming_weight(bitstring, return_indexes: bool = False):
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
+    if not isinstance(bitstring, (int, str, list, tuple, np.ndarray)):
+        raise_error(
+            TypeError,
+            "bitstring must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring)}.",
+        )
+
     if isinstance(bitstring, int):
         bitstring = f"{bitstring:b}"
     elif isinstance(bitstring, (list, tuple, np.ndarray)):
@@ -42,6 +53,58 @@ def hamming_weight(bitstring, return_indexes: bool = False):
         return indexes
 
     return len(indexes)
+
+
+def hamming_distance(
+    bitstring_1: Union[int, str, list, tuple],
+    bitstring_2: Union[int, str, list, tuple],
+    return_indexes: bool = False,
+):
+    """Calculates the Hamming distance between two bistrings.
+
+    This is done by calculating the Hamming weight
+    (:func:`qibo.quantum_info.utils.hamming_weight`) of ``| bitstring_1 - bitstring_2 |``.
+
+    Args:
+        bitstring_1 (int or str or list or tuple): fisrt bistring.
+        bitstring_2 (int or str or list or tuple): second bitstring.
+        return_indexes (bool, optional): If ``True``, returns the indexes of the
+            non-zero elements. Defaults to ``False``.
+
+    Returns:
+        int or list: Hamming distance or list of indexes of non-zero elements.
+    """
+    if not isinstance(return_indexes, bool):
+        raise_error(
+            TypeError,
+            f"return_indexes must be type bool, but it is type {type(return_indexes)}",
+        )
+
+    if not isinstance(bitstring_1, (int, str, list, tuple)):
+        raise_error(
+            TypeError,
+            "bitstring_1 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_1)}.",
+        )
+
+    if not isinstance(bitstring_2, (int, str, list, tuple)):
+        raise_error(
+            TypeError,
+            "bitstring_2 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_2)}.",
+        )
+
+    if isinstance(bitstring_1, (list, tuple)):
+        bitstring_1 = "".join(bitstring_1)
+
+    if isinstance(bitstring_2, (list, tuple)):
+        bitstring_2 = "".join(bitstring_2)
+
+    nbits = max(len(bitstring_1), len(bitstring_2))
+
+    difference = abs(int(bitstring_1, 2) - int(bitstring_2, 2))
+
+    return hamming_weight(f"{difference:{nbits}b}", return_indexes=return_indexes)
 
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
@@ -71,8 +134,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     Returns:
         ndarray: (Fast) Hadamard Transform of ``array``.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         len(array.shape) not in [1, 2]
@@ -127,76 +189,10 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     return array
 
 
-def shannon_entropy(probability_array, base: float = 2, backend=None):
-    """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
-
-    .. math::
-        H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
-
-    where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the
-    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base (default 2),
-    and :math:`0 \\log_{b}(0) \\equiv 0`.
-
-    Args:
-        probability_array (ndarray or list): a probability array :math:`\\mathbf{p}`.
-        base (float): the base of the log. Defaults to  :math:`2`.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
-            Defaults to ``None``.
-
-    Returns:
-        (float): The Shannon entropy :math:`H(\\mathcal{p})`.
-    """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    if isinstance(probability_array, list):
-        probability_array = backend.cast(probability_array, dtype=float)
-
-    if base <= 0:
-        raise_error(ValueError, "log base must be non-negative.")
-
-    if len(probability_array.shape) != 1:
-        raise_error(
-            TypeError,
-            f"Probability array must have dims (k,) but it has {probability_array.shape}.",
-        )
-
-    if len(probability_array) == 0:
-        raise_error(TypeError, "Empty array.")
-
-    if any(probability_array < 0) or any(probability_array > 1.0):
-        raise_error(
-            ValueError,
-            "All elements of the probability array must be between 0. and 1..",
-        )
-
-    if np.abs(np.sum(probability_array) - 1.0) > PRECISION_TOL:
-        raise_error(ValueError, "Probability array must sum to 1.")
-
-    if base == 2:
-        log_prob = np.where(probability_array != 0.0, np.log2(probability_array), 0.0)
-    elif base == 10:
-        log_prob = np.where(probability_array != 0, np.log10(probability_array), 0.0)
-    elif base == np.e:
-        log_prob = np.where(probability_array != 0, np.log(probability_array), 0.0)
-    else:
-        log_prob = np.where(
-            probability_array != 0, np.log(probability_array) / np.log(base), 0.0
-        )
-
-    entropy = -np.sum(probability_array * log_prob)
-
-    # absolute value if entropy == 0.0 to avoid returning -0.0
-    entropy = np.abs(entropy) if entropy == 0.0 else entropy
-
-    return complex(entropy).real
-
-
 def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger distance :math:`H(p, q)` between
-    two discrete probability distributions, :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
-    It is defined as
+    """Calculates the Hellinger distance :math:`H` between two discrete probability distributions.
+
+    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
     .. math::
         H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
@@ -205,10 +201,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Default: False.
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -216,13 +212,12 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     Returns:
         (float): Hellinger distance :math:`H(p, q)`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist_p, list):
-        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
     if isinstance(prob_dist_q, list):
-        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
@@ -242,10 +237,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
@@ -256,16 +251,20 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
 
 def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger fidelity between two discrete
-    probability distributions, :math:`p` and :math:`q`. The fidelity is
-    defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
-    is the Hellinger distance.
+    """Calculates the Hellinger fidelity between two discrete probability distributions.
+
+    For probabilities :math:`p` and :math:`q`, the fidelity is defined as
+
+    .. math::
+        (1 - H^{2}(p, q))^{2} \\, ,
+
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`.
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Default: False.
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -274,9 +273,60 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
         (float): Hellinger fidelity.
 
     """
+    backend = _check_backend(backend)
+
     distance = hellinger_distance(prob_dist_p, prob_dist_q, validate, backend=backend)
 
     return (1 - distance**2) ** 2
+
+
+def hellinger_shot_error(
+    prob_dist_p, prob_dist_q, nshots: int, validate: bool = False, backend=None
+):
+    """Calculates the Hellinger fidelity error between two discrete probability distributions estimated from finite statistics.
+
+    It is calculated propagating the probability error of each state of the system.
+    The complete formula is:
+
+    .. math::
+        \\frac{1 - H^{2}(p, q)}{\\sqrt{nshots}} \\, \\sum_{k} \\,
+            \\left(\\sqrt{p_{k} \\, (1 - q_{k})} + \\sqrt{q_{k} \\, (1 - p_{k})}\\right)
+
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`,
+    and :math:`1 - H^{2}(p, q)` is the square root of the
+    :func:`qibo.quantum_info.utils.hellinger_fidelity`.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        nshots (int): number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
+        validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        (float): Hellinger fidelity error.
+
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    hellinger_error = hellinger_fidelity(
+        prob_dist_p, prob_dist_q, validate=validate, backend=backend
+    )
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.np.sum(
+        np.sqrt(prob_dist_q * (1 - prob_dist_p))
+        + np.sqrt(prob_dist_p * (1 - prob_dist_q))
+    )
+
+    return hellinger_error
 
 
 def haar_integral(
@@ -324,8 +374,7 @@ def haar_integral(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = 2**nqubits
 
@@ -339,9 +388,7 @@ def haar_integral(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
         for _ in range(samples):
-            haar_state = np.reshape(
-                random_statevector(dim, haar=True, backend=backend), (-1, 1)
-            )
+            haar_state = np.reshape(random_statevector(dim, backend=backend), (-1, 1))
 
             rho = haar_state @ np.conj(np.transpose(haar_state))
 
@@ -401,8 +448,7 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     circuit.density_matrix = True
     dim = 2**circuit.nqubits

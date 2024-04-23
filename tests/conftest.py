@@ -3,6 +3,7 @@ conftest.py
 
 Pytest fixtures.
 """
+
 import sys
 
 import pytest
@@ -10,7 +11,14 @@ import pytest
 from qibo.backends import construct_backend
 
 # backends to be tested
-BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy", "qibojit-cuquantum"]
+BACKENDS = [
+    "numpy",
+    "tensorflow",
+    "pytorch",
+    "qibojit-numba",
+    "qibojit-cupy",
+    "qibojit-cuquantum",
+]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
     {"/GPU:0": 1, "/GPU:1": 1},
@@ -46,7 +54,7 @@ def pytest_runtest_setup(item):
     plat = sys.platform
     if supported_platforms and plat not in supported_platforms:  # pragma: no cover
         # case not covered by workflows
-        pytest.skip("Cannot run test on platform {}.".format(plat))
+        pytest.skip(f"Cannot run test on platform {plat}.")
 
 
 def pytest_configure(config):

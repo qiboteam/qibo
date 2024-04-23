@@ -3,7 +3,7 @@ from typing import Optional, Union
 from qibo import Circuit, gates
 from qibo.config import raise_error
 from qibo.gates import Gate
-from qibo.transpiler.exceptions import BlockingError
+from qibo.transpiler._exceptions import BlockingError
 
 
 class Block:
@@ -200,12 +200,11 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
         remove_list = [first_block]
         if len(initial_blocks[1:]) > 0:
             for second_block in initial_blocks[1:]:
-                try:
+                if second_block.qubits == first_block.qubits:
                     first_block = first_block.fuse(second_block)
                     remove_list.append(second_block)
-                except BlockingError:
-                    if not first_block.commute(second_block):
-                        break
+                elif not first_block.commute(second_block):
+                    break
         blocks.append(first_block)
         _remove_gates(initial_blocks, remove_list)
 

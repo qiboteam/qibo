@@ -1,4 +1,5 @@
 """Test :class:`qibo.models.distcircuit.DistributedCircuit` execution."""
+
 import numpy as np
 import pytest
 

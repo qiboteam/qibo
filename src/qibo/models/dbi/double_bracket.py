@@ -5,7 +5,6 @@ from functools import partial
 import hyperopt
 import numpy as np
 
-from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
 
@@ -38,7 +37,7 @@ class DoubleBracketIteration:
             from qibo.hamiltonians import Hamiltonian
 
             nqubits = 4
-            h0 = random_hermitian(2**nqubits)
+            h0 = random_hermitian(2**nqubits, seed=2)
             dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
             # diagonalized matrix
@@ -89,7 +88,7 @@ class DoubleBracketIteration:
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+                d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 -1.0j * step,
                 self.commutator(d, self.h.matrix),
@@ -123,7 +122,7 @@ class DoubleBracketIteration:
 
     @property
     def off_diagonal_norm(self):
-        r"""Hilbert Schmidt norm of off-diagonal part of H matrix: \sqrt{A^\dag A}"""
+        r"""Hilbert Schmidt norm of off-diagonal part of H matrix, namely :math:`\\text{Tr}(\\sqrt{A^{\\dagger} A})`."""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )

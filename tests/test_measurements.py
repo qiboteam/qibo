@@ -1,4 +1,5 @@
 """Test circuit result measurements and measurement gate and as part of circuit."""
+
 import numpy as np
 import pytest
 
@@ -317,28 +318,6 @@ def test_register_measurements(backend):
     )
 
 
-def test_register_name_error(backend):
-    c = models.Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.M(0, register_name="a"))
-    with pytest.raises(KeyError):
-        c.add(gates.M(1, register_name="a"))
-
-
-def test_registers_with_same_name_error(backend):
-    """Check that circuits that contain registers with the same name cannot be added."""
-    c1 = models.Circuit(2)
-    c1.add(gates.H(0))
-    c1.add(gates.M(0, register_name="a"))
-
-    c2 = models.Circuit(2)
-    c2.add(gates.H(1))
-    c2.add(gates.M(1, register_name="a"))
-
-    with pytest.raises(KeyError):
-        c = c1 + c2
-
-
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
@@ -457,9 +436,7 @@ def test_measurement_basis_list(backend):
     c.add(gates.X(3))
     c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
     result = c(nshots=100)
-    print(result.frequencies())
     assert result.frequencies() == {"0011": 100}
-    print(c.draw())
     assert (
         c.draw()
         == """q0: ─H─H───M─
@@ -473,3 +450,10 @@ def test_measurement_basis_list_error(backend):
     c = models.Circuit(4)
     with pytest.raises(ValueError):
         c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
+
+
+def test_measurement_same_qubit_different_registers_error(backend):
+    c = models.Circuit(4)
+    c.add(gates.M(0, 1, 3, register_name="a"))
+    with pytest.raises(KeyError):
+        c.add(gates.M(1, 2, 3, register_name="a"))

@@ -1,6 +1,12 @@
+""" This module implements a Quantum Convolutional Neural Network (QCNN) for classification tasks. The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_ for the identification of quantum phases.
+
+The QuantumCNN class in this module provides methods to construct the QCNN.
+"""
+
 import numpy as np
 
-from qibo import Circuit, gates
+from qibo import gates, get_backend
+from qibo.models import Circuit
 
 
 class QuantumCNN:
@@ -16,14 +22,16 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
+        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
     Example:
         .. testcode::
-            import qibo
-            from qibo.models.qcnn import QuantumCNN
+
             import math
-            import qibo
             import numpy as np
             import random
+            import qibo
+            from qibo.models.qcnn import QuantumCNN
+
 
             qibo.set_backend("numpy")
             data = np.random.rand(16)
@@ -42,12 +50,46 @@ class QuantumCNN:
 
     """
 
-    def __init__(self, nqubits, nlayers, nclasses=2, params=None):
+    def __init__(
+        self,
+        nqubits,
+        nlayers,
+        nclasses=2,
+        params=None,
+        twoqubitansatz=None,
+        copy_init_state=None,
+    ):
+        """
+        Initializes the QuantumCNN object.
+
+        Args:
+            nqubits (int): The number of qubits in the QCNN.
+            nlayers (int): The number of layers in the QCNN.
+            nclasses (int, optional): The number of classes for the classification task. Defaults to 2.
+            params (np.ndarray, optional): The initial parameters for the QCNN. If None, random parameters are generated. Defaults to None.
+            twoqubitansatz (qibo.models.circuit.Circuit, optional): A two-qubit ansatz for the convolutional layers. If None, a default ansatz is used. Defaults to None.
+            copy_init_state (bool, optional): Whether to copy the initial state for each shot in the simulation. If None, the behavior depends on the backend. Defaults to None.
+
+        Raises:
+            ValueError: If nqubits is not larger than 1.
+        """
+
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
+        self.twoqubitansatz = twoqubitansatz
 
-        self.nparams_conv = 15
+        if copy_init_state is None:
+            if "qibojit" in get_backend():
+                self.copy_init_state = True
+            else:
+                self.copy_init_state = False
+
+        if self.twoqubitansatz == None:
+            self.nparams_conv = 15
+        else:
+            self.nparams_conv = len(self.twoqubitansatz.get_parameters())
+
         self.nparams_pool = 6
         self.nparams_layer = self.nparams_conv + self.nparams_pool
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
@@ -161,15 +203,21 @@ class QuantumCNN:
             Circuit containing the unitaries added to the specified qubits.
         """
 
-        c = Circuit(self.nqubits)
-        c += self.one_qubit_unitary(bits[0], symbols[0:3])
-        c += self.one_qubit_unitary(bits[1], symbols[3:6])
-        c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
-        c.add(gates.RYY(bits[0], bits[1], symbols[7]))
-        c.add(gates.RXX(bits[0], bits[1], symbols[8]))
+        if self.twoqubitansatz is None:
+            c = Circuit(self.nqubits)
+            c += self.one_qubit_unitary(bits[0], symbols[0:3])
+            c += self.one_qubit_unitary(bits[1], symbols[3:6])
+            c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
+            c.add(gates.RYY(bits[0], bits[1], symbols[7]))
+            c.add(gates.RXX(bits[0], bits[1], symbols[8]))
 
-        c += self.one_qubit_unitary(bits[0], symbols[9:12])
-        c += self.one_qubit_unitary(bits[1], symbols[12:])
+            c += self.one_qubit_unitary(bits[0], symbols[9:12])
+            c += self.one_qubit_unitary(bits[1], symbols[12:])
+
+        else:
+            c = Circuit(self.nqubits)
+            c.add(self.twoqubitansatz.on_qubits(bits[0], bits[1]))
+            c.set_parameters(symbols[0 : self.nparams_conv])
 
         return c
 
@@ -229,9 +277,6 @@ class QuantumCNN:
         """
         Args:
             theta: list or numpy.array with the biases and the angles to be used in the circuit.
-            nlayers: int number of layers of the varitional circuit ansatz.
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit.
-                if False, parameterized Ry gates are used in the circuit (default=False).
         Returns:
             Circuit implementing the variational ansatz for angles "theta".
         """
@@ -251,7 +296,11 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        circuit_exec = circuit(init_state, nshots)
+        if self.copy_init_state:
+            init_state_copy = init_state.copy()
+        else:
+            init_state_copy = init_state
+        circuit_exec = circuit(init_state_copy, nshots)
         result = circuit_exec.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
 
@@ -281,7 +330,6 @@ class QuantumCNN:
         """
         Args:
             theta: list or numpy.array with the biases and the angles to be used in the circuit.
-            nlayers: int number of layers of the varitional circuit ansatz.
             data: numpy.array data[page][word]  (this is an array of kets).
             labels: list or numpy.array with the labels of the quantum states to be classified.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
@@ -309,17 +357,15 @@ class QuantumCNN:
             data: the training data to be used in the minimization.
             labels: the corresponding ground truth for the training data.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
-            method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
+            method: str 'classical optimizer for the minimization'. All methods from qibo.optimizers.optimize are suported (default='Powell').
         Returns:
             numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
         """
-        from scipy.optimize import minimize
+        from qibo.optimizers import optimize
 
-        result = minimize(
+        loss, optimal_angles, result = optimize(
             self.Cost_function, init_theta, args=(data, labels, nshots), method=method
         )
-        loss = result.fun
-        optimal_angles = result.x
 
         self._optimal_angles = optimal_angles
 

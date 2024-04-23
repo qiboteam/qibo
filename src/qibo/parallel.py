@@ -1,11 +1,12 @@
 """
 Resources for parallel circuit evaluation.
 """
+
 from typing import Iterable
 
 from joblib import Parallel, delayed
 
-from qibo.backends import GlobalBackend, set_threads
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 
@@ -38,8 +39,7 @@ def parallel_execution(circuit, states, processes=None, backend=None):
     Returns:
         Circuit evaluation for input states.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if states is None or not isinstance(states, list):  # pragma: no cover
         raise_error(TypeError, "states must be a list.")
@@ -87,8 +87,7 @@ def parallel_circuits_execution(
     Returns:
         Circuit evaluation for input states.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if not isinstance(circuits, Iterable):  # pragma: no cover
         raise_error(TypeError, "circuits must be iterable.")
@@ -164,8 +163,7 @@ def parallel_parametrized_execution(
     Returns:
         Circuit evaluation for input parameters.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if not isinstance(parameters, list):  # pragma: no cover
         raise_error(TypeError, "parameters must be a list.")

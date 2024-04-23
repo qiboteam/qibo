@@ -1,4 +1,5 @@
 """Test functions defined in `qibo/models/distcircuit.py`."""
+
 import pytest
 
 from qibo import Circuit, gates

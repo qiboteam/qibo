@@ -1,4 +1,5 @@
 """Test methods defined in `qibo/core/callbacks.py`."""
+
 import numpy as np
 import pytest
 
@@ -305,10 +306,14 @@ def test_overlap(backend, nqubits, density_matrix, seed):
 
     if density_matrix:
         final_overlap = overlap.apply_density_matrix(backend, state1)
-        target_overlap = np.trace(np.transpose(np.conj(state0)) @ state1)
+        target_overlap = np.trace(
+            np.transpose(np.conj(backend.to_numpy(state0))) @ backend.to_numpy(state1)
+        )
     else:
         final_overlap = overlap.apply(backend, state1)
-        target_overlap = np.abs(np.sum(np.conj(state0) * state1))
+        target_overlap = np.abs(
+            np.sum(np.conj(backend.to_numpy(state0)) * backend.to_numpy(state1))
+        )
 
     backend.assert_allclose(final_overlap, target_overlap)
 

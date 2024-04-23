@@ -1,4 +1,5 @@
 import collections
+import math
 
 import numpy as np
 
@@ -93,7 +94,7 @@ class NumpyBackend(Backend):
 
     def plus_state(self, nqubits):
         state = self.np.ones(2**nqubits, dtype=self.dtype)
-        state /= self.np.sqrt(2**nqubits)
+        state /= math.sqrt(2**nqubits)
         return state
 
     def plus_density_matrix(self, nqubits):
@@ -105,16 +106,20 @@ class NumpyBackend(Backend):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        return _matrix(2 ** len(gate.target_qubits)) if callable(_matrix) else _matrix
+        if callable(_matrix):
+            _matrix = _matrix(2 ** len(gate.target_qubits))
+
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)(*gate.parameters)
+        matrix = getattr(self.matrices, name)(*gate.parameters)
+        return self.cast(matrix, dtype=matrix.dtype)
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2**rank, dtype=self.dtype)
+        matrix = np.eye(2**rank)
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
@@ -122,7 +127,7 @@ class NumpyBackend(Backend):
             gmatrix = self.to_numpy(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
+            eye = np.eye(2 ** (rank - len(gate.qubits)))
             gmatrix = np.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
@@ -137,7 +142,7 @@ class NumpyBackend(Backend):
             gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
-        return matrix
+        return self.cast(matrix)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -153,10 +158,13 @@ class NumpyBackend(Backend):
             raise_error(
                 ValueError,
                 "Cannot use ``control_unitary`` method on "
-                "gate matrix of shape {}.".format(shape),
+                + f"gate matrix of shape {shape}.",
             )
         zeros = self.np.zeros((2, 2), dtype=self.dtype)
-        part1 = self.np.concatenate([self.np.eye(2, dtype=self.dtype), zeros], axis=0)
+        zeros = self.cast(zeros, dtype=zeros.dtype)
+        identity = self.np.eye(2, dtype=self.dtype)
+        identity = self.cast(identity, dtype=identity.dtype)
+        part1 = self.np.concatenate([identity, zeros], axis=0)
         part2 = self.np.concatenate([zeros, matrix], axis=0)
         return self.np.concatenate([part1, part2], axis=1)
 
@@ -177,7 +185,7 @@ class NumpyBackend(Backend):
             updates = self.np.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
-            state = self.np.concatenate([state[:-1], updates[self.np.newaxis]], axis=0)
+            state = self.np.concatenate([state[:-1], updates[None]], axis=0)
             state = self.np.reshape(state, nqubits * (2,))
             # Put qubit indices back to their proper places
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
@@ -219,11 +227,9 @@ class NumpyBackend(Backend):
 
             state00 = state[range(n - 1)]
             state00 = state00[:, range(n - 1)]
-            state01 = self.np.concatenate(
-                [state00, state01[:, self.np.newaxis]], axis=1
-            )
-            state10 = self.np.concatenate([state10, state11[self.np.newaxis]], axis=0)
-            state = self.np.concatenate([state01, state10[self.np.newaxis]], axis=0)
+            state01 = self.np.concatenate([state00, state01[:, None]], axis=1)
+            state10 = self.np.concatenate([state10, state11[None]], axis=0)
+            state = self.np.concatenate([state01, state10[None]], axis=0)
             state = self.np.reshape(state, 2 * nqubits * (2,))
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
@@ -238,7 +244,7 @@ class NumpyBackend(Backend):
 
     def apply_gate_half_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, 2 * nqubits * (2,))
+        state = self.np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:  # pragma: no cover
             raise_error(
@@ -248,12 +254,12 @@ class NumpyBackend(Backend):
                 "gates.",
             )
         else:
-            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             left, _ = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
-            state = np.einsum(left, state, matrix)
-        return np.reshape(state, 2 * (2**nqubits,))
+            state = self.np.einsum(left, state, matrix)
+        return self.np.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
@@ -273,11 +279,12 @@ class NumpyBackend(Backend):
     def _append_zeros(self, state, qubits, results):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
-            state = self.np.expand_dims(state, axis=q)
-            if r:
-                state = self.np.concatenate([self.np.zeros_like(state), state], axis=q)
-            else:
-                state = self.np.concatenate([state, self.np.zeros_like(state)], axis=q)
+            state = self.np.expand_dims(state, q)
+            state = (
+                self.np.concatenate([self.np.zeros_like(state), state], q)
+                if r == 1
+                else self.np.concatenate([state, self.np.zeros_like(state)], q)
+            )
         return state
 
     def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
@@ -324,7 +331,7 @@ class NumpyBackend(Backend):
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
-        zero = self.np.tensordot(trace, zero, axes=0)
+        zero = self.np.tensordot(trace, zero, 0)
         order = list(range(2 * nqubits - 2))
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
@@ -347,7 +354,7 @@ class NumpyBackend(Backend):
         trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
         identity = self.identity_density_matrix(len(q))
         identity = self.np.reshape(identity, 2 * len(q) * (2,))
-        identity = self.np.tensordot(trace, identity, axes=0)
+        identity = self.np.tensordot(trace, identity, 0)
         qubits = list(range(nqubits))
         for j in q:
             qubits.pop(qubits.index(j))
@@ -369,6 +376,7 @@ class NumpyBackend(Backend):
         return state
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -386,6 +394,8 @@ class NumpyBackend(Backend):
                 )
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
+        elif initial_state is not None:
+            initial_state = self.cast(initial_state)
 
         if circuit.repeated_execution:
             if circuit.measurements or circuit.has_collapse:
@@ -465,7 +475,7 @@ class NumpyBackend(Backend):
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
         and samples. Note that this method is called only if a unitary channel
         is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
-        if some collapsing measuremnt is performed.
+        if some collapsing measurement is performed.
         """
 
         if (
@@ -522,15 +532,14 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    samples.append("".join([str(s) for s in sample]))
+                    samples.append("".join([str(int(s)) for s in sample]))
                 for gate in circuit.measurements:
                     gate.result.reset()
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = np.mean(self.to_numpy(final_states), 0)
+            final_state = self.cast(np.mean(self.to_numpy(final_states), 0))
             if circuit.measurements:
-                qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
                     final_state,
                     circuit.measurements,
@@ -606,7 +615,7 @@ class NumpyBackend(Backend):
         rtype = self.np.real(state).dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
         state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
-        probs = self.np.sum(state.astype(rtype), axis=unmeasured_qubits)
+        probs = self.np.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
@@ -629,21 +638,23 @@ class NumpyBackend(Backend):
         )
 
     def aggregate_shots(self, shots):
-        return self.np.array(shots, dtype=shots[0].dtype)
+        return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        return self.np.mod(self.np.right_shift(samples[:, self.np.newaxis], qrange), 2)
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
+        return self.np.mod(
+            self.np.right_shift(self.cast(samples[:, None], dtype="int32"), qrange), 2
+        )
 
     def samples_to_decimal(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        qrange = (2**qrange)[:, self.np.newaxis]
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
+        qrange = (2**qrange)[:, None]
         return self.np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
-        res, counts = self.np.unique(samples, return_counts=True)
-        res, counts = self.np.array(res), self.np.array(counts)
-        return collections.Counter({k: v for k, v in zip(res, counts)})
+        # Samples are a list of strings so there is no advantage in using other backends
+        res, counts = np.unique(samples, return_counts=True)
+        return collections.Counter(dict(zip(res, counts)))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)
@@ -655,19 +666,21 @@ class NumpyBackend(Backend):
         from qibo.config import SHOT_BATCH_SIZE
 
         nprobs = probabilities / self.np.sum(probabilities)
-        frequencies = self.np.zeros(len(nprobs), dtype="int64")
+        frequencies = self.np.zeros(len(nprobs), dtype=self.np.int64)
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
         frequencies = self.update_frequencies(
             frequencies, nprobs, nshots % SHOT_BATCH_SIZE
         )
-        return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
+        return collections.Counter(
+            {i: int(f) for i, f in enumerate(frequencies) if f > 0}
+        )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        fprobs = self.np.array(bitflip_probabilities, dtype="float64")
-        sprobs = self.np.random.random(noiseless_samples.shape)
-        flip_0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip_1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        fprobs = self.cast(bitflip_probabilities, dtype="float64")
+        sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
+        flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
@@ -676,7 +689,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         axes = 2 * [list(qubits)]
-        rho = self.np.tensordot(state, self.np.conj(state), axes=axes)
+        rho = self.np.tensordot(state, self.np.conj(state), axes)
         shape = 2 * (2 ** (nqubits - len(qubits)),)
         return self.np.reshape(rho, shape)
 
@@ -695,21 +708,19 @@ class NumpyBackend(Backend):
 
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
-        return self.np.linalg.norm(state, ord=order)
+        return self.np.linalg.norm(state, order)
 
     def calculate_norm_density_matrix(self, state, order="nuc"):
         state = self.cast(state)
         return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
-        state1 = self.cast(state1)
-        state2 = self.cast(state2)
-        return self.np.abs(self.np.sum(self.np.conj(state1) * state2))
+        return self.np.abs(self.np.sum(np.conj(self.cast(state1)) * self.cast(state2)))
 
     def calculate_overlap_density_matrix(self, state1, state2):
-        state1 = self.cast(state1)
-        state2 = self.cast(state2)
-        return self.np.trace(self.np.transpose(self.np.conj(state1)) @ state2)
+        return self.np.trace(
+            self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
+        )
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
@@ -737,42 +748,37 @@ class NumpyBackend(Backend):
             else:
                 from scipy.linalg import expm
             return expm(-1j * a * matrix)
-        else:
-            expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-            ud = self.np.transpose(self.np.conj(eigenvectors))
-            return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+        ud = self.np.transpose(np.conj(eigenvectors))
+        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)
         hstate = hamiltonian @ state
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
-            norm = self.np.sum(self.np.square(self.np.abs(state)))
-            ev = ev / norm
+            ev /= self.np.sum(self.np.square(self.np.abs(state)))
         return ev
 
     def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
-        ev = self.np.real(self.np.trace(hamiltonian @ state))
+        ev = self.np.real(self.np.trace(self.cast(hamiltonian @ state)))
         if normalize:
             norm = self.np.real(self.np.trace(state))
-            ev = ev / norm
+            ev /= norm
         return ev
 
+    # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        return self.np.dot(matrix1, matrix2)
+        return matrix1 @ matrix2
 
+    # TODO: remove this method
     def calculate_hamiltonian_state_product(self, matrix, state):
-        rank = len(tuple(state.shape))
-        state = self.cast(state)
-        if rank == 1:  # vector
-            return matrix.dot(state[:, np.newaxis])[:, 0]
-        elif rank == 2:  # matrix
-            return matrix.dot(state)
-        else:
+        if len(tuple(state.shape)) > 2:
             raise_error(
                 ValueError,
-                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+                f"Cannot multiply Hamiltonian with rank-{len(tuple(state.shape))} tensor.",
             )
+        return matrix @ state
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
