@@ -5,7 +5,7 @@ import pytest
 
 from qibo import gates
 from qibo.models.circuit import Circuit
-from qibo.models.qdp.dynamic_programming import DensityMatrixExponentiation
+from qibo.models.qdp.quantum_dynamic_programming import DensityMatrixExponentiation
 
 
 def test_increment_instruction_qubit():
