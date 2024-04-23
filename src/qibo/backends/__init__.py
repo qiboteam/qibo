@@ -53,7 +53,7 @@ class MetaBackend:
             try:
                 MetaBackend.load(backend)
                 available = True
-            except:
+            except:  # pragma: no cover
                 available = False
             available_backends[backend] = available
         for backend in QIBO_NON_NATIVE_BACKENDS:
