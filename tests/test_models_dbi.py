@@ -71,7 +71,6 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
         ) * np.linalg.norm(h0) * np.linalg.norm(d)
 
 
-
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_single_commutator(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
