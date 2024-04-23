@@ -58,7 +58,7 @@ class MetaBackend:
             available_backends[backend] = available
         for backend in QIBO_NON_NATIVE_BACKENDS:
             try:
-                module = import_module(backend)
+                module = import_module(backend.replace("-", "_"))
                 available = getattr(module, "MetaBackend")().list_available()
             except:
                 available = False
