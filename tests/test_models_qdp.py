@@ -1,7 +1,7 @@
 """Test cases for DensityMatrixExponentiation model."""
 import numpy as np
 import pytest
-from qibo.models.qdp.dynamic_programming import DensityMatrixExponentiation
+from qibo.models.qdp.qunatum_dynamic_programming import DensityMatrixExponentiation
 from qibo import gates
 from qibo.models.circuit import Circuit
 
