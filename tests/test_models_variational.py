@@ -125,6 +125,8 @@ def test_vqe(backend, method, options, compile, filename):
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
+    if backend.name == "pytorch":
+        initial_parameters = backend.np.tensor(initial_parameters, requires_grad=True)
     v = models.VQE(circuit, hamiltonian)
     best, params, _ = v.minimize(
         initial_parameters, method=method, options=options, compile=compile
@@ -169,7 +171,7 @@ def test_qaoa_execution(backend, solver, dense, accel=None):
     else:
         atol = 0
 
-    target_state = np.copy(state)
+    target_state = backend.cast(state, copy=True)
     h_matrix = backend.to_numpy(h.matrix)
     m_matrix = backend.to_numpy(m.matrix)
     for i, p in enumerate(params):

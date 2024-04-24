@@ -262,7 +262,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
 
 def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
 
-    vparams = backend.np.tensor(initial_parameters, requires_grad=True)
+    vparams = initial_parameters
     optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
         params=[vparams], lr=sgd_options["learning_rate"]
     )
@@ -270,7 +270,6 @@ def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
     for e in range(sgd_options["nepochs"]):
         optimizer.zero_grad()
         l = loss(vparams, *args)
-        print("Loss_gradient: ", l.requires_grad)
         l.backward()
         optimizer.step()
 

@@ -8,20 +8,26 @@ from qibo.backends.numpy import NumpyBackend
 
 
 class TorchMatrices(NumpyMatrices):
-    """Matrix representation of every gate as a torch Tensor."""
+    """Matrix representation of every gate as a torch Tensor.
 
-    def __init__(self, dtype):
+    Args:
+        dtype (torch.dtype): Data type of the matrices.
+        requires_grad (bool): If ``True`` the matrices require gradient.
+    """
+
+    def __init__(self, dtype, requires_grad):
         import torch  # pylint: disable=import-outside-toplevel
 
         super().__init__(dtype)
         self.np = torch
         self.dtype = dtype
+        self.requires_grad = requires_grad
 
     def _cast(self, x, dtype):
         return self.np.as_tensor(x, dtype=dtype)
 
     def _cast_parameter(self, x):
-        return self.np.tensor(x)
+        return self.np.tensor(x, requires_grad=self.requires_grad)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)
@@ -31,6 +37,9 @@ class PyTorchBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
         import torch  # pylint: disable=import-outside-toplevel
+
+        # Global variable to enable or disable gradient calculation
+        self.gradients = True
 
         self.np = torch
 
@@ -42,7 +51,7 @@ class PyTorchBackend(NumpyBackend):
         }
 
         self.dtype = self._torch_dtype(self.dtype)
-        self.matrices = TorchMatrices(self.dtype)
+        self.matrices = TorchMatrices(self.dtype, requires_grad=self.gradients)
         self.device = self.np.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.tensor_types = (self.np.Tensor, np.ndarray)
@@ -52,6 +61,11 @@ class PyTorchBackend(NumpyBackend):
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift
+
+    def requires_grad(self, requires_grad):
+        """Enable or disable gradient calculation."""
+        self.gradients = requires_grad
+        self.matrices.requires_grad = requires_grad
 
     def _torch_dtype(self, dtype):
         if dtype == "float":
@@ -66,6 +80,7 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
+        requires_grad: bool = None,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -80,7 +95,13 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
+            requires_grad (bool, optional): If ``True``, the input tensor requires gradient.
+                If ``False``, the input tensor does not require gradient.
+                If ``None``, the default gradient setting of the backend is used.
         """
+        if requires_grad is None:
+            requires_grad = self.gradients
+
         if dtype is None:
             dtype = self.dtype
         elif isinstance(dtype, type):
@@ -93,7 +114,7 @@ class PyTorchBackend(NumpyBackend):
         elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
             x = self.np.stack(x)
         else:
-            x = self.np.tensor(x, dtype=dtype)
+            x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
 
         if copy:
             return x.clone()
