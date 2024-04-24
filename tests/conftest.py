@@ -12,7 +12,7 @@ from qibo.backends import construct_backend
 
 # backends to be tested
 BACKENDS = [
-    # "numpy",
+    "numpy",
     "jax",
     # "tensorflow",
     # "pytorch",
