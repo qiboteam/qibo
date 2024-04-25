@@ -154,7 +154,7 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function. (without the constant term norm(H))"""
-        h_np = np.diag(np.diag(self.backend.to_numpy(self.h.matrix)))
+        h_np = self.backend.to_numpy(self.h.matrix)
 
         return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
 
