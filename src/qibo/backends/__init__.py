@@ -82,7 +82,7 @@ class GlobalBackend(NumpyBackend):
             # Create backend according to default order
             for kwargs in cls._default_order:
                 try:
-                    cls._instance = construct_baceknd(**kwargs)
+                    cls._instance = construct_backend(**kwargs)
                     break
                 except (ModuleNotFoundError, ImportError):
                     pass

@@ -135,7 +135,7 @@ class QuantumState:
         Returns:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
-        backend = backends.construct_backend.load("numpy")
+        backend = backends.construct_backend("numpy")
         return cls(payload.get("state"), backend=backend)
 
     @classmethod
