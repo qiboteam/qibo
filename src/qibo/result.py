@@ -135,7 +135,7 @@ class QuantumState:
         Returns:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
-        backend = backends.MetaBackend.load("numpy")
+        backend = backends.construct_backend.load("numpy")
         return cls(payload.get("state"), backend=backend)
 
     @classmethod
@@ -442,14 +442,14 @@ class MeasurementOutcomes:
         Returns:
             A :class:`qibo.result.MeasurementOutcomes` object.
         """
-        from qibo.backends import MetaBackend
+        from qibo.backends import construct_backend
 
         if payload["probabilities"] is not None and payload["samples"] is not None:
             warnings.warn(
                 "Both `probabilities` and `samples` found, discarding the `probabilities` and building out of the `samples`."
             )
             payload.pop("probabilities")
-        backend = MetaBackend.load("numpy")
+        backend = construct_backend("numpy")
         measurements = [gates.M.load(m) for m in payload.get("measurements")]
         return cls(
             measurements,

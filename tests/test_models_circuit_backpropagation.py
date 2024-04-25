@@ -8,9 +8,9 @@ from qibo import Circuit, gates
 
 def construct_tensorflow_backend():
     try:
-        from qibo.backends import MetaBackend
+        from qibo.backends import construct_backend
 
-        backend = MetaBackend.load("tensorflow")
+        backend = construct_backend("tensorflow")
     except ModuleNotFoundError:  # pragma: no cover
         pytest.skip(
             "Skipping backpropagation test because tensorflow is not available."

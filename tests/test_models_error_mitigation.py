@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import MetaBackend
+from qibo.backends import construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.error_mitigation import (
     CDR,
@@ -52,7 +52,7 @@ def get_circuit(nqubits, nmeas=None):
     return c
 
 
-backend = MetaBackend.load("numpy")
+backend = construct_backend("numpy")
 # # Generate random response matrices
 resp_matrix_1q = random_stochastic_matrix(
     2, diagonally_dominant=True, seed=2, backend=backend

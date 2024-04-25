@@ -18,11 +18,11 @@ class MetaBackend:
 
     @staticmethod
     def load(backend: str, **kwargs) -> Backend:
-        """Loads the backend.
+        """Loads the native qibo backend.
 
         Args:
             backend (str): Name of the backend to load.
-            kwargs (dict): Additional arguments for the non-native qibo backends.
+            kwargs (dict): Additional arguments for the qibo backend.
         Returns:
             qibo.backends.abstract.Backend: The loaded backend.
         """
@@ -37,17 +37,14 @@ class MetaBackend:
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
-        elif backend in QIBO_NON_NATIVE_BACKENDS:
-            module = import_module(backend.replace("-", "_"))
-            return getattr(module, "MetaBackend").load(**kwargs)
         else:
             raise_error(
                 ValueError,
-                f"Backend {backend} is not available. To check which  backend is installed use `qibo.list_available_backends()`.",
+                f"Backend {backend} is not available. The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
             )
 
     def list_available(self) -> dict:
-        """Lists all the available qibo backends."""
+        """Lists all the available native qibo backends."""
         available_backends = {}
         for backend in QIBO_NATIVE_BACKENDS:
             try:
@@ -56,13 +53,6 @@ class MetaBackend:
             except:  # pragma: no cover
                 available = False
             available_backends[backend] = available
-        for backend in QIBO_NON_NATIVE_BACKENDS:
-            try:
-                module = import_module(backend.replace("-", "_"))
-                available = getattr(module, "MetaBackend")().list_available()
-            except:
-                available = False
-            available_backends.update({backend: available})
         return available_backends
 
 
@@ -87,12 +77,12 @@ class GlobalBackend(NumpyBackend):
         if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = MetaBackend.load(backend, platform=platform)
+            cls._instance = construct_backend(backend, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
                 try:
-                    cls._instance = MetaBackend.load(**kwargs)
+                    cls._instance = construct_baceknd(**kwargs)
                     break
                 except (ModuleNotFoundError, ImportError):
                     pass
@@ -110,7 +100,7 @@ class GlobalBackend(NumpyBackend):
             or cls._instance.name != backend
             or cls._instance.platform != kwargs.get("platform")
         ):
-            cls._instance = MetaBackend.load(backend, **kwargs)
+            cls._instance = construct_backend(backend, **kwargs)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
@@ -198,9 +188,35 @@ def _check_backend(backend):
     return backend
 
 
-def list_available_backends():
-    return MetaBackend().list_available()
+def list_available_backends() -> dict:
+    """Lists all the backends that are available."""
+    available_backends = MetaBackend().list_available()
+    for backend in QIBO_NON_NATIVE_BACKENDS:
+        try:
+            module = import_module(backend.replace("-", "_"))
+            available = getattr(module, "MetaBackend")().list_available()
+        except:
+            available = False
+        available_backends.update({backend: available})
+    return available_backends
 
 
-def construct_backend(backend, **kwargs):
-    return MetaBackend.load(backend, **kwargs)
+def construct_backend(backend, **kwargs) -> Backend:
+    """Construct a generic native or non-native qibo backend.
+    Args:
+        backend (str): Name of the backend to load.
+        kwargs (dict): Additional arguments for constructing the backend.
+    Returns:
+        qibo.backends.abstract.Backend: The loaded backend.
+
+    """
+    if backend in QIBO_NATIVE_BACKENDS:
+        return MetaBackend.load(backend, **kwargs)
+    elif backend in QIBO_NON_NATIVE_BACKENDS:
+        module = import_module(backend.replace("-", "_"))
+        return getattr(module, "MetaBackend").load(**kwargs)
+    else:
+        raise_error(
+            ValueError,
+            f"Backend {backend} is not available. To check which backends are installed use `qibo.list_available_backends()`.",
+        )

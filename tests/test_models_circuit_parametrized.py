@@ -219,9 +219,9 @@ def test_set_parameters_with_light_cone(backend, trainable):
 def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
     try:
-        from qibo.backends import MetaBackend
+        from qibo.backends import construct_backend
 
-        backend = MetaBackend.load("tensorflow")
+        backend = construct_backend("tensorflow")
     except ModuleNotFoundError:  # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
 

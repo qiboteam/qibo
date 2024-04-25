@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from qibo.backends import MetaBackend
+from qibo.backends import construct_backend
 
 # backends to be tested
 BACKENDS = [
@@ -32,7 +32,7 @@ def get_backend(backend_name):
         name, platform = backend_name.split("-")
     else:
         name, platform = backend_name, None
-    return MetaBackend.load(name, platform=platform)
+    return construct_backend(name, platform=platform)
 
 
 # ignore backends that are not available in the current testing environment
