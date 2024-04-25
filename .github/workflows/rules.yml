@@ -6,7 +6,7 @@ on:
   push:
   merge_group:
   pull_request:
-    types: [labeled, created]
+    types: [labeled, opened]
 
 jobs:
   build:
