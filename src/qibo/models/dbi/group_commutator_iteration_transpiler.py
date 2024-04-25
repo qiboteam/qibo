@@ -61,7 +61,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 DoubleBracketGeneratorType.group_commutator
             )
         super().__init__(
-            input_hamiltonian_evolution_oracle.h, mode_double_bracket_rotation_old
+            input_hamiltonian_evolution_oracle.h.dense, mode_double_bracket_rotation_old
         )
 
         self.input_hamiltonian_evolution_oracle = input_hamiltonian_evolution_oracle
@@ -135,27 +135,8 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         if eo2 is None:
             eo2 = self.iterated_hamiltonian_evolution_oracle
-        ##
-        from scipy.linalg import expm, norm
 
-        Vh = expm(1j * s_step * eo2.h.dense.matrix)
-        Vd = expm(1j * s_step * eo1.h.dense.matrix)
-        print(
-            norm(
-                Vh @ Vd @ Vh.conj().T @ Vd.conj().T
-                - super().eval_dbr_unitary(t_step, d=eo1.h.dense.matrix)
-            )
-        )
-        print(norm(Vh - eo2.circuit(-s_step)))
-        print(norm(Vd - eo1.circuit(-s_step)))
-        from functools import reduce
-
-        by_hand_list = [Vh, Vd, Vh.conj().T, Vd.conj().T]
-        S = reduce(np.ndarray.__matmul__, by_hand_list)
-        print(norm(S - super().eval_dbr_unitary(t_step, d=eo1.h.dense.matrix)))
         assert eo1.mode_evolution_oracle.value is eo2.mode_evolution_oracle.value
-
-        eo_mode = eo1.mode_evolution_oracle
 
         if mode_dbr is None:
             gc_type = self.mode_double_bracket_rotation
@@ -171,14 +152,14 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         if gc_type is DoubleBracketRotationType.group_commutator:
             query_list_forward = [
                 eo2.circuit(-s_step),
-                eo1.circuit(-s_step),
-                eo2.circuit(s_step),
                 eo1.circuit(s_step),
+                eo2.circuit(s_step),
+                eo1.circuit(-s_step),
             ]
             query_list_backward = [
-                eo1.circuit(-s_step),
-                eo2.circuit(-s_step),
                 eo1.circuit(s_step),
+                eo2.circuit(-s_step),
+                eo1.circuit(-s_step),
                 eo2.circuit(s_step),
             ]
         elif gc_type is DoubleBracketRotationType.group_commutator_reduced:
@@ -197,20 +178,9 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 ValueError,
                 "You are in the group commutator query list but your dbr mode is not recognized",
             )
-        print("start")
-        reduce(
-            print,
-            [
-                norm(x @ y.conj().T - np.eye(x.shape[0]))
-                for x, y in zip(query_list_forward, by_hand_list)
-            ],
-        )
-        from functools import reduce
 
-        print("stop")
-        print(query_list_forward[2])
-        W = reduce(np.ndarray.__matmul__, query_list_forward)
-        print(norm(W - S))
+        eo_mode = eo1.mode_evolution_oracle
+        from functools import reduce
         if eo_mode is EvolutionOracleType.text_strings:
             return {
                 "forwards": reduce(str.__add__, query_list_forward),

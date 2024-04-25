@@ -53,7 +53,7 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
 @pytest.mark.parametrize("nqubits", [3])
 def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
-    r"""The bound is $$||e^{-[D,H]}-GC||\le s^{3/2}(||[H,[D,H]||+||[D,[D,H]]||$$"""
+    r"""The bound is $$||e^{-[D,H]}-GC||\le s^{3/2}(||[H,[D,H]||+||[D,[D,H]]||$$ which we check by a loglog fit."""
     h0 = random_hermitian(2**nqubits, backend=backend)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
@@ -61,7 +61,10 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
         mode=DoubleBracketGeneratorType.group_commutator,
     )
 
-    for s in np.linspace(0.001, 0.01, NSTEPS):
+    times = np.linspace(0.001, 0.01, 10)
+    norms = []
+    norms_bound = []
+    for s in times:
         u = dbi.eval_dbr_unitary(
             s, d=d, mode=DoubleBracketGeneratorType.single_commutator
         )
@@ -69,13 +72,24 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
             s, d=d, mode=DoubleBracketGeneratorType.group_commutator
         )
 
+        norms.append(np.linalg.norm(u - v) )
+        w = dbi.commutator(h0,d)
+        norms_bound.append(0.5*s**1.48 * (
+            np.linalg.norm(dbi.commutator(h0,w)) + np.linalg.norm(dbi.commutator(d,w))
+        ))
         assert np.linalg.norm(u - v) < 10 * s**1.49 * (
-            np.linalg.norm(h0) + np.linalg.norm(d)
-        ) * np.linalg.norm(h0) * np.linalg.norm(d)
+                np.linalg.norm(h0) + np.linalg.norm(d)
+            ) * np.linalg.norm(h0) * np.linalg.norm(d)
+
 
 
 @pytest.mark.parametrize("nqubits", [3])
-def test_dbi_evolution_oracle(backend, nqubits, t_step, eps):
+def test_dbi_evolution_oracle(backend, nqubits, t_step = 0.1, eps = 0.001 ):
+    """ We test the basic functionality provided by `EvolutionOracle`:
+    - hamiltonian_simulation: will use `SymbolicHamiltonian.circuit()` and should match with the corresponding evolution unitary up to the discretization error threshold
+    - numerical is just exponential $e^{-1jt_{step} H}$
+    - text_strings will have strings which just have the name of the evolution oracle 
+    """
     from numpy.linalg import norm
 
     from qibo import symbols
@@ -94,13 +108,28 @@ def test_dbi_evolution_oracle(backend, nqubits, t_step, eps):
     evolution_oracle = EvolutionOracle(
         h_input, "ZX", mode_evolution_oracle=EvolutionOracleType.hamiltonian_simulation
     )
-
     evolution_oracle.eps_trottersuzuki = eps
 
     U_hamiltonian_simulation = evolution_oracle.circuit(t_step).unitary()
     V_target = h_input.exp(t_step)
 
     assert norm(U_hamiltonian_simulation - V_target) < eps
+
+    evolution_oracle_np = EvolutionOracle(
+        h_input, "ZX numpy", mode_evolution_oracle=EvolutionOracleType.numerical
+    )
+    U_np = evolution_oracle_np.circuit(t_step)
+    assert norm(U_np - V_target) < 1e-12
+
+    evolution_oracle_txt = EvolutionOracle(
+        h_input, "ZX test", mode_evolution_oracle=EvolutionOracleType.text_strings
+    )
+    U_txt = evolution_oracle_txt.circuit(t_step)   
+    assert isinstance(U_txt, str)
+
+
+
+
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
