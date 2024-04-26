@@ -9,7 +9,7 @@ from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch", "clifford")
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
 QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
 
 
@@ -210,7 +210,7 @@ def construct_backend(backend, **kwargs) -> Backend:
         qibo.backends.abstract.Backend: The loaded backend.
 
     """
-    if backend in QIBO_NATIVE_BACKENDS:
+    if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
         return MetaBackend.load(backend, **kwargs)
     elif backend in QIBO_NON_NATIVE_BACKENDS:
         module = import_module(backend.replace("-", "_"))
