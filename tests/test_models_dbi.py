@@ -129,6 +129,84 @@ def test_dbi_evolution_oracle(backend, nqubits, t_step = 0.1, eps = 0.001 ):
 
 
 
+def test_gci_evolution_oracles_types_numerical(nqubits,backend,t_step, eps):
+    """
+
+    This is testing the following:
+
+    `dbi_exact` runs $V_{exact} = e^{-sW}$ and rotates $H_1 = V_{exact}^\dagger H_0 V_{exact}$.
+
+    `dbi_GC` runs $V_{GC} = GC$ and rotates $K_1 = V_{GC}^\dagger H_0 V_{GC}$.
+
+    We assert that dbi_exact and dbi_GC should be within the approximation bound of the GC
+    $$||J_1-H_1||\le2 ||H_0||\,||R-V||\le C ||H_0|| s^{3/2}$$
+
+    `gci` runs $V_{EO,GC} = GC$ and rotates $J_1 = V_{EO,GC}^\dagger H_0 V_{EO,GC}$.
+
+    We assert that gci and dbi2 should be within machine precision for the correct sorting.
+    $$||J_1-K_1||\le2 ||H_0||\,||R-Q||\le \epsilon$$
+    """
+
+    from numpy.linalg import norm
+
+    h_x = SymbolicHamiltonian(
+        symbols.X(0)
+        + symbols.Z(0) * symbols.X(1)
+        + symbols.Y(2)
+        + symbols.Y(1) * symbols.Y(2),
+        nqubits=3,
+    )
+    d_0 = SymbolicHamiltonian(symbols.Z(0), nqubits=3)
+    h_input = h_x + d_0
+
+    dbi = DoubleBracketIteration(deepcopy(h_input.dense))
+
+    v_exact = dbi.eval_dbr_unitary(t_step, d=d_0.dense.matrix, mode=DoubleBracketGeneratorType.single_commutator)
+    v_gc = dbi.eval_dbr_unitary(t_step, d=d_0.dense.matrix, mode=DoubleBracketGeneratorType.group_commutator)
+
+    dbi(t_step, d = d_0.dense.matrix )
+    h_1 = dbi.h.matrix
+
+    dbi.h = deepcopy(h_input.dense)
+    dbi(t_step, d = d_0.dense.matrix, mode = DoubleBracketGeneratorType.group_commutator )
+    k_1 = dbi.h.matrix
+
+    w = dbi.commutator(h_input.dense.matrix,d_0.dense.matrix)
+    norms_bound = 0.5*t_step**1.48 * (
+        np.linalg.norm(dbi.commutator(h_input.dense.matrix,w)) + np.linalg.norm(dbi.commutator(d_0.matrix,w))
+    )
+    assert norm(v_exact - v_gc) < norms_bound
+    assert norm(h_1-k_1) < 2 * norm(h_input.dense.matrix) * norms_bound   
+
+    evolution_oracle = EvolutionOracle(h_input, "ZX",
+                        mode_evolution_oracle = EvolutionOracleType.numerical)    
+    d_02 = SymbolicHamiltonian(symbols.Z(0), nqubits=3)
+    evolution_oracle_diagonal_target =  EvolutionOracle(d_02, "D0",
+               mode_evolution_oracle = EvolutionOracleType.numerical)
+
+    gci = GroupCommutatorIterationWithEvolutionOracles( deepcopy(evolution_oracle ))
+    #gci.mode_double_bracket_rotation = DoubleBracketRotationType.group_commutator
+
+    u_gc_from_oracles = gci.group_commutator( t_step, evolution_oracle_diagonal_target )   
+    u_gci = u_gc_from_oracles['forwards']
+
+    assert norm(u_gci.conj().T - u_gc_from_oracles['backwards']) < 1e-12
+
+
+    v_exact = dbi.eval_dbr_unitary(t_step, d=d_0.dense.matrix, mode=DoubleBracketGeneratorType.single_commutator)
+    w = dbi.commutator(h_input.dense.matrix,d_0.dense.matrix)
+    norms_bound = 0.5*t_step**1.48 * (
+        np.linalg.norm(dbi.commutator(h_input.dense.matrix,w)) + np.linalg.norm(dbi.commutator(d_0.matrix,w))
+    )
+    assert norm(v_exact - u_gci) < norms_bound
+
+    gci(t_step, diagonal_association= evolution_oracle_diagonal_target )
+    j_1 = gci.iterated_hamiltonian_evolution_oracle.h.matrix
+    assert norm(h_1-j_1) < 2 * norm(h_input.dense.matrix) * norms_bound   
+    assert norm(j_1-k_1) < 1e-12 
+    
+    
+    
 
 
 

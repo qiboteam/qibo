@@ -177,12 +177,12 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
             return self.name + "(" + str(t_duration) + ")"
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
-            return self.before_circuit @ self.h.exp(t_duration) @ self.after_circuit
+            return self.before_circuit @ self.base_evolution_oracle(t_duration) @ self.after_circuit
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             return (
-                self.before_circuit
+                self.after_circuit
                 + self.base_evolution_oracle.circuit(t_duration)
-                + self.after_circuit
+                + self.before_circuit
             )
         else:
             raise_error(

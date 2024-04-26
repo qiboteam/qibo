@@ -71,9 +71,8 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         self.gci_unitary = []
         self.gci_unitary_dagger = []
-        self.iterated_hamiltonian_evolution_oracle = (
-            self.input_hamiltonian_evolution_oracle
-        )
+        self.iterated_hamiltonian_evolution_oracle = deepcopy( self.input_hamiltonian_evolution_oracle )
+        
 
     def __call__(
         self,
@@ -99,6 +98,13 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         before_circuit = double_bracket_rotation_step["backwards"]
         after_circuit = double_bracket_rotation_step["forwards"]
 
+        self.iterated_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle(
+                deepcopy(self.iterated_hamiltonian_evolution_oracle),
+                str(step_duration),
+                before_circuit,
+                after_circuit,
+            )
+
         if (
             self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
             is EvolutionOracleType.numerical
@@ -109,12 +115,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
             is EvolutionOracleType.hamiltonian_simulation
         ):
-            self.iterated_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle(
-                deepcopy(self.iterated_hamiltonian_evolution_oracle),
-                str(step_duration),
-                before_circuit,
-                after_circuit,
-            )
+
             self.h.matrix = (
                 before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
             )
