@@ -1,5 +1,5 @@
 from qibo import __version__
-from qibo.backends.npmatrices import NumpyMatrices
+from qibo.backends import einsum_utils
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
 
@@ -79,5 +79,52 @@ class JaxBackend(NumpyBackend):
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)
         res, counts = self.np.unique(samples, return_counts=True)
-        frequencies.at[res].add(counts)
+        frequencies = frequencies.at[res].add(counts)
         return frequencies
+
+    def apply_gate_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = self.np.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.matrix(self)
+        if gate.is_controlled_by:
+            matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+            matrixc = self.np.conj(matrix)
+            ncontrol = len(gate.control_qubits)
+            nactive = nqubits - ncontrol
+            n = 2**ncontrol
+
+            order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
+            state = self.np.transpose(state, order)
+            state = self.np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+
+            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
+                targets, nactive
+            )
+            state01 = state[: n - 1, n - 1]
+            state01 = self.np.einsum(rightc, state01, matrixc)
+            state10 = state[n - 1, : n - 1]
+            state10 = self.np.einsum(leftc, state10, matrix)
+
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                targets, nactive
+            )
+            state11 = state[n - 1, n - 1]
+            state11 = self.np.einsum(right, state11, matrixc)
+            state11 = self.np.einsum(left, state11, matrix)
+
+            state00 = state[: n - 1]
+            state00 = state00[:, tuple(range(n - 1))]
+            state01 = self.np.concatenate([state00, state01[:, None]], axis=1)
+            state10 = self.np.concatenate([state10, state11[None]], axis=0)
+            state = self.np.concatenate([state01, state10[None]], axis=0)
+            state = self.np.reshape(state, 2 * nqubits * (2,))
+            state = self.np.transpose(state, einsum_utils.reverse_order(order))
+        else:
+            matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrixc = self.np.conj(matrix)
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
+            state = self.np.einsum(right, state, matrixc)
+            state = self.np.einsum(left, state, matrix)
+        return self.np.reshape(state, 2 * (2**nqubits,))
