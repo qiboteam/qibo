@@ -722,12 +722,12 @@ class QuantumComb(QuantumNetwork):
         )
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_out, dims=1)
-            sub_comb = self._tensordot(reduced, trace_in, dims=1)
+            reduced = self._tensordot(self.full(), trace_out, dims=([-1], [0]))
+            sub_comb = self._tensordot(reduced, trace_in, dims=([-1], [0]))
             expected = self._tensordot(sub_comb, trace_in / dim_in, dims=0)
         else:
-            reduced = self._tensordot(self.full(), trace_out, axes=1)
-            sub_comb = self._tensordot(reduced, trace_in, axes=1)
+            reduced = self._tensordot(self.full(), trace_out, axes=(-1, 0))
+            sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
             expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
 
         norm = self._backend.calculate_norm(reduced - expected, order=order)
@@ -851,13 +851,20 @@ class QuantumChannel(QuantumComb):
         )
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_in, dims=0)
-            sub_comb = self._tensordot(reduced, trace_out, dims=0)
-            expected = self._tensordot(sub_comb, trace_out / dim_out, dims=1)
+            reduced = self._tensordot(self.full(), trace_in, dims=([0], [0]))
+            sub_comb = self._tensordot(
+                reduced,
+                trace_out,
+                dims=(
+                    [0],
+                    [0],
+                ),
+            )
+            expected = self._tensordot(trace_out / dim_out, sub_comb, dims=0)
         else:
-            reduced = self._tensordot(self.full(), trace_in, axes=0)
-            sub_comb = self._tensordot(reduced, trace_out, axes=0)
-            expected = self._tensordot(sub_comb, trace_out / dim_out, axes=1)
+            reduced = self._tensordot(self.full(), trace_in, axes=(0, 0))
+            sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
+            expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
 
         norm = self._backend.calculate_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:

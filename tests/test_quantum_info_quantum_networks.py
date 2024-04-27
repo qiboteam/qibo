@@ -210,14 +210,17 @@ def test_parameters(backend):
     dims = 2**nqubits
     partition = (dims, dims)
 
-    network = QuantumNetwork.from_nparray(
-        channel.to_choi(backend=backend), partition, backend=backend
-    )
-    quantum_comb = QuantumComb.from_nparray(
-        channel.to_choi(backend=backend), partition, backend=backend
-    )
+    choi = channel.to_choi(backend=backend)
+
+    network = QuantumNetwork.from_nparray(choi, partition, backend=backend)
+    quantum_comb = QuantumComb.from_nparray(choi, partition, backend=backend)
     quantum_channel = QuantumChannel.from_nparray(
-        channel.to_choi(backend=backend), partition, backend=backend
+        choi, partition, backend=backend, inverse=True
+    )
+
+    rand = random_density_matrix(dims**2, backend=backend)
+    non_channel = QuantumChannel.from_nparray(
+        rand, partition, backend=backend, inverse=True
     )
 
     backend.assert_allclose(network.operator(backend=backend).shape, (2, 2, 2, 2))
@@ -225,11 +228,15 @@ def test_parameters(backend):
     backend.assert_allclose(network.partition, partition)
     backend.assert_allclose(network.system_input, (True, False))
 
-    assert quantum_comb.is_causal()
-    assert quantum_channel.is_unital()
     assert network.is_hermitian()
     assert network.is_positive_semidefinite()
+    assert quantum_comb.is_causal()
+    assert quantum_channel.is_unital()
     assert quantum_channel.is_channel()
+
+    # Test non-unital and non_causal
+    assert not non_channel.is_causal()
+    assert not non_channel.is_unital()
 
 
 def test_with_states(backend):
@@ -305,23 +312,50 @@ def test_with_comb(backend):
     subscript = "jklm,kl->jm"
     comb_partition = (2,) * 4
     channel_partition = (2,) * 2
-    comb_sys_out = (False, True) * 2
-    channel_sys_out = (False, True)
+    comb_sys_in = (False, True) * 2
+    channel_sys_in = (False, True)
+
+    rand_choi = random_density_matrix(4**2, backend=backend)
+    unitary_1 = random_unitary(4, backend=backend)
+    non_channel = QuantumNetwork.from_nparray(
+        rand_choi,
+        (2, 2, 2, 2),
+        system_input=(True, True, False, False),
+        backend=backend,
+    )
+    unitary_channel = QuantumNetwork.from_nparray(
+        unitary_1,
+        (2, 2, 2, 2),
+        system_input=(True, True, False, False),
+        pure=True,
+        backend=backend,
+    )
+
+    non_comb = link_product("ij kl, km on -> jl mn", non_channel, unitary_channel)
+    non_comb = QuantumComb(
+        non_comb.full(backend=backend),
+        (2, 2, 2, 2),
+        system_input=(True, True, False, False),
+        backend=backend,
+    )
 
     comb = random_density_matrix(2**4, backend=backend)
     channel = random_density_matrix(2**2, backend=backend)
 
     comb_choi = QuantumNetwork.from_nparray(
-        comb, comb_partition, system_input=comb_sys_out, backend=backend
+        comb, comb_partition, system_input=comb_sys_in, backend=backend
     )
     channel_choi = QuantumNetwork.from_nparray(
-        channel, channel_partition, system_input=channel_sys_out, backend=backend
+        channel, channel_partition, system_input=channel_sys_in, backend=backend
     )
 
     test = comb_choi.link_product(subscript, channel_choi).full(backend, update=True)
     channel_choi2 = comb_choi @ channel_choi
 
     backend.assert_allclose(test, channel_choi2.full(backend), atol=1e-5)
+
+    assert non_comb.is_hermitian()
+    assert not non_comb.is_causal()
 
 
 def test_apply(backend):
