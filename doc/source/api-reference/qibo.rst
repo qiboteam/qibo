@@ -167,14 +167,6 @@ Feedback-based Algorithm for Quantum Optimization (FALQON)
     :member-order: bysource
 
 
-Style-based Quantum Generative Adversarial Network (style-qGAN)
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-.. autoclass:: qibo.models.qgan.StyleQGAN
-    :members:
-    :member-order: bysource
-
-
 Grover's Algorithm
 """"""""""""""""""
 
