@@ -1,4 +1,4 @@
-"""Submodule with distances, metrics, and measures for quantum states and channels."""
+"""Distances, metrics, and measures for quantum states and channels."""
 
 from typing import Optional, Union
 
@@ -10,7 +10,9 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by
+    """Purity of a quantum state :math:`\\rho`.
+
+    This is given by
 
     .. math::
         \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
@@ -44,8 +46,9 @@ def purity(state):
 
 
 def impurity(state):
-    """Impurity of quantum state :math:`\\rho`, which is given by
-    :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
+    """Impurity of quantum state :math:`\\rho`.
+
+    This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
     is defined in :func:`qibo.quantum_info.purity`.
 
     Args:
@@ -58,7 +61,8 @@ def impurity(state):
 
 
 def trace_distance(state, target, check_hermitian: bool = False, backend=None):
-    """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
+    """Trace distance between two quantum states, :math:`\\rho` and
+    :math:`\\sigma`:
 
     .. math::
         T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
@@ -178,8 +182,8 @@ def hilbert_schmidt_distance(state, target):
 
 
 def fidelity(state, target, check_hermitian: bool = False, backend=None):
-    """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho`
-    and ``target`` state :math:`\\sigma`. In general,
+    """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho` and
+    ``target`` state :math:`\\sigma`. In general,
 
     .. math::
         F(\\rho, \\sigma) = \\text{tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
@@ -283,8 +287,8 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
 
 def infidelity(state, target, check_hermitian: bool = False, backend=None):
-    """Infidelity between ``state`` :math:`\\rho` and ``target`` state :math:`\\sigma`,
-    which is given by
+    """Infidelity between ``state`` :math:`\\rho` and ``target`` state
+    :math:`\\sigma`, which is given by
 
     .. math::
         1 - F(\\rho, \\, \\sigma) \\, ,
@@ -308,8 +312,8 @@ def infidelity(state, target, check_hermitian: bool = False, backend=None):
 
 
 def bures_angle(state, target, check_hermitian: bool = False, backend=None):
-    """Calculates the Bures angle :math:`D_{A}` between a ``state`` :math:`\\rho`
-    and a ``target`` state :math:`\\sigma`. This is given by
+    """Calculates the Bures angle :math:`D_{A}` between a ``state``
+    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
         D_{A}(\\rho, \\, \\sigma) = \\text{arccos}\\left(\\sqrt{F(\\rho, \\, \\sigma)}\\right) \\, ,
@@ -337,8 +341,8 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
 
 
 def bures_distance(state, target, check_hermitian: bool = False, backend=None):
-    """Calculates the Bures distance :math:`D_{B}` between a ``state`` :math:`\\rho`
-    and a ``target`` state :math:`\\sigma`. This is given by
+    """Calculates the Bures distance :math:`D_{B}` between a ``state``
+    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
         D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)}
@@ -366,8 +370,8 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
 
 
 def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
-    """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and a
-    ``target`` unitary channel :math:`U`. The process fidelity is defined as
+    """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and
+    a ``target`` unitary channel :math:`U`. The process fidelity is defined as
 
     .. math::
         F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
@@ -429,8 +433,8 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
 
 def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
-    """Process infidelity between quantum channel :math:`\\mathcal{E}`
-    and a ``target`` unitary channel :math:`U`. The process infidelity is defined as
+    """Process infidelity between quantum channel :math:`\\mathcal{E}` and a
+    ``target`` unitary channel :math:`U`. The process infidelity is defined as
 
     .. math::
         1 - F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) \\, ,
@@ -461,8 +465,8 @@ def average_gate_fidelity(
     channel, target=None, check_unitary: bool = False, backend=None
 ):
     """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
-    and a ``target`` unitary channel :math:`U`. The average gate fidelity
-    is defined as
+    and a ``target`` unitary channel :math:`U`. The average gate fidelity is
+    defined as
 
     .. math::
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
@@ -500,8 +504,8 @@ def average_gate_fidelity(
 
 
 def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
-    """Gate error between a quantum ``channel`` :math:`\\mathcal{E}`
-    and a ``target`` unitary channel :math:`U`, which is defined as
+    """Gate error between a quantum ``channel`` :math:`\\mathcal{E}` and a
+    ``target`` unitary channel :math:`U`, which is defined as
 
     .. math::
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
@@ -530,7 +534,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
-def diamond_norm(channel, target=None, backend=None, **kwargs):
+def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no cover
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
@@ -544,22 +548,20 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):
     If a ``target`` channel :math:`\\Lambda` is specified,
     then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
 
-    Example:
+    Example::
 
-        .. testcode::
+        from qibo.quantum_info import diamond_norm, random_unitary, to_choi
 
-            from qibo.quantum_info import diamond_norm, random_unitary, to_choi
+        nqubits = 1
+        dim = 2**nqubits
 
-            nqubits = 1
-            dim = 2**nqubits
+        unitary = random_unitary(dim)
+        unitary = to_choi(unitary, order="row")
 
-            unitary = random_unitary(dim)
-            unitary = to_choi(unitary, order="row")
+        unitary_2 = random_unitary(dim)
+        unitary_2 = to_choi(unitary_2, order="row")
 
-            unitary_2 = random_unitary(dim)
-            unitary_2 = to_choi(unitary_2, order="row")
-
-            dnorm = diamond_norm(unitary, unitary_2)
+        dnorm = diamond_norm(unitary, unitary_2)
 
     Args:
         channel (ndarray): row-vectorized Choi representation of a quantum channel.
@@ -574,9 +576,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):
 
     .. note::
         This function requires the optional CVXPY package to be installed.
-
     """
-    import cvxpy  # pylint: disable=C0415
+    import cvxpy
 
     if target is not None:
         if channel.shape != target.shape:
@@ -667,8 +668,8 @@ def expressibility(
     order: Optional[Union[int, float, str]] = 2,
     backend=None,
 ):
-    """Returns the expressibility :math:`\\|A\\|` of a parametrized
-    circuit, where
+    """Returns the expressibility :math:`\\|A\\|` of a parametrized circuit,
+    where
 
     .. math::
         A = \\int_{\\text{Haar}} d\\psi \\, \\left(|\\psi\\rangle\\right.\\left.
@@ -723,7 +724,8 @@ def frame_potential(
     samples: int = None,
     backend=None,
 ):
-    """Returns the frame potential of a parametrized circuit under uniform sampling of the parameters.
+    """Returns the frame potential of a parametrized circuit under uniform
+    sampling of the parameters.
 
     For :math:`n` qubits and moment :math:`t`, the frame potential
     :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by [1]
@@ -756,7 +758,6 @@ def frame_potential(
     References:
         1. M. Liu *et al.*, *Estimating the randomness of quantum circuit ensembles up to 50 qubits*.
         `arXiv:2205.09900 [quant-ph] <https://arxiv.org/abs/2205.09900>`_.
-
     """
     if not isinstance(power_t, int):
         raise_error(
@@ -794,9 +795,9 @@ def frame_potential(
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):
-    """Checks if a given matrix is Hermitian and whether
-    the backend is neither :class:`qibojit.backends.CupyBackend`
-    nor :class:`qibojit.backends.CuQuantumBackend`.
+    """Checks if a given matrix is Hermitian and whether the backend is neither
+    :class:`qibojit.backends.CupyBackend` nor
+    :class:`qibojit.backends.CuQuantumBackend`.
 
     Args:
         matrix: input array.
@@ -810,7 +811,6 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     Raises:
         NotImplementedError: If `matrix` is not Hermitian and
         `backend` is not :class:`qibojit.backends.CupyBackend`
-
     """
     backend = _check_backend(backend)
 

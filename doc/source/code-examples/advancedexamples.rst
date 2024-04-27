@@ -702,7 +702,7 @@ the following script optimizes the parameters of two rotations so that the circu
 output matches a target state using the fidelity as the corresponding loss
 function.
 
-.. testcode::
+.. code-block:: python
 
     import qibo
     qibo.set_backend("tensorflow")

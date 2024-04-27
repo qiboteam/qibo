@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.7"
+version = "0.2.8"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -21,18 +21,19 @@ packages = [{ include = "qibo", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9,<3.13"
 scipy = "^1.10.1"
 sympy = "^1.11.1"
 cma = "^3.3.0"
 joblib = "^1.2.0"
 hyperopt = "^0.2.7"
+# `setuptools` is only required because undeclared by `hyperopt`
+setuptools = "^69.1.1"
 tabulate = "^0.9.0"
 openqasm3 = { version = ">=0.5.0", extras = ["parser"] }
 numpy = "^1.26.4"
 networkx = "^3.2.1"
-cvxpy = { version = "^1.4.2", optional = true }
-tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
+tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 torch = { version = "^2.1.1", optional = true }
 
 [tool.poetry.group.dev]
@@ -61,16 +62,15 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.1"
 cirq = "^1.1.0"
-cvxpy = "^1.3.1"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
-pylint = "^3.0.3"
+pylint = "^3.1.0"
 matplotlib = "^3.7.0"
-tensorflow = { version = "^2.14.1,<2.16", markers = "sys_platform == 'linux'" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
+tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
 
 [tool.poe.tasks]
@@ -81,14 +81,16 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
+
 [tool.poetry.group.cuda11]
 optional = true
 
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
+
 
 [tool.poetry.group.cuda12]
 optional = true
@@ -96,13 +98,16 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
 
 [tool.poetry.extras]
 tensorflow = ["tensorflow"]
 torch = ["torch"]
-qinfo = ["cvxpy", "stim"]
+qinfo = ["stim"]
+
+[tool.pylint.main]
+ignored-modules = ["cvxpy"]
 
 [tool.pylint.reports]
 output-format = "colorized"
