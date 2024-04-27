@@ -1,3 +1,4 @@
+from qibo.backends import JaxBackend
 from qibo.config import log, raise_error
 
 
@@ -294,6 +295,7 @@ class ParallelBFGS:  # pragma: no cover
         callback=None,
         options=None,
         processes=None,
+        backend=None,
     ):
         self.function = function
         self.args = args
@@ -305,6 +307,10 @@ class ParallelBFGS:  # pragma: no cover
         self.callback = callback
         self.options = options
         self.processes = processes
+
+        from qibo.backends import _check_backend
+
+        self.backend = _check_backend(backend)
 
     def run(self, x0):
         """Executes parallel L-BFGS-B minimization.
@@ -357,6 +363,10 @@ class ParallelBFGS:  # pragma: no cover
             ret = Parallel(self.processes, prefer="threads")(
                 delayed(operation)(epsi) for epsi in eps_at
             )
+
+            if isinstance(self.backend, JaxBackend):
+                ret = self.backend.np.stack(ret)
+
             self.function_value = ret[0]
             self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
 

@@ -43,11 +43,12 @@ class JaxBackend(NumpyBackend):
             return x.astype(dtype)
         return self.np.array(x, dtype=dtype, copy=copy)
 
+    # TODO: using numpy's rng for now. Shall we use Jax's?
     def set_seed(self, seed):
-        self.jax.random.key(seed)
+        self.numpy.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        return self.jax.random.choice(
+        return self.numpy.random.choice(
             range(len(probabilities)), size=nshots, p=probabilities
         )
 
@@ -70,11 +71,6 @@ class JaxBackend(NumpyBackend):
         state = self.np.ones(2 * (2**nqubits,), dtype=self.dtype)
         state /= 2**nqubits
         return state
-
-    def sample_shots(self, probabilities, nshots):
-        return self.numpy.random.choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)

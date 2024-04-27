@@ -29,8 +29,6 @@ class Hamiltonian(AbstractHamiltonian):
 
         self.backend = _check_backend(backend)
 
-        print("ciao", self.backend.tensor_types)
-
         if not (
             isinstance(matrix, self.backend.tensor_types)
             or self.backend.issparse(matrix)
