@@ -1,5 +1,8 @@
+import numpy as np
+
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
+from qibo.models.utils import vqe_loss
 
 
 class VQE:
@@ -39,6 +42,7 @@ class VQE:
         self,
         initial_state,
         method="Powell",
+        loss_func=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -58,6 +62,7 @@ class VQE:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
+            loss (callable): loss function, the default one is :func:`qibo.models.utils.vqe_loss`.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -77,17 +82,12 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
-
-        def _loss(params, circuit, hamiltonian):
-            circuit.set_parameters(params)
-            result = hamiltonian.backend.execute_circuit(circuit)
-            final_state = result.state()
-            return hamiltonian.expectation(final_state)
-
+        if loss_func is None:
+            loss_func = vqe_loss
         if compile:
-            loss = self.hamiltonian.backend.compile(_loss)
+            loss = self.hamiltonian.backend.compile(loss_func)
         else:
-            loss = _loss
+            loss = loss_func
 
         if method == "cma":
             # TODO: check if we can use this shortcut
@@ -98,7 +98,7 @@ class VQE:
             else:
                 loss = lambda p, c, h: dtype(_loss(p, c, h))
         elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
+            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
@@ -636,8 +636,6 @@ class FALQON(QAOA):
             The corresponding best parameters.
             extra: variable with historical data for the energy and callbacks.
         """
-        import numpy as np
-
         parameters = np.array([delta_t, 0])
 
         def _loss(params, falqon, hamiltonian):
@@ -647,7 +645,7 @@ class FALQON(QAOA):
 
         energy = [np.inf]
         callback_result = []
-        for it in range(1, max_layers + 1):
+        for _ in range(1, max_layers + 1):
             beta = self.hamiltonian.backend.to_numpy(
                 _loss(parameters, self, self.evol_hamiltonian)
             )
