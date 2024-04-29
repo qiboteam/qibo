@@ -364,8 +364,7 @@ class ParallelBFGS:  # pragma: no cover
                 delayed(operation)(epsi) for epsi in eps_at
             )
 
-            if isinstance(self.backend, JaxBackend):
-                ret = self.backend.np.stack(ret)
+            ret = self.backend.np.stack(ret)
 
             self.function_value = ret[0]
             self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
