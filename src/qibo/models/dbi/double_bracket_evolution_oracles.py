@@ -207,9 +207,9 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         c = self.circuit(0)
         while isinstance(base_evolution_oracle, FrameShiftedEvolutionOracle):
             if self.mode_evolution_oracle is EvolutionOracleType.numerical:
-                c = base_evolution_oracle.get_composed_unitary() @ c
+                c = self.base_evolution_oracle.get_composed_unitary() @ c
             elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-                c = c + base_evolution_oracle.get_composed_unitary()
+                c = c + self.base_evolution_oracle.get_composed_circuit()
             
 
 class DoubleBracketDiagonalAssociationType(Enum):
