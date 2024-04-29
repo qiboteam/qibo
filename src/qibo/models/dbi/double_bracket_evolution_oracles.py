@@ -44,7 +44,7 @@ class EvolutionOracle:
         self.name = name
         self.mode_evolution_oracle = mode_evolution_oracle
         self.mode_find_number_of_trottersuzuki_steps = True
-        self.eps_trottersuzuki = 0.1
+        self.eps_trottersuzuki = 0.0001
         self.please_be_verbose = False
 
     def __call__(self, t_duration: float = None):
@@ -54,8 +54,23 @@ class EvolutionOracle:
         else:
             return self.circuit(t_duration=t_duration)
 
-    def circuit(self, t_duration: float = None):
+    def eval_unitary(self, t_duration):
+        """ This wraps around `circuit` and always returns a unitary"""
+        if self.mode_evolution_oracle is EvolutionOracleType.numerical:
+            return self.circuit(t_duration)
+        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+            return self.circuit(t_duration).unitary()
+        else:
+            raise_error(
+                ValueError,
+                f"You are using an EvolutionOracle type which does not seem to return a unitary.",
+            )
 
+        
+
+    def circuit(self, t_duration: float = None):
+        """This function returns depending on `EvolutionOracleType` string, ndarray or `Circuit`.
+        In the hamiltonian_simulation mode we evaluate an appropriate Trotter-Suzuki discretization up to `self.eps_trottersuzuki` threshold."""
         if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
             return self.name + str(t_duration)
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
@@ -162,8 +177,6 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
 
         assert isinstance(before_circuit, type(after_circuit))
 
-        #       if base_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation :
-        #            assert type(before_circuit) is Circuit, str(type(before_circuit))
 
         self.h = base_evolution_oracle.h
         self.base_evolution_oracle = base_evolution_oracle
@@ -179,6 +192,7 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
             return self.before_circuit @ self.base_evolution_oracle(t_duration) @ self.after_circuit
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+            
             return (
                 self.after_circuit
                 + self.base_evolution_oracle.circuit(t_duration)
@@ -189,7 +203,14 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
                 ValueError,
                 f"You are using an EvolutionOracle type which is not yet supported.",
             )
-
+    def get_composed_circuit(self):
+        c = self.circuit(0)
+        while isinstance(base_evolution_oracle, FrameShiftedEvolutionOracle):
+            if self.mode_evolution_oracle is EvolutionOracleType.numerical:
+                c = base_evolution_oracle.get_composed_unitary() @ c
+            elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+                c = c + base_evolution_oracle.get_composed_unitary()
+            
 
 class DoubleBracketDiagonalAssociationType(Enum):
     """Define the evolution generator of a variant of the double-bracket iterations."""

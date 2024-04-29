@@ -93,8 +93,8 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         # This will run the appropriate group commutator step
         double_bracket_rotation_step = self.group_commutator(
-            step_duration, diagonal_association
-        )
+            step_duration, diagonal_association, mode_dbr = mode_dbr)
+        
         before_circuit = double_bracket_rotation_step["backwards"]
         after_circuit = double_bracket_rotation_step["forwards"]
 
@@ -124,6 +124,20 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             raise_error(NotImplementedError)
         else:
             super().__call__(step, d)
+    def eval_gcr_unitary(
+        self,
+        step_duration: float,
+        eo1: EvolutionOracle,
+        eo2: EvolutionOracle = None,
+        mode_dbr: DoubleBracketRotationType = None,
+    ):
+        u = self.group_commutator( step_duration, eo1, eo2, mode_dbr = mode_dbr )["forwards"]
+        if eo1.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+            return u.unitary()
+        elif eo1.mode_evolution_oracle is EvolutionOracleType.numerical:
+            return u
+        else:
+            raise_error(NotImplementedError)
 
     def group_commutator(
         self,
