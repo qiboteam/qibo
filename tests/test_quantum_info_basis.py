@@ -66,7 +66,7 @@ def test_pauli_basis(
         for row in basis_test:
             row_indexes = list(np.flatnonzero(row))
             indexes.append(row_indexes)
-            elements.append(row[row_indexes])
+            elements.append(row[backend.np.array(row_indexes)])
         indexes = backend.cast(indexes)
 
     if not vectorize and sparse:

@@ -274,7 +274,7 @@ def pauli_to_comp_basis(
         for row in unitary:
             index_list = list(np.flatnonzero(row))
             indexes.append(index_list)
-            elements.append(row[index_list])
+            elements.append(row[backend.np.array(index_list)])
 
         elements = backend.cast(elements)
         indexes = backend.cast(indexes)
