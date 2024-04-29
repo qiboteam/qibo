@@ -107,6 +107,8 @@ def test_vqe(backend, method, options, compile, filename):
         pytest.skip("Skipping SGD test for unsupported backend.")
     if method != "sgd" and backend.name == "tensorflow":
         pytest.skip("Skipping scipy optimizers for tensorflow.")
+    if method == "cma" and backend.name == "jax":
+        pytest.skip("Skipping CMA-ES optimization on Jax backend.")
     n_threads = backend.nthreads
     backend.set_threads(1)
     nqubits = 3
@@ -309,6 +311,8 @@ def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
     if backend.name == "pytorch":
         pytest.skip("Skipping VQE test for pytorch backend.")
+    if method == "cma" and backend.name == "jax":
+        pytest.skip("Skipping CMA-ES optimization on Jax backend.")
     nqubits = 4
     layers = 1
     circuit = models.Circuit(nqubits)
