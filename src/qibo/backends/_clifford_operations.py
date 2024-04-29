@@ -329,7 +329,9 @@ def ECR(symplectic_matrix, control_q, target_q, nqubits):
     return X(symplectic_matrix, control_q, nqubits)
 
 
-def _exponent(x1: np.array, z1: np.array, x2: np.array, z2: np.array) -> np.array:
+def _exponent(
+    x1: np.ndarray, z1: np.ndarray, x2: np.ndarray, z2: np.ndarray
+) -> np.ndarray:
     """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
 
     Args:
@@ -391,7 +393,7 @@ def _determined_outcome(state, q, nqubits):
         state,
         2 * nqubits * np.ones(idx.shape, dtype=np.uint),
         idx,
-        _get_packed_size(nqubits),
+        _packed_size(nqubits),
         True,
     )
     state = _unpack_for_measurements(state, nqubits)
@@ -410,7 +412,7 @@ def _random_outcome(state, p, q, nqubits):
             state,
             h.astype(np.uint),
             p * np.ones(h.shape[0], dtype=np.uint),
-            _get_packed_size(nqubits),
+            _packed_size(nqubits),
             False,
         )
         state = _unpack_for_measurements(state, nqubits)
@@ -423,13 +425,13 @@ def _random_outcome(state, p, q, nqubits):
 
 
 @cache
-def _get_dim(nqubits):
+def _dim(nqubits):
     """Returns the dimension of the symplectic matrix for a given number of qubits."""
     return 2 * nqubits + 1
 
 
 @cache
-def _get_packed_size(n):
+def _packed_size(n):
     """Returns the size of an array of `n` booleans after packing."""
     return np.ceil(n / 8).astype(int)
 
@@ -451,7 +453,7 @@ def _pack_for_measurements(state, nqubits):
 
 
 @cache
-def _get_pad_size(n):
+def _pad_size(n):
     """Returns the size of the pad added to an array of original dimension `n` after unpacking."""
     return 8 - (n % 8)
 
@@ -459,14 +461,14 @@ def _get_pad_size(n):
 def _unpack_for_measurements(state, nqubits):
     """Unpacks the symplectc matrix that was packed for measurements."""
     xz = _unpackbits(state[:, :-1], axis=1)
-    padding_size = _get_pad_size(nqubits)
+    padding_size = _pad_size(nqubits)
     x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
     return np.hstack((x, z, state[:, -1][:, None]))
 
 
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
-        return _unpackbits(state, axis=0)[: _get_dim(nqubits)]
+        return _unpackbits(state, axis=0)[: _dim(nqubits)]
     else:
         return state.copy()
 
@@ -524,7 +526,7 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     Returns:
         (np.array) The unpacked and reshaped state.
     """
-    state = _unpackbits(state, axis=0)[: _get_dim(nqubits)]
+    state = _unpackbits(state, axis=0)[: _dim(nqubits)]
     return state
 
 
