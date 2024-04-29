@@ -577,7 +577,9 @@ class NumpyBackend(Backend):
         for i in np.nonzero(state)[0]:
             b = bin(i)[2:].zfill(nqubits)
             if np.abs(state[i]) >= cutoff:
-                x = np.round(state[i], decimals)
+                # TODO: we need to use numpy.round and force the state to be a numpy
+                # array. Why?
+                x = np.round(np.array(state[i]), decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
