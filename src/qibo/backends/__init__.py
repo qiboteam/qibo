@@ -2,11 +2,8 @@ import os
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
-from qibo.backends.jax import JaxBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.backends.pytorch import PyTorchBackend
-from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 
@@ -28,16 +25,22 @@ def construct_backend(backend, **kwargs):
                 return NumbaBackend()
 
     elif backend == "tensorflow":
+        from qiboml.backends import TensorflowBackend
+
         return TensorflowBackend()
 
     elif backend == "pytorch":
+        from qiboml.backends import PyTorchBackend
+
         return PyTorchBackend()
+
+    elif backend == "jax":
+        from qiboml.backends import JaxBackend
+
+        return JaxBackend()
 
     elif backend == "numpy":
         return NumpyBackend()
-
-    elif backend == "jax":
-        return JaxBackend()
 
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
@@ -84,6 +87,7 @@ class GlobalBackend(NumpyBackend):
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "tensorflow"},
         {"backend": "numpy"},
+        {"backend": "jax"},
         {"backend": "pytorch"},
     ]
 

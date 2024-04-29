@@ -1,4 +1,3 @@
-from qibo.backends import JaxBackend
 from qibo.config import log, raise_error
 
 
