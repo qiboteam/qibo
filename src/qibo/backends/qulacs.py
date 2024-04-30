@@ -24,6 +24,15 @@ class QulacsBackend(NumpyBackend):
     def circuit_to_qulacs(
         self, circuit: "qibo.Circuit"
     ) -> qulacs.QuantumCircuit:  # pylint: disable=no-member
+        """
+        Converts a qibo circuit in a qulacs circuit.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Input circuit to convert.
+
+        Returns:
+            qulacs.QuantumCircuit: The converted qulacs circuit.
+        """
         qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
         qasm_str = re.sub(r"creg\s.+;", "", qasm_str)
         qasm_str = re.sub(r"measure\s.+;", "", qasm_str)
@@ -35,6 +44,16 @@ class QulacsBackend(NumpyBackend):
         circuit: "qibo.Circuit",
         nshots: int = 1000,
     ):
+        """Execute a circuit with qulacs.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Input circuit.
+            nshots (int, optional): Number of shots to perform if ``circuit`` has measurements.
+                Defaults to :math:`10^{3}`.
+
+        Returns:
+            :class:`qibo.result.CircuitResult`: Object storing to the final results.
+        """
         circ = self.circuit_to_qulacs(circuit)
         state = (
             qulacs.DensityMatrix(circuit.nqubits)  # pylint: disable=no-member
