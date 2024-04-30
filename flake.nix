@@ -3,6 +3,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
+    poetry2nix.url = "github:nix-community/poetry2nix";
   };
 
   outputs = {
@@ -10,13 +11,16 @@
     nixpkgs,
     devenv,
     systems,
+    poetry2nix,
     ...
   } @ inputs: let
     forEachSystem = nixpkgs.lib.genAttrs (import systems);
   in {
-    packages = forEachSystem (system: {
+    packages = forEachSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
       default =
-        nixpkgs.legacyPackages.${system}.poetry2nix.mkPoetryApplication
+        (import poetry2nix {inherit pkgs;}).mkPoetryApplication
         {
           projectDir = self;
           preferWheels = true;
