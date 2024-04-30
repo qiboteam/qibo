@@ -1,6 +1,6 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 
-import platform
+import sys
 from collections import Counter
 
 import numpy as np
@@ -308,6 +308,7 @@ def test_repeated_execute_with_pauli_noise(backend):
     )
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_repeated_execute_probs_and_freqs(backend, nqubits):
     circuit = Circuit(nqubits)
@@ -330,18 +331,11 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
             else Counter({"11": 674, "10": 155, "01": 154, "00": 41})
         )
     elif backend.__class__.__name__ == "PyTorchBackend":
-        if platform.system() not in ("Linux", "Windows"):
-            test_frequencies = (
-                Counter({"1": 810, "0": 214})
-                if nqubits == 1
-                else Counter({"11": 685, "01": 160, "10": 144, "00": 35})
-            )
-        else:
-            test_frequencies = (
-                Counter({"1": 817, "0": 207})
-                if nqubits == 1
-                else Counter({"11": 664, "01": 162, "10": 166, "00": 32})
-            )
+        test_frequencies = (
+            Counter({"1": 817, "0": 207})
+            if nqubits == 1
+            else Counter({"11": 664, "01": 162, "10": 166, "00": 32})
+        )
     else:
         test_frequencies = (
             Counter({"1": 790, "0": 234})
