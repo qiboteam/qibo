@@ -1,4 +1,5 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
+
 import sys
 from collections import Counter
 
@@ -305,6 +306,7 @@ def test_repeated_execute_with_pauli_noise(backend):
         str(excinfo.value)
         == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
     )
+
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 @pytest.mark.parametrize("nqubits", [1, 2])
