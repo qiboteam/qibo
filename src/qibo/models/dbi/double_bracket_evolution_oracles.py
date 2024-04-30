@@ -205,11 +205,14 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
             )
     def get_composed_circuit(self):
         c = self.circuit(0)
-        while isinstance(base_evolution_oracle, FrameShiftedEvolutionOracle):
+        fseo = self
+        while isinstance( fseo, FrameShiftedEvolutionOracle):
             if self.mode_evolution_oracle is EvolutionOracleType.numerical:
-                c = self.base_evolution_oracle.get_composed_unitary() @ c
+                c = fseo.after_circuit @ c
             elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-                c = c + self.base_evolution_oracle.get_composed_circuit()
+                c = c + fseo.after_circuit
+            fseo = fseo.base_evolution_oracle
+        return c
             
 
 
