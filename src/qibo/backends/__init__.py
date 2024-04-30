@@ -66,6 +66,12 @@ def construct_backend(backend, **kwargs):
         )
 
         return QiskitClientBackend(**kwargs)
+    elif backend == "aws":  # pragma: no cover
+        from qibo_cloud_backends.aws_client import (  # pylint: disable=E0401
+            BraketClientBackend,
+        )
+
+        return BraketClientBackend(**kwargs)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
