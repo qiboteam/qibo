@@ -667,13 +667,11 @@ class Circuit:
                     nreg = self.queue.nmeasurements - 1
                     gate.register_name = f"register{nreg}"
                 else:
-                    registers = self.measurement_tuples
-                    for register, qubits in registers.items():
-                        intersection = set(qubits).intersection(set(gate.target_qubits))
-                        if len(intersection) > 0:
+                    name = gate.register_name
+                    for mgate in self.measurements:
+                        if name == mgate.register_name:
                             raise_error(
-                                KeyError,
-                                f"Qubits {tuple(intersection)} already measured in register `{register}`.",
+                                KeyError, f"Register {name} already exists in circuit."
                             )
 
                 gate.result.circuit = self
@@ -1156,16 +1154,14 @@ class Circuit:
         code += [f"qreg q[{self.nqubits}];"]
 
         # Set measurements
-        for measurement in self.measurements:
-            reg_name = measurement.register_name
-            reg_qubits = measurement.target_qubits
-            if not reg_name.islower():
+        for register, qubits in self.measurement_tuples.items():
+            if not register.islower():
                 raise_error(
                     NameError,
                     "OpenQASM does not support capital letters in "
-                    + f"register names but {reg_name} was used",
+                    + f"register names but {register} was used",
                 )
-            code.append(f"creg {reg_name}[{len(reg_qubits)}];")
+            code.append(f"creg {register}[{len(qubits)}];")
 
         # Add gates
         for gate in self.queue:
@@ -1186,10 +1182,9 @@ class Circuit:
             code.append(f"{name} {qubits};")
 
         # Add measurements
-        for measurement in self.measurements:
-            reg_name = measurement.register_name
-            for i, q in enumerate(measurement.target_qubits):
-                code.append(f"measure q[{q}] -> {reg_name}[{i}];")
+        for register, qubits in self.measurement_tuples.items():
+            for i, q in enumerate(qubits):
+                code.append(f"measure q[{q}] -> {register}[{i}];")
 
         return "\n".join(code)
 
