@@ -68,7 +68,7 @@ pytest-cov = "^4.0.0"
 pylint = "^3.1.0"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
 stim = "^1.12.0"
@@ -89,7 +89,7 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 
 [tool.poetry.group.cuda12]
@@ -99,7 +99,7 @@ optional = true
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "py3.12" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]
 tensorflow = ["tensorflow"]
