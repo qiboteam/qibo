@@ -501,19 +501,16 @@ def cast(x, dtype=None, copy=False):
     return np.array(x, dtype=dtype, copy=copy)
 
 
-def _clifford_pre_execution_reshape(state, pack: bool = False):
+def _clifford_pre_execution_reshape(state):
     """Reshape and packing applied to the symplectic matrix before execution to prepare the state in the form needed by each engine.
 
     Args:
         state (np.array): Input state.
-        pack (bool): Whether to pack the bits of the symplectic matrix.
 
     Returns:
         (np.array) The packed and reshaped state.
     """
-    if pack:
-        state = _packbits(state, axis=0)
-    return state
+    return _packbits(state, axis=0)
 
 
 def _clifford_post_execution_reshape(state, nqubits: int):
