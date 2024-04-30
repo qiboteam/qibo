@@ -4076,8 +4076,8 @@ cuda = ["cupy-cuda11x (>=11.6.0,<12.0.0)", "cuquantum-python-cu11 (>=23.3.0,<24.
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibotn.git"
-reference = "py3.12"
-resolved_reference = "ece196efcbad52be712cce6860f8b1a2d23f0680"
+reference = "HEAD"
+resolved_reference = "6814fdbe19df19678299f9a4f662410256762ac1"
 
 [[package]]
 name = "quimb"
@@ -5375,4 +5375,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "9eee2df223cb4d8ad7d57f82037e26a80903335366bf0355ff864b893bed847a"
+content-hash = "a81e1a9e6c7c67df5c8a2ac51a6af89d110b474c6a39d1e15c2a679f38ea8389"
