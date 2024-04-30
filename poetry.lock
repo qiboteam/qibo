@@ -1280,13 +1280,13 @@ files = [
 
 [[package]]
 name = "filelock"
-version = "3.13.4"
+version = "3.14.0"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "filelock-3.13.4-py3-none-any.whl", hash = "sha256:404e5e9253aa60ad457cae1be07c0f0ca90a63931200a47d9b6a6af84fd7b45f"},
-    {file = "filelock-3.13.4.tar.gz", hash = "sha256:d13f466618bfde72bd2c18255e269f72542c6e70e7bac83a0232d6b1cc5c8cf4"},
+    {file = "filelock-3.14.0-py3-none-any.whl", hash = "sha256:43339835842f110ca7ae60f1e1c160714c5a6afd15a2873419ab185334975c0f"},
+    {file = "filelock-3.14.0.tar.gz", hash = "sha256:6ea72da3be9b8c82afd3edcf99f2fffbb5076335a5ae4d03248bb5b6c3eae78a"},
 ]
 
 [package.extras]
@@ -4057,7 +4057,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "HEAD"
-resolved_reference = "eb3373e43c42acec1e0725487685dfd88d78b3cd"
+resolved_reference = "d525abc199652fb6340a26ac25a9d6cb03334379"
 
 [[package]]
 name = "qibotn"
@@ -4078,8 +4078,8 @@ cuda = ["cupy-cuda11x (>=11.6.0,<12.0.0)", "cuquantum-python-cu11 (>=23.3.0,<24.
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibotn.git"
-reference = "py3.12"
-resolved_reference = "ece196efcbad52be712cce6860f8b1a2d23f0680"
+reference = "HEAD"
+resolved_reference = "6814fdbe19df19678299f9a4f662410256762ac1"
 
 [[package]]
 name = "quimb"
@@ -5377,4 +5377,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "b13e15f03c3992eb4b59ad643f15b95de7d507671ff3b72aff0b7ba60ff231b0"
+content-hash = "c96177091d8cbe08f1791d4962a7b638d185e2cd35bff80e8afc7a239e4ae6b3"
