@@ -808,9 +808,10 @@ class QuantumChannel(QuantumComb):
     def is_unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is unital.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network is unital.
+        A map is unital if it preserves the identity operator.
 
-        Unitality is calculated as distance between the partial trace of :math:`\\mathcal{E}`
+        Unitality is calculated as distance between the partial trace of :math:`\\mathcal{J}`
         and the Identity operator :math:`I`, with respect to a given norm.
         Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
 
@@ -840,8 +841,8 @@ class QuantumChannel(QuantumComb):
 
         backend = self._backend
 
-        dim_out = self.partition[-1]
-        dim_in = self.partition[-2]
+        dim_out = self.partition[1]
+        dim_in = self.partition[0]
 
         trace_out = backend.cast(
             trace(dim_out, backend=backend).full(), dtype=self._tensor.dtype
@@ -855,10 +856,7 @@ class QuantumChannel(QuantumComb):
             sub_comb = self._tensordot(
                 reduced,
                 trace_out,
-                dims=(
-                    [0],
-                    [0],
-                ),
+                dims=([0], [0]),
             )
             expected = self._tensordot(trace_out / dim_out, sub_comb, dims=0)
         else:
@@ -871,21 +869,10 @@ class QuantumChannel(QuantumComb):
             return False
         elif len(self.partition) == 2:
             return True
-
-        self._tensor = self.full()
-        self._pure = False
-
-        partial_trace = self._einsum("jkjl -> kl", self._tensor)
-        identity = self._backend.cast(
-            np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
-        )
-
-        norm = self._backend.calculate_norm_density_matrix(
-            partial_trace - identity,
-            order=order,
-        )
-
-        return float(norm) <= precision_tol
+        else:
+            return QuantumChannel(
+                sub_comb, self.partition[2:], pure=False, backend=self._backend
+            ).is_unital(order, precision_tol)
 
     def is_channel(
         self,
