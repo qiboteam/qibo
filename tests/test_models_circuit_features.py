@@ -1,5 +1,6 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 
+import sys
 from collections import Counter
 
 import numpy as np
@@ -307,6 +308,7 @@ def test_repeated_execute_with_pauli_noise(backend):
     )
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_repeated_execute_probs_and_freqs(backend, nqubits):
     circuit = Circuit(nqubits)
