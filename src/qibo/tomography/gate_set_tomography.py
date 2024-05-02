@@ -133,56 +133,6 @@ def _measurement_basis(j, nqubits):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-def reset_register(circuit, invert_register):
-    """Returns an inverse circuit of the selected register to prepare the zero state :math:`|0\\rangle`.
-        One can then add inverse_circuit to the original circuit by addition:
-            circ_with_inverse = circ.copy()
-            circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
-        where register_to_reset = (0,), (1,) , or (0, 1).
-        Note that this function is mainly used for the gate set tomography of basis operations, should
-        the basis operations include qubit resets as seen in Ref. [5]. Also, note that the reset_register
-        may not work with qubits which have been entangled. One might choose to do a swap with a fresh ancilla
-        instead of implementing ``reset_register``.
-
-        [5] Takagi, Ryuji. "Optimal resource cost for error mitigation." Physical Review Research 3.3 (2021): 033178.
-
-    Args:
-        circuit (:class:`qibo.models.Circuit`): original circuit
-        invert_register (tuple): Qubit(s) to reset: Use a tuple to specify which qubit(s) to reset:
-            - (0,) to reset qubit 0;
-            - (1,) to reset qubit 1; or
-            - (0,1) to reset both qubits.
-    Returns:
-        inverse_circuit (:class:`qibo.models.Circuit`): Inverse of the input circuit's register.
-    """
-    valid_registers = [(0,), (1,), (0, 1)]
-    if invert_register is not None:
-        if (
-            not isinstance(invert_register, tuple)
-            or invert_register not in valid_registers
-        ):
-            raise_error(
-                NameError,
-                f"Invalid register {invert_register}, please pick one in {valid_registers}.",
-            )
-
-        elif len(invert_register) == 1:
-            register_to_reset = invert_register[0]
-            new_circ = Circuit(1)
-            # for data in circuit.raw["queue"]:
-            #     init_kwargs = data.get("init_kwargs", {})
-            #     if data["_target_qubits"][0] == register_to_reset:
-            # new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
-            for gate in circuit.queue:
-                if register_to_reset in gate.target_qubits:
-                    new_circ.add(gate.__class__(0, **gate.init_kwargs))
-
-        else:
-            new_circ = circuit.copy()
-
-    return new_circ.invert()
-
-
 def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
@@ -222,11 +172,10 @@ def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
         return result.expectation_from_samples(observable)
 
 
-def _gate_set_tomography(
+def _gate_tomography(
     nqubits,
     gate=None,
     nshots=int(1e4),
-    invert_register=None,
     noise_model=None,
     backend=None,
 ):
@@ -267,9 +216,6 @@ def _gate_set_tomography(
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
         circ.add(_prepare_state(k, nqubits))
-        if invert_register is not None:
-            inverted_circuit = reset_register(circ, invert_register)
-            circ.add(inverted_circuit.on_qubits(*invert_register))
 
         if gate is not None:
             circ.add(gate)
@@ -290,8 +236,8 @@ def GST(
     nshots=int(1e4),
     noise_model=None,
     include_empty=False,
-    invert_register=None,
     Pauli_Liouville=False,
+    T=None,
     backend=None,
 ):
     """This is a wrapper function that runs gate set tomography for a list of gates. One can choose to output the gate set tomography
@@ -302,28 +248,26 @@ def GST(
         gate_set (tuple, set, list): A list containing :class:`qibo.gates.abstract.Gate`.
         nshots (int, optional): Number of shots used in Gate Set Tomography.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
-        include_empty (bool, optional): If ``False``, only perform gate set tomography for the list of gates in ``gate_set``.
-            If ``True``, perform gate set tomography for the list of gates in ``gate_set`` and also empty circuits.
-        invert_register (bool, optional): If ``True``, one needs to specify which qubit(s) to reset.
+        include_empty (bool, optional): If ``True``, perform gate set tomography for empty circuits.
         Pauli_Liouville (bool, optional): If ``True``, returns gate set tomography of the gates in the Pauli-Liouville representation.
+        T (numpy array): A 4x4 invertible matrix that must be the same for all gates on the same qubit.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
         list(ndarray): List of matrices of the gate(s) in gate set tomography.
     """
+
     matrices = []
     empty_matrices = []
-    for nqubits in range(1, 3):
-        empty_matrix = _gate_set_tomography(
-            nqubits=nqubits,
-            gate=None,
-            nshots=nshots,
-            noise_model=noise_model,
-            invert_register=invert_register,
-            backend=backend,
-        )
-        empty_matrices.append(empty_matrix)
-        if include_empty:
-            matrices.append(empty_matrix)
+    if include_empty or Pauli_Liouville:
+        for nqubits in range(1, 3):
+            empty_matrix = _gate_tomography(
+                nqubits=nqubits,
+                gate=None,
+                nshots=nshots,
+                noise_model=noise_model,
+                backend=backend,
+            )
+            empty_matrices.append(empty_matrix)
 
     for gate in gate_set:
         if gate is not None:
@@ -339,33 +283,34 @@ def GST(
                 )
             gate = gate(*range(nqubits))
 
-        if Pauli_Liouville is False:
-            matrices.append(
-                _gate_set_tomography(
-                    nqubits=nqubits,
-                    gate=gate,
-                    nshots=nshots,
-                    noise_model=noise_model,
-                    invert_register=invert_register,
-                    backend=backend,
-                )
-            )
-        elif Pauli_Liouville is True:
-            T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-            matrix = _gate_set_tomography(
+        matrices.append(
+            _gate_tomography(
                 nqubits=nqubits,
                 gate=gate,
                 nshots=nshots,
                 noise_model=noise_model,
-                invert_register=invert_register,
                 backend=backend,
             )
+        )
+
+    print(len(matrices))
+    if Pauli_Liouville:
+        if T is not None:
+            if np.linalg.det(T) == 0:
+                raise_error(ValueError, "Matrix is not invertible")
+        else:
+            T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+        PL_matrices = []
+        for matrix in matrices:
             T_matrix = T if matrix.shape[0] == 4 else np.kron(T, T)
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
-
-            Pauli_Liouville_form = (
+            PL_matrix = (
                 T_matrix @ np.linalg.inv(empty) @ matrix @ np.linalg.inv(T_matrix)
             )
-            matrices.append(Pauli_Liouville_form)
+            PL_matrices.append(PL_matrix)
+        matrices = PL_matrices
+
+    if include_empty:
+        matrices = empty_matrices + matrices
 
     return matrices
