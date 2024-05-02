@@ -18,7 +18,7 @@ class d_ansatz_type(Enum):
     # ising = auto() # for future implementation
 
 
-def d_ansatz(params: np.array, d_type: d_ansatz_type):
+def d_ansatz(params: np.array, d_type: d_ansatz_type, normalization: bool = False):
     r"""
     Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
     If $\alpha_i$ are our parameters and d the number of qubits then:
@@ -28,6 +28,7 @@ def d_ansatz(params: np.array, d_type: d_ansatz_type):
     Args:
         params(np.array): parameters for the ansatz.
         d_type(d_ansatz type): type of parameterization for the ansatz.
+        normalization(bool): If True, the diagonal is normalized to 1.
     """
 
     if d_type is d_ansatz_type.element_wise:
@@ -46,7 +47,8 @@ def d_ansatz(params: np.array, d_type: d_ansatz_type):
         d = d.dense.matrix
     else:
         raise ValueError(f"Parameterization type {type} not recognized.")
-
+    if normalization:
+        d = d / np.linalg.norm(d)
     return d
 
 
@@ -150,6 +152,7 @@ def gradient_descent_dbr_d_ansatz(
     lr=1e-2,
     analytic=True,
     d_type=d_ansatz_type.element_wise,
+    normalize=False,
 ):
     r"""
     Optimizes the D operator using gradient descent evaluated at the at the rotaion angle found using the polynomial expansion.
@@ -164,6 +167,7 @@ def gradient_descent_dbr_d_ansatz(
         lr(float): Learning rate.
         analytic(bool): If True, the gradient is calculated analytically, otherwise numerically.
         d_type(d_ansatz_type): Ansatz used for the D operator.
+        normalize(bool): If True, the D operator is normalized at each iteration.
     Returns:
         d(np.array): Optimized D operator.
         loss(np.array): Loss function evaluated at each iteration.
@@ -172,7 +176,7 @@ def gradient_descent_dbr_d_ansatz(
     """
 
     h = dbi_object.h.matrix
-    d = d_ansatz(params, d_type)
+    d = d_ansatz(params, d_type, normalization=normalize)
     loss = np.zeros(nmb_iterations + 1)
     grad = np.zeros((nmb_iterations, len(params)))
     dbi_new = deepcopy(dbi_object)
@@ -189,7 +193,7 @@ def gradient_descent_dbr_d_ansatz(
         )
         for j in range(len(params)):
             params[j] = params[j] - lr * grad[i, j]
-        d = d_ansatz(params, d_type)
+        d = d_ansatz(params, d_type, normalization=normalize)
         s = polynomial_step(dbi_new, n=3, d=d)
         dbi_new(s, d=d)
         loss[i + 1] = dbi_new.loss(0.0, d=d)
