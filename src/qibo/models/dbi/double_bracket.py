@@ -5,6 +5,11 @@ from typing import Optional
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
+from qibo.models.dbi.utils_analytical import (
+    energy_fluctuation_polynomial_expansion_coef,
+    least_squares_polynomial_expansion_coef,
+    off_diagonal_norm_polynomial_expansion_coef,
+)
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
@@ -79,14 +84,14 @@ class DoubleBracketIteration:
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
         cost: DoubleBracketCostFunction = DoubleBracketCostFunction.off_diagonal_norm,
-        state: int = 0,
+        ref_state: int = 0,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
         self.scheduling = scheduling
         self.cost = cost
-        self.state = state
+        self.ref_state = ref_state
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -150,12 +155,11 @@ class DoubleBracketIteration:
         """Get Hamiltonian's backend."""
         return self.h0.backend
 
-    def least_squares(self, D: np.array):
+    def least_squares(self, d: np.array):
         """Least squares cost function."""
-        H = self.h.matrix
-        return -np.real(
-            np.trace(H @ D) - 0.5 * (np.linalg.norm(H) ** 2 + np.linalg.norm(D) ** 2)
-        )
+        h_np = self.backend.to_numpy(self.h.matrix)
+
+        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
 
     def choose_step(
         self,
@@ -200,14 +204,14 @@ class DoubleBracketIteration:
         elif self.cost == DoubleBracketCostFunction.least_squares:
             loss = self.least_squares(d)
         elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
-            loss = self.energy_fluctuation(self.state)
+            loss = self.energy_fluctuation(self.ref_state)
 
         # set back the initial configuration
         self.h = h_copy
 
         return loss
 
-    def energy_fluctuation(self, state=None):
+    def energy_fluctuation(self, state):
         """
         Evaluate energy fluctuation
 
@@ -219,11 +223,12 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        if state is None:
-            state = self.state
-        state_vector = np.zeros(len(self.h.matrix))
-        state_vector[state] = 1.0
-        return np.real(self.h.energy_fluctuation(state_vector))
+        h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
+        h2 = h_np @ h_np
+        a = state.conj() @ h2 @ state
+        b = state.conj() @ h_np @ state
+        return (np.sqrt(np.real(a - b**2))).item()
+        r  # return np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
@@ -235,3 +240,16 @@ class DoubleBracketIteration:
         for _ in range(n - 1):
             Gamma_list.append(self.commutator(W, Gamma_list[-1]))
         return Gamma_list
+
+    def cost_expansion(self, d, n):
+        if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
+            coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
+        elif self.cost is DoubleBracketCostFunction.least_squares:
+            coef = least_squares_polynomial_expansion_coef(self, d, n)
+        elif self.cost is DoubleBracketCostFunction.energy_fluctuation:
+            coef = energy_fluctuation_polynomial_expansion_coef(
+                self, d, n, self.ref_state
+            )
+        else:
+            raise ValueError(f"Cost function {self.cost} not recognized.")
+        return coef

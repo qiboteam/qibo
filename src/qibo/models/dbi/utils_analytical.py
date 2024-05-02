@@ -1,6 +1,9 @@
+import math
 from typing import Optional
 
-from qibo.models.dbi.utils import *
+import numpy as np
+
+from qibo.models.dbi.utils import commutator, covariance, variance
 
 
 def dGamma_di_Pauli(dbi_object, n: int, Z_i: np.array, d: np.array):

@@ -95,7 +95,7 @@ def polynomial_step(
     n_max: int = 5,
     d: np.array = None,
     coef: Optional[list] = None,
-    cost: str = None,
+    cost=None,
 ):
     r"""
     Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -107,7 +107,7 @@ def polynomial_step(
         backup_scheduling (`DoubleBracketScheduling`): the scheduling method to use in case no real positive roots are found.
     """
     if cost is None:
-        cost = dbi_object.cost.name
+        cost = dbi_object.cost
 
     if d is None:
         d = dbi_object.diagonal_h_matrix
@@ -117,17 +117,7 @@ def polynomial_step(
             "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
         )
     if coef is None:
-        if cost == "off_diagonal_norm":
-            coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n)
-        elif cost == "least_squares":
-            coef = least_squares_polynomial_expansion_coef(dbi_object, d, n)
-        elif cost == "energy_fluctuation":
-            coef = energy_fluctuation_polynomial_expansion_coef(
-                dbi_object, d, n, dbi_object.state
-            )
-        else:
-            raise ValueError(f"Cost function {cost} not recognized.")
-
+        coef = dbi_object.cost_expansion(d=d, n=n)
     roots = np.roots(coef)
     real_positive_roots = [
         np.real(root) for root in roots if np.imag(root) < error and np.real(root) > 0

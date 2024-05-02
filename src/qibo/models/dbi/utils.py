@@ -8,21 +8,29 @@ from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 
 
-def commutator(A, B):
+def commutator(a, b):
     """Compute commutator between two arrays."""
-    return A @ B - B @ A
+    return a @ b - b @ a
 
 
-def variance(A, state):
-    """Calculates the variance of a matrix A with respect to a state: Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
-    B = A @ A
-    return B[state, state] - A[state, state] ** 2
+def variance(a, state):
+    """Calculates the variance of a matrix A with respect to a state:
+    Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
+    b = a @ a
+    return state.conj().T @ b @ state - (state.conj().T @ a @ state) ** 2
 
 
-def covariance(A, B, state):
-    """Calculates the covariance of two matrices A and B with respect to a state: Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$"""
-    C = A @ B + B @ A
-    return C[state, state] - 2 * A[state, state] * B[state, state]
+def covariance(a, b, state):
+    """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
+    applied to two operators A and B with respect to a state:
+    Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$
+    """
+
+    c = a @ b + b @ a
+    return (
+        state.conj().T @ c @ state
+        - 2 * state.conj().T @ a @ state * state.conj().T @ b @ state
+    )
 
 
 def generate_Z_operators(nqubits: int, backend=None):
