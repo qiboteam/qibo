@@ -183,9 +183,13 @@ def test_expectation_value(backend):
         )
 
 
-@pytest.mark.parametrize("nqubits", range(1, 4))
-@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.TOFFOLI(0, 1, 2), None])
-def test_gate_tomography(backend, nqubits, gate):
+# @pytest.mark.parametrize("nqubits", range(1, 4))
+# @pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.TOFFOLI(0, 1, 2), None])
+@pytest.mark.parametrize(
+    "nqubits, gate", [(1, gates.CNOT(0, 1)), (3, gates.TOFFOLI(0, 1, 2))]
+)
+def test_gate_set_tomography_value_error(backend, nqubits, gate):
+    # def test_gate_tomography(backend, nqubits, gate):
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
 
