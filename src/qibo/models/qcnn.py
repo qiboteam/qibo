@@ -4,7 +4,6 @@ import qibo
 from qibo import gates, set_backend
 from qibo.models import Circuit
 
-
 class QuantumCNN:
     """
     Model that implements and trains a variational quantum convolutional network (QCNN) for
