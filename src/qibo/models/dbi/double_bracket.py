@@ -222,7 +222,7 @@ class DoubleBracketIteration:
         a = state.conj() @ h2 @ state
         b = state.conj() @ h_np @ state
         return (np.sqrt(np.real(a - b**2))).item()
-        r  # eturn np.real(self.h.energy_fluctuation(state))
+    
 
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
