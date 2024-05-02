@@ -118,10 +118,10 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
             )
 
-        elif self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+        elif self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.text_strings:
             raise_error(NotImplementedError)
         else:
-            super().__call__(step, d)
+            super().__call__(step_duration, diagonal_association.h.dense.matrix)
     def eval_gcr_unitary(
         self,
         step_duration: float,
