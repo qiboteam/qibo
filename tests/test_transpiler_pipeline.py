@@ -128,12 +128,16 @@ def test_assert_circuit_equivalence_false():
     with pytest.raises(TranspilerPipelineError):
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
+
 def test_int_qubit_names():
     circ = Circuit(2)
-    final_map = {i:i for i in range(5)}
-    default_transpiler = Passes(passes=None, connectivity=star_connectivity(), int_qubit_names=True)
+    final_map = {i: i for i in range(5)}
+    default_transpiler = Passes(
+        passes=None, connectivity=star_connectivity(), int_qubit_names=True
+    )
     _, final_layout = default_transpiler(circ)
     assert final_map == final_layout
+
 
 def test_assert_circuit_equivalence_wrong_nqubits():
     circ1 = Circuit(1)
