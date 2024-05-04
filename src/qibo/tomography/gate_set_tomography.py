@@ -293,7 +293,6 @@ def GST(
             )
         )
 
-    print(len(matrices))
     if Pauli_Liouville:
         if T is not None:
             if np.linalg.det(T) == 0:
