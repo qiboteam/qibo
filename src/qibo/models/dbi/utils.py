@@ -133,11 +133,13 @@ def select_best_dbr_generator(
             )
         else:
             step_best = step
-        dbi_eval(step=step_best)
-        optimal_steps.append(step_best)
-        norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
+        dbi_object(step=step)
+        optimal_steps.append(step)
+        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
     # find best d
-    idx_max_loss = np.argmin(norms_off_diagonal_restriction)
+    idx_max_loss = norms_off_diagonal_restriction.index(
+        min(norms_off_diagonal_restriction)
+    )
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
     dbi_eval = deepcopy(dbi_object)
