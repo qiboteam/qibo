@@ -2162,3 +2162,13 @@ In some cases the empty circuit matrix :math:`E` can also be useful, and can be 
    )
 
 where ``empty_1q`` and ``empty_2q`` correspond to the single and two qubits empty matrices respectively.
+Similarly, the Pauli-Liouville representation of the gates can be directly returned as well:
+
+.. testcode::
+
+   estimated_gates = GST(
+       gate_set = gate_set,
+       nshots = 10000,
+       noise_model = noise_model,
+       Pauli_Liouville = True,
+   )
