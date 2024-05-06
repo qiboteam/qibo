@@ -89,6 +89,14 @@ class DoubleBracketIteration:
         self.scheduling = scheduling
         self.cost = cost
         self.ref_state = ref_state
+        """
+        Args:
+            hamiltonian (Hamiltonian): Starting Hamiltonian;
+            mode (DoubleBracketGeneratorType): type of generator of the evolution.
+            scheduling (DoubleBracketScheduling): type of scheduling strategy.
+            cost (DoubleBracketCost): type of cost function.
+            ref_state (np.array): reference state for computing the energy fluctuation.
+        """
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -164,6 +172,7 @@ class DoubleBracketIteration:
         scheduling: Optional[DoubleBracketScheduling] = None,
         **kwargs,
     ):
+        
         if scheduling is None:
             scheduling = self.scheduling
         step = scheduling(self, d=d, **kwargs)
@@ -175,6 +184,7 @@ class DoubleBracketIteration:
             kwargs["n"] += 1
             # if n==n_max, return None
             step = scheduling(self, d=d, **kwargs)
+            # if for a given polynomial order n, no solution is found, we the order by 1
         return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
@@ -217,11 +227,12 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
-        h2 = h_np @ h_np
-        a = state.conj() @ h2 @ state
-        b = state.conj() @ h_np @ state
-        return (np.sqrt(np.real(a - b**2))).item()
+        #h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
+        #h2 = h_np @ h_np
+        #a = state.conj() @ h2 @ state
+        #b = state.conj() @ h_np @ state
+        return np.real(self.h.energy_fluctuation(state))
+        #return (np.sqrt(np.real(a - b**2))).item()
     
 
     def sigma(self, h: np.array):

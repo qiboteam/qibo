@@ -42,7 +42,7 @@ def d_ansatz(params: np.array, d_type: d_ansatz_type, normalization: bool = Fals
         symbolHam = op_list[0]
         for i in range(len(params) - 1):
             symbolHam += op_list[i + 1]
-
+        
         d = SymbolicHamiltonian(symbolHam, nqubits=len(params))
         d = d.dense.matrix
     else:
