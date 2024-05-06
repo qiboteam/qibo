@@ -137,6 +137,10 @@ def generate_pauli_operator_dict(
 
 
 def diagonal_min_max(matrix: np.array):
+    """
+    Generate a diagonal matrix D with the same diagonal elements as `matrix` but with minimum and maximum values.
+    (may be deprecated as a useful ansatz for D)
+    """
     L = int(np.log2(matrix.shape[0]))
     D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
     D = np.diag(D)

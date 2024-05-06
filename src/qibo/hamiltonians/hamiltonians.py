@@ -368,11 +368,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     @property
     def dense(self):
         """Creates the equivalent :class:`qibo.hamiltonians.MatrixHamiltonian`."""
-        #if self._dense is None:
-        #    log.warning(
-        #        "Calculating the dense form of a symbolic Hamiltonian. "
-        #        "This operation is memory inefficient."
-        #    )
+        if self._dense is None:
+            log.warning(
+                "Calculating the dense form of a symbolic Hamiltonian. "
+               "This operation is memory inefficient."
+            )
         self.dense = self.calculate_dense()
         return self._dense
 
