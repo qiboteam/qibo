@@ -1,5 +1,4 @@
 import numpy as np
-
 import qibo
 from qibo import gates, set_backend
 from qibo.models import Circuit
