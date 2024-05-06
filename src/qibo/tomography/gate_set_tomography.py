@@ -14,12 +14,12 @@ from qibo.hamiltonians import SymbolicHamiltonian
 
 @cache
 def _gates(nqubits):
-    """Returns a list of gates used in state preparation.
+    """Gates implementing all the GST state preparations.
 
     Args:
         nqubits (int): Number of qubits for the circuit.
     Returns:
-        list(:class:`qibo.gates.abstract.Gate`): list of the gates used in state preparation.
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates used to prepare the possible states.
     """
 
     return list(
@@ -31,12 +31,12 @@ def _gates(nqubits):
 
 @cache
 def _measurements(nqubits):
-    """Returns a list of gates used for measurement bases.
+    """Measurement gates implementing all the GST measurement bases.
 
     Args:
         nqubits (int): Number of qubits for the circuit.
     Returns:
-        list(:class:`qibo.gates.abstract.Gate`): list of the gates used for measurement bases.
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates implementing the possible measurement bases.
     """
 
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
@@ -44,12 +44,12 @@ def _measurements(nqubits):
 
 @cache
 def _observables(nqubits):
-    """Returns a list of gates used for the function _get_observable().
+    """All the observables measured in GST.
 
     Args:
         nqubits (int): Number of qubits for the circuit.
     Returns:
-        list(:class:`qibo.gates.abstract.Gate`): list of the gates used for the function _get_observable().
+        list(:class:`qibo.symbols.Symbol`): list of the possible observables measured.
     """
 
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
@@ -57,7 +57,7 @@ def _observables(nqubits):
 
 @cache
 def _get_observable(j, nqubits):
-    """Returns a list of gates used for the function _get_observable(). Here,
+    """Returns the j-th observable. Here,
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
@@ -69,7 +69,7 @@ def _get_observable(j, nqubits):
         list(:class:`qibo.hamiltonians.SymbolicHamiltonian`): Symbolic hamiltonian of the observable.
     """
 
-    if j == 0 and nqubits >= 3:
+    if j == 0 and nqubits not in (1, 2):
         raise_error(
             ValueError,
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
@@ -141,17 +141,16 @@ def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
 
         The function returns the expectation value given by either
         :math:`\\text{tr}(M_j rho_k)` or :math:`\\Tr(M_j O_l rho_k)`,
-        where :math:`k` is the index of the state prepared (which is not necessary
-        in this function since it has been used earlier), :math:`j` is the index
+        where :math:`k` is the index of the state prepared by ``circuit``, :math:`j` is the index
         of the measurement basis, and :math:`O_l` is the :math:`i`-th gate of
         the circuit.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): The Qibo circuit to be executed.
-        j (int): The index of the measurement basis.
+        circuit (:class:`qibo.models.Circuit`): The Qibo circuit realizing the k-th state to measure the observable on.
+        j (int): The index of the measurement basis and observable.
         nshots (int, optional): Number of shots to execute the circuit with.
     Returns:
-        numpy.float: Expectation value.
+        float: Expectation value.
     """
 
     nqubits = circuit.nqubits
@@ -179,18 +178,19 @@ def _gate_tomography(
     noise_model=None,
     backend=None,
 ):
-    """Runs gate set tomography for a 1 or 2 qubit gate to obtain a :math:`4^n` by :math:`4^n` matrix (where :math:`n`
+    """Runs gate tomography for a 1 or 2 qubit gate to obtain a :math:`4^n` by :math:`4^n` matrix (where :math:`n`
     is the number of qubits in the circuit). This matrix needs to be processed further to get the Pauli-Liouville
     representation of the `gate`. The matrix has elements :math:`\\text{tr}(M_{j} \\, \\rho_{k})` or
     :math:`\\text{tr}(M_{j} \\, O_{l} \\rho_{k})` depending on whether the gate :math:`O_l` is present.
 
     Args:
-        nshots (int, optional): Number of shots used in Gate Set Tomography.
-        gate (:class:`qibo.gates.abstract.Gate`, optional): The gate to perform gate set tomography on. If ``None``, then gate set tomography will be performed for an empty circuit.
+        nqubits (int): Number of qubits of the gate.
+        gate (:class:`qibo.gates.abstract.Gate`, optional): The gate to perform gate tomography on. If ``None``, then gate tomography will be performed for an empty circuit.
+        nshots (int, optional): Number of shots used.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
-        ndarray: array with elements ``jk``.
+        ndarray: matrix approximating the input gate.
     """
 
     # Check if gate is 1 or 2 qubit gate.
@@ -240,20 +240,18 @@ def GST(
     T=None,
     backend=None,
 ):
-    """This is a wrapper function that runs gate set tomography for a list of gates. One can choose to output the gate set tomography
-    for each gate in the Pauli-Liouville representation or not.
-
+    """Runs Gate Set Tomography on the input ``gate_set``.
 
     Args:
-        gate_set (tuple, set, list): A list containing :class:`qibo.gates.abstract.Gate`.
+        gate_set (tuple, set, list): List of :class:`qibo.gates.abstract.Gate` to run GST on.
         nshots (int, optional): Number of shots used in Gate Set Tomography.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
-        include_empty (bool, optional): If ``True``, perform gate set tomography for empty circuits.
-        Pauli_Liouville (bool, optional): If ``True``, returns gate set tomography of the gates in the Pauli-Liouville representation.
-        T (numpy array): A 4x4 invertible matrix that must be the same for all gates on the same qubit.
+        include_empty (bool, optional): If ``True``, additionally performs gate set tomography for 1- and 2-qubits empty circuits and returns the corresponding empty circuit matrices in the first and second position of the ouput list.
+        Pauli_Liouville (bool, optional): If ``True``, returns the gates' matrices in the Pauli-Liouville representation.
+        T (ndarray): Gauge matrix transfromation to the Puli-Liouville representation. Defaults to ``array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
-        list(ndarray): List of matrices of the gate(s) in gate set tomography.
+        list(ndarray): Approximated matrices of the input gate_set.
     """
 
     matrices = []
@@ -300,13 +298,14 @@ def GST(
         else:
             T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
         PL_matrices = []
+        T_1q = T
+        T_2q = np.kron(T, T)
         for matrix in matrices:
-            T_matrix = T if matrix.shape[0] == 4 else np.kron(T, T)
+            T_matrix = T_1q if matrix.shape[0] == 4 else T_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
-            PL_matrix = (
+            PL_matrices.append(
                 T_matrix @ np.linalg.inv(empty) @ matrix @ np.linalg.inv(T_matrix)
             )
-            PL_matrices.append(PL_matrix)
         matrices = PL_matrices
 
     if include_empty:
