@@ -25,6 +25,13 @@ def _compare_gates(g1, g2):
     assert g1.qubits == g2.qubits
 
 
+def _get_noise_model():
+    lam = 0.5
+    noise_model = NoiseModel()
+    noise_model.add(DepolarizingError(lam))
+    return noise_model
+
+
 INDEX_NQUBITS = (
     list(zip(range(4), repeat(1, 4)))
     + list(zip(range(16), repeat(2, 16)))
@@ -160,7 +167,6 @@ def test__get_observable(j, nqubits):
 
 
 def test_expectation_value_nqubits_error(backend):
-
     nqubits = 3
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.TOFFOLI(0, 1, 2))
@@ -175,15 +181,19 @@ def test_expectation_value_nqubits_error(backend):
 
 
 @pytest.mark.parametrize(
-    "nqubits, gate", [(1, gates.CNOT(0, 1)), (3, gates.TOFFOLI(0, 1, 2))]
+    "nqubits, gate, noise_model",
+    [
+        (1, gates.CNOT(0, 1), _get_noise_model()),
+        (3, gates.TOFFOLI(0, 1, 2), _get_noise_model()),
+    ],
 )
-def test_gate_tomography_value_error(backend, nqubits, gate):
+def test_gate_tomography_value_error(backend, nqubits, gate, noise_model):
     with pytest.raises(ValueError):
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
             gate=gate,
             nshots=int(1e4),
-            noise_model=None,
+            noise_model=noise_model,
             backend=backend,
         )
 
@@ -229,3 +239,15 @@ def test_GST(backend, target_gates, Pauli_Liouville):
                 Pauli_Liouville=Pauli_Liouville,
                 backend=backend,
             )
+
+
+def test_GST_invertible_matrix():
+    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+    matrices = GST(gate_set=[], Pauli_Liouville=True, T=T)
+    assert True
+
+
+def test_GST_non_invertible_matrix():
+    T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
+    with pytest.raises(ValueError):
+        matrices = GST(gate_set=[], Pauli_Liouville=True, T=T)
