@@ -197,7 +197,7 @@ def test_gate_tomography_noise_model(backend):
     lam = 1.0
     noise_model = NoiseModel()
     noise_model.add(DepolarizingError(lam))
-    return noise_model
+    # return noise_model
     target = _gate_tomography(
         nqubits=nqubits,
         gate=gate,
@@ -208,7 +208,7 @@ def test_gate_tomography_noise_model(backend):
     exact_matrix = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
     backend.assert_allclose(
         target,
-        estimate,
+        exact_matrix,
         atol=1e-1,
     )
 
