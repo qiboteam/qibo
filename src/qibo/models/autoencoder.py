@@ -86,7 +86,7 @@ class QuantumAutoencoder:
             circuit = self.qc._circuit
         elif(self.costFunType=='qcnn.ry'):
 
-            print("ckg:  I am in qcnn.ry")
+            # print("ckg:  I am in qcnn.ry")
             c = models.Circuit(2)
             for i in range(2): 
                 c.add(gates.RY(i,0))
