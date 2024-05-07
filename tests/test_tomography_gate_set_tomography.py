@@ -25,13 +25,6 @@ def _compare_gates(g1, g2):
     assert g1.qubits == g2.qubits
 
 
-def _get_noise_model():
-    lam = 0.5
-    noise_model = NoiseModel()
-    noise_model.add(DepolarizingError(lam))
-    return noise_model
-
-
 INDEX_NQUBITS = (
     list(zip(range(4), repeat(1, 4)))
     + list(zip(range(16), repeat(2, 16)))
@@ -181,21 +174,43 @@ def test_expectation_value_nqubits_error(backend):
 
 
 @pytest.mark.parametrize(
-    "nqubits, gate, noise_model",
+    "nqubits, gate",
     [
-        (1, gates.CNOT(0, 1), _get_noise_model()),
-        (3, gates.TOFFOLI(0, 1, 2), _get_noise_model()),
+        (1, gates.CNOT(0, 1)),
+        (3, gates.TOFFOLI(0, 1, 2)),
     ],
 )
-def test_gate_tomography_value_error(backend, nqubits, gate, noise_model):
+def test_gate_tomography_value_error(backend, nqubits, gate):
     with pytest.raises(ValueError):
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
             gate=gate,
             nshots=int(1e4),
-            noise_model=noise_model,
+            noise_model=None,
             backend=backend,
         )
+
+
+def test_gate_tomography_noise_model(backend):
+    nqubits = 1
+    gate = gates.H(0)
+    lam = 1.0
+    noise_model = NoiseModel()
+    noise_model.add(DepolarizingError(lam))
+    return noise_model
+    target = _gate_tomography(
+        nqubits=nqubits,
+        gate=gate,
+        nshots=int(1e4),
+        noise_model=noise_model,
+        backend=backend,
+    )
+    exact_matrix = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+    backend.assert_allclose(
+        target,
+        estimate,
+        atol=1e-1,
+    )
 
 
 @pytest.mark.parametrize(
