@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import construct_backend, gates, list_available_backends, set_backend
+from qibo.backends import MetaBackend
 
 ####################### Test `matrix` #######################
 GATES = [
@@ -129,6 +130,11 @@ def test_plus_density_matrix(backend):
 def test_set_backend_error():
     with pytest.raises(ValueError):
         set_backend("non-existing-backend")
+
+
+def test_metabackend_load_error():
+    with pytest.raises(ValueError):
+        MetaBackend.load("non-existing-backend")
 
 
 def test_construct_backend(backend):
