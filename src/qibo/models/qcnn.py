@@ -73,7 +73,7 @@ class QuantumCNN:
             self.nparams_pool = 6
         else:
             # ckgan: First line of code  
-            print("ckgan: in qcnn.py --- ifReal is true!")
+            print("new ckgan: in qcnn.py --- ifReal is true!")
             if self.twoqubitansatz == None:
                 self.nparams_conv = 5
             else:
