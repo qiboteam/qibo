@@ -702,6 +702,9 @@ the following script optimizes the parameters of two rotations so that the circu
 output matches a target state using the fidelity as the corresponding loss
 function.
 
+Note that, as in the following example, the rotation angles have to assume real values
+to ensure the rotational gates are representing unitary operators.
+
 .. code-block:: python
 
     import qibo
