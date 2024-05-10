@@ -223,12 +223,14 @@ class QuantumAutoencoder:
         self.add_gates_from_circuit(circuit, self.reset_circuit)
         self.add_gates_from_circuit(circuit, self.cf_circuit_inv) #decoder
     
+        ''' ckgan: remove printing of circuits at this stage!
         print("encoder circuit:")
         print(self.cf_circuit.draw())
         print("decoder circuit:")
         print(self.cf_circuit_inv.draw())
         print("copied circuit:")
         print(circuit.draw())
+        '''
 
         # ckgan: We loop through a bunch of ground states!
         # ckgan: But I do not understand...  I thought we need to evolve a state to get the final state and then compute fidelity. The same state has be evolved many times. And then we need to do the same for other states?
