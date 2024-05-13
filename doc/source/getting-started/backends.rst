@@ -40,6 +40,7 @@ if the corresponding packages are installed, following the hierarchy below:
 * :ref:`installing-pytorch`: a pure PyTorch implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibojit` instead.
 * :ref:`clifford <Clifford>`: a specialized backend for the simulation of quantum circuits with Clifford gates. This backend uses :ref:`installing-qibojit` and/or :ref:`installing-numpy`.
 * `qibotn <https://qibo.science/qibotn/stable/>`_: an interface to Tensor Networks simulation algorithms designed for GPUs and multi-node CPUs. This backend makes possible scaling quantum circuit simulation to a larger number of qubits.
+* `qulacs <https://github.com/qulacs/qulacs>`_: an interface to the `qulacs` library for quantum simulation. GPU support is not available yet.
 
 The default backend that is used is the first available from the above list.
 The user can switch to a different using the ``qibo.set_backend`` method
