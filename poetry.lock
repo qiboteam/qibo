@@ -121,13 +121,13 @@ tests-no-zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy"
 
 [[package]]
 name = "autoray"
-version = "0.6.9"
+version = "0.6.10"
 description = "Abstract your array operations."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "autoray-0.6.9-py3-none-any.whl", hash = "sha256:5685759f6e705f33cc3c614e57a55ba4822dc601969511465985159f2ea1573f"},
-    {file = "autoray-0.6.9.tar.gz", hash = "sha256:9f41759f6a286bc280c4f6aece436da1c87ce75eb00efe7dc7319860c43654fa"},
+    {file = "autoray-0.6.10-py3-none-any.whl", hash = "sha256:a475909417a1593275d427e20aded362aa55266a5e24aa0e09df69a14dc6eb50"},
+    {file = "autoray-0.6.10.tar.gz", hash = "sha256:afff46ed3a001daad1bed917aecda75a8f0d36c0c8823eed877db4e8d55a8b20"},
 ]
 
 [package.extras]
@@ -852,24 +852,24 @@ numpy = ">=1.21,<2.0"
 
 [[package]]
 name = "custatevec-cu11"
-version = "1.6.0"
+version = "1.6.0.post1"
 description = "cuStateVec - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "custatevec_cu11-1.6.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1b86051c365705fcc3ac33eff846385641a3f98d2c2cdbcecd7caab7e3bf0913"},
-    {file = "custatevec_cu11-1.6.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:5c932d03d1792cf432ecd972e641dfeb4318be00c3934a44c765938e7d9bb404"},
+    {file = "custatevec_cu11-1.6.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:6840bd957455d33f9df1f2e266fe33079e429b2442f5ff6ef5eae6c1b618108e"},
+    {file = "custatevec_cu11-1.6.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:8d57ada4d3cc77b24b3be83b55929942186698e71edadaa952448c1b0af43539"},
 ]
 
 [[package]]
 name = "custatevec-cu12"
-version = "1.6.0"
+version = "1.6.0.post1"
 description = "cuStateVec - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "custatevec_cu12-1.6.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:e9296be9eec8b4c32407424a6a7fc6e386c38eefbb649beb73f5a517c6dd3704"},
-    {file = "custatevec_cu12-1.6.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:4d3505eff236f822adba4d313358b659fe145824b5be2c7283c1d6243b05be00"},
+    {file = "custatevec_cu12-1.6.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:4f38175cb6cb9dfa0008e5109e22bf92eeedd3aad843be3ce27ad41b53318f95"},
+    {file = "custatevec_cu12-1.6.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:0c875981de852091f5f3c040d705b284424171aa5df07f843728ff2fae450016"},
 ]
 
 [[package]]
@@ -898,13 +898,13 @@ files = [
 
 [[package]]
 name = "cutensornet-cu11"
-version = "2.4.0"
+version = "2.4.0.post1"
 description = "cuTensorNet - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cutensornet_cu11-2.4.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:c3c9e2018dbdc29391d29c9b04897126076359ca5957bde447de72478cc98e26"},
-    {file = "cutensornet_cu11-2.4.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:712f3d9784c3830138e8eef2f3a1b66375f4742e90c943b92aa944129478108a"},
+    {file = "cutensornet_cu11-2.4.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:110b64a69f245666f5895ae621c9205d5aabb008e3e845f716620d3fd3846633"},
+    {file = "cutensornet_cu11-2.4.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:8a4ef6517086623c702138a8f5f0e8c69a9e71ba6e729b05889778058449ba42"},
 ]
 
 [package.dependencies]
@@ -912,13 +912,13 @@ cutensor-cu11 = ">=2.0.1,<3"
 
 [[package]]
 name = "cutensornet-cu12"
-version = "2.4.0"
+version = "2.4.0.post1"
 description = "cuTensorNet - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cutensornet_cu12-2.4.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1c64b4802c57a727c12129142419cbfcf4db8f2534738f1c99106f3c7a346882"},
-    {file = "cutensornet_cu12-2.4.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:af08991e732b6f8672b72fef175e3be8d9609403cbc3871c172c61a3d437a4bb"},
+    {file = "cutensornet_cu12-2.4.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:0356564387165914ea3c07047a1ffef2d92dac74a97b544e63664c6cef0af599"},
+    {file = "cutensornet_cu12-2.4.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:2301e1f6e24fd002b69a89358592898a949a319ba6497bd3d5ff569ec5841d45"},
 ]
 
 [package.dependencies]
@@ -2479,8 +2479,8 @@ files = [
 numpy = [
     {version = ">=1.21.2", markers = "python_version >= \"3.10\" and python_version < \"3.11\""},
     {version = ">1.20", markers = "python_version < \"3.10\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.3", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
 [package.extras]
@@ -3068,8 +3068,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -3558,13 +3558,13 @@ tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
 name = "pylint"
-version = "3.1.0"
+version = "3.1.1"
 description = "python code static checker"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "pylint-3.1.0-py3-none-any.whl", hash = "sha256:507a5b60953874766d8a366e8e8c7af63e058b26345cfcb5f91f89d987fd6b74"},
-    {file = "pylint-3.1.0.tar.gz", hash = "sha256:6a69beb4a6f63debebaab0a3477ecd0f559aa726af4954fc948c51f7a2549e23"},
+    {file = "pylint-3.1.1-py3-none-any.whl", hash = "sha256:862eddf25dab42704c5f06d3688b8bc19ef4c99ad8a836b6ff260a3b2fbafee1"},
+    {file = "pylint-3.1.1.tar.gz", hash = "sha256:c7c2652bf8099c7fb7a63bc6af5c5f8f7b9d7b392fa1d320cb020e222aff28c2"},
 ]
 
 [package.dependencies]
@@ -3572,8 +3572,8 @@ astroid = ">=3.1.0,<=3.2.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
-    {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
     {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
+    {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
 ]
 isort = ">=4.2.5,<5.13.0 || >5.13.0,<6"
 mccabe = ">=0.6,<0.8"
@@ -4048,7 +4048,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "HEAD"
-resolved_reference = "a68b3b6190d1d05b6e390b88ee340d6e275f2867"
+resolved_reference = "de78b0d879ee2d64b0fe28a5d7aaeb4b7f6e84d7"
 
 [[package]]
 name = "qibotn"
@@ -5004,13 +5004,13 @@ files = [
 
 [[package]]
 name = "tomlkit"
-version = "0.12.4"
+version = "0.12.5"
 description = "Style preserving TOML library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "tomlkit-0.12.4-py3-none-any.whl", hash = "sha256:5cd82d48a3dd89dee1f9d64420aa20ae65cfbd00668d6f094d7578a78efbb77b"},
-    {file = "tomlkit-0.12.4.tar.gz", hash = "sha256:7ca1cfc12232806517a8515047ba66a19369e71edf2439d0f5824f91032b6cc3"},
+    {file = "tomlkit-0.12.5-py3-none-any.whl", hash = "sha256:af914f5a9c59ed9d0762c7b64d3b5d5df007448eb9cd2edc8a46b1eafead172f"},
+    {file = "tomlkit-0.12.5.tar.gz", hash = "sha256:eef34fba39834d4d6b73c9ba7f3e4d1c417a4e56f89a7e96e090dd0d24b8fb3c"},
 ]
 
 [[package]]
