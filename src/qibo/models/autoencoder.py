@@ -37,7 +37,10 @@ class QuantumAutoencoder:
         self.cf_circuit_inv = None #self.cf_circuit.invert()
         self.reset_circuit = None
         self.rs = 2  # Random seed, can also be made configurable
+
+        # ckgan:  Hard coded here!!!
         self.cfTypes =["qcnn","qcnn.ry","qcnn.real","HEA"]
+
         self.backendName = backendname
         qibo.set_backend(backendname) 
         
@@ -146,13 +149,27 @@ class QuantumAutoencoder:
         time0 = time.time()
         np.random.seed(self.rs)
         count = [0]
-        if(self.costFunType in self.cfTypes[:3]):
-            nparams = self.qc.nparams_layer*self.layers
+
+        # this is for QCNN only ?? 
+
+        # if in qcnn.
+        # WEIRD WEIRD.. printing of missing variable does not crash the code but other part of code is entered! WHY? WHY? So HOW CAN WE DEBUG??
+        # print("ckgan: costFunType is ",self.contFunType)
+        print("ckgan: costFunType is ",self.costFunType)
+        print("ckgan:  cfTypes are:")
+        print(self.cfTypes)
+        print("ckgan: .....")
+
+        if(self.costFunType in self.cfTypes[:3]): # no bug!
+
+            nparams = self.qc.nparams_layer*self.layers  # nparams for qcnn architetures! since the parameters are correlated. 
+
+            # bias only in QCNN. optimizing parameter by adding some constants..
             bias = np.zeros(self.qc.measured_qubits)
             initial_params = np.random.uniform(0, 2 * np.pi, nparams)
             initial_params = np.concatenate((bias,initial_params))
-        else:
-            nparams = 2 * self.nqubits * self.layers + self.nqubits
+        else: # this is general one
+            nparams = 2 * self.nqubits * self.layers + self.nqubits 
             initial_params = np.random.uniform(0, 2 * np.pi, nparams)
 
         result = minimize(
@@ -162,6 +179,10 @@ class QuantumAutoencoder:
             options={"maxiter": self.maxiter, "maxfun": 2.0e3},
         )
         time1 = time.time()
+        print("time0 is ",time0)
+        print("time1 is ",time1)
+        print("time1-time0 is ",time1-time0)
+
 
         print("Final parameters: ", result.x)
         print("Final cost function: ", result.fun)
