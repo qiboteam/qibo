@@ -798,7 +798,7 @@ class QuantumChannel(QuantumComb):
             )
         if len(partition) == 1:
             if system_input == None:  # Assume the input is a quantum state
-                partition = (partition[0], 1)
+                partition = (1, partition[0])
             else:
                 if isinstance(system_input, bool):
                     system_input = (system_input,)

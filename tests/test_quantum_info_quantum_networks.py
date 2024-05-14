@@ -149,7 +149,7 @@ def test_errors(backend):
     link_product("ii", quantum_channel)
     link_product("ij, kj", network_state, quantum_channel)
     link_product("ij, jj", network_state, quantum_channel)
-    link_product("ij, jj, jj", network_state, network_state, quantum_channel)
+    link_product("ij, jj, jj", network_state, quantum_channel, quantum_channel)
 
 
 def test_class_methods(backend):
@@ -457,7 +457,7 @@ def test_default_construction(backend):
     assert channel2.partition == (4, 1)
     assert channel2.system_input == (True, False)
     channel3 = QuantumChannel(vec, partition=4, pure=True, backend=backend)
-    assert channel3.partition == (4, 1)
+    assert channel3.partition == (1, 4)
     assert channel3.system_input == (True, False)
     channel4 = QuantumChannel(
         vec, partition=4, system_input=False, pure=True, backend=backend
