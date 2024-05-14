@@ -165,7 +165,7 @@ class EvolutionOracle:
         assert np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
         return combined_circuit
 
-    def non_classical_bound(self, s, commutator_loss, epsilon):
+    def non_classical_bound(self, s, h_loss, epsilon):
         """
         commutator_loss takes in a symbolic hamiltonian and compute the norm.
         epsilon is the error tolerance level that we set.
@@ -174,7 +174,7 @@ class EvolutionOracle:
         # decompose the terms
         terms = self.h.terms()
         # find the maximum norm
-        Ch = max([commutator_loss(hihj) for hihj in terms])
+        Ch = max([h_loss(hihj) for hihj in terms])
         return epsilon/(Ch * s**2)
 
 
