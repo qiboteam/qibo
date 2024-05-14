@@ -136,6 +136,9 @@ def test_errors(backend):
     with pytest.raises(ValueError):
         QuantumComb.from_nparray(vec, pure=True, backend=backend)
 
+    with pytest.raises(ValueError):
+        QuantumChannel(matrix, partition=(2, 2, 2), pure=True, backend=backend)
+
     with pytest.raises(TypeError):
         link_product(1, quantum_comb)
 
@@ -146,6 +149,7 @@ def test_errors(backend):
     link_product("ii", quantum_channel)
     link_product("ij, kj", network_state, quantum_channel)
     link_product("ij, jj", network_state, quantum_channel)
+    link_product("ij, jj, jj", network_state, network_state, quantum_channel)
 
 
 def test_class_methods(backend):
@@ -429,6 +433,7 @@ def test_predefined(backend):
 
 def test_default_construction(backend):
     vec = np.random.rand(4).reshape([4, 1])
+    mat = np.random.rand(16).reshape([2, 2, 2, 2])
     network = QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
     assert network.partition == (4, 1)
     assert network.system_input == (True, False)
@@ -437,9 +442,25 @@ def test_default_construction(backend):
     comb2 = QuantumComb.from_nparray(vec, pure=True, backend=backend)
     assert comb2.partition == (4, 1)
     assert comb2.system_input == (True, False)
+    comb3 = QuantumComb.from_nparray(mat, pure=False, backend=backend)
+    assert comb3.partition == (2, 2)
+    assert comb3.system_input == (True, False)
     comb3 = QuantumComb(vec, system_input=(True, True), pure=True, backend=backend)
     assert comb3.partition == (4, 1)
     assert comb3.system_input == (True, False)
-    channel = QuantumChannel.from_nparray(vec, pure=True, backend=backend)
-    assert channel.partition == (4, 1)
-    assert channel.system_input == (True, False)
+    channel1 = QuantumChannel.from_nparray(vec, pure=True, backend=backend)
+    assert channel1.partition == (4, 1)
+    assert channel1.system_input == (True, False)
+    channel2 = QuantumChannel(
+        vec, partition=4, system_input=True, pure=True, backend=backend
+    )
+    assert channel2.partition == (4, 1)
+    assert channel2.system_input == (True, False)
+    channel3 = QuantumChannel(vec, partition=4, pure=True, backend=backend)
+    assert channel3.partition == (4, 1)
+    assert channel3.system_input == (True, False)
+    channel4 = QuantumChannel(
+        vec, partition=4, system_input=False, pure=True, backend=backend
+    )
+    assert channel4.partition == (1, 4)
+    assert channel4.system_input == (True, False)
