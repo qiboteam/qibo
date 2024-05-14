@@ -321,6 +321,7 @@ def test_with_comb(backend):
 
     rand_choi = random_density_matrix(4**2, backend=backend)
     unitary_1 = random_unitary(4, backend=backend)
+    unitary_2 = random_unitary(4, backend=backend)
     non_channel = QuantumNetwork.from_nparray(
         rand_choi,
         (2, 2, 2, 2),
@@ -334,12 +335,32 @@ def test_with_comb(backend):
         pure=True,
         backend=backend,
     )
+    unitary_channel2 = QuantumNetwork.from_nparray(
+        unitary_2,
+        (2, 2, 2, 2),
+        system_input=(True, True, False, False),
+        pure=True,
+        backend=backend,
+    )
 
     non_comb = link_product("ij kl, km on -> jl mn", non_channel, unitary_channel)
     non_comb = QuantumComb(
         non_comb.full(backend=backend),
         (2, 2, 2, 2),
-        system_input=(True, True, False, False),
+        system_input=(True, False, True, False),
+        backend=backend,
+    )
+    two_comb = link_product(
+        "ij kl, km on, i, o",
+        unitary_channel,
+        unitary_channel2,
+        trace(2, backend=backend),
+        trace(2, backend=backend),
+    )
+    two_comb = QuantumComb(
+        two_comb.full(backend=backend),
+        (2, 2, 2, 2),
+        system_input=(True, False, True, False),
         backend=backend,
     )
 
@@ -360,6 +381,9 @@ def test_with_comb(backend):
 
     assert non_comb.is_hermitian()
     assert not non_comb.is_causal()
+
+    assert two_comb.is_hermitian()
+    assert two_comb.is_causal()
 
 
 def test_apply(backend):

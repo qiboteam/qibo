@@ -998,24 +998,18 @@ def link_product(
                     is_input = operands[inds[i]].system_input[index]
                     if found > 2:
                         warning(
-                            f"Index {ind} is accores multiple times in the input subscripts {input_str}."
+                            f"Index {ind} appears multiple times in the input subscripts {input_str}."
                         )
                 except:
                     continue
 
-    # check output systems
+    # set correct order of the `partition` and `system_input`
     partition = []
     system_input = []
     for ind in results_index:
-        found = False
         for i, script in enumerate(inputs):
             try:
                 index = script.index(ind)
-                if found:
-                    warning(
-                        f"Index {ind} is repeated in the input subscripts {input_str}."
-                    )
-                found = True
 
                 partition.append(operands[inds[i]].partition[index])
                 system_input.append(operands[inds[i]].system_input[index])
