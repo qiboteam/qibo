@@ -1,7 +1,8 @@
 import os
 from importlib import import_module
 
-from qibo.backends.abstract import Backend
+import numpy as np
+
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
@@ -220,3 +221,29 @@ def construct_backend(backend, **kwargs) -> Backend:
             ValueError,
             f"Backend {backend} is not available. To check which backends are installed use `qibo.list_available_backends()`.",
         )
+
+
+def _check_backend_and_local_state(seed, backend):
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
+    backend = _check_backend(backend)
+
+    if seed is None or isinstance(seed, int):
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
+            local_state = backend.np.random.default_rng(seed)
+        else:
+            local_state = np.random.default_rng(seed)
+    else:
+        local_state = seed
+
+    return backend, local_state
