@@ -65,12 +65,12 @@ cirq = "^1.1.0"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
-pylint = "^3.1.0"
+pylint = "3.1.0"
 matplotlib = "^3.7.0"
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch="list_backends" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "list_backends" }
 stim = "^1.12.0"
 
 [tool.poe.tasks]
@@ -89,7 +89,7 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch="list_backends" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "list_backends" }
 
 [tool.poetry.group.cuda12]
 optional = true
@@ -98,7 +98,7 @@ optional = true
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch="list_backends" }
+qibotn = { git = "https://github.com/qiboteam/qibotn.git", branch = "list_backends" }
 
 [tool.poetry.extras]
 tensorflow = ["tensorflow"]
