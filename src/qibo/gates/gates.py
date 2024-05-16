@@ -2150,41 +2150,6 @@ class PRx(ParametrizedGate):
         )  # pylint: disable=E1130
 
 
-class RX(_Rn_):
-    """Rotation around the X-axis of the Bloch sphere.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        \\cos \\frac{\\theta }{2}  &
-        -i\\sin \\frac{\\theta }{2} \\\\
-        -i\\sin \\frac{\\theta }{2}  &
-        \\cos \\frac{\\theta }{2} \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-        theta (float): the rotation angle.
-        trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
-            Defaults to ``True``.
-    """
-
-    def __init__(self, q, theta, trainable=True):
-        super().__init__(q, theta, trainable)
-        self.name = "rx"
-        self.draw_label = "RX"
-        self._controlled_gate = CRX
-
-    @property
-    def qasm_label(self):
-        return "rx"
-
-    def generator_eigenvalue(self):
-        return 0.5
-
-
 class GIVENS(ParametrizedGate):
     """The Givens gate.
 
