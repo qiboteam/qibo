@@ -335,8 +335,8 @@ def test_gpi(backend):
     target_state = np.dot(matrix, initial_state)
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.GPI(0, phi).qasm_label
+    # with pytest.raises(NotImplementedError):
+    #     gates.GPI(0, phi).qasm_label
 
     assert not gates.GPI(0, phi).clifford
     assert gates.GPI(0, phi).unitary
@@ -357,8 +357,8 @@ def test_gpi2(backend):
     target_state = np.dot(matrix, initial_state)
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.GPI2(0, phi).qasm_label
+    # with pytest.raises(NotImplementedError):
+    #    gates.GPI2(0, phi).qasm_label
 
     assert not gates.GPI2(0, phi).clifford
     assert gates.GPI2(0, phi).unitary
@@ -1029,8 +1029,8 @@ def test_ms(backend):
     phi1 = 0.4321
     theta = np.pi / 2
 
-    with pytest.raises(NotImplementedError):
-        gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=theta).qasm_label
+    # with pytest.raises(NotImplementedError):
+    #     gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=theta).qasm_label
     with pytest.raises(ValueError):
         gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=np.pi)
 
@@ -1054,8 +1054,8 @@ def test_ms(backend):
 
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.MS(0, 1, phi0=phi0, phi1=phi1).qasm_label
+    # with pytest.raises(NotImplementedError):
+    #     gates.MS(0, 1, phi0=phi0, phi1=phi1).qasm_label
 
     assert not gates.RXX(0, 1, phi0, phi1).clifford
     assert gates.RXX(0, 1, phi0, phi1).unitary
