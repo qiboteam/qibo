@@ -2116,6 +2116,17 @@ class PRx(ParametrizedGate):
         self.target_qubits = (q,)
         self.unitary = True
 
+        if theta is None:
+            raise_error(
+                ValueError,
+                f"Theta is not defined.",
+            )
+        if phi is None:
+            raise_error(
+                ValueError,
+                f"Phi is not defined.",
+            )
+
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
         self.nparams = 2
