@@ -210,9 +210,7 @@ class QuantumAutoencoder:
 
     # ckgan: This is to be called after a successful initialization !
     def run_full_circuit(self, params=None):
-
-
-        # ckgan: I do not understand!!! when we run optimization, we try to get the set of thetas!
+        # ckgan: when we run optimization, we try to get the set of thetas
         if(params == None):
             #np.random.seed(self.rs)
             self.run_optimization()
@@ -266,33 +264,6 @@ class QuantumAutoencoder:
         cost = cost/ len(self.ising_groundstates)
         print("encoder+decoder cost: ",cost)
 
-    # ckgan: NOT used. Roughly same as what is above!
-    def run_full_circuit_test(self, params=None):
-        if(params == None):
-            #np.random.seed(self.rs)
-            self.run_optimization()
-
-        else: 
-            if(self.costFunType in self.cfTypes[:3]):
-                #print("to compare paramters:\n")
-                #print(params)
-                #self.qc.set_circuit_params(params)
-                self.qc.set_circuit_params(params,has_bias=True)
-                self.cf_circuit = self.qc._circuit
-                #print(self.cf_circuit.get_parameters())
-                #print("\n")
-            else:
-                self.cf_circuit.set_parameters(params)
-        self.update_cf_circuit_invert()
-        
-        cost = 0.
-        for state in self.ising_groundstates:
-            final_state = self.cf_circuit(np.copy(state))
-            #cost += np.real(self.encoder.expectation(final_state.state()))
-            inv_state = self.cf_circuit_inv(np.copy(final_state.state()))
-            cost += 1.-np.real(np.vdot(state, inv_state.state()))
-        print("encoder+decoder cost: ",cost) 
-    
     # ckgan: Make this to be in the class
     def printInfo(self,fname, x):
         with open(fname, 'a') as filex:
