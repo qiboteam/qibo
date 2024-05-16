@@ -1061,6 +1061,24 @@ def test_ms(backend):
     assert gates.RXX(0, 1, phi0, phi1).unitary
 
 
+def test_prx(backend):
+    phi = 0.24
+    theta = 0.52
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.PRx(0, phi=phi, theta=theta)], nqubits=1
+    )
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    exponent1 = -1.0j * np.exp(-1.0j * phi)
+    exponent2 = -1.0j * np.exp(1.0j * phi)
+    gate = np.array([[cos, exponent1 * sin], [exponent2 * sin, cos]])
+    target_state = gate.dot(np.ones(2)) / np.sqrt(2.0)
+    backend.assert_allclose(final_state, target_state)
+    assert gates.PRx(0, phi=phi, theta=theta).qasm_label == "prx"
+    assert not gates.PRx(0, phi=phi, theta=theta).clifford
+    assert gates.PRx(0, phi=phi, theta=theta).unitary
+
+
 def test_givens(backend):
     theta = 0.1234
     nqubits = 2
