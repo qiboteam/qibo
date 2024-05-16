@@ -404,6 +404,25 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    # def PRx(self, theta, phi):
+    #     cos = self.np.cos(theta / 2)
+    #     sin = self.np.sin(theta / 2)
+    #     return self._cast(
+    #         [
+    #             [cos, 1.0j * self.np.exp(-1.0j * phi) * sin],
+    #             [-1.0j * self.np.exp(1.0j * phi) * sin, cos]
+    #         ]
+    #     )
+
+    def PRx(self, theta, phi):
+        cos = self.np.cos(theta / 2)
+        sin = self.np.sin(theta / 2)
+        exponent1 = -1.0j * self.np.exp(-1.0j * phi)
+        exponent2 = -1.0j * self.np.exp(1.0j * phi)
+        return self._cast(
+            [[cos, exponent1 * sin], [exponent2 * sin, cos]], dtype=self.dtype
+        )
+
     def GIVENS(self, theta):
         return self._cast(
             [
