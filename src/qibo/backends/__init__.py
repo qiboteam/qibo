@@ -3,6 +3,7 @@ from importlib import import_module
 
 import numpy as np
 
+from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
