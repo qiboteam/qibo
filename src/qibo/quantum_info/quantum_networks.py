@@ -668,7 +668,7 @@ class QuantumComb(QuantumNetwork):
             if pure:
                 partition = tensor.shape
             else:
-                partition = (int(np.sqrt(d)) for d in tensor.shape)
+                partition = tuple(int(np.sqrt(d)) for d in tensor.shape)
         if len(partition) % 2 != 0:
             raise_error(
                 ValueError,
@@ -790,23 +790,24 @@ class QuantumChannel(QuantumComb):
         if isinstance(partition, int):
             partition = (partition,)
 
-        if len(partition) > 2:
-            raise_error(
-                ValueError,
-                "A quantum channel should only contain one input system and one output system. "
-                + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
-            )
-        if len(partition) == 1:
-            if system_input == None:  # Assume the input is a quantum state
-                partition = (1, partition[0])
-            else:
-                if isinstance(system_input, bool):
-                    system_input = (system_input,)
-
-                if system_input[0]:
-                    partition = (partition[0], 1)
-                else:
+        if partition is not None:
+            if len(partition) > 2:
+                raise_error(
+                    ValueError,
+                    "A quantum channel should only contain one input system and one output system. "
+                    + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
+                )
+            if len(partition) == 1:
+                if system_input == None:  # Assume the input is a quantum state
                     partition = (1, partition[0])
+                else:
+                    if isinstance(system_input, bool):
+                        system_input = (system_input,)
+
+                    if system_input[0]:
+                        partition = (partition[0], 1)
+                    else:
+                        partition = (1, partition[0])
 
         super().__init__(tensor, partition, pure=pure, backend=backend)
 

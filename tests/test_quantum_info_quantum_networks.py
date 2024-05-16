@@ -458,6 +458,7 @@ def test_predefined(backend):
 def test_default_construction(backend):
     vec = np.random.rand(4).reshape([4, 1])
     mat = np.random.rand(16).reshape([2, 2, 2, 2])
+    tensor = np.random.rand(16).reshape([4, 4])
     network = QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
     assert network.partition == (4, 1)
     assert network.system_input == (True, False)
@@ -488,3 +489,6 @@ def test_default_construction(backend):
     )
     assert channel4.partition == (1, 4)
     assert channel4.system_input == (True, False)
+    channel5 = QuantumChannel(tensor, pure=False, backend=backend)
+    assert channel5.partition == (2, 2)
+    assert channel5.system_input == (True, False)
