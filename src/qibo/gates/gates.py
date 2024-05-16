@@ -2128,7 +2128,8 @@ class PRx(ParametrizedGate):
             )
 
         self.parameter_names = ["theta", "phi"]
-        self.parameters = theta, phi
+        self.theta = theta
+        self.phi = phi
         self.nparams = 2
 
         self.init_args = [q]
@@ -2143,8 +2144,8 @@ class PRx(ParametrizedGate):
         return "prx"
 
     def _dagger(self) -> "Gate":
-        theta = -self.parameters[0]
-        phi = self.parameters[1]
+        theta = -self.theta
+        phi = self.phi
         return self.__class__(
             self.target_qubits[0], theta, phi
         )  # pylint: disable=E1130
