@@ -145,12 +145,23 @@ class QuantumAutoencoder:
 
         return cost / len(self.ising_groundstates)
 
+    def setup_reset_circuit(self):
+        self.reset_circuit = models.Circuit(self.nqubits, density_matrix=True)
+        for i in range(self.nqubits - self.compress):
+            resetq = gates.ResetChannel(i, [1.0, 0.])
+            self.reset_circuit.add(resetq)
+
+    def add_gates_from_circuit(self, circuit, source_circuit):
+        #circuit = models.Circuit(self.nqubits, density_matrix=True)
+        for gate in source_circuit.queue:
+            if(gate.name == "measure"): continue
+            circuit.add(copy.copy(gate))
+            #circuit.add(gate)
+
     def run_optimization(self):
         time0 = time.time()
         np.random.seed(self.rs)
         count = [0]
-
-        # this is for QCNN only ?? 
 
         # if in qcnn.
         # WEIRD WEIRD.. printing of missing variable does not crash the code but other part of code is entered! WHY? WHY? So HOW CAN WE DEBUG??
@@ -193,29 +204,18 @@ class QuantumAutoencoder:
         except:
             listtoprint+=[self.backendName, self.costFunType,str(self.nqubits),str(self.layers),str(self.compress),self.method,"-1",str(result.fun),str(len(self.ising_groundstates)),str(time1-time0),str(self.rs)]
 
+        # the printing should not be here!
         self.printInfo(fname,listtoprint)
-
-    def setup_reset_circuit(self):
-        self.reset_circuit = models.Circuit(self.nqubits, density_matrix=True)
-        for i in range(self.nqubits - self.compress):
-            resetq = gates.ResetChannel(i, [1.0, 0.])
-            self.reset_circuit.add(resetq)
-
-    def add_gates_from_circuit(self, circuit, source_circuit):
-        #circuit = models.Circuit(self.nqubits, density_matrix=True)
-        for gate in source_circuit.queue:
-            if(gate.name == "measure"): continue
-            circuit.add(copy.copy(gate))
-            #circuit.add(gate)
 
     # ckgan: This is to be called after a successful initialization !
     def run_full_circuit(self, params=None):
+
         # ckgan: when we run optimization, we try to get the set of thetas
         if(params == None):
             #np.random.seed(self.rs)
             self.run_optimization()
 
-        else:
+        else: # ??? so how to run optimization once we enter this loop? We modify the circuit since we have a new set of optimized parameters?
             if(self.costFunType in self.cfTypes[:3]):
                 #print("to compare paramters:\n")
                 #print(params)
@@ -252,7 +252,8 @@ class QuantumAutoencoder:
         '''
 
         # ckgan: We loop through a bunch of ground states!
-        # ckgan: But I do not understand...  I thought we need to evolve a state to get the final state and then compute fidelity. The same state has be evolved many times. And then we need to do the same for other states?
+        # ckgan: But I do not understand...  I thought we need to evolve a state to get the final 
+        # state and then compute fidelity. The same state has be evolved many times. And then we need to do the same for other states?
         for state in self.ising_groundstates:
             v_state = np.outer(np.copy(state),np.conjugate(state))
             final_state = circuit(np.copy(v_state))
@@ -264,11 +265,10 @@ class QuantumAutoencoder:
         cost = cost/ len(self.ising_groundstates)
         print("encoder+decoder cost: ",cost)
 
-    # ckgan: Make this to be in the class
-    def printInfo(self,fname, x):
-        with open(fname, 'a') as filex:
-            for da in x:
-                filex.write(da + '\t')
-                print(da + '\t')
-            filex.write('\n')
+    def printInfo(self,fname, xs):
+        with open(fname, 'a') as f:
+            for x in xs:
+                f.write(x + '\t')
+                print(x + '\t')
+            f.write('\n')
     
