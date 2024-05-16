@@ -718,6 +718,10 @@ class GPI(ParametrizedGate):
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
 
+    @property
+    def qasm_label(self):
+        return "gpi"
+
 
 class GPI2(ParametrizedGate):
     """The GPI2 gate.
@@ -751,6 +755,10 @@ class GPI2(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -2074,11 +2082,96 @@ class MS(ParametrizedGate):
             "trainable": trainable,
         }
 
+    @property
+    def qasm_label(self):
+        return "ms"
+
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
         phi0, phi1, theta = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
+
+
+class PRx(ParametrizedGate):
+    """Phase Rx gate.
+
+    Corresponds to the following unitary matrix
+
+        .. math::
+            \\begin{pmatrix}
+                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
+                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+            \\end{pmatrix}
+
+    Args:
+        theta (float): The first angle of the gate in radians or expression representation.
+        phi (float): The second angle of the gate in radians or expression representation.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "prx"
+        self.draw_label = "prx"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "trainable": trainable,
+        }
+
+    @property
+    def qasm_label(self):
+        return "prx"
+
+    def _dagger(self) -> "Gate":
+        theta = -self.parameters[0]
+        phi = self.parameters[1]
+        return self.__class__(
+            self.target_qubits[0], theta, phi
+        )  # pylint: disable=E1130
+
+
+class RX(_Rn_):
+    """Rotation around the X-axis of the Bloch sphere.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2}  &
+        -i\\sin \\frac{\\theta }{2} \\\\
+        -i\\sin \\frac{\\theta }{2}  &
+        \\cos \\frac{\\theta }{2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, trainable=True):
+        super().__init__(q, theta, trainable)
+        self.name = "rx"
+        self.draw_label = "RX"
+        self._controlled_gate = CRX
+
+    @property
+    def qasm_label(self):
+        return "rx"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
 
 class GIVENS(ParametrizedGate):
