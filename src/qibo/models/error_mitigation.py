@@ -51,51 +51,70 @@ def get_gammas(noise_levels, analytical: bool = True):
     return zne_coefficients
 
 
-def get_noisy_circuit(circuit, num_insertions: int, insertion_gate: str = "CNOT"):
+def get_noisy_circuit(circuit, num_insertions: int, insertion_gate=None):
     """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to modify.
-        num_insertions (int): number of insertion gate pairs to add.
+        num_insertions (int): number of insertion gate pairs / global unitary folds to add.
         insertion_gate (str, optional): gate to be used in the insertion.
             If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Default is ``"CNOT"``.
+            Otherwise, the other gate is ``"CNOT"``.
+            If None, global unitary folding is carried out.
 
     Returns:
-        :class:`qibo.models.Circuit`: circuit with the inserted gate pairs.
+        :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
-    if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
-        raise_error(
-            ValueError,
-            "Invalid insertion gate specification. Please select between 'CNOT' and 'RX'.",
-        )
-    if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
-        raise_error(
-            ValueError,
-            "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. "
-            + "Alternatively, try with the 'RX' insertion gate instead.",
-        )
 
-    i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+    if insertion_gate is None:  # pragma: no cover
+        circuit_no_meas = circuit.__class__(**circuit.init_kwargs)
+        circuit_meas = circuit.__class__(**circuit.init_kwargs)
+        for gate in circuit.queue:
+            if gate.name != "measure":
+                circuit_no_meas.add(gate)
+            else:
+                circuit_meas.add(gate)
 
-    theta = np.pi / 2
-    noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+        noisy_circuit = circuit_no_meas
+        for _ in range(num_insertions):
+            noisy_circuit += circuit_no_meas.invert() + circuit_no_meas
 
-    for gate in circuit.queue:
-        noisy_circuit.add(gate)
+        noisy_circuit += circuit_meas
 
-        if isinstance(gate, i_gate):
-            if insertion_gate == "CNOT":
-                control = gate.control_qubits[0]
-                target = gate.target_qubits[0]
-                for _ in range(num_insertions):
-                    noisy_circuit.add(gates.CNOT(control, target))
-                    noisy_circuit.add(gates.CNOT(control, target))
-            elif gate.init_kwargs["theta"] == theta:
-                qubit = gate.qubits[0]
-                for _ in range(num_insertions):
-                    noisy_circuit.add(gates.RX(qubit, theta=theta))
-                    noisy_circuit.add(gates.RX(qubit, theta=-theta))
+    else:
+        if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
+            raise_error(
+                ValueError,
+                "Invalid insertion gate specification. Please select between 'CNOT' and 'RX'.",
+            )
+        if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
+            raise_error(
+                ValueError,
+                "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. "
+                + "Alternatively, try with the 'RX' insertion gate instead.",
+            )
+
+        i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+
+        theta = np.pi / 2
+        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+
+        for gate in circuit.queue:
+            noisy_circuit.add(gate)
+
+            if isinstance(gate, i_gate):
+                if insertion_gate == "CNOT":
+                    control = gate.control_qubits[0]
+                    target = gate.target_qubits[0]
+                    for _ in range(num_insertions):
+                        noisy_circuit.add(gates.CNOT(control, target))
+                        noisy_circuit.add(gates.CNOT(control, target))
+                elif gate.init_kwargs["theta"] == theta:
+                    qubit = gate.qubits[0]
+                    for _ in range(num_insertions):
+                        noisy_circuit.add(gates.RX(qubit, theta=theta))
+                        noisy_circuit.add(gates.RX(qubit, theta=-theta))
 
     return noisy_circuit
 
