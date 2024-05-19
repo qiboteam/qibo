@@ -1,7 +1,7 @@
 import hyperopt
 
 from qibo.models.dbi.double_bracket import *
-from qibo.models.dbi.utils import cs_angle_sgn
+from qibo.models.dbi.utils import cs_angle_sgn, generate_pauli_operator_dict
 from qibo.models.dbi.utils_analytical import *
 from qibo.models.dbi.utils_scheduling import polynomial_step
 
