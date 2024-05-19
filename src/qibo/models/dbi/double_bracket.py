@@ -81,6 +81,7 @@ class DoubleBracketIteration:
         if mode is None:
             mode = self.mode
 
+        operator = None
         if mode is DoubleBracketGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 -1.0j * step,

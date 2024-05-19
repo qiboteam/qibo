@@ -29,12 +29,16 @@ class qPDF:
         if not isinstance(multi_output, bool):  # pragma: no cover
             raise_error(TypeError, "multi-output must be a boolean.")
 
+        # TODO: top-level constant
+        ANSATZES = {
+            "Weighted": ansatz_Weighted,
+            "Fourier": ansatz_Fourier,
+        }
+
         # parse ansatz
-        if ansatz == "Weighted":
-            ansatz_function = ansatz_Weighted
-        elif ansatz == "Fourier":
-            ansatz_function = ansatz_Fourier
-        else:  # pragma: no cover
+        try:
+            ansatz_function = ANSATZES[ansatz]
+        except KeyError:
             raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
 
         # load ansatz
@@ -128,12 +132,12 @@ def qpdf_hamiltonian(nqubits, z_qubit=0, backend=None):
 
 
 def map_to(x):
-    """Auxiliary function"""
+    """Auxiliary function."""
     return 2 * np.pi * x
 
 
 def maplog_to(x):
-    """Auxiliary function"""
+    """Auxiliary function."""
     return -np.pi * np.log10(x)
 
 

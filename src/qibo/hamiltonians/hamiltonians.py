@@ -194,10 +194,7 @@ class Hamiltonian(AbstractHamiltonian):
         elif isinstance(o, self.backend.numeric_types):
             new_matrix = self.matrix + o * self.eye()
         else:
-            raise_error(
-                NotImplementedError,
-                f"Hamiltonian addition to {type(o)} not implemented.",
-            )
+            raise NotImplementedError(f"Hamiltonian addition to {type(o)} not implemented.")
         return self.__class__(self.nqubits, new_matrix, backend=self.backend)
 
     def __sub__(self, o):
@@ -211,10 +208,7 @@ class Hamiltonian(AbstractHamiltonian):
         elif isinstance(o, self.backend.numeric_types):
             new_matrix = self.matrix - o * self.eye()
         else:
-            raise_error(
-                NotImplementedError,
-                f"Hamiltonian subtraction to {type(o)} not implemented.",
-            )
+            raise NotImplementedError(f"Hamiltonian subtraction to {type(o)} not implemented.")
         return self.__class__(self.nqubits, new_matrix, backend=self.backend)
 
     def __rsub__(self, o):

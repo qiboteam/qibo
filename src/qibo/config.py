@@ -1,6 +1,4 @@
-"""
-Define the default circuit, constants and types.
-"""
+"""Define the default circuit, constants and types."""
 
 import logging
 import os
@@ -64,12 +62,14 @@ def set_batch_size(batch_size):
 
 
 def get_metropolis_threshold():
-    """Returns threshold for using Metropolis algorithm for sampling measurement shots."""
+    """Returns threshold for using Metropolis algorithm for sampling
+    measurement shots."""
     return SHOT_METROPOLIS_THRESHOLD
 
 
 def set_metropolis_threshold(threshold):
-    """Sets threshold for using Metropolis algorithm for sampling measurement shots."""
+    """Sets threshold for using Metropolis algorithm for sampling measurement
+    shots."""
     if not isinstance(threshold, int):
         raise_error(TypeError, "Shot threshold must be integer.")
     elif threshold < 1:
