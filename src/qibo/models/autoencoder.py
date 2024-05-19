@@ -166,10 +166,12 @@ class QuantumAutoencoder:
         # if in qcnn.
         # WEIRD WEIRD.. printing of missing variable does not crash the code but other part of code is entered! WHY? WHY? So HOW CAN WE DEBUG??
         # print("ckgan: costFunType is ",self.contFunType)
+        '''
         print("ckgan: costFunType is ",self.costFunType)
         print("ckgan:  cfTypes are:")
         print(self.cfTypes)
         print("ckgan: .....")
+        '''
 
         if(self.costFunType in self.cfTypes[:3]): # no bug!
 
@@ -190,18 +192,26 @@ class QuantumAutoencoder:
             options={"maxiter": self.maxiter, "maxfun": 2.0e3},
         )
         time1 = time.time()
+        '''
         print("time0 is ",time0)
         print("time1 is ",time1)
         print("time1-time0 is ",time1-time0)
+        '''
 
 
         print("Final parameters: ", result.x)
         print("Final cost function: ", result.fun)
-        fname="results.txt"
-        listtoprint=["[backend,costFunType,str(nqubits),str(layers),str(compress),_method,str(nit),str(result.fun),str(len(data)),str(time1-time0),str(rs)]\n"]
-        try:
+        print("ckg: ----- \n")
+
+
+        fname="results.txt" # the mother of confusing for me!
+        # this is stupid !! \n should not be there!! listtoprint=["[backend,costFunType,str(nqubits),str(layers),str(compress),_method,str(nit),str(result.fun),str(len(data)),str(time1-time0),str(rs)]\n"]
+        listtoprint=["[backend,costFunType,str(nqubits),str(layers),str(compress),_method,str(nit),str(result.fun),str(len(data)),str(time1-time0),str(rs)]"]
+        try:  # if the (number of iterations) is defined
+
+            # this looks cunningly deceptive like the previous one. No, it is just one item for each line!
             listtoprint+=[self.backendName, self.costFunType,str(self.nqubits),str(self.layers),str(self.compress),self.method,str(result.nit),str(result.fun),str(len(self.ising_groundstates)),str(time1-time0),str(self.rs)]
-        except:
+        except: # if nit (number of iterations) is not defined
             listtoprint+=[self.backendName, self.costFunType,str(self.nqubits),str(self.layers),str(self.compress),self.method,"-1",str(result.fun),str(len(self.ising_groundstates)),str(time1-time0),str(self.rs)]
 
         # the printing should not be here!
@@ -265,10 +275,24 @@ class QuantumAutoencoder:
         cost = cost/ len(self.ising_groundstates)
         print("encoder+decoder cost: ",cost)
 
+    # much cleaner code now
     def printInfo(self,fname, xs):
-        with open(fname, 'a') as f:
+        # no more that confusing results.txt nonsense
+        '''
+        with open(fname, 'a') as f:  # this is a stupid bug!! How can we keep accumulating!
+            print("ckgan: --- in printInfo !\n")
+            f.write("ckgan: --- in printInfo !\n")
+
+            print("len(xs) = %d"%(len(xs)))
+            f.write("len(xs) = %d\n"%(len(xs)))
             for x in xs:
                 f.write(x + '\t')
                 print(x + '\t')
             f.write('\n')
-    
+        '''
+        # no need to print here.. len(xs)=12 is one block of data! print("len(xs) = %d"%(len(xs)))
+        #f.write("len(xs) = %d\n"%(len(xs)))
+        for x in xs:
+            # f.write(x + '\t')
+            print(x + '\t')
+        # f.write('\n')
