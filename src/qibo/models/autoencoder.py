@@ -292,7 +292,9 @@ class QuantumAutoencoder:
         '''
         # no need to print here.. len(xs)=12 is one block of data! print("len(xs) = %d"%(len(xs)))
         #f.write("len(xs) = %d\n"%(len(xs)))
+        print("\n << new block of data")
         for x in xs:
             # f.write(x + '\t')
             print(x + '\t')
         # f.write('\n')
+        print(" >> new block of data\n")
