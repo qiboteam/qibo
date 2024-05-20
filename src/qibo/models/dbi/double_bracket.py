@@ -7,6 +7,15 @@ import numpy as np
 from qibo.hamiltonians import Hamiltonian
 
 
+from qibo.models.dbi.utils_scheduling import (
+    grid_search_step,
+    hyperopt_step,
+    polynomial_step,
+    simulated_annealing_step,
+)
+
+
+
 class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
 
@@ -19,23 +28,16 @@ class DoubleBracketGeneratorType(Enum):
     # TODO: add double commutator (does it converge?)
 
 
-class DoubleBracketCost(Enum):
+class DoubleBracketCost(str, Enum):
     """Define the DBI cost function."""
 
-    off_diagonal_norm = auto()
+    off_diagonal_norm = "off_diagonal_norm"
     """Use off-diagonal norm as cost function."""
-    least_squares = auto()
+    least_squares = "least_squares"
     """Use least squares as cost function."""
-    energy_fluctuation = auto()
+    energy_fluctuation = "energy_fluctuation"
     """Use energy fluctuation as cost function."""
 
-
-from qibo.models.dbi.utils_scheduling import (
-    grid_search_step,
-    hyperopt_step,
-    polynomial_step,
-    simulated_annealing_step,
-)
 
 
 class DoubleBracketScheduling(Enum):
@@ -130,6 +132,7 @@ class DoubleBracketIteration:
         )
 
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        self.h = Hamiltonian(nqubits=int(np.log2(len(self.h.matrix))), matrix=self.h.matrix)
 
     @staticmethod
     def commutator(a, b):
@@ -184,7 +187,7 @@ class DoubleBracketIteration:
             kwargs["n"] += 1
             # if n==n_max, return None
             step = scheduling(self, d=d, **kwargs)
-            # if for a given polynomial order n, no solution is found, we the order by 1
+            # if for a given polynomial order n, no solution is found, we increase the order of the polynomial by 1
         return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
@@ -227,14 +230,9 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        #h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
-        #h2 = h_np @ h_np
-        #a = state.conj() @ h2 @ state
-        #b = state.conj() @ h_np @ state
-        return np.real(self.h.energy_fluctuation(state))
-        #return (np.sqrt(np.real(a - b**2))).item()
-    
 
+        return np.real(self.h.energy_fluctuation(state))
+       
     def sigma(self, h: np.array):
         return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
 

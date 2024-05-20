@@ -14,8 +14,7 @@ class d_ansatz_type(Enum):
 
     element_wise = auto()
     local_1 = auto()
-    # local_2 = auto() # for future implementation
-    # ising = auto() # for future implementation
+
 
 
 def d_ansatz(params: np.array, d_type: d_ansatz_type, normalization: bool = False):
@@ -75,7 +74,7 @@ def dGamma_diDiagonal(d, h, n, i, dGamma, gamma_list):
     return dW_di + commutator(w, dGamma[-1])
 
 
-# def dpolynomial_diDiagonal(dbi_object, d, h, i): #element_wise_ansatz
+
 def derivative_scalar_product_dbr_approx_element_wise_ansatz(dbi_object, d, h, i):
     r"""
     TODO: add formula and explain terms

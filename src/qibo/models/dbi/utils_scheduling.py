@@ -4,14 +4,13 @@ from typing import Optional
 import hyperopt
 import numpy as np
 
-from qibo.models.dbi.double_bracket import DoubleBracketCost
 from qibo.models.dbi.utils_analytical import (
     energy_fluctuation_polynomial_expansion_coef,
     least_squares_polynomial_expansion_coef,
     off_diagonal_norm_polynomial_expansion_coef,
 )
 
-error = 1e-3
+
 
 
 def grid_search_step(
@@ -95,7 +94,7 @@ def polynomial_step(
     n_max: int = 5,
     d: np.array = None,
     coef: Optional[list] = None,
-    cost: DoubleBracketCost = None,
+    cost: Optional[str] = None,
 ):
     r"""
     Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -117,11 +116,11 @@ def polynomial_step(
             "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
         )
     if coef is None:
-        if cost is DoubleBracketCost.off_diagonal_norm:
+        if cost == 'off_diagonal_norm':
             coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n)
-        elif cost is DoubleBracketCost.least_squares:
+        elif cost == 'least_squares':
             coef = least_squares_polynomial_expansion_coef(dbi_object, d, n)
-        elif cost is DoubleBracketCost.energy_fluctuation:
+        elif cost == 'energy_fluctuation':
             coef = energy_fluctuation_polynomial_expansion_coef(
                 dbi_object, d, n, dbi_object.ref_state
             )
@@ -130,7 +129,7 @@ def polynomial_step(
 
     roots = np.roots(coef)
     real_positive_roots = [
-        np.real(root) for root in roots if np.imag(root) < error and np.real(root) > 0
+        np.real(root) for root in roots if np.imag(root) < 1e-3 and np.real(root) > 0
     ]
     # solution exists, return minimum s
     if len(real_positive_roots) > 0:
