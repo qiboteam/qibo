@@ -225,8 +225,10 @@ class DoubleBracketIteration:
         """
         h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
         h2 = h_np @ h_np
-        a = state.conj() @ h2 @ state
-        b = state.conj() @ h_np @ state
+        state_cast = self.backend.cast(state)
+        state_conj = self.backend.cast(state.conj())
+        a = state_conj @ h2 @ state_cast
+        b = state_conj @ h_np @ state_cast
         return (np.sqrt(np.real(a - b**2))).item()
         r  # return np.real(self.h.energy_fluctuation(state))
 
