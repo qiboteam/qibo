@@ -21,7 +21,7 @@ from qibo.models.dbi.group_commutator_iteration_transpiler import (
 )
 from qibo.quantum_info import random_hermitian
 
-NSTEPS = 1
+NSTEPS = 2
 seed = 10
 """Number of steps for evolution."""
 
@@ -41,7 +41,7 @@ def test_double_bracket_iteration_canonical(backend, nqubits):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [1, 2])
+@pytest.mark.parametrize("nqubits", [3, 4])
 def test_double_bracket_iteration_group_commutator(backend, nqubits):
     """Check group commutator mode."""
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
@@ -229,16 +229,29 @@ def test_gci_evolution_oracles_types_numerical(
 
     assert norm(j_1 - k_1) < 1e-10
 
-    # test single_commutator case
-    gci = GroupCommutatorIterationWithEvolutionOracles(deepcopy(evolution_oracle))
-    gci.mode_double_bracket_rotation = DoubleBracketRotationType.single_commutator
-    u_gc_from_oracles = gci.group_commutator(t_step, evolution_oracle_diagonal_target)
-    assert (
-        norm(u_gc_from_oracles["forwards"].conj().T - u_gc_from_oracles["backwards"])
-        < 1e-10
+    # when gci mode is single_commutator, an error should be raised:
+    with pytest.raises(ValueError):
+        gci.mode_double_bracket_rotation = DoubleBracketRotationType.single_commutator
+        u_gc_from_oracles = gci.group_commutator(
+            t_step, evolution_oracle_diagonal_target
+        )
+
+    # compare DoubleBracketRotationType.group_commutator_reduced and group_commutator
+    u_gc_from_oracles = gci.group_commutator(
+        t_step,
+        evolution_oracle_diagonal_target,
+        mode_dbr=DoubleBracketRotationType.group_commutator,
+    )
+    u_gc_reduced_from_oracles = gci.group_commutator(
+        t_step,
+        evolution_oracle_diagonal_target,
+        mode_dbr=DoubleBracketRotationType.group_commutator_reduced,
     )
 
-    # make 2 new objects with DoubleBracketRotationType.group_commutator_reduced and group_commutator, compare h matrix rotation
+    assert (
+        norm(u_gc_from_oracles["forwards"] - u_gc_reduced_from_oracles["forwards"])
+        < 1e-10
+    )
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -381,6 +394,7 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     # test first iteration with default d
     dbi(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
     for _ in range(NSTEPS):
+        d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
         dbi(step=0.01, d=d)
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
