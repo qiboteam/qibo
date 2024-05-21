@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from math import ceil
 
 import hyperopt
 import numpy as np
@@ -6,7 +7,6 @@ import numpy as np
 from qibo import Circuit
 from qibo.config import raise_error
 from qibo.hamiltonians import AbstractHamiltonian, SymbolicHamiltonian
-from math import ceil
 
 
 class EvolutionOracleType(Enum):
@@ -179,7 +179,7 @@ class EvolutionOracle:
         terms = self.h.terms
         # find the maximum norm
         Ch = max([h_loss(hihj) for hihj in terms])
-        return ceil(epsilon/(Ch * s**2))
+        return ceil(epsilon / (Ch * s**2))
 
 
 class FrameShiftedEvolutionOracle(EvolutionOracle):
