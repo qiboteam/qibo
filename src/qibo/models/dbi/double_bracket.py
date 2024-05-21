@@ -15,6 +15,7 @@ from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
     polynomial_step,
+    simulated_annealing_step,
 )
 
 
@@ -39,6 +40,8 @@ class DoubleBracketScheduling(Enum):
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
     """Use polynomial expansion (analytical) of the loss function."""
+    simulated_annealing = simulated_annealing_step
+    """Use simulated annealing algorithm"""
 
 
 class DoubleBracketCostFunction(Enum):
@@ -128,7 +131,7 @@ class DoubleBracketIteration:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
+                -1.0j * step,
                 self.commutator(self.backend.cast(d), self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:

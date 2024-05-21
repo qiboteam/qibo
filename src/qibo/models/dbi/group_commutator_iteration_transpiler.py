@@ -69,8 +69,9 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         self.gci_unitary = []
         self.gci_unitary_dagger = []
-        self.iterated_hamiltonian_evolution_oracle = deepcopy( self.input_hamiltonian_evolution_oracle )
-        
+        self.iterated_hamiltonian_evolution_oracle = deepcopy(
+            self.input_hamiltonian_evolution_oracle
+        )
 
     def __call__(
         self,
@@ -91,17 +92,18 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         # This will run the appropriate group commutator step
         double_bracket_rotation_step = self.group_commutator(
-            step_duration, diagonal_association, mode_dbr = mode_dbr)
-        
+            step_duration, diagonal_association, mode_dbr=mode_dbr
+        )
+
         before_circuit = double_bracket_rotation_step["backwards"]
         after_circuit = double_bracket_rotation_step["forwards"]
 
         self.iterated_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle(
-                deepcopy(self.iterated_hamiltonian_evolution_oracle),
-                str(step_duration),
-                before_circuit,
-                after_circuit,
-            )
+            deepcopy(self.iterated_hamiltonian_evolution_oracle),
+            str(step_duration),
+            before_circuit,
+            after_circuit,
+        )
 
         if (
             self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
@@ -118,10 +120,14 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 before_circuit.unitary() @ self.h.matrix @ after_circuit.unitary()
             )
 
-        elif self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.text_strings:
+        elif (
+            self.input_hamiltonian_evolution_oracle.mode_evolution_oracle
+            is EvolutionOracleType.text_strings
+        ):
             raise_error(NotImplementedError)
         else:
             super().__call__(step_duration, diagonal_association.h.dense.matrix)
+
     def eval_gcr_unitary(
         self,
         step_duration: float,
@@ -129,13 +135,13 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         eo2: EvolutionOracle = None,
         mode_dbr: DoubleBracketRotationType = None,
     ):
-        u = self.group_commutator( step_duration, eo1, eo2, mode_dbr = mode_dbr )["forwards"]
+        u = self.group_commutator(step_duration, eo1, eo2, mode_dbr=mode_dbr)[
+            "forwards"
+        ]
         if eo1.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             return u.unitary()
         elif eo1.mode_evolution_oracle is EvolutionOracleType.numerical:
             return u
-        else:
-            raise_error(NotImplementedError)
 
     def group_commutator(
         self,
@@ -194,6 +200,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         eo_mode = eo1.mode_evolution_oracle
         from functools import reduce
+
         if eo_mode is EvolutionOracleType.text_strings:
             return {
                 "forwards": reduce(str.__add__, query_list_forward),
