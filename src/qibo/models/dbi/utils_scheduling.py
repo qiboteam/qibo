@@ -95,7 +95,7 @@ def polynomial_step(
     n_max: int = 5,
     d: np.array = None,
     coef: Optional[list] = None,
-    cost=None,
+    cost: Optional[str] = None,
 ):
     r"""
     Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -120,7 +120,7 @@ def polynomial_step(
         coef = dbi_object.cost_expansion(d=d, n=n)
     roots = np.roots(coef)
     real_positive_roots = [
-        np.real(root) for root in roots if np.imag(root) < error and np.real(root) > 0
+        np.real(root) for root in roots if np.imag(root) < 1e-3 and np.real(root) > 0
     ]
     # solution exists, return minimum s
     if len(real_positive_roots) > 0:

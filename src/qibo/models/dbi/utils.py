@@ -115,6 +115,9 @@ def decompose_into_Pauli_basis(h_matrix: np.array, pauli_operators: list):
 
 
 def generate_pauli_index(nqubits, order):
+    """
+    Generate all possible combinations of qubits for a given order of Pauli operators.
+    """
     if order == 1:
         return list(range(nqubits))
     elif order > 1:
@@ -129,6 +132,10 @@ def generate_pauli_index(nqubits, order):
 def generate_pauli_operator_dict(
     nqubits: int, parameterization_order: int = 1, symbols_pauli=symbols.Z
 ):
+    """
+    Generate a dictionary containing all possible products of a given Pauli operators (X,Y or Z) of a given order (e.g. 1 corresponds to a magnetic field)
+    for L = n_qubits and their respective names.
+    """
     pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
     pauli_operators = [
         generate_Pauli_operators(nqubits, symbols_pauli, index) for index in pauli_index
@@ -137,6 +144,10 @@ def generate_pauli_operator_dict(
 
 
 def diagonal_min_max(matrix: np.array):
+    """
+    Generate a diagonal matrix D with the same diagonal elements as `matrix` but with minimum and maximum values.
+    (may be deprecated as a useful ansatz for D)
+    """
     L = int(np.log2(matrix.shape[0]))
     D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
     D = np.diag(D)

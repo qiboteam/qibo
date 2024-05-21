@@ -371,9 +371,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         if self._dense is None:
             log.warning(
                 "Calculating the dense form of a symbolic Hamiltonian. "
-                "This operation is memory inefficient."
+               "This operation is memory inefficient."
             )
-            self.dense = self.calculate_dense()
+        self.dense = self.calculate_dense()
         return self._dense
 
     @dense.setter

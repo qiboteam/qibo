@@ -6,7 +6,7 @@ import numpy as np
 from qibo.models.dbi.utils import commutator, covariance, variance
 
 
-def dGamma_di_Pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
+def dGamma_di_pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
     """Computes the derivatives $\frac{\\partial \\Gamma_n}{\\partial \alpha_i}$ where the diagonal operator $D=\\sum \alpha_i Z_i$.
 
     Args:
@@ -35,7 +35,7 @@ def dGamma_di_Pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
     return dGamma_di
 
 
-def ds_di_Pauli(
+def ds_di_pauli(
     dbi_object,
     d: np.array,
     Z_i: np.array,
@@ -52,7 +52,7 @@ def ds_di_Pauli(
             floats da, db, dc, ds
     """
     # generate the list of derivatives w.r.t ith Z operator coefficient
-    dGamma_di = dGamma_di_Pauli(dbi_object, n=4, Z_i=Z_i, d=d)
+    dGamma_di = dGamma_di_pauli(dbi_object, n=4, Z_i=Z_i, d=d)
     Gamma_list = dbi_object.generate_Gamma_list(n=4, d=d)
 
     def derivative_product(k1, k2):
@@ -112,7 +112,7 @@ def gradient_Pauli(
     a, b, c = coef[len(coef) - 3 :]
 
     for i, operator in enumerate(pauli_operators):
-        da, db, dc, ds = ds_di_Pauli(
+        da, db, dc, ds = ds_di_pauli(
             dbi_object, d=d, Z_i=operator, taylor_coef=[a, b, c]
         )
         if use_ds is True:
@@ -131,7 +131,7 @@ def gradient_Pauli(
 
 
 def dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list):
-    # Derivative of gamma with respect to diagonal elements of D (full-diagonal ansatz)
+    # Derivative of Gamma with respect to diagonal elements of D (full-diagonal ansatz)
     A = np.zeros(d.shape)
     A[i, i] = 1
     B = commutator(commutator(A, H), Gamma_list[n - 1])

@@ -30,6 +30,17 @@ class DoubleBracketGeneratorType(Enum):
     # TODO: add double commutator (does it converge?)
 
 
+class DoubleBracketCostFunction(str, Enum):
+    """Define the DBI cost function."""
+
+    off_diagonal_norm = "off_diagonal_norm"
+    """Use off-diagonal norm as cost function."""
+    least_squares = "least_squares"
+    """Use least squares as cost function."""
+    energy_fluctuation = "energy_fluctuation"
+    """Use energy fluctuation as cost function."""
+
+
 class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
@@ -41,17 +52,6 @@ class DoubleBracketScheduling(Enum):
     """Use polynomial expansion (analytical) of the loss function."""
     simulated_annealing = simulated_annealing_step
     """Use simulated annealing algorithm"""
-
-
-class DoubleBracketCostFunction(Enum):
-    """Define the DBI cost function."""
-
-    off_diagonal_norm = auto()
-    """Use off-diagonal norm as cost function."""
-    least_squares = auto()
-    """Use least squares as cost function."""
-    energy_fluctuation = auto()
-    """Use energy fluctuation as cost function."""
 
 
 class DoubleBracketIteration:
@@ -84,7 +84,7 @@ class DoubleBracketIteration:
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
         scheduling: DoubleBracketScheduling = DoubleBracketScheduling.grid_search,
         cost: DoubleBracketCostFunction = DoubleBracketCostFunction.off_diagonal_norm,
-        ref_state: int = 0,
+        ref_state: np.array = None,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
@@ -92,6 +92,14 @@ class DoubleBracketIteration:
         self.scheduling = scheduling
         self.cost = cost
         self.ref_state = ref_state
+        """
+        Args:
+            hamiltonian (Hamiltonian): Starting Hamiltonian;
+            mode (DoubleBracketGeneratorType): type of generator of the evolution.
+            scheduling (DoubleBracketScheduling): type of scheduling strategy.
+            cost (DoubleBracketCost): type of cost function.
+            ref_state (np.array): reference state for computing the energy fluctuation.
+        """
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -175,12 +183,13 @@ class DoubleBracketIteration:
         step = scheduling(self, d=d, **kwargs)
         if (
             step is None
-            and scheduling == DoubleBracketScheduling.polynomial_approximation
+            and scheduling is DoubleBracketScheduling.polynomial_approximation
         ):
             kwargs["n"] = kwargs.get("n", 3)
             kwargs["n"] += 1
             # if n==n_max, return None
             step = scheduling(self, d=d, **kwargs)
+            # if for a given polynomial order n, no solution is found, we increase the order of the polynomial by 1
         return step
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
@@ -199,9 +208,9 @@ class DoubleBracketIteration:
             self.__call__(mode=self.mode, step=step, d=d)
 
         # loss values depending on the cost function
-        if self.cost == DoubleBracketCostFunction.off_diagonal_norm:
+        if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             loss = self.off_diagonal_norm
-        elif self.cost == DoubleBracketCostFunction.least_squares:
+        elif self.cost is DoubleBracketCostFunction.least_squares:
             loss = self.least_squares(d)
         elif self.cost == DoubleBracketCostFunction.energy_fluctuation:
             loss = self.energy_fluctuation(self.ref_state)
@@ -230,7 +239,6 @@ class DoubleBracketIteration:
         a = state_conj @ h2 @ state_cast
         b = state_conj @ h_np @ state_cast
         return (np.sqrt(np.real(a - b**2))).item()
-        r  # return np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
         return self.backend.cast(h) - self.backend.cast(
