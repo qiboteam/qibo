@@ -109,7 +109,7 @@ class DoubleBracketIteration:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
-                self.commutator(d, self.h.matrix),
+                self.commutator(self.backend.cast(d), self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
@@ -157,7 +157,7 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
-        h_np = self.backend.to_numpy(self.h.matrix)
+        h_np = self.backend.cast(self.h.matrix)
 
         return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
 
@@ -233,11 +233,13 @@ class DoubleBracketIteration:
         r  # return np.real(self.h.energy_fluctuation(state))
 
     def sigma(self, h: np.array):
-        return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
+        return self.backend.cast(h) - self.backend.cast(
+            np.diag(np.diag(self.backend.to_numpy(h)))
+        )
 
     def generate_Gamma_list(self, n: int, d: np.array):
         r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
-        W = self.commutator(d, self.sigma(self.h.matrix))
+        W = self.commutator(self.backend.cast(d), self.sigma(self.h.matrix))
         Gamma_list = [self.h.matrix]
         for _ in range(n - 1):
             Gamma_list.append(self.commutator(W, Gamma_list[-1]))

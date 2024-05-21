@@ -21,8 +21,8 @@ def dGamma_di_Pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
     dGamma_di = [np.zeros((2**nqubits, 2**nqubits))] * (n + 1)
     Gamma_list = dbi_object.generate_Gamma_list(n=n + 2, d=d)
-    W = dbi_object.commutator(d, dbi_object.h.matrix)
-    dW_di = dbi_object.commutator(Z_i, dbi_object.h.matrix)
+    W = dbi_object.commutator(dbi_object.backend.cast(d), dbi_object.h.matrix)
+    dW_di = dbi_object.commutator(dbi_object.backend.cast(Z_i), dbi_object.h.matrix)
     for k in range(n + 1):
         if k == 0:
             continue

@@ -35,6 +35,7 @@ def select_best_dbr_generator(
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
+        d = dbi_eval.backend.cast(d)
         flip_list[i] = cs_angle_sgn(dbi_eval, d)
         if flip_list[i] != 0:
             if step is None:
