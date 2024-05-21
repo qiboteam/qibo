@@ -21,6 +21,9 @@ class DoubleBracketRotationType(Enum):
     group_commutator = auto()
     """Use group commutator approximation"""
 
+    group_commutator_reordered = auto()
+    """Use group commutator approximation with reordering of the operators"""
+
     group_commutator_reduced = auto()
     """Use group commutator approximation with a reduction using symmetry
 
@@ -174,6 +177,19 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 eo2.circuit(-s_step),
                 eo1.circuit(-s_step),
                 eo2.circuit(s_step),
+            ]
+        elif gc_type is DoubleBracketRotationType.group_commutator_reordered:
+            query_list_forward = [
+                eo1.circuit(s_step),
+                eo2.circuit(-s_step),
+                eo1.circuit(-s_step),
+                eo2.circuit(s_step),
+            ]
+            query_list_backward = [
+                eo2.circuit(-s_step),
+                eo1.circuit(s_step),
+                eo2.circuit(s_step),
+                eo1.circuit(-s_step),
             ]
         elif gc_type is DoubleBracketRotationType.group_commutator_reduced:
             query_list_forward = [
