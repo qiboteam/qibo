@@ -15,6 +15,7 @@ from qibo.models.dbi.double_bracket import (
 )
 from qibo.models.dbi.double_bracket_evolution_oracles import EvolutionOracle
 from qibo.models.dbi.group_commutator_iteration_transpiler import (
+    DoubleBracketRotationType,
     EvolutionOracleType,
     GroupCommutatorIterationWithEvolutionOracles,
 )
@@ -138,10 +139,9 @@ def test_dbi_evolution_oracle(backend, nqubits, t_step=0.1, eps=0.001):
     assert isinstance(U_txt, str)
 
 
-@pytest.mark.parametrize("nqubits", [3])
-@pytest.mark.parametrize("t_step", [1e-3])
-@pytest.mark.parametrize("eps", [1e-3])
-def test_gci_evolution_oracles_types_numerical(backend, nqubits, t_step, eps):
+def test_gci_evolution_oracles_types_numerical(
+    backend, nqubits=3, t_step=1e-3, eps=1e-3
+):
     r"""
 
     This is testing the following:
@@ -226,6 +226,17 @@ def test_gci_evolution_oracles_types_numerical(backend, nqubits, t_step, eps):
     assert norm(h_1 - j_1) < 2 * norm(h_input.dense.matrix) * norms_bound
 
     assert norm(j_1 - k_1) < 1e-10
+
+    # test single_commutator case
+    gci = GroupCommutatorIterationWithEvolutionOracles(deepcopy(evolution_oracle))
+    gci.mode_double_bracket_rotation = DoubleBracketRotationType.single_commutator
+    u_gc_from_oracles = gci.group_commutator(t_step, evolution_oracle_diagonal_target)
+    assert (
+        norm(u_gc_from_oracles["forwards"].conj().T - u_gc_from_oracles["backwards"])
+        < 1e-10
+    )
+
+    # make 2 new objects with DoubleBracketRotationType.group_commutator_reduced and group_commutator, compare h matrix rotation
 
 
 @pytest.mark.parametrize("nqubits", [3])
