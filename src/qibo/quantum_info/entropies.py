@@ -459,16 +459,16 @@ def von_neumann_entropy(
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
-    if purity(state) == 1.0:
+    if purity(state, backend=backend) == 1.0:
         if return_spectrum:
             return 0.0, backend.cast([1.0], dtype=float)
 
         return 0.0
 
     if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
-        eigenvalues = np.linalg.eigvalsh(state)
+        eigenvalues = np.linalg.eigvalsh(backend.to_numpy(state))
     else:
-        eigenvalues = np.linalg.eigvals(state)
+        eigenvalues = np.linalg.eigvals(backend.to_numpy(state))
 
     log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues) / np.log2(base), 0.0)
 

@@ -58,6 +58,7 @@ class PyTorchBackend(NumpyBackend):
 
         # These functions in Torch works in a different way than numpy or have different names
         self.np.transpose = self.np.permute
+        self.np.copy = self.np.clone
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift

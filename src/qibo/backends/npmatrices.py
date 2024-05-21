@@ -1,4 +1,5 @@
 import cmath
+import math
 from functools import cached_property
 
 from qibo.config import raise_error
@@ -100,7 +101,7 @@ class NumpyMatrices:
         phase = self.np.exp(1.0j * phi)
         return self._cast(
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
-        ) / self.np.sqrt(2)
+        ) / math.sqrt(2)
 
     def U1(self, theta):
         theta = self._cast_parameter(theta)
@@ -110,11 +111,10 @@ class NumpyMatrices:
     def U2(self, phi, lam):
         phi = self._cast_parameter(phi)
         lam = self._cast_parameter(lam)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        eplus = self.np.exp(1j * (phi + lam) / 2.0 * math.sqrt(2))
+        eminus = self.np.exp(1j * (phi - lam) / 2.0 * math.sqrt(2))
         return self._cast(
-            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]]
-            / cmath.sqrt(2),
+            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
             dtype=self.dtype,
         )
 
@@ -138,7 +138,7 @@ class NumpyMatrices:
         theta = self._cast_parameter(theta)
         phi = self._cast_parameter(phi)
         return self._cast(
-            self.U3(theta, phi - cmath.pi / 2, cmath.pi / 2 - phi), dtype=self.dtype
+            self.U3(theta, phi - math.pi / 2, math.pi / 2 - phi), dtype=self.dtype
         )
 
     @cached_property
@@ -237,8 +237,8 @@ class NumpyMatrices:
     def CU2(self, phi, lam):
         phi = self._cast_parameter(phi)
         lam = self._cast_parameter(lam)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0) / self.np.sqrt(2)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0) / self.np.sqrt(2)
+        eplus = self.np.exp(1j * (phi + lam) / 2.0) / math.sqrt(2)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0) / math.sqrt(2)
         matrix = [
             [1, 0, 0, 0],
             [0, 1, 0, 0],

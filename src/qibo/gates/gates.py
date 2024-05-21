@@ -2392,17 +2392,19 @@ class Unitary(ParametrizedGate):
                 all_function = torch.all
                 conj_function = torch.conj
                 transpose_function = torch.transpose
+                abs_function = torch.abs
             else:
                 diag_function = np.diag
                 all_function = np.all
                 conj_function = np.conj
                 transpose_function = np.transpose
+                abs_function = np.abs
 
             product = transpose_function(conj_function(unitary), (1, 0)) @ unitary
-            diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
+            diagonals = all(abs_function(1 - diag_function(product)) < PRECISION_TOL)
             off_diagonals = bool(
                 all_function(
-                    np.abs(product - diag_function(diag_function(product)))
+                    abs_function(product - diag_function(diag_function(product)))
                     < PRECISION_TOL
                 )
             )
@@ -2413,7 +2415,14 @@ class Unitary(ParametrizedGate):
     @Gate.parameters.setter
     def parameters(self, x):
         shape = self.parameters[0].shape
-        self._parameters = (np.reshape(x, shape),)
+        if self.parameters[0].__class__.__name__ == "Tensor":
+            import torch  # pylint: disable=C0145
+
+            reshape_function = torch.reshape
+            x = x[0]
+        else:
+            reshape_function = np.reshape
+        self._parameters = (reshape_function(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
@@ -2436,5 +2445,11 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        ud = np.conj(np.transpose(self.parameters[0]))
+        if self.parameters[0].__class__.__name__ == "Tensor":
+            import torch  # pylint: disable=C0145
+
+            conj_function = torch.conj
+        else:
+            conj_function = np.conj
+        ud = conj_function(self.parameters[0].T)
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)

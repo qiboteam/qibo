@@ -9,7 +9,7 @@ from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def purity(state):
+def purity(state, backend=None):
     """Purity of a quantum state :math:`\\rho`.
 
     This is given by
@@ -19,9 +19,13 @@ def purity(state):
 
     Args:
         state (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     Returns:
         float: Purity of quantum ``state`` :math:`\\rho`.
     """
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -34,13 +38,13 @@ def purity(state):
         )
 
     if len(state.shape) == 1:
-        pur = np.abs(np.dot(np.conj(state), state)) ** 2
+        pur = backend.np.abs(backend.np.matmul(backend.np.conj(state), state)) ** 2
     else:
-        pur = np.real(np.trace(np.dot(state, state)))
+        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
 
     # this is necessary to remove the float from inside
     # a 0-dim ndarray
-    pur = float(pur)
+    pur = float(backend.to_numpy(pur))
 
     return pur
 
@@ -107,15 +111,17 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = np.outer(np.conj(state), state)
-        target = np.outer(np.conj(target), target)
+        state = backend.np.outer(backend.np.conj(state), state)
+        target = backend.np.outer(backend.np.conj(target), target)
 
     difference = state - target
     if check_hermitian is True:
         hermitian = bool(
             float(
                 backend.calculate_norm_density_matrix(
-                    np.transpose(np.conj(difference)) - difference, order=2
+                    backend.np.transpose(backend.np.conj(difference), (1, 0))
+                    - difference,
+                    order=2,
                 )
             )
             <= PRECISION_TOL
@@ -129,20 +135,19 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
                 + "for non-Hermitian `state - target`.",
             )
         eigenvalues = (
-            np.linalg.eigvalsh(difference)
+            np.linalg.eigvalsh(backend.to_numpy(difference))
             if hermitian
-            else np.linalg.eigvals(difference)
+            else np.linalg.eigvals(backend.to_numpy(difference))
         )
     else:
         eigenvalues = np.linalg.eigvalsh(difference)
 
     distance = np.sum(np.absolute(eigenvalues)) / 2
-    distance = float(distance)
 
-    return distance
+    return backend.cast(distance, dtype=backend.np.float64)
 
 
-def hilbert_schmidt_distance(state, target):
+def hilbert_schmidt_distance(state, target, backend=None):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
@@ -152,11 +157,15 @@ def hilbert_schmidt_distance(state, target):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
         and ``target`` :math:`\\sigma`.
     """
+    backend = _check_backend(backend)
 
     if state.shape != target.shape:
         raise_error(
@@ -172,10 +181,10 @@ def hilbert_schmidt_distance(state, target):
         )
 
     if len(state.shape) == 1:
-        state = np.outer(np.conj(state), state)
-        target = np.outer(np.conj(target), target)
+        state = backend.np.outer(backend.np.conj(state), state)
+        target = backend.np.outer(backend.np.conj(target), target)
 
-    distance = np.real(np.trace((state - target) ** 2))
+    distance = backend.np.real(backend.np.trace((state - target) ** 2))
     distance = float(distance)
 
     return distance
@@ -241,9 +250,9 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             if check_hermitian is False or _check_hermitian_or_not_gpu(
                 state, backend=backend
             ):
-                eigenvalues, eigenvectors = np.linalg.eigh(state)
+                eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(state))
             else:
-                eigenvalues, eigenvectors = np.linalg.eig(state)
+                eigenvalues, eigenvectors = np.linalg.eig(backend.to_numpy(state))
             state = np.zeros(state.shape, dtype=complex)
             state = backend.cast(state, dtype=state.dtype)
             for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
@@ -270,15 +279,15 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
                     fid += matrix
                     del matrix
 
-            fid = np.real(np.trace(fid)) ** 2
+            fid = backend.np.real(backend.np.trace(fid)) ** 2
 
             return fid
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        np.abs(np.dot(np.conj(state), target)) ** 2
+        backend.np.abs(backend.np.dot(backend.np.conj(state), target)) ** 2
         if len(state.shape) == 1
-        else np.real(np.trace(np.dot(state, target)))
+        else backend.np.real(backend.np.trace(backend.np.dot(state, target)))
     )
 
     fid = float(fid)
@@ -333,8 +342,10 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Bures angle between ``state`` and ``target``.
     """
-    angle = np.arccos(
-        np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
+    backend = _check_backend(backend)
+
+    angle = backend.np.arccos(
+        backend.np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
     )
 
     return angle
@@ -362,8 +373,13 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Bures distance between ``state`` and ``target``.
     """
-    distance = np.sqrt(
-        2 * (1 - np.sqrt(fidelity(state, target, check_hermitian, backend=backend)))
+    backend = _check_backend(backend)
+    distance = backend.np.sqrt(
+        2
+        * (
+            1
+            - backend.np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
+        )
     )
 
     return distance
@@ -399,12 +415,15 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}",
             )
 
-    dim = int(np.sqrt(channel.shape[0]))
+    dim = int(backend.np.sqrt(channel.shape[0]))
 
     if check_unitary is True:
         norm_channel = float(
             backend.calculate_norm_density_matrix(
-                np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
+                backend.np.dot(
+                    backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
+                )
+                - backend.np.eye(dim**2)
             )
         )
         if target is None and norm_channel > PRECISION_TOL:
@@ -412,7 +431,10 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         if target is not None:
             norm_target = float(
                 backend.calculate_norm(
-                    np.dot(np.conj(np.transpose(target)), target) - np.eye(dim**2)
+                    backend.np.dot(
+                        backend.np.conj(backend.np.transpose(target, (1, 0))), target
+                    )
+                    - backend.np.eye(dim**2)
                 )
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
@@ -420,13 +442,15 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        process_fid = np.real(np.trace(channel)) / dim**2
+        process_fid = backend.np.real(backend.np.trace(channel)) / dim**2
         process_fid = float(process_fid)
 
         return process_fid
 
-    process_fid = np.dot(np.transpose(np.conj(channel)), target)
-    process_fid = np.real(np.trace(process_fid)) / dim**2
+    process_fid = backend.np.dot(
+        backend.np.transpose(backend.np.conj(channel), (1, 0)), target
+    )
+    process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
     process_fid = float(process_fid)
 
     return process_fid
@@ -567,6 +591,9 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
         channel (ndarray): row-vectorized Choi representation of a quantum channel.
         target (ndarray, optional): row-vectorized Choi representation of a target
             quantum channel. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
         kwargs: optional arguments to pass to CVXPY solver. For more information,
             please visit `CVXPY's API documentation
             <https://www.cvxpy.org/api_reference/cvxpy.problems.html#problem>`_.
@@ -578,6 +605,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
         This function requires the optional CVXPY package to be installed.
     """
     import cvxpy
+
+    backend = _check_backend(backend)
 
     if target is not None:
         if channel.shape != target.shape:
@@ -595,9 +624,9 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
     channel = backend.to_numpy(channel)
 
-    channel = np.transpose(channel)
-    channel_real = np.real(channel)
-    channel_imag = np.imag(channel)
+    channel = backend.np.transpose(channel, (1, 0))
+    channel_real = backend.np.real(channel)
+    channel_imag = backend.np.imag(channel)
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -787,8 +816,10 @@ def frame_potential(
             unitary_2.set_parameters(params_2)
             unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
 
-            potential += np.abs(
-                np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)
+            potential += backend.np.abs(
+                backend.np.trace(
+                    backend.np.transpose(backend.np.conj(unitary_1), (1, 0)) @ unitary_2
+                )
             ) ** (2 * power_t)
 
     return potential / samples**2
@@ -815,7 +846,7 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     backend = _check_backend(backend)
 
     norm = backend.calculate_norm_density_matrix(
-        np.transpose(np.conj(matrix)) - matrix, order=2
+        backend.np.transpose(backend.np.conj(matrix)) - matrix, order=2
     )
 
     hermitian = bool(float(norm) <= PRECISION_TOL)

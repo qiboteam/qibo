@@ -64,12 +64,12 @@ def vectorization(state, order: str = "row", backend=None):
     backend = _check_backend(backend)
 
     if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
+        state = backend.np.outer(state, backend.np.conj(state))
 
     if order == "row":
-        state = np.reshape(state, (1, -1), order="C")[0]
+        state = backend.np.reshape(state, (1, -1))[0]
     elif order == "column":
-        state = np.reshape(state, (1, -1), order="F")[0]
+        state = backend.np.reshape(state, (1, -1), order="F")[0]
     else:
         dim = len(state)
         nqubits = int(np.log2(dim))
@@ -2152,13 +2152,12 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     dim = int(dim)
-    super_op = np.reshape(super_op, [dim] * 4)
+    super_op = backend.np.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = np.swapaxes(super_op, *axes)
+    super_op = backend.np.swapaxes(super_op, *axes)
 
-    super_op = np.reshape(super_op, [dim**2, dim**2])
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
+    super_op = backend.np.reshape(super_op, [dim**2, dim**2])
 
     return super_op
 

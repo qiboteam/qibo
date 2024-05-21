@@ -110,7 +110,8 @@ def pauli_basis(
             del row
     elif vectorize and not sparse:
         basis = [
-            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
+            vectorization(backend.cast(matrix), order=order, backend=backend)
+            for matrix in basis_full
         ]
     else:
         basis = basis_full
@@ -212,7 +213,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = np.conj(unitary)
+    unitary = backend.np.conj(unitary)
     unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary

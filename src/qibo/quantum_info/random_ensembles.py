@@ -184,12 +184,12 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = np.dot(np.transpose(np.conj(matrix)), matrix)
+        matrix = backend.np.dot(np.conj(matrix).T, matrix)
     else:
-        matrix = (matrix + np.transpose(np.conj(matrix))) / 2
+        matrix = (matrix + backend.np.conj(matrix).T) / 2
 
     if normalize:
-        matrix = matrix / np.linalg.norm(matrix)
+        matrix = matrix / backend.np.linalg.norm(matrix)
 
     return matrix
 
@@ -439,7 +439,7 @@ def random_statevector(dims: int, seed=None, backend=None):
     state = local_state.standard_normal(dims).astype(complex)
     state += 1.0j * local_state.standard_normal(dims)
     state /= np.linalg.norm(state)
-    state = backend.cast(state, dtype=state.dtype)
+    state = backend.cast(state)
 
     return state
 
@@ -546,31 +546,37 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=local_state, backend=backend)
-        state = np.outer(state, np.transpose(np.conj(state)))
+        state = backend.np.outer(
+            state, backend.np.transpose(backend.np.conj(state), (1, 0))
+        )
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
                 dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
-            state = np.dot(state, np.transpose(np.conj(state)))
-            state = state / np.trace(state)
+            state = backend.np.matmul(
+                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            )
+            state = state / backend.np.trace(state)
         else:
-            nqubits = int(np.log2(dims))
+            nqubits = int(backend.np.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
             state += random_unitary(dims, seed=local_state, backend=backend)
-            state = np.dot(
+            state = backend.np.matmul(
                 state,
                 random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
             )
-            state = np.dot(state, np.transpose(np.conj(state)))
-            state /= np.trace(state)
+            state = backend.np.matmul(
+                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            )
+            state /= backend.np.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
     if basis is not None:
         pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
-            int(np.log2(dims)),
+            int(backend.np.log2(dims)),
             normalize=normalize,
             order=order,
             pauli_order=pauli_order,
