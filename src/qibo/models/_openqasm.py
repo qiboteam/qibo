@@ -170,9 +170,7 @@ class QASMParser:
             density_matrix,
             wire_names=self._construct_wire_names(),
         )
-        for gate in gates:
-            circ.add(gate)
-        self._reorder_registers(circ.measurements)
+        circ.add(self._merge_measurements(gates))
         return circ
 
     def _get_measurement(self, measurement):
@@ -267,11 +265,27 @@ class QASMParser:
         gates = [self._get_gate(gate) for gate in definition.body]
         self.defined_gates.update({name: CustomQASMGate(name, gates, qubits, args)})
 
-    def _reorder_registers(self, measurements):
-        """Reorders the registers of the provided :class:`qibo.gates.measurements.M`
-        gates according to the classical registers order defined in the QASM program."""
-        for meas in measurements:
-            meas.target_qubits = [self.c_registers[meas.register_name].pop(0)]
+    def _merge_measurements(self, gates):
+        """Merges separated measurements of a same register into a single one.
+        This is needed because qibo doesn't allow to separetely define two measurements in a same register:
+
+        # not allowed
+        c.add(gates.M(0, register="m0"))
+        c.add(gates.M(1, register="m0"))
+        """
+        updated_queue = []
+        for gate in gates:
+            if isinstance(gate, qibo.gates.M):
+                if gate.register_name in self.c_registers:
+                    updated_queue.append(
+                        qibo.gates.M(
+                            *self.c_registers.pop(gate.register_name),
+                            register_name=gate.register_name,
+                        )
+                    )
+            else:
+                updated_queue.append(gate)
+        return updated_queue
 
     def _construct_wire_names(self):
         """Builds the wires names from the declared quantum registers."""
