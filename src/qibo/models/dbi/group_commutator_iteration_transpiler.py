@@ -184,14 +184,28 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         elif gc_type is DoubleBracketRotationType.group_commutator_reduced:
             query_list_forward = [
                 eo1.circuit(s_step),
-                eo2.circuit(s_step),
+                eo2.circuit(-s_step),
                 eo1.circuit(-s_step),
             ]
             query_list_backward = [
                 eo1.circuit(s_step),
-                eo2.circuit(-s_step),
+                eo2.circuit(s_step),
                 eo1.circuit(-s_step),
             ]
+
+            ## @TODO Sam, please run with the above. Please try also replacing 1 minus sign as follows (if both times are flipped then the bracket is invariant so I flip only eo2 which is self.h by default and eo1 is the variational operator)
+  #          query_list_forward = [
+  #              eo1.circuit(s_step),
+  #              eo2.circuit(s_step),
+  #              eo1.circuit(-s_step),
+  #          ]
+  #          query_list_backward = [
+  #              eo1.circuit(s_step),
+  #              eo2.circuit(-s_step),
+  #              eo1.circuit(-s_step),
+  #          ]
+
+
         else:
             raise_error(
                 ValueError,
