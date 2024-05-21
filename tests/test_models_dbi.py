@@ -237,6 +237,7 @@ def test_gci_evolution_oracles_types_numerical(
         )
 
     # compare DoubleBracketRotationType.group_commutator_reduced and group_commutator
+    gci = GroupCommutatorIterationWithEvolutionOracles(deepcopy(evolution_oracle))
     u_gc_from_oracles = gci.group_commutator(
         t_step,
         evolution_oracle_diagonal_target,
@@ -247,11 +248,20 @@ def test_gci_evolution_oracles_types_numerical(
         evolution_oracle_diagonal_target,
         mode_dbr=DoubleBracketRotationType.group_commutator_reduced,
     )
-
-    assert (
-        norm(u_gc_from_oracles["forwards"] - u_gc_reduced_from_oracles["forwards"])
+    h_update_gc = (
+        u_gc_from_oracles["backwards"] @ gci.h.matrix @ u_gc_from_oracles["forwards"]
+    )
+    h_update_gc_reduced = (
+        u_gc_reduced_from_oracles["backwards"]
+        @ gci.h.matrix
+        @ u_gc_reduced_from_oracles["forwards"]
+    )
+    assert norm(
+        u_gc_reduced_from_oracles["forwards"].conj().T
+        - u_gc_reduced_from_oracles["backwards"]
         < 1e-10
     )
+    assert norm(h_update_gc - h_update_gc_reduced) < 1e-10
 
 
 @pytest.mark.parametrize("nqubits", [3])
