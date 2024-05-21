@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import cache, reduce
 
 import numpy as np
 from scipy import sparse
@@ -329,7 +329,9 @@ def ECR(symplectic_matrix, control_q, target_q, nqubits):
     return X(symplectic_matrix, control_q, nqubits)
 
 
-def _exponent(x1, z1, x2, z2):
+def _exponent(
+    x1: np.ndarray, z1: np.ndarray, x2: np.ndarray, z2: np.ndarray
+) -> np.ndarray:
     """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
 
     Args:
@@ -341,13 +343,7 @@ def _exponent(x1, z1, x2, z2):
     Returns:
         (np.array): The calculated exponents.
     """
-    x1_ = x1.astype(np.int8)
-    x2_ = x2.astype(np.int8)
-    z1_ = z1.astype(np.int8)
-    z2_ = z2.astype(np.int8)
-    return (
-        2 * (x1_ * x2_ * (z2_ - z1_) + z1_ * z2_ * (x1_ - x2_)) - x1_ * z2_ + x2_ * z1_
-    )
+    return 2 * (x1 * x2 * (z2 - z1) + z1 * z2 * (x1 - x2)) - x1 * z2 + x2 * z1
 
 
 def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
@@ -362,16 +358,16 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    xi, xh = symplectic_matrix[i, :nqubits], symplectic_matrix[h, :nqubits]
-    zi, zh = symplectic_matrix[i, nqubits:-1], symplectic_matrix[h, nqubits:-1]
+    xi, zi = symplectic_matrix[i, :nqubits], symplectic_matrix[i, nqubits:-1]
+    xh, zh = symplectic_matrix[h, :nqubits], symplectic_matrix[h, nqubits:-1]
     exponents = _exponent(xi, zi, xh, zh)
     ind = (
         2 * symplectic_matrix[h, -1]
         + 2 * symplectic_matrix[i, -1]
         + np.sum(exponents, axis=-1)
     ) % 4 == 0
-    r = np.ones(h.shape[0], dtype=bool)
-    r[ind] = False
+    r = np.ones(h.shape[0], dtype=np.uint8)
+    r[ind] = 0
 
     xi_xh = xi ^ xh
     zi_zh = zi ^ zh
@@ -390,57 +386,108 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
 
 
 def _determined_outcome(state, q, nqubits):
-    state[-1, :] = False
+    state[-1, :] = 0
     idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
+    state = _pack_for_measurements(state, nqubits)
     state = _rowsum(
         state,
         2 * nqubits * np.ones(idx.shape, dtype=np.uint),
-        idx.astype(np.uint),
-        nqubits,
+        idx,
+        _packed_size(nqubits),
         True,
     )
-    return state, np.uint(state[-1, -1])
+    state = _unpack_for_measurements(state, nqubits)
+    return state, state[-1, -1]
 
 
 def _random_outcome(state, p, q, nqubits):
     p = p[0] + nqubits
     tmp = state[p, q].copy()
-    state[p, q] = False
+    state[p, q] = 0
     h = state[:-1, q].nonzero()[0]
     state[p, q] = tmp
     if h.shape[0] > 0:
+        state = _pack_for_measurements(state, nqubits)
         state = _rowsum(
             state,
             h.astype(np.uint),
             p * np.ones(h.shape[0], dtype=np.uint),
-            nqubits,
+            _packed_size(nqubits),
             False,
         )
+        state = _unpack_for_measurements(state, nqubits)
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
-    state[p, :] = False
+    state[p, :] = 0
     state[p, -1] = outcome
-    state[p, nqubits + q] = True
+    state[p, nqubits + q] = 1
     return state, outcome
 
 
-def _get_p(state, q, nqubits):
-    return state[nqubits:-1, q].nonzero()[0]
+@cache
+def _dim(nqubits):
+    """Returns the dimension of the symplectic matrix for a given number of qubits."""
+    return 2 * nqubits + 1
+
+
+@cache
+def _packed_size(n):
+    """Returns the size of an array of `n` booleans after packing."""
+    return np.ceil(n / 8).astype(int)
+
+
+def _packbits(array, axis):
+    return np.packbits(array, axis=axis)
+
+
+def _unpackbits(array, axis):
+    return np.unpackbits(array, axis=axis)
+
+
+def _pack_for_measurements(state, nqubits):
+    """Prepares the state for measurements by packing the rows of the X and Z sections of the symplectic matrix."""
+    r, x, z = _get_rxz(state, nqubits)
+    x = _packbits(x, axis=1)
+    z = _packbits(z, axis=1)
+    return np.hstack((x, z, r[:, None]))
+
+
+@cache
+def _pad_size(n):
+    """Returns the size of the pad added to an array of original dimension `n` after unpacking."""
+    return 8 - (n % 8)
+
+
+def _unpack_for_measurements(state, nqubits):
+    """Unpacks the symplectc matrix that was packed for measurements."""
+    xz = _unpackbits(state[:, :-1], axis=1)
+    padding_size = _pad_size(nqubits)
+    x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
+    return np.hstack((x, z, state[:, -1][:, None]))
+
+
+def _init_state_for_measurements(state, nqubits, collapse):
+    if collapse:
+        return _unpackbits(state, axis=0)[: _dim(nqubits)]
+    else:
+        return state.copy()
 
 
 # valid for a standard basis measurement only
 def M(state, qubits, nqubits, collapse=False):
     sample = []
-    state_copy = state if collapse else state.copy()
+    state = _init_state_for_measurements(state, nqubits, collapse)
     for q in qubits:
-        p = _get_p(state_copy, q, nqubits)
+        p = state[nqubits:-1, q].nonzero()[0]
         # random outcome, affects the state
         if len(p) > 0:
-            state_copy, outcome = _random_outcome(state_copy, p, q, nqubits)
+            state, outcome = _random_outcome(state, p, q, nqubits)
         # determined outcome, state unchanged
         else:
-            state_copy, outcome = _determined_outcome(state_copy, q, nqubits)
+            state, outcome = _determined_outcome(state, q, nqubits)
         sample.append(outcome)
+    if collapse:
+        state = _packbits(state, axis=0)
     return sample
 
 
@@ -455,10 +502,28 @@ def cast(x, dtype=None, copy=False):
 
 
 def _clifford_pre_execution_reshape(state):
-    return state
+    """Reshape and packing applied to the symplectic matrix before execution to prepare the state in the form needed by each engine.
+
+    Args:
+        state (np.array): Input state.
+
+    Returns:
+        (np.array) The packed and reshaped state.
+    """
+    return _packbits(state, axis=0)
 
 
-def _clifford_post_execution_reshape(state, nqubits):
+def _clifford_post_execution_reshape(state, nqubits: int):
+    """Reshape and unpacking applied to the state after execution to retrieve the standard symplectic matrix form.
+
+    Args:
+        state (np.array): Input state.
+        nqubits (int): Number of qubits.
+
+    Returns:
+        (np.array) The unpacked and reshaped state.
+    """
+    state = _unpackbits(state, axis=0)[: _dim(nqubits)]
     return state
 
 
