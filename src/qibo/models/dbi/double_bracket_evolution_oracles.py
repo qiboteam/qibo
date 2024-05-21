@@ -6,6 +6,7 @@ import numpy as np
 from qibo import Circuit
 from qibo.config import raise_error
 from qibo.hamiltonians import AbstractHamiltonian, SymbolicHamiltonian
+from math import ceil
 
 
 class EvolutionOracleType(Enum):
@@ -167,17 +168,18 @@ class EvolutionOracle:
 
     def non_classical_bound(self, s, h_loss, epsilon):
         """
+        This is meant for the setting where classical simulation is not possible.
+        We use the bound sum ||h||s^2 <= C_h s^2 N where Ch = max(h)
+        and hence we set N= epsilon/(Chs^2) and then we round it up.
         commutator_loss takes in a symbolic hamiltonian and compute the norm.
         epsilon is the error tolerance level that we set.
         we return the step size required
         """
         # decompose the terms
-        terms = self.h.terms()
+        terms = self.h.terms
         # find the maximum norm
         Ch = max([h_loss(hihj) for hihj in terms])
-        return epsilon/(Ch * s**2)
-
-
+        return ceil(epsilon/(Ch * s**2))
 
 
 class FrameShiftedEvolutionOracle(EvolutionOracle):
