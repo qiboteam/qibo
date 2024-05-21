@@ -229,13 +229,6 @@ def test_gci_evolution_oracles_types_numerical(
 
     assert norm(j_1 - k_1) < 1e-10
 
-    # when gci mode is single_commutator, an error should be raised:
-    with pytest.raises(ValueError):
-        gci.mode_double_bracket_rotation = DoubleBracketRotationType.single_commutator
-        u_gc_from_oracles = gci.group_commutator(
-            t_step, evolution_oracle_diagonal_target
-        )
-
     # compare DoubleBracketRotationType.group_commutator_reduced and group_commutator
     gci = GroupCommutatorIterationWithEvolutionOracles(deepcopy(evolution_oracle))
     u_gc_from_oracles = gci.group_commutator(
@@ -262,6 +255,23 @@ def test_gci_evolution_oracles_types_numerical(
         < 1e-10
     )
     assert norm(h_update_gc - h_update_gc_reduced) < 1e-10
+
+    # when gci mode is single_commutator, an error should be raised:
+    with pytest.raises(ValueError):
+        gci.mode_double_bracket_rotation = DoubleBracketRotationType.single_commutator
+        u_gc_from_oracles = gci.group_commutator(
+            t_step, evolution_oracle_diagonal_target
+        )
+
+    # when gci eo_mode is unrecognized, an errorr should be raised:
+    with pytest.raises(ValueError):
+        gci.mode_double_bracket_rotation = DoubleBracketRotationType.group_commutator
+        evolution_oracle_diagonal_target = EvolutionOracle(
+            d_0, "D0", mode_evolution_oracle=DoubleBracketRotationType.group_commutator
+        )
+        u_gc_from_oracles = gci.group_commutator(
+            t_step, evolution_oracle_diagonal_target
+        )
 
 
 @pytest.mark.parametrize("nqubits", [3])
