@@ -523,7 +523,7 @@ class Align(ParametrizedGate):
         super().__init__(trainable)
         self.name = "align"
         self.draw_label = f"A({delay})"
-        self.init_args = q
+        self.init_args = [q]
         self.init_kwargs = {"name": self.name, "delay": delay, "trainable": trainable}
         self.target_qubits = (q,)
         self._parameters = (delay,)
