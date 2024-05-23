@@ -1,6 +1,7 @@
+from copy import deepcopy
+
 from qibo.models.dbi.utils_analytical import *
 from qibo.models.dbi.utils_scheduling import polynomial_step
-from copy import deepcopy
 
 
 def gradient_Pauli(
