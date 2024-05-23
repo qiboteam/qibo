@@ -68,7 +68,7 @@ class NumpyMatrices:
     def I(self, n=2):
         return self._cast(self.np.eye(n), dtype=self.dtype)
 
-    def Align(self, n=2):
+    def Align(self, delay, n=2):
         return self._cast(self.I(n), dtype=self.dtype)
 
     def M(self):  # pragma: no cover

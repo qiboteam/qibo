@@ -208,12 +208,12 @@ def test_align(backend):
     with pytest.raises(ValueError):
         gates.Align(0, delay=-1)
 
-    nqubits = 2
+    nqubits = 1
 
-    gate = gates.Align(0, 1)
-    gate_list = [gates.H(0), gates.H(1), gate]
+    gate = gates.Align(0, 0)
+    gate_list = [gates.H(0), gate]
 
-    final_state = apply_gates(backend, gate_list, nqubits=2)
+    final_state = apply_gates(backend, gate_list, nqubits=nqubits)
     target_state = backend.plus_state(nqubits)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -225,8 +225,8 @@ def test_align(backend):
     with pytest.raises(NotImplementedError):
         gate.qasm_label
 
-    assert not gates.Align(0, 1).clifford
-    assert not gates.Align(0, 1).unitary
+    assert not gates.Align(0, delay=0).clifford
+    assert not gates.Align(0, delay=0).unitary
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
