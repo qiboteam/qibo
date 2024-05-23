@@ -43,6 +43,8 @@ def test_sample_frequency_agreement(backend):
     target_frequencies = result.frequencies(binary=False)
     samples = result.samples(binary=False)
     outcomes, counts = np.unique(samples, return_counts=True)
+    outcomes = backend.to_numpy(outcomes)
+    counts = backend.to_numpy(counts)
     frequencies = dict(zip(outcomes, counts))
     assert frequencies == target_frequencies
 

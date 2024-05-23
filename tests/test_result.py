@@ -91,12 +91,11 @@ def test_circuitresult_dump_load(backend, agnostic_load):
     # set probabilities to trigger the warning
     result._probs = result.probabilities()
     result.dump("tmp.npy")
-    if agnostic_load:
-        loaded_res = load_result("tmp.npy")
-    else:
-        loaded_res = CircuitResult.load("tmp.npy")
+    loaded_res = (
+        load_result("tmp.npy") if agnostic_load else CircuitResult.load("tmp.npy")
+    )
     loaded_freq = loaded_res.frequencies()
     for state, f in freq.items():
         assert loaded_freq[state] == f
-    assert backend.np.sum(result.state() - loaded_res.state()) == 0
+    assert backend.np.sum(result.state() - backend.cast(loaded_res.state())) == 0
     remove("tmp.npy")

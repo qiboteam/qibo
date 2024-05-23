@@ -702,7 +702,10 @@ the following script optimizes the parameters of two rotations so that the circu
 output matches a target state using the fidelity as the corresponding loss
 function.
 
-.. testcode::
+Note that, as in the following example, the rotation angles have to assume real values
+to ensure the rotational gates are representing unitary operators.
+
+.. code-block:: python
 
     import qibo
     qibo.set_backend("tensorflow")
@@ -716,7 +719,7 @@ function.
 
     # Define circuit ansatz
     params = tf.Variable(
-        tf.random.uniform((2,), dtype=tf.float64).astype(tf.complex128)
+        tf.random.uniform((2,), dtype=tf.float64)
     )
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
@@ -729,7 +732,6 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
-        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -763,7 +765,6 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
-        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):

@@ -104,12 +104,34 @@ class DoubleBracketIteration:
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
+        r"""We use convention that $H' = U^\dagger H U$ where $U=e^{-sW}$ with $W=[D,H]$ (or depending on `mode` an approximation, see `eval_dbr_unitary`). If $s>0$ then for $D = \Delta(H)$ the GWW DBR will give a $\sigma$-decrease, see https://arxiv.org/abs/2206.11772."""
+
+        operator = self.eval_dbr_unitary(step, mode, d)
+        operator_dagger = self.backend.cast(
+            np.matrix(self.backend.to_numpy(operator)).getH()
+        )
+        self.h.matrix = operator_dagger @ self.h.matrix @ operator
+        return operator
+
+    def eval_dbr_unitary(
+        self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
+    ):
+        """In call we will are working in the convention that $H' = U^\\dagger H U$ where $U=e^{-sW}$ with $W=[D,H]$ or an approximation of that by a group commutator. That is handy because if we switch from the DBI in the Heisenberg picture for the Hamiltonian, we get that the transformation of the state is $|\\psi'\rangle = U |\\psi\rangle$ so that $\\langle H\rangle_{\\psi'} = \\langle H' \rangle_\\psi$ (i.e. when writing the unitary acting on the state dagger notation is avoided).
+
+        The group commutator must approximate $U=e^{-s[D,H]}$. This is achieved by setting $r = \\sqrt{s}$ so that
+        $$V = e^{-irH}e^{irD}e^{irH}e^{-irD}$$
+        because
+        $$e^{-irH}De^{irH} = D+ir[D,H]+O(r^2)$$
+        so
+        $$V\approx e^{irD +i^2 r^2[D,H] + O(r^2) -irD} \approx U\\ .$$
+        See the app in https://arxiv.org/abs/2206.11772 for a derivation.
+        """
         if mode is None:
             mode = self.mode
 
         if mode is DoubleBracketGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
+                -1.0j * step,
                 self.commutator(self.diagonal_h_matrix, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
@@ -122,11 +144,13 @@ class DoubleBracketIteration:
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
+
+            sqrt_step = np.sqrt(step)
             operator = (
-                self.h.exp(-step)
-                @ self.backend.calculate_matrix_exp(-step, d)
-                @ self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(step, d)
+                self.h.exp(sqrt_step)
+                @ self.backend.calculate_matrix_exp(-sqrt_step, d)
+                @ self.h.exp(-sqrt_step)
+                @ self.backend.calculate_matrix_exp(sqrt_step, d)
             )
         operator_dagger = self.backend.cast(
             np.matrix(self.backend.to_numpy(operator)).getH()

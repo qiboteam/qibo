@@ -119,7 +119,7 @@ class CliffordBackend(NumpyBackend):
             state
         )
 
-    def _clifford_post_execution_reshape(self, state, nqubits):
+    def _clifford_post_execution_reshape(self, state, nqubits: int):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
 
         Args:
@@ -294,17 +294,11 @@ class CliffordBackend(NumpyBackend):
         if isinstance(qubits, list):
             qubits = tuple(qubits)
 
-        state = self._clifford_pre_execution_reshape(state)
-
         if collapse:
-            samples = [
-                self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)
-            ]  # parallelize?
+            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)]
             samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
-            samples = [
-                self.engine.M(state, qubits, nqubits) for _ in range(nshots)
-            ]  # parallelize?
+            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
 
         return self.engine.cast(samples, dtype=int)
 
