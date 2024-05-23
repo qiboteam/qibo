@@ -70,9 +70,7 @@ def gradient_descent_dbr_d_ansatz(
 
     for i in range(nmb_iterations):
         dbi_new = deepcopy(dbi_object)
-        grad[i, :] = gradientDiagonalEntries(
-            dbi_object, params, d_type=d_type
-        )
+        grad[i, :] = gradientDiagonalEntries(dbi_object, params, d_type=d_type)
         for j in range(len(params)):
             params[j] = params[j] - lr * grad[i, j]
         d = d_ansatz(params, d_type, normalization=normalize)
