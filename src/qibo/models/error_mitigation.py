@@ -51,22 +51,25 @@ def get_gammas(noise_levels, analytical: bool = True):
     return zne_coefficients
 
 
-def get_noisy_circuit(circuit, num_insertions: int, insertion_gate=None):
+def get_noisy_circuit(
+    circuit, num_insertions: int, global_unitary_folding=True, insertion_gate=None
+):
     """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to modify.
         num_insertions (int): number of insertion gate pairs / global unitary folds to add.
+        global_unitary_folding (bool): Default True. Global unitary folding is carried out by default.
+            Global unitary folding takes precedence over insertion_gate.
         insertion_gate (str, optional): gate to be used in the insertion.
             If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
             Otherwise, the other gate is ``"CNOT"``.
-            If None, global unitary folding is carried out.
 
     Returns:
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
 
-    if insertion_gate is None:  # pragma: no cover
+    if global_unitary_folding:  # pragma: no cover
         circuit_no_meas = circuit.__class__(**circuit.init_kwargs)
         circuit_meas = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
@@ -83,7 +86,10 @@ def get_noisy_circuit(circuit, num_insertions: int, insertion_gate=None):
         noisy_circuit += circuit_meas
 
     else:
-        if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
+        if insertion_gate is None or insertion_gate not in (
+            "CNOT",
+            "RX",
+        ):  # pragma: no cover
             raise_error(
                 ValueError,
                 "Invalid insertion gate specification. Please select between 'CNOT' and 'RX'.",
