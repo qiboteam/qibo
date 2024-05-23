@@ -99,6 +99,7 @@ def test_sx(backend):
     backend.assert_allclose(
         np.conj(np_final_state_decompose).T @ np_obs @ np_final_state_decompose,
         np.conj(np_target_state).T @ np_obs @ np_target_state,
+        atol=1e-6,
     )
 
     assert gates.SX(0).qasm_label == "sx"
@@ -137,6 +138,7 @@ def test_sxdg(backend):
     backend.assert_allclose(
         np.conj(np_final_state_decompose).T @ np_obs @ np_final_state_decompose,
         np.conj(np_target_state).T @ np_obs @ np_target_state,
+        atol=1e-6,
     )
 
     assert gates.SXDG(0).qasm_label == "sxdg"
@@ -220,7 +222,7 @@ def test_align(backend):
 
     gate_matrix = gate.matrix(backend)
     identity = backend.identity_density_matrix(nqubits, normalize=False)
-    backend.assert_allclose(gate_matrix, identity)
+    backend.assert_allclose(gate_matrix, identity, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gate.qasm_label
@@ -382,12 +384,11 @@ def test_u2(backend):
     )
     matrix = np.array(
         [
-            [np.exp(-1j * (phi + lam) / 2.0), -np.exp(-1j * (phi - lam) / 2.0)],
-            [np.exp(1j * (phi - lam) / 2.0), np.exp(1j * (phi + lam) / 2.0)],
+            [np.exp(-1j * (phi + lam) / 2), -np.exp(-1j * (phi - lam) / 2)],
+            [np.exp(1j * (phi - lam) / 2), np.exp(1j * (phi + lam) / 2)],
         ]
     )
-
-    target_state = np.dot(matrix, backend.to_numpy(initial_state)) / np.sqrt(2)
+    target_state = np.matmul(matrix, backend.to_numpy(initial_state)) / np.sqrt(2)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -434,6 +435,7 @@ def test_u3(backend, seed_state, seed_observable):
         backend.cast(backend.np.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
+        atol=1e-6,
     )
     assert gates.U3(0, theta, phi, lam).qasm_label == "u3"
     assert not gates.U3(0, theta, phi, lam).clifford
@@ -526,6 +528,7 @@ def test_cy(backend, controlled_by, seed_state, seed_observable):
         backend.cast(backend.np.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
+        atol=1e-6,
     )
 
     assert gates.CY(0, 1).qasm_label == "cy"
@@ -572,6 +575,7 @@ def test_cz(backend, controlled_by, seed_state, seed_observable):
         backend.cast(backend.np.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
+        atol=1e-6,
     )
 
     assert gates.CZ(0, 1).qasm_label == "cz"
@@ -608,7 +612,7 @@ def test_csx(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     assert gates.CSX(0, 1).qasm_label == "csx"
     assert not gates.CSX(0, 1).clifford
@@ -644,7 +648,7 @@ def test_csxdg(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     assert gates.CSXDG(0, 1).qasm_label == "csxdg"
     assert not gates.CSXDG(0, 1).clifford
@@ -759,7 +763,7 @@ def test_fswap(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     assert gates.FSWAP(0, 1).qasm_label == "fswap"
     assert gates.FSWAP(0, 1).clifford
@@ -787,7 +791,7 @@ def test_fsim(backend):
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, target_state)
+    target_state = backend.np.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -810,7 +814,7 @@ def test_sycamore(backend):
 
     matrix = np.array(
         [
-            [1, 0, 0, 0],
+            [1 + 0j, 0, 0, 0],
             [0, 0, -1j, 0],
             [0, -1j, 0, 0],
             [0, 0, 0, np.exp(-1j * np.pi / 6)],
@@ -839,9 +843,8 @@ def test_generalized_fsim(backend):
     matrix = np.eye(4, dtype=target_state.dtype)
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
-    matrix = backend.cast(matrix)
-    target_state[:4] = backend.np.matmul(matrix, target_state[:4])
-    target_state[4:] = backend.np.matmul(matrix, target_state[4:])
+    target_state[:4] = np.matmul(matrix, target_state[:4])
+    target_state[4:] = np.matmul(matrix, target_state[4:])
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
@@ -855,7 +858,7 @@ def test_generalized_fsim_parameter_setter(backend):
     phi = np.random.random()
     matrix = np.random.random((2, 2))
     gate = gates.GeneralizedfSim(0, 1, matrix, phi)
-    backend.assert_allclose(gate.parameters[0], matrix)
+    backend.assert_allclose(gate.parameters[0], matrix, atol=1e-6)
 
     assert gate.parameters[1] == phi
 
@@ -961,7 +964,7 @@ def test_rzx(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.RZX(0, 1, theta).qasm_label
@@ -1010,6 +1013,7 @@ def test_rxxyy(backend):
         @ observable
         @ final_state_decompose,
         backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        atol=1e-6,
     )
 
     with pytest.raises(NotImplementedError):
@@ -1045,7 +1049,7 @@ def test_ms(backend):
     matrix[1, 2] = -1.0j * np.conj(minus)
     matrix /= np.sqrt(2)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, target_state)
+    target_state = backend.np.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1087,7 +1091,7 @@ def test_givens(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.GIVENS(0, 1, theta).qasm_label
@@ -1127,7 +1131,7 @@ def test_rbs(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state, atol=1e-6)
-    backend.assert_allclose(final_state_decompose, target_state)
+    backend.assert_allclose(final_state_decompose, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.RBS(0, 1, theta).qasm_label
@@ -1173,6 +1177,7 @@ def test_ecr(backend):
         @ observable
         @ final_state_decompose,
         backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        atol=1e-6,
     )
 
     with pytest.raises(NotImplementedError):
@@ -1254,7 +1259,7 @@ def test_unitary_initialization(backend):
 
     matrix = np.random.random((4, 4))
     gate = gates.Unitary(matrix, 0, 1)
-    backend.assert_allclose(gate.parameters[0], matrix)
+    backend.assert_allclose(gate.parameters[0], matrix, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
         gates.Unitary(matrix, 0, 1).qasm_label

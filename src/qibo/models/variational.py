@@ -94,9 +94,9 @@ class VQE:
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
             if str(dtype) == "torch.float64":
-                loss = lambda p, c, h: _loss(p, c, h).item()
+                loss = lambda p, c, h: loss_func(p, c, h).item()
             else:
-                loss = lambda p, c, h: dtype(_loss(p, c, h))
+                loss = lambda p, c, h: dtype(loss_func(p, c, h))
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
 

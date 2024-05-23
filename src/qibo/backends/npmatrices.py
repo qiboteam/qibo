@@ -111,12 +111,12 @@ class NumpyMatrices:
     def U2(self, phi, lam):
         phi = self._cast_parameter(phi)
         lam = self._cast_parameter(lam)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0 * math.sqrt(2))
-        eminus = self.np.exp(1j * (phi - lam) / 2.0 * math.sqrt(2))
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
         return self._cast(
             [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
             dtype=self.dtype,
-        )
+        ) / math.sqrt(2)
 
     def U3(self, theta, phi, lam):
         theta = self._cast_parameter(theta)
@@ -334,7 +334,7 @@ class NumpyMatrices:
         phase = cmath.exp(-1j * cmath.pi / 6)
         return self._cast(
             [
-                [1, 0, 0, 0],
+                [1 + 0j, 0, 0, 0],
                 [0, cost, isint, 0],
                 [0, isint, cost, 0],
                 [0, 0, 0, phase],
