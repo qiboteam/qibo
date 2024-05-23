@@ -156,6 +156,8 @@ def unary_encoder(data, architecture: str = "tree"):
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
     circuit += circuit_rbs
 
+    if data.__class__.__name__ == "Tensor":
+        data = data.detach().numpy()
     # calculating phases and setting circuit parameters
     phases = _generate_rbs_angles(data, nqubits, architecture)
     circuit.set_parameters(phases)

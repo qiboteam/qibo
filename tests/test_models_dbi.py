@@ -65,10 +65,9 @@ def test_double_bracket_iteration_eval_dbr_unitary(backend, nqubits):
         v = dbi.eval_dbr_unitary(
             s, d=d, mode=DoubleBracketGeneratorType.group_commutator
         )
-
-        assert np.linalg.norm(u - v) < 10 * s**1.49 * (
-            np.linalg.norm(h0) + np.linalg.norm(d)
-        ) * np.linalg.norm(h0) * np.linalg.norm(d)
+        assert np.linalg.norm(backend.to_numpy(u - v)) < 10 * s**1.49 * (
+            np.linalg.norm(backend.to_numpy(h0)) + np.linalg.norm(backend.to_numpy(d))
+        ) * np.linalg.norm(backend.to_numpy(h0)) * np.linalg.norm(backend.to_numpy(d))
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])

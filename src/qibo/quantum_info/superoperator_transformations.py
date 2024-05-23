@@ -62,6 +62,7 @@ def vectorization(state, order: str = "row", backend=None):
             )
 
     backend = _check_backend(backend)
+    state = backend.cast(state)
 
     if len(state.shape) == 1:
         state = backend.np.outer(state, backend.np.conj(state))
@@ -69,7 +70,8 @@ def vectorization(state, order: str = "row", backend=None):
     if order == "row":
         state = backend.np.reshape(state, (1, -1))[0]
     elif order == "column":
-        state = backend.np.reshape(state, (1, -1), order="F")[0]
+        state = state.T
+        state = backend.np.reshape(state, (1, -1))[0]
     else:
         dim = len(state)
         nqubits = int(np.log2(dim))
@@ -78,11 +80,9 @@ def vectorization(state, order: str = "row", backend=None):
         for qubit in range(nqubits):
             new_axis += [qubit + nqubits, qubit]
 
-        state = np.reshape(state, [2] * 2 * nqubits)
-        state = np.transpose(state, axes=new_axis)
-        state = np.reshape(state, -1)
-
-    state = backend.cast(state, dtype=state.dtype)
+        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        state = backend.np.transpose(state, new_axis)
+        state = backend.np.reshape(state, (-1,))
 
     return state
 

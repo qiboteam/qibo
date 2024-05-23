@@ -104,7 +104,7 @@ def pauli_basis(
         basis, indexes = [], []
         for row in basis_full:
             row = vectorization(row, order=order, backend=backend)
-            row_indexes = list(np.flatnonzero(row))
+            row_indexes = list(np.flatnonzero(backend.to_numpy(row)))
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
@@ -116,10 +116,10 @@ def pauli_basis(
     else:
         basis = basis_full
 
-    basis = backend.cast(basis, dtype=backend.dtype)
+    basis = backend.cast(basis)
 
     if normalize:
-        basis /= np.sqrt(2**nqubits)
+        basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
         indexes = backend.cast(indexes)
@@ -199,7 +199,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = np.conj(elements)
+        elements = backend.np.conj(elements)
 
         return elements, indexes
 
@@ -214,7 +214,6 @@ def comp_basis_to_pauli(
     )
 
     unitary = backend.np.conj(unitary)
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -268,12 +267,12 @@ def pauli_to_comp_basis(
         pauli_order=pauli_order,
         backend=backend,
     )
-    unitary = np.transpose(unitary)
+    unitary = unitary.T
 
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = list(np.flatnonzero(row))
+            index_list = list(np.flatnonzero(backend.to_numpy(row)))
             indexes.append(index_list)
             elements.append(row[index_list])
 

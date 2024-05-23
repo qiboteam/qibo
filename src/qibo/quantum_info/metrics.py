@@ -9,7 +9,7 @@ from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def purity(state, backend=None):
+def purity(state):
     """Purity of a quantum state :math:`\\rho`.
 
     This is given by
@@ -19,14 +19,11 @@ def purity(state, backend=None):
 
     Args:
         state (ndarray): statevector or density matrix.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
-            Defaults to ``None``.
     Returns:
         float: Purity of quantum ``state`` :math:`\\rho`.
     """
-    backend = _check_backend(backend)
-
+    if state.__class__.__name__ == "Tensor":
+        state = state.detach().numpy()
     if (
         (len(state.shape) >= 3)
         or (len(state) == 0)
@@ -38,13 +35,13 @@ def purity(state, backend=None):
         )
 
     if len(state.shape) == 1:
-        pur = backend.np.abs(backend.np.matmul(backend.np.conj(state), state)) ** 2
+        pur = np.abs(np.matmul(np.conj(state), state)) ** 2
     else:
-        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
+        pur = np.real(np.trace(np.matmul(state, state)))
 
     # this is necessary to remove the float from inside
     # a 0-dim ndarray
-    pur = float(backend.to_numpy(pur))
+    pur = float(pur)
 
     return pur
 
@@ -216,7 +213,8 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
         float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
     backend = _check_backend(backend)
-
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     if state.shape != target.shape:
         raise_error(
             TypeError,
@@ -258,7 +256,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
                 matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
                 matrix = backend.cast(matrix, dtype=matrix.dtype)
-                state += matrix
+                state = state + matrix
                 del matrix
 
             fid = state @ target @ state
@@ -267,16 +265,16 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             if check_hermitian is False or _check_hermitian_or_not_gpu(
                 fid, backend=backend
             ):
-                eigenvalues, eigenvectors = np.linalg.eigh(fid)
+                eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(fid))
             else:
-                eigenvalues, eigenvectors = np.linalg.eig(fid)
+                eigenvalues, eigenvectors = np.linalg.eig(backend.to_numpy(fid))
             fid = np.zeros(state.shape, dtype=complex)
             fid = backend.cast(fid, dtype=fid.dtype)
             for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
                 if eig > PRECISION_TOL:
                     matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
                     matrix = backend.cast(matrix, dtype=matrix.dtype)
-                    fid += matrix
+                    fid = fid + matrix
                     del matrix
 
             fid = backend.np.real(backend.np.trace(fid)) ** 2
@@ -285,9 +283,9 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        backend.np.abs(backend.np.dot(backend.np.conj(state), target)) ** 2
+        backend.np.abs(backend.np.matmul(backend.np.conj(state), target)) ** 2
         if len(state.shape) == 1
-        else backend.np.real(backend.np.trace(backend.np.dot(state, target)))
+        else backend.np.real(backend.np.trace(backend.np.matmul(state, target)))
     )
 
     fid = float(fid)
@@ -420,7 +418,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     if check_unitary is True:
         norm_channel = float(
             backend.calculate_norm_density_matrix(
-                backend.np.dot(
+                backend.np.matmul(
                     backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
                 )
                 - backend.np.eye(dim**2)
@@ -431,7 +429,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         if target is not None:
             norm_target = float(
                 backend.calculate_norm(
-                    backend.np.dot(
+                    backend.np.matmul(
                         backend.np.conj(backend.np.transpose(target, (1, 0))), target
                     )
                     - backend.np.eye(dim**2)
@@ -447,7 +445,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
         return process_fid
 
-    process_fid = backend.np.dot(
+    process_fid = backend.np.matmul(
         backend.np.transpose(backend.np.conj(channel), (1, 0)), target
     )
     process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
@@ -846,7 +844,7 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     backend = _check_backend(backend)
 
     norm = backend.calculate_norm_density_matrix(
-        backend.np.transpose(backend.np.conj(matrix)) - matrix, order=2
+        backend.np.conj(matrix).T - matrix, order=2
     )
 
     hermitian = bool(float(norm) <= PRECISION_TOL)

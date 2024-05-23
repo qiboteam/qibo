@@ -287,22 +287,27 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         )
         if basis is None and normalize is False:
             backend.assert_allclose(
-                np.real(np.trace(state)) <= 1.0 + PRECISION_TOL, True
+                np.real(np.trace(backend.to_numpy(state))) <= 1.0 + PRECISION_TOL, True
             )
             backend.assert_allclose(
-                np.real(np.trace(state)) >= 1.0 - PRECISION_TOL, True
+                np.real(np.trace(backend.to_numpy(state))) >= 1.0 - PRECISION_TOL, True
             )
             backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
             if pure is True:
                 backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
-
-            state_dagger = np.transpose(np.conj(state))
-            norm = float(norm_function(state - state_dagger, order=2))
+            norm = np.abs(
+                backend.to_numpy(
+                    norm_function(state - backend.np.conj(state).T, order=2)
+                )
+            )
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
             backend.assert_allclose(state[0], normalization)
-            assert all(np.abs(exp_value) <= normalization for exp_value in state[1:])
+            assert all(
+                np.abs(backend.to_numpy(exp_value)) <= normalization
+                for exp_value in state[1:]
+            )
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -403,7 +408,11 @@ def test_pauli_single(backend):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
-        float(backend.calculate_norm_density_matrix(matrix - result, order=2))
+        np.abs(
+            backend.to_numpy(
+                backend.calculate_norm_density_matrix(matrix - result, order=2)
+            )
+        )
         < PRECISION_TOL,
         True,
     )
@@ -460,10 +469,9 @@ def test_random_pauli(
                 True,
             )
     else:
-        matrix = np.transpose(matrix, (1, 0, 2, 3))
+        matrix = backend.np.transpose(matrix, (1, 0, 2, 3))
         matrix = [reduce(backend.np.kron, row) for row in matrix]
-        dot = backend.np.matmul if backend.name == "pytorch" else np.dot
-        matrix = reduce(dot, matrix)
+        matrix = reduce(backend.np.matmul, matrix)
 
         if subset is None:
             backend.assert_allclose(
@@ -516,10 +524,15 @@ def test_random_pauli_hamiltonian(
     )
 
     if normalize is True:
-        backend.assert_allclose(np.abs(eigenvalues[0]) < PRECISION_TOL, True)
-        backend.assert_allclose(np.abs(eigenvalues[1] - 1) < PRECISION_TOL, True)
         backend.assert_allclose(
-            np.abs(eigenvalues[-1] - max_eigenvalue) < PRECISION_TOL, True
+            np.abs(backend.to_numpy(eigenvalues[0])) < PRECISION_TOL, True
+        )
+        backend.assert_allclose(
+            np.abs(backend.to_numpy(eigenvalues[1]) - 1) < PRECISION_TOL, True
+        )
+        backend.assert_allclose(
+            np.abs(backend.to_numpy(eigenvalues[-1]) - max_eigenvalue) < PRECISION_TOL,
+            True,
         )
 
 

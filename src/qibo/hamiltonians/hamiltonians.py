@@ -139,7 +139,7 @@ class Hamiltonian(AbstractHamiltonian):
         )
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.matrix
+        obs = self.backend.to_numpy(self.matrix)
         if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())

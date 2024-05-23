@@ -353,7 +353,7 @@ class MeasurementOutcomes:
                 qubit_map = {
                     q: i for i, q in enumerate(self.measurement_gate.target_qubits)
                 }
-                self._samples = self.backend.cast(samples, "int32")
+                self._samples = samples
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                     gate.result.register_samples(

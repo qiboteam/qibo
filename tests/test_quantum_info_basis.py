@@ -59,12 +59,12 @@ def test_pauli_basis(
     basis_test = backend.cast(basis_test)
 
     if normalize:
-        basis_test /= np.sqrt(2**nqubits)
+        basis_test = basis_test / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
         elements, indexes = [], []
         for row in basis_test:
-            row_indexes = list(np.flatnonzero(row))
+            row_indexes = list(np.flatnonzero(backend.to_numpy(row)))
             indexes.append(row_indexes)
             elements.append(row[row_indexes])
         indexes = backend.cast(indexes)
@@ -82,15 +82,19 @@ def test_pauli_basis(
                 elements, indexes, basis[0], basis[1]
             ):
                 backend.assert_allclose(
-                    np.linalg.norm(elem_test - elem) < PRECISION_TOL, True
+                    np.linalg.norm(backend.to_numpy(elem_test - elem)) < PRECISION_TOL,
+                    True,
                 )
                 backend.assert_allclose(
-                    np.linalg.norm(ind_test - ind) < PRECISION_TOL, True
+                    np.linalg.norm(backend.to_numpy(ind_test - ind)) < PRECISION_TOL,
+                    True,
                 )
         else:
             for pauli, pauli_test in zip(basis, basis_test):
                 backend.assert_allclose(
-                    np.linalg.norm(pauli - pauli_test) < PRECISION_TOL, True
+                    np.linalg.norm(backend.to_numpy(pauli - pauli_test))
+                    < PRECISION_TOL,
+                    True,
                 )
 
         comp_basis_to_pauli(nqubits, normalize, sparse, order, pauli_order, backend)

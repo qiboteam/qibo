@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 from enum import Enum, auto
 from functools import partial
 
@@ -50,7 +50,7 @@ class DoubleBracketIteration:
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
     ):
         self.h = hamiltonian
-        self.h0 = deepcopy(self.h)
+        self.h0 = copy(self.h)
         self.mode = mode
 
     def __call__(
@@ -66,7 +66,7 @@ class DoubleBracketIteration:
         return operator
 
     def eval_dbr_unitary(
-        self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
+        self, step: float, mode: DoubleBracketGeneratorType = None, d=None
     ):
         """In call we will are working in the convention that $H' = U^\\dagger H U$ where $U=e^{-sW}$ with $W=[D,H]$ or an approximation of that by a group commutator. That is handy because if we switch from the DBI in the Heisenberg picture for the Hamiltonian, we get that the transformation of the state is $|\\psi'\rangle = U |\\psi\rangle$ so that $\\langle H\rangle_{\\psi'} = \\langle H' \rangle_\\psi$ (i.e. when writing the unitary acting on the state dagger notation is avoided).
 
@@ -187,7 +187,7 @@ class DoubleBracketIteration:
             look_ahead: number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
-        h_copy = deepcopy(self.h)
+        h_copy = copy(self.h)
 
         for _ in range(look_ahead):
             self.__call__(mode=self.mode, step=step, d=d)

@@ -189,7 +189,7 @@ def random_hermitian(
         matrix = (matrix + backend.np.conj(matrix).T) / 2
 
     if normalize:
-        matrix = matrix / backend.np.linalg.norm(matrix)
+        matrix = matrix / np.linalg.norm(backend.to_numpy(matrix))
 
     return matrix
 
@@ -546,9 +546,7 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=local_state, backend=backend)
-        state = backend.np.outer(
-            state, backend.np.transpose(backend.np.conj(state), (1, 0))
-        )
+        state = backend.np.outer(state, backend.np.conj(state).T)
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
@@ -559,7 +557,7 @@ def random_density_matrix(
             )
             state = state / backend.np.trace(state)
         else:
-            nqubits = int(backend.np.log2(dims))
+            nqubits = int(np.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
             state += random_unitary(dims, seed=local_state, backend=backend)
             state = backend.np.matmul(
@@ -576,7 +574,7 @@ def random_density_matrix(
     if basis is not None:
         pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
-            int(backend.np.log2(dims)),
+            int(np.log2(dims)),
             normalize=normalize,
             order=order,
             pauli_order=pauli_order,
@@ -924,7 +922,7 @@ def random_pauli_hamiltonian(
 
     hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
 
-    eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian)
+    eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(hamiltonian))
 
     if normalize is True:
         eigenvalues -= eigenvalues[0]
@@ -943,15 +941,17 @@ def random_pauli_hamiltonian(
         for eigenvalue, eigenvector in zip(
             eigenvalues[1:], np.transpose(eigenvectors)[1:]
         ):
-            hamiltonian += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
+            hamiltonian = hamiltonian + backend.cast(eigenvalue) * backend.cast(
+                np.outer(eigenvector, np.conj(eigenvector))
+            )
 
     U = comp_basis_to_pauli(
         nqubits, normalize=True, pauli_order=pauli_order, backend=backend
     )
 
-    hamiltonian = np.real(U @ vectorization(hamiltonian, backend=backend))
+    hamiltonian = backend.np.real(U @ vectorization(hamiltonian, backend=backend))
 
-    return hamiltonian, eigenvalues
+    return hamiltonian, backend.cast(eigenvalues)
 
 
 def random_stochastic_matrix(

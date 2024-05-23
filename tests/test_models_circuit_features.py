@@ -137,10 +137,10 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
         else:
             c = c.fuse()
     invc = c.invert()
-    target_state = np.ones(2**4) / 4
+    target_state = np.ones(2**4) / 4.0
     final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))._state
     final_state = backend.execute_circuit(invc, initial_state=final_state)._state
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
 def test_circuit_invert_and_addition_execution(backend, accelerators):

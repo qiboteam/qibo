@@ -27,7 +27,7 @@ class TorchMatrices(NumpyMatrices):
         return self.np.as_tensor(x, dtype=dtype)
 
     def _cast_parameter(self, x):
-        return self.np.tensor(x, requires_grad=self.requires_grad)
+        return self.np.tensor(x, dtype=self.dtype, requires_grad=self.requires_grad)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)
@@ -105,10 +105,15 @@ class PyTorchBackend(NumpyBackend):
 
         if dtype is None:
             dtype = self.dtype
+
         elif isinstance(dtype, type):
             dtype = self._torch_dtype(dtype.__name__)
         elif not isinstance(dtype, self.np.dtype):
             dtype = self._torch_dtype(str(dtype))
+
+        # check if dtype is an integer to remove gradients
+        if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
+            requires_grad = False
 
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)

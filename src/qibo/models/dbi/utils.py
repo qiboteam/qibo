@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 from itertools import product
 from typing import Optional
 
@@ -101,7 +101,7 @@ def select_best_dbr_generator(
     optimal_steps, flip_list = [], []
     for i, d in enumerate(d_list):
         # prescribed step durations
-        dbi_eval = deepcopy(dbi_object)
+        dbi_eval = copy(dbi_object)
         flip_list.append(cs_angle_sgn(dbi_eval, d))
         if flip_list[i] != 0:
             if step is None:
@@ -121,7 +121,7 @@ def select_best_dbr_generator(
     # canonical
     if compare_canonical is True:
         flip_list.append(1)
-        dbi_eval = deepcopy(dbi_object)
+        dbi_eval = copy(dbi_object)
         dbi_eval.mode = DoubleBracketGeneratorType.canonical
         if step is None:
             step_best = dbi_eval.hyperopt_step(
@@ -142,7 +142,7 @@ def select_best_dbr_generator(
     )
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
-    dbi_eval = deepcopy(dbi_object)
+    dbi_eval = copy(dbi_object)
     if idx_max_loss == len(d_list) and compare_canonical is True:
         # canonical
         dbi_eval(step=step_optimal, mode=DoubleBracketGeneratorType.canonical)
@@ -155,12 +155,13 @@ def select_best_dbr_generator(
 
 def cs_angle_sgn(dbi_object, d):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
-    norm = np.trace(
-        np.dot(
-            np.conjugate(
+    backend = dbi_object.backend
+    norm = backend.np.trace(
+        backend.np.matmul(
+            backend.np.conj(
                 dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
             ).T,
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    return np.sign(norm)
+    return np.sign(backend.to_numpy(norm))
