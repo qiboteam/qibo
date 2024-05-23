@@ -124,11 +124,8 @@ def polynomial_step(
     ]
     # solution exists, return minimum s
     if len(real_positive_roots) > 0:
-        sol = min(real_positive_roots)
-        for s in real_positive_roots:
-            if dbi_object.loss(s, d) < dbi_object.loss(sol, d):
-                sol = s
-        return sol
+        losses = [dbi_object.loss(step=root, d=d) for root in real_positive_roots]
+        return real_positive_roots[losses.index(min(losses))]
     # solution does not exist, return None
     else:
         return None
