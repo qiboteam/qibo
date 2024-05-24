@@ -5,12 +5,6 @@ from typing import Optional
 import hyperopt
 import numpy as np
 
-from qibo.models.dbi.utils_analytical import (
-    energy_fluctuation_polynomial_expansion_coef,
-    least_squares_polynomial_expansion_coef,
-    off_diagonal_norm_polynomial_expansion_coef,
-)
-
 error = 1e-3
 
 

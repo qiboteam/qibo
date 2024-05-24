@@ -163,3 +163,23 @@ def generate_Pauli_operators(nqubits, symbols_pauli, positions):
     else:
         terms = [symbols_pauli(pos) for pos in positions]
         return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix
+
+
+def element_wise_d(params: np.array, normalization: bool = False):
+    r"""
+    Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
+    If $\alpha_i$ are our parameters and d the number of qubits then:
+
+    element_wise: $D = \sum_{i=0}^{2^d} \alpha_i |i\rangle \langle i|$
+    local_1: $D = \sum_{i=1}^{d} \alpha_i Z_i$
+    Args:
+        params(np.array): parameters for the ansatz.
+        d_type(d_ansatz type): type of parameterization for the ansatz.
+        normalization(bool): If True, the diagonal is normalized to 1.
+    """
+    d = np.zeros((len(params), len(params)))
+    for i in range(len(params)):
+        d[i, i] = params[i]
+    if normalization:
+        d = d / np.linalg.norm(d)
+    return d

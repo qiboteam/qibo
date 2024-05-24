@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
-from qibo.models.dbi.utils_analytical import (
+from qibo.models.dbi.utils_gradients import (
     energy_fluctuation_polynomial_expansion_coef,
     least_squares_polynomial_expansion_coef,
     off_diagonal_norm_polynomial_expansion_coef,
