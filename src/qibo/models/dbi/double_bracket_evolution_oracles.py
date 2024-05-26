@@ -176,16 +176,18 @@ class EvolutionOracle:
         epsilon is the error tolerance level that we set.
         we return the step size required
         """
+
         # decompose the terms
         def commutator_norm(a, b):
             a_mat = a.matrix
             b_mat = b.matrix
-            return np.linalg.norm(a_mat @ b_mat -b_mat @ a_mat)
+            return np.linalg.norm(a_mat @ b_mat - b_mat @ a_mat)
+
         terms = self.h.terms
         # find the maximum norm
         n = len(terms)
-        Ch = max([commutator_norm(terms[i], terms[i+1]) for i in range(n-1)])
-        return ceil(epsilon/(Ch * s**2))
+        Ch = max([commutator_norm(terms[i], terms[i + 1]) for i in range(n - 1)])
+        return ceil(epsilon / (Ch * s**2))
 
 
 class FrameShiftedEvolutionOracle(EvolutionOracle):
