@@ -203,7 +203,7 @@ def energy_fluctuation_polynomial_expansion_coef(
     return coef
 
 
-def gradientDiagonalEntries(dbi_object, params, delta=1e-4):
+def gradient_diagonal_entries(dbi_object, params, delta=1e-4):
     r"""
     Gradient of the DBI with respect to the parametrization of D. A simple finite difference is used to calculate the gradient.
 
@@ -257,22 +257,21 @@ def gradient_descent_dbr_d_ansatz(
     d = element_wise_d(params, normalization=normalize)
     loss = np.zeros(nmb_iterations + 1)
     grad = np.zeros((nmb_iterations, len(params)))
-    dbi_new = deepcopy(dbi_object)
-    s = dbi_object.choose_step(d=d)
-    dbi_new(s, d=d)
-    loss[0] = dbi_new.loss(0.0, d)
+    dbi_eval = deepcopy(dbi_object)
+    s = dbi_eval.choose_step(d=d)
+    dbi_eval(s, d=d)
+    loss[0] = dbi_eval.loss(0.0, d)
     params_hist = np.empty((len(params), nmb_iterations + 1))
     params_hist[:, 0] = params
 
     for i in range(nmb_iterations):
-        dbi_new = deepcopy(dbi_object)
-        grad[i, :] = gradientDiagonalEntries(dbi_object, params)
+        dbi_eval = deepcopy(dbi_object)
+        grad[i, :] = gradient_diagonal_entries(dbi_eval, params)
         for j in range(len(params)):
             params[j] = params[j] - lr * grad[i, j]
         d = element_wise_d(params, normalization=normalize)
-        s = dbi_object.choose_step(d=d)
-        dbi_new(s, d=d)
-        loss[i + 1] = dbi_new.loss(0.0, d=d)
+        s = dbi_eval.choose_step(d=d)
+        loss[i + 1] = dbi_eval.loss(s, d=d)
         params_hist[:, i + 1] = params
 
     return d, loss, grad, params_hist
