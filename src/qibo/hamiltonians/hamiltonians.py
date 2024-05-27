@@ -373,7 +373,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 "Calculating the dense form of a symbolic Hamiltonian. "
                 "This operation is memory inefficient."
             )
-        self.dense = self.calculate_dense()
+            self.dense = self.calculate_dense()
         return self._dense
 
     @dense.setter
