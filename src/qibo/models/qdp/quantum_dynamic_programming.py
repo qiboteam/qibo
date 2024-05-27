@@ -18,35 +18,40 @@ Classes:
         - Resets instruction qubits based on measurement outcomes.
 
 References:
-    - Son, J., Gluza, M., Takagi, R., & Ng, N. H. Y. (2024). 
-    Quantum Dynamic Programming. arXiv preprint arXiv:2403.09187. 
+    - Son, J., Gluza, M., Takagi, R., & Ng, N. H. Y. (2024).
+    Quantum Dynamic Programming. arXiv preprint arXiv:2403.09187.
     Retrieved from https://arxiv.org/abs/2403.09187
-    - Kjaergaard, M., Schwartz, M. E., Greene, A., Samach, G. O., Bengtsson, A., O'Keeffe, M., ... Oliver, W. D. (2020). 
-    Programming a quantum computer with quantum instructions. arXiv preprint arXiv:2001.08838. 
+    - Kjaergaard, M., Schwartz, M. E., Greene, A., Samach, G. O., Bengtsson, A., O'Keeffe, M., ... Oliver, W. D. (2020).
+    Programming a quantum computer with quantum instructions. arXiv preprint arXiv:2001.08838.
     Retrieved from https://arxiv.org/abs/2001.08838
 
 """
 
+import random
 from abc import abstractmethod
 from enum import Enum, auto
-import random
+
 import numpy as np
 import scipy
-from qibo.config import raise_error
+
 from qibo import gates, models
+from qibo.config import raise_error
 from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
+
 
 class QDP_memory_type(Enum):
     """
     Enumerated type representing memory types for quantum dynamic programming.
     """
+
     default = auto()
     reset = auto()
     quantum_measurement_emulation = auto()
 
+
 class AbstractQuantumDynamicProgramming:
     """
-    Class representing the implementation framework of quantum dynamic programming. 
+    Class representing the implementation framework of quantum dynamic programming.
         - List essential functions. Which one need to be implemented?
         - What is the intended way of using it?
 
@@ -57,29 +62,33 @@ class AbstractQuantumDynamicProgramming:
         QME_rotation_gate (callable): Optional. Rotation gate for quantum measurement emulation.
 
     Abstract functions:
-        memory_usage_query_circuit: define a memory usage circuit 
+        memory_usage_query_circuit: define a memory usage circuit
             (the circuit to be iterated over)
-        memory_call_circuit: define how memory call work, 
+        memory_call_circuit: define how memory call work,
             which instruction qubits to use, how many iterations etc.
 
     Functions:
         instruction_qubits_initialization: initialize instruction qubit
         trace_one_instruction_qubit: trace the instruction qubit, an important step in QDP
         trace_all_instruction_qubit: trace all instruction qubit
-        instruction_reg_delegation: helper function for memory_call_circuit, 
-            define how instruction register is used. 
+        instruction_reg_delegation: helper function for memory_call_circuit,
+            define how instruction register is used.
         increment_current_instruction_register: use the next instruction qubit in the specified list.
             Instruction qubit does not need to be in order.
         circuit_reset: Reset the circuit
         return_circuit: Return the circuit
     """
 
-    def __init__(self, num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit = None):
+    def __init__(
+        self, num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+    ):
         self.num_work_qubits = int(num_work_qubits)
         self.num_instruction_qubits = int(num_instruction_qubits)
 
         self.list_id_work_reg = np.arange(0, num_work_qubits, 1)
-        self.list_id_instruction_reg = np.arange(0, num_instruction_qubits, 1) + num_work_qubits
+        self.list_id_instruction_reg = (
+            np.arange(0, num_instruction_qubits, 1) + num_work_qubits
+        )
         self.id_current_instruction_reg = self.list_id_instruction_reg[0]
         self.M = number_muq_per_call
         self.list_id_current_instruction_reg = self.list_id_instruction_reg
@@ -103,7 +112,7 @@ class AbstractQuantumDynamicProgramming:
         """Initializes the instruction qubits."""
         pass
 
-    def trace_one_instruction_qubit(self,qubit_reg):
+    def trace_one_instruction_qubit(self, qubit_reg):
         """Traces the user specified instruction qubit."""
         self.c.add(gates.M(qubit_reg))
 
@@ -116,14 +125,18 @@ class AbstractQuantumDynamicProgramming:
         """Uses a work qubit as an instruction qubit."""
         pass
 
-    def instruction_index(self,id_reg):
+    def instruction_index(self, id_reg):
         return list(self.list_id_instruction_reg).index(id_reg)
 
     def increment_current_instruction_register(self):
         """Increments the current instruction register index."""
-        current_instruction_index = self.instruction_index(self.id_current_instruction_reg)
-        self.id_current_instruction_reg = list(self.list_id_instruction_reg)[current_instruction_index+1]
-    
+        current_instruction_index = self.instruction_index(
+            self.id_current_instruction_reg
+        )
+        self.id_current_instruction_reg = list(self.list_id_instruction_reg)[
+            current_instruction_index + 1
+        ]
+
     def circuit_reset(self):
         """Resets the entire quantum circuit."""
         self.c = models.Circuit(self.num_work_qubits + self.num_instruction_qubits)
@@ -131,7 +144,8 @@ class AbstractQuantumDynamicProgramming:
     def return_circuit(self):
         """Return the whole circuit"""
         return self.c
-    
+
+
 class QDPSequentialInstruction(AbstractQuantumDynamicProgramming):
     def memory_call_circuit(self, num_instruction_qubits_per_query):
         """
@@ -140,31 +154,46 @@ class QDPSequentialInstruction(AbstractQuantumDynamicProgramming):
         Args:
             num_instruction_qubits_per_query (int): Number of instruction qubits per query.
         """
-        current_instruction_index = self.instruction_index(self.id_current_instruction_reg)
+        current_instruction_index = self.instruction_index(
+            self.id_current_instruction_reg
+        )
         self.list_id_current_instruction_reg = self.list_id_instruction_reg[
-            current_instruction_index:self.M * num_instruction_qubits_per_query + current_instruction_index]
+            current_instruction_index : self.M * num_instruction_qubits_per_query
+            + current_instruction_index
+        ]
         self.instruction_qubits_initialization()
         for _register in self.list_id_current_instruction_reg:
             self.memory_usage_query_circuit()
             self.trace_one_instruction_qubit(_register)
-            if self.instruction_index(_register)+1 < len(list(self.list_id_current_instruction_reg)):
+            if self.instruction_index(_register) + 1 < len(
+                list(self.list_id_current_instruction_reg)
+            ):
                 self.increment_current_instruction_register()
             self.instruction_reg_delegation()
 
 
 class QDPMeasurementEmulation(AbstractQuantumDynamicProgramming):
-    def __init__(self,num_work_qubits, num_instruction_qubits, number_muq_per_call, QME_rotation_gate, circuit = None):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit = None)
+    def __init__(
+        self,
+        num_work_qubits,
+        num_instruction_qubits,
+        number_muq_per_call,
+        QME_rotation_gate,
+        circuit=None,
+    ):
+        super().__init__(
+            num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+        )
         self.QME_rotation_gate = QME_rotation_gate
 
     def quantum_measurement_emulation(self, register):
         """
-        Performs quantum measurement emulation, 
+        Performs quantum measurement emulation,
         where a rotation gate or identity gate is applied randomly with p = 0.5
 
         Args:
             register (int): The register index.
-            rotation_gate (callable): The rotation gate about an axis parallel 
+            rotation_gate (callable): The rotation gate about an axis parallel
             to the instruction qubit(s).
         """
         coin_flip = random.choice([0, 1])
@@ -205,7 +234,7 @@ class QDPMeasurementReset(AbstractQuantumDynamicProgramming):
             self.trace_one_instruction_qubit(self.id_current_instruction_reg)
             self.current_register_reset()
             self.instruction_reg_delegation()
-    
+
     @abstractmethod
     def current_register_reset(self):
         """
@@ -228,16 +257,17 @@ class QDPMeasurementReset(AbstractQuantumDynamicProgramming):
 
     @abstractmethod
     def all_register_reset(self):
-        #todo: find way to do reset gate: disruptive measurement?
+        # todo: find way to do reset gate: disruptive measurement?
         """
         Resets all instruction registers.
-        
-        Example: 
+
+        Example:
         for qubit in self.num_instruction_qubits:
             self.c.add(gates.M(qubit))
             self.id_current_instruction_reg = 0
         """
         raise_error(NotImplementedError)
+
 
 class DensityMatrixExponentiation(QDPSequentialInstruction):
     """
@@ -260,8 +290,13 @@ class DensityMatrixExponentiation(QDPSequentialInstruction):
         print(my_protocol.c.draw())
         my_protocol.c.execute(nshots=1000).frequencies()
     """
-    def __init__(self, theta, N, num_work_qubits, num_instruction_qubits, number_muq_per_call):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call,circuit=None)
+
+    def __init__(
+        self, theta, N, num_work_qubits, num_instruction_qubits, number_muq_per_call
+    ):
+        super().__init__(
+            num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+        )
         self.theta = theta  # overall rotation angle
         self.N = N  # number of steps
         self.delta = theta / N  # small rotation angle
@@ -269,8 +304,18 @@ class DensityMatrixExponentiation(QDPSequentialInstruction):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        delta_SWAP = scipy.linalg.expm( -1j * gates.SWAP(self.id_current_work_reg,self.id_current_instruction_reg).matrix() * self.delta)
-        for decomposed_gate in two_qubit_decomposition(self.id_current_work_reg, self.id_current_instruction_reg, unitary=delta_SWAP):
+        delta_SWAP = scipy.linalg.expm(
+            -1j
+            * gates.SWAP(
+                self.id_current_work_reg, self.id_current_instruction_reg
+            ).matrix()
+            * self.delta
+        )
+        for decomposed_gate in two_qubit_decomposition(
+            self.id_current_work_reg,
+            self.id_current_instruction_reg,
+            unitary=delta_SWAP,
+        ):
             self.c.add(decomposed_gate)
 
     def instruction_qubits_initialization(self):
@@ -284,8 +329,13 @@ class DME_reset(QDPMeasurementReset):
     Warning: Functional, but without a way to actually do reset.
     DME using reset method.
     """
-    def __init__(self, theta, N, num_work_qubits, num_instruction_qubits, number_muq_per_call):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call,circuit=None)
+
+    def __init__(
+        self, theta, N, num_work_qubits, num_instruction_qubits, number_muq_per_call
+    ):
+        super().__init__(
+            num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+        )
         self.theta = theta  # overall rotation angle
         self.N = N  # number of steps
         self.delta = theta / N  # small rotation angle
@@ -299,8 +349,8 @@ class DME_reset(QDPMeasurementReset):
             register (int): The register index.
             _c = self.c.copy()
         """
-        #todo: find a way to do reset
-        #result = _c.execute(nshots=1).samples(binary=True)[0][0]
+        # todo: find a way to do reset
+        # result = _c.execute(nshots=1).samples(binary=True)[0][0]
         result = 1
         if result == 1:
             self.c.add(gates.X(self.id_current_instruction_reg))
@@ -311,8 +361,18 @@ class DME_reset(QDPMeasurementReset):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        delta_SWAP = scipy.linalg.expm( -1j * gates.SWAP(self.id_current_work_reg,self.id_current_instruction_reg).matrix() * self.delta)
-        for decomposed_gate in two_qubit_decomposition(self.id_current_work_reg, self.id_current_instruction_reg, unitary=delta_SWAP):
+        delta_SWAP = scipy.linalg.expm(
+            -1j
+            * gates.SWAP(
+                self.id_current_work_reg, self.id_current_instruction_reg
+            ).matrix()
+            * self.delta
+        )
+        for decomposed_gate in two_qubit_decomposition(
+            self.id_current_work_reg,
+            self.id_current_instruction_reg,
+            unitary=delta_SWAP,
+        ):
             self.c.add(decomposed_gate)
 
     def instruction_qubits_initialization(self):
