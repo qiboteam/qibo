@@ -90,7 +90,7 @@ def optimize(
 
         backend = _check_backend(backend)
 
-        return sgd(loss, initial_parameters, args, options, compile, backend)
+        return sgd(loss, initial_parameters, args, callback, options, compile, backend)
     else:
         from qibo.backends import _check_backend
 
@@ -213,7 +213,15 @@ def newtonian(
     return m.fun, m.x, m
 
 
-def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
+def sgd(
+    loss,
+    initial_parameters,
+    args=(),
+    callback=None,
+    options=None,
+    compile=False,
+    backend=None,
+):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -225,6 +233,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
+        callback (callable): Called after each iteration.
         options (dict): Dictionary with options for the SGD optimizer. Supports
             the following keys:
 
@@ -265,6 +274,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
+        callback(vparams)
         if e % sgd_options["nmessage"] == 1:
             log.info("ite %d : loss %f", e, l.numpy())
 
