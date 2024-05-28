@@ -184,7 +184,7 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.np.dot(np.conj(matrix).T, matrix)
+        matrix = backend.np.matmul(backend.np.conj(matrix).T, matrix)
     else:
         matrix = (matrix + backend.np.conj(matrix).T) / 2
 
@@ -230,7 +230,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
-        Q, R = np.linalg.qr(unitary)
+        Q, R = np.linalg.qr(backend.to_numpy(unitary))
         D = np.diag(R)
         D = D / np.abs(D)
         R = np.diag(D)
@@ -351,7 +351,7 @@ def random_quantum_channel(
     else:
         super_op = random_unitary(dims, measure, local_state, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = np.outer(super_op, np.conj(super_op))
+        super_op = backend.np.outer(super_op, backend.np.conj(super_op))
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -1199,10 +1199,12 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = random_gaussian_matrix(
         dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
     )
-    super_op = super_op @ np.transpose(np.conj(super_op))
+    super_op = super_op @ backend.np.conj(super_op).T
 
     # partial trace implemented with einsum
-    super_op_reduced = np.einsum("ijik->jk", np.reshape(super_op, (dims,) * 4))
+    super_op_reduced = np.einsum(
+        "ijik->jk", np.reshape(backend.to_numpy(super_op), (dims,) * 4)
+    )
 
     eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
 
@@ -1210,8 +1212,12 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
 
     operator = np.zeros((dims, dims), dtype=complex)
     operator = backend.cast(operator, dtype=operator.dtype)
-    for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
-        operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
+    for eigenvalue, eigenvector in zip(
+        backend.cast(eigenvalues), backend.cast(eigenvectors).T
+    ):
+        operator = operator + eigenvalue * backend.np.outer(
+            eigenvector, backend.np.conj(eigenvector)
+        )
 
     if order == "row":
         operator = backend.np.kron(

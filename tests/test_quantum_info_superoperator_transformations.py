@@ -49,12 +49,9 @@ from qibo.quantum_info.superoperator_transformations import (
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
 def test_vectorization(backend, nqubits, order):
     with pytest.raises(TypeError):
-        vectorization(np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]), backend=backend)
-    with pytest.raises(TypeError):
-        vectorization(
-            np.array([[[0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0]]], dtype="object"),
-            backend=backend,
-        )
+        x = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]])
+        x = backend.cast(x)
+        vectorization(x, backend=backend)
     with pytest.raises(TypeError):
         vectorization(np.array([]), backend=backend)
     with pytest.raises(TypeError):
@@ -158,7 +155,7 @@ def test_vectorization(backend, nqubits, order):
 
     dim = 2**nqubits
     matrix = np.arange(dim**2).reshape((dim, dim))
-    matrix = vectorization(matrix, order, backend=backend)
+    matrix = vectorization(backend.cast(matrix), order, backend=backend)
 
     backend.assert_allclose(matrix, matrix_test, atol=PRECISION_TOL)
 
@@ -247,8 +244,10 @@ def chi_superop(pauli_order):
 
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_to_choi(backend, order):
-    choi_a0 = to_choi(test_a0, order=order, backend=backend)
-    choi_a1 = to_choi(test_a1, order=order, backend=backend)
+    test_a0_ = backend.cast(test_a0)
+    test_a1_ = backend.cast(test_a1)
+    choi_a0 = to_choi(test_a0_, order=order, backend=backend)
+    choi_a1 = to_choi(test_a1_, order=order, backend=backend)
     choi = choi_a0 + choi_a1
 
     axes = [1, 2] if order == "row" else [0, 3]
@@ -261,8 +260,10 @@ def test_to_choi(backend, order):
 
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_to_liouville(backend, order):
-    liouville_a0 = to_liouville(test_a0, order=order, backend=backend)
-    liouville_a1 = to_liouville(test_a1, order=order, backend=backend)
+    test_a0_ = backend.cast(test_a0)
+    test_a1_ = backend.cast(test_a1)
+    liouville_a0 = to_liouville(test_a0_, order=order, backend=backend)
+    liouville_a1 = to_liouville(test_a1_, order=order, backend=backend)
     liouville = liouville_a0 + liouville_a1
 
     backend.assert_allclose(liouville, test_superop, atol=PRECISION_TOL)
@@ -272,15 +273,17 @@ def test_to_liouville(backend, order):
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_to_pauli_liouville(backend, normalize, order, pauli_order):
+    test_a0_ = backend.cast(test_a0)
+    test_a1_ = backend.cast(test_a1)
     pauli_a0 = to_pauli_liouville(
-        test_a0,
+        test_a0_,
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
     pauli_a1 = to_pauli_liouville(
-        test_a1,
+        test_a1_,
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
@@ -300,15 +303,17 @@ def test_to_pauli_liouville(backend, normalize, order, pauli_order):
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_to_chi(backend, normalize, order, pauli_order):
+    test_a0_ = backend.cast(test_a0)
+    test_a1_ = backend.cast(test_a1)
     chi_a0 = to_chi(
-        test_a0,
+        test_a0_,
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
     chi_a1 = to_chi(
-        test_a1,
+        test_a1_,
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
@@ -352,9 +357,9 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.swapaxes(np.reshape(test_superop * aux, [2] * 4), *axes).reshape(
-        [4, 4]
-    )
+    test_choi = backend.np.swapaxes(
+        backend.np.reshape(test_superop * aux, [2] * 4), *axes
+    ).reshape([4, 4])
 
     pauli_op = choi_to_pauli(
         test_choi, normalize, order, pauli_order=pauli_order, backend=backend
@@ -401,11 +406,11 @@ def test_choi_to_kraus(
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
-    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
+    evolution_a0 = a0 @ state @ backend.np.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.np.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
-    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+    test_evolution_a0 = test_a0 @ state @ backend.np.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.np.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -423,9 +428,9 @@ def test_choi_to_kraus(
             test_coefficients,
         ):
             state = random_density_matrix(2, backend=backend)
-            evolution = left @ state @ np.transpose(np.conj(right))
+            evolution = left @ state @ backend.np.conj(right).T
             test_evolution = (
-                test_coeff**2 * test_left @ state @ np.transpose(np.conj(test_right))
+                test_coeff**2 * test_left @ state @ backend.np.conj(test_right).T
             )
 
             backend.assert_allclose(evolution, test_evolution, atol=2 * PRECISION_TOL)
@@ -444,9 +449,9 @@ def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.swapaxes(np.reshape(test_superop * aux, [2] * 4), *axes).reshape(
-        [4, 4]
-    )
+    test_choi = backend.np.swapaxes(
+        backend.np.reshape(test_superop * aux, [2] * 4), *axes
+    ).reshape([4, 4])
 
     chi_matrix = choi_to_chi(
         test_choi,
@@ -506,20 +511,22 @@ def test_choi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ np.kron(state, np.outer(v_0, v_0))
-        @ np.transpose(np.conj(stinespring))
+        @ backend.np.kron(state, backend.np.outer(v_0, v_0))
+        @ backend.np.conj(stinespring).T
     )
 
     # partial trace of the environment
-    stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
-    stinespring = np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        state_final += np.conj(vector_alpha) @ stinespring @ vector_alpha
+        state_final = (
+            state_final + backend.np.conj(vector_alpha) @ stinespring @ vector_alpha
+        )
 
     backend.assert_allclose(state_final, state_final_test, atol=PRECISION_TOL)
 
@@ -532,9 +539,9 @@ def test_liouville_to_choi(backend, order, test_superop):
     choi = liouville_to_choi(test_superop, order=order, backend=backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4)
-    test_choi = np.swapaxes(test_choi, *axes)
-    test_choi = np.reshape(test_choi, (4, 4))
+    test_choi = backend.np.reshape(test_superop, [2] * 4)
+    test_choi = backend.np.swapaxes(test_choi, *axes)
+    test_choi = backend.np.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
@@ -582,11 +589,11 @@ def test_liouville_to_kraus(backend, order, test_a0, test_a1):
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
-    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
+    evolution_a0 = a0 @ state @ backend.np.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.np.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
-    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+    test_evolution_a0 = test_a0 @ state @ backend.np.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.np.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=PRECISION_TOL)
@@ -654,20 +661,22 @@ def test_liouville_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ np.kron(state, np.outer(v_0, v_0))
-        @ np.transpose(np.conj(stinespring))
+        @ backend.np.kron(state, backend.np.outer(v_0, v_0))
+        @ backend.np.conj(stinespring).T
     )
 
     # partial trace of the environment
-    stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
-    stinespring = np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        state_final += np.conj(vector_alpha) @ stinespring @ vector_alpha
+        state_final = (
+            state_final + backend.np.conj(vector_alpha) @ stinespring @ vector_alpha
+        )
 
     backend.assert_allclose(state_final, state_final_test, atol=PRECISION_TOL)
 
@@ -797,8 +806,8 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes)
-    test_choi = np.reshape(test_choi, (4, 4))
+    test_choi = backend.np.swapaxes(backend.np.reshape(test_superop, [2] * 4), *axes)
+    test_choi = backend.np.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(test_choi, choi_super_op, atol=PRECISION_TOL)
 
@@ -833,11 +842,11 @@ def test_pauli_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
-    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
+    evolution_a0 = a0 @ state @ backend.np.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.np.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
-    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+    test_evolution_a0 = test_a0 @ state @ backend.np.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.np.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -909,20 +918,22 @@ def test_pauli_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ np.kron(state, np.outer(v_0, v_0))
-        @ np.transpose(np.conj(stinespring))
+        @ backend.np.kron(state, backend.np.outer(v_0, v_0))
+        @ backend.np.conj(stinespring).T
     )
 
     # partial trace of the environment
-    stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
-    stinespring = np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        state_final += np.conj(vector_alpha) @ stinespring @ vector_alpha
+        state_final = (
+            state_final + backend.np.conj(vector_alpha) @ stinespring @ vector_alpha
+        )
 
     backend.assert_allclose(state_final, aux * state_final_test, atol=PRECISION_TOL)
 
@@ -940,7 +951,9 @@ def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
     test_superop = backend.cast(test_superop, dtype=backend.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes).reshape([4, 4])
+    test_choi = backend.np.swapaxes(
+        backend.np.reshape(test_superop, [2] * 4), *axes
+    ).reshape([4, 4])
 
     choi_super_op = chi_to_choi(
         test_chi / aux, normalize, order, pauli_order, backend=backend
@@ -1013,11 +1026,11 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
-    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
+    evolution_a0 = a0 @ state @ backend.np.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.np.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
-    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+    test_evolution_a0 = test_a0 @ state @ backend.np.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.np.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -1062,20 +1075,22 @@ def test_chi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ np.kron(state, np.outer(v_0, v_0))
-        @ np.transpose(np.conj(stinespring))
+        @ backend.np.kron(state, backend.np.outer(v_0, v_0))
+        @ backend.np.conj(stinespring).T
     )
 
     # partial trace of the environment
-    stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
-    stinespring = np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        state_final += np.conj(vector_alpha) @ stinespring @ vector_alpha
+        state_final = (
+            state_final + backend.np.conj(vector_alpha) @ stinespring @ vector_alpha
+        )
 
     backend.assert_allclose(state_final, aux * state_final_test, atol=PRECISION_TOL)
 
@@ -1272,12 +1287,14 @@ def test_reshuffling(backend, order, test_superop):
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     backend.assert_allclose(
-        np.linalg.norm(reshuffled - backend.cast(test_superop)) < PRECISION_TOL, True
+        np.linalg.norm(backend.to_numpy(reshuffled) - backend.to_numpy(test_superop))
+        < PRECISION_TOL,
+        True,
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(
-        np.swapaxes(np.reshape(test_superop, [2] * 4), *axes), [4, 4]
+    test_choi = backend.np.reshape(
+        backend.np.swapaxes(backend.np.reshape(test_superop, [2] * 4), *axes), [4, 4]
     )
 
     reshuffled = _reshuffling(test_choi, order, backend=backend)

@@ -111,40 +111,40 @@ def test_random_hermitian(backend):
     # test if function returns Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_dagger = backend.np.conj(matrix).T
     norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_dagger = backend.np.conj(matrix).T
     norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(matrix)
+    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
 
     # test if function returns normalized Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_dagger = backend.np.conj(matrix).T
     norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(matrix)
+    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_dagger = backend.np.conj(matrix).T
     norm = float(backend.calculate_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues = np.linalg.eigvalsh(matrix)
+    eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
     backend.assert_allclose(all(eigenvalues <= 1), True)
@@ -171,7 +171,7 @@ def test_random_unitary(backend, measure):
     # tests if operator is unitary (measure == "haar")
     dims = 4
     matrix = random_unitary(dims, measure=measure, backend=backend)
-    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_dagger = backend.np.conj(matrix).T
     matrix_inv = (
         backend.np.inverse(matrix)
         if backend.name == "pytorch"

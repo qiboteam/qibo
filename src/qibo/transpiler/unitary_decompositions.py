@@ -77,12 +77,14 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
         eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
         psi_magic, _ = np.linalg.qr(psi_magic)
     else:
-        eigvals, psi_magic = backend.np.linalg.eig(np.round(ut_u, decimals=20))
+        eigvals, psi_magic = np.linalg.eig(
+            np.round(backend.to_numpy(ut_u), decimals=20)
+        )
         # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-        psi_magic, _ = backend.np.linalg.qr(psi_magic)
+        psi_magic, _ = np.linalg.qr(psi_magic)
     # write psi in computational basis
-    psi = backend.np.matmul(magic_basis, psi_magic)
-    return psi, eigvals
+    psi = backend.np.matmul(magic_basis, backend.cast(psi_magic))
+    return psi, backend.cast(eigvals)
 
 
 def schmidt_decompose(state, backend=None):
@@ -100,7 +102,7 @@ def schmidt_decompose(state, backend=None):
         u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
     else:
         u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
-    if not np.allclose(d, [1, 0]):  # pragma: no cover
+    if not np.allclose(backend.to_numpy(d), [1, 0]):  # pragma: no cover
         raise_error(
             ValueError,
             f"Unexpected singular values: {d}\nCan only decompose product states.",
@@ -122,7 +124,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
     if not np.allclose(
-        backend.to_numpy(psi_magic).imag, np.zeros_like(psi_magic)
+        backend.to_numpy(psi_magic).imag, np.zeros_like(backend.to_numpy(psi_magic))
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
@@ -210,10 +212,10 @@ def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
         backend.np.transpose(backend.np.conj(bell_basis), (1, 0)) @ ud @ bell_basis
     )
     ud_diag = backend.np.diag(ud_bell)
-    if not np.allclose(backend.np.diag(ud_diag), ud_bell):  # pragma: no cover
+    if not backend.np.allclose(backend.np.diag(ud_diag), ud_bell):  # pragma: no cover
         return None
     uprod = backend.np.prod(ud_diag)
-    if not np.allclose(uprod, 1):  # pragma: no cover
+    if not np.allclose(backend.to_numpy(uprod), 1):  # pragma: no cover
         return None
     return ud_diag
 

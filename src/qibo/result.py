@@ -291,7 +291,9 @@ class MeasurementOutcomes:
             probs[state] = freq / self.nshots
         probs = self.backend.cast(probs)
         self._probs = probs
-        return self.backend.calculate_probabilities(np.sqrt(probs), qubits, nqubits)
+        return self.backend.calculate_probabilities(
+            self.backend.np.sqrt(probs), qubits, nqubits
+        )
 
     def has_samples(self):
         """Check whether the samples are available already.
