@@ -155,3 +155,16 @@ def test_list_available_backends():
         "qibotn": {"cutensornet": False, "qutensornet": True},
     }
     assert available_backends == list_available_backends()
+
+
+def test_gradients_pytorch(backend):
+    if backend.name != "pytorch":
+        pytest.skip("Check gradients activation only for pytorch backend.")
+    assert backend.gradients
+    assert backend.matrices.requires_grad
+    backend.requires_grad(False)
+    assert not backend.gradients
+    assert not backend.matrices.requires_grad
+    backend.requires_grad(True)
+    assert backend.gradients
+    assert backend.matrices.requires_grad

@@ -1605,10 +1605,10 @@ def test_dagger_consistency(backend, gate_1, gate_2, qubit):
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_dagger(backend, nqubits):
     matrix = np.random.random((2**nqubits, 2**nqubits))
+    matrix = backend.cast(matrix)
     gate = gates.Unitary(matrix, *range(nqubits))
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
-    matrix = backend.cast(matrix)
     target_state = backend.np.matmul(matrix, initial_state)
     target_state = backend.np.matmul(backend.np.conj(matrix).T, target_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -1619,6 +1619,7 @@ def test_controlled_unitary_dagger(backend):
 
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
+    matrix = backend.cast(matrix)
     gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
     nqubits = 5
     initial_state = random_statevector(2**nqubits, backend=backend)
