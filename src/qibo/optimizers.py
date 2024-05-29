@@ -243,6 +243,7 @@ def sgd(
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
+
     if not backend.name == "tensorflow":
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
@@ -274,7 +275,8 @@ def sgd(
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
-        callback(vparams)
+        if callback is not None:
+            callback(vparams)
         if e % sgd_options["nmessage"] == 1:
             log.info("ite %d : loss %f", e, l.numpy())
 
