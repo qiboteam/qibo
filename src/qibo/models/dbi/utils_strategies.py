@@ -73,13 +73,12 @@ def select_best_dbr_generator(
     return dbi_eval, idx_max_loss, step_optimal, flip
 
 
-def gradient_Pauli(
+def gradient_pauli_analytical(
     dbi_object,
     d: np.array,
     pauli_operator_dict: dict,
     use_ds=False,
     n=3,
-    **kwargs,
 ):
     r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
     Args:
@@ -96,9 +95,8 @@ def gradient_Pauli(
     pauli_operators = list(pauli_operator_dict.values())
     num_paul = len(pauli_operators)
     grad = np.zeros(num_paul)
-    coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n=n)
-    s = polynomial_step(dbi_object, n=3, d=d)
-
+    coef = dbi_object.cost_expansion(d, n=n)
+    s = polynomial_step(dbi_object, n=4, d=d)
     a, b, c = coef[len(coef) - 3 :]
 
     for i, operator in enumerate(pauli_operators):
@@ -120,76 +118,122 @@ def gradient_Pauli(
     return grad, s
 
 
-def gradient_descent_pauli(
+def gradient_numerical(
     dbi_object: DoubleBracketIteration,
-    d_coef: list,
-    d: Optional[np.array] = None,
-    pauli_operator_dict: dict = None,
-    parameterization_order: int = 1,
-    n: int = 3,
-    onsite_Z_ops: Optional[list] = None,
+    d_params: list,
+    parameterization: ParameterizationTypes,
+    s: float = 1e-2,
+    delta: float = 1e-3,
+    **kwargs,
+):
+    r"""
+    Gradient of the DBI with respect to the parametrization of D. A simple finite difference is used to calculate the gradient.
+
+    Args:
+        dbi_object(DoubleBracketIteration): DoubleBracketIteration object.
+        d_params(np.array): Parameters for the ansatz (note that the dimension must be 2**nqubits for full ansazt and nqubits for Pauli ansatz).
+        delta(float): Step size for numerical gradient.
+    Returns:
+        grad(np.array): Gradient of the D operator.
+    """
+    nqubits = dbi_object.nqubits
+    grad = np.zeros(len(d_params))
+    d = params_to_diagonal_operator(
+        d_params, nqubits, parameterization=parameterization, **kwargs
+    )
+    for i in range(len(d_params)):
+        params_new = d_params.copy()
+        params_new[i] += delta
+        d_new = params_to_diagonal_operator(
+            params_new, nqubits, parameterization=parameterization, **kwargs
+        )
+        # find the increment of a very small step
+        grad[i] = (dbi_object.loss(s, d_new) - dbi_object.loss(s, d)) / delta
+    return grad
+
+
+def gradient_descent(
+    dbi_object: DoubleBracketIteration,
+    iterations: int,
+    d_params: list,
+    parameterization: ParameterizationTypes,
+    pauli_operator_dict: list = None,
+    pauli_parameterization_order: int = 1,
+    normalize: bool = False,
     lr_min: float = 1e-5,
     lr_max: float = 1,
     max_evals: int = 100,
     space: callable = None,
     optimizer: callable = None,
     verbose: bool = False,
-    use_ds: bool = True,
 ):
-    """calculate the elements of one gradient descent step on `dbi_object`.
-
-    Args:
-        dbi_object (DoubleBracketIteration): the target dbi object
-        d_coef (list): the initial decomposition of `d` into Pauli-Z operators
-        d (np.array, optional): the initial diagonal operator. Defaults to None.
-        n_taylor (int, optional): the highest order to expand the loss function derivative. Defaults to 2.
-        onsite_Z_ops (list, optional): list of onsite-Z operators. Defaults to None.
-        lr_min (float, optional): the minimal gradient step. Defaults to 1e-5.
-        lr_max (float, optional): the maximal gradient step. Defaults to 1.
-        max_evals (int, optional): the max number of evaluations for `hyperopt` to find the optimal gradient step `lr`. Defaults to 100.
-        space (callable, optional): the search space for `hyperopt`. Defaults to None.
-        optimizer (callable, optional): optimizer for `hyperopt`. Defaults to None.
-        verbose (bool, optional): option to print out the 'hyperopt' progress. Defaults to False.
-        use_ds (bool, optional): if False, ds is set to 0. Defaults to True.
-
-    Returns:
-        the optimal step found, coeffcients of `d` in Pauli-Z basis, matrix of `d`
-
-    """
-    nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
-    if pauli_operator_dict is None:
+    nqubits = dbi_object.nqubits
+    # use polynomial scheduling for analytical solutions
+    d = params_to_diagonal_operator(
+        d_params,
+        nqubits,
+        parameterization=parameterization,
+        pauli_operator_dict=pauli_operator_dict,
+        normalize=normalize,
+    )
+    loss_hist = [dbi_object.loss(0.0, d=d)]
+    d_params_hist = [d_params]
+    s_hist = [0]
+    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
         pauli_operator_dict = generate_pauli_operator_dict(
-            nqubits, parameterization_order
+            nqubits=nqubits, parameterization_order=pauli_parameterization_order
+        )
+    # first step
+    s = dbi_object.choose_step(d=d)
+    dbi_object(step=s, d=d)
+    for _ in range(iterations):
+        grad = gradient_numerical(
+            dbi_object,
+            d_params,
+            parameterization,
+            pauli_operator_dict=pauli_operator_dict,
+            pauli_parameterization_order=pauli_parameterization_order,
+            normalize=normalize,
         )
 
-    grad, s = gradient_Pauli(
-        dbi_object, d, n=n, pauli_operator_dict=pauli_operator_dict, use_ds=use_ds
-    )
-    # optimize gradient descent step with hyperopt
-    if space is None:
-        space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
-    if optimizer is None:
-        optimizer = hyperopt.tpe
+        # set up hyperopt to find optimal lr
+        def func_loss_to_lr(lr):
+            d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+            d_eval = params_to_diagonal_operator(
+                d_params_eval,
+                nqubits,
+                parameterization=parameterization,
+                pauli_operator_dict=pauli_operator_dict,
+                normalize=normalize,
+            )
+            return dbi_object.loss(step=s, d=d_eval)
 
-    def func_loss_to_lr(lr):
-        d_coef_eval = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
-        d_eval = sum(
-            [
-                d_coef_eval[i] * list(pauli_operator_dict.values())[i]
-                for i in range(nqubits)
-            ]
+        if space is None:
+            space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
+        if optimizer is None:
+            optimizer = hyperopt.tpe
+        best = hyperopt.fmin(
+            fn=func_loss_to_lr,
+            space=space,
+            algo=optimizer.suggest,
+            max_evals=max_evals,
+            verbose=verbose,
         )
-        return dbi_object.loss(step=s, d=d_eval)
+        lr = best["lr"]
 
-    best = hyperopt.fmin(
-        fn=func_loss_to_lr,
-        space=space,
-        algo=optimizer.suggest,
-        max_evals=max_evals,
-        verbose=verbose,
-    )
-    lr = best["lr"]
+        d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+        d = params_to_diagonal_operator(
+            d_params,
+            nqubits,
+            parameterization=parameterization,
+            pauli_operator_dict=pauli_operator_dict,
+            normalize=normalize,
+        )
+        s = dbi_object.choose_step(d=d)
+        dbi_object(step=s, d=d)
 
-    d_coef = [d_coef[j] - grad[j] * lr for j in range(nqubits)]
-    d = sum([d_coef[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)])
-    return s, d_coef, d
+        # record history
+        loss_hist.append(dbi_object.loss(0.0, d=d))
+        d_params_hist.append(d_params)
+        s_hist.append(s)
+    return loss_hist, d_params_hist, s_hist

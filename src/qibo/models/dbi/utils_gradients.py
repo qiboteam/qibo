@@ -218,11 +218,15 @@ def gradient_diagonal_entries(dbi_object, params, delta=1e-4):
     """
 
     grad = np.zeros(len(params))
-    d = element_wise_d(params)
+    d = params_to_diagonal_operator(
+        params, dbi_object.nqubits, parameterization=ParameterizationTypes.element
+    )
     for i in range(len(params)):
         params_new = deepcopy(params)
         params_new[i] += delta
-        d_new = element_wise_d(params_new)
+        d_new = params_to_diagonal_operator(
+            params, dbi_object.nqubits, parameterization=ParameterizationTypes.element
+        )
         grad[i] = (dbi_object.loss(0.0, d_new) - dbi_object.loss(0.0, d)) / delta
     return grad
 
@@ -253,8 +257,12 @@ def gradient_descent_dbr_d_ansatz(
         grad(np.array): Gradient evaluated at each iteration.
         params_hist(np.array): Parameters evaluated at each iteration.
     """
-
-    d = element_wise_d(params, normalization=normalize)
+    d = params_to_diagonal_operator(
+        params,
+        dbi_object.h.nqubits,
+        parameterization=ParameterizationTypes.element,
+        normalize=normalize,
+    )
     loss = np.zeros(nmb_iterations + 1)
     grad = np.zeros((nmb_iterations, len(params)))
     dbi_eval = deepcopy(dbi_object)
@@ -269,7 +277,12 @@ def gradient_descent_dbr_d_ansatz(
         grad[i, :] = gradient_diagonal_entries(dbi_eval, params)
         for j in range(len(params)):
             params[j] = params[j] - lr * grad[i, j]
-        d = element_wise_d(params, normalization=normalize)
+        d = params_to_diagonal_operator(
+            params,
+            dbi_object.h.nqubits,
+            parameterization=ParameterizationTypes.element,
+            normalize=normalize,
+        )
         s = dbi_eval.choose_step(d=d)
         loss[i + 1] = dbi_eval.loss(s, d=d)
         params_hist[:, i + 1] = params

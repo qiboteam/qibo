@@ -202,6 +202,27 @@ def test_select_best_dbr_generator(backend, nqubits):
     assert dbi.off_diagonal_norm < initial_off_diagonal_norm
 
 
+def test_params_to_diagonal_operator(backend):
+    nqubits = 3
+    pauli_operator_dict = generate_pauli_operator_dict(
+        nqubits, parameterization_order=1
+    )
+    params = [1, 2, 3]
+    operator_pauli = [
+        params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)
+    ]
+    assert (
+        operator_pauli
+        == params_to_diagonal_operator(
+            params, nqubits=nqubits, parameterization=ParameterizationTypes.pauli
+        )
+    ).all()
+    operator_element = params_to_diagonal_operator(
+        params, nqubits=nqubits, parameterization=ParameterizationTypes.element
+    )
+    assert (operator_element.diag() == params).all()
+
+
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_gradient_descent_pauli(backend, nqubits):
     scheduling = DoubleBracketScheduling.grid_search

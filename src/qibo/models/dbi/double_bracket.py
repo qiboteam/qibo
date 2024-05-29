@@ -117,7 +117,7 @@ class DoubleBracketIteration:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
-                self.commutator(self.backend.cast(d), self.h.matrix),
+                self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
@@ -162,6 +162,11 @@ class DoubleBracketIteration:
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    @property
+    def nqubits(self):
+        """Number of qubits."""
+        return self.h.nqubits
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
