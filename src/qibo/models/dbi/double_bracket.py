@@ -165,8 +165,11 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
-
-        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(self.h.matrix @ d))
+        d = self.backend.to_numpy(d)
+        return np.real(
+            0.5 * np.linalg.norm(d) ** 2
+            - np.trace(self.backend.to_numpy(self.h.matrix) @ d)
+        )
 
     def choose_step(
         self,
@@ -247,6 +250,8 @@ class DoubleBracketIteration:
         return gamma_list
 
     def cost_expansion(self, d, n):
+        d = self.backend.cast(d)
+
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
         elif self.cost is DoubleBracketCostFunction.least_squares:

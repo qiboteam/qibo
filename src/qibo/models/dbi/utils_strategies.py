@@ -98,7 +98,7 @@ def gradient_pauli(
     # pauli_index is the list of positions \mu
     pauli_operators = list(pauli_operator_dict.values())
     num_paul = len(pauli_operators)
-    grad = np.zeros(num_paul)
+    grad = []
     coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n=n)
     s = polynomial_step(dbi_object, n=5, d=d)
 
@@ -109,7 +109,7 @@ def gradient_pauli(
         )
         if use_ds is True:
             ds = 0
-        grad[i] = (
+        grad.append(
             s**3 / 3 * da
             + s**2 / 2 * db
             + 2 * s * dc
@@ -117,7 +117,7 @@ def gradient_pauli(
             + s * ds * b
             + 2 * ds * c
         )
-    grad = np.array(grad)
+    grad = backend.to_numpy(grad)
     grad = grad / np.linalg.norm(grad)
     return grad, s
 

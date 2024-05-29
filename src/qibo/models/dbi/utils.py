@@ -101,7 +101,7 @@ def cs_angle_sgn(dbi_object, d):
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    return np.sign(norm)
+    return np.real(np.sign(norm))
 
 
 def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list):

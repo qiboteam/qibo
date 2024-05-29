@@ -134,10 +134,11 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     )
     gamma_list = dbi_object.generate_gamma_list(n + 2, d)
     sigma_gamma_list = list(map(dbi_object.sigma, gamma_list))
+    gamma_list_np = list(map(dbi_object.backend.to_numpy, sigma_gamma_list))
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients for rotation with [W,H] and H
-    c1 = exp_list.reshape((-1, 1, 1)) * sigma_gamma_list[1:]
-    c2 = exp_list.reshape((-1, 1, 1)) * sigma_gamma_list[:-1]
+    c1 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[:-1]
     # product coefficient
     trace_coefficients = [0] * (2 * n + 1)
     for k in range(n + 1):
