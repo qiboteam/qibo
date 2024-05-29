@@ -101,7 +101,7 @@ def test_hyperopt_step(backend, nqubits):
     delta = 0.02
 
     step = dbi.hyperopt_step(
-        step_min=initial_step - delta, step_max=initial_step + delta, max_evals=10
+        step_min=initial_step - delta, step_max=initial_step + delta, n_trials=10
     )
 
     assert step != initial_step
@@ -116,7 +116,7 @@ def test_hyperopt_step(backend, nqubits):
     step = dbi.hyperopt_step(
         step_min=initial_step - delta,
         step_max=initial_step + delta,
-        max_evals=10,
+        n_trials=10,
         look_ahead=look_ahead,
     )
 
