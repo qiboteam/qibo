@@ -165,9 +165,8 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
-        h_np = self.backend.to_numpy(self.h.matrix)
 
-        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
+        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(self.h.matrix @ d))
 
     def choose_step(
         self,
@@ -239,13 +238,13 @@ class DoubleBracketIteration:
             np.diag(np.diag(self.backend.to_numpy(h)))
         )
 
-    def generate_Gamma_list(self, n: int, d: np.array):
+    def generate_gamma_list(self, n: int, d: np.array):
         r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
         W = self.commutator(self.backend.cast(d), self.sigma(self.h.matrix))
-        Gamma_list = [self.h.matrix]
+        gamma_list = [self.h.matrix]
         for _ in range(n - 1):
-            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
-        return Gamma_list
+            gamma_list.append(self.commutator(W, gamma_list[-1]))
+        return gamma_list
 
     def cost_expansion(self, d, n):
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:

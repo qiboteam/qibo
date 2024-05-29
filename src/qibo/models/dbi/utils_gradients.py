@@ -9,7 +9,7 @@ from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.utils import *
 
 
-def dGamma_di_pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
+def d_gamma_di_pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
     """Computes the derivatives $\frac{\\partial \\Gamma_n}{\\partial \alpha_i}$ where the diagonal operator $D=\\sum \alpha_i Z_i$.
 
     Args:
@@ -19,23 +19,24 @@ def dGamma_di_pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
         d (np.array): the diagonal operator
 
     Returns:
-        (list): [dGamma_0_di, dGamma_1_di, ..., dGamma_n_di]
+        (list): [d_gamma_0_di, d_gamma_1_di, ..., d_gamma_n_di]
     """
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
-    dGamma_di = [np.zeros((2**nqubits, 2**nqubits))] * (n + 1)
-    Gamma_list = dbi_object.generate_Gamma_list(n=n + 2, d=d)
+    d_gamma_di = [np.zeros((2**nqubits, 2**nqubits))] * (n + 1)
+    gamma_list = dbi_object.generate_gamma_list(n=n + 2, d=d)
     W = dbi_object.commutator(dbi_object.backend.cast(d), dbi_object.h.matrix)
+
     dW_di = dbi_object.commutator(dbi_object.backend.cast(Z_i), dbi_object.h.matrix)
     for k in range(n + 1):
         if k == 0:
             continue
         elif k == 1:
-            dGamma_di[k] = dW_di
+            d_gamma_di[k] = dW_di
         else:
-            dGamma_di[k] = dbi_object.commutator(
-                dW_di, Gamma_list[k - 1]
-            ) + dbi_object.commutator(W, dGamma_di[k - 1])
-    return dGamma_di
+            d_gamma_di[k] = dbi_object.commutator(
+                dW_di, gamma_list[k - 1]
+            ) + dbi_object.commutator(W, d_gamma_di[k - 1])
+    return d_gamma_di
 
 
 def ds_di_pauli(
@@ -55,15 +56,15 @@ def ds_di_pauli(
             floats da, db, dc, ds
     """
     # generate the list of derivatives w.r.t ith Z operator coefficient
-    dGamma_di = dGamma_di_pauli(dbi_object, n=4, Z_i=Z_i, d=d)
-    Gamma_list = dbi_object.generate_Gamma_list(n=4, d=d)
+    d_gamma_di = d_gamma_di_pauli(dbi_object, n=4, Z_i=Z_i, d=d)
+    gamma_list = dbi_object.generate_gamma_list(n=4, d=d)
 
     def derivative_product(k1, k2):
         r"""Calculate the derivative of a product $\sigma(\Gamma(n1,i))@\sigma(\Gamma(n2,i))"""
-        return dbi_object.sigma(dGamma_di[k1]) @ dbi_object.sigma(
-            Gamma_list[k2]
-        ) + dbi_object.sigma(dbi_object.sigma(Gamma_list[k1])) @ dbi_object.sigma(
-            dGamma_di[k2]
+        return dbi_object.sigma(d_gamma_di[k1]) @ dbi_object.sigma(
+            gamma_list[k2]
+        ) + dbi_object.sigma(dbi_object.sigma(gamma_list[k1])) @ dbi_object.sigma(
+            d_gamma_di[k2]
         )
 
     # calculate the derivatives of s polynomial coefficients
@@ -83,7 +84,7 @@ def ds_di_pauli(
     return da, db, dc, ds
 
 
-def dGamma_diDiagonal(d, h, n, i, dGamma, gamma_list):
+def d_gamma_d_diagonal(d, h, n, i, d_gamma, gamma_list):
     r"""
     Gradient of the nth gamma operator with respect to the ith diagonal elements of D.
     $Gamma_{n} = [W,[W,...,[W,H]]...]]$,
@@ -94,7 +95,7 @@ def dGamma_diDiagonal(d, h, n, i, dGamma, gamma_list):
         h(np.array): Hamiltonian.
         n(int): nth Gamma operator.
         i(int): Index of the diagonal element of D.
-        dGamma(list): List of the n-1 derivatives of the gamma operators (better to keep them in memory than to calculate at each iteration).
+        d_gamma(list): List of the n-1 derivatives of the gamma operators (better to keep them in memory than to calculate at each iteration).
         gamma_list(list): List of the n gamma operators.
     Returns:
         (float): Derivative of the nth gamma operator with respect to the ith diagonal elements of D.
@@ -103,24 +104,24 @@ def dGamma_diDiagonal(d, h, n, i, dGamma, gamma_list):
     dD_di[i, i] = 1
     dW_di = commutator(commutator(dD_di, h), gamma_list[n - 1])
     w = commutator(d, h)
-    return dW_di + commutator(w, dGamma[-1])
+    return dW_di + commutator(w, d_gamma[-1])
 
 
-def dpolynomial_diDiagonal(dbi_object, s, d, H, i):
+def d_polynomial_d_diagonal(dbi_object, s, d, H, i):
     # Derivative of polynomial approximation of potential function with respect to diagonal elements of d (full-diagonal ansatz)
     # Formula can be expanded easily to any order, with n=3 corresponding to cubic approximation
     derivative = 0
     A = np.zeros(d.shape)
-    Gamma_list = dbi_object.generate_Gamma_list(4, d)
+    gamma_list = dbi_object.generate_gamma_list(4, d)
     A[i, i] = 1
-    dGamma = [commutator(A, H)]
+    d_gamma = [commutator(A, H)]
     derivative += np.real(
-        np.trace(Gamma_list[0] @ A) + np.trace(dGamma[0] @ d + Gamma_list[1] @ A) * s
+        np.trace(gamma_list[0] @ A) + np.trace(d_gamma[0] @ d + gamma_list[1] @ A) * s
     )
     for n in range(2, 4):
-        dGamma.append(dGamma_diDiagonal(d, H, n, i, dGamma, Gamma_list))
+        d_gamma.append(d_gamma_d_diagonal(d, H, n, i, d_gamma, gamma_list))
         derivative += np.real(
-            np.trace(dGamma[-1] @ d + Gamma_list[n] @ A) * s**n / math.factorial(n)
+            np.trace(d_gamma[-1] @ d + gamma_list[n] @ A) * s**n / math.factorial(n)
         )
 
     return derivative
@@ -131,12 +132,12 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     W = dbi_object.commutator(
         dbi_object.backend.cast(d), dbi_object.sigma(dbi_object.h.matrix)
     )
-    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
-    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
+    gamma_list = dbi_object.generate_gamma_list(n + 2, d)
+    sigma_gamma_list = list(map(dbi_object.sigma, gamma_list))
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients for rotation with [W,H] and H
-    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
-    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
+    c1 = exp_list.reshape((-1, 1, 1)) * sigma_gamma_list[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * sigma_gamma_list[:-1]
     # product coefficient
     trace_coefficients = [0] * (2 * n + 1)
     for k in range(n + 1):
@@ -151,13 +152,13 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
 
 def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients
     coef = np.empty(n)
     for i in range(n):
         coef[i] = np.real(
-            exp_list[i] * np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
+            exp_list[i] * np.trace(dbi_object.backend.cast(d) @ gamma_list[i + 1])
         )
     coef = list(reversed(coef))
     return coef
@@ -169,7 +170,7 @@ def energy_fluctuation_polynomial_expansion_coef(
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     # coefficients
     coef = np.empty(3)
     state_cast = dbi_object.backend.cast(state)
@@ -193,11 +194,11 @@ def energy_fluctuation_polynomial_expansion_coef(
             - 2 * state_dag @ a @ state_cast * state_dag @ b @ state_cast
         )
 
-    coef[0] = np.real(2 * covariance(Gamma_list[0], Gamma_list[1]))
-    coef[1] = np.real(2 * variance(Gamma_list[1]))
+    coef[0] = np.real(2 * covariance(gamma_list[0], gamma_list[1]))
+    coef[1] = np.real(2 * variance(gamma_list[1]))
     coef[2] = np.real(
-        covariance(Gamma_list[0], Gamma_list[3])
-        + 3 * covariance(Gamma_list[1], Gamma_list[2])
+        covariance(gamma_list[0], gamma_list[3])
+        + 3 * covariance(gamma_list[1], gamma_list[2])
     )
     coef = list(reversed(coef))
     return coef

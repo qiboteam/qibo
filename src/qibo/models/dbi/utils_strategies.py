@@ -1,5 +1,6 @@
 import hyperopt
 
+from qibo.backends import _check_backend
 from qibo.models.dbi.double_bracket import *
 from qibo.models.dbi.utils import *
 from qibo.models.dbi.utils_gradients import *
@@ -73,12 +74,13 @@ def select_best_dbr_generator(
     return dbi_eval, idx_max_loss, step_optimal, flip
 
 
-def gradient_Pauli(
+def gradient_pauli(
     dbi_object,
     d: np.array,
     pauli_operator_dict: dict,
     use_ds=False,
     n=3,
+    backend=None,
     **kwargs,
 ):
     r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
@@ -90,6 +92,7 @@ def gradient_Pauli(
         taylor_coef (list): coefficients of `s` in the taylor expansion of math:`\\frac{\\partial ||\sigma(e^{sW}He^{-sW})||^2}{\\partial s}`
         use_ds (boolean): if False, ds is set to 0
     """
+    backend = _check_backend(backend)
     # n is the highest order for calculating s
 
     # pauli_index is the list of positions \mu
@@ -100,10 +103,9 @@ def gradient_Pauli(
     s = polynomial_step(dbi_object, n=5, d=d)
 
     a, b, c = coef[len(coef) - 3 :]
-
     for i, operator in enumerate(pauli_operators):
         da, db, dc, ds = ds_di_pauli(
-            dbi_object, d=d, Z_i=operator, taylor_coef=[a, b, c]
+            dbi_object, d=d, Z_i=backend.cast(operator), taylor_coef=[a, b, c]
         )
         if use_ds is True:
             ds = 0
@@ -134,6 +136,7 @@ def gradient_descent_pauli(
     optimizer: callable = None,
     verbose: bool = False,
     use_ds: bool = True,
+    backend=None,
 ):
     """calculate the elements of one gradient descent step on `dbi_object`.
 
@@ -155,14 +158,22 @@ def gradient_descent_pauli(
         the optimal step found, coeffcients of `d` in Pauli-Z basis, matrix of `d`
 
     """
+    backend = _check_backend(backend)
     nqubits = int(np.log2(dbi_object.h.matrix.shape[0]))
     if pauli_operator_dict is None:
         pauli_operator_dict = generate_pauli_operator_dict(
-            nqubits, parameterization_order
+            nqubits,
+            parameterization_order,
+            backend=backend,
         )
 
-    grad, s = gradient_Pauli(
-        dbi_object, d, n=n, pauli_operator_dict=pauli_operator_dict, use_ds=use_ds
+    grad, s = gradient_pauli(
+        dbi_object,
+        d,
+        n=n,
+        pauli_operator_dict=pauli_operator_dict,
+        use_ds=use_ds,
+        backend=backend,
     )
     # optimize gradient descent step with hyperopt
     if space is None:

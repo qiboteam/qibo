@@ -92,6 +92,7 @@ def str_to_symbolic(name: str):
 
 def cs_angle_sgn(dbi_object, d):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
+    d = dbi_object.backend.cast(d)
     norm = np.trace(
         np.dot(
             np.conjugate(
@@ -103,7 +104,7 @@ def cs_angle_sgn(dbi_object, d):
     return np.sign(norm)
 
 
-def decompose_into_Pauli_basis(h_matrix: np.array, pauli_operators: list):
+def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list):
     """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
 
@@ -130,15 +131,20 @@ def generate_pauli_index(nqubits, order):
 
 
 def generate_pauli_operator_dict(
-    nqubits: int, parameterization_order: int = 1, symbols_pauli=symbols.Z
+    nqubits: int,
+    parameterization_order: int = 1,
+    symbols_pauli=symbols.Z,
+    backend=None,
 ):
     """
     Generate a dictionary containing all possible products of a given Pauli operators (X,Y or Z) of a given order (e.g. 1 corresponds to a magnetic field)
     for L = n_qubits and their respective names.
     """
+    backend = _check_backend(backend)
     pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
     pauli_operators = [
-        generate_Pauli_operators(nqubits, symbols_pauli, index) for index in pauli_index
+        generate_pauli_operators(nqubits, symbols_pauli, index, backend=backend)
+        for index in pauli_index
     ]
     return {index: operator for index, operator in zip(pauli_index, pauli_operators)}
 
@@ -154,15 +160,19 @@ def diagonal_min_max(matrix: np.array):
     return D
 
 
-def generate_Pauli_operators(nqubits, symbols_pauli, positions):
+def generate_pauli_operators(nqubits, symbols_pauli, positions, backend=None):
     # generate matrix of an nqubit-pauli operator with `symbols_pauli` at `positions`
     if isinstance(positions, int):
         return SymbolicHamiltonian(
-            symbols_pauli(positions), nqubits=nqubits
+            symbols_pauli(positions),
+            nqubits=nqubits,
+            backend=backend,
         ).dense.matrix
     else:
         terms = [symbols_pauli(pos) for pos in positions]
-        return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix
+        return SymbolicHamiltonian(
+            math.prod(terms), nqubits=nqubits, backend=backend
+        ).dense.matrix
 
 
 def element_wise_d(params: np.array, normalization: bool = False):
