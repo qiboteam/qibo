@@ -1104,17 +1104,17 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
 
 @cache
 def _create_S(q):
-    return gates.S(q)
+    return gates.S(int(q))
 
 
 @cache
 def _create_CZ(cq, tq):
-    return gates.CZ(cq, tq)
+    return gates.CZ(int(cq), int(tq))
 
 
 @cache
 def _create_CNOT(cq, tq):
-    return gates.CNOT(cq, tq)
+    return gates.CNOT(int(cq), int(tq))
 
 
 def _operator_from_hadamard_free_group(
