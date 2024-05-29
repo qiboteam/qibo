@@ -45,7 +45,7 @@ def test_select_best_dbr_generator(backend, nqubits, step):
 
     for _ in range(NSTEPS):
         dbi, idx, step_optimize, flip = select_best_dbr_generator(
-            dbi, Z_ops, step=step, compare_canonical=True, max_evals=5
+            dbi, Z_ops, step=step, compare_canonical=True, n_trials=5
         )
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
