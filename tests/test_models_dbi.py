@@ -125,14 +125,13 @@ def test_polynomial_cost_function(backend, cost):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-def test_polynomial_energy_fluctuation():
-    set_backend("numpy")
+def test_polynomial_energy_fluctuation(backend):
     nqubits = 4
-    h0 = random_hermitian(2**nqubits, seed=seed)
+    h0 = random_hermitian(2**nqubits, seed=seed, backend=backend)
     state = np.zeros(2**nqubits)
-    state[3] = 1
+    state[0] = 1
     dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0),
+        Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
         cost=DoubleBracketCostFunction.energy_fluctuation,
         scheduling=DoubleBracketScheduling.polynomial_approximation,
@@ -141,7 +140,7 @@ def test_polynomial_energy_fluctuation():
     for i in range(NSTEPS):
         s = dbi.choose_step(d=dbi.diagonal_h_matrix, n=5)
         dbi(step=s, d=dbi.off_diag_h)
-    assert dbi.energy_fluctuation(state=state) == 0.0
+    assert dbi.energy_fluctuation(state=state) < dbi.h0.energy_fluctuation(state=state)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])

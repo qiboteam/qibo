@@ -129,7 +129,7 @@ class DoubleBracketIteration:
                 @ self.backend.calculate_matrix_exp(step, d)
             )
         operator_dagger = self.backend.cast(
-            np.matrix(self.backend.to_numpy(operator)).getH()
+            np.array(np.matrix(self.backend.to_numpy(operator)).getH())
         )
 
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
@@ -165,7 +165,7 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
-        h_np = self.h.matrix
+        h_np = self.backend.to_numpy(self.h.matrix)
 
         return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
 
@@ -232,13 +232,7 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
-        h2 = h_np @ h_np
-        state_cast = self.backend.cast(state)
-        state_conj = self.backend.cast(state.conj())
-        a = state_conj @ h2 @ state_cast
-        b = state_conj @ h_np @ state_cast
-        return (np.sqrt(np.real(a - b**2))).item()
+        return self.h.energy_fluctuation(state)
 
     def sigma(self, h: np.array):
         return self.backend.cast(h) - self.backend.cast(
