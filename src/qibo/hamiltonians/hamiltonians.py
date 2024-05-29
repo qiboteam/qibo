@@ -180,7 +180,7 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        average_h2 = h2.expectation(state, normalize=True)
         return np.sqrt(np.abs(average_h2 - energy**2))
 
     def __add__(self, o):
