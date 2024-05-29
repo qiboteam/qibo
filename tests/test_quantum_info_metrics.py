@@ -39,7 +39,7 @@ def test_purity_and_impurity(backend):
     backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
 
-    state = np.outer(np.conj(state), state)
+    state = backend.np.outer(backend.np.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
@@ -90,10 +90,8 @@ def test_trace_distance(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
         trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
         0.0,
@@ -136,19 +134,23 @@ def test_hilbert_schmidt_distance(backend):
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 0.0
+    )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 0.0
+    )
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 2.0
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [True, False])
@@ -201,10 +203,8 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
         fidelity(state, target, check_hermitian, backend=backend),
         1.0,

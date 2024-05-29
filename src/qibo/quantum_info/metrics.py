@@ -137,7 +137,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             else np.linalg.eigvals(backend.to_numpy(difference))
         )
     else:
-        eigenvalues = np.linalg.eigvalsh(difference)
+        eigenvalues = np.linalg.eigvalsh(backend.to_numpy(difference))
 
     distance = np.sum(np.absolute(eigenvalues)) / 2
 
@@ -288,8 +288,6 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
         else backend.np.real(backend.np.trace(backend.np.matmul(state, target)))
     )
 
-    fid = float(fid)
-
     return fid
 
 
@@ -413,7 +411,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}",
             )
 
-    dim = int(backend.np.sqrt(channel.shape[0]))
+    dim = int(np.sqrt(channel.shape[0]))
 
     if check_unitary is True:
         norm_channel = float(
@@ -449,7 +447,6 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         backend.np.transpose(backend.np.conj(channel), (1, 0)), target
     )
     process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
-    process_fid = float(process_fid)
 
     return process_fid
 

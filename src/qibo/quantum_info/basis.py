@@ -100,6 +100,8 @@ def pauli_basis(
     else:
         basis_full = basis_single
 
+    basis_full = backend.cast(basis_full)
+
     if vectorize and sparse:
         basis, indexes = [], []
         for row in basis_full:

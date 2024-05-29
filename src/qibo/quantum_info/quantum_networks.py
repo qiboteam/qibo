@@ -119,10 +119,11 @@ class QuantumNetwork:
         self._pure = False
 
         reshaped = self._backend.cast(
-            np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
+            self._backend.np.reshape(self._matrix, (self.dims, self.dims)),
+            dtype=self._matrix.dtype,
         )
         reshaped = self._backend.cast(
-            np.transpose(np.conj(reshaped)) - reshaped, dtype=reshaped.dtype
+            self._backend.np.conj(reshaped).T - reshaped, dtype=reshaped.dtype
         )
         norm = self._backend.calculate_norm_density_matrix(reshaped, order=order)
 
@@ -240,7 +241,9 @@ class QuantumNetwork:
         self._matrix = self._full()
         self._pure = False
 
-        reshaped = np.reshape(self._matrix, (self.dims, self.dims))
+        reshaped = self._backend.to_numpy(
+            self._backend.np.reshape(self._matrix, (self.dims, self.dims))
+        )
 
         if self.is_hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
@@ -640,10 +643,10 @@ class QuantumNetwork:
 
         try:
             if self._pure:
-                self._matrix = np.reshape(self._matrix, self.partition)
+                self._matrix = self._backend.np.reshape(self._matrix, self.partition)
             else:
                 matrix_partition = self.partition * 2
-                self._matrix = np.reshape(self._matrix, matrix_partition)
+                self._matrix = self._backend.np.reshape(self._matrix, matrix_partition)
         except:
             raise_error(
                 ValueError,

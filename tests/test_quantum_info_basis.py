@@ -53,7 +53,8 @@ def test_pauli_basis(
 
     if vectorize:
         basis_test = [
-            vectorization(matrix, order=order, backend=backend) for matrix in basis_test
+            vectorization(backend.cast(matrix), order=order, backend=backend)
+            for matrix in basis_test
         ]
 
     basis_test = backend.cast(basis_test)
