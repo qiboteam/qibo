@@ -97,7 +97,7 @@ def gradient_Pauli(
     num_paul = len(pauli_operators)
     grad = np.zeros(num_paul)
     coef = off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n=n)
-    s = polynomial_step(dbi_object, n=3, d=d)
+    s = polynomial_step(dbi_object, n=5, d=d)
 
     a, b, c = coef[len(coef) - 3 :]
 
@@ -127,7 +127,6 @@ def gradient_descent_pauli(
     pauli_operator_dict: dict = None,
     parameterization_order: int = 1,
     n: int = 3,
-    onsite_Z_ops: Optional[list] = None,
     lr_min: float = 1e-5,
     lr_max: float = 1,
     max_evals: int = 100,
