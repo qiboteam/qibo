@@ -171,8 +171,8 @@ class ParameterizationTypes(Enum):
 
     pauli = auto()
     """Uses Pauli-Z operators (magnetic field)."""
-    element = auto()
-    """Uses diagonal entries."""
+    computational = auto()
+    """Uses computational basis."""
 
 
 def params_to_diagonal_operator(
@@ -193,12 +193,12 @@ def params_to_diagonal_operator(
         d = sum(
             [params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)]
         )
-    elif parameterization is ParameterizationTypes.element:
+    elif parameterization is ParameterizationTypes.computational:
         d = np.zeros((len(params), len(params)))
         for i in range(len(params)):
             d[i, i] = params[i]
-        if normalize:
-            d = d / np.linalg.norm(d)
     else:
         raise ValueError(f"Parameterization type not recognized.")
+    if normalize:
+        d = d / np.linalg.norm(d)
     return d

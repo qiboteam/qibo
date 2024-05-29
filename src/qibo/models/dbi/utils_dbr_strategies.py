@@ -2,8 +2,6 @@ import hyperopt
 
 from qibo.models.dbi.double_bracket import *
 from qibo.models.dbi.utils import *
-from qibo.models.dbi.utils_gradients import *
-from qibo.models.dbi.utils_scheduling import polynomial_step
 
 
 def select_best_dbr_generator(
@@ -71,51 +69,6 @@ def select_best_dbr_generator(
         d_optimal = flip * d_list[idx_max_loss]
         dbi_eval(step=step_optimal, d=d_optimal)
     return dbi_eval, idx_max_loss, step_optimal, flip
-
-
-def gradient_pauli_analytical(
-    dbi_object,
-    d: np.array,
-    pauli_operator_dict: dict,
-    use_ds=False,
-    n=3,
-):
-    r"""Calculate the gradient of loss function with respect to onsite Pauli-Z coefficients
-    Args:
-        dbi_object (DoubleBracketIteration): the target dbi object
-        d (np.array): the diagonal operator
-        n_taylor (int): the highest order of the taylore expansion of  w.r.t `s`
-        onsite_Z_ops (list): list of Pauli-Z operators
-        taylor_coef (list): coefficients of `s` in the taylor expansion of math:`\\frac{\\partial ||\sigma(e^{sW}He^{-sW})||^2}{\\partial s}`
-        use_ds (boolean): if False, ds is set to 0
-    """
-    # n is the highest order for calculating s
-
-    # pauli_index is the list of positions \mu
-    pauli_operators = list(pauli_operator_dict.values())
-    num_paul = len(pauli_operators)
-    grad = np.zeros(num_paul)
-    coef = dbi_object.cost_expansion(d, n=n)
-    s = polynomial_step(dbi_object, n=4, d=d)
-    a, b, c = coef[len(coef) - 3 :]
-
-    for i, operator in enumerate(pauli_operators):
-        da, db, dc, ds = ds_di_pauli(
-            dbi_object, d=d, Z_i=operator, taylor_coef=[a, b, c]
-        )
-        if use_ds is True:
-            ds = 0
-        grad[i] = (
-            s**3 / 3 * da
-            + s**2 / 2 * db
-            + 2 * s * dc
-            + s**2 * ds * a
-            + s * ds * b
-            + 2 * ds * c
-        )
-    grad = np.array(grad)
-    grad = grad / np.linalg.norm(grad)
-    return grad, s
 
 
 def gradient_numerical(

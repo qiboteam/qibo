@@ -5,11 +5,7 @@ from typing import Optional
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
-from qibo.models.dbi.utils_gradients import (
-    energy_fluctuation_polynomial_expansion_coef,
-    least_squares_polynomial_expansion_coef,
-    off_diagonal_norm_polynomial_expansion_coef,
-)
+from qibo.models.dbi.utils_gradients import *
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
@@ -117,7 +113,7 @@ class DoubleBracketIteration:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
-                self.commutator(d, self.h.matrix),
+                self.commutator(self.backend.cast(d), self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
