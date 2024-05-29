@@ -1,9 +1,8 @@
 from copy import deepcopy
 from enum import Enum, auto
-from functools import partial
 
-import hyperopt
 import numpy as np
+import optuna
 
 from qibo.hamiltonians import Hamiltonian
 
@@ -139,43 +138,42 @@ class DoubleBracketIteration:
         self,
         step_min: float = 1e-5,
         step_max: float = 1,
-        max_evals: int = 1000,
-        space: callable = None,
-        optimizer: callable = None,
+        n_trials: int = 1000,
         look_ahead: int = 1,
         verbose: bool = False,
         d: np.array = None,
+        sampler: optuna.samplers.BaseSampler = None,
     ):
         """
-        Optimize iteration step.
+        Optimize iteration step using Optuna.
 
         Args:
             step_min: lower bound of the search grid;
             step_max: upper bound of the search grid;
-            max_evals: maximum number of iterations done by the hyperoptimizer;
-            space: see hyperopt.hp possibilities;
-            optimizer: see hyperopt algorithms;
+            n_trials: maximum number of trials done by the optimizer;
             look_ahead: number of iteration steps to compute the loss function;
             verbose: level of verbosity;
-            d: diagonal operator for generating double-bracket iterations.
+            d: diagonal operator for generating double-bracket iterations;
+            sampler: Optuna sampler for the search algorithm (e.g.,
+                optuna.samplers.TPESampler()).
+                See: https://optuna.readthedocs.io/en/stable/reference/samplers/index.html
 
         Returns:
             (float): optimized best iteration step.
         """
-        if space is None:
-            space = hyperopt.hp.uniform
-        if optimizer is None:
-            optimizer = hyperopt.tpe
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        space = space("step", step_min, step_max)
-        best = hyperopt.fmin(
-            fn=partial(self.loss, d=d, look_ahead=look_ahead),
-            space=space,
-            algo=optimizer.suggest,
-            max_evals=max_evals,
-            verbose=verbose,
-        )
-        return best["step"]
+        def objective(trial):
+            step = trial.suggest_float("step", step_min, step_max)
+            return self.loss(step, d=d, look_ahead=look_ahead)
+
+        if sampler is None:
+            sampler = optuna.samplers.TPESampler()
+
+        study = optuna.create_study(direction="minimize", sampler=sampler)
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=verbose)
+
+        return study.best_params["step"]
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
