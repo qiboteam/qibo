@@ -128,8 +128,16 @@ def test_vqe(backend, method, options, compile, filename):
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
     v = models.VQE(circuit, hamiltonian)
+
+    def callback(parameters):
+        pass
+
     best, params, _ = v.minimize(
-        initial_parameters, method=method, options=options, compile=compile
+        initial_parameters,
+        method=method,
+        options=options,
+        compile=compile,
+        callback=callback,
     )
     if method == "cma":
         # remove `outcmaes` folder
