@@ -298,7 +298,9 @@ class QuantumNetwork:
         matrix = self._backend.cast(self._matrix, copy=True)
 
         if self.is_pure():
-            return self._einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
+            return self._einsum(
+                "kj,ml,jl -> km", matrix, self._backend.np.conj(matrix), state
+            )
 
         return self._einsum("jklm,km -> jl", matrix, state)
 
@@ -358,6 +360,7 @@ class QuantumNetwork:
             return QuantumNetwork(
                 self._einsum(cexpr, first_matrix, second_matrix),
                 [self.partition[0] + self.partition[-1]],
+                backend=self._backend,
             )
 
         cexpr = "jkab,klbc->jlac"
@@ -366,17 +369,19 @@ class QuantumNetwork:
             return QuantumNetwork(
                 self._einsum(cexpr, second_matrix, first_matrix),
                 [second_network.partition[0], self.partition[1]],
+                backend=self._backend,
             )
 
         return QuantumNetwork(
             self._einsum(cexpr, first_matrix, second_matrix),
             [self.partition[0], second_network.partition[1]],
+            backend=self._backend,
         )
 
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
         return self.__class__(
-            np.copy(self._matrix),
+            self._backend.np.copy(self._matrix),
             partition=self.partition,
             system_output=self.system_output,
             pure=self._pure,
@@ -669,7 +674,9 @@ class QuantumNetwork:
         matrix = self._backend.cast(self._matrix, copy=True)
 
         if self.is_pure():
-            matrix = self._einsum("jk,lm -> kjml", matrix, np.conj(matrix))
+            matrix = self._einsum(
+                "jk,lm -> kjml", matrix, self._backend.np.conj(matrix)
+            )
 
         return matrix
 
