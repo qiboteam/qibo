@@ -3,7 +3,6 @@ from itertools import product
 from typing import Optional
 
 import numpy as np
-from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.backends import _check_backend
@@ -77,7 +76,7 @@ def select_best_dbr_generator(
     step: Optional[float] = None,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 200,
+    n_trials: int = 200,
     compare_canonical: bool = True,
 ):
     """Selects the best double bracket rotation generator from a list and execute the rotation.
@@ -86,10 +85,10 @@ def select_best_dbr_generator(
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
         d_list (list): list of diagonal operators (np.array) to run from.
         step (float): fixed iteration duration.
-            Defaults to ``None``, uses hyperopt.
+            Defaults to ``None``, uses hyperoptimazion.
         step_min (float): minimally allowed iteration duration.
         step_max (float): maximally allowed iteration duration.
-        max_evals (int): maximally allowed number of evaluation in hyperopt.
+        n_trials (int): number of trials performed by the Optuna optimizer.
         compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
 
     Returns:
@@ -109,9 +108,7 @@ def select_best_dbr_generator(
                     d=flip_list[i] * d,
                     step_min=step_min,
                     step_max=step_max,
-                    space=hp.uniform,
-                    optimizer=tpe,
-                    max_evals=max_evals,
+                    n_trials=n_trials,
                 )
             else:
                 step_best = step
@@ -127,13 +124,11 @@ def select_best_dbr_generator(
             step_best = dbi_eval.hyperopt_step(
                 step_min=step_min,
                 step_max=step_max,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=max_evals,
+                n_trials=n_trials,
             )
         else:
             step_best = step
-        dbi_object(step=step)
+        dbi_object(step=step_best)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
     # find best d
