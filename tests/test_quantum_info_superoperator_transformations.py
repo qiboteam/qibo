@@ -47,7 +47,8 @@ from qibo.quantum_info.superoperator_transformations import (
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
-def test_vectorization(backend, nqubits, order):
+@pytest.mark.parametrize("statevector", [True, False])
+def test_vectorization(backend, nqubits, order, statevector):
     with pytest.raises(TypeError):
         x = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]])
         x = backend.cast(x)
@@ -64,10 +65,16 @@ def test_vectorization(backend, nqubits, order):
     dim = 2**nqubits
 
     if nqubits == 1:
-        if order == "system" or order == "column":
-            matrix_test = [0, 2, 1, 3]
+        if statevector:
+            if order == "system":
+                matrix_test = [0, 0, 0, 1, 0, 0, 2, 3, 0, 2, 0, 3, 4, 6, 6, 9]
+            else:
+                matrix_test = [0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 3, 6, 9]
         else:
-            matrix_test = [0, 1, 2, 3]
+            if order == "system" or order == "column":
+                matrix_test = [0, 2, 1, 3]
+            else:
+                matrix_test = [0, 1, 2, 3]
     elif nqubits == 2:
         if order == "row":
             matrix_test = np.arange(dim**2)
@@ -154,9 +161,11 @@ def test_vectorization(backend, nqubits, order):
     matrix_test = backend.cast(matrix_test)
 
     dim = 2**nqubits
-    matrix = np.arange(dim**2).reshape((dim, dim))
+    if statevector and nqubits == 1:
+        matrix = np.arange(dim**2)
+    else:
+        matrix = np.arange(dim**2).reshape((dim, dim))
     matrix = vectorization(backend.cast(matrix), order, backend=backend)
-
     backend.assert_allclose(matrix, matrix_test, atol=PRECISION_TOL)
 
 
