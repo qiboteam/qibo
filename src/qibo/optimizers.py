@@ -263,7 +263,6 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
 def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
 
     vparams = initial_parameters
-    print(vparams)
     optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
         params=[vparams], lr=sgd_options["learning_rate"]
     )
