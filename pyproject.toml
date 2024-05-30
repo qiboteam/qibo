@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.8"
+version = "0.2.9"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -65,11 +65,11 @@ cirq = "^1.1.0"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
-pylint = "^3.1.0"
+pylint = "3.1.0"
 matplotlib = "^3.7.0"
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="clifford_simulator_numba" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
 
@@ -88,7 +88,7 @@ optional = true
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="clifford_simulator_numba" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.group.cuda12]
@@ -97,7 +97,7 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="clifford_simulator_numba" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]

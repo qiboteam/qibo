@@ -22,7 +22,7 @@ def test_variable_backpropagation():
     backend = construct_tensorflow_backend()
     import tensorflow as tf
 
-    theta = tf.Variable(0.1234, dtype=tf.complex128)
+    theta = tf.Variable(0.1234, dtype=tf.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with tf.GradientTape() as tape:
@@ -45,7 +45,7 @@ def test_two_variables_backpropagation():
     backend = construct_tensorflow_backend()
     import tensorflow as tf
 
-    theta = tf.Variable([0.1234, 0.4321], dtype=tf.complex128)
+    theta = tf.Variable([0.1234, 0.4321], dtype=tf.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with tf.GradientTape() as tape:
