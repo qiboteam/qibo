@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
-from qibo.models.dbi.utils_gradients import *
+from qibo.models.dbi.utils import *
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
@@ -100,6 +100,7 @@ class DoubleBracketIteration:
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
+        """Performs one double bracket rotation."""
         if mode is None:
             mode = self.mode
 
@@ -142,11 +143,12 @@ class DoubleBracketIteration:
 
     @property
     def off_diag_h(self):
+        """Off-diagonal H matrix."""
         return self.h.matrix - self.diagonal_h_matrix
 
     @property
     def off_diagonal_norm(self):
-        r"""Hilbert Schmidt norm of off-diagonal part of H matrix, namely :math:`\\text{Tr}(\\sqrt{A^{\\dagger} A})`."""
+        """Hilbert Schmidt norm of off-diagonal part of H matrix, namely :math:`\\text{Tr}(\\sqrt{A^{\\dagger} A})`."""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
@@ -176,9 +178,7 @@ class DoubleBracketIteration:
         scheduling: Optional[DoubleBracketScheduling] = None,
         **kwargs,
     ):
-        """
-        Calculate the optimal step using respective `scheduling` methods.
-        """
+        """Calculate the optimal step using respective the `scheduling` methods."""
         if scheduling is None:
             scheduling = self.scheduling
         step = scheduling(self, d=d, **kwargs)
@@ -198,9 +198,9 @@ class DoubleBracketIteration:
         Compute loss function distance between `look_ahead` steps.
 
         Args:
-            step: iteration step.
-            d: diagonal operator, use canonical by default.
-            look_ahead: number of iteration steps to compute the loss function;
+            step (float): iteration step.
+            d (np.array): diagonal operator, use canonical by default.
+            look_ahead (int): number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
         h_copy = deepcopy(self.h)
@@ -223,7 +223,7 @@ class DoubleBracketIteration:
 
     def energy_fluctuation(self, state):
         """
-        Evaluate energy fluctuation
+        Evaluate energy fluctuation.
 
         .. math::
             \\Xi(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
@@ -242,12 +242,20 @@ class DoubleBracketIteration:
         return (np.sqrt(np.real(a - b**2))).item()
 
     def sigma(self, h: np.array):
+        """Returns the off-diagonal restriction of matrix `h`."""
         return self.backend.cast(h) - self.backend.cast(
             np.diag(np.diag(self.backend.to_numpy(h)))
         )
 
     def generate_Gamma_list(self, n: int, d: np.array):
-        r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+        """Computes the n-nested Gamma functions.
+        .. math::
+            \\Gamma_k=[W,...,[W,[W,H]]...],
+        where :math:`W = [D, H]`.
+        Args:
+            n (int): number of nested commutators in the expression.
+            d (np.array): the diagonal operator involved in the DBR.
+        """
         W = self.commutator(self.backend.cast(d), self.sigma(self.h.matrix))
         Gamma_list = [self.h.matrix]
         for _ in range(n - 1):
@@ -255,6 +263,7 @@ class DoubleBracketIteration:
         return Gamma_list
 
     def cost_expansion(self, d, n):
+        """The Taylor expansion coefficients up to the `n`th order of the selected cost function with respect to step duration."""
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
         elif self.cost is DoubleBracketCostFunction.least_squares:

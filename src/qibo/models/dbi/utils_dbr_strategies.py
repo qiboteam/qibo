@@ -16,14 +16,35 @@ def select_best_dbr_generator(
 
     Args:
         dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
-        d_list (list): list of diagonal operators (np.array) to run from.
+        d_list (list): list of diagonal operators (np.array) to select from.
         step (float): fixed iteration duration.
             Defaults to ``None``, optimize with `scheduling` method and `choose_step` function.
         compare_canonical (boolean): if `True`, the diagonalization effect with operators from `d_list` is compared with the canonical bracket.
         scheduling (`DoubleBracketScheduling`): scheduling method for finding the optimal step.
 
     Returns:
-        The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
+        The updated dbi_object (`DoubleBracketIteration`), index of the optimal diagonal operator (int), respective step duration (float), and sign (int).
+
+    Example:
+        from qibo.hamiltonians import Hamiltonian
+        from qibo.models.dbi.double_bracket import *
+        from qibo.models.dbi.utils_dbr_strategies import select_best_dbr_generator
+        from qibo.quantum_info import random_hermitian
+
+        nqubits = 3
+        NSTEPS = 3
+        h0 = random_hermitian(2**nqubits)
+        dbi = DoubleBracketIteration(
+            Hamiltonian(nqubits, h0),
+            mode=DoubleBracketGeneratorType.single_commutator,
+        )
+        initial_off_diagonal_norm = dbi.off_diagonal_norm
+        generate_local_Z = generate_Z_operators(nqubits)
+        Z_ops = list(generate_local_Z.values())
+        for _ in range(NSTEPS):
+            dbi, idx, step, flip_sign = select_best_dbr_generator(
+                dbi, Z_ops, compare_canonical=True
+                )
     """
     if scheduling is None:
         scheduling = dbi_object.scheduling
@@ -83,11 +104,12 @@ def gradient_numerical(
     Gradient of the DBI with respect to the parametrization of D. A simple finite difference is used to calculate the gradient.
 
     Args:
-        dbi_object(DoubleBracketIteration): DoubleBracketIteration object.
-        d_params(np.array): Parameters for the ansatz (note that the dimension must be 2**nqubits for full ansazt and nqubits for Pauli ansatz).
-        delta(float): Step size for numerical gradient.
+        dbi_object (DoubleBracketIteration): DoubleBracketIteration object.
+        d_params (np.array): Parameters for the ansatz (note that the dimension must be 2**nqubits for full ansazt and nqubits for Pauli ansatz).
+        s (float): A short flow duration for finding the numerical gradient.
+        delta (float): Step size for numerical gradient.
     Returns:
-        grad(np.array): Gradient of the D operator.
+        grad (np.array): Gradient of the D operator.
     """
     nqubits = dbi_object.nqubits
     grad = np.zeros(len(d_params))
@@ -110,18 +132,80 @@ def gradient_descent(
     iterations: int,
     d_params: list,
     parameterization: ParameterizationTypes,
-    pauli_operator_dict: list = None,
+    pauli_operator_dict: dict = None,
     pauli_parameterization_order: int = 1,
     normalize: bool = False,
     lr_min: float = 1e-5,
     lr_max: float = 1,
     max_evals: int = 100,
     space: callable = None,
-    optimizer: callable = None,
+    optimizer: callable = hyperopt.tpe,
     verbose: bool = False,
 ):
+    r"""Numerical gradient descent method for variating diagonal operator in each double bracket rotation.
+
+    Args:
+        dbi_object (DoubleBracketIteration): the target double bracket object.
+        iterations (int): number of double bracket rotations.
+        d_params (list): the parameters for the initial diagonal operator.
+        parameterization (ParameterizationTypes): the parameterization method for diagonal operator.
+            Options include pauli and computational.
+        pauli_operator_dict (dictionary, optional): dictionary of "name": Pauli-operator for Pauli-based parameterization type.
+            Defaults to None.
+        pauli_parameterization_order (int, optional): the order of parameterization or locality in Pauli basis. Defaults to 1.
+        normalize (bool, optional): option to normalize the diagonal operator. Defaults to False.
+        lr_min (float, optional): the minimal gradient step. Defaults to 1e-5.
+        lr_max (float, optional): the maximal gradient step. Defaults to 1.
+        max_evals (int, optional): maximum number of evaluations for `lr` using `hyperopt`. Defaults to 100.
+        space (callable, optional): evalutation space for `hyperopt`. Defaults to None.
+        optimizer (callable, optional): optimizer option for `hyperopt`. Defaults to `hyperopt.tpe`.
+        verbose (bool, optional): option for printing `hyperopt` process. Defaults to False.
+
+    Returns:
+        loss_hist (list): list of history losses of `dbi_object` throughout the double bracket rotations.
+        d_params_hist (list): list of history of `d` parameters after gradient descent.
+        s_hist (list): list of history of optimal `s` found.
+    Example:
+        from qibo import set_backend
+        from qibo.hamiltonians import Hamiltonian
+        from qibo.models.dbi.double_bracket import *
+        from qibo.models.dbi.utils import *
+        from qibo.models.dbi.utils_dbr_strategies import gradient_descent
+        from qibo.quantum_info import random_hermitian
+
+        nqubits = 3
+        NSTEPS = 5
+        set_backend("numpy")
+        h0 = random_hermitian(2**nqubits)
+        dbi = DoubleBracketIteration(
+            Hamiltonian(nqubits, h0),
+            mode=DoubleBracketGeneratorType.single_commutator,
+            scheduling=DoubleBracketScheduling.hyperopt,
+            cost=DoubleBracketCostFunction.off_diagonal_norm,
+        )
+        initial_off_diagonal_norm = dbi.off_diagonal_norm
+        pauli_operator_dict = generate_pauli_operator_dict(
+            nqubits, parameterization_order=1
+        )
+        pauli_operators = list(pauli_operator_dict.values())
+        # let initial d be approximation of $\Delta(H)
+        d_coef_pauli = decompose_into_Pauli_basis(
+            dbi.diagonal_h_matrix, pauli_operators=pauli_operators
+        )
+        d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
+        loss_hist_pauli, d_params_hist_pauli, s_hist_pauli = gradient_descent(
+            dbi,
+            NSTEPS,
+            d_coef_pauli,
+            ParameterizationTypes.pauli,
+            pauli_operator_dict=pauli_operator_dict,
+        )
+    """
     nqubits = dbi_object.nqubits
-    # use polynomial scheduling for analytical solutions
+    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
+        pauli_operator_dict = generate_pauli_operator_dict(
+            nqubits=nqubits, parameterization_order=pauli_parameterization_order
+        )
     d = params_to_diagonal_operator(
         d_params,
         nqubits,
@@ -132,10 +216,6 @@ def gradient_descent(
     loss_hist = [dbi_object.loss(0.0, d=d)]
     d_params_hist = [d_params]
     s_hist = [0]
-    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
-        pauli_operator_dict = generate_pauli_operator_dict(
-            nqubits=nqubits, parameterization_order=pauli_parameterization_order
-        )
     # first step
     s = dbi_object.choose_step(d=d)
     dbi_object(step=s, d=d)
@@ -163,8 +243,7 @@ def gradient_descent(
 
         if space is None:
             space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
-        if optimizer is None:
-            optimizer = hyperopt.tpe
+
         best = hyperopt.fmin(
             fn=func_loss_to_lr,
             space=space,

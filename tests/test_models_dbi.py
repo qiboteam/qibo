@@ -254,12 +254,6 @@ def test_gradient_descent(backend, nqubits):
 
     # computational basis
     d_coef_computational_partial = d_pauli.diagonal()
-    d_computational_partial = params_to_diagonal_operator(
-        d_coef_computational_partial,
-        nqubits,
-        ParameterizationTypes.computational,
-        normalize=False,
-    )
     (
         loss_hist_computational_partial,
         d_params_hist_computational_partiali,
