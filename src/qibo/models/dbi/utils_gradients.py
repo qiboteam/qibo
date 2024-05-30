@@ -1,5 +1,4 @@
 import math
-from copy import deepcopy
 from typing import Optional
 
 import numpy as np
@@ -7,6 +6,11 @@ import numpy as np
 from qibo import symbols
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.utils import *
+
+
+def commutator(a, b):
+    """Compute commutator between two arrays."""
+    return a @ b - b @ a
 
 
 def d_gamma_di_pauli(dbi_object, n: int, Z_i: np.array, d: np.array):
@@ -203,77 +207,3 @@ def energy_fluctuation_polynomial_expansion_coef(
     )
     coef = list(reversed(coef))
     return coef
-
-
-def gradient_diagonal_entries(dbi_object, params, delta=1e-4):
-    r"""
-    Gradient of the DBI with respect to the parametrization of D. A simple finite difference is used to calculate the gradient.
-
-    Args:
-        dbi_object(DoubleBracketIteration): DoubleBracketIteration object.
-        params(np.array): Parameters for the ansatz (note that the dimension must be 2**nqubits for full ansazt and nqubits for Pauli ansatz).
-        h(np.array): Hamiltonian.
-        d_type(d_ansatz_type): Ansatz used for the D operator. Options are 'Full' and '1-local'.
-        delta(float): Step size for numerical gradient.
-    Returns:
-        grad(np.array): Gradient of the D operator.
-    """
-
-    grad = np.zeros(len(params))
-    d = element_wise_d(params)
-    for i in range(len(params)):
-        params_new = deepcopy(params)
-        params_new[i] += delta
-        d_new = element_wise_d(params_new)
-        grad[i] = (dbi_object.loss(0.0, d_new) - dbi_object.loss(0.0, d)) / delta
-    return grad
-
-
-def gradient_descent_dbr_d_ansatz(
-    dbi_object,
-    params,
-    nmb_iterations,
-    lr=1e-2,
-    normalize=True,
-):
-    r"""
-    Optimizes the D operator using gradient descent evaluated at the at the rotaion angle found using the polynomial expansion.
-    - Declare variables
-    - Calculate initial loss
-    - Iterate, learning at each the optimal D and measure loss
-    - Return values
-    Args:
-        dbi_object(DoubleBracketIteration): DoubleBracketIteration object.
-        params(np.array): Initial parameters for the ansatz (note that the dimension must be 2**nqubits for full ansazt and nqubits for Pauli ansatz).
-        nmb_iterations(int): Number of gradient descent iterations.
-        lr(float): Learning rate.
-        d_type(d_ansatz_type): Ansatz used for the D operator.
-        normalize(bool): If True, the D operator is normalized at each iteration.
-    Returns:
-        d(np.array): Optimized D operator.
-        loss(np.array): Loss function evaluated at each iteration.
-        grad(np.array): Gradient evaluated at each iteration.
-        params_hist(np.array): Parameters evaluated at each iteration.
-    """
-
-    d = element_wise_d(params, normalization=normalize)
-    loss = np.zeros(nmb_iterations + 1)
-    grad = np.zeros((nmb_iterations, len(params)))
-    dbi_eval = deepcopy(dbi_object)
-    s = dbi_eval.choose_step(d=d)
-    dbi_eval(s, d=d)
-    loss[0] = dbi_eval.loss(0.0, d)
-    params_hist = np.empty((len(params), nmb_iterations + 1))
-    params_hist[:, 0] = params
-
-    for i in range(nmb_iterations):
-        dbi_eval = deepcopy(dbi_object)
-        grad[i, :] = gradient_diagonal_entries(dbi_eval, params)
-        for j in range(len(params)):
-            params[j] = params[j] - lr * grad[i, j]
-        d = element_wise_d(params, normalization=normalize)
-        s = dbi_eval.choose_step(d=d)
-        loss[i + 1] = dbi_eval.loss(s, d=d)
-        params_hist[:, i + 1] = params
-
-    return d, loss, grad, params_hist

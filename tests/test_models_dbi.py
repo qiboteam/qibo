@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import set_backend
+from qibo import hamiltonians, set_backend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketCostFunction,
@@ -12,12 +12,11 @@ from qibo.models.dbi.double_bracket import (
     DoubleBracketScheduling,
 )
 from qibo.models.dbi.utils import *
-from qibo.models.dbi.utils_gradients import gradient_descent_dbr_d_ansatz
-from qibo.models.dbi.utils_scheduling import polynomial_step
-from qibo.models.dbi.utils_strategies import (
-    gradient_descent_pauli,
+from qibo.models.dbi.utils_dbr_strategies import (
+    gradient_descent,
     select_best_dbr_generator,
 )
+from qibo.models.dbi.utils_scheduling import polynomial_step
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 3
@@ -90,10 +89,11 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
 )
 def test_variational_scheduling(backend, nqubits, scheduling):
     """Check schduling options."""
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
-    dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0, backend=backend), scheduling=scheduling
-    )
+    h = 2
+
+    # define the hamiltonian
+    h0 = hamiltonians.TFIM(nqubits=nqubits, h=h)
+    dbi = DoubleBracketIteration(h0, scheduling=scheduling)
     # find initial best step with look_ahead = 1
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
@@ -173,68 +173,91 @@ def test_least_squares(backend):
 
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_select_best_dbr_generator(backend, nqubits):
-    scheduling = DoubleBracketScheduling.grid_search
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
-        scheduling=scheduling,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     generate_local_Z = generate_Z_operators(nqubits, backend=backend)
     Z_ops = list(generate_local_Z.values())
     for _ in range(NSTEPS):
         dbi, idx, step, flip_sign = select_best_dbr_generator(
-            dbi,
-            Z_ops,
-            scheduling=scheduling,
-            compare_canonical=True,
+            dbi, Z_ops, compare_canonical=True
         )
     assert dbi.off_diagonal_norm < initial_off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [2, 3])
-def test_gradient_descent_pauli(backend, nqubits):
-    scheduling = DoubleBracketScheduling.grid_search
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
+def test_params_to_diagonal_operator(backend):
+    nqubits = 3
+    pauli_operator_dict = generate_pauli_operator_dict(
+        nqubits, parameterization_order=1, backend=backend
+    )
+    params = [1, 2, 3]
+    operator_pauli = sum(
+        [params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)]
+    )
+    backend.assert_allclose(
+        operator_pauli,
+        params_to_diagonal_operator(
+            params,
+            nqubits=nqubits,
+            parameterization=ParameterizationTypes.pauli,
+            pauli_operator_dict=pauli_operator_dict,
+        ),
+    )
+    operator_element = params_to_diagonal_operator(
+        params, nqubits=nqubits, parameterization=ParameterizationTypes.computational
+    )
+    for i in range(len(params)):
+        backend.assert_allclose(
+            backend.cast(backend.to_numpy(operator_element).diagonal())[i], params[i]
+        )
+
+
+@pytest.mark.parametrize("nqubits", [3])
+def test_gradient_descent(backend, nqubits):
+    h0 = random_hermitian(2**nqubits, seed=seed, backend=backend)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
-        scheduling=scheduling,
+        scheduling=DoubleBracketScheduling.hyperopt,
+        cost=DoubleBracketCostFunction.off_diagonal_norm,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     pauli_operator_dict = generate_pauli_operator_dict(
-        nqubits=nqubits,
-        parameterization_order=2,
+        nqubits,
+        parameterization_order=1,
         backend=backend,
     )
-
-    d_coef = decompose_into_pauli_basis(
-        dbi.h.matrix,
-        list(
-            pauli_operator_dict.values(),
-        ),
+    pauli_operators = list(pauli_operator_dict.values())
+    # let initial d be approximation of $\Delta(H)
+    d_coef_pauli = decompose_into_pauli_basis(
+        dbi.diagonal_h_matrix, pauli_operators=pauli_operators
     )
-    d = sum([d_coef[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)])
-    step, d_coef, d = gradient_descent_pauli(dbi, d_coef, d, backend=backend)
-    dbi(d=d, step=step)
-    assert dbi.off_diagonal_norm < initial_off_diagonal_norm
-
-
-@pytest.mark.parametrize("nqubits", [2, 3])
-def test_gradient_descent_d_ansatz(backend, nqubits):
-    scheduling = DoubleBracketScheduling.polynomial_approximation
-    cost = DoubleBracketCostFunction.least_squares
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
-    dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0, backend=backend),
-        mode=DoubleBracketGeneratorType.single_commutator,
-        cost=cost,
-        scheduling=scheduling,
+    d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
+    loss_hist_pauli, d_params_hist_pauli, s_hist_pauli = gradient_descent(
+        dbi,
+        NSTEPS,
+        d_coef_pauli,
+        ParameterizationTypes.pauli,
+        pauli_operator_dict=pauli_operator_dict,
     )
-    params = np.linspace(1, 2**nqubits, 2**nqubits)
-    step = 1e-1
+    assert loss_hist_pauli[-1] < initial_off_diagonal_norm
 
-    d, loss, grad, diags = gradient_descent_dbr_d_ansatz(dbi, params, 25, step)
-
-    assert loss[-1] < loss[0]
+    # computational basis
+    d_coef_computational_partial = backend.cast(backend.to_numpy(d_pauli).diagonal())
+    d_computational_partial = params_to_diagonal_operator(
+        d_coef_computational_partial,
+        nqubits,
+        ParameterizationTypes.computational,
+        normalize=False,
+    )
+    (
+        loss_hist_computational_partial,
+        d_params_hist_computational_partiali,
+        s_computational_partial,
+    ) = gradient_descent(
+        dbi, NSTEPS, d_coef_computational_partial, ParameterizationTypes.computational
+    )
+    assert loss_hist_computational_partial[-1] < loss_hist_pauli[-1]

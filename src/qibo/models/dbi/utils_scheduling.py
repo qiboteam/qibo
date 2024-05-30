@@ -44,7 +44,7 @@ def hyperopt_step(
     dbi_object,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 500,
+    max_evals: int = 100,
     space: callable = None,
     optimizer: callable = None,
     look_ahead: int = 1,
@@ -204,7 +204,7 @@ def simulated_annealing_step(
             current_loss = candidate_loss
         # Cool down
         temp *= cooling_rate
-        if temp < min_temp:
+        if temp < min_temp or current_s > step_max or current_s < step_min:
             break
 
     return current_s
