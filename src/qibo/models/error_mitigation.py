@@ -132,6 +132,7 @@ def ZNE(
     noise_model=None,
     nshots=10000,
     solve_for_gammas=False,
+    global_unitary_folding=True,
     insertion_gate="CNOT",
     readout=None,
     qubit_map=None,
@@ -186,7 +187,10 @@ def ZNE(
     expected_values = []
     for num_insertions in noise_levels:
         noisy_circuit = get_noisy_circuit(
-            circuit, num_insertions, insertion_gate=insertion_gate
+            circuit,
+            num_insertions,
+            global_unitary_folding,
+            insertion_gate=insertion_gate,
         )
         val = get_expectation_val_with_readout_mitigation(
             noisy_circuit,
