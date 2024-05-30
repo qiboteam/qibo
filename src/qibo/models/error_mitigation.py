@@ -85,7 +85,7 @@ def get_noisy_circuit(
 
         noisy_circuit += circuit_meas
 
-    else:
+    else:  # pragma: no cover
         if insertion_gate is None or insertion_gate not in (
             "CNOT",
             "RX",
@@ -116,7 +116,8 @@ def get_noisy_circuit(
                     for _ in range(num_insertions):
                         noisy_circuit.add(gates.CNOT(control, target))
                         noisy_circuit.add(gates.CNOT(control, target))
-                elif gate.init_kwargs["theta"] == theta:
+                # elif gate.init_kwargs["theta"] == theta:
+                elif insertion_gate == "RX":
                     qubit = gate.qubits[0]
                     for _ in range(num_insertions):
                         noisy_circuit.add(gates.RX(qubit, theta=theta))
