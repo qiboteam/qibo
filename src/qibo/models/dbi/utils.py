@@ -112,9 +112,18 @@ def generate_pauli_operator_dict(
     symbols_pauli=symbols.Z,
     backend=None,
 ):
-    """
-    Generate a dictionary containing all possible products of a given Pauli operators (X,Y or Z) of a given order (e.g. 1 corresponds to a magnetic field)
-    for L = n_qubits and their respective names.
+    """Generates a dictionary containing Pauli `symbols_pauli` operators of locality `parameterization_order` for `nqubits` qubits.
+
+    Args:
+        nqubits (int): number of qubits in the system.
+        parameterization_order (int, optional): the locality of the operators generated. Defaults to 1.
+        symbols_pauli (qibo.symbols, optional): the symbol of the intended Pauli operator. Defaults to symbols.Z.
+
+    Returns:
+        pauli_operator_dict (dictionary): dictionary with structure {"operator_name": operator}
+
+    Example:
+        pauli_operator_dict = generate_pauli_operator_dict)
     """
     backend = _check_backend(backend)
     pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
@@ -193,3 +202,83 @@ def params_to_diagonal_operator(
     if normalize:
         d = d / np.linalg.norm(d)
     return d
+
+
+def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(
+        dbi_object.backend.cast(d), dbi_object.sigma(dbi_object.h.matrix)
+    )
+    gamma_list = dbi_object.generate_gamma_list(n + 2, d)
+    sigma_gamma_list = list(map(dbi_object.sigma, gamma_list))
+    gamma_list_np = list(map(dbi_object.backend.to_numpy, sigma_gamma_list))
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients for rotation with [W,H] and H
+    c1 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[:-1]
+    # product coefficient
+    trace_coefficients = [0] * (2 * n + 1)
+    for k in range(n + 1):
+        for j in range(n + 1):
+            power = k + j
+            product_matrix = c1[k] @ c2[j]
+            trace_coefficients[power] += 2 * np.trace(product_matrix)
+    # coefficients from high to low (n:0)
+    coef = list(reversed(trace_coefficients[: n + 1]))
+    return coef
+
+
+def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
+    """Return the Taylor expansion coefficients of least square cost of `dbi_object.h` and diagonal operator `d` with respect to double bracket rotation duration `s`."""
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
+    exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+    # coefficients
+    coef = np.empty(n)
+    for i in range(n):
+        coef[i] = np.real(
+            exp_list[i] * np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
+        )
+    coef = list(reversed(coef))
+    return coef
+
+
+def energy_fluctuation_polynomial_expansion_coef(
+    dbi_object, d: np.array = None, n: int = 3, state=0
+):
+    """Return the Taylor expansion coefficients of energy fluctuation of `dbi_object` with respect to double bracket rotation duration `s`."""
+    if d is None:
+        d = dbi_object.diagonal_h_matrix
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
+    # coefficients
+    coef = np.empty(3)
+    state_cast = dbi_object.backend.cast(state)
+    state_dag = dbi_object.backend.cast(state.conj().T)
+
+    def variance(a):
+        """Calculates the variance of a matrix A with respect to a state:
+        Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
+        b = a @ a
+        return state_dag @ b @ state_cast - (state_dag @ a @ state_cast) ** 2
+
+    def covariance(a, b):
+        """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
+        applied to two operators A and B with respect to a state:
+        Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$
+        """
+
+        c = a @ b + b @ a
+        return (
+            state_dag @ c @ state_cast
+            - 2 * state_dag @ a @ state_cast * state_dag @ b @ state_cast
+        )
+
+    coef[0] = np.real(2 * covariance(Gamma_list[0], Gamma_list[1]))
+    coef[1] = np.real(2 * variance(Gamma_list[1]))
+    coef[2] = np.real(
+        covariance(Gamma_list[0], Gamma_list[3])
+        + 3 * covariance(Gamma_list[1], Gamma_list[2])
+    )
+    coef = list(reversed(coef))
+    return coef
