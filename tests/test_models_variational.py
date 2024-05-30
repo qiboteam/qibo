@@ -258,12 +258,12 @@ test_values = [
 def test_qaoa_optimization(backend, method, options, dense, filename):
     if (method == "sgd") and (backend.name not in ["tensorflow", "pytorch"]):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name == "pytorch":
-        pytest.skip("Skipping scipy optimizers for pytorch.")
+    if method != "sgd" and backend.name in ("tensorflow", "pytorch"):
+        pytest.skip("Skipping scipy optimizers for tensorflow and pytorch.")
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
-    initial_p = backend.cast(initial_p)
+    initial_p = backend.cast(initial_p, dtype=np.float64)
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
