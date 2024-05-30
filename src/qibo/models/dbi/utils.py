@@ -1,4 +1,5 @@
 import math
+from enum import Enum, auto
 from itertools import combinations, product
 
 import numpy as np
@@ -165,21 +166,39 @@ def generate_Pauli_operators(nqubits, symbols_pauli, positions):
         return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix
 
 
-def element_wise_d(params: np.array, normalization: bool = False):
-    r"""
-    Creates the $D$ operator for the double-bracket iteration ansatz depending on the type of parameterization.
-    If $\alpha_i$ are our parameters and d the number of qubits then:
+class ParameterizationTypes(Enum):
+    """Define types of parameterization for diagonal operator."""
 
-    element_wise: $D = \sum_{i=0}^{2^d} \alpha_i |i\rangle \langle i|$
-    local_1: $D = \sum_{i=1}^{d} \alpha_i Z_i$
-    Args:
-        params(np.array): parameters for the ansatz.
-        d_type(d_ansatz type): type of parameterization for the ansatz.
-        normalization(bool): If True, the diagonal is normalized to 1.
-    """
-    d = np.zeros((len(params), len(params)))
-    for i in range(len(params)):
-        d[i, i] = params[i]
-    if normalization:
+    pauli = auto()
+    """Uses Pauli-Z operators (magnetic field)."""
+    computational = auto()
+    """Uses computational basis."""
+
+
+def params_to_diagonal_operator(
+    params: np.array,
+    nqubits: int,
+    parameterization: ParameterizationTypes = ParameterizationTypes.pauli,
+    pauli_parameterization_order: int = 1,
+    normalize: bool = False,
+    pauli_operator_dict: dict = None,
+):
+    r"""Creates the $D$ operator for the double-bracket iteration ansatz depending on the parameterization type."""
+    if parameterization is ParameterizationTypes.pauli:
+        # raise error if dimension mismatch
+        if len(params) != len(pauli_operator_dict):
+            raise ValueError(
+                f"Dimension of params ({len(params)}) mismatches the given parameterization order ({pauli_parameterization_order})"
+            )
+        d = sum(
+            [params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)]
+        )
+    elif parameterization is ParameterizationTypes.computational:
+        d = np.zeros((len(params), len(params)))
+        for i in range(len(params)):
+            d[i, i] = params[i]
+    else:
+        raise ValueError(f"Parameterization type not recognized.")
+    if normalize:
         d = d / np.linalg.norm(d)
     return d

@@ -204,7 +204,7 @@ def simulated_annealing_step(
             current_loss = candidate_loss
         # Cool down
         temp *= cooling_rate
-        if temp < min_temp:
+        if temp < min_temp or current_s > step_max or current_s < step_min:
             break
 
     return current_s

@@ -5,11 +5,7 @@ from typing import Optional
 import numpy as np
 
 from qibo.hamiltonians import Hamiltonian
-from qibo.models.dbi.utils_gradients import (
-    energy_fluctuation_polynomial_expansion_coef,
-    least_squares_polynomial_expansion_coef,
-    off_diagonal_norm_polynomial_expansion_coef,
-)
+from qibo.models.dbi.utils_gradients import *
 from qibo.models.dbi.utils_scheduling import (
     grid_search_step,
     hyperopt_step,
@@ -162,6 +158,11 @@ class DoubleBracketIteration:
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    @property
+    def nqubits(self):
+        """Number of qubits."""
+        return self.h.nqubits
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
