@@ -503,16 +503,16 @@ class I(Gate):
         return "id"
 
 
-class Align(Gate):
+class Align(ParametrizedGate):
     """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
 
     Args:
-        *q (int): The qubit ID numbers.
+        q (int): The qubit ID.
         delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
             Defaults to ``0`` (zero).
     """
 
-    def __init__(self, *q, delay: int = 0):
+    def __init__(self, q, delay=0, trainable=True):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -520,13 +520,14 @@ class Align(Gate):
         if delay < 0.0:
             raise_error(ValueError, "Delay must not be negative.")
 
-        super().__init__()
+        super().__init__(trainable)
         self.name = "align"
-        self.delay = delay
         self.draw_label = f"A({delay})"
-        self.init_args = q
-        self.init_kwargs = {"delay": delay}
-        self.target_qubits = tuple(q)
+        self.init_args = [q]
+        self.init_kwargs = {"name": self.name, "delay": delay, "trainable": trainable}
+        self.target_qubits = (q,)
+        self._parameters = (delay,)
+        self.nparams = 1
 
 
 def _is_clifford_given_angle(angle):
