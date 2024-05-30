@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import set_backend
+from qibo import hamiltonians, set_backend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketCostFunction,
@@ -89,10 +89,11 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
 )
 def test_variational_scheduling(backend, nqubits, scheduling):
     """Check schduling options."""
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
-    dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0, backend=backend), scheduling=scheduling
-    )
+    h = 2
+
+    # define the hamiltonian
+    h0 = hamiltonians.TFIM(nqubits=nqubits, h=h)
+    dbi = DoubleBracketIteration(h0, scheduling=scheduling)
     # find initial best step with look_ahead = 1
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     for _ in range(NSTEPS):
