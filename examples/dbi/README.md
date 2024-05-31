@@ -27,17 +27,17 @@ With this notation we next use the Hilbert-Schmidt scalar product and norm to me
  $$||\sigma(H_0(s))||^2- ||\sigma (H_0 )||^2= -2s \langle W, [H,\sigma(H)\rangle+O(s^2)$$
 This equation tells us that as long as the scalar product $\langle W, [H,\sigma(H)\rangle$ is positive then after the DBR the magnitude of the off-diagonal couplings in $H_0(s)$ is less than in $H_0$.
 
-For the implementation of the DBR unitary $U_0(s) = e^{-s W_0}$ see 
+For the implementation of the DBR unitary $U_0(s) = e^{-s W_0}$ see
 https://github.com/qiboteam/qibo/blob/363a6e5e689e5b907a7602bd1cc8d9811c60ee69/src/qibo/models/dbi/double_bracket.py#L68
 
 ### How to choose $D$?
 
-For theoretical considerations the canonical bracket is useful. 
+For theoretical considerations the canonical bracket is useful.
 For this we need the notation of the dephasing channel $\Delta(H)$ which is equivalent to `np.diag(h)`.
  $M = [\Delta(H),\sigma(H)]= [H,\sigma(H)]= [\Delta(H),H]$
  The canonical bracket appears on its own in the monotonicity relation above and gives an unconditional reduction of the magnitude of the off-diagonal terms
- $$||\sigma(H_0(s))||^2- ||\sigma (H_0 )||^2= -2s \|M\|^2+O(s^2)$$ 
-- the multi qubit Pauli Z generator with $Z(\mu) = (Z_1)^{\mu_1}\ldots (Z_L)^{\mu_L}$ where we optimize over all binary strings $\mu\in \{0,1\}^L$ 
+ $$||\sigma(H_0(s))||^2- ||\sigma (H_0 )||^2= -2s \|M\|^2+O(s^2)$$
+- the multi qubit Pauli Z generator with $Z(\mu) = (Z_1)^{\mu_1}\ldots (Z_L)^{\mu_L}$ where we optimize over all binary strings $\mu\in \{0,1\}^L$
 - the magnetic field $D = \sum_i B_i Z_i$
 - the two qubit Ising model $D  = \sum_i B_i Z_i + \sum_{i,j} J_{i,j} Z_i Z_j$, please follow the tutorial by Matteo and use the QIBO ising model for that with $h=0$
 
@@ -49,6 +49,6 @@ For this we need the notation of the dephasing channel $\Delta(H)$ which is equi
 
 
 
-[1] https://arxiv.org/abs/2206.11772 
+[1] https://arxiv.org/abs/2206.11772
 
 [2] https://github.com/qiboteam/vqe-sun
