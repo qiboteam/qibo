@@ -79,6 +79,7 @@ def hyperopt_step(
         space=space,
         algo=optimizer.suggest,
         max_evals=max_evals,
+        show_progressbar=False,
     )
     return best["step"]
 
