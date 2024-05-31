@@ -2129,6 +2129,7 @@ class PRx(ParametrizedGate):
             )
 
         self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
         self.theta = theta
         self.phi = phi
         self.nparams = 2
