@@ -1,5 +1,6 @@
 import hyperopt
 
+from qibo.backends import _check_backend
 from qibo.models.dbi.double_bracket import *
 from qibo.models.dbi.utils import *
 
@@ -98,6 +99,7 @@ def gradient_numerical(
     parameterization: ParameterizationTypes,
     s: float = 1e-2,
     delta: float = 1e-3,
+    backend=None,
     **kwargs,
 ):
     r"""
@@ -111,13 +113,14 @@ def gradient_numerical(
     Returns:
         grad (np.array): Gradient of the D operator.
     """
+    backend = _check_backend(backend)
     nqubits = dbi_object.nqubits
     grad = np.zeros(len(d_params))
     d = params_to_diagonal_operator(
         d_params, nqubits, parameterization=parameterization, **kwargs
     )
     for i in range(len(d_params)):
-        params_new = d_params.copy()
+        params_new = backend.cast(d_params, copy=True)
         params_new[i] += delta
         d_new = params_to_diagonal_operator(
             params_new, nqubits, parameterization=parameterization, **kwargs
@@ -141,6 +144,7 @@ def gradient_descent(
     space: callable = None,
     optimizer: callable = hyperopt.tpe,
     verbose: bool = False,
+    backend=None,
 ):
     r"""Numerical gradient descent method for variating diagonal operator in each double bracket rotation.
 
@@ -201,6 +205,8 @@ def gradient_descent(
             pauli_operator_dict=pauli_operator_dict,
         )
     """
+    backend = _check_backend(backend)
+
     nqubits = dbi_object.nqubits
     if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
         pauli_operator_dict = generate_pauli_operator_dict(
@@ -216,6 +222,12 @@ def gradient_descent(
     loss_hist = [dbi_object.loss(0.0, d=d)]
     d_params_hist = [d_params]
     s_hist = [0]
+    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
+        pauli_operator_dict = generate_pauli_operator_dict(
+            nqubits=nqubits,
+            parameterization_order=pauli_parameterization_order,
+            backend=backend,
+        )
     # first step
     s = dbi_object.choose_step(d=d)
     dbi_object(step=s, d=d)
@@ -227,6 +239,7 @@ def gradient_descent(
             pauli_operator_dict=pauli_operator_dict,
             pauli_parameterization_order=pauli_parameterization_order,
             normalize=normalize,
+            backend=backend,
         )
 
         # set up hyperopt to find optimal lr

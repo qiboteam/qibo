@@ -126,7 +126,7 @@ class DoubleBracketIteration:
                 @ self.backend.calculate_matrix_exp(step, d)
             )
         operator_dagger = self.backend.cast(
-            np.matrix(self.backend.to_numpy(operator)).getH()
+            np.array(np.matrix(self.backend.to_numpy(operator)).getH())
         )
 
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
@@ -168,9 +168,11 @@ class DoubleBracketIteration:
 
     def least_squares(self, d: np.array):
         """Least squares cost function."""
-        h_np = self.h.matrix
-
-        return np.real(0.5 * np.linalg.norm(d) ** 2 - np.trace(h_np @ d))
+        d = self.backend.to_numpy(d)
+        return np.real(
+            0.5 * np.linalg.norm(d) ** 2
+            - np.trace(self.backend.to_numpy(self.h.matrix) @ d)
+        )
 
     def choose_step(
         self,
@@ -233,13 +235,7 @@ class DoubleBracketIteration:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        h_np = self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
-        h2 = h_np @ h_np
-        state_cast = self.backend.cast(state)
-        state_conj = self.backend.cast(state.conj())
-        a = state_conj @ h2 @ state_cast
-        b = state_conj @ h_np @ state_cast
-        return (np.sqrt(np.real(a - b**2))).item()
+        return self.h.energy_fluctuation(state)
 
     def sigma(self, h: np.array):
         """Returns the off-diagonal restriction of matrix `h`."""
@@ -247,23 +243,17 @@ class DoubleBracketIteration:
             np.diag(np.diag(self.backend.to_numpy(h)))
         )
 
-    def generate_Gamma_list(self, n: int, d: np.array):
-        """Computes the n-nested Gamma functions.
-        .. math::
-            \\Gamma_k=[W,...,[W,[W,H]]...],
-        where :math:`W = [D, H]`.
-        Args:
-            n (int): number of nested commutators in the expression.
-            d (np.array): the diagonal operator involved in the DBR.
-        """
+    def generate_gamma_list(self, n: int, d: np.array):
+        r"""Computes the n-nested Gamma functions, where $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
         W = self.commutator(self.backend.cast(d), self.sigma(self.h.matrix))
-        Gamma_list = [self.h.matrix]
+        gamma_list = [self.h.matrix]
         for _ in range(n - 1):
-            Gamma_list.append(self.commutator(W, Gamma_list[-1]))
-        return Gamma_list
+            gamma_list.append(self.commutator(W, gamma_list[-1]))
+        return gamma_list
 
     def cost_expansion(self, d, n):
-        """The Taylor expansion coefficients up to the `n`th order of the selected cost function with respect to step duration."""
+        d = self.backend.cast(d)
+
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
         elif self.cost is DoubleBracketCostFunction.least_squares:

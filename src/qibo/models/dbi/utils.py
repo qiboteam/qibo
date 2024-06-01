@@ -9,33 +9,6 @@ from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 
 
-def commutator(a, b):
-    """Compute commutator between two arrays."""
-    return a @ b - b @ a
-
-
-def variance(a, state):
-    """Calculates the variance of a matrix A with respect to a state:
-    .. math::
-        Var(A) = \\langle\\mu|A^2|\\mu\\rangle-\\langle\\mu|A|\\mu\\rangle^2"""
-    b = a @ a
-    return state.conj().T @ b @ state - (state.conj().T @ a @ state) ** 2
-
-
-def covariance(a, b, state):
-    """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
-    applied to two operators A and B with respect to a state:
-    .. math::
-        Cov(A,B) = \\langle\\mu|AB|\\mu\\rangle-\\langle\\mu|A|\\mu\\rangle\\langle\\mu|B|\\mu\\rangle
-    """
-
-    c = a @ b + b @ a
-    return (
-        state.conj().T @ c @ state
-        - 2 * state.conj().T @ a @ state * state.conj().T @ b @ state
-    )
-
-
 def generate_Z_operators(nqubits: int, backend=None):
     """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
     Return: Dictionary with operator names (str) as keys and operators (np.array) as values
@@ -95,6 +68,7 @@ def str_to_symbolic(name: str):
 
 def cs_angle_sgn(dbi_object, d):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
+    d = dbi_object.backend.cast(d)
     norm = np.trace(
         np.dot(
             np.conjugate(
@@ -103,11 +77,11 @@ def cs_angle_sgn(dbi_object, d):
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    return np.sign(norm)
+    return np.real(np.sign(norm))
 
 
-def decompose_into_Pauli_basis(h_matrix: np.array, pauli_operators: list):
-    """Finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
+def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list):
+    """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
 
     decomposition = []
@@ -133,7 +107,10 @@ def generate_pauli_index(nqubits, order):
 
 
 def generate_pauli_operator_dict(
-    nqubits: int, parameterization_order: int = 1, symbols_pauli: symbols = symbols.Z
+    nqubits: int,
+    parameterization_order: int = 1,
+    symbols_pauli=symbols.Z,
+    backend=None,
 ):
     """Generates a dictionary containing Pauli `symbols_pauli` operators of locality `parameterization_order` for `nqubits` qubits.
 
@@ -148,9 +125,11 @@ def generate_pauli_operator_dict(
     Example:
         pauli_operator_dict = generate_pauli_operator_dict)
     """
+    backend = _check_backend(backend)
     pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
     pauli_operators = [
-        generate_Pauli_operators(nqubits, symbols_pauli, index) for index in pauli_index
+        generate_pauli_operators(nqubits, symbols_pauli, index, backend=backend)
+        for index in pauli_index
     ]
     return {index: operator for index, operator in zip(pauli_index, pauli_operators)}
 
@@ -166,15 +145,19 @@ def diagonal_min_max(matrix: np.array):
     return D
 
 
-def generate_Pauli_operators(nqubits, symbols_pauli, positions):
-    """Generate matrix of an nqubit-pauli operator with `symbols_pauli` at `positions`"""
+def generate_pauli_operators(nqubits, symbols_pauli, positions, backend=None):
+    # generate matrix of an nqubit-pauli operator with `symbols_pauli` at `positions`
     if isinstance(positions, int):
         return SymbolicHamiltonian(
-            symbols_pauli(positions), nqubits=nqubits
+            symbols_pauli(positions),
+            nqubits=nqubits,
+            backend=backend,
         ).dense.matrix
     else:
         terms = [symbols_pauli(pos) for pos in positions]
-        return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix
+        return SymbolicHamiltonian(
+            math.prod(terms), nqubits=nqubits, backend=backend
+        ).dense.matrix
 
 
 class ParameterizationTypes(Enum):
@@ -193,8 +176,10 @@ def params_to_diagonal_operator(
     pauli_parameterization_order: int = 1,
     normalize: bool = False,
     pauli_operator_dict: dict = None,
+    backend=None,
 ):
-    """Creates the $D$ operator for the double-bracket iteration ansatz depending on the parameterization type."""
+    r"""Creates the $D$ operator for the double-bracket iteration ansatz depending on the parameterization type."""
+    backend = _check_backend(backend)
     if parameterization is ParameterizationTypes.pauli:
         # raise error if dimension mismatch
         if len(params) != len(pauli_operator_dict):
@@ -202,12 +187,16 @@ def params_to_diagonal_operator(
                 f"Dimension of params ({len(params)}) mismatches the given parameterization order ({pauli_parameterization_order})"
             )
         d = sum(
-            [params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)]
+            [
+                backend.to_numpy(params[i])
+                * backend.to_numpy(list(pauli_operator_dict.values())[i])
+                for i in range(nqubits)
+            ]
         )
     elif parameterization is ParameterizationTypes.computational:
         d = np.zeros((len(params), len(params)))
         for i in range(len(params)):
-            d[i, i] = params[i]
+            d[i, i] = backend.to_numpy(params[i])
     else:
         raise ValueError(f"Parameterization type not recognized.")
     if normalize:
@@ -216,13 +205,17 @@ def params_to_diagonal_operator(
 
 
 def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
-    """Return the Taylor expansion coefficients of off-diagonal norm of `dbi_object.h` with respect to double bracket rotation duration `s`."""
-    Gamma_list = dbi_object.generate_Gamma_list(n + 2, d)
-    sigma_Gamma_list = list(map(dbi_object.sigma, Gamma_list))
+    # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    W = dbi_object.commutator(
+        dbi_object.backend.cast(d), dbi_object.sigma(dbi_object.h.matrix)
+    )
+    gamma_list = dbi_object.generate_gamma_list(n + 2, d)
+    sigma_gamma_list = list(map(dbi_object.sigma, gamma_list))
+    gamma_list_np = list(map(dbi_object.backend.to_numpy, sigma_gamma_list))
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients for rotation with [W,H] and H
-    c1 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[1:]
-    c2 = exp_list.reshape((-1, 1, 1)) * sigma_Gamma_list[:-1]
+    c1 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[1:]
+    c2 = exp_list.reshape((-1, 1, 1)) * gamma_list_np[:-1]
     # product coefficient
     trace_coefficients = [0] * (2 * n + 1)
     for k in range(n + 1):
@@ -238,7 +231,7 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
 def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
     """Return the Taylor expansion coefficients of least square cost of `dbi_object.h` and diagonal operator `d` with respect to double bracket rotation duration `s`."""
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients
     coef = np.empty(n)
@@ -257,7 +250,7 @@ def energy_fluctuation_polynomial_expansion_coef(
     if d is None:
         d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
-    Gamma_list = dbi_object.generate_Gamma_list(n + 1, d)
+    Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     # coefficients
     coef = np.empty(3)
     state_cast = dbi_object.backend.cast(state)

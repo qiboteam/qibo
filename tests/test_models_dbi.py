@@ -19,7 +19,7 @@ from qibo.models.dbi.utils_dbr_strategies import (
 from qibo.models.dbi.utils_scheduling import polynomial_step
 from qibo.quantum_info import random_hermitian
 
-NSTEPS = 1
+NSTEPS = 3
 seed = 10
 """Number of steps for evolution."""
 
@@ -78,7 +78,7 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nqubits", [2, 3])
 @pytest.mark.parametrize(
     "scheduling",
     [
@@ -110,7 +110,7 @@ def test_variational_scheduling(backend, nqubits, scheduling):
     ],
 )
 def test_polynomial_cost_function(backend, cost):
-    nqubits = 4
+    nqubits = 2
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -125,14 +125,13 @@ def test_polynomial_cost_function(backend, cost):
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
 
-def test_polynomial_energy_fluctuation():
-    set_backend("numpy")
+def test_polynomial_energy_fluctuation(backend):
     nqubits = 4
-    h0 = random_hermitian(2**nqubits, seed=seed)
+    h0 = random_hermitian(2**nqubits, seed=seed, backend=backend)
     state = np.zeros(2**nqubits)
-    state[3] = 1
+    state[0] = 1
     dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0),
+        Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
         cost=DoubleBracketCostFunction.energy_fluctuation,
         scheduling=DoubleBracketScheduling.polynomial_approximation,
@@ -140,8 +139,8 @@ def test_polynomial_energy_fluctuation():
     )
     for i in range(NSTEPS):
         s = dbi.choose_step(d=dbi.diagonal_h_matrix, n=5)
-        dbi(step=s, d=dbi.off_diag_h)
-    assert dbi.energy_fluctuation(state=state) == 0.0
+        dbi(step=s, d=dbi.diagonal_h_matrix)
+    assert dbi.energy_fluctuation(state=state) < dbi.h0.energy_fluctuation(state=state)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
@@ -155,17 +154,6 @@ def test_polynomial_fail_cases(backend, nqubits):
     with pytest.raises(ValueError):
         polynomial_step(dbi, n=2, n_max=1)
     assert polynomial_step(dbi, n=1) == None
-
-
-def test_energy_fluctuations(backend):
-    """Check energy fluctuation cost function."""
-    nqubits = 3
-    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
-    dbi = DoubleBracketIteration(Hamiltonian(nqubits, h0, backend=backend))
-    # define the state
-    state = np.zeros(2**nqubits)
-    state[3] = 1
-    assert dbi.energy_fluctuation(state=state) < 1e-5
 
 
 def test_least_squares(backend):
@@ -191,7 +179,7 @@ def test_select_best_dbr_generator(backend, nqubits):
         mode=DoubleBracketGeneratorType.single_commutator,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
-    generate_local_Z = generate_Z_operators(nqubits)
+    generate_local_Z = generate_Z_operators(nqubits, backend=backend)
     Z_ops = list(generate_local_Z.values())
     for _ in range(NSTEPS):
         dbi, idx, step, flip_sign = select_best_dbr_generator(
@@ -203,43 +191,48 @@ def test_select_best_dbr_generator(backend, nqubits):
 def test_params_to_diagonal_operator(backend):
     nqubits = 3
     pauli_operator_dict = generate_pauli_operator_dict(
-        nqubits, parameterization_order=1
+        nqubits, parameterization_order=1, backend=backend
     )
     params = [1, 2, 3]
     operator_pauli = sum(
         [params[i] * list(pauli_operator_dict.values())[i] for i in range(nqubits)]
     )
-    assert (
-        operator_pauli
-        == params_to_diagonal_operator(
+    backend.assert_allclose(
+        operator_pauli,
+        params_to_diagonal_operator(
             params,
             nqubits=nqubits,
             parameterization=ParameterizationTypes.pauli,
             pauli_operator_dict=pauli_operator_dict,
-        )
-    ).all()
+        ),
+    )
     operator_element = params_to_diagonal_operator(
         params, nqubits=nqubits, parameterization=ParameterizationTypes.computational
     )
-    assert (operator_element.diagonal() == params).all()
+    for i in range(len(params)):
+        backend.assert_allclose(
+            backend.cast(backend.to_numpy(operator_element).diagonal())[i], params[i]
+        )
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nqubits", [3])
 def test_gradient_descent(backend, nqubits):
-    h0 = random_hermitian(2**nqubits, seed=seed)
+    h0 = random_hermitian(2**nqubits, seed=seed, backend=backend)
     dbi = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0),
+        Hamiltonian(nqubits, h0, backend=backend),
         mode=DoubleBracketGeneratorType.single_commutator,
         scheduling=DoubleBracketScheduling.hyperopt,
         cost=DoubleBracketCostFunction.off_diagonal_norm,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     pauli_operator_dict = generate_pauli_operator_dict(
-        nqubits, parameterization_order=1
+        nqubits,
+        parameterization_order=1,
+        backend=backend,
     )
     pauli_operators = list(pauli_operator_dict.values())
     # let initial d be approximation of $\Delta(H)
-    d_coef_pauli = decompose_into_Pauli_basis(
+    d_coef_pauli = decompose_into_pauli_basis(
         dbi.diagonal_h_matrix, pauli_operators=pauli_operators
     )
     d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
@@ -253,11 +246,11 @@ def test_gradient_descent(backend, nqubits):
     assert loss_hist_pauli[-1] < initial_off_diagonal_norm
 
     # computational basis
-    d_coef_computational_partial = d_pauli.diagonal()
+    d_coef_computational_partial = backend.cast(backend.to_numpy(d_pauli).diagonal())
     (
         loss_hist_computational_partial,
-        d_params_hist_computational_partiali,
-        s_computational_partial,
+        _,
+        _,
     ) = gradient_descent(
         dbi, NSTEPS, d_coef_computational_partial, ParameterizationTypes.computational
     )

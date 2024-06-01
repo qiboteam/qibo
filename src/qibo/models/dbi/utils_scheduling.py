@@ -44,7 +44,7 @@ def hyperopt_step(
     dbi_object,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 500,
+    max_evals: int = 100,
     space: callable = None,
     optimizer: callable = None,
     look_ahead: int = 1,
@@ -79,6 +79,7 @@ def hyperopt_step(
         space=space,
         algo=optimizer.suggest,
         max_evals=max_evals,
+        show_progressbar=False,
     )
     return best["step"]
 
