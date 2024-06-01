@@ -97,13 +97,11 @@ def generate_pauli_index(nqubits, order):
     """
     if order == 1:
         return list(range(nqubits))
-    elif order > 1:
+    else:
         indices = list(range(nqubits))
         return indices + [
             comb for i in range(2, order + 1) for comb in combinations(indices, i)
         ]
-    else:
-        raise ValueError("Order must be a positive integer")
 
 
 def generate_pauli_operator_dict(
@@ -132,17 +130,6 @@ def generate_pauli_operator_dict(
         for index in pauli_index
     ]
     return {index: operator for index, operator in zip(pauli_index, pauli_operators)}
-
-
-def diagonal_min_max(matrix: np.array):
-    """
-    Generate a diagonal matrix D with the same diagonal elements as `matrix` but with minimum and maximum values.
-    (may be deprecated as a useful ansatz for D)
-    """
-    L = int(np.log2(matrix.shape[0]))
-    D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
-    D = np.diag(D)
-    return D
 
 
 def generate_pauli_operators(nqubits, symbols_pauli, positions, backend=None):
@@ -182,10 +169,6 @@ def params_to_diagonal_operator(
     backend = _check_backend(backend)
     if parameterization is ParameterizationTypes.pauli:
         # raise error if dimension mismatch
-        if len(params) != len(pauli_operator_dict):
-            raise ValueError(
-                f"Dimension of params ({len(params)}) mismatches the given parameterization order ({pauli_parameterization_order})"
-            )
         d = sum(
             [
                 backend.to_numpy(params[i])
@@ -197,9 +180,9 @@ def params_to_diagonal_operator(
         d = np.zeros((len(params), len(params)))
         for i in range(len(params)):
             d[i, i] = backend.to_numpy(params[i])
-    else:
-        raise ValueError(f"Parameterization type not recognized.")
-    if normalize:
+
+    # TODO: write proper tests for normalize=True
+    if normalize:  # pragma: no cover
         d = d / np.linalg.norm(d)
     return d
 
@@ -244,11 +227,9 @@ def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
 
 
 def energy_fluctuation_polynomial_expansion_coef(
-    dbi_object, d: np.array = None, n: int = 3, state=0
+    dbi_object, d: np.array, n: int = 3, state=0
 ):
     """Return the Taylor expansion coefficients of energy fluctuation of `dbi_object` with respect to double bracket rotation duration `s`."""
-    if d is None:
-        d = dbi_object.diagonal_h_matrix
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
     Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     # coefficients

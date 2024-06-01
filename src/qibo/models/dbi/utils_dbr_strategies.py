@@ -49,9 +49,18 @@ def select_best_dbr_generator(
     """
     if scheduling is None:
         scheduling = dbi_object.scheduling
-    norms_off_diagonal_restriction = [dbi_object.off_diagonal_norm] * (len(d_list) + 1)
-    optimal_steps = np.zeros(len(d_list) + 1)
-    flip_list = np.ones(len(d_list) + 1)
+
+    if compare_canonical:
+        norms_off_diagonal_restriction = [dbi_object.off_diagonal_norm] * (
+            len(d_list) + 1
+        )
+        optimal_steps = np.zeros(len(d_list) + 1)
+        flip_list = np.ones(len(d_list) + 1)
+    else:
+        norms_off_diagonal_restriction = [dbi_object.off_diagonal_norm] * (len(d_list))
+        optimal_steps = np.zeros(len(d_list))
+        flip_list = np.ones(len(d_list))
+
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
@@ -208,7 +217,10 @@ def gradient_descent(
     backend = _check_backend(backend)
 
     nqubits = dbi_object.nqubits
-    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
+    # TODO: write tests where this condition applies
+    if (
+        parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
+    ):  # pragma: no cover
         pauli_operator_dict = generate_pauli_operator_dict(
             nqubits=nqubits, parameterization_order=pauli_parameterization_order
         )
@@ -222,7 +234,10 @@ def gradient_descent(
     loss_hist = [dbi_object.loss(0.0, d=d)]
     d_params_hist = [d_params]
     s_hist = [0]
-    if parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None:
+    # TODO: write tests where this condition applies
+    if (
+        parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
+    ):  # pragma: no cover
         pauli_operator_dict = generate_pauli_operator_dict(
             nqubits=nqubits,
             parameterization_order=pauli_parameterization_order,

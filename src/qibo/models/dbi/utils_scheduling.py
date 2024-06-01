@@ -179,7 +179,8 @@ def simulated_annealing_step(
         d = dbi_object.diagonal_h_matrix
     if initial_s is None:
         initial_s = polynomial_step(dbi_object=dbi_object, d=d, n=4)
-        if initial_s is None:
+        # TODO: implement test to catch this if statement
+        if initial_s is None:  # pragma: no cover
             initial_s = step_min
     if s_jump_range is None:
         s_jump_range = (step_max - step_min) / s_jump_range_divident

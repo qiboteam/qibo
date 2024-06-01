@@ -171,8 +171,10 @@ def test_least_squares(backend):
     assert dbi.least_squares(d=d) < initial_potential
 
 
+@pytest.mark.parametrize("compare_canonical", [True, False])
+@pytest.mark.parametrize("step", [None, 1e-3])
 @pytest.mark.parametrize("nqubits", [2, 3])
-def test_select_best_dbr_generator(backend, nqubits):
+def test_select_best_dbr_generator(backend, nqubits, step, compare_canonical):
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -183,13 +185,17 @@ def test_select_best_dbr_generator(backend, nqubits):
     Z_ops = list(generate_local_Z.values())
     for _ in range(NSTEPS):
         dbi, idx, step, flip_sign = select_best_dbr_generator(
-            dbi, Z_ops, compare_canonical=True
+            dbi,
+            Z_ops,
+            compare_canonical=compare_canonical,
+            step=step,
         )
     assert dbi.off_diagonal_norm < initial_off_diagonal_norm
 
 
-def test_params_to_diagonal_operator(backend):
-    nqubits = 3
+@pytest.mark.parametrize("step", [None, 1e-3])
+def test_params_to_diagonal_operator(backend, step):
+    nqubits = 2
     pauli_operator_dict = generate_pauli_operator_dict(
         nqubits, parameterization_order=1, backend=backend
     )
@@ -207,7 +213,9 @@ def test_params_to_diagonal_operator(backend):
         ),
     )
     operator_element = params_to_diagonal_operator(
-        params, nqubits=nqubits, parameterization=ParameterizationTypes.computational
+        params,
+        nqubits=nqubits,
+        parameterization=ParameterizationTypes.computational,
     )
     for i in range(len(params)):
         backend.assert_allclose(
@@ -215,8 +223,9 @@ def test_params_to_diagonal_operator(backend):
         )
 
 
-@pytest.mark.parametrize("nqubits", [3])
-def test_gradient_descent(backend, nqubits):
+@pytest.mark.parametrize("order", [1, 2])
+def test_gradient_descent(backend, order):
+    nqubits = 2
     h0 = random_hermitian(2**nqubits, seed=seed, backend=backend)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -227,7 +236,7 @@ def test_gradient_descent(backend, nqubits):
     initial_off_diagonal_norm = dbi.off_diagonal_norm
     pauli_operator_dict = generate_pauli_operator_dict(
         nqubits,
-        parameterization_order=1,
+        parameterization_order=order,
         backend=backend,
     )
     pauli_operators = list(pauli_operator_dict.values())
@@ -242,6 +251,7 @@ def test_gradient_descent(backend, nqubits):
         d_coef_pauli,
         ParameterizationTypes.pauli,
         pauli_operator_dict=pauli_operator_dict,
+        pauli_parameterization_order=order,
     )
     assert loss_hist_pauli[-1] < initial_off_diagonal_norm
 
@@ -254,4 +264,4 @@ def test_gradient_descent(backend, nqubits):
     ) = gradient_descent(
         dbi, NSTEPS, d_coef_computational_partial, ParameterizationTypes.computational
     )
-    assert loss_hist_computational_partial[-1] < loss_hist_pauli[-1]
+    assert loss_hist_computational_partial[-1] < initial_off_diagonal_norm

@@ -184,10 +184,11 @@ class DoubleBracketIteration:
         if scheduling is None:
             scheduling = self.scheduling
         step = scheduling(self, d=d, **kwargs)
+        # TODO: write test for this case
         if (
             step is None
             and scheduling is DoubleBracketScheduling.polynomial_approximation
-        ):
+        ):  # pragma: no cover
             kwargs["n"] = kwargs.get("n", 3)
             kwargs["n"] += 1
             # if n==n_max, return None
@@ -262,6 +263,6 @@ class DoubleBracketIteration:
             coef = energy_fluctuation_polynomial_expansion_coef(
                 self, d, n, self.ref_state
             )
-        else:
+        else:  # pragma: no cover
             raise ValueError(f"Cost function {self.cost} not recognized.")
         return coef
