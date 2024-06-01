@@ -8,8 +8,8 @@ from typing import Optional, Union
 import numpy as np
 from scipy.stats import rv_continuous
 
-from qibo import Circuit, gates
-from qibo.backends import NumpyBackend, _check_backend
+from qibo import Circuit, gates, matrices
+from qibo.backends import NumpyBackend, _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
@@ -67,7 +67,7 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
     elif ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     sampler = _probability_distribution_sin(a=0, b=np.pi, seed=local_state)
     phases = local_state.random((ngates, 3))
@@ -133,7 +133,7 @@ def random_gaussian_matrix(
     if stddev is not None and stddev <= 0.0:
         raise_error(ValueError, "stddev must be a positive float.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     dims = (dims, rank)
 
@@ -179,7 +179,7 @@ def random_hermitian(
     if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
         raise_error(TypeError, "semidefinite and normalize must be type bool.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
@@ -226,7 +226,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         if measure != "haar":
             raise_error(ValueError, f"measure {measure} not implemented.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
@@ -342,7 +342,7 @@ def random_quantum_channel(
             NotImplementedError, f"order {order} not implemented for measure {measure}."
         )
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if measure == "bcsz":
         super_op = _super_op_from_bcsz_measure(
@@ -434,7 +434,7 @@ def random_statevector(dims: int, seed=None, backend=None):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     state = local_state.standard_normal(dims).astype(complex)
     state += 1.0j * local_state.standard_normal(dims)
@@ -539,7 +539,7 @@ def random_density_matrix(
     elif normalize is True and basis is None:
         raise_error(ValueError, "normalize cannot be True when basis=None.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if metric == "hilbert-schmidt":
         rank = None
@@ -628,7 +628,7 @@ def random_clifford(
             f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
         )
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
         nqubits, local_state=local_state
@@ -809,9 +809,13 @@ def random_pauli(
             "subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    complete_set = {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
+    complete_set = (
+        {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
+        if return_circuit
+        else {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    )
 
     if subset is None:
         subset = complete_set
@@ -840,13 +844,9 @@ def random_pauli(
                 if subset[column_item] != gates.I:
                     gate_grid.add(subset[column_item](qubit))
     else:
-        gate_grid = np.array(
-            [
-                [subset[column_item](qubit).matrix(backend) for column_item in row]
-                for qubit, row in zip(qubits, indexes)
-            ]
+        gate_grid = backend.cast(
+            [[subset[column_item] for column_item in row] for row in indexes]
         )
-        gate_grid = backend.cast(gate_grid, dtype=gate_grid.dtype)
 
     return gate_grid
 
@@ -912,7 +912,7 @@ def random_pauli_hamiltonian(
             "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     d = 2**nqubits
 
@@ -1016,7 +1016,7 @@ def random_stochastic_matrix(
         if max_iterations <= 0.0:
             raise_error(ValueError, "max_iterations must be a positive int.")
 
-    backend, local_state = _set_backend_and_local_state(seed, backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if precision_tol is None:
         precision_tol = PRECISION_TOL
@@ -1104,17 +1104,17 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
 
 @cache
 def _create_S(q):
-    return gates.S(q)
+    return gates.S(int(q))
 
 
 @cache
 def _create_CZ(cq, tq):
-    return gates.CZ(cq, tq)
+    return gates.CZ(int(cq), int(tq))
 
 
 @cache
 def _create_CNOT(cq, tq):
-    return gates.CNOT(cq, tq)
+    return gates.CNOT(int(cq), int(tq))
 
 
 def _operator_from_hadamard_free_group(
@@ -1219,29 +1219,3 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = operator @ super_op @ operator
 
     return super_op
-
-
-def _set_backend_and_local_state(seed, backend):
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    backend = _check_backend(backend)
-
-    if seed is None or isinstance(seed, int):
-        if backend.__class__.__name__ in [
-            "CupyBackend",
-            "CuQuantumBackend",
-        ]:  # pragma: no cover
-            local_state = backend.np.random.default_rng(seed)
-        else:
-            local_state = np.random.default_rng(seed)
-    else:
-        local_state = seed
-
-    return backend, local_state
