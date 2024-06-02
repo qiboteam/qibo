@@ -1903,6 +1903,14 @@ For more details, see G. Chiribella *et al.*, *Theoretical framework for quantum
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumComb
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumChannel
+    :members:
+    :member-order: bysource
+
 
 Random Ensembles
 ^^^^^^^^^^^^^^^^

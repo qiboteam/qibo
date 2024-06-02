@@ -635,7 +635,7 @@ class QuantumComb(QuantumNetwork):
     """Quantum comb is a quantum network such that the systems follows a sequential order.
     It is also called the *non-Markovian quantum process* in many literatures.
     Specifically, a quantum comb is a quantum network of the form :math:`J[┍i1┑,┕o1┙,┍i2┑,┕o2┙, ...]`,
-    where the the process first take an input state from system :math:`i1`, then output a state to system :math:`o1`, and so on.
+    where the process first take an input state from system :math:`i1`, then output a state to system :math:`o1`, and so on.
     This is a non-Markovian process as the output of the system :math:`o2` may depend on what happened in systems :math:`i1`, and :math:`o1`.
 
     A quantum channel is a special case of quantum comb, where there are only one input
@@ -968,8 +968,16 @@ def link_product(
         if not isinstance(operand, QuantumNetwork):
             raise_error(TypeError, f"The {i}th operator is not a ``QuantumNetwork``.")
 
+    if backend is None:
+        backend = operands[0]._backend
+
     tensors = [
-        operand.full() if operand.is_pure() else operand._tensor for operand in operands
+        (
+            backend.to_numpy(operand.full())
+            if operand.is_pure()
+            else backend.to_numpy(operand._tensor)
+        )
+        for operand in operands
     ]
 
     # keep track of the `partition` and `system_input` of the network

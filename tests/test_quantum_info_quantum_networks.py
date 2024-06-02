@@ -140,16 +140,18 @@ def test_errors(backend):
         QuantumChannel(matrix, partition=(2, 2, 2), pure=True, backend=backend)
 
     with pytest.raises(TypeError):
-        link_product(1, quantum_comb)
+        link_product(1, quantum_comb, backend=backend)
 
     with pytest.raises(TypeError):
-        link_product("ij, i", quantum_comb, matrix)
+        link_product("ij, i", quantum_comb, matrix, backend=backend)
 
     # raise warning
-    link_product("ii", quantum_channel)
-    link_product("ij, kj", network_state, quantum_channel)
-    link_product("ij, jj", network_state, quantum_channel)
-    link_product("ij, jj, jj", network_state, quantum_channel, quantum_channel)
+    link_product("ii", quantum_channel, backend=backend)
+    link_product("ij, kj", network_state, quantum_channel, backend=backend)
+    link_product("ij, jj", network_state, quantum_channel, backend=backend)
+    link_product(
+        "ij, jj, jj", network_state, quantum_channel, quantum_channel, backend=backend
+    )
 
 
 def test_class_methods(backend):
@@ -343,7 +345,9 @@ def test_with_comb(backend):
         backend=backend,
     )
 
-    non_comb = link_product("ij kl, km on -> jl mn", non_channel, unitary_channel)
+    non_comb = link_product(
+        "ij kl, km on -> jl mn", non_channel, unitary_channel, backend=backend
+    )
     non_comb = QuantumComb(
         non_comb.full(backend=backend),
         (2, 2, 2, 2),
@@ -356,6 +360,7 @@ def test_with_comb(backend):
         unitary_channel2,
         trace(2, backend=backend),
         trace(2, backend=backend),
+        backend=backend,
     )
     two_comb = QuantumComb(
         two_comb.full(backend=backend),
@@ -448,7 +453,7 @@ def test_predefined(backend):
         atol=1e-8,
     )
 
-    traced = link_product("ij,j", id, tr)
+    traced = link_product("ij,j", id, tr, backend=backend)
 
     backend.assert_allclose(
         tr.matrix(backend=backend), traced.matrix(backend=backend), atol=1e-8
