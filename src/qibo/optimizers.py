@@ -84,7 +84,7 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
-        return cmaes(loss, initial_parameters, args, options)
+        return cmaes(loss, initial_parameters, args, callback, options)
     elif method == "sgd":
         from qibo.backends import _check_backend
 
@@ -114,7 +114,7 @@ def optimize(
         )
 
 
-def cmaes(loss, initial_parameters, args=(), options=None):
+def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
@@ -123,13 +123,19 @@ def cmaes(loss, initial_parameters, args=(), options=None):
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
+        callback (list[callable]): List of callable called after each optimization
+            iteration. According to cma-es implementation take ``CMAEvolutionStrategy``
+            instance as argument.
+            See: https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.CMAEvolutionStrategy.html.
         options (dict): Dictionary with options accepted by the ``cma``
             optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
             available options.
     """
     import cma
 
-    r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
+    r = cma.fmin2(
+        loss, initial_parameters, 1.7, options=options, args=args, callback=callback
+    )
     return r[1].result.fbest, r[1].result.xbest, r
 
 
