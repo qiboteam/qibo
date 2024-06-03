@@ -10,6 +10,8 @@ from qibo import Circuit, gates, symbols
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 @cache
@@ -177,6 +179,7 @@ def _gate_tomography(
     nshots=int(1e4),
     noise_model=None,
     backend=None,
+    transpiler=None,
 ):
     """Runs gate tomography for a 1 or 2 qubit gate to obtain a :math:`4^n` by :math:`4^n` matrix (where :math:`n`
     is the number of qubits in the circuit). This matrix needs to be processed further to get the Pauli-Liouville
@@ -203,6 +206,12 @@ def _gate_tomography(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
+    if backend.name == "qibolab" and transpiler is None:
+        transpiler = Passes(
+            connectivity=backend.platform.topology,
+            passes=[Unroller(NativeGates.default())],
+        )
+
     if gate is not None:
         if nqubits != len(gate.qubits):
             raise_error(
@@ -226,19 +235,22 @@ def _gate_tomography(
             new_circ.add(measurements)
             if noise_model is not None and backend.name != "qibolab":
                 new_circ = noise_model.apply(new_circ)
+            if transpiler is not None:
+                new_circ, _ = transpiler(new_circ)
             expectation_val = _expectation_value(new_circ, j, nshots, backend=backend)
             matrix_jk[j, k] = expectation_val
     return matrix_jk
 
 
 def GST(
-    gate_set=Union[tuple, set, list],
+    gate_set: Union[tuple, set, list],
     nshots=int(1e4),
     noise_model=None,
     include_empty=False,
     Pauli_Liouville=False,
     T=None,
     backend=None,
+    transpiler=None,
 ):
     """Runs Gate Set Tomography on the input ``gate_set``.
 
@@ -264,6 +276,7 @@ def GST(
                 nshots=nshots,
                 noise_model=noise_model,
                 backend=backend,
+                transpiler=transpiler,
             )
             empty_matrices.append(empty_matrix)
 
@@ -288,6 +301,7 @@ def GST(
                 nshots=nshots,
                 noise_model=noise_model,
                 backend=backend,
+                transpiler=transpiler,
             )
         )
 
