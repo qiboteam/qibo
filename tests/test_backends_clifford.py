@@ -212,10 +212,10 @@ def test_collapsing_measurements(backend, seed):
     c2.add(gates.M(*range(3)))
 
     clifford_bkd.set_seed(seed)
-    clifford_res = clifford_bkd.execute_circuit(c1, nshots=100)
+    clifford_res = clifford_bkd.execute_circuit(c1, nshots=1000)
 
     numpy_bkd.set_seed(seed)
-    numpy_res = numpy_bkd.execute_circuit(c2, nshots=100)
+    numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
 
     backend.assert_allclose(
         clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1

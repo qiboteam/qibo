@@ -1,36 +1,17 @@
-import math
-from itertools import combinations, product
+from copy import deepcopy
+from itertools import product
+from typing import Optional
 
 import numpy as np
+from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.backends import _check_backend
 from qibo.hamiltonians import SymbolicHamiltonian
-
-
-def commutator(a, b):
-    """Compute commutator between two arrays."""
-    return a @ b - b @ a
-
-
-def variance(a, state):
-    """Calculates the variance of a matrix A with respect to a state:
-    Var($A$) = $\\langle\\mu|A^2|\\mu\rangle-\\langle\\mu|A|\\mu\rangle^2$"""
-    b = a @ a
-    return state.conj().T @ b @ state - (state.conj().T @ a @ state) ** 2
-
-
-def covariance(a, b, state):
-    """This is a generalization of the notion of covariance, needed for the polynomial expansion of the energy fluctuation,
-    applied to two operators A and B with respect to a state:
-    Cov($A,B$) = $\\langle\\mu|AB|\\mu\rangle-\\langle\\mu|A|\\mu\rangle\\langle\\mu|B|\\mu\rangle$
-    """
-
-    c = a @ b + b @ a
-    return (
-        state.conj().T @ c @ state
-        - 2 * state.conj().T @ a @ state * state.conj().T @ b @ state
-    )
+from qibo.models.dbi.double_bracket import (
+    DoubleBracketGeneratorType,
+    DoubleBracketIteration,
+)
 
 
 def generate_Z_operators(nqubits: int, backend=None):
@@ -90,6 +71,88 @@ def str_to_symbolic(name: str):
     return tensor_op
 
 
+def select_best_dbr_generator(
+    dbi_object: DoubleBracketIteration,
+    d_list: list,
+    step: Optional[float] = None,
+    step_min: float = 1e-5,
+    step_max: float = 1,
+    max_evals: int = 200,
+    compare_canonical: bool = True,
+):
+    """Selects the best double bracket rotation generator from a list and execute the rotation.
+
+    Args:
+        dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
+        d_list (list): list of diagonal operators (np.array) to run from.
+        step (float): fixed iteration duration.
+            Defaults to ``None``, uses hyperopt.
+        step_min (float): minimally allowed iteration duration.
+        step_max (float): maximally allowed iteration duration.
+        max_evals (int): maximally allowed number of evaluation in hyperopt.
+        compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+
+    Returns:
+        The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
+    """
+    norms_off_diagonal_restriction = [
+        dbi_object.off_diagonal_norm for _ in range(len(d_list))
+    ]
+    optimal_steps, flip_list = [], []
+    for i, d in enumerate(d_list):
+        # prescribed step durations
+        dbi_eval = deepcopy(dbi_object)
+        flip_list.append(cs_angle_sgn(dbi_eval, d))
+        if flip_list[i] != 0:
+            if step is None:
+                step_best = dbi_eval.hyperopt_step(
+                    d=flip_list[i] * d,
+                    step_min=step_min,
+                    step_max=step_max,
+                    space=hp.uniform,
+                    optimizer=tpe,
+                    max_evals=max_evals,
+                )
+            else:
+                step_best = step
+            dbi_eval(step=step_best, d=flip_list[i] * d)
+            optimal_steps.append(step_best)
+            norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
+    # canonical
+    if compare_canonical is True:
+        flip_list.append(1)
+        dbi_eval = deepcopy(dbi_object)
+        dbi_eval.mode = DoubleBracketGeneratorType.canonical
+        if step is None:
+            step_best = dbi_eval.hyperopt_step(
+                step_min=step_min,
+                step_max=step_max,
+                space=hp.uniform,
+                optimizer=tpe,
+                max_evals=max_evals,
+            )
+        else:
+            step_best = step
+        dbi_object(step=step)
+        optimal_steps.append(step)
+        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
+    # find best d
+    idx_max_loss = norms_off_diagonal_restriction.index(
+        min(norms_off_diagonal_restriction)
+    )
+    flip = flip_list[idx_max_loss]
+    step_optimal = optimal_steps[idx_max_loss]
+    dbi_eval = deepcopy(dbi_object)
+    if idx_max_loss == len(d_list) and compare_canonical is True:
+        # canonical
+        dbi_eval(step=step_optimal, mode=DoubleBracketGeneratorType.canonical)
+
+    else:
+        d_optimal = flip * d_list[idx_max_loss]
+        dbi_eval(step=step_optimal, d=d_optimal)
+    return dbi_eval, idx_max_loss, step_optimal, flip
+
+
 def cs_angle_sgn(dbi_object, d):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
     norm = np.trace(
@@ -101,54 +164,3 @@ def cs_angle_sgn(dbi_object, d):
         )
     )
     return np.sign(norm)
-
-
-def decompose_into_Pauli_basis(h_matrix: np.array, pauli_operators: list):
-    """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
-    nqubits = int(np.log2(h_matrix.shape[0]))
-
-    decomposition = []
-    for Z_i in pauli_operators:
-        expect = np.trace(h_matrix @ Z_i) / 2**nqubits
-        decomposition.append(expect)
-    return decomposition
-
-
-def generate_pauli_index(nqubits, order):
-    if order == 1:
-        return list(range(nqubits))
-    elif order > 1:
-        indices = list(range(nqubits))
-        return indices + [
-            comb for i in range(2, order + 1) for comb in combinations(indices, i)
-        ]
-    else:
-        raise ValueError("Order must be a positive integer")
-
-
-def generate_pauli_operator_dict(
-    nqubits: int, parameterization_order: int = 1, symbols_pauli=symbols.Z
-):
-    pauli_index = generate_pauli_index(nqubits, order=parameterization_order)
-    pauli_operators = [
-        generate_Pauli_operators(nqubits, symbols_pauli, index) for index in pauli_index
-    ]
-    return {index: operator for index, operator in zip(pauli_index, pauli_operators)}
-
-
-def diagonal_min_max(matrix: np.array):
-    L = int(np.log2(matrix.shape[0]))
-    D = np.linspace(np.min(np.diag(matrix)), np.max(np.diag(matrix)), 2**L)
-    D = np.diag(D)
-    return D
-
-
-def generate_Pauli_operators(nqubits, symbols_pauli, positions):
-    # generate matrix of an nqubit-pauli operator with `symbols_pauli` at `positions`
-    if isinstance(positions, int):
-        return SymbolicHamiltonian(
-            symbols_pauli(positions), nqubits=nqubits
-        ).dense.matrix
-    else:
-        terms = [symbols_pauli(pos) for pos in positions]
-        return SymbolicHamiltonian(math.prod(terms), nqubits=nqubits).dense.matrix

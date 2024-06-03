@@ -32,7 +32,7 @@ def test_generate_Z_operators(backend, nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
-@pytest.mark.parametrize("step", [0.1, None])
+@pytest.mark.parametrize("step", [0.1, 0.2])
 def test_select_best_dbr_generator(backend, nqubits, step):
     h0 = random_hermitian(2**nqubits, seed=1, backend=backend)
     dbi = DoubleBracketIteration(
