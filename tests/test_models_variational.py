@@ -10,7 +10,7 @@ from scipy.linalg import expm
 
 from qibo import gates, hamiltonians, models
 from qibo.models.utils import cvar, gibbs
-from qibo.quantum_info import random_statevector
+from qibo.quantum_info import fidelity, random_statevector
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
@@ -129,8 +129,15 @@ def test_vqe(backend, method, options, compile, filename):
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
     v = models.VQE(circuit, hamiltonian)
 
-    def callback(parameters):
-        pass
+    loss_values = []
+
+    def callback(parameters, loss_values=loss_values, vqe=v):
+        # cma callback takes as input a CMAEvolutionStrategy class
+        # which keeps track of the best current solution into its .best.x
+        if method == "cma":
+            parameters = parameters.best.x
+        vqe.circuit.set_parameters(parameters)
+        loss_values.append(vqe.hamiltonian.expectation(vqe.circuit().state()))
 
     best, params, _ = v.minimize(
         initial_parameters,
@@ -146,6 +153,8 @@ def test_vqe(backend, method, options, compile, filename):
         shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
+
+    assert best == min(loss_values)
 
     # test energy fluctuation
     state = backend.np.ones(2**nqubits) / np.sqrt(2**nqubits)
