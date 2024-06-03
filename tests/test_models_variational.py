@@ -10,7 +10,7 @@ from scipy.linalg import expm
 
 from qibo import gates, hamiltonians, models
 from qibo.models.utils import cvar, gibbs
-from qibo.quantum_info import fidelity, random_statevector
+from qibo.quantum_info import random_statevector
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
