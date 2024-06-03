@@ -14,10 +14,12 @@ from qibo import (
     solvers,
 )
 from qibo.backends import (
+    construct_backend,
     get_backend,
     get_device,
     get_precision,
     get_threads,
+    list_available_backends,
     matrices,
     set_backend,
     set_device,

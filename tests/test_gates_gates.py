@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
 
@@ -212,12 +212,12 @@ def test_align(backend):
     with pytest.raises(ValueError):
         gates.Align(0, delay=-1)
 
-    nqubits = 2
+    nqubits = 1
 
-    gate = gates.Align(0, 1)
-    gate_list = [gates.H(0), gates.H(1), gate]
+    gate = gates.Align(0, 0)
+    gate_list = [gates.H(0), gate]
 
-    final_state = apply_gates(backend, gate_list, nqubits=2)
+    final_state = apply_gates(backend, gate_list, nqubits=nqubits)
     target_state = backend.plus_state(nqubits)
 
     backend.assert_allclose(final_state, target_state)
@@ -229,8 +229,8 @@ def test_align(backend):
     with pytest.raises(NotImplementedError):
         gate.qasm_label
 
-    assert not gates.Align(0, 1).clifford
-    assert not gates.Align(0, 1).unitary
+    assert not gates.Align(0, delay=0).clifford
+    assert not gates.Align(0, delay=0).unitary
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
@@ -1204,6 +1204,46 @@ def test_toffoli(backend, applyx):
     assert gatelist[-1].qasm_label == "ccx"
     assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
+
+
+def test_ccz(backend):
+    nqubits = 3
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.CCZ(0, 1, 2)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, -1],
+        ],
+        dtype=np.complex128,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+
+    assert gates.CCZ(0, 1, 2).qasm_label == "ccz"
+    assert not gates.CCZ(0, 1, 2).clifford
+    assert gates.CCZ(0, 1, 2).unitary
+
+    # test decomposition
+    decomposition = Circuit(3)
+    decomposition.add(gates.CCZ(0, 1, 2).decompose())
+    decomposition = decomposition.unitary(backend)
+
+    backend.assert_allclose(decomposition, backend.cast(matrices.CCZ), atol=1e-10)
 
 
 def test_deutsch(backend):

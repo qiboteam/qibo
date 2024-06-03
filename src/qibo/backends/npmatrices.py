@@ -64,7 +64,7 @@ class NumpyMatrices:
         # _cast will take care of casting in the right dtype for all the backends
         return self._cast(self.np.eye(n, dtype=complex), dtype=self.dtype)
 
-    def Align(self, n=2):
+    def Align(self, delay, n=2):
         return self._cast(self.I(n), dtype=self.dtype)
 
     def M(self):  # pragma: no cover
@@ -442,6 +442,22 @@ class NumpyMatrices:
                 [0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 0, 0, 1, 0],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def CCZ(self):
+        return self._cast(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, -1],
             ],
             dtype=self.dtype,
         )
