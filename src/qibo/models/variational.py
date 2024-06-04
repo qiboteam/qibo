@@ -82,6 +82,7 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
+        print("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
         if loss_func is None:
             loss_func = vqe_loss
         if compile:
@@ -96,7 +97,7 @@ class VQE:
             loss = lambda p, c, h: dtype(loss_func(p, c, h))
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
-
+        print("JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ", options)
         result, parameters, extra = self.optimizers.optimize(
             loss,
             initial_state,
