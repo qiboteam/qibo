@@ -177,12 +177,12 @@ def gradient_descent_step(
         pauli_operator_dict=pauli_operator_dict,
         normalize=normalize,
     )
-    return d_params, d
+    s = dbi_object.choose_step(d=d)
+    return d_params, d, s
 
 
 def gradient_descent(
     dbi_object: DoubleBracketIteration,
-    iterations: int,
     d_params: list,
     parameterization: ParameterizationTypes,
     pauli_operator_dict: dict = None,
@@ -194,6 +194,7 @@ def gradient_descent(
     space: callable = None,
     optimizer: callable = hyperopt.tpe,
     verbose: bool = False,
+    step_min: float = 1e-2,
     backend=None,
 ):
     r"""Numerical gradient descent method for variating diagonal operator in each double bracket rotation.
@@ -272,10 +273,6 @@ def gradient_descent(
         pauli_operator_dict=pauli_operator_dict,
         normalize=normalize,
     )
-    loss_hist = [dbi_object.loss(0.0, d=d)]
-    d_params_hist = [d_params]
-    s_hist = [0]
-    # TODO: write tests where this condition applies
     if (
         parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
     ):  # pragma: no cover
@@ -284,58 +281,48 @@ def gradient_descent(
             parameterization_order=pauli_parameterization_order,
             backend=backend,
         )
+    grad = gradient_numerical(
+        dbi_object,
+        d_params,
+        parameterization,
+        pauli_operator_dict=pauli_operator_dict,
+        pauli_parameterization_order=pauli_parameterization_order,
+        normalize=normalize,
+        backend=backend,
+    )
 
-    for _ in range(iterations):
-        # first step ensures dbi is rotated optimally for current d operator
-        if _ > 0:
-            grad = gradient_numerical(
-                dbi_object,
-                d_params,
-                parameterization,
-                pauli_operator_dict=pauli_operator_dict,
-                pauli_parameterization_order=pauli_parameterization_order,
-                normalize=normalize,
-                backend=backend,
-            )
-
-            # set up hyperopt to find optimal lr
-            def func_loss_to_lr(lr):
-                d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
-                d_eval = params_to_diagonal_operator(
-                    d_params_eval,
-                    nqubits,
-                    parameterization=parameterization,
-                    pauli_operator_dict=pauli_operator_dict,
-                    normalize=normalize,
-                )
-                return dbi_object.loss(step=s, d=d_eval)
-
-            if space is None:
-                space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
-
-            best = hyperopt.fmin(
-                fn=func_loss_to_lr,
-                space=space,
-                algo=optimizer.suggest,
-                max_evals=max_evals,
-                verbose=verbose,
-            )
-            lr = best["lr"]
-
-            d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
-
-        d = params_to_diagonal_operator(
-            d_params,
+    # set up hyperopt to find optimal lr
+    def func_loss_to_lr(lr):
+        d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+        d_eval = params_to_diagonal_operator(
+            d_params_eval,
             nqubits,
             parameterization=parameterization,
             pauli_operator_dict=pauli_operator_dict,
             normalize=normalize,
         )
-        s = dbi_object.choose_step(d=d)
-        dbi_object(step=s, d=d)
+        return dbi_object.loss(step=step_min, d=d_eval)
 
-        # record history
-        loss_hist.append(dbi_object.loss(0.0, d=d))
-        d_params_hist.append(d_params)
-        s_hist.append(s)
-    return loss_hist, d_params_hist, s_hist
+    if space is None:
+        space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
+
+    best = hyperopt.fmin(
+        fn=func_loss_to_lr,
+        space=space,
+        algo=optimizer.suggest,
+        max_evals=max_evals,
+        verbose=verbose,
+    )
+    lr = best["lr"]
+
+    d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+
+    d = params_to_diagonal_operator(
+        d_params,
+        nqubits,
+        parameterization=parameterization,
+        pauli_operator_dict=pauli_operator_dict,
+        normalize=normalize,
+    )
+    s = dbi_object.choose_step(d=d)
+    return d_params, d, s
