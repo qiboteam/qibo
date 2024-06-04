@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from math import ceil
 
 import hyperopt
 import numpy as np
@@ -111,6 +112,29 @@ class EvolutionOracle:
             np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
         ), f"{np.linalg.norm(combined_circuit.unitary() - target_unitary)},{eps}, {nmb_trottersuzuki_steps}"
         return combined_circuit
+
+    def non_classical_bound(self, s, epsilon):
+        """
+        We assume h has more than 2 terms.
+        This is meant for the setting where classical simulation is not possible.
+        We use the bound sum ||h||s^2 <= C_h s^2 N where Ch = max(h)
+        and hence we set N= epsilon/(Chs^2) and then we round it up.
+        commutator_loss takes in a symbolic hamiltonian and compute the norm.
+        epsilon is the error tolerance level that we set.
+        we return the step size required
+        """
+
+        # decompose the terms
+        def commutator_norm(a, b):
+            a_mat = a.matrix
+            b_mat = b.matrix
+            return np.linalg.norm(a_mat @ b_mat - b_mat @ a_mat)
+
+        terms = self.h.terms
+        # find the maximum norm
+        n = len(terms)
+        Ch = max([commutator_norm(terms[i], terms[i + 1]) for i in range(n - 1)])
+        return ceil(epsilon / (Ch * s**2))
 
 
 class FrameShiftedEvolutionOracle(EvolutionOracle):
