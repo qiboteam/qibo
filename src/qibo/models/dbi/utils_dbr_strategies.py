@@ -139,6 +139,47 @@ def gradient_numerical(
     return grad
 
 
+def gradient_descent_step(
+    dbi_object: DoubleBracketIteration,
+    train_epochs: int,
+    d_params: list,
+    parameterization: ParameterizationTypes,
+    pauli_operator_dict: dict = None,
+    pauli_parameterization_order: int = 1,
+    normalize: bool = False,
+    lr: float = 1e-2,
+    backend=None,
+):
+    backend = _check_backend(backend)
+    nqubits = dbi_object.nqubits
+    if (
+        parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
+    ):  # pragma: no cover
+        pauli_operator_dict = generate_pauli_operator_dict(
+            nqubits=nqubits, parameterization_order=pauli_parameterization_order
+        )
+    for _ in range(train_epochs):
+        # find gradient
+        grad = gradient_numerical(
+            dbi_object,
+            d_params,
+            parameterization,
+            pauli_operator_dict=pauli_operator_dict,
+            pauli_parameterization_order=pauli_parameterization_order,
+            normalize=normalize,
+            backend=backend,
+        )
+        d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+    d = params_to_diagonal_operator(
+        d_params,
+        nqubits,
+        parameterization=parameterization,
+        pauli_operator_dict=pauli_operator_dict,
+        normalize=normalize,
+    )
+    return d_params, d
+
+
 def gradient_descent(
     dbi_object: DoubleBracketIteration,
     iterations: int,
@@ -243,45 +284,46 @@ def gradient_descent(
             parameterization_order=pauli_parameterization_order,
             backend=backend,
         )
-    # first step
-    s = dbi_object.choose_step(d=d)
-    dbi_object(step=s, d=d)
+
     for _ in range(iterations):
-        grad = gradient_numerical(
-            dbi_object,
-            d_params,
-            parameterization,
-            pauli_operator_dict=pauli_operator_dict,
-            pauli_parameterization_order=pauli_parameterization_order,
-            normalize=normalize,
-            backend=backend,
-        )
-
-        # set up hyperopt to find optimal lr
-        def func_loss_to_lr(lr):
-            d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
-            d_eval = params_to_diagonal_operator(
-                d_params_eval,
-                nqubits,
-                parameterization=parameterization,
+        # first step ensures dbi is rotated optimally for current d operator
+        if _ > 0:
+            grad = gradient_numerical(
+                dbi_object,
+                d_params,
+                parameterization,
                 pauli_operator_dict=pauli_operator_dict,
+                pauli_parameterization_order=pauli_parameterization_order,
                 normalize=normalize,
+                backend=backend,
             )
-            return dbi_object.loss(step=s, d=d_eval)
 
-        if space is None:
-            space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
+            # set up hyperopt to find optimal lr
+            def func_loss_to_lr(lr):
+                d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+                d_eval = params_to_diagonal_operator(
+                    d_params_eval,
+                    nqubits,
+                    parameterization=parameterization,
+                    pauli_operator_dict=pauli_operator_dict,
+                    normalize=normalize,
+                )
+                return dbi_object.loss(step=s, d=d_eval)
 
-        best = hyperopt.fmin(
-            fn=func_loss_to_lr,
-            space=space,
-            algo=optimizer.suggest,
-            max_evals=max_evals,
-            verbose=verbose,
-        )
-        lr = best["lr"]
+            if space is None:
+                space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
 
-        d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+            best = hyperopt.fmin(
+                fn=func_loss_to_lr,
+                space=space,
+                algo=optimizer.suggest,
+                max_evals=max_evals,
+                verbose=verbose,
+            )
+            lr = best["lr"]
+
+            d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
+
         d = params_to_diagonal_operator(
             d_params,
             nqubits,
