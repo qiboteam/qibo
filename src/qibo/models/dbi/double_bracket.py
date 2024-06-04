@@ -24,6 +24,7 @@ class DoubleBracketGeneratorType(Enum):
     group_commutator = auto()
     """Use group commutator approximation"""
     # TODO: add double commutator (does it converge?)
+    group_commutator_3 = auto()
 
 
 class DoubleBracketCostFunction(str, Enum):
@@ -124,6 +125,17 @@ class DoubleBracketIteration:
                 @ self.backend.calculate_matrix_exp(-step, d)
                 @ self.h.exp(step)
                 @ self.backend.calculate_matrix_exp(step, d)
+            )
+        elif mode is DoubleBracketGeneratorType.group_commutator_3:
+            if d is None:
+                d = self.diagonal_h_matrix
+            operator = (
+                self.h.exp(-step*(np.sqrt(5)-1)/2)
+                @ self.backend.calculate_matrix_exp(-step*(np.sqrt(5)-1)/2, d)
+                @ self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(step*(np.sqrt(5)+1)/2, d)
+                @ self.h.exp(-step*(3-np.sqrt(5))/2)
+                @ self.backend.calculate_matrix_exp(-step, d)
             )
         operator_dagger = self.backend.cast(
             np.array(np.matrix(self.backend.to_numpy(operator)).getH())
