@@ -57,6 +57,7 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 
+
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator_3(backend, nqubits):
     """Check group commutator mode."""
