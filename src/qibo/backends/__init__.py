@@ -12,7 +12,7 @@ from qibo.backends.qulacs import QulacsBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch", "qulacs")
 QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
 
 
