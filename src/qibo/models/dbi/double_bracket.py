@@ -115,8 +115,8 @@ class DoubleBracketIteration:
     def eval_dbr_unitary(
         self,
         step: float,
-        mode: Optional(DoubleBracketGeneratorType) = None,
-        d: Optional(np.array) = None,
+        mode: DoubleBracketGeneratorType = None,
+        d: np.array = None,
     ):
         """In call we will are working in the convention that $H' = U^\\dagger H
         U$ where $U=e^{-sW}$ with $W=[D,H]$ or an approximation of that by a group commutator.
