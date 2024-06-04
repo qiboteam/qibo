@@ -100,9 +100,9 @@ class DoubleBracketIteration:
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
-        r"""We use convention that $H' = U^\dagger H U$ where $U=e^{-sW}$ with $W=[D,H]$ 
+        r"""We use convention that $H' = U^\dagger H U$ where $U=e^{-sW}$ with $W=[D,H]$
         (or depending on `mode` an approximation, see `eval_dbr_unitary`).
-        If $s>0$ then for $D = \Delta(H)$ the GWW DBR will give a $\sigma$-decrease, 
+        If $s>0$ then for $D = \Delta(H)$ the GWW DBR will give a $\sigma$-decrease,
         see https://arxiv.org/abs/2206.11772."""
 
         operator = self.eval_dbr_unitary(step, mode, d)
@@ -112,12 +112,16 @@ class DoubleBracketIteration:
         self.h.matrix = operator @ self.h.matrix @ operator_dagger
         return operator
 
-    def eval_dbr_unitary(self, step:float, mode: Optional(DoubleBracketGeneratorType) = None,
-                      d: Optional(np.array) = None):
-        """In call we will are working in the convention that $H' = U^\\dagger H 
+    def eval_dbr_unitary(
+        self,
+        step: float,
+        mode: Optional(DoubleBracketGeneratorType) = None,
+        d: Optional(np.array) = None,
+    ):
+        """In call we will are working in the convention that $H' = U^\\dagger H
         U$ where $U=e^{-sW}$ with $W=[D,H]$ or an approximation of that by a group commutator.
-        That is handy because if we switch from the DBI in the Heisenberg picture for the 
-        Hamiltonian, we get that the transformation of the state is $|\\psi'\rangle = U |\\psi\rangle$ 
+        That is handy because if we switch from the DBI in the Heisenberg picture for the
+        Hamiltonian, we get that the transformation of the state is $|\\psi'\rangle = U |\\psi\rangle$
         so that $\\langle H\rangle_{\\psi'} = \\langle H' \rangle_\\psi$ (i.e. when writing the unitary
         acting on the state dagger notation is avoided).
         The group commutator must approximate $U=e^{-s[D,H]}$. This is achieved by setting $r = \\sqrt{s}$ so that
@@ -155,7 +159,7 @@ class DoubleBracketIteration:
         else:
             raise NotImplementedError(f"The mode {mode} is not supported")
 
-        return operator 
+        return operator
 
     @staticmethod
     def commutator(a, b):
