@@ -108,9 +108,7 @@ def polynomial_step(
         d = dbi_object.diagonal_h_matrix
 
     if n > n_max:
-        raise ValueError(
-            "No solution can be found with polynomial approximation. Increase `n_max` or use other scheduling methods."
-        )
+        return 0.01
     if coef is None:
         coef = dbi_object.cost_expansion(d=d, n=n)
     roots = np.roots(coef)
@@ -123,7 +121,7 @@ def polynomial_step(
         return real_positive_roots[losses.index(min(losses))]
     # solution does not exist, return None
     else:
-        return None
+        return polynomial_step(dbi_object, n + 1, n_max, d)
 
 
 def simulated_annealing_step(

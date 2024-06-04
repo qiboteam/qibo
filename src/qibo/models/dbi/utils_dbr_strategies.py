@@ -246,6 +246,8 @@ def gradient_descent(
     # first step
     s = dbi_object.choose_step(d=d)
     dbi_object(step=s, d=d)
+    s_hist.append(s)
+    loss_hist = [dbi_object.loss(0.0, d=d)]
     for _ in range(iterations):
         grad = gradient_numerical(
             dbi_object,

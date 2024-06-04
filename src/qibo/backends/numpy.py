@@ -758,9 +758,7 @@ class NumpyBackend(Backend):
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
-        statec = self.np.conj(state)
-        hstate = hamiltonian @ state
-        ev = self.np.real(self.np.sum(statec * hstate))
+        ev = self.np.real(self.np.sum(self.np.conj(state) * hamiltonian.matrix @ state))
         if normalize:
             ev /= self.np.sum(self.np.square(self.np.abs(state)))
         return ev
