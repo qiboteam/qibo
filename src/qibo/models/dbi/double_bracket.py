@@ -130,11 +130,11 @@ class DoubleBracketIteration:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = (
-                self.h.exp(-step*(np.sqrt(5)-1)/2)
-                @ self.backend.calculate_matrix_exp(-step*(np.sqrt(5)-1)/2, d)
+                self.h.exp(-step * (np.sqrt(5) - 1) / 2)
+                @ self.backend.calculate_matrix_exp(-step * (np.sqrt(5) - 1) / 2, d)
                 @ self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(step*(np.sqrt(5)+1)/2, d)
-                @ self.h.exp(-step*(3-np.sqrt(5))/2)
+                @ self.backend.calculate_matrix_exp(step * (np.sqrt(5) + 1) / 2, d)
+                @ self.h.exp(-step * (3 - np.sqrt(5)) / 2)
                 @ self.backend.calculate_matrix_exp(-step, d)
             )
         operator_dagger = self.backend.cast(
