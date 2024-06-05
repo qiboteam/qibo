@@ -24,10 +24,10 @@ class DoubleBracketGeneratorType(Enum):
     group_commutator = auto()
     """Use group commutator approximation"""
     group_commutator_3 = auto()
-    """Implements: $e^{\frac{\sqrt{5}-1}{2}sH}e^{\frac{\sqrt{5}-1}{2}sD}e^{-sH}e^{sD}e^{\frac{3-\sqrt{5}}{2}sH}e^{sD}
-    \approx e^{s^2[H,D]} + O(s^4)$ 
+    """Implements: $e^{\frac{\\sqrt{5}-1}{2}sH}e^{\frac{\\sqrt{5}-1}{2}sD}e^{-sH}e^{sD}e^{\frac{3-\\sqrt{5}}{2}sH}e^{sD}
+    \approx e^{s^2[H,D]} + O(s^4)$
     which is equation (8) in https://arxiv.org/abs/2111.12177]
-    s must be taken as $\sqrt{s}$ to approximate the flow using the commutator
+    s must be taken as $\\sqrt{s}$ to approximate the flow using the commutator
     """
 
 
