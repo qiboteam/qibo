@@ -2,6 +2,7 @@ import collections
 import math
 
 import numpy as np
+from scipy import sparse
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -119,7 +120,8 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2**rank)
+        matrix = sparse.eye(2**rank)
+
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
@@ -141,8 +143,10 @@ class NumpyBackend(Backend):
             gmatrix = np.transpose(gmatrix, transpose_indices)
             gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
-            matrix = gmatrix @ matrix
-        return self.cast(matrix)
+            # we are using sparse matrices to improve perfomances
+            matrix = sparse.csr_matrix(gmatrix).dot(matrix)
+
+        return self.cast(matrix.toarray())
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
