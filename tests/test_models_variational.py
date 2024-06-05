@@ -92,7 +92,7 @@ test_values = [
     ("BFGS", {"maxiter": 1}, False, "vqe_bfgs.out"),
     ("parallel_L-BFGS-B", {"maxiter": 1}, True, None),
     ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
-    ("cma", {"maxfevals": 2}, False, None),
+    ("cma", {"maxiter": 1}, False, None),
     ("sgd", {"nepochs": 5}, False, None),
     ("sgd", {"nepochs": 5}, True, None),
 ]
@@ -132,10 +132,6 @@ def test_vqe(backend, method, options, compile, filename):
     loss_values = []
 
     def callback(parameters, loss_values=loss_values, vqe=v):
-        # cma callback takes as input a CMAEvolutionStrategy class
-        # which keeps track of the best current solution into its .best.x
-        if method == "cma":
-            parameters = parameters.best.x
         vqe.circuit.set_parameters(parameters)
         loss_values.append(vqe.hamiltonian.expectation(vqe.circuit().state()))
 
@@ -153,7 +149,6 @@ def test_vqe(backend, method, options, compile, filename):
         shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
-
     assert best == min(loss_values)
 
     # test energy fluctuation
@@ -316,7 +311,7 @@ def test_falqon_optimization_callback(backend):
 test_names = "method,options,compile,filename"
 test_values = [
     ("BFGS", {"maxiter": 1}, False, "aavqe_bfgs.out"),
-    ("cma", {"maxfevals": 2}, False, None),
+    ("cma", {"maxiter": 1}, False, None),
     ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
 ]
 
