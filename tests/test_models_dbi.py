@@ -59,7 +59,7 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_group_commutator_3(backend, nqubits):
-    """Check group commutator mode."""
+    """Check 3rd order group commutator mode."""
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
