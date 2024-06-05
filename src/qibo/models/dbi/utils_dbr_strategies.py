@@ -128,6 +128,7 @@ def gradient_numerical(
     d = params_to_diagonal_operator(
         d_params, nqubits, parameterization=parameterization, **kwargs
     )
+    loss_ini = dbi_object.loss(s, d)
     for i in range(len(d_params)):
         params_new = backend.cast(d_params, copy=True)
         params_new[i] += delta
@@ -135,7 +136,7 @@ def gradient_numerical(
             params_new, nqubits, parameterization=parameterization, **kwargs
         )
         # find the increment of a very small step
-        grad[i] = (dbi_object.loss(s, d_new) - dbi_object.loss(s, d)) / delta
+        grad[i] = (dbi_object.loss(s, d_new) - loss_ini) / delta
     return grad
 
 
