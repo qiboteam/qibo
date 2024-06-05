@@ -148,6 +148,7 @@ def gradient_descent_step(
     pauli_parameterization_order: int = 1,
     normalize: bool = False,
     lr: float = 1e-2,
+    num_check_points: int = 5,
     backend=None,
 ):
     backend = _check_backend(backend)
@@ -158,6 +159,11 @@ def gradient_descent_step(
         pauli_operator_dict = generate_pauli_operator_dict(
             nqubits=nqubits, parameterization_order=pauli_parameterization_order
         )
+    d_params_store = []
+    d_store = []
+    s_store = []
+    loss_store = []
+    check_point_mark = train_epochs // num_check_points
     for _ in range(train_epochs):
         # find gradient
         grad = gradient_numerical(
@@ -170,15 +176,28 @@ def gradient_descent_step(
             backend=backend,
         )
         d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
-    d = params_to_diagonal_operator(
-        d_params,
-        nqubits,
-        parameterization=parameterization,
-        pauli_operator_dict=pauli_operator_dict,
-        normalize=normalize,
-    )
-    s = dbi_object.choose_step(d=d)
-    return d_params, d, s
+        # reach check point
+        if (_ + 1) % check_point_mark == 0:
+            d = params_to_diagonal_operator(
+                d_params,
+                nqubits,
+                parameterization=parameterization,
+                pauli_operator_dict=pauli_operator_dict,
+                normalize=normalize,
+            )
+            s = dbi_object.choose_step(d=d)
+            # store values
+            d_params_store.append(d_params)
+            d_store.append(d)
+            s_store.append(s)
+            loss_store.append(dbi_object.loss(s, d))
+    # choose the minimum loss from store
+    min_loss = min(loss_store)
+    idx_min = loss_store.index(min_loss)
+    d_params = d_params_store[idx_min]
+    d = d_store[idx_min]
+    s = s_store[idx_min]
+    return d_params, d, s, min_loss
 
 
 def gradient_descent(

@@ -187,6 +187,24 @@ def params_to_diagonal_operator(
     return d
 
 
+def gradient_descent_initial_d_ideas(
+    nqubits: int,
+    parameterization_order: int = 2,
+    pauli_operator_dict: dict = None,
+):
+    """Return dictionary of options for d_params to use with gradient descent strategy."""
+    param_dict = {"uniform": np.ones(nqubits)}
+    len_order = sum([math.comb(nqubits, k + 1) for k in range(parameterization_order)])
+    param_dict["uniform_order"] = np.ones(len_order)
+    param_dict["random"] = np.random.rand(nqubits)
+    param_dict["uniform_random"] = np.ones(nqubits) + np.random.rand(nqubits) - 0.5
+    param_dict["uniform_order_random"] = (
+        np.random.rand(len_order) + np.random.rand(len_order) - 0.5
+    )
+    param_dict["linear"] = np.linspace(0, 1, nqubits)
+    return param_dict
+
+
 def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
     W = dbi_object.commutator(
