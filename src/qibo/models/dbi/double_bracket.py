@@ -109,7 +109,7 @@ class DoubleBracketIteration:
         operator_dagger = self.backend.cast(
             np.matrix(self.backend.to_numpy(operator)).getH()
         )
-        self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        self.h.matrix = operator_dagger @ self.h.matrix @ operator
         return operator
 
     def eval_dbr_unitary(
@@ -137,24 +137,25 @@ class DoubleBracketIteration:
 
         if mode is DoubleBracketGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
+                -1.0j * step,
                 self.commutator(self.diagonal_h_matrix, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
+                -1.0j * step,
                 self.commutator(self.backend.cast(d), self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
+            sqrt_step = np.sqrt(step)
             operator = (
-                self.h.exp(-step)
-                @ self.backend.calculate_matrix_exp(-step, d)
-                @ self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(step, d)
+                self.h.exp(sqrt_step)
+                @ self.backend.calculate_matrix_exp(-sqrt_step, d)
+                @ self.h.exp(-sqrt_step)
+                @ self.backend.calculate_matrix_exp(sqrt_step, d)
             )
         else:
             raise NotImplementedError(f"The mode {mode} is not supported")
