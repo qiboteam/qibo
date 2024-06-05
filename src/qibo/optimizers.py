@@ -133,10 +133,20 @@ def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
     """
     import cma
 
-    r = cma.fmin2(
-        loss, initial_parameters, 1.7, options=options, args=args, callback=callback
-    )
-    return r[1].result.fbest, r[1].result.xbest, r
+    es = cma.CMAEvolutionStrategy(initial_parameters, sigma0=1.7, inopts=options)
+
+    if callback is not None:
+        while not es.stop():
+            solutions = es.ask()
+            objective_values = [loss(x, *args) for x in solutions]
+            for solution in solutions:
+                callback(solution)
+            es.tell(solutions, objective_values)
+            es.logger.add()
+    else:
+        es.optimize(loss, args=args)
+
+    return es.result.fbest, es.result.xbest, es.result
 
 
 def newtonian(
