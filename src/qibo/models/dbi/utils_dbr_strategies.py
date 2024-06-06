@@ -1,3 +1,5 @@
+from copy import copy
+
 import hyperopt
 
 from qibo.backends import _check_backend
@@ -47,6 +49,7 @@ def select_best_dbr_generator(
                 dbi, Z_ops, compare_canonical=True
                 )
     """
+    backend = dbi_object.backend
     if scheduling is None:
         scheduling = dbi_object.scheduling
 
@@ -63,9 +66,9 @@ def select_best_dbr_generator(
 
     for i, d in enumerate(d_list):
         # prescribed step durations
-        dbi_eval = deepcopy(dbi_object)
-        d = dbi_eval.backend.cast(d)
-        flip_list[i] = cs_angle_sgn(dbi_eval, d)
+        dbi_eval = copy(dbi_object)
+        d = backend.cast(d)
+        flip_list[i] = cs_angle_sgn(dbi_eval, d, backend=backend)
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.choose_step(
@@ -78,7 +81,7 @@ def select_best_dbr_generator(
             norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
-        dbi_eval = deepcopy(dbi_object)
+        dbi_eval = copy(dbi_object)
         dbi_eval.mode = DoubleBracketGeneratorType.canonical
         if step is None:
             step_best = dbi_eval.choose_step(scheduling=scheduling, **kwargs)
@@ -91,7 +94,7 @@ def select_best_dbr_generator(
     idx_max_loss = np.argmin(norms_off_diagonal_restriction)
     flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
-    dbi_eval = deepcopy(dbi_object)
+    dbi_eval = copy(dbi_object)
     if idx_max_loss == len(d_list) and compare_canonical is True:
         # canonical
         dbi_eval(step=step_optimal, mode=DoubleBracketGeneratorType.canonical)
@@ -126,13 +129,17 @@ def gradient_numerical(
     nqubits = dbi_object.nqubits
     grad = np.zeros(len(d_params))
     d = params_to_diagonal_operator(
-        d_params, nqubits, parameterization=parameterization, **kwargs
+        d_params, nqubits, parameterization=parameterization, **kwargs, backend=backend
     )
     for i in range(len(d_params)):
-        params_new = backend.cast(d_params, copy=True)
-        params_new[i] += delta
+        params_new = backend.to_numpy(d_params).copy()
+        params_new[i] = params_new[i] + delta
         d_new = params_to_diagonal_operator(
-            params_new, nqubits, parameterization=parameterization, **kwargs
+            params_new,
+            nqubits,
+            parameterization=parameterization,
+            **kwargs,
+            backend=backend,
         )
         # find the increment of a very small step
         grad[i] = (dbi_object.loss(s, d_new) - dbi_object.loss(s, d)) / delta
@@ -230,6 +237,7 @@ def gradient_descent(
         parameterization=parameterization,
         pauli_operator_dict=pauli_operator_dict,
         normalize=normalize,
+        backend=backend,
     )
     loss_hist = [dbi_object.loss(0.0, d=d)]
     d_params_hist = [d_params]

@@ -66,13 +66,13 @@ def str_to_symbolic(name: str):
     return tensor_op
 
 
-def cs_angle_sgn(dbi_object, d):
+def cs_angle_sgn(dbi_object, d, backend=None):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
-    backend = dbi_object.backend
-    d = dbi_object.backend.cast(d)
+    backend = _check_backend(backend)
+    d = backend.cast(d)
     norm = backend.np.trace(
         backend.np.dot(
-            backend.np.conjugate(
+            backend.np.conj(
                 dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
             ).T,
             dbi_object.commutator(d, dbi_object.h.matrix),
@@ -81,13 +81,13 @@ def cs_angle_sgn(dbi_object, d):
     return backend.np.real(backend.np.sign(norm))
 
 
-def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list):
+def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list, backend=None):
     """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
-
+    backend = _check_backend(backend)
     decomposition = []
     for Z_i in pauli_operators:
-        expect = np.trace(h_matrix @ Z_i) / 2**nqubits
+        expect = backend.np.trace(h_matrix @ Z_i) / 2**nqubits
         decomposition.append(expect)
     return decomposition
 
@@ -185,7 +185,7 @@ def params_to_diagonal_operator(
     # TODO: write proper tests for normalize=True
     if normalize:  # pragma: no cover
         d = d / np.linalg.norm(d)
-    return d
+    return backend.cast(d)
 
 
 def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):

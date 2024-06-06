@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import hamiltonians, set_backend
+from qibo import hamiltonians
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketCostFunction,
@@ -242,7 +242,7 @@ def test_gradient_descent(backend, order):
     pauli_operators = list(pauli_operator_dict.values())
     # let initial d be approximation of $\Delta(H)
     d_coef_pauli = decompose_into_pauli_basis(
-        dbi.diagonal_h_matrix, pauli_operators=pauli_operators
+        dbi.diagonal_h_matrix, pauli_operators=pauli_operators, backend=backend
     )
     d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
     loss_hist_pauli, d_params_hist_pauli, s_hist_pauli = gradient_descent(
@@ -252,6 +252,7 @@ def test_gradient_descent(backend, order):
         ParameterizationTypes.pauli,
         pauli_operator_dict=pauli_operator_dict,
         pauli_parameterization_order=order,
+        backend=backend,
     )
     assert loss_hist_pauli[-1] < initial_off_diagonal_norm
 
@@ -262,6 +263,10 @@ def test_gradient_descent(backend, order):
         _,
         _,
     ) = gradient_descent(
-        dbi, NSTEPS, d_coef_computational_partial, ParameterizationTypes.computational
+        dbi,
+        NSTEPS,
+        d_coef_computational_partial,
+        ParameterizationTypes.computational,
+        backend=backend,
     )
     assert loss_hist_computational_partial[-1] < initial_off_diagonal_norm
