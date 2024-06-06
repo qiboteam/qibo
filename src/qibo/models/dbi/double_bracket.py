@@ -107,7 +107,7 @@ class DoubleBracketIteration:
 
         operator = self.eval_dbr_unitary(step, mode, d)
         operator_dagger = self.backend.cast(
-            np.matrix(self.backend.to_numpy(operator)).getH()
+            np.array(np.matrix(self.backend.to_numpy(operator)).getH())
         )
         self.h.matrix = operator_dagger @ self.h.matrix @ operator
         return operator

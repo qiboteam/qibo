@@ -82,7 +82,6 @@ class VQE:
             the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
             and for ``'sgd'`` the options used during the optimization.
         """
-        print("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
         if loss_func is None:
             loss_func = vqe_loss
         if compile:
