@@ -158,7 +158,7 @@ class DoubleBracketIteration:
                 @ self.backend.calculate_matrix_exp(sqrt_step, d)
             )
         else:
-            raise NotImplementedError(f"The mode {mode} is not supported")
+            raise NotImplementedError(f"The mode {mode} is not supported") # pragma: no cover
 
         return operator
 
