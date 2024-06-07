@@ -65,7 +65,7 @@ def test_double_bracket_iteration_group_commutator_3(backend, nqubits):
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
-        mode=DoubleBracketGeneratorType.group_commutator_3rd_order,
+        mode=DoubleBracketGeneratorType.group_commutator_third_order,
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
