@@ -130,7 +130,7 @@ class DoubleBracketIteration:
                 @ self.h.exp(step)
                 @ self.backend.calculate_matrix_exp(step, d)
             )
-        elif mode is DoubleBracketGeneratorType.group_commutator_3rd_order:
+        elif mode is DoubleBracketGeneratorType.group_commutator_third_order:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = (
