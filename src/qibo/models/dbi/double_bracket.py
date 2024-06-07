@@ -23,7 +23,7 @@ class DoubleBracketGeneratorType(Enum):
     """Use single commutator."""
     group_commutator = auto()
     """Use group commutator approximation"""
-    group_commutator_3rd_order = auto()
+    group_commutator_third_order = auto()
     """Implements: $e^{\frac{\\sqrt{5}-1}{2}isH}e^{\frac{\\sqrt{5}-1}{2}isD}e^{-isH}e^{isD}e^{\frac{3-\\sqrt{5}}{2}isH}e^{isD}
     \approx e^{-s^2[H,D]} + O(s^4)$
     which is equation (8) in https://arxiv.org/abs/2111.12177]
