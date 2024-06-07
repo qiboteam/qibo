@@ -70,7 +70,7 @@ def test_double_bracket_iteration_group_commutator_3(backend, nqubits):
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     # test first iteration with default d
-    dbi(mode=DoubleBracketGeneratorType.group_commutator_3, step=0.01)
+    dbi(mode=DoubleBracketGeneratorType.group_commutator_third_order, step=0.01)
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
 
