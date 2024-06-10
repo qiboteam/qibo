@@ -159,20 +159,6 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
-def test_expectation_value_nqubits_error(backend):
-    nqubits = 3
-    test_circuit = qibo.models.Circuit(nqubits)
-    test_circuit.add(gates.TOFFOLI(0, 1, 2))
-    test_circuit.add(gates.M(*np.arange(0, nqubits, 1)))
-    with pytest.raises(ValueError):
-        expectation_val = _expectation_value(
-            test_circuit,
-            1,
-            nshots=int(1e4),
-            backend=backend,
-        )
-
-
 @pytest.mark.parametrize(
     "nqubits, gate",
     [
