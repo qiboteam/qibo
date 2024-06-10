@@ -23,7 +23,12 @@ class DoubleBracketGeneratorType(Enum):
     """Use single commutator."""
     group_commutator = auto()
     """Use group commutator approximation"""
-    # TODO: add double commutator (does it converge?)
+    group_commutator_third_order = auto()
+    """Implements: $e^{\frac{\\sqrt{5}-1}{2}isH}e^{\frac{\\sqrt{5}-1}{2}isD}e^{-isH}e^{isD}e^{\frac{3-\\sqrt{5}}{2}isH}e^{isD}
+    \approx e^{-s^2[H,D]} + O(s^4)$
+    which is equation (8) in https://arxiv.org/abs/2111.12177]
+    s must be taken as $\\sqrt{s}$ to approximate the flow using the commutator
+    """
 
 
 class DoubleBracketCostFunction(str, Enum):
@@ -150,12 +155,30 @@ class DoubleBracketIteration:
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
-            sqrt_step = np.sqrt(step)
             operator = (
-                self.h.exp(sqrt_step)
-                @ self.backend.calculate_matrix_exp(-sqrt_step, d)
-                @ self.h.exp(-sqrt_step)
-                @ self.backend.calculate_matrix_exp(sqrt_step, d)
+                self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(-step, d)
+                @ self.h.exp(-step)
+                @ self.backend.calculate_matrix_exp(step, d)
+            )
+        elif mode is DoubleBracketGeneratorType.group_commutator_third_order:
+            if d is None:
+                d = self.diagonal_h_matrix
+            operator = (
+                self.h.exp(-step * (np.sqrt(5) - 1) / 2)
+                @ self.backend.calculate_matrix_exp(-step * (np.sqrt(5) - 1) / 2, d)
+                @ self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(step * (np.sqrt(5) + 1) / 2, d)
+                @ self.h.exp(-step * (3 - np.sqrt(5)) / 2)
+                @ self.backend.calculate_matrix_exp(-step, d)
+            )
+            operator = (
+                self.backend.calculate_matrix_exp(step, d)
+                @ self.h.exp(step * (3 - np.sqrt(5)) / 2)
+                @ self.backend.calculate_matrix_exp(-step * (np.sqrt(5) + 1) / 2, d)
+                @ self.h.exp(-step)
+                @ self.backend.calculate_matrix_exp(step * (np.sqrt(5) - 1) / 2, d)
+                @ self.h.exp(step * (np.sqrt(5) - 1) / 2)
             )
         else:
             raise NotImplementedError(
