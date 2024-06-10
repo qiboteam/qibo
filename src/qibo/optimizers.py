@@ -1,5 +1,5 @@
 from qibo.config import log, raise_error
-
+import numpy as np
 
 def optimize(
     loss,
@@ -91,6 +91,17 @@ def optimize(
         backend = _check_backend(backend)
 
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
+    elif method == "rotosolve":
+
+        max_steps = options['max_steps']
+        step_size = options['step_size']
+        alt_convention = options['alt_convention']
+        num_params = options['num_params']
+
+        rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size, alt_convention = alt_convention)
+        result = rotosolver.optimize(num_params, loss, args, initial_point = initial_parameters, callback = callback)
+
+        return result
     else:
         from qibo.backends import _check_backend
 
@@ -112,7 +123,6 @@ def optimize(
             processes,
             backend,
         )
-
 
 def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -395,3 +405,126 @@ class ParallelBFGS:  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+class Rotosolve:
+    """docstring for ."""
+
+
+
+    def __init__(self, max_steps: int = 10, step_size: int = 1, alt_convention: bool = False):
+
+        super().__init__()
+
+        self._max_steps = max_steps
+        self._step_size = step_size
+
+        # alt_convention == False:
+        # e^{-i H theta}
+        # alt_convention == True
+        # e^{-i H theta/2}
+        self._alt_convention = alt_convention
+
+    def optimize(self, num_vars, loss_function, args, initial_point=None, callback=None):
+
+        if initial_point is None:
+            initial_point = np.random.uniform(-np.pi, +np.pi, num_vars)
+
+        return self._minimize(fun = loss_function, args = args, x0 = initial_point, callback = callback)
+
+    def _minimize(self, fun, args, x0, callback):
+
+        factor = 2 if self._alt_convention else 1
+
+        def f(x, args):
+            return fun(x / factor, args[0], args[1])
+
+        theta_optimal, optimal_value, expectation_vals, nevals =  self._rotosolve(f, args, x0, self._max_steps, self._step_size, callback)
+
+        self.energy_values = expectation_vals
+
+        extra = {}
+        extra['x'] = theta_optimal # optimal parameters
+        extra['fun'] = optimal_value # optimal function value
+        extra['exp_vals'] = expectation_vals
+        extra['nfev'] = nevals
+
+        parameters = theta_optimal
+        result = expectation_vals
+
+        return result, parameters, extra
+
+    def _rotosolve(self, f, args, initial_point, max_steps, step_size, callback):
+
+        D = len(initial_point)
+        theta = initial_point
+        f_evals = 0
+
+        def f_counter(params, args):
+            return f(params, args)
+
+        f_current = f_counter(initial_point, args)
+        f_evals += 1
+
+        converged = False
+        steps = 0
+
+        theta_values = []
+        f_values = []
+
+        print("Rotosolve algorithm for optimizing a given value")
+        print("================================================")
+
+        while not converged:
+
+            for d in range(D):
+
+                phi = np.random.uniform(-np.pi, +np.pi)
+                theta_d = phi
+                theta[d] = theta_d
+                m_vals = {
+                    'phi+0': 0,
+                    'phi+pi/2': 0,
+                    'phi-pi/2': 0
+                }
+
+                m_vals['phi+0'] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = theta[d] + np.pi/2
+
+                m_vals['phi+pi/2'] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = theta[d] - np.pi
+
+                m_vals['phi-pi/2'] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = phi - np.pi/2 - np.arctan2(
+                    2*m_vals['phi+0'] - m_vals['phi+pi/2'] - m_vals['phi-pi/2'],
+                    m_vals['phi+pi/2'] - m_vals['phi-pi/2']
+                )
+
+                phi = 0
+                theta_d = 0
+
+            theta_values.append(theta)
+
+            expectation_value = f(theta, args)
+            f_values.append(expectation_value)
+
+            if callback != None:
+                callback(theta, expectation_value, steps)
+
+            print('Step {step}. Current expectation value: {ev: .8f}'.format(step = steps, ev = expectation_value))
+
+            steps += step_size
+
+            if steps >= max_steps:
+                converged = True
+
+        f_current = f_counter(theta, args)
+        f_evals += 1
+
+        min_index = np.argmin(f_values)
+        f_min = f_values[min_index]
+        theta_min = theta_values[min_index]
+
+        return theta_min, f_min, f_values, f_evals
