@@ -99,9 +99,8 @@ def optimize(
         num_params = options['num_params']
 
         rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size, alt_convention = alt_convention)
-        result = rotosolver.optimize(num_params, loss, args, initial_point = initial_parameters, callback = callback)
 
-        return result
+        return rotosolver.optimize(num_params, loss, args, initial_point = initial_parameters, callback = callback)
     else:
         from qibo.backends import _check_backend
 
