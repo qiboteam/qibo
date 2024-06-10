@@ -1,16 +1,21 @@
 from functools import cache
 from inspect import signature
 from itertools import product
+from random import Random
 from typing import Union
 
 import numpy as np
+from networkx import connectivity
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import GlobalBackend
+from qibo.backends import GlobalBackend, _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.placer import Random
+from qibo.transpiler.router import Sabre
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -135,7 +140,7 @@ def _measurement_basis(j, nqubits):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
+def _expectation_value(nqubits, circuit, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
         should already have noise models implemented, if any, prior to using this
@@ -155,22 +160,14 @@ def _expectation_value(circuit, j, nshots=int(1e4), backend=None):
         float: Expectation value.
     """
 
-    nqubits = circuit.nqubits
-    if not nqubits in (1, 2):
-        raise_error(
-            ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
-        )
+    if j == 0:
+        return 1.0
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
-    else:
-        if j == 0:
-            return 1.0
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
-
-        result = backend.execute_circuit(circuit, nshots=nshots)
-        observable = _get_observable(j, nqubits)
-        return result.expectation_from_samples(observable)
+    result = backend.execute_circuit(circuit, nshots=nshots)
+    observable = _get_observable(j, nqubits)
+    return result.expectation_from_samples(observable)
 
 
 def _gate_tomography(
@@ -206,12 +203,6 @@ def _gate_tomography(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if backend.name == "qibolab" and transpiler is None:
-        transpiler = Passes(
-            connectivity=backend.platform.topology,
-            passes=[Unroller(NativeGates.default())],
-        )
-
     if gate is not None:
         if nqubits != len(gate.qubits):
             raise_error(
@@ -237,7 +228,9 @@ def _gate_tomography(
                 new_circ = noise_model.apply(new_circ)
             if transpiler is not None:
                 new_circ, _ = transpiler(new_circ)
-            expectation_val = _expectation_value(new_circ, j, nshots, backend=backend)
+            expectation_val = _expectation_value(
+                nqubits, new_circ, j, nshots, backend=backend
+            )
             matrix_jk[j, k] = expectation_val
     return matrix_jk
 
@@ -265,6 +258,19 @@ def GST(
     Returns:
         list(ndarray): Approximated matrices of the input gate_set.
     """
+
+    backend = _check_backend(backend)
+
+    if backend.name == "qibolab" and transpiler is None:
+        transpiler = Passes(
+            connectivity=backend.platform.topology,
+            passes=[
+                Preprocessing(backend.platform.topology),
+                Random(backend.platform.topology),
+                Sabre(backend.platform.topology),
+                Unroller(NativeGates.default()),
+            ],
+        )
 
     matrices = []
     empty_matrices = []
