@@ -123,7 +123,7 @@ class DoubleBracketIteration:
         mode: DoubleBracketGeneratorType = None,
         d: np.array = None,
     ):
-        """In call we will are working in the convention that $H' = U^\\dagger H
+        """In call we are working in the convention that $H' = U^\\dagger H
         U$ where $U=e^{-sW}$ with $W=[D,H]$ or an approximation of that by a group commutator.
         That is handy because if we switch from the DBI in the Heisenberg picture for the
         Hamiltonian, we get that the transformation of the state is $|\\psi'\rangle = U |\\psi\rangle$
