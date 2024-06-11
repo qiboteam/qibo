@@ -2270,10 +2270,18 @@ class TOFFOLI(Gate):
     def qasm_label(self):
         return "ccx"
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        c0, c1 = self.control_qubits
-        t = self.target_qubits[0]
-        return [self.__class__(c0, c1, t)]
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{TOFFOLI}` gate.
+
+        Decompose :math:`\\text{TOFFOLI}` gate into :class:`qibo.gates.H`,
+        :class:`qibo.gates.T`, :class:`qibo.gates.TDG`, and
+        :class:`qibo.gates.CNOT`.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
         """Congruent representation of ``TOFFOLI`` gate.

@@ -1205,6 +1205,13 @@ def test_toffoli(backend, applyx):
     assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
 
+    # test decomposition
+    decomposition = Circuit(3)
+    decomposition.add(gates.TOFFOLI(0, 1, 2).decompose())
+    decomposition = decomposition.unitary(backend)
+
+    backend.assert_allclose(decomposition, backend.cast(matrices.TOFFOLI), atol=1e-10)
+
 
 def test_ccz(backend):
     nqubits = 3
