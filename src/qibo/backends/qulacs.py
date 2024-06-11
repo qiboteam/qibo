@@ -12,7 +12,10 @@ class QulacsBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
         import qulacs
-        from qulacs import QuantumCircuitSimulator, converter
+        from qulacs import (  # pylint: disable=no-name-in-module
+            QuantumCircuitSimulator,
+            converter,
+        )
 
         self.qulacs = qulacs
         self.simulator = QuantumCircuitSimulator
