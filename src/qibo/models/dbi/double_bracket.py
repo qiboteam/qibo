@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import Optional
 
 import numpy as np
+import optuna
 
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.utils import *
