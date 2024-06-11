@@ -93,10 +93,22 @@ def optimize(
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
     elif method == "rotosolve":
 
-        max_steps = options['max_steps']
-        step_size = options['step_size']
-        alt_convention = options['alt_convention']
+        if not "num_params" in options:
+            raise Exception(f"Params needed for Rotosolve")
+
         num_params = options['num_params']
+
+        if "max_steps" in options:
+            max_steps = options['max_steps']
+        else:
+            max_steps = 10
+
+        if "step_size" in options:
+            step_size = options['step_size']
+        else:
+            step_size = 1
+
+        alt_convention = False
 
         rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size, alt_convention = alt_convention)
 
