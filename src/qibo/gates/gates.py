@@ -2270,7 +2270,7 @@ class TOFFOLI(Gate):
     def qasm_label(self):
         return "ccx"
 
-    def decompose(self) -> List[Gate]:
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of :math:`\\text{TOFFOLI}` gate.
 
         Decompose :math:`\\text{TOFFOLI}` gate into :class:`qibo.gates.H`,
