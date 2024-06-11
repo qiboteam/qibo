@@ -11,8 +11,8 @@ class QulacsBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        import qulacs
-        from qulacs import (  # pylint: disable=no-name-in-module
+        import qulacs  # pylint: disable=import-error
+        from qulacs import (  # pylint: disable=no-name-in-module, import-error
             QuantumCircuitSimulator,
             converter,
         )
