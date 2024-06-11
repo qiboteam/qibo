@@ -35,7 +35,7 @@ numpy = "^1.26.4"
 networkx = "^3.2.1"
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 torch = { version = "^2.1.1", optional = true }
-qulacs = { version = "^0.6.4", optional = true }
+qulacs = { version = "^0.6.4", optional = true, markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'"}
 
 [tool.poetry.group.dev]
 optional = true
@@ -74,7 +74,7 @@ torch = "^2.1.1"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
-qulacs = "^0.6.3"
+qulacs = { version = "^0.6.4", markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
 
 [tool.poe.tasks]
 test = "pytest"

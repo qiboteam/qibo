@@ -4070,7 +4070,7 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "HEAD"
-resolved_reference = "683a19467797c8a4d7deaf1a3a1f10a1baca66ca"
+resolved_reference = "a09b5de0248f9c702e1bdbb6717ae694ec247654"
 
 [[package]]
 name = "qibotn"
@@ -5435,4 +5435,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "5a79a55221a1417404521c98624455fac4eea5dcdac0b805a8f15c768bd29b65"
+content-hash = "3a9dee5a5b40e1e4de7ec5b2ae3877a43545c5c6e8385c627f49d08aeba34fb7"
