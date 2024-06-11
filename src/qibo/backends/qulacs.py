@@ -12,8 +12,11 @@ class QulacsBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
         import qulacs
+        from qulacs import QuantumCircuitSimulator, converter
 
         self.qulacs = qulacs
+        self.simulator = QuantumCircuitSimulator
+        self.converter = converter
         self.name = "qulacs"
         self.versions = {"qibo": __version__, "qulacs": qulacs.__version__}
         self.device = "CPU"
@@ -33,9 +36,7 @@ class QulacsBackend(NumpyBackend):
         qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
         qasm_str = re.sub(r"creg\s.+;", "", qasm_str)
         qasm_str = re.sub(r"measure\s.+;", "", qasm_str)
-        circ = self.qulacs.converter.convert_QASM_to_qulacs_circuit(
-            qasm_str.splitlines()
-        )
+        circ = self.converter.convert_QASM_to_qulacs_circuit(qasm_str.splitlines())
         return circ
 
     def execute_circuit(
@@ -59,7 +60,7 @@ class QulacsBackend(NumpyBackend):
             if circuit.density_matrix
             else self.qulacs.QuantumState(circuit.nqubits)  # pylint: disable=no-member
         )
-        sim = self.qulacs.QuantumCircuitSimulator(circ, state)
+        sim = self.simulator(circ, state)
         sim.simulate()
         if circuit.density_matrix:
             dim = 2**circuit.nqubits
