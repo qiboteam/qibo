@@ -6,6 +6,7 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
+from qibo.transpiler.decompositions import standard_decompositions
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -1207,7 +1208,7 @@ def test_toffoli(backend, applyx):
 
     # test decomposition
     decomposition = Circuit(3)
-    decomposition.add(gates.TOFFOLI(0, 1, 2).decompose())
+    decomposition.add(standard_decompositions(gates.TOFFOLI(0, 1, 2)))
     decomposition = decomposition.unitary(backend)
 
     backend.assert_allclose(decomposition, backend.cast(matrices.TOFFOLI), atol=1e-10)
