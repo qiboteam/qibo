@@ -108,7 +108,6 @@ def hamming_distance(
     difference = np.array(list(bitstring_1), dtype=int) - np.array(
         list(bitstring_2), dtype=int
     )
-    print(difference, difference.dtype)
     difference = np.abs(difference)
     difference = difference.astype(str)
     difference = "".join(difference)
