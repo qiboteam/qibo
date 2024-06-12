@@ -108,11 +108,9 @@ def optimize(
         else:
             step_size = 1
 
-        alt_convention = False
+        rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size)
 
-        rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size, alt_convention = alt_convention)
-
-        return rotosolver.optimize(num_params, loss, args, initial_point = initial_parameters, callback = callback)
+        return rotosolver.optimize(num_params, loss, args, initial_parameters = initial_parameters, callback = callback)
     else:
         from qibo.backends import _check_backend
 
@@ -418,33 +416,48 @@ class ParallelBFGS:  # pragma: no cover
         return self.jacobian_value
 
 class Rotosolve:
-    """docstring for ."""
+    """Rotosolve gradient free optimizer. This implementation is based on https://doi.org/10.22331/q-2021-01-28-391 and https://10.1103/PhysRevResearch.2.043158
 
+    Args:
+        max_steps (int): Maximum number of iterations to minimize the circuit
+        step_size (int): Size between iteration steps
+        num_vars (int): Number of parameters to optimize from variational circuit
+        loss_function: Loss as a function for variational parameters to be optimized
+        args (tuple): Optional arguments for the loss function.
+        initial_parameters (nd.array): Initial guess for the variational parameters
+        callback (callable): Callback function for intermidiate expectation values
 
+    """
 
-    def __init__(self, max_steps: int = 10, step_size: int = 1, alt_convention: bool = False):
+    def __init__(self, max_steps: int = 10, step_size: int = 1):
 
         super().__init__()
 
         self._max_steps = max_steps
         self._step_size = step_size
 
-        # alt_convention == False:
-        # e^{-i H theta}
-        # alt_convention == True
-        # e^{-i H theta/2}
-        self._alt_convention = alt_convention
+    def optimize(self, num_vars, loss_function, args, initial_parameters=None, callback=None):
+        """Executes parametrized gate angle minimization
+        Args:
+            num_vars (int): Number of parameters to optimize from variational circuit
+            loss_function: Loss as a function for variational parameters to be optimized
+            args (tuple): Optional arguments for the loss function.
+            initial_parameters (nd.array): Initial guess for the variational parameters
+            callback (callable): Callback function for intermidiate expectation values
 
-    def optimize(self, num_vars, loss_function, args, initial_point=None, callback=None):
+        Returns:
+            list: expectation values obtained on each optimization loop
+            nd.array: optimized parameters (angles) obtained on each optimization loop
+            dict: summary with all information obtained from optimization process
+        """
+        if initial_parameters is None:
+            initial_parameters = np.random.uniform(-np.pi, +np.pi, num_vars)
 
-        if initial_point is None:
-            initial_point = np.random.uniform(-np.pi, +np.pi, num_vars)
-
-        return self._minimize(fun = loss_function, args = args, x0 = initial_point, callback = callback)
+        return self._minimize(fun = loss_function, args = args, x0 = initial_parameters, callback = callback)
 
     def _minimize(self, fun, args, x0, callback):
 
-        factor = 2 if self._alt_convention else 1
+        factor = 1
 
         def f(x, args):
             return fun(x / factor, args[0], args[1])
@@ -464,16 +477,16 @@ class Rotosolve:
 
         return result, parameters, extra
 
-    def _rotosolve(self, f, args, initial_point, max_steps, step_size, callback):
+    def _rotosolve(self, f, args, initial_parameters, max_steps, step_size, callback):
 
-        D = len(initial_point)
-        theta = initial_point
+        D = len(initial_parameters)
+        theta = initial_parameters
         f_evals = 0
 
         def f_counter(params, args):
             return f(params, args)
 
-        f_current = f_counter(initial_point, args)
+        f_current = f_counter(initial_parameters, args)
         f_evals += 1
 
         converged = False
@@ -482,8 +495,8 @@ class Rotosolve:
         theta_values = []
         f_values = []
 
-        print("Rotosolve algorithm for optimizing a given value")
-        print("================================================")
+        print("Rotosolve circuit optimization steps")
+        print("====================================")
 
         while not converged:
 
@@ -528,7 +541,7 @@ class Rotosolve:
 
             steps += step_size
 
-            if steps >= max_steps:
+            if steps >= max_steps + 1:
                 converged = True
 
         f_current = f_counter(theta, args)

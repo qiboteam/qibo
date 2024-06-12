@@ -215,6 +215,20 @@ def vqe_loss(params, circuit, hamiltonian):
     return hamiltonian.expectation(final_state)
 
 def matrix_to_pauli_operators(matrix):
+    """Calculates the Pauli operators for a given matrix.
+
+    Args:
+        matrix (np.ndarray): The filter threshold for each input dimension. Default is None.
+
+    Returns:
+        dict(string:float): Pauli operators for a given matrix mapped to their coefficient
+    """
+
+    n = int(np.log2(len(matrix)))
+    dims = 2 ** n
+
+    if matrix.shape != (dims, dims):
+        raise ValueError("The input must be a 2^n x 2^n dimensional matrix.")
 
     from functools import reduce
     from itertools import product
@@ -226,12 +240,6 @@ def matrix_to_pauli_operators(matrix):
         "Y": m.Y,
         "Z": m.Z,
     }
-
-    n = int(np.log2(len(matrix)))
-    dims = 2 ** n
-
-    if matrix.shape != (dims, dims):
-        raise ValueError("The input must be a 2^n x 2^n dimensional matrix.")
 
     basis_key = ["".join(k) for k in product(PAULIS.keys(), repeat=n)]
     components = {}
