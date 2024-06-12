@@ -102,7 +102,12 @@ def hamming_distance(
 
     nbits = max(len(bitstring_1), len(bitstring_2))
 
-    difference = abs(int(bitstring_1, 2) - int(bitstring_2, 2))
+    bitstring_1 = "0" * (nbits - len(bitstring_1)) + bitstring_1
+    bitstring_2 = "0" * (nbits - len(bitstring_2)) + bitstring_2
+
+    difference = np.abs(
+        np.array(list(bitstring_1), dtype=int) - np.array(list(bitstring_2), dtype=int)
+    )
 
     return hamming_weight(f"{difference:{nbits}b}", return_indexes=return_indexes)
 
