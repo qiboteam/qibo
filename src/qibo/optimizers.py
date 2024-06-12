@@ -1,5 +1,7 @@
-from qibo.config import log, raise_error
 import numpy as np
+
+from qibo.config import log, raise_error
+
 
 def optimize(
     loss,
@@ -96,21 +98,27 @@ def optimize(
         if not "num_params" in options:
             raise Exception(f"Params needed for Rotosolve")
 
-        num_params = options['num_params']
+        num_params = options["num_params"]
 
         if "max_steps" in options:
-            max_steps = options['max_steps']
+            max_steps = options["max_steps"]
         else:
             max_steps = 10
 
         if "step_size" in options:
-            step_size = options['step_size']
+            step_size = options["step_size"]
         else:
             step_size = 1
 
-        rotosolver = Rotosolve(max_steps = max_steps, step_size = step_size)
+        rotosolver = Rotosolve(max_steps=max_steps, step_size=step_size)
 
-        return rotosolver.optimize(num_params, loss, args, initial_parameters = initial_parameters, callback = callback)
+        return rotosolver.optimize(
+            num_params,
+            loss,
+            args,
+            initial_parameters=initial_parameters,
+            callback=callback,
+        )
     else:
         from qibo.backends import _check_backend
 
@@ -132,6 +140,7 @@ def optimize(
             processes,
             backend,
         )
+
 
 def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -415,6 +424,7 @@ class ParallelBFGS:  # pragma: no cover
         self.evaluate(x)
         return self.jacobian_value
 
+
 class Rotosolve:
     """Rotosolve gradient free optimizer. This implementation is based on https://doi.org/10.22331/q-2021-01-28-391 and https://10.1103/PhysRevResearch.2.043158
     Code created as part of QuantumSpain Project (https://quantumspain-project.es/)
@@ -437,7 +447,9 @@ class Rotosolve:
         self._max_steps = max_steps
         self._step_size = step_size
 
-    def optimize(self, num_vars, loss_function, args, initial_parameters=None, callback=None):
+    def optimize(
+        self, num_vars, loss_function, args, initial_parameters=None, callback=None
+    ):
         """Executes parametrized gate angle minimization
         Args:
             num_vars (int): Number of parameters to optimize from variational circuit
@@ -454,7 +466,9 @@ class Rotosolve:
         if initial_parameters is None:
             initial_parameters = np.random.uniform(-np.pi, +np.pi, num_vars)
 
-        return self._minimize(fun = loss_function, args = args, x0 = initial_parameters, callback = callback)
+        return self._minimize(
+            fun=loss_function, args=args, x0=initial_parameters, callback=callback
+        )
 
     def _minimize(self, fun, args, x0, callback):
 
@@ -463,15 +477,17 @@ class Rotosolve:
         def f(x, args):
             return fun(x / factor, args[0], args[1])
 
-        theta_optimal, optimal_value, expectation_vals, nevals =  self._rotosolve(f, args, x0, self._max_steps, self._step_size, callback)
+        theta_optimal, optimal_value, expectation_vals, nevals = self._rotosolve(
+            f, args, x0, self._max_steps, self._step_size, callback
+        )
 
         self.energy_values = expectation_vals
 
         extra = {}
-        extra['x'] = theta_optimal # optimal parameters
-        extra['fun'] = optimal_value # optimal function value
-        extra['exp_vals'] = expectation_vals
-        extra['nfev'] = nevals
+        extra["x"] = theta_optimal  # optimal parameters
+        extra["fun"] = optimal_value  # optimal function value
+        extra["exp_vals"] = expectation_vals
+        extra["nfev"] = nevals
 
         parameters = theta_optimal
         result = expectation_vals
@@ -506,25 +522,25 @@ class Rotosolve:
                 phi = np.random.uniform(-np.pi, +np.pi)
                 theta_d = phi
                 theta[d] = theta_d
-                m_vals = {
-                    'phi+0': 0,
-                    'phi+pi/2': 0,
-                    'phi-pi/2': 0
-                }
+                m_vals = {"phi+0": 0, "phi+pi/2": 0, "phi-pi/2": 0}
 
-                m_vals['phi+0'] = f_counter(theta, args)
+                m_vals["phi+0"] = f_counter(theta, args)
                 f_evals += 1
-                theta[d] = theta[d] + np.pi/2
+                theta[d] = theta[d] + np.pi / 2
 
-                m_vals['phi+pi/2'] = f_counter(theta, args)
+                m_vals["phi+pi/2"] = f_counter(theta, args)
                 f_evals += 1
                 theta[d] = theta[d] - np.pi
 
-                m_vals['phi-pi/2'] = f_counter(theta, args)
+                m_vals["phi-pi/2"] = f_counter(theta, args)
                 f_evals += 1
-                theta[d] = phi - np.pi/2 - np.arctan2(
-                    2*m_vals['phi+0'] - m_vals['phi+pi/2'] - m_vals['phi-pi/2'],
-                    m_vals['phi+pi/2'] - m_vals['phi-pi/2']
+                theta[d] = (
+                    phi
+                    - np.pi / 2
+                    - np.arctan2(
+                        2 * m_vals["phi+0"] - m_vals["phi+pi/2"] - m_vals["phi-pi/2"],
+                        m_vals["phi+pi/2"] - m_vals["phi-pi/2"],
+                    )
                 )
 
                 phi = 0
@@ -538,7 +554,11 @@ class Rotosolve:
             if callback != None:
                 callback(theta, expectation_value, steps)
 
-            print('Step {step}. Current expectation value: {ev: .8f}'.format(step = steps, ev = expectation_value))
+            print(
+                "Step {step}. Current expectation value: {ev: .8f}".format(
+                    step=steps, ev=expectation_value
+                )
+            )
 
             steps += step_size
 

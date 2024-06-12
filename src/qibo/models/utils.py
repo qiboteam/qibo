@@ -4,6 +4,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
+
 def convert_bit_to_energy(hamiltonian, bitstring):
     """
     Given a binary string and a hamiltonian, we compute the corresponding energy.
@@ -214,10 +215,11 @@ def vqe_loss(params, circuit, hamiltonian):
     final_state = result.state()
     return hamiltonian.expectation(final_state)
 
+
 def matrix_to_pauli_operators(matrix):
     """Calculates the Pauli operators for a given matrix.
     Code created as part of QuantumSpain Project (https://quantumspain-project.es/)
-    
+
     Args:
         matrix (np.ndarray): The filter threshold for each input dimension. Default is None.
 
@@ -226,13 +228,14 @@ def matrix_to_pauli_operators(matrix):
     """
 
     n = int(np.log2(len(matrix)))
-    dims = 2 ** n
+    dims = 2**n
 
     if matrix.shape != (dims, dims):
         raise ValueError("The input must be a 2^n x 2^n dimensional matrix.")
 
     from functools import reduce
     from itertools import product
+
     from qibo import matrices as m
 
     PAULIS = {
