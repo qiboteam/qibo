@@ -400,6 +400,16 @@ class NumpyBackend(Backend):
                 return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
             initial_state = self.cast(initial_state)
+            if circuit.density_matrix:
+                valid_shape = 2 * (2**circuit.nqubits,)
+            else:
+                valid_shape = (2**circuit.nqubits,)
+            if tuple(initial_state.shape) != valid_shape:
+                raise_error(
+                    ValueError,
+                    f"Given initial state has shape {initial_state.shape} instead of "
+                    f"the expected {valid_shape}.",
+                )
 
         if circuit.repeated_execution:
             if circuit.measurements or circuit.has_collapse:
