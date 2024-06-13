@@ -1,4 +1,4 @@
-""Submodule with entropy measures."""
+"""Submodule with entropy measures."""
 
 from typing import Union
 
