@@ -186,9 +186,6 @@ class MeasurementOutcomes:
             for m in measurements:
                 indices = [self.measurement_gate.qubits.index(q) for q in m.qubits]
                 m.result.register_samples(samples[:, indices])
-        else:
-            for gate in self.measurements:
-                gate.result.reset()
 
     def frequencies(self, binary: bool = True, registers: bool = False):
         """Returns the frequencies of measured samples.

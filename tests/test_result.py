@@ -40,6 +40,16 @@ def test_measurementoutcomes_probabilities(backend, qubits):
         backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-1)
 
 
+def test_measurementoutcomes_samples_from_measurements(backend):
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.M(0, 2))
+    res = backend.execute_circuit(c)
+    samples = res.samples()
+    outcome = MeasurementOutcomes(c.measurements, backend=backend)
+    backend.assert_allclose(samples, outcome.samples())
+
+
 def test_circuit_result_error(backend):
     c = models.Circuit(1)
     state = np.array([1, 0])
