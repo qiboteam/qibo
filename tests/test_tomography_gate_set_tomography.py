@@ -271,6 +271,7 @@ def test_GST_with_transpiler(backend):
         include_empty=True,
         Pauli_Liouville=False,
         backend=backend,
+        transpiler=None,
     )
     # define transpiler
     connectivity = nx.Graph()
@@ -284,6 +285,7 @@ def test_GST_with_transpiler(backend):
             Sabre(connectivity),
             Unroller(NativeGates.default()),
         ],
+        int_qubit_names=True,
     )
     # transpiled GST
     T_empty_1q, T_empty_2q, *T_approx_gates = GST(

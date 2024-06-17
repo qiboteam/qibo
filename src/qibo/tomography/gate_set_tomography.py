@@ -140,6 +140,7 @@ def _measurement_basis(j, nqubits):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
+# this is not needed anymore
 def _expectation_value(nqubits, circuit, j, nshots=int(1e4), backend=None):
     """Executes a circuit used in gate set tomography and processes the
         measurement outcomes for the Pauli Transfer Matrix notation. The circuit
@@ -221,17 +222,27 @@ def _gate_tomography(
             circ.add(gate)
 
         for j in range(4**nqubits):
-            new_circ = circ.copy()
-            measurements = _measurement_basis(j, nqubits)
-            new_circ.add(measurements)
-            if noise_model is not None and backend.name != "qibolab":
-                new_circ = noise_model.apply(new_circ)
-            if transpiler is not None:
-                new_circ, _ = transpiler(new_circ)
-            expectation_val = _expectation_value(
-                nqubits, new_circ, j, nshots, backend=backend
-            )
-            matrix_jk[j, k] = expectation_val
+            if j == 0:
+                exp_val = 1.0
+            else:
+                new_circ = circ.copy()
+                measurements = _measurement_basis(j, nqubits)
+                new_circ.add(measurements)
+                observable = _get_observable(j, nqubits)
+                if noise_model is not None and backend.name != "qibolab":
+                    new_circ = noise_model.apply(new_circ)
+                if transpiler is not None:
+                    new_circ, qubit_map = transpiler(new_circ)
+                    qubit_map = {v: k for k, v in qubit_map.items()}
+                    for term in observable.terms:
+                        term.target_qubits = tuple(
+                            qubit_map.get(q, q) for q in term.target_qubits
+                        )
+
+                    exp_val = backend.execute_circuit(
+                        new_circ, nshots=nshots
+                    ).expectation_from_samples(observable)
+            matrix_jk[j, k] = exp_val
     return matrix_jk
 
 
