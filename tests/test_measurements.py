@@ -424,7 +424,7 @@ def test_measurement_basis(backend, nqubits, outcome):
         c.add(gates.X(q) for q in range(nqubits))
     c.add(gates.H(q) for q in range(nqubits))
     c.add(gates.M(*range(nqubits), basis=gates.X))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     assert result.frequencies() == {nqubits * str(outcome): 100}
 
 
@@ -435,7 +435,7 @@ def test_measurement_basis_list(backend):
     c.add(gates.H(2))
     c.add(gates.X(3))
     c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     assert result.frequencies() == {"0011": 100}
     assert (
         c.draw()
