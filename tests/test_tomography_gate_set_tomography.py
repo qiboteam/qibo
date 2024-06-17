@@ -18,6 +18,11 @@ from qibo.tomography.gate_set_tomography import (
     _measurement_basis,
     _prepare_state,
 )
+from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.placer import Random
+from qibo.transpiler.router import Sabre
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def _compare_gates(g1, g2):
@@ -252,3 +257,45 @@ def test_GST_non_invertible_matrix():
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
         matrices = GST(gate_set=[], Pauli_Liouville=True, T=T)
+
+
+def test_GST_with_transpiler(backend):
+    import networkx as nx
+
+    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
+    gate_set = [g.__class__ for g in target_gates]
+    # standard not transpiled GST
+    empty_1q, empty_2q, *approx_gates = GST(
+        gate_set=gate_set,
+        nshots=int(1e4),
+        include_empty=True,
+        Pauli_Liouville=False,
+        backend=backend,
+    )
+    # define transpiler
+    connectivity = nx.Graph()
+    # star connectivity
+    connectivity.add_edges_from([(0, 2), (1, 2), (2, 3), (2, 4)])
+    transpiler = Passes(
+        connectivity=connectivity,
+        passes=[
+            Preprocessing(connectivity),
+            Random(connectivity),
+            Sabre(connectivity),
+            Unroller(NativeGates.default()),
+        ],
+    )
+    # transpiled GST
+    T_empty_1q, T_empty_2q, *T_approx_gates = GST(
+        gate_set=gate_set,
+        nshots=int(1e4),
+        include_empty=True,
+        Pauli_Liouville=False,
+        backend=backend,
+        transpiler=transpiler,
+    )
+
+    backend.assert_allclose(empty_1q, T_empty_1q, atol=1e-1)
+    backend.assert_allclose(empty_2q, T_empty_2q, atol=1e-1)
+    for standard, transpiled in zip(approx_gates, T_approx_gates):
+        backend.assert_allclose(standard, transpiled, atol=1e-1)
