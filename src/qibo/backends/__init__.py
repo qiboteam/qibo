@@ -7,12 +7,17 @@ from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.backends.pytorch import PyTorchBackend
-from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
-QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
+QIBO_NATIVE_BACKENDS = ("numpy",)
+QIBO_NON_NATIVE_BACKENDS = (
+    "qibojit",
+    "qibolab",
+    "qibo-cloud-backends",
+    "qibotn",
+    "tensorflow",
+    "pytorch",
+)
 
 
 class MetaBackend:
@@ -31,10 +36,6 @@ class MetaBackend:
 
         if backend == "numpy":
             return NumpyBackend()
-        elif backend == "tensorflow":
-            return TensorflowBackend()
-        elif backend == "pytorch":
-            return PyTorchBackend()
         elif backend == "clifford":
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
