@@ -12,8 +12,8 @@ from qibo.backends import construct_backend
 # backends to be tested
 BACKENDS = [
     "numpy",
-    "tensorflow",
-    "pytorch",
+    "qiboml-tensorflow",
+    "qiboml-pytorch",
     "qibojit-numba",
     "qibojit-cupy",
     "qibojit-cuquantum",
@@ -27,7 +27,10 @@ ACCELERATORS = [
 
 
 def get_backend(backend_name):
-    if "-" in backend_name:
+    if "qiboml" in backend_name:
+        _, name = backend_name.split("-")
+        platform = None
+    elif "-" in backend_name:
         name, platform = backend_name.split("-")
     else:
         name, platform = backend_name, None
