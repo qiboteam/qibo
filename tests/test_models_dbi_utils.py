@@ -50,3 +50,12 @@ def test_select_best_dbr_generator(backend, nqubits, step):
         )
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
+
+
+def test_copy_dbi(backend):
+    h0 = random_hermitian(4, seed=1, backend=backend)
+    dbi = DoubleBracketIteration(Hamiltonian(2, h0, backend=backend))
+    dbi_copy = copy_dbi_object(dbi)
+
+    assert dbi is not dbi_copy
+    assert dbi.h.nqubits == dbi_copy.h.nqubits

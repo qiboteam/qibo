@@ -268,3 +268,27 @@ def energy_fluctuation_polynomial_expansion_coef(
     )
     coef = list(reversed(coef))
     return coef
+
+
+def copy_dbi_object(dbi_object):
+    """
+    Return a copy of the DoubleBracketIteration object.
+    This is necessary for the `select_best_dbr_generator` function as pytorch do not support deepcopy for leaf tensors.
+    """
+    backend = dbi_object.backend
+    backend = _check_backend(backend)
+    from copy import copy, deepcopy  # pylint: disable=import-outside-toplevel
+
+    dbi_class = dbi_object.__class__
+    new = dbi_class.__new__(dbi_class)
+
+    # Manually copy each attribute
+    new.h = copy(dbi_object.h)
+    new.h0 = copy(dbi_object.h0)
+    new.mode = deepcopy(dbi_object.mode)
+    new.scheduling = deepcopy(dbi_object.scheduling)
+    new.cost = deepcopy(dbi_object.cost)
+    new.ref_state = (
+        deepcopy(dbi_object.ref_state) if dbi_object.ref_state is not None else None
+    )
+    return new
