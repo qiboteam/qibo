@@ -15,6 +15,8 @@ QIBO_NON_NATIVE_BACKENDS = (
     "qibolab",
     "qibo-cloud-backends",
     "qibotn",
+)
+QIBOML_BACKENDS = (
     "tensorflow",
     "pytorch",
 )
@@ -195,7 +197,7 @@ def _check_backend(backend):
 def list_available_backends() -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()
-    for backend in QIBO_NON_NATIVE_BACKENDS:
+    for backend in QIBO_NON_NATIVE_BACKENDS + ("qiboml",):
         try:
             module = import_module(backend.replace("-", "_"))
             available = getattr(module, "MetaBackend")().list_available()
@@ -219,6 +221,10 @@ def construct_backend(backend, **kwargs) -> Backend:
     elif backend in QIBO_NON_NATIVE_BACKENDS:
         module = import_module(backend.replace("-", "_"))
         return getattr(module, "MetaBackend").load(**kwargs)
+    elif backend in QIBOML_BACKENDS:
+        module = import_module("qiboml")
+        return getattr(module, "MetaBackend").load(backend, **kwargs)
+
     else:
         raise_error(
             ValueError,
