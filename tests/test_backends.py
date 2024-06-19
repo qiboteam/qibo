@@ -147,11 +147,10 @@ def test_list_available_backends():
     tensorflow = False if platform.system() == "Windows" else True
     available_backends = {
         "numpy": True,
-        "tensorflow": tensorflow,
-        "pytorch": True,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
+        "qiboml": {"tensorflow": True, "pytorch": True, "jax": True},
     }
     assert available_backends == list_available_backends()
