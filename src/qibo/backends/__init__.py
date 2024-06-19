@@ -1,4 +1,7 @@
 import os
+from importlib import import_module
+
+import numpy as np
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
@@ -8,66 +11,51 @@ from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
+QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
 
-def construct_backend(backend, **kwargs):
-    if backend == "qibojit":
-        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
-        platform = kwargs.get("platform")
-        if platform == "cupy":  # pragma: no cover
-            return CupyBackend()
-        elif platform == "cuquantum":  # pragma: no cover
-            return CuQuantumBackend()
-        elif platform == "numba":
-            return NumbaBackend()
-        else:  # pragma: no cover
+class MetaBackend:
+    """Meta-backend class which takes care of loading the qibo backends."""
+
+    @staticmethod
+    def load(backend: str, **kwargs) -> Backend:
+        """Loads the native qibo backend.
+
+        Args:
+            backend (str): Name of the backend to load.
+            kwargs (dict): Additional arguments for the qibo backend.
+        Returns:
+            qibo.backends.abstract.Backend: The loaded backend.
+        """
+
+        if backend == "numpy":
+            return NumpyBackend()
+        elif backend == "tensorflow":
+            return TensorflowBackend()
+        elif backend == "pytorch":
+            return PyTorchBackend()
+        elif backend == "clifford":
+            engine = kwargs.pop("platform", None)
+            kwargs["engine"] = engine
+            return CliffordBackend(**kwargs)
+        else:
+            raise_error(
+                ValueError,
+                f"Backend {backend} is not available. The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
+            )
+
+    def list_available(self) -> dict:
+        """Lists all the available native qibo backends."""
+        available_backends = {}
+        for backend in QIBO_NATIVE_BACKENDS:
             try:
-                return CupyBackend()
-            except (ModuleNotFoundError, ImportError):
-                return NumbaBackend()
-
-    elif backend == "tensorflow":
-        return TensorflowBackend()
-
-    elif backend == "pytorch":
-        return PyTorchBackend()
-
-    elif backend == "numpy":
-        return NumpyBackend()
-
-    elif backend == "qibolab":  # pragma: no cover
-        from qibolab.backends import QibolabBackend  # pylint: disable=E0401
-
-        return QibolabBackend(**kwargs)
-
-    elif backend == "qibotn":  # pragma: no cover
-
-        platform = kwargs.get("platform")
-        if platform == "cutensornet":  # pragma: no cover
-            from qibotn.backends.cutensornet import CuTensorNet  # pylint: disable=E0401
-
-            return CuTensorNet(kwargs["runcard"])
-        elif platform == "qutensornet":  # pragma: no cover
-            from qibotn.backends.quimb import QuimbBackend  # pylint: disable=E0401
-
-            return QuimbBackend(kwargs["runcard"])
-
-    elif backend == "clifford":
-        return CliffordBackend(kwargs["platform"])
-    elif backend == "qibo-client":  # pragma: no cover
-        from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
-            QiboClientBackend,
-        )
-
-        return QiboClientBackend(**kwargs)
-    elif backend == "qiskit":  # pragma: no cover
-        from qibo_cloud_backends.qiskit_client import (  # pylint: disable=E0401
-            QiskitClientBackend,
-        )
-
-        return QiskitClientBackend(**kwargs)
-    else:  # pragma: no cover
-        raise_error(ValueError, f"Backend {backend} is not available.")
+                MetaBackend.load(backend)
+                available = True
+            except:  # pragma: no cover
+                available = False
+            available_backends[backend] = available
+        return available_backends
 
 
 class GlobalBackend(NumpyBackend):
@@ -145,6 +133,7 @@ class QiboMatrices:
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
         self.TOFFOLI = self.matrices.TOFFOLI
+        self.CCZ = self.matrices.CCZ
 
 
 matrices = QiboMatrices()
@@ -200,3 +189,63 @@ def _check_backend(backend):
         return GlobalBackend()
 
     return backend
+
+
+def list_available_backends() -> dict:
+    """Lists all the backends that are available."""
+    available_backends = MetaBackend().list_available()
+    for backend in QIBO_NON_NATIVE_BACKENDS:
+        try:
+            module = import_module(backend.replace("-", "_"))
+            available = getattr(module, "MetaBackend")().list_available()
+        except:
+            available = False
+        available_backends.update({backend: available})
+    return available_backends
+
+
+def construct_backend(backend, **kwargs) -> Backend:
+    """Construct a generic native or non-native qibo backend.
+    Args:
+        backend (str): Name of the backend to load.
+        kwargs (dict): Additional arguments for constructing the backend.
+    Returns:
+        qibo.backends.abstract.Backend: The loaded backend.
+
+    """
+    if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
+        return MetaBackend.load(backend, **kwargs)
+    elif backend in QIBO_NON_NATIVE_BACKENDS:
+        module = import_module(backend.replace("-", "_"))
+        return getattr(module, "MetaBackend").load(**kwargs)
+    else:
+        raise_error(
+            ValueError,
+            f"Backend {backend} is not available. To check which backends are installed use `qibo.list_available_backends()`.",
+        )
+
+
+def _check_backend_and_local_state(seed, backend):
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
+    backend = _check_backend(backend)
+
+    if seed is None or isinstance(seed, int):
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
+            local_state = backend.np.random.default_rng(seed)
+        else:
+            local_state = np.random.default_rng(seed)
+    else:
+        local_state = seed
+
+    return backend, local_state

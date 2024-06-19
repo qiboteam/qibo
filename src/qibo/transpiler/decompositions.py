@@ -465,3 +465,24 @@ standard_decompositions.add(
 standard_decompositions.add(
     gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]
 )
+standard_decompositions.add(gates.CCZ, [gates.H(2), gates.TOFFOLI(0, 1, 2), gates.H(2)])
+standard_decompositions.add(
+    gates.TOFFOLI,
+    [
+        gates.H(2),
+        gates.CNOT(1, 2),
+        gates.TDG(2),
+        gates.CNOT(0, 2),
+        gates.T(2),
+        gates.CNOT(1, 2),
+        gates.T(1),
+        gates.TDG(2),
+        gates.CNOT(0, 2),
+        gates.CNOT(0, 1),
+        gates.T(2),
+        gates.T(0),
+        gates.TDG(1),
+        gates.H(2),
+        gates.CNOT(0, 1),
+    ],
+)

@@ -76,4 +76,12 @@ Diagonalization Algorithms
 .. toctree::
     :maxdepth: 1
 
-    tutorials/dbi/dbi.ipynb
+    tutorials/dbi/README.md
+
+    tutorials/dbi/dbi_cost_functions.ipynb
+    tutorials/dbi/dbi_gradient_descent_strategies.ipynb
+    tutorials/dbi/dbi_scheduling.ipynb
+    tutorials/dbi/dbi_strategies_compare.ipynb
+    tutorials/dbi/dbi_strategy_Ising_model.ipynb
+    tutorials/dbi/dbi_strategy_Pauli-Z.ipynb
+    tutorials/dbi/dbi_tutorial_basic_intro.ipynb

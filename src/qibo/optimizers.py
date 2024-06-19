@@ -84,13 +84,13 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
-        return cmaes(loss, initial_parameters, args, options)
+        return cmaes(loss, initial_parameters, args, callback, options)
     elif method == "sgd":
         from qibo.backends import _check_backend
 
         backend = _check_backend(backend)
 
-        return sgd(loss, initial_parameters, args, options, compile, backend)
+        return sgd(loss, initial_parameters, args, callback, options, compile, backend)
     else:
         from qibo.backends import _check_backend
 
@@ -114,7 +114,7 @@ def optimize(
         )
 
 
-def cmaes(loss, initial_parameters, args=(), options=None):
+def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
@@ -123,14 +123,30 @@ def cmaes(loss, initial_parameters, args=(), options=None):
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
+        callback (list[callable]): List of callable called after each optimization
+            iteration. According to cma-es implementation take ``CMAEvolutionStrategy``
+            instance as argument.
+            See: https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.CMAEvolutionStrategy.html.
         options (dict): Dictionary with options accepted by the ``cma``
             optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
             available options.
     """
     import cma
 
-    r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
-    return r[1].result.fbest, r[1].result.xbest, r
+    es = cma.CMAEvolutionStrategy(initial_parameters, sigma0=1.7, inopts=options)
+
+    if callback is not None:
+        while not es.stop():
+            solutions = es.ask()
+            objective_values = [loss(x, *args) for x in solutions]
+            for solution in solutions:
+                callback(solution)
+            es.tell(solutions, objective_values)
+            es.logger.add()
+    else:
+        es.optimize(loss, args=args)
+
+    return es.result.fbest, es.result.xbest, es.result
 
 
 def newtonian(
@@ -213,7 +229,15 @@ def newtonian(
     return m.fun, m.x, m
 
 
-def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
+def sgd(
+    loss,
+    initial_parameters,
+    args=(),
+    callback=None,
+    options=None,
+    compile=False,
+    backend=None,
+):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -225,6 +249,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
+        callback (callable): Called after each iteration.
         options (dict): Dictionary with options for the SGD optimizer. Supports
             the following keys:
 
@@ -234,6 +259,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
+
     if not backend.name == "tensorflow":
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
@@ -265,6 +291,8 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
+        if callback is not None:
+            callback(vparams)
         if e % sgd_options["nmessage"] == 1:
             log.info("ite %d : loss %f", e, l.numpy())
 

@@ -503,16 +503,16 @@ class I(Gate):
         return "id"
 
 
-class Align(Gate):
+class Align(ParametrizedGate):
     """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
 
     Args:
-        *q (int): The qubit ID numbers.
+        q (int): The qubit ID.
         delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
             Defaults to ``0`` (zero).
     """
 
-    def __init__(self, *q, delay: int = 0):
+    def __init__(self, q, delay=0, trainable=True):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -520,13 +520,14 @@ class Align(Gate):
         if delay < 0.0:
             raise_error(ValueError, "Delay must not be negative.")
 
-        super().__init__()
+        super().__init__(trainable)
         self.name = "align"
-        self.delay = delay
         self.draw_label = f"A({delay})"
-        self.init_args = q
-        self.init_kwargs = {"delay": delay}
-        self.target_qubits = tuple(q)
+        self.init_args = [q]
+        self.init_kwargs = {"name": self.name, "delay": delay, "trainable": trainable}
+        self.target_qubits = (q,)
+        self._parameters = (delay,)
+        self.nparams = 1
 
 
 def _is_clifford_given_angle(angle):
@@ -2305,6 +2306,56 @@ class TOFFOLI(Gate):
             CNOT(control1, target),
             RY(target, math.pi / 4),
         ]
+
+
+class CCZ(Gate):
+    """The controlled-CZ gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2):
+        super().__init__()
+        self.name = "ccz"
+        self.draw_label = "Z"
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
+        self.init_args = [q0, q1, q2]
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "ccz"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CCZ}` gate.
+
+        Decompose :math:`\\text{CCZ}` gate into :class:`qibo.gates.H` in
+        the target qubit, followed by :class:`qibo.gates.TOFFOLI`, followed
+        by a :class:`qibo.gates.H` in the target qubit.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class DEUTSCH(ParametrizedGate):

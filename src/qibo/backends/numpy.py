@@ -2,6 +2,7 @@ import collections
 import math
 
 import numpy as np
+from scipy import sparse
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -119,7 +120,8 @@ class NumpyBackend(Backend):
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2**rank)
+        matrix = sparse.eye(2**rank)
+
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
@@ -141,8 +143,10 @@ class NumpyBackend(Backend):
             gmatrix = np.transpose(gmatrix, transpose_indices)
             gmatrix = np.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
-            matrix = gmatrix @ matrix
-        return self.cast(matrix)
+            # we are using sparse matrices to improve perfomances
+            matrix = sparse.csr_matrix(gmatrix).dot(matrix)
+
+        return self.cast(matrix.toarray())
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
@@ -641,19 +645,23 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
-        return self.np.mod(
-            self.np.right_shift(self.cast(samples[:, None], dtype="int32"), qrange), 2
-        )
+        ### This is faster just staying @ NumPy.
+        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
+        samples = self.to_numpy(samples)
+        return np.mod(np.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype=self.np.int32)
+        ### This is faster just staying @ NumPy.
+        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
         qrange = (2**qrange)[:, None]
-        return self.np.matmul(samples, qrange)[:, 0]
+        samples = np.asarray(samples.tolist())
+        return np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
         # Samples are a list of strings so there is no advantage in using other backends
         res, counts = np.unique(samples, return_counts=True)
+        res = self.to_numpy(res).tolist()
+        counts = self.to_numpy(counts).tolist()
         return collections.Counter(dict(zip(res, counts)))
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
@@ -677,6 +685,7 @@ class NumpyBackend(Backend):
         )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+        noiseless_samples = self.cast(noiseless_samples, dtype=noiseless_samples.dtype)
         fprobs = self.cast(bitflip_probabilities, dtype="float64")
         sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
         flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)

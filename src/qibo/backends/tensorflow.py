@@ -32,8 +32,12 @@ class TensorflowBackend(NumpyBackend):
         super().__init__()
         self.name = "tensorflow"
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
+
         import tensorflow as tf  # pylint: disable=import-error
         import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
+
+        if TF_LOG_LEVEL >= 2:
+            tf.get_logger().setLevel("ERROR")
 
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
