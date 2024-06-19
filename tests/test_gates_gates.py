@@ -6,6 +6,7 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
+from qibo.transpiler.decompositions import standard_decompositions
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -1204,6 +1205,13 @@ def test_toffoli(backend, applyx):
     assert gatelist[-1].qasm_label == "ccx"
     assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
+
+    # test decomposition
+    decomposition = Circuit(3)
+    decomposition.add(standard_decompositions(gates.TOFFOLI(0, 1, 2)))
+    decomposition = decomposition.unitary(backend)
+
+    backend.assert_allclose(decomposition, backend.cast(matrices.TOFFOLI), atol=1e-10)
 
 
 def test_ccz(backend):
