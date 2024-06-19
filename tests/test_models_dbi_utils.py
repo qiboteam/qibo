@@ -9,6 +9,7 @@ from qibo.models.dbi.double_bracket import (
     DoubleBracketIteration,
 )
 from qibo.models.dbi.utils import *
+from qibo.models.dbi.utils_dbr_strategies import select_best_dbr_generator
 from qibo.quantum_info import random_hermitian
 
 NSTEPS = 5

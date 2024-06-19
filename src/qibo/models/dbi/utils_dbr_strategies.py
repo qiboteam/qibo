@@ -274,6 +274,7 @@ def gradient_descent(
                 parameterization=parameterization,
                 pauli_operator_dict=pauli_operator_dict,
                 normalize=normalize,
+                backend=backend,
             )
             return dbi_object.loss(step=s, d=d_eval)
 
@@ -296,6 +297,7 @@ def gradient_descent(
             parameterization=parameterization,
             pauli_operator_dict=pauli_operator_dict,
             normalize=normalize,
+            backend=backend,
         )
         s = dbi_object.choose_step(d=d)
         dbi_object(step=s, d=d)

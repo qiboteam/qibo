@@ -262,9 +262,6 @@ def sgd(
               a message of the loss function.
     """
 
-    if not backend.name == "tensorflow":
-        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
-
     sgd_options = {
         "nepochs": 1000000,
         "nmessage": 1000,
@@ -275,20 +272,30 @@ def sgd(
         sgd_options.update(options)
 
     if backend.name == "tensorflow":
-        return _sgd_tf(loss, initial_parameters, args, sgd_options, compile, backend)
+        return _sgd_tf(
+            loss,
+            initial_parameters,
+            args,
+            sgd_options,
+            compile,
+            backend,
+            callback=callback,
+        )
     elif backend.name == "pytorch":
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."
             )
-        return _sgd_torch(loss, initial_parameters, args, sgd_options, backend)
+        return _sgd_torch(
+            loss, initial_parameters, args, sgd_options, backend, callback=callback
+        )
     else:
         raise_error(
             RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend."
         )
 
 
-def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
+def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):
 
     vparams = initial_parameters
     optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
@@ -300,14 +307,17 @@ def _sgd_torch(loss, initial_parameters, args, sgd_options, backend):
         l = loss(vparams, *args)
         l.backward()
         optimizer.step()
-
+        if callback is not None:
+            callback(backend.to_numpy(vparams))
         if e % sgd_options["nmessage"] == 1:
             log.info("ite %d : loss %f", e, l.item())
 
     return loss(vparams, *args).item(), vparams.detach().numpy(), sgd_options
 
 
-def _sgd_tf(loss, initial_parameters, args, sgd_options, compile, backend):
+def _sgd_tf(
+    loss, initial_parameters, args, sgd_options, compile, backend, callback=None
+):
 
     vparams = backend.tf.Variable(initial_parameters)
     optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(

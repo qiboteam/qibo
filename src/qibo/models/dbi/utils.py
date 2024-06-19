@@ -71,13 +71,15 @@ def cs_angle_sgn(dbi_object, d, backend=None):
     backend = _check_backend(backend)
     d = backend.cast(d)
     norm = backend.np.trace(
-        backend.np.dot(
+        backend.np.matmul(
             backend.np.conj(
                 dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
             ).T,
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
+    if backend.name == "pytorch":
+        return backend.np.real(backend.np.sgn(norm))
     return backend.np.real(backend.np.sign(norm))
 
 
@@ -212,16 +214,18 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     return coef
 
 
-def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
+def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3, backend=None):
     """Return the Taylor expansion coefficients of least square cost of `dbi_object.h` and diagonal operator `d` with respect to double bracket rotation duration `s`."""
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    backend = _check_backend(backend)
     Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients
     coef = np.empty(n)
     for i in range(n):
-        coef[i] = np.real(
-            exp_list[i] * np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
+        coef[i] = backend.np.real(
+            exp_list[i]
+            * backend.np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
         )
     coef = list(reversed(coef))
     return coef

@@ -314,7 +314,9 @@ class DoubleBracketIteration:
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
         elif self.cost is DoubleBracketCostFunction.least_squares:
-            coef = least_squares_polynomial_expansion_coef(self, d, n)
+            coef = least_squares_polynomial_expansion_coef(
+                self, d, n, backend=self.backend
+            )
         elif self.cost is DoubleBracketCostFunction.energy_fluctuation:
             coef = energy_fluctuation_polynomial_expansion_coef(
                 self, d, n, self.ref_state

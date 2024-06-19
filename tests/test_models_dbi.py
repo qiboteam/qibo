@@ -229,12 +229,14 @@ def test_params_to_diagonal_operator(backend, step):
             nqubits=nqubits,
             parameterization=ParameterizationTypes.pauli,
             pauli_operator_dict=pauli_operator_dict,
+            backend=backend,
         ),
     )
     operator_element = params_to_diagonal_operator(
         params,
         nqubits=nqubits,
         parameterization=ParameterizationTypes.computational,
+        backend=backend,
     )
     for i in range(len(params)):
         backend.assert_allclose(
