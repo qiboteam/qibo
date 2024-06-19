@@ -67,7 +67,7 @@ scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
 pylint = "3.1.0"
 matplotlib = "^3.7.0"
-qiboml = { git  = "https://github.com/qiboteam/qiboml.git"}
+qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
