@@ -9,6 +9,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
+from qibo.models.mpldrawer import plot_qibo_circuit
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -1268,6 +1269,9 @@ class Circuit:
             idx = [col + 1] * self.nqubits
 
         return matrix, idx
+
+    def draw_mpl(self, scale = 0.6):
+        plot_qibo_circuit(self, scale)
 
     def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
