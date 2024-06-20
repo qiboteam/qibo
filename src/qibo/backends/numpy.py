@@ -186,9 +186,17 @@ class NumpyBackend(Backend):
         return self.np.concatenate([part1, part2], axis=1)
 
     def apply_gate(self, gate, state, nqubits):
+        from qibo.gates.abstract import ParametrizedGate
+
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
-        matrix = gate.matrix(self)
+        # matrix = gate.matrix(self)
+        matrix = (
+            gate.__class__(*gate.qubits, *gate.parameters)
+            if isinstance(gate, ParametrizedGate)
+            else gate.__class__(*gate.qubits)
+        )
+        matrix = matrix.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
@@ -213,9 +221,17 @@ class NumpyBackend(Backend):
         return self.np.reshape(state, (2**nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
+        from qibo.gates.abstract import ParametrizedGate
+
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        matrix = gate.matrix(self)
+        # matrix = gate.matrix(self)
+        matrix = (
+            gate.__class__(*gate.qubits, *gate.parameters)
+            if isinstance(gate, ParametrizedGate)
+            else gate.__class__(*gate.qubits)
+        )
+        matrix = matrix.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             matrixc = self.np.conj(matrix)
