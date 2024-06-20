@@ -194,10 +194,10 @@ def _check_backend(backend):
     return backend
 
 
-def list_available_backends() -> dict:
+def list_available_backends(*providers: str) -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()
-    for backend in QIBO_NON_NATIVE_BACKENDS:
+    for backend in providers:
         try:
             module = import_module(backend.replace("-", "_"))
             available = getattr(module, "MetaBackend")().list_available()
