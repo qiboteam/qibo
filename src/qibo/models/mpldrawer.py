@@ -100,14 +100,14 @@ class MPLDrawer:
         for ci in control_indices:
             x = gate_grid[i]
             y = wire_grid[ci]
-            if name in ['SWAP']:
+            if name in ['SWAP', 'ISWAP', 'SISWAP', 'FISWAP']:
                 self._swapx(ax,x,y,plot_params)
             else:
                 self._cdot(ax,x,y,plot_params)
         return
 
     def _draw_target(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params):
-        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CZ='Z')
+        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X')
         name,target = gate[:2]
         symbol = target_symbols.get(name,name) # override name with target_symbols
         x = gate_grid[i]
@@ -118,7 +118,7 @@ class MPLDrawer:
             self._oplus(ax,x,y,plot_params)
         elif name in ['CPHASE']:
             self._cdot(ax,x,y,plot_params)
-        elif name in ['SWAP']:
+        elif name in ['SWAP', 'ISWAP', 'SISWAP', 'FISWAP']:
             self._swapx(ax,x,y,plot_params)
         else:
             self._text(ax,x,y,symbol,plot_params,box=True)
@@ -243,7 +243,7 @@ class MPLDrawer:
         inits = []
 
         for gate in circuit.queue:
-            init_label = gate.draw_label.upper()
+            init_label = gate.name.upper()
             inits.append(init_label)
             item = ()
             item += (init_label, )
