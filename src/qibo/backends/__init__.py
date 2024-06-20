@@ -222,7 +222,9 @@ def construct_backend(backend, **kwargs) -> Backend:
     try:
         module = import_module(backend.replace("-", "_"))
         return getattr(module, "MetaBackend").load(**kwargs)
-    except ImportError:
+    except ImportError as e:
+        if backend not in e.msg:
+            raise e
         raise_error(
             ValueError,
             f"The '{backend}' backends' provider is not available. Check that a Python "
