@@ -16,10 +16,6 @@ QIBO_NON_NATIVE_BACKENDS = (
     "qibo-cloud-backends",
     "qibotn",
 )
-QIBOML_BACKENDS = (
-    "tensorflow",
-    "pytorch",
-)
 
 
 class MetaBackend:
@@ -209,22 +205,23 @@ def list_available_backends() -> dict:
 
 def construct_backend(backend, **kwargs) -> Backend:
     """Construct a generic native or non-native qibo backend.
+
     Args:
         backend (str): Name of the backend to load.
         kwargs (dict): Additional arguments for constructing the backend.
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
-
     """
+    # TODO: remove this as soon as posible (it might break things)
+    if backend == "tensorflow":
+        backend = "qiboml"
+        kwargs["platform"] = "tensorflow"
+
     if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
         return MetaBackend.load(backend, **kwargs)
     elif backend in QIBO_NON_NATIVE_BACKENDS:
         module = import_module(backend.replace("-", "_"))
         return getattr(module, "MetaBackend").load(**kwargs)
-    elif backend in QIBOML_BACKENDS:
-        module = import_module("qiboml")
-        return getattr(module, "MetaBackend").load(backend, **kwargs)
-
     else:
         raise_error(
             ValueError,
