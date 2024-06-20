@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 from scipy import sparse
+from scipy.linalg import block_diag
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -110,13 +111,25 @@ class NumpyBackend(Backend):
         if callable(_matrix):
             _matrix = _matrix(2 ** len(gate.target_qubits))
 
+        num_controls = len(gate.control_qubits)
+        if num_controls > 0:
+            _matrix = block_diag(
+                np.eye(2 ** len(gate.qubits) - len(_matrix)), self.to_numpy(_matrix)
+            )
+
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        matrix = getattr(self.matrices, name)(*gate.parameters)
-        return self.cast(matrix, dtype=matrix.dtype)
+        _matrix = getattr(self.matrices, name)(*gate.parameters)
+
+        num_controls = len(gate.control_qubits)
+        if num_controls > 0:
+            _matrix = block_diag(
+                np.eye(2 ** len(gate.qubits) - 2), self.to_numpy(_matrix)
+            )
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
