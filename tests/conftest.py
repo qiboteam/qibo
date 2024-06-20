@@ -27,11 +27,9 @@ ACCELERATORS = [
 
 
 def get_backend(backend_name):
-    if "qiboml" in backend_name:
-        _, name = backend_name.split("-")
-        platform = None
-    elif "-" in backend_name:
+    if "-" in backend_name:
         name, platform = backend_name.split("-")
+        name = platform if "qiboml" in backend_name else name
     else:
         name, platform = backend_name, None
     return construct_backend(name, platform=platform)
