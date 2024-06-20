@@ -686,6 +686,69 @@ class RZ(_Rn_):
         return 0.5
 
 
+class PRX(ParametrizedGate):
+    """Phase :math:`RX` gate.
+
+    Corresponds to the following unitary matrix
+
+        .. math::
+            \\begin{pmatrix}
+                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
+                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+            \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the first angle corresponding to a rotation angle.
+        phi (float): the second angle correspoding to a phase angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "prx"
+        self.draw_label = "prx"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        if theta is None:
+            raise_error(
+                ValueError,
+                f"Theta is not defined.",
+            )
+        if phi is None:
+            raise_error(
+                ValueError,
+                f"Phi is not defined.",
+            )
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+        self.theta = theta
+        self.phi = phi
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "trainable": trainable,
+        }
+
+    @property
+    def qasm_label(self):
+        return "prx"
+
+    def _dagger(self) -> "Gate":
+        theta = -self.theta
+        phi = self.phi
+        return self.__class__(
+            self.target_qubits[0], theta, phi
+        )  # pylint: disable=E1130
+
+
 class GPI(ParametrizedGate):
     """The GPI gate.
 
@@ -2092,65 +2155,6 @@ class MS(ParametrizedGate):
         q0, q1 = self.target_qubits
         phi0, phi1, theta = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
-
-
-class PRX(ParametrizedGate):
-    """Phase Rx gate.
-
-    Corresponds to the following unitary matrix
-
-        .. math::
-            \\begin{pmatrix}
-                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
-                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
-            \\end{pmatrix}
-
-    Args:
-        theta (float): The first angle of the gate in radians or expression representation.
-        phi (float): The second angle of the gate in radians or expression representation.
-    """
-
-    def __init__(self, q, theta, phi, trainable=True):
-        super().__init__(trainable)
-        self.name = "prx"
-        self.draw_label = "prx"
-        self.target_qubits = (q,)
-        self.unitary = True
-
-        if theta is None:
-            raise_error(
-                ValueError,
-                f"Theta is not defined.",
-            )
-        if phi is None:
-            raise_error(
-                ValueError,
-                f"Phi is not defined.",
-            )
-
-        self.parameter_names = ["theta", "phi"]
-        self.parameters = theta, phi
-        self.theta = theta
-        self.phi = phi
-        self.nparams = 2
-
-        self.init_args = [q]
-        self.init_kwargs = {
-            "theta": theta,
-            "phi": phi,
-            "trainable": trainable,
-        }
-
-    @property
-    def qasm_label(self):
-        return "prx"
-
-    def _dagger(self) -> "Gate":
-        theta = -self.theta
-        phi = self.phi
-        return self.__class__(
-            self.target_qubits[0], theta, phi
-        )  # pylint: disable=E1130
 
 
 class GIVENS(ParametrizedGate):
