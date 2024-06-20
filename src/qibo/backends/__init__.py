@@ -212,14 +212,14 @@ def construct_backend(backend, **kwargs) -> Backend:
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
     """
-    # TODO: remove this as soon as posible (it might break things)
+    # TODO: remove this as soon as possible (it might break things)
     if backend == "tensorflow":
         backend = "qiboml"
         kwargs["platform"] = "tensorflow"
 
     if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
         return MetaBackend.load(backend, **kwargs)
-    elif backend in QIBO_NON_NATIVE_BACKENDS:
+    elif backend in QIBO_NON_NATIVE_BACKENDS + ("qiboml",):
         module = import_module(backend.replace("-", "_"))
         return getattr(module, "MetaBackend").load(**kwargs)
     else:
