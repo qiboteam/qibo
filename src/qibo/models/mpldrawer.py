@@ -1,4 +1,5 @@
-# Simplified Plotting Routines for Quantum Circuits by Rick Muller
+# MPLDrawer craeted from code provided by Rick Muller
+# Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
 import matplotlib
 import numpy as np
