@@ -9,6 +9,46 @@ class MPLDrawer:
     def __init__(self):
             pass
 
+    def _plot_quantum_schedule(self, schedule,inits={},labels=[],plot_labels=True,**kwargs):
+        """Use Matplotlib to plot a quantum circuit.
+        schedule  List of time steps, each containing a sequence of gates during that step.
+                  Each gate is a tuple containing (name,target,control1,control2...).
+                  Targets and controls initially defined in terms of labels.
+        inits     Initialization list of gates, optional
+
+        kwargs    Can override plot_parameters
+        """
+        plot_params = dict(scale = 1.0,fontsize = 14.0, linewidth = 1.0,
+                             control_radius = 0.05, not_radius = 0.15,
+                             swap_delta = 0.08, label_buffer = 0.0)
+        plot_params.update(kwargs)
+        scale = plot_params['scale']
+
+        # Create labels from gates. This will become slow if there are a lot
+        #  of gates, in which case move to an ordered dictionary
+        if not labels:
+            labels = []
+            for i,gate in self._enumerate_gates(schedule,schedule=True):
+                for label in gate[1:]:
+                    if label not in labels:
+                        labels.append(label)
+
+        nq = len(labels)
+        nt = len(schedule)
+        wire_grid = np.arange(0.0, nq*scale, scale, dtype=float)
+        gate_grid = np.arange(0.0, nt*scale, scale, dtype=float)
+
+        fig,ax = self._setup_figure(nq,nt,gate_grid,wire_grid,plot_params)
+
+        measured = self._measured_wires(schedule,labels,schedule=True)
+        self._draw_wires(ax,nq,gate_grid,wire_grid,plot_params,measured)
+
+        if plot_labels:
+            self._draw_labels(ax,labels,inits,gate_grid,wire_grid,plot_params)
+
+        self._draw_gates(ax,schedule,labels,gate_grid,wire_grid,plot_params,measured,schedule=True)
+        return ax
+
     def _plot_quantum_circuit(self, gates,inits={},labels=[],plot_labels=True,**kwargs):
         """Use Matplotlib to plot a quantum circuit.
         gates     List of tuples for each gate in the quantum circuit.
@@ -239,7 +279,26 @@ class MPLDrawer:
                 return r'$|%s\rangle$' % inits[label]
         return r'$|%s\rangle$' % label
 
-    def plot_qibo_circuit(self,circuit, scale):
+    def _make_schedule(self, item_plos):
+        schedule = [[]]
+        current_tic = schedule[-1]
+        qubits_in_current_tic = set()
+        for gate in item_plos:
+            qubits = set(gate[1:])
+           # print(qubits)
+            if qubits_in_current_tic.intersection(qubits):
+                # Qubits already in tic, create new tic
+                current_tic = [gate]
+                qubits_in_current_tic = qubits
+                schedule.append(current_tic)
+            else:
+                # Add to current tic
+                current_tic.append(gate)
+                qubits_in_current_tic = qubits_in_current_tic.union(qubits)
+
+        return schedule
+
+    def plot_qibo_circuit(self, circuit, scale, cluster_gates):
         gates_plot = []
         inits = []
 
@@ -263,7 +322,11 @@ class MPLDrawer:
 
             gates_plot.append(item)
 
-        return self._plot_quantum_circuit(gates_plot, inits, scale = scale)
+        if cluster_gates:
+            scheduled_plots = self._make_schedule(gates_plot)
+            return self._plot_quantum_schedule(scheduled_plots, inits, scale = scale)
+        else:
+            return self._plot_quantum_circuit(gates_plot, inits, scale = scale)
 
     @staticmethod
     def save_fig(fig, path_file):
