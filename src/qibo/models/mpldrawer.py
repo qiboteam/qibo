@@ -263,4 +263,8 @@ class MPLDrawer:
 
             gates_plot.append(item)
 
-        self._plot_quantum_circuit(gates_plot, inits, scale = scale)
+        return self._plot_quantum_circuit(gates_plot, inits, scale = scale)
+
+    @staticmethod
+    def save_fig(fig, path_file):
+        return fig.savefig(path_file, bbox_inches='tight')

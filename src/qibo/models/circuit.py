@@ -1270,8 +1270,14 @@ class Circuit:
 
         return matrix, idx
 
-    def draw_mpl(self, scale = 0.6):
-        MPLDrawer().plot_qibo_circuit(self, scale)
+    def draw_mpl(self, scale = 0.6, save_file = None):
+
+        ax = MPLDrawer().plot_qibo_circuit(self, scale)
+
+        if save_file:
+            MPLDrawer.save_fig(ax.figure, save_file)
+
+        return ax
 
     def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
