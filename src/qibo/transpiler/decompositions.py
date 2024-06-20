@@ -131,6 +131,14 @@ u3_dec.add(
 u3_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
+    gates.PRX,
+    lambda gate: [
+        gates.RZ(0, gate.parameters[1] - np.pi / 2),
+        gates.RY(0, -gate.parameters[0]),
+        gates.RZ(0, gate.parameters[1] + np.pi / 2),
+    ],
+)
+u3_dec.add(
     gates.GPI2, lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))]
 )
 u3_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
@@ -399,6 +407,14 @@ standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
 standard_decompositions.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
 standard_decompositions.add(
+    gates.PRX,
+    lambda gate: [
+        gates.RZ(0, -gate.parameters[1] - np.pi / 2),
+        gates.RY(0, -gate.parameters[0]),
+        gates.RZ(0, gate.parameters[1] + np.pi / 2),
+    ],
+)
+standard_decompositions.add(
     gates.U3,
     lambda gate: [
         gates.RZ(0, gate.parameters[2]),
@@ -466,3 +482,23 @@ standard_decompositions.add(
     gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]
 )
 standard_decompositions.add(gates.CCZ, [gates.H(2), gates.TOFFOLI(0, 1, 2), gates.H(2)])
+standard_decompositions.add(
+    gates.TOFFOLI,
+    [
+        gates.H(2),
+        gates.CNOT(1, 2),
+        gates.TDG(2),
+        gates.CNOT(0, 2),
+        gates.T(2),
+        gates.CNOT(1, 2),
+        gates.T(1),
+        gates.TDG(2),
+        gates.CNOT(0, 2),
+        gates.CNOT(0, 1),
+        gates.T(2),
+        gates.T(0),
+        gates.TDG(1),
+        gates.H(2),
+        gates.CNOT(0, 1),
+    ],
+)

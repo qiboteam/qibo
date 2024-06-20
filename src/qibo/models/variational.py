@@ -96,7 +96,6 @@ class VQE:
             loss = lambda p, c, h: dtype(loss_func(p, c, h))
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
-
         result, parameters, extra = self.optimizers.optimize(
             loss,
             initial_state,
