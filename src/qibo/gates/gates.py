@@ -2094,7 +2094,7 @@ class MS(ParametrizedGate):
         return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
 
 
-class PRx(ParametrizedGate):
+class PRX(ParametrizedGate):
     """Phase Rx gate.
 
     Corresponds to the following unitary matrix
