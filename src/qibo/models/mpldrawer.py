@@ -107,7 +107,7 @@ class MPLDrawer:
         return
 
     def _draw_target(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params):
-        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X')
+        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X',DEUTSCH='DE')
         name,target = gate[:2]
         symbol = target_symbols.get(name,name) # override name with target_symbols
         x = gate_grid[i]
