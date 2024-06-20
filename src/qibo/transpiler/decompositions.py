@@ -131,6 +131,14 @@ u3_dec.add(
 u3_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
+    gates.PRX,
+    lambda gate: [
+        gates.RZ(0, gate.parameters[1] - np.pi / 2),
+        gates.RY(0, -gate.parameters[0]),
+        gates.RZ(0, gate.parameters[1] + np.pi / 2),
+    ],
+)
+u3_dec.add(
     gates.GPI2, lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))]
 )
 u3_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
@@ -398,6 +406,14 @@ opt_dec.add(
 standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
 standard_decompositions.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
+standard_decompositions.add(
+    gates.PRX,
+    lambda gate: [
+        gates.RZ(0, -gate.parameters[1] - np.pi / 2),
+        gates.RY(0, -gate.parameters[0]),
+        gates.RZ(0, gate.parameters[1] + np.pi / 2),
+    ],
+)
 standard_decompositions.add(
     gates.U3,
     lambda gate: [

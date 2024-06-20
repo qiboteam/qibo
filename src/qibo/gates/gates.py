@@ -737,6 +737,14 @@ class PRX(ParametrizedGate):
             self.target_qubits[0], theta, phi
         )  # pylint: disable=E1130
 
+    def decompose(self):
+        """Decomposition of Phase-:math:`RX` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class GPI(ParametrizedGate):
     """The GPI gate.

@@ -322,6 +322,42 @@ def test_rz(backend, theta, apply_x):
         assert not gates.RZ(0, theta=theta).clifford
 
 
+def test_prx(backend):
+    theta = 0.52
+    phi = 0.24
+
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.PRX(0, theta, phi)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.PRX(0, theta, phi).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    exponent1 = -1.0j * np.exp(-1.0j * phi)
+    exponent2 = -1.0j * np.exp(1.0j * phi)
+    matrix = np.array([[cos, exponent1 * sin], [exponent2 * sin, cos]])
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    assert gates.PRX(0, theta, phi).qasm_label == "prx"
+    assert not gates.PRX(0, theta, phi).clifford
+    assert gates.PRX(0, theta, phi).unitary
+
+
 def test_gpi(backend):
     phi = 0.1234
     nqubits = 1
@@ -1051,24 +1087,6 @@ def test_ms(backend):
     assert gates.MS(0, 1, phi0, phi1, theta).qasm_label == "ms"
     assert not gates.MS(0, 1, phi0, phi1).clifford
     assert gates.MS(0, 1, phi0, phi1).unitary
-
-
-def test_prx(backend):
-    phi = 0.24
-    theta = 0.52
-    final_state = apply_gates(
-        backend, [gates.H(0), gates.PRX(0, theta, phi)], nqubits=1
-    )
-    cos = np.cos(theta / 2)
-    sin = np.sin(theta / 2)
-    exponent1 = -1.0j * np.exp(-1.0j * phi)
-    exponent2 = -1.0j * np.exp(1.0j * phi)
-    gate = np.array([[cos, exponent1 * sin], [exponent2 * sin, cos]])
-    target_state = gate.dot(np.ones(2)) / np.sqrt(2.0)
-    backend.assert_allclose(final_state, target_state)
-    # assert gates.PRX(0, phi=phi, theta=theta).qasm_label == "prx"
-    # assert not gates.PRX(0, phi=phi, theta=theta).clifford
-    # assert gates.PRX(0, phi=phi, theta=theta).unitary
 
 
 def test_givens(backend):
