@@ -127,7 +127,7 @@ class NumpyBackend(Backend):
         num_controls = len(gate.control_qubits)
         if num_controls > 0:
             _matrix = block_diag(
-                np.eye(2 ** len(gate.qubits) - 2), self.to_numpy(_matrix)
+                np.eye(2 ** len(gate.qubits) - len(_matrix)), self.to_numpy(_matrix)
             )
         return self.cast(_matrix, dtype=_matrix.dtype)
 
