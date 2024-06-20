@@ -98,7 +98,6 @@ class MPLDrawer:
         else:
             for i,gate in enumerate(l):
                 yield i,gate
-        return
 
     def _measured_wires(self,l,labels,schedule=False):
         "measured[i] = j means wire i is measured at step j"
@@ -115,7 +114,6 @@ class MPLDrawer:
             self._draw_target(ax,i,gate,labels,gate_grid,wire_grid,plot_params)
             if len(gate) > 2: # Controlled
                 self._draw_controls(ax,i,gate,labels,gate_grid,wire_grid,plot_params,measured)
-        return
 
     def _draw_controls(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params,measured={}):
         linewidth = plot_params['linewidth']
@@ -145,7 +143,6 @@ class MPLDrawer:
                 self._swapx(ax,x,y,plot_params)
             else:
                 self._cdot(ax,x,y,plot_params)
-        return
 
     def _draw_target(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params):
         target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X',DEUTSCH='DE',UNITARY='U')
@@ -163,7 +160,6 @@ class MPLDrawer:
             self._swapx(ax,x,y,plot_params)
         else:
             self._text(ax,x,y,symbol,plot_params,box=True)
-        return
 
     def _line(self,ax,x1,x2,y1,y2,plot_params):
         Line2D = matplotlib.lines.Line2D
@@ -179,7 +175,6 @@ class MPLDrawer:
         else:
             bbox= dict(fill=False,lw=0)
         ax.text(x,y,textstr,color='k',ha='center',va='center',bbox=bbox,size=fontsize)
-        return
 
     def _oplus(self,ax,x,y,plot_params):
         Line2D = matplotlib.lines.Line2D
@@ -190,7 +185,6 @@ class MPLDrawer:
                    fc='w',fill=False,lw=linewidth)
         ax.add_patch(c)
         self._line(ax,x,x,y-not_radius,y+not_radius,plot_params)
-        return
 
     def _cdot(self,ax,x,y,plot_params):
         Circle = matplotlib.patches.Circle
@@ -200,14 +194,12 @@ class MPLDrawer:
         c = Circle((x, y),control_radius*scale,
             ec='k',fc='k',fill=True,lw=linewidth)
         ax.add_patch(c)
-        return
 
     def _swapx(self,ax,x,y,plot_params):
         d = plot_params['swap_delta']
         linewidth = plot_params['linewidth']
         self._line(ax,x-d,x+d,y-d,y+d,plot_params)
         self._line(ax,x-d,x+d,y+d,y-d,plot_params)
-        return
 
     def _setup_figure(self,nq,ng,gate_grid,wire_grid,plot_params):
         scale = plot_params['scale']
@@ -236,7 +228,6 @@ class MPLDrawer:
         for i in measured:
             j = measured[i]
             self._line(ax,gate_grid[j],gate_grid[-1]+scale,wire_grid[i]+dy,wire_grid[i]+dy,plot_params)
-        return
 
     def _draw_labels(self,ax,labels,inits,gate_grid,wire_grid,plot_params):
         scale = plot_params['scale']
@@ -247,7 +238,6 @@ class MPLDrawer:
         for i in range(nq):
             j = self._get_flipped_index(labels[i],labels)
             self._text(ax,xdata[0]-label_buffer,wire_grid[j],self._render_label(labels[i],inits),plot_params)
-        return
 
     def _get_flipped_index(self,target,labels):
         """Get qubit labels from the rest of the line,and return indices
@@ -285,7 +275,7 @@ class MPLDrawer:
         qubits_in_current_tic = set()
         for gate in item_plos:
             qubits = set(gate[1:])
-           # print(qubits)
+
             if qubits_in_current_tic.intersection(qubits):
                 # Qubits already in tic, create new tic
                 current_tic = [gate]
