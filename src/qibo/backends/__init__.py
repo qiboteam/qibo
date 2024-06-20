@@ -225,7 +225,9 @@ def construct_backend(backend, **kwargs) -> Backend:
     except ImportError:
         raise_error(
             ValueError,
-            f"Backend {backend} is not available. To check which backends are installed use `qibo.list_available_backends()`.",
+            f"The '{backend}' backends' provider is not available. Check that a Python "
+            "package with this name is installed, and it is exposing valid Qibo "
+            "backends.",
         )
 
 
