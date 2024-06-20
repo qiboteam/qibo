@@ -224,6 +224,7 @@ def construct_backend(backend, **kwargs) -> Backend:
         module = import_module(provider)
         return getattr(module, "MetaBackend").load(**kwargs)
     except ImportError as e:
+        # pylint: disable=unsupported-membership-test
         if provider not in e.msg:
             raise e
         raise_error(
