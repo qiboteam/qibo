@@ -219,16 +219,17 @@ def construct_backend(backend, **kwargs) -> Backend:
     if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
         return MetaBackend.load(backend, **kwargs)
 
+    provider = backend.replace("-", "_")
     try:
-        module = import_module(backend.replace("-", "_"))
+        module = import_module(provider)
         return getattr(module, "MetaBackend").load(**kwargs)
     except ImportError as e:
-        if backend not in e.msg:
+        if provider not in e.msg:
             raise e
         raise_error(
             ValueError,
             f"The '{backend}' backends' provider is not available. Check that a Python "
-            "package with this name is installed, and it is exposing valid Qibo "
+            f"package named '{provider}' is installed, and it is exposing valid Qibo "
             "backends.",
         )
 
