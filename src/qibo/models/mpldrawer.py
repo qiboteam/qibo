@@ -248,11 +248,17 @@ class MPLDrawer:
             item = ()
             item += (init_label, )
 
-            if len(gate.init_args) == 1:
-                item += ("q_" + str(gate.init_args[0]), )
-            else:
-                for i in reversed(range(len(gate.init_args))):
-                    item += ("q_" + str(gate.init_args[i]), )
+            for qbit in gate._target_qubits:
+                if qbit is tuple:
+                    item += ("q_" + str(qbit[0]),)
+                else:
+                    item += ("q_" + str(qbit),)
+
+            for qbit in gate._control_qubits:
+                if qbit is tuple:
+                    item += ("q_" + str(qbit[0]),)
+                else:
+                    item += ("q_" + str(qbit),)
 
             gates_plot.append(item)
 
