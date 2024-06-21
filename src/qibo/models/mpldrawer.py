@@ -92,7 +92,7 @@ class MPLDrawer:
         self._draw_gates(ax,gates,labels,gate_grid,wire_grid,plot_params,measured)
         return ax
 
-    def _plot_lines_circuit(self,labels,inits,plot_labels=True,**kwargs):
+    def _plot_lines_circuit(self,inits,labels,plot_labels=True,**kwargs):
         """Use Matplotlib to plot a quantum circuit.
         labels    List of qubit labels
         inits     Initialization list of gates, optional
@@ -373,7 +373,7 @@ class MPLDrawer:
 
             return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
-            return self._plot_lines_circuit(labels, inits, scale = scale)
+            return self._plot_lines_circuit(inits, labels, scale = scale)
 
     @staticmethod
     def save_fig(fig, path_file):
