@@ -89,6 +89,35 @@ class MPLDrawer:
         self._draw_gates(ax,gates,labels,gate_grid,wire_grid,plot_params,measured)
         return ax
 
+    def _plot_lines_circuit(self,labels=[],inits=[],plot_labels=True,**kwargs):
+        """Use Matplotlib to plot a quantum circuit.
+        gates     List of tuples for each gate in the quantum circuit.
+                  (name,target,control1,control2...). Targets and controls initially
+                  defined in terms of labels.
+        inits     Initialization list of gates, optional
+
+        kwargs    Can override plot_parameters
+        """
+        plot_params = dict(scale = 1.0,fontsize = 14.0, linewidth = 1.0,
+                             control_radius = 0.05, not_radius = 0.15,
+                             swap_delta = 0.08, label_buffer = 0.0)
+        plot_params.update(kwargs)
+        scale = plot_params['scale']
+
+        nq = len(labels)
+
+        wire_grid = np.arange(0.0, nq*scale, scale, dtype=float)
+        gate_grid = np.arange(0.0, nq*scale, scale, dtype=float)
+
+        fig,ax = self._setup_figure(nq,nq,gate_grid,wire_grid,plot_params)
+
+        self._draw_wires(ax,nq,gate_grid,wire_grid,plot_params)
+
+        if plot_labels:
+            self._draw_labels(ax,labels,inits,gate_grid,wire_grid,plot_params)
+
+        return ax
+
     def _enumerate_gates(self,l,schedule=False):
         "Enumerate the gates in a way that can take l as either a list of gates or a schedule"
         if schedule:
@@ -98,6 +127,7 @@ class MPLDrawer:
         else:
             for i,gate in enumerate(l):
                 yield i,gate
+        return
 
     def _measured_wires(self,l,labels,schedule=False):
         "measured[i] = j means wire i is measured at step j"
@@ -114,6 +144,7 @@ class MPLDrawer:
             self._draw_target(ax,i,gate,labels,gate_grid,wire_grid,plot_params)
             if len(gate) > 2: # Controlled
                 self._draw_controls(ax,i,gate,labels,gate_grid,wire_grid,plot_params,measured)
+        return
 
     def _draw_controls(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params,measured={}):
         linewidth = plot_params['linewidth']
@@ -143,9 +174,10 @@ class MPLDrawer:
                 self._swapx(ax,x,y,plot_params)
             else:
                 self._cdot(ax,x,y,plot_params)
+        return
 
     def _draw_target(self,ax,i,gate,labels,gate_grid,wire_grid,plot_params):
-        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X',DEUTSCH='DE',UNITARY='U')
+        target_symbols = dict(CNOT='X',CPHASE='Z',NOP='',CX='X',CY='Y',CZ='Z',CCX='X',DEUTSCH='DE',UNITARY='U',MEASURE='M',SX=r'$\sqrt{\text{X}}$',CSX=r'$\sqrt{\text{X}}$')
         name,target = gate[:2]
         symbol = target_symbols.get(name,name) # override name with target_symbols
         x = gate_grid[i]
@@ -160,6 +192,7 @@ class MPLDrawer:
             self._swapx(ax,x,y,plot_params)
         else:
             self._text(ax,x,y,symbol,plot_params,box=True)
+        return
 
     def _line(self,ax,x1,x2,y1,y2,plot_params):
         Line2D = matplotlib.lines.Line2D
@@ -175,6 +208,7 @@ class MPLDrawer:
         else:
             bbox= dict(fill=False,lw=0)
         ax.text(x,y,textstr,color='k',ha='center',va='center',bbox=bbox,size=fontsize)
+        return
 
     def _oplus(self,ax,x,y,plot_params):
         Line2D = matplotlib.lines.Line2D
@@ -185,6 +219,7 @@ class MPLDrawer:
                    fc='w',fill=False,lw=linewidth)
         ax.add_patch(c)
         self._line(ax,x,x,y-not_radius,y+not_radius,plot_params)
+        return
 
     def _cdot(self,ax,x,y,plot_params):
         Circle = matplotlib.patches.Circle
@@ -194,12 +229,14 @@ class MPLDrawer:
         c = Circle((x, y),control_radius*scale,
             ec='k',fc='k',fill=True,lw=linewidth)
         ax.add_patch(c)
+        return
 
     def _swapx(self,ax,x,y,plot_params):
         d = plot_params['swap_delta']
         linewidth = plot_params['linewidth']
         self._line(ax,x-d,x+d,y-d,y+d,plot_params)
         self._line(ax,x-d,x+d,y+d,y-d,plot_params)
+        return
 
     def _setup_figure(self,nq,ng,gate_grid,wire_grid,plot_params):
         scale = plot_params['scale']
@@ -228,6 +265,7 @@ class MPLDrawer:
         for i in measured:
             j = measured[i]
             self._line(ax,gate_grid[j],gate_grid[-1]+scale,wire_grid[i]+dy,wire_grid[i]+dy,plot_params)
+        return
 
     def _draw_labels(self,ax,labels,inits,gate_grid,wire_grid,plot_params):
         scale = plot_params['scale']
@@ -238,6 +276,7 @@ class MPLDrawer:
         for i in range(nq):
             j = self._get_flipped_index(labels[i],labels)
             self._text(ax,xdata[0]-label_buffer,wire_grid[j],self._render_label(labels[i],inits),plot_params)
+        return
 
     def _get_flipped_index(self,target,labels):
         """Get qubit labels from the rest of the line,and return indices
@@ -275,7 +314,7 @@ class MPLDrawer:
         qubits_in_current_tic = set()
         for gate in item_plos:
             qubits = set(gate[1:])
-
+           # print(qubits)
             if qubits_in_current_tic.intersection(qubits):
                 # Qubits already in tic, create new tic
                 current_tic = [gate]
@@ -289,34 +328,45 @@ class MPLDrawer:
         return schedule
 
     def plot_qibo_circuit(self, circuit, scale, cluster_gates):
-        gates_plot = []
-        inits = []
 
-        for gate in circuit.queue:
-            init_label = gate.name.upper()
-            inits.append(init_label)
-            item = ()
-            item += (init_label, )
+        inits = list(range(circuit.nqubits))
 
-            for qbit in gate._target_qubits:
-                if qbit is tuple:
-                    item += ("q_" + str(qbit[0]),)
-                else:
-                    item += ("q_" + str(qbit),)
+        if len(circuit.queue) > 0:
 
-            for qbit in gate._control_qubits:
-                if qbit is tuple:
-                    item += ("q_" + str(qbit[0]),)
-                else:
-                    item += ("q_" + str(qbit),)
+            labels = []
+            for i in range(circuit.nqubits):
+                labels.append('q_' + str(i))
 
-            gates_plot.append(item)
+            gates_plot = []
 
-        if cluster_gates:
-            scheduled_plots = self._make_schedule(gates_plot)
-            return self._plot_quantum_schedule(scheduled_plots, inits, scale = scale)
+            for gate in circuit.queue:
+                init_label = gate.name.upper()
+
+                item = ()
+                item += (init_label, )
+
+                for qbit in gate._target_qubits:
+                    if qbit is tuple:
+                        item += ("q_" + str(qbit[0]),)
+                    else:
+                        item += ("q_" + str(qbit),)
+
+                for qbit in gate._control_qubits:
+                    if qbit is tuple:
+                        item += ("q_" + str(qbit[0]),)
+                    else:
+                        item += ("q_" + str(qbit),)
+
+                gates_plot.append(item)
+
+            if cluster_gates:
+                scheduled_plots = self._make_schedule(gates_plot)
+                return self._plot_quantum_schedule(scheduled_plots, inits, labels, scale = scale)
+            else:
+                return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
-            return self._plot_quantum_circuit(gates_plot, inits, scale = scale)
+
+            return self._plot_lines_circuit(circuit._wire_names, inits)
 
     @staticmethod
     def save_fig(fig, path_file):
