@@ -686,6 +686,66 @@ class RZ(_Rn_):
         return 0.5
 
 
+class PRX(ParametrizedGate):
+    """Phase :math:`RX` gate.
+
+    Corresponds to the following unitary matrix
+
+        .. math::
+            \\begin{pmatrix}
+                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
+                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+            \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the first angle corresponding to a rotation angle.
+        phi (float): the second angle correspoding to a phase angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "prx"
+        self.draw_label = "prx"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+        self.theta = theta
+        self.phi = phi
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "trainable": trainable,
+        }
+
+    @property
+    def qasm_label(self):
+        return "prx"
+
+    def _dagger(self) -> "Gate":
+        theta = -self.theta
+        phi = self.phi
+        return self.__class__(
+            self.target_qubits[0], theta, phi
+        )  # pylint: disable=E1130
+
+    def decompose(self):
+        """Decomposition of Phase-:math:`RX` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
+
 class GPI(ParametrizedGate):
     """The GPI gate.
 
@@ -718,6 +778,10 @@ class GPI(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi"
 
 
 class GPI2(ParametrizedGate):
@@ -752,6 +816,10 @@ class GPI2(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -2074,6 +2142,10 @@ class MS(ParametrizedGate):
             "theta": theta,
             "trainable": trainable,
         }
+
+    @property
+    def qasm_label(self):
+        return "ms"
 
     def _dagger(self) -> "Gate":
         """"""
