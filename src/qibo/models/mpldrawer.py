@@ -1,6 +1,7 @@
-# MPLDrawer craeted from code provided by Rick Muller
+# Some functions in MPLDrawer are from code provided by Rick Muller
 # Simplified Plotting Routines for Quantum Circuits
 # https://github.com/rpmuller/PlotQCircuit
+#
 import matplotlib
 import numpy as np
 
