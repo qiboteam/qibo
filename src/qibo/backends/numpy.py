@@ -168,7 +168,13 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         if isinstance(gate, Unitary):
-            matrix = gate.__class__(gate.init_args[0], *(gate.init_args[1:]))
+            matrix = gate.__class__(
+                gate.init_args[0],
+                *(gate.init_args[1:]),
+                trainable=gate.init_kwargs["trainable"],
+                name=gate.init_kwargs["name"],
+                check_unitary=gate.init_kwargs["check_unitary"],
+            )
         else:
             matrix = (
                 gate.__class__(*gate.init_args, *gate.parameters)
@@ -205,15 +211,22 @@ class NumpyBackend(Backend):
 
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        if isinstance(gate, Unitary):
-            matrix = gate.__class__(gate.init_args[0], *(gate.init_args[1:]))
-        else:
-            matrix = (
-                gate.__class__(*gate.init_args, *gate.parameters)
-                if isinstance(gate, ParametrizedGate)
-                else gate.__class__(*gate.init_args)
-            )
-        matrix = matrix.matrix(self)
+        # if isinstance(gate, Unitary):
+        #     matrix = gate.__class__(
+        #         gate.init_args[0],
+        #         *(gate.init_args[1:]),
+        #         trainable=gate.init_kwargs["trainable"],
+        #         name=gate.init_kwargs["name"],
+        #         check_unitary=gate.init_kwargs["check_unitary"],
+        #     )
+        # else:
+        #     matrix = (
+        #         gate.__class__(*gate.init_args, *gate.parameters)
+        #         if isinstance(gate, ParametrizedGate)
+        #         else gate.__class__(*gate.init_args)
+        #     )
+        # matrix = matrix.matrix(self)
+        matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             matrixc = self.np.conj(matrix)
