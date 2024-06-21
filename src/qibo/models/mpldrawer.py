@@ -331,12 +331,11 @@ class MPLDrawer:
 
         inits = list(range(circuit.nqubits))
 
+        labels = []
+        for i in range(circuit.nqubits):
+            labels.append('q_' + str(i))
+
         if len(circuit.queue) > 0:
-
-            labels = []
-            for i in range(circuit.nqubits):
-                labels.append('q_' + str(i))
-
             gates_plot = []
 
             for gate in circuit.queue:
@@ -365,8 +364,7 @@ class MPLDrawer:
             else:
                 return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
-
-            return self._plot_lines_circuit(circuit._wire_names, inits, scale = scale)
+            return self._plot_lines_circuit(labels, inits, scale = scale)
 
     @staticmethod
     def save_fig(fig, path_file):
