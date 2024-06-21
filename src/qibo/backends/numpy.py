@@ -206,12 +206,12 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
         if isinstance(gate, Unitary):
-            matrix = gate.__class__(gate.parameters[0], *gate.target_qubits)
+            matrix = gate.__class__(gate.init_args[0], *(gate.init_args[1:]))
         else:
             matrix = (
-                gate.__class__(*gate.target_qubits, *gate.parameters)
+                gate.__class__(*gate.init_args, *gate.parameters)
                 if isinstance(gate, ParametrizedGate)
-                else gate.__class__(*gate.target_qubits)
+                else gate.__class__(*gate.init_args)
             )
         matrix = matrix.matrix(self)
         if gate.is_controlled_by:
