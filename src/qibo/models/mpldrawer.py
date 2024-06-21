@@ -313,7 +313,9 @@ class MPLDrawer:
                     temp_gates = []
                 cluster_gates.append([item])
             i = i + 1
-        cluster_gates.append(temp_gates)
+
+        if len(temp_gates) > 0:
+            cluster_gates.append(temp_gates)
         temp_gates = []
 
         return cluster_gates
