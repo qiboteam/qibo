@@ -162,8 +162,8 @@ class NumpyBackend(Backend):
         return self.cast(matrix.toarray())
 
     def apply_gate(self, gate, state, nqubits):
-        from qibo.gates.abstract import ParametrizedGate
-        from qibo.gates.gates import Unitary
+        from qibo.gates.abstract import ParametrizedGate  # pylint: disable=C0415
+        from qibo.gates.gates import Unitary  # pylint: disable=C0415
 
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
@@ -206,9 +206,6 @@ class NumpyBackend(Backend):
         return self.np.reshape(state, (2**nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
-        from qibo.gates.abstract import ParametrizedGate
-        from qibo.gates.gates import Unitary
-
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)

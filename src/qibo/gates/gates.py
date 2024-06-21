@@ -71,17 +71,6 @@ class X(Gate):
     def qasm_label(self):
         return "x"
 
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CNOT and Toffoli if there is one or two controls."""
-        if len(q) == 1:
-            gate = CNOT(q[0], self.target_qubits[0])
-        elif len(q) == 2:
-            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
-        else:
-            gate = super().controlled_by(*q)
-        return gate
-
     def decompose(self, *free, use_toffolis=True):
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
@@ -187,15 +176,6 @@ class Y(Gate):
     def qasm_label(self):
         return "y"
 
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CY if there is only one control."""
-        if len(q) == 1:
-            gate = CY(q[0], self.target_qubits[0])
-        else:
-            gate = super().controlled_by(*q)
-        return gate
-
     def basis_rotation(self):
         from qibo import matrices  # pylint: disable=C0415
 
@@ -233,15 +213,6 @@ class Z(Gate):
     @property
     def qasm_label(self):
         return "z"
-
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CZ if there is only one control."""
-        if len(q) == 1:
-            gate = CZ(q[0], self.target_qubits[0])
-        else:
-            gate = super().controlled_by(*q)
-        return gate
 
     def basis_rotation(self):
         return None
@@ -571,17 +542,6 @@ class _Rn_(ParametrizedGate):
             self.target_qubits[0], -self.parameters[0]
         )  # pylint: disable=E1130
 
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CRn if there is only one control."""
-        if len(q) == 1:
-            gate = self._controlled_gate(  # pylint: disable=E1102
-                q[0], self.target_qubits[0], **self.init_kwargs
-            )
-        else:
-            gate = super().controlled_by(*q)
-        return gate
-
 
 class RX(_Rn_):
     """Rotation around the X-axis of the Bloch sphere.
@@ -846,17 +806,6 @@ class _Un_(ParametrizedGate):
         self.unitary = True
 
         self.init_kwargs = {"trainable": trainable}
-
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CUn if there is only one control."""
-        if len(q) == 1:
-            gate = self._controlled_gate(  # pylint: disable=E1102
-                q[0], self.target_qubits[0], **self.init_kwargs
-            )
-        else:
-            gate = super().controlled_by(*q)
-        return gate
 
 
 class U1(_Un_):
