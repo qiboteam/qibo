@@ -306,9 +306,10 @@ class Random(Placer):
             Defaults to :math:`100`.
     """
 
-    def __init__(self, connectivity, samples: int = 100):
+    def __init__(self, connectivity, samples: int = 100, seed=42):
         self.connectivity = connectivity
         self.samples = samples
+        self.seed = seed
 
     def __call__(self, circuit):
         """Find an initial layout of the given circuit using random greedy algorithm.
@@ -319,6 +320,7 @@ class Random(Placer):
         Returns:
             (dict): physical-to-logical qubit mapping.
         """
+        random.seed(self.seed)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())

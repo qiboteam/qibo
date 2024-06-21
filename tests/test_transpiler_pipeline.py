@@ -283,3 +283,25 @@ def test_custom_passes_wrong_pass():
     circ = generate_random_circuit(nqubits=5, ngates=5)
     with pytest.raises(TranspilerPipelineError):
         transpiled_circ, final_layout = custom_pipeline(circ)
+
+
+def test_bug_measurements():
+    connectivity = nx.Graph()
+    connectivity.add_edges_from([(0, 2), (1, 2), (2, 3), (2, 4)])
+    transpiler = Passes(
+        connectivity=connectivity,
+        passes=[
+            Preprocessing(connectivity),
+            Random(connectivity, seed=0),
+            Sabre(connectivity),
+            Unroller(NativeGates.default()),
+        ],
+        int_qubit_names=True,
+    )
+    circuit = Circuit(1)
+    circuit.add(gates.I(0))
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
+    traspiled_circuit, final_layout = transpiler(circuit)
+    print(traspiled_circuit.draw())
+    assert False
