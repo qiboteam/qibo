@@ -308,6 +308,26 @@ class MPLDrawer:
                 return r'$|%s\rangle$' % inits[label]
         return r'$|%s\rangle$' % label
 
+    def _make_cluster_gates(self,gates_items):
+        cluster_gates = []
+        temp_gates = []
+        for i in list(range(len(gates_items))):
+            item = gates_items[i]
+            if len(item) == 2 and i > 0:
+                if len(temp_gates) > 0 and item[1] == gates_items[i-1][1]:
+                    gates = []
+                temp_gates.append(item)
+            else:
+                if len(temp_gates) != 0:
+                    cluster_gates.append(temp_gates)
+                    temp_gates = []
+                cluster_gates.append([item])
+            i = i + 1
+        cluster_gates.append(temp_gates)
+        temp_gates = []
+
+        return cluster_gates
+
     def plot_qibo_circuit(self, circuit, scale, cluster_gates):
 
         inits = list(range(circuit.nqubits))
@@ -340,25 +360,9 @@ class MPLDrawer:
                 gates_plot.append(item)
 
             if cluster_gates:
-                cluster_gates = []
-                temp_gates = []
-                for i in list(range(len(gates_plot))):
-                    item = gates_plot[i]
-                    if len(item) == 2 and i > 0:
-                        if len(temp_gates) > 0 and item[1] == gates_plot[i-1][1]:
-                            gates = []
-                        temp_gates.append(item)
-                    else:
-                        if len(temp_gates) != 0:
-                            cluster_gates.append(temp_gates)
-                            temp_gates = []
-                        cluster_gates.append([item])
-                    i = i + 1
-                cluster_gates.append(temp_gates)
-                temp_gates = []
-                return self._plot_quantum_schedule(cluster_gates, inits, labels, scale = scale)
-            else:
-                return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
+                return self._plot_quantum_schedule(self._make_cluster_gates(gates_plot), inits, labels, scale = scale)
+
+            return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
             return self._plot_lines_circuit(labels, inits, scale = scale)
 
