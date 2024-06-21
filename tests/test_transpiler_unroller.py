@@ -111,3 +111,11 @@ def test_unroller(natives_1q, natives_2q):
         translated_circuit,
         native_gates=natives_1q | natives_2q | NativeGates.RZ | NativeGates.Z,
     )
+
+
+def test_measurements_non_comp_basis():
+    unroller = Unroller(native_gates=NativeGates.default())
+    circuit = Circuit(1)
+    circuit.add(gates.M(0, basis=gates.X))
+    transpiled_circuit = unroller(circuit)
+    assert isinstance(transpiled_circuit.queue[2], gates.M)
