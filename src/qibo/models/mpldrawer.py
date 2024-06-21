@@ -472,4 +472,7 @@ class MPLDrawer:
 
     @staticmethod
     def save_fig(fig, path_file):
+        """Save natpltlib image to file
+        path_file   Path to file with filename and extension
+        """
         return fig.savefig(path_file, bbox_inches="tight")
