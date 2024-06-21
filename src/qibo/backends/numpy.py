@@ -161,41 +161,20 @@ class NumpyBackend(Backend):
 
         return self.cast(matrix.toarray())
 
-    def control_matrix(self, gate):
-        if len(gate.control_qubits) > 1:
-            raise_error(
-                NotImplementedError,
-                "Cannot calculate controlled "
-                "unitary for more than two "
-                "control qubits.",
-            )
-        matrix = gate.matrix(self)
-        shape = matrix.shape
-        if shape != (2, 2):
-            raise_error(
-                ValueError,
-                "Cannot use ``control_unitary`` method on "
-                + f"gate matrix of shape {shape}.",
-            )
-        zeros = self.np.zeros((2, 2), dtype=self.dtype)
-        zeros = self.cast(zeros, dtype=zeros.dtype)
-        identity = self.np.eye(2, dtype=self.dtype)
-        identity = self.cast(identity, dtype=identity.dtype)
-        part1 = self.np.concatenate([identity, zeros], axis=0)
-        part2 = self.np.concatenate([zeros, matrix], axis=0)
-        return self.np.concatenate([part1, part2], axis=1)
-
     def apply_gate(self, gate, state, nqubits):
         from qibo.gates.abstract import ParametrizedGate
+        from qibo.gates.gates import Unitary
 
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
-        # matrix = gate.matrix(self)
-        matrix = (
-            gate.__class__(*gate.qubits, *gate.parameters)
-            if isinstance(gate, ParametrizedGate)
-            else gate.__class__(*gate.qubits)
-        )
+        if isinstance(gate, Unitary):
+            matrix = gate.__class__(gate.init_args[0], *(gate.init_args[1:]))
+        else:
+            matrix = (
+                gate.__class__(*gate.init_args, *gate.parameters)
+                if isinstance(gate, ParametrizedGate)
+                else gate.__class__(*gate.init_args)
+            )
         matrix = matrix.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
@@ -222,15 +201,18 @@ class NumpyBackend(Backend):
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         from qibo.gates.abstract import ParametrizedGate
+        from qibo.gates.gates import Unitary
 
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        # matrix = gate.matrix(self)
-        matrix = (
-            gate.__class__(*gate.qubits, *gate.parameters)
-            if isinstance(gate, ParametrizedGate)
-            else gate.__class__(*gate.qubits)
-        )
+        if isinstance(gate, Unitary):
+            matrix = gate.__class__(gate.parameters[0], *gate.target_qubits)
+        else:
+            matrix = (
+                gate.__class__(*gate.target_qubits, *gate.parameters)
+                if isinstance(gate, ParametrizedGate)
+                else gate.__class__(*gate.target_qubits)
+            )
         matrix = matrix.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))

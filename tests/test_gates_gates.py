@@ -1574,23 +1574,6 @@ def test_controlled_unitary(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-def test_controlled_unitary_matrix(backend):
-    nqubits = 2
-    initial_state = random_statevector(2**nqubits, backend=backend)
-
-    matrix = np.random.random((2, 2))
-    gate = gates.Unitary(matrix, 1).controlled_by(0)
-
-    target_state = apply_gates(backend, [gate], nqubits, initial_state)
-
-    u = backend.control_matrix(gate)
-    u = backend.cast(u, dtype=u.dtype)
-
-    final_state = np.dot(u, initial_state)
-
-    backend.assert_allclose(final_state, target_state)
-
-
 ###############################################################################
 
 ################################# Test dagger #################################
