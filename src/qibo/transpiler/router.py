@@ -176,10 +176,13 @@ class CircuitMap:
             self.circuit_blocks = blocks
         else:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
-        self.initial_layout = initial_layout
-        self._graph_qubits_names = [int(key[1:]) for key in initial_layout.keys()]
-        self._circuit_logical = list(range(len(initial_layout)))
-        self._physical_logical = list(initial_layout.values())
+        # Order the initial layout based on the hardware qubit name (this may create problems for a custom layout)
+        self.initial_layout = {
+            key: value for key, value in sorted(initial_layout.items())
+        }
+        self._graph_qubits_names = [int(key[1:]) for key in self.initial_layout.keys()]
+        self._circuit_logical = list(range(len(self.initial_layout)))
+        self._physical_logical = list(self.initial_layout.values())
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
 
@@ -724,13 +727,12 @@ class Sabre(Router):
         """
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
-            routed_qubits = (
+            routed_qubits = list(
                 self.circuit.circuit_to_physical(qubit) for qubit in original_qubits
             )
             routed_circuit.add(
                 measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
             )
-
         return routed_circuit
 
     def _update_dag_layers(self):

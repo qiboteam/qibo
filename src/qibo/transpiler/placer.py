@@ -334,13 +334,15 @@ class Random(Placer):
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)
             if cost == 0:
-                return dict(zip(dict_keys, list(mapping.values())))
+                final_layout = dict(zip(dict_keys, list(mapping.values())))
+                return {key: value for key, value in sorted(final_layout.items())}
             if cost < final_cost:
                 final_graph = graph
                 final_mapping = mapping
                 final_cost = cost
 
-        return dict(zip(dict_keys, list(final_mapping.values())))
+        final_layout = dict(zip(dict_keys, list(final_mapping.values())))
+        return {key: value for key, value in sorted(final_layout.items())}
 
     def _cost(self, graph: nx.Graph, gates_qubits_pairs: list):
         """

@@ -302,6 +302,7 @@ def test_bug_measurements():
     circuit.add(gates.I(0))
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
-    traspiled_circuit, final_layout = transpiler(circuit)
-    print(traspiled_circuit.draw())
-    assert False
+    transpiled_circuit, final_layout = transpiler(circuit)
+    initial_layout = transpiler.get_initial_layout()
+    assert transpiled_circuit.queue[2].qubits == (1,)
+    assert transpiled_circuit.queue[3].qubits == (1,)
