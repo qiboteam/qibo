@@ -9,12 +9,13 @@ class MPLDrawer:
     def __init__(self):
             pass
 
-    def _plot_quantum_schedule(self, schedule,inits={},labels=[],plot_labels=True,**kwargs):
+    def _plot_quantum_schedule(self, schedule,inits,labels=[],plot_labels=True,**kwargs):
         """Use Matplotlib to plot a quantum circuit.
         schedule  List of time steps, each containing a sequence of gates during that step.
                   Each gate is a tuple containing (name,target,control1,control2...).
                   Targets and controls initially defined in terms of labels.
-        inits     Initialization list of gates, optional
+        inits     Initialization list of gates
+        labels    List of qubit labels, optional
 
         kwargs    Can override plot_parameters
         """
@@ -49,12 +50,13 @@ class MPLDrawer:
         self._draw_gates(ax,schedule,labels,gate_grid,wire_grid,plot_params,measured,schedule=True)
         return ax
 
-    def _plot_quantum_circuit(self, gates,inits={},labels=[],plot_labels=True,**kwargs):
+    def _plot_quantum_circuit(self, gates,inits,labels=[],plot_labels=True,**kwargs):
         """Use Matplotlib to plot a quantum circuit.
         gates     List of tuples for each gate in the quantum circuit.
                   (name,target,control1,control2...). Targets and controls initially
                   defined in terms of labels.
-        inits     Initialization list of gates, optional
+        inits     Initialization list of gates
+        labels    List of qubit labels. optional
 
         kwargs    Can override plot_parameters
         """
@@ -89,11 +91,9 @@ class MPLDrawer:
         self._draw_gates(ax,gates,labels,gate_grid,wire_grid,plot_params,measured)
         return ax
 
-    def _plot_lines_circuit(self,labels=[],inits=[],plot_labels=True,**kwargs):
+    def _plot_lines_circuit(self,labels,inits,plot_labels=True,**kwargs):
         """Use Matplotlib to plot a quantum circuit.
-        gates     List of tuples for each gate in the quantum circuit.
-                  (name,target,control1,control2...). Targets and controls initially
-                  defined in terms of labels.
+        labels    List of qubit labels
         inits     Initialization list of gates, optional
 
         kwargs    Can override plot_parameters
