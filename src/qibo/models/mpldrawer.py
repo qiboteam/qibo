@@ -308,25 +308,6 @@ class MPLDrawer:
                 return r'$|%s\rangle$' % inits[label]
         return r'$|%s\rangle$' % label
 
-    def _make_schedule(self, item_plos):
-        schedule = [[]]
-        current_tic = schedule[-1]
-        qubits_in_current_tic = set()
-        for gate in item_plos:
-            qubits = set(gate[1:])
-
-            if qubits_in_current_tic.intersection(qubits):
-                # Qubits already in tic, create new tic
-                current_tic = [gate]
-                qubits_in_current_tic = qubits
-                schedule.append(current_tic)
-            else:
-                # Add to current tic
-                current_tic.append(gate)
-                qubits_in_current_tic = qubits_in_current_tic.union(qubits)
-
-        return schedule
-
     def plot_qibo_circuit(self, circuit, scale, cluster_gates):
 
         inits = list(range(circuit.nqubits))
@@ -359,8 +340,23 @@ class MPLDrawer:
                 gates_plot.append(item)
 
             if cluster_gates:
-                scheduled_plots = self._make_schedule(gates_plot)
-                return self._plot_quantum_schedule(scheduled_plots, inits, labels, scale = scale)
+                cluster_gates = []
+                temp_gates = []
+                for i in list(range(len(gates_plot))):
+                    item = gates_plot[i]
+                    if len(item) == 2 and i > 0:
+                        if len(temp_gates) > 0 and item[1] == gates_plot[i-1][1]:
+                            gates = []
+                        temp_gates.append(item)
+                    else:
+                        if len(temp_gates) != 0:
+                            cluster_gates.append(temp_gates)
+                            temp_gates = []
+                        cluster_gates.append([item])
+                    i = i + 1
+                cluster_gates.append(temp_gates)
+                temp_gates = []
+                return self._plot_quantum_schedule(cluster_gates, inits, labels, scale = scale)
             else:
                 return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
