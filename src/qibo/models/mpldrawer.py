@@ -314,7 +314,7 @@ class MPLDrawer:
         qubits_in_current_tic = set()
         for gate in item_plos:
             qubits = set(gate[1:])
-           # print(qubits)
+
             if qubits_in_current_tic.intersection(qubits):
                 # Qubits already in tic, create new tic
                 current_tic = [gate]
