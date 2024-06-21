@@ -366,7 +366,7 @@ class MPLDrawer:
                 return self._plot_quantum_circuit(gates_plot, inits, labels, scale = scale)
         else:
 
-            return self._plot_lines_circuit(circuit._wire_names, inits)
+            return self._plot_lines_circuit(circuit._wire_names, inits, scale = scale)
 
     @staticmethod
     def save_fig(fig, path_file):
