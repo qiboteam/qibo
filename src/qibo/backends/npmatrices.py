@@ -92,6 +92,8 @@ class NumpyMatrices:
         return self._cast([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
 
     def PRX(self, theta, phi):
+        theta = self._cast_parameter(theta)
+        phi = self._cast_parameter(phi)
         cos = self.np.cos(theta / 2)
         sin = self.np.sin(theta / 2)
         exponent1 = -1.0j * self.np.exp(-1.0j * phi)
