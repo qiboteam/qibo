@@ -1270,7 +1270,7 @@ class Circuit:
 
         return matrix, idx
 
-    def draw_mpl(self, scale = 0.6, cluster_gates = True, save_file = None):
+    def draw_mpl(self, scale=0.6, cluster_gates=True, save_file=None):
 
         ax = MPLDrawer().plot_qibo_circuit(self, scale, cluster_gates)
 
