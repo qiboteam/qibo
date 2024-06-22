@@ -245,8 +245,8 @@ class MPLDrawer:
             DEUTSCH="DE",
             UNITARY="U",
             MEASURE="M",
-            SX=r'$\rm\sqrt{X}$',
-            CSX=r'$\rm\sqrt{X}$',
+            SX=r"$\rm\sqrt{X}$",
+            CSX=r"$\rm\sqrt{X}$",
         )
         name, target = gate[:2]
         symbol = target_symbols.get(name, name)  # override name with target_symbols
