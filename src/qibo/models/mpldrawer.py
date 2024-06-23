@@ -443,6 +443,9 @@ class MPLDrawer:
             for gate in circuit.queue:
                 init_label = gate.name.upper()
 
+                if len(gate._target_qubits) > 0  and 'C' in init_label[0]:
+                    init_label = init_label[1:]
+                    
                 item = ()
                 item += (init_label,)
 
