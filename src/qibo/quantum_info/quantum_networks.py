@@ -947,6 +947,12 @@ def link_product(
             `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
         operands (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
             networks to be contracted.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+        surpress_warning (bool, optional): If ``True``, surpresses the warning
+            regarding if the same index connects two input or two output
+            systems. Defaults to ``False``.
 
     Returns:
         :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
