@@ -259,7 +259,7 @@ class MPLDrawer:
             self._oplus(ax, x, y, plot_params)
         elif name in ["CPHASE"]:
             self._cdot(ax, x, y, plot_params)
-        elif name in ["SWAP", "ISWAP", "SISWAP", "FISWAP"]:
+        elif name in ["SWAP", "ISWAP", "SISWAP", "FSWAP"]:
             self._swapx(ax, x, y, plot_params)
         else:
             self._text(ax, x, y, symbol, plot_params, box=True)
@@ -443,7 +443,7 @@ class MPLDrawer:
             for gate in circuit.queue:
                 init_label = gate.name.upper()
 
-                if len(gate._target_qubits) > 0 and "C" in init_label[0]:
+                if len(gate._control_qubits) > 0 and "C" in init_label[0]:
                     init_label = init_label[1:]
 
                 item = ()
