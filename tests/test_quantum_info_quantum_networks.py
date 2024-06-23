@@ -5,12 +5,12 @@ import pytest
 
 from qibo import gates
 from qibo.quantum_info.quantum_networks import (
+    IdentityChannel,
     QuantumChannel,
     QuantumComb,
     QuantumNetwork,
-    identity,
+    TraceOperation,
     link_product,
-    trace,
 )
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
@@ -25,13 +25,13 @@ def test_errors(backend):
     nqubits = len(channel.target_qubits)
     dims = 2**nqubits
     partition = (dims, dims)
-    network = QuantumNetwork.from_nparray(
+    network = QuantumNetwork.from_operator(
         channel.to_choi(backend=backend), partition, backend=backend
     )
-    quantum_comb = QuantumComb.from_nparray(
+    quantum_comb = QuantumComb.from_operator(
         channel.to_choi(backend=backend), partition, backend=backend
     )
-    quantum_channel = QuantumChannel.from_nparray(
+    quantum_channel = QuantumChannel.from_operator(
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
@@ -127,14 +127,14 @@ def test_errors(backend):
         QuantumNetwork(matrix, (1, 2), backend=backend)
 
     with pytest.raises(ValueError):
-        QuantumNetwork.from_nparray(matrix, (1, 2), pure=True, backend=backend)
+        QuantumNetwork.from_operator(matrix, (1, 2), pure=True, backend=backend)
 
     vec = np.random.rand(4)
     with pytest.raises(ValueError):
-        QuantumNetwork.from_nparray(vec, backend=backend)
+        QuantumNetwork.from_operator(vec, backend=backend)
 
     with pytest.raises(ValueError):
-        QuantumComb.from_nparray(vec, pure=True, backend=backend)
+        QuantumComb.from_operator(vec, pure=True, backend=backend)
 
     with pytest.raises(ValueError):
         QuantumChannel(matrix, partition=(2, 2, 2), pure=True, backend=backend)
@@ -166,7 +166,7 @@ def test_operational_logic(backend):
     nqubits = len(channel.target_qubits)
     dims = 2**nqubits
     partition = (dims, dims)
-    network = QuantumNetwork.from_nparray(
+    network = QuantumNetwork.from_operator(
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
@@ -218,14 +218,14 @@ def test_parameters(backend):
 
     choi = channel.to_choi(backend=backend)
 
-    network = QuantumNetwork.from_nparray(choi, partition, backend=backend)
-    quantum_comb = QuantumComb.from_nparray(choi, partition, backend=backend)
-    quantum_channel = QuantumChannel.from_nparray(
+    network = QuantumNetwork.from_operator(choi, partition, backend=backend)
+    quantum_comb = QuantumComb.from_operator(choi, partition, backend=backend)
+    quantum_channel = QuantumChannel.from_operator(
         choi, partition, backend=backend, inverse=True
     )
 
     rand = random_density_matrix(dims**2, backend=backend)
-    non_channel = QuantumChannel.from_nparray(
+    non_channel = QuantumChannel.from_operator(
         rand, partition, backend=backend, inverse=True
     )
 
@@ -250,11 +250,11 @@ def test_with_states(backend):
     dims = 2**nqubits
 
     state = random_density_matrix(dims, backend=backend)
-    network_state = QuantumChannel.from_nparray(state, backend=backend)
+    network_state = QuantumChannel.from_operator(state, backend=backend)
 
     lamb = float(np.random.rand())
     channel = gates.DepolarizingChannel(0, lamb)
-    network_channel = QuantumChannel.from_nparray(
+    network_channel = QuantumChannel.from_operator(
         channel.to_choi(backend=backend), (dims, dims), backend=backend, inverse=True
     )
 
@@ -277,16 +277,16 @@ def test_with_unitaries(backend, subscript):
     unitary_1 = random_unitary(dims, backend=backend)
     unitary_2 = random_unitary(dims, backend=backend)
 
-    network_1 = QuantumComb.from_nparray(
+    network_1 = QuantumComb.from_operator(
         unitary_1, (dims, dims), pure=True, backend=backend, inverse=True
     )
-    network_2 = QuantumComb.from_nparray(
+    network_2 = QuantumComb.from_operator(
         unitary_2, (dims, dims), pure=True, backend=backend, inverse=True
     )
-    network_3 = QuantumComb.from_nparray(
+    network_3 = QuantumComb.from_operator(
         unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend, inverse=True
     )
-    network_4 = QuantumComb.from_nparray(
+    network_4 = QuantumComb.from_operator(
         unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend, inverse=True
     )
 
@@ -324,20 +324,20 @@ def test_with_comb(backend):
     rand_choi = random_density_matrix(4**2, backend=backend)
     unitary_1 = random_unitary(4, backend=backend)
     unitary_2 = random_unitary(4, backend=backend)
-    non_channel = QuantumNetwork.from_nparray(
+    non_channel = QuantumNetwork.from_operator(
         rand_choi,
         (2, 2, 2, 2),
         system_input=(True, True, False, False),
         backend=backend,
     )
-    unitary_channel = QuantumNetwork.from_nparray(
+    unitary_channel = QuantumNetwork.from_operator(
         unitary_1,
         (2, 2, 2, 2),
         system_input=(True, True, False, False),
         pure=True,
         backend=backend,
     )
-    unitary_channel2 = QuantumNetwork.from_nparray(
+    unitary_channel2 = QuantumNetwork.from_operator(
         unitary_2,
         (2, 2, 2, 2),
         system_input=(True, True, False, False),
@@ -358,8 +358,8 @@ def test_with_comb(backend):
         "ij kl, km on, i, o",
         unitary_channel,
         unitary_channel2,
-        trace(2, backend=backend),
-        trace(2, backend=backend),
+        TraceOperation(2, backend=backend),
+        TraceOperation(2, backend=backend),
         backend=backend,
     )
     two_comb = QuantumComb(
@@ -372,10 +372,10 @@ def test_with_comb(backend):
     comb = random_density_matrix(2**4, backend=backend)
     channel = random_density_matrix(2**2, backend=backend)
 
-    comb_choi = QuantumNetwork.from_nparray(
+    comb_choi = QuantumNetwork.from_operator(
         comb, comb_partition, system_input=comb_sys_in, backend=backend
     )
-    channel_choi = QuantumNetwork.from_nparray(
+    channel_choi = QuantumNetwork.from_operator(
         channel, channel_partition, system_input=channel_sys_in, backend=backend
     )
 
@@ -397,7 +397,7 @@ def test_apply(backend):
 
     state = random_density_matrix(dims, backend=backend)
     unitary = random_unitary(dims, backend=backend)
-    network = QuantumChannel.from_nparray(
+    network = QuantumChannel.from_operator(
         unitary, (dims, dims), pure=True, backend=backend, inverse=True
     )
 
@@ -412,7 +412,7 @@ def test_non_hermitian_and_prints(backend):
     dims = 2**nqubits
 
     matrix = random_gaussian_matrix(dims**2, backend=backend)
-    network = QuantumNetwork.from_nparray(
+    network = QuantumNetwork.from_operator(
         matrix, (dims, dims), pure=False, backend=backend
     )
 
@@ -440,9 +440,10 @@ def test_uility_func():
 
 
 def test_predefined(backend):
-    id = identity(2, backend=backend)
-    id_mat = id.matrix()
-    tr = trace(2, backend=backend)
+    tr_ch = TraceOperation(2, backend=backend)
+
+    id_ch = IdentityChannel(2, backend=backend)
+    id_mat = id_ch.matrix(backend=backend)
 
     backend.assert_allclose(
         id_mat,
@@ -453,10 +454,10 @@ def test_predefined(backend):
         atol=1e-8,
     )
 
-    traced = link_product("ij,j", id, tr, backend=backend)
+    traced = link_product("ij,j", id_ch, tr_ch, backend=backend)
 
     backend.assert_allclose(
-        tr.matrix(backend=backend), traced.matrix(backend=backend), atol=1e-8
+        tr_ch.matrix(backend=backend), traced.matrix(backend=backend), atol=1e-8
     )
 
 
@@ -464,21 +465,21 @@ def test_default_construction(backend):
     vec = np.random.rand(4).reshape([4, 1])
     mat = np.random.rand(16).reshape([2, 2, 2, 2])
     tensor = np.random.rand(16).reshape([4, 4])
-    network = QuantumNetwork.from_nparray(vec, pure=True, backend=backend)
+    network = QuantumNetwork.from_operator(vec, pure=True, backend=backend)
     assert network.partition == (4, 1)
     assert network.system_input == (True, False)
-    comb1 = QuantumComb.from_nparray(vec, (4, 1), pure=True, backend=backend)
+    comb1 = QuantumComb.from_operator(vec, (4, 1), pure=True, backend=backend)
     assert comb1.system_input == (True, False)
-    comb2 = QuantumComb.from_nparray(vec, pure=True, backend=backend)
+    comb2 = QuantumComb.from_operator(vec, pure=True, backend=backend)
     assert comb2.partition == (4, 1)
     assert comb2.system_input == (True, False)
-    comb3 = QuantumComb.from_nparray(mat, pure=False, backend=backend)
+    comb3 = QuantumComb.from_operator(mat, pure=False, backend=backend)
     assert comb3.partition == (2, 2)
     assert comb3.system_input == (True, False)
     comb3 = QuantumComb(vec, system_input=(True, True), pure=True, backend=backend)
     assert comb3.partition == (4, 1)
     assert comb3.system_input == (True, False)
-    channel1 = QuantumChannel.from_nparray(vec, pure=True, backend=backend)
+    channel1 = QuantumChannel.from_operator(vec, pure=True, backend=backend)
     assert channel1.partition == (4, 1)
     assert channel1.system_input == (True, False)
     channel2 = QuantumChannel(

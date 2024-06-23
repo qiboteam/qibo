@@ -92,7 +92,7 @@ class QuantumNetwork:
             )
 
     @classmethod
-    def from_nparray(
+    def from_operator(
         cls,
         arr: np.ndarray,
         partition: Optional[Union[List[int], Tuple[int]]] = None,
@@ -715,10 +715,10 @@ class QuantumComb(QuantumNetwork):
         dim_in = self.partition[-2]
 
         trace_out = backend.cast(
-            trace(dim_out, backend=backend).full(), dtype=self._tensor.dtype
+            TraceOperation(dim_out, backend=backend).full(), dtype=self._tensor.dtype
         )
         trace_in = backend.cast(
-            trace(dim_in, backend=backend).full(), dtype=self._tensor.dtype
+            TraceOperation(dim_in, backend=backend).full(), dtype=self._tensor.dtype
         )
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
@@ -742,10 +742,10 @@ class QuantumComb(QuantumNetwork):
             ).is_causal(order, precision_tol)
 
     @classmethod
-    def from_nparray(
+    def from_operator(
         cls, tensor, partition=None, pure=False, backend=None, inverse=False
     ):
-        comb = super().from_nparray(tensor, partition, None, pure, backend)
+        comb = super().from_operator(tensor, partition, None, pure, backend)
         if (
             inverse
         ):  # Convert mathmetical convention of Choi operator to physical convention
@@ -851,10 +851,10 @@ class QuantumChannel(QuantumComb):
         dim_in = self.partition[0]
 
         trace_out = backend.cast(
-            trace(dim_out, backend=backend).full(), dtype=self._tensor.dtype
+            TraceOperation(dim_out, backend=backend).full(), dtype=self._tensor.dtype
         )
         trace_in = backend.cast(
-            trace(dim_in, backend=backend).full(), dtype=self._tensor.dtype
+            TraceOperation(dim_in, backend=backend).full(), dtype=self._tensor.dtype
         )
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
@@ -928,16 +928,11 @@ class QuantumChannel(QuantumComb):
         return self._einsum("ijkl, jl", operator, state)
 
 
-class StochQuantumNetwork:
-    pass
-
-
 def link_product(
     subscripts: str = "ij,jk -> ik",
     *operands: QuantumNetwork,
     backend=None,
     surpress_warning=False,
-    casting: bool = True,
 ):
     """Link product between two quantum networks.
 
@@ -985,7 +980,7 @@ def link_product(
         subscripts, *tensors, optimize=False, einsum_call=True
     )
 
-    inds, idx_rm, einsum_str, remaining, blas = contracrtion_list[0]
+    inds, idx_rm, einsum_str, _, _ = contracrtion_list[0]
     input_str, results_index = einsum_str.split("->")
     inputs = input_str.split(",")
 
@@ -994,45 +989,42 @@ def link_product(
         for ind in idx_rm:
             found = 0
             for i, script in enumerate(inputs):
-                try:
-                    index = script.index(ind)
-                    found += 1
-                    if found > 1:
-                        if is_input != operands[inds[i]].system_input[index]:
-                            pass
-                        else:
-                            warning(
-                                f"Index {ind} connects two {'input' if is_input else 'output'} systems."
-                            )
-                    is_input = operands[inds[i]].system_input[index]
-                    if found > 2:
-                        warning(
-                            f"Index {ind} appears multiple times in the input subscripts {input_str}."
-                        )
-                except:
+                index = script.find(ind)
+                if index < 0:
                     continue
+                found += 1
+                if found > 1:
+                    if is_input != operands[inds[i]].system_input[index]:
+                        pass
+                    else:
+                        warning(
+                            f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                        )
+                is_input = operands[inds[i]].system_input[index]
+                if found > 2:
+                    warning(
+                        f"Index {ind} appears multiple times in the input subscripts {input_str}."
+                    )
 
     # set correct order of the `partition` and `system_input`
     partition = []
     system_input = []
     for ind in results_index:
         for i, script in enumerate(inputs):
-            try:
-                index = script.index(ind)
-
-                partition.append(operands[inds[i]].partition[index])
-                system_input.append(operands[inds[i]].system_input[index])
-
-            except:
+            index = script.find(ind)
+            if index < 0:
                 continue
+
+            partition.append(operands[inds[i]].partition[index])
+            system_input.append(operands[inds[i]].system_input[index])
 
     new_tensor = np.einsum(subscripts, *tensors)
 
     return QuantumNetwork(new_tensor, partition, system_input, backend=backend)
 
 
-def identity(dim: int, backend=None):
-    """Returns the identity channel.
+class IdentityChannel(QuantumChannel):
+    """The identity channel with the given dimension.
 
     Args:
         dim (int): Dimension of the identity operator.
@@ -1041,21 +1033,21 @@ def identity(dim: int, backend=None):
             when initializing the :class:`qibo.quant
     """
 
-    return QuantumChannel.from_nparray(
-        np.eye(dim), [dim, dim], pure=True, backend=backend
-    )
+    def __init__(self, dim: int, backend=None):
+
+        super().__init__(np.eye(dim), [dim, dim], pure=True, backend=backend)
 
 
-def trace(dim: int, backend=None):
-    """Returns the trace operator.
+class TraceOperation(QuantumNetwork):
+    """The trace operator with the given dimension.
 
     Args:
-        dim (int): Dimension to be traced.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
-            to return the identity operator. If ``None``, defaults to the backend defined
-            when initializing the :class:`qibo.quant
+        dim (int): Dimension of the trace operator.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
 
-    return QuantumNetwork.from_nparray(
-        np.eye(dim), [dim], [True], pure=False, backend=backend
-    )
+    def __init__(self, dim: int, backend=None):
+
+        super().__init__(np.eye(dim), [dim], [True], pure=False, backend=backend)
