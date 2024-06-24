@@ -473,7 +473,7 @@ def _set_style(style):
             plot_params.update(style)
 
 
-def _plot_qibo_circuit(circuit, scale, cluster_gates, style):
+def plot(circuit, scale=0.6, cluster_gates=True, style=None, save_file=None):
 
     _set_style(style)
 
@@ -520,18 +520,11 @@ def _plot_qibo_circuit(circuit, scale, cluster_gates, style):
 
         if cluster_gates:
             gates_cluster = _make_cluster_gates(gates_plot)
-            return _plot_quantum_schedule(gates_cluster, inits, labels, scale=scale)
+            ax = _plot_quantum_schedule(gates_cluster, inits, labels, scale=scale)
+            return ax, ax.figure
 
-        return _plot_quantum_circuit(gates_plot, inits, labels, scale=scale)
+        ax = _plot_quantum_circuit(gates_plot, inits, labels, scale=scale)
+        return ax, ax.figure
     else:
-        return _plot_lines_circuit(inits, labels, scale=scale)
-
-
-def plot(circuit, scale=0.6, cluster_gates=True, style=None, save_file=None):
-
-    ax = _plot_qibo_circuit(circuit, scale, cluster_gates, style)
-
-    if save_file:
-        ax.figure.savefig(save_file, bbox_inches="tight")
-
-    return ax, ax.figure
+        ax = _plot_lines_circuit(inits, labels, scale=scale)
+        return ax, ax.figure
