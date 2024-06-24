@@ -4,7 +4,9 @@
 #
 import matplotlib
 import numpy as np
+
 from .plot_styles import _get_style
+
 
 class MPLDrawer:
     def __init__(self):
@@ -227,7 +229,7 @@ class MPLDrawer:
 
     def _draw_target(self, ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         target_symbols = dict(
-            #CNOT="X",
+            # CNOT="X",
             CPHASE="Z",
             NOP="",
             CX="X",
@@ -258,18 +260,35 @@ class MPLDrawer:
 
     def _line(self, ax, x1, x2, y1, y2, plot_params):
         Line2D = matplotlib.lines.Line2D
-        line = Line2D((x1, x2), (y1, y2), color=plot_params["linecolor"], lw=plot_params["linewidth"])
+        line = Line2D(
+            (x1, x2),
+            (y1, y2),
+            color=plot_params["linecolor"],
+            lw=plot_params["linewidth"],
+        )
         ax.add_line(line)
 
     def _text(self, ax, x, y, textstr, plot_params, box=False):
         linewidth = plot_params["linewidth"]
         fontsize = plot_params["fontsize"]
         if box:
-            bbox = dict(ec=plot_params["edgecolor"], fc=plot_params["gatecolor"], fill=True, lw=linewidth)
+            bbox = dict(
+                ec=plot_params["edgecolor"],
+                fc=plot_params["gatecolor"],
+                fill=True,
+                lw=linewidth,
+            )
         else:
             bbox = dict(fill=False, lw=0)
         ax.text(
-            x, y, textstr, color=plot_params["textcolor"], ha="center", va="center", bbox=bbox, size=fontsize
+            x,
+            y,
+            textstr,
+            color=plot_params["textcolor"],
+            ha="center",
+            va="center",
+            bbox=bbox,
+            size=fontsize,
         )
 
     def _oplus(self, ax, x, y, plot_params):
@@ -277,7 +296,14 @@ class MPLDrawer:
         Circle = matplotlib.patches.Circle
         not_radius = plot_params["not_radius"]
         linewidth = plot_params["linewidth"]
-        c = Circle((x, y), not_radius, ec=plot_params["edgecolor"], fc=plot_params["gatecolor"], fill=True, lw=linewidth)
+        c = Circle(
+            (x, y),
+            not_radius,
+            ec=plot_params["edgecolor"],
+            fc=plot_params["gatecolor"],
+            fill=True,
+            lw=linewidth,
+        )
         ax.add_patch(c)
         self._line(ax, x, x, y - not_radius, y + not_radius, plot_params)
 
@@ -287,7 +313,12 @@ class MPLDrawer:
         scale = plot_params["scale"]
         linewidth = plot_params["linewidth"]
         c = Circle(
-            (x, y), control_radius * scale, ec=plot_params["edgecolor"], fc=plot_params["controlcolor"], fill=True, lw=linewidth
+            (x, y),
+            control_radius * scale,
+            ec=plot_params["edgecolor"],
+            fc=plot_params["controlcolor"],
+            fill=True,
+            lw=linewidth,
         )
         ax.add_patch(c)
 
@@ -300,7 +331,9 @@ class MPLDrawer:
     def _setup_figure(self, nq, ng, gate_grid, wire_grid, plot_params):
         scale = plot_params["scale"]
         fig = matplotlib.pyplot.figure(
-            figsize=(ng * scale, nq * scale), facecolor=plot_params["facecolor"], edgecolor=plot_params["edgecolor"]
+            figsize=(ng * scale, nq * scale),
+            facecolor=plot_params["facecolor"],
+            edgecolor=plot_params["edgecolor"],
         )
         ax = fig.add_subplot(1, 1, 1, frameon=True)
         ax.set_axis_off()
@@ -421,7 +454,7 @@ class MPLDrawer:
 
         return cluster_gates
 
-    def _set_style(self,style):
+    def _set_style(self, style):
 
         if style is None:
             default_values = dict(
@@ -464,12 +497,16 @@ class MPLDrawer:
             for gate in circuit.queue:
                 init_label = gate.name.upper()
                 if "CCX" in init_label:
-                     init_label = "TOFFOLI"
+                    init_label = "TOFFOLI"
 
                 if "CX" in init_label:
-                     init_label = "CNOT"
+                    init_label = "CNOT"
 
-                if len(gate._control_qubits) > 0 and "C" in init_label[0] and "CNOT" not in init_label:
+                if (
+                    len(gate._control_qubits) > 0
+                    and "C" in init_label[0]
+                    and "CNOT" not in init_label
+                ):
                     init_label = init_label[1:]
 
                 item = ()
