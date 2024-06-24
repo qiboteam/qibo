@@ -46,13 +46,13 @@ def _get_style(style_name):
 
     if "cachirulo" in style_name:
         return {
-            "facecolor":"#ffffff",
-            "edgecolor":"#800000",
-            "linecolor":"#800000",
-            "textcolor":"#000000",
-            "fillcolor":"#ffffff",
-            "gatecolor":"#ffffff",
-            "controlcolor":"#800000",
+            "facecolor": "#ffffff",
+            "edgecolor": "#800000",
+            "linecolor": "#800000",
+            "textcolor": "#000000",
+            "fillcolor": "#ffffff",
+            "gatecolor": "#ffffff",
+            "controlcolor": "#800000",
         }
 
     return {
