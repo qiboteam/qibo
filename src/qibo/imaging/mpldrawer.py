@@ -4,11 +4,29 @@
 #
 import matplotlib
 import numpy as np
-
+from .plot_styles import _get_style
 
 class MPLDrawer:
     def __init__(self):
         pass
+
+    global plot_params
+    plot_params = dict(
+        scale=1.0,
+        fontsize=14.0,
+        linewidth=1.0,
+        control_radius=0.05,
+        not_radius=0.15,
+        swap_delta=0.08,
+        label_buffer=0.0,
+        facecolor="w",
+        edgecolor="#000000",
+        fillcolor="#000000",
+        linecolor="k",
+        textcolor="k",
+        gatecolor="w",
+        controlcolor="#000000",
+    )
 
     def _plot_quantum_schedule(
         self, schedule, inits, labels=[], plot_labels=True, **kwargs
@@ -22,15 +40,6 @@ class MPLDrawer:
 
         kwargs    Can override plot_parameters
         """
-        plot_params = dict(
-            scale=1.0,
-            fontsize=14.0,
-            linewidth=1.0,
-            control_radius=0.05,
-            not_radius=0.15,
-            swap_delta=0.08,
-            label_buffer=0.0,
-        )
         plot_params.update(kwargs)
         scale = plot_params["scale"]
 
@@ -80,15 +89,6 @@ class MPLDrawer:
 
         kwargs    Can override plot_parameters
         """
-        plot_params = dict(
-            scale=1.0,
-            fontsize=14.0,
-            linewidth=1.0,
-            control_radius=0.05,
-            not_radius=0.15,
-            swap_delta=0.08,
-            label_buffer=0.0,
-        )
         plot_params.update(kwargs)
         scale = plot_params["scale"]
 
@@ -124,15 +124,7 @@ class MPLDrawer:
 
         kwargs    Can override plot_parameters
         """
-        plot_params = dict(
-            scale=1.0,
-            fontsize=14.0,
-            linewidth=1.0,
-            control_radius=0.05,
-            not_radius=0.15,
-            swap_delta=0.08,
-            label_buffer=0.0,
-        )
+
         plot_params.update(kwargs)
         scale = plot_params["scale"]
 
@@ -228,14 +220,14 @@ class MPLDrawer:
         for ci in control_indices:
             x = gate_grid[i]
             y = wire_grid[ci]
-            if name in ["SWAP", "ISWAP", "SISWAP", "FISWAP"]:
+            if name in ["SWAP", "ISWAP", "SISWAP", "FSWAP"]:
                 self._swapx(ax, x, y, plot_params)
             else:
                 self._cdot(ax, x, y, plot_params)
 
     def _draw_target(self, ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         target_symbols = dict(
-            CNOT="X",
+            #CNOT="X",
             CPHASE="Z",
             NOP="",
             CX="X",
@@ -266,18 +258,18 @@ class MPLDrawer:
 
     def _line(self, ax, x1, x2, y1, y2, plot_params):
         Line2D = matplotlib.lines.Line2D
-        line = Line2D((x1, x2), (y1, y2), color="k", lw=plot_params["linewidth"])
+        line = Line2D((x1, x2), (y1, y2), color=plot_params["linecolor"], lw=plot_params["linewidth"])
         ax.add_line(line)
 
     def _text(self, ax, x, y, textstr, plot_params, box=False):
         linewidth = plot_params["linewidth"]
         fontsize = plot_params["fontsize"]
         if box:
-            bbox = dict(ec="k", fc="w", fill=True, lw=linewidth)
+            bbox = dict(ec=plot_params["edgecolor"], fc=plot_params["gatecolor"], fill=True, lw=linewidth)
         else:
             bbox = dict(fill=False, lw=0)
         ax.text(
-            x, y, textstr, color="k", ha="center", va="center", bbox=bbox, size=fontsize
+            x, y, textstr, color=plot_params["textcolor"], ha="center", va="center", bbox=bbox, size=fontsize
         )
 
     def _oplus(self, ax, x, y, plot_params):
@@ -285,7 +277,7 @@ class MPLDrawer:
         Circle = matplotlib.patches.Circle
         not_radius = plot_params["not_radius"]
         linewidth = plot_params["linewidth"]
-        c = Circle((x, y), not_radius, ec="k", fc="w", fill=False, lw=linewidth)
+        c = Circle((x, y), not_radius, ec=plot_params["edgecolor"], fc=plot_params["gatecolor"], fill=True, lw=linewidth)
         ax.add_patch(c)
         self._line(ax, x, x, y - not_radius, y + not_radius, plot_params)
 
@@ -295,7 +287,7 @@ class MPLDrawer:
         scale = plot_params["scale"]
         linewidth = plot_params["linewidth"]
         c = Circle(
-            (x, y), control_radius * scale, ec="k", fc="k", fill=True, lw=linewidth
+            (x, y), control_radius * scale, ec=plot_params["edgecolor"], fc=plot_params["controlcolor"], fill=True, lw=linewidth
         )
         ax.add_patch(c)
 
@@ -308,7 +300,7 @@ class MPLDrawer:
     def _setup_figure(self, nq, ng, gate_grid, wire_grid, plot_params):
         scale = plot_params["scale"]
         fig = matplotlib.pyplot.figure(
-            figsize=(ng * scale, nq * scale), facecolor="w", edgecolor="w"
+            figsize=(ng * scale, nq * scale), facecolor=plot_params["facecolor"], edgecolor=plot_params["edgecolor"]
         )
         ax = fig.add_subplot(1, 1, 1, frameon=True)
         ax.set_axis_off()
@@ -429,7 +421,36 @@ class MPLDrawer:
 
         return cluster_gates
 
-    def plot_qibo_circuit(self, circuit, scale, cluster_gates):
+    def _set_style(self,style):
+
+        if style is None:
+            default_values = dict(
+                scale=1.0,
+                fontsize=14.0,
+                linewidth=1.0,
+                control_radius=0.05,
+                not_radius=0.15,
+                swap_delta=0.08,
+                label_buffer=0.0,
+                facecolor="w",
+                edgecolor="#000000",
+                fillcolor="#000000",
+                linecolor="k",
+                textcolor="k",
+                gatecolor="w",
+                controlcolor="#000000",
+            )
+
+            plot_params.update(default_values)
+        else:
+            if type(style) is str:
+                plot_params.update(_get_style(style))
+            elif type(style) is dict:
+                plot_params.update(style)
+
+    def plot_qibo_circuit(self, circuit, scale, cluster_gates, style):
+
+        self._set_style(style)
 
         inits = list(range(circuit.nqubits))
 
@@ -442,8 +463,13 @@ class MPLDrawer:
 
             for gate in circuit.queue:
                 init_label = gate.name.upper()
+                if "CCX" in init_label:
+                     init_label = "TOFFOLI"
 
-                if len(gate._control_qubits) > 0 and "C" in init_label[0]:
+                if "CX" in init_label:
+                     init_label = "CNOT"
+
+                if len(gate._control_qubits) > 0 and "C" in init_label[0] and "CNOT" not in init_label:
                     init_label = init_label[1:]
 
                 item = ()
