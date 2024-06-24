@@ -478,7 +478,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
     scale           Scale the ouput plot
     cluster_gates   Group single-qubit gates
-    style           Style applied to the circuit (built-in styles: garnacha, fardelejo, quantumspain, color-blind)
+    style           Style applied to the circuit (built-in styles: garnacha, fardelejo, quantumspain, color-blind and cachirulo)
 
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
     fig             A Figure object (type: matplotlib.figure.Figure)
