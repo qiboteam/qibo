@@ -5,7 +5,7 @@
 import matplotlib
 import numpy as np
 
-from .plot_styles import _get_style
+from .plot_styles import STYLE
 
 plot_params = dict(
     scale=1.0,
@@ -483,7 +483,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
     fig             A Figure object (type: matplotlib.figure.Figure)
     """
-    _set_style(style)
+    _set_style(STYLE[style] if style in list(STYLE.keys()) else STYLE["default"])
 
     inits = list(range(circuit.nqubits))
 
