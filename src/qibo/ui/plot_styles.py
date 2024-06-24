@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 STYLE = {
     "garnacha": {
         "facecolor": "#5e2129",
