@@ -9,7 +9,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
-from qibo.models.mpldrawer import MPLDrawer
+from qibo.imaging.mpldrawer import MPLDrawer
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 

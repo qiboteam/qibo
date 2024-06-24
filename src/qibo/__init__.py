@@ -33,3 +33,4 @@ from qibo.config import (
     set_metropolis_threshold,
 )
 from qibo.models.circuit import Circuit
+from qibo.imaging.mpldrawer import MPLDrawer
