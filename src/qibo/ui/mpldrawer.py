@@ -483,8 +483,14 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
     fig             A Figure object (type: matplotlib.figure.Figure)
     """
-    _set_style(STYLE[style] if style in list(STYLE.keys()) else STYLE["default"])
-
+    if style is not None:
+        if type(style) is dict:
+            _set_style(style)
+        else:
+            _set_style(STYLE[style] if style in list(STYLE.keys()) else STYLE["default"])
+    else:
+        _set_style(STYLE["default"])
+        
     inits = list(range(circuit.nqubits))
 
     labels = []
