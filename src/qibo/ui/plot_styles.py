@@ -1,15 +1,15 @@
 def _get_style(style_name):
 
     if "garnacha" in style_name:
-        new_values = dict()
-        new_values["facecolor"] = "#5e2129"
-        new_values["edgecolor"] = "#FFFFFF"
-        new_values["linecolor"] = "#FFFFFF"
-        new_values["textcolor"] = "#FFFFFF"
-        new_values["fillcolor"] = "#FFFFFF"
-        new_values["gatecolor"] = "#5e2129"
-        new_values["controlcolor"] = "#FFFFFF"
-        return new_values
+        return {
+            "facecolor": "#5e2129",
+            "edgecolor": "#ffffff",
+            "linecolor": "#ffffff",
+            "textcolor": "#ffffff",
+            "fillcolor": "#ffffff",
+            "gatecolor": "#5e2129",
+            "controlcolor": "#ffffff",
+        }
 
     if "fardelejo" in style_name:
         new_values = dict()
