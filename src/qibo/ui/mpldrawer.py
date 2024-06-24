@@ -4,6 +4,7 @@
 #
 import matplotlib
 import numpy as np
+
 from .plot_styles import _get_style
 
 plot_params = dict(
@@ -342,8 +343,8 @@ def _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
         )
 
     # Add the doubling for measured wires:
-    #dy = 0.04  # TODO: add to plot_params
-    #for i in measured:
+    # dy = 0.04  # TODO: add to plot_params
+    # for i in measured:
     #    j = measured[i]
     #    _line(
     #        ax,
