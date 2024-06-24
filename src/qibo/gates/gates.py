@@ -71,6 +71,17 @@ class X(Gate):
     def qasm_label(self):
         return "x"
 
+    @Gate.check_controls
+    def controlled_by(self, *q):
+        """Fall back to CNOT and Toffoli if there is one or two controls."""
+        if len(q) == 1:
+            gate = CNOT(q[0], self.target_qubits[0])
+        elif len(q) == 2:
+            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
+        else:
+            gate = super().controlled_by(*q)
+        return gate
+
     def decompose(self, *free, use_toffolis=True):
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
