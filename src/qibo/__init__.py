@@ -32,5 +32,4 @@ from qibo.config import (
     set_batch_size,
     set_metropolis_threshold,
 )
-from qibo.imaging.mpldrawer import MPLDrawer
 from qibo.models.circuit import Circuit

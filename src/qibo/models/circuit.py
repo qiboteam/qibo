@@ -8,7 +8,6 @@ import qibo
 from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-from qibo.imaging.mpldrawer import MPLDrawer
 from qibo.models._openqasm import QASMParser
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
@@ -1269,15 +1268,6 @@ class Circuit:
             idx = [col + 1] * self.nqubits
 
         return matrix, idx
-
-    def draw_mpl(self, scale=0.6, cluster_gates=True, style=None, save_file=None):
-
-        ax = MPLDrawer().plot_qibo_circuit(self, scale, cluster_gates, style)
-
-        if save_file:
-            MPLDrawer.save_fig(ax.figure, save_file)
-
-        return ax
 
     def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
