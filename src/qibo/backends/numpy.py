@@ -110,25 +110,12 @@ class NumpyBackend(Backend):
         _matrix = getattr(self.matrices, name)
         if callable(_matrix):
             _matrix = _matrix(2 ** len(gate.target_qubits))
-
-        num_controls = len(gate.control_qubits)
-        if num_controls > 0:
-            _matrix = block_diag(
-                np.eye(2 ** len(gate.qubits) - len(_matrix)), self.to_numpy(_matrix)
-            )
-
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)(*gate.parameters)
-
-        num_controls = len(gate.control_qubits)
-        if num_controls > 0:
-            _matrix = block_diag(
-                np.eye(2 ** len(gate.qubits) - len(_matrix)), self.to_numpy(_matrix)
-            )
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):
@@ -140,6 +127,13 @@ class NumpyBackend(Backend):
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
             gmatrix = self.to_numpy(gate.matrix(self))
+            # add controls if controls were instantiated using
+            # the ``Gate.controlled_by`` method
+            num_controls = len(gate.control_qubits)
+            if num_controls > 0:
+                gmatrix = block_diag(
+                    np.eye(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
+                )
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)))
@@ -162,25 +156,8 @@ class NumpyBackend(Backend):
         return self.cast(matrix.toarray())
 
     def apply_gate(self, gate, state, nqubits):
-        from qibo.gates.abstract import ParametrizedGate  # pylint: disable=C0415
-        from qibo.gates.gates import Unitary  # pylint: disable=C0415
-
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
-        if isinstance(gate, Unitary):
-            matrix = gate.__class__(
-                gate.init_args[0],
-                *(gate.init_args[1:]),
-                trainable=gate.init_kwargs["trainable"],
-                name=gate.init_kwargs["name"],
-                check_unitary=gate.init_kwargs["check_unitary"],
-            )
-        else:
-            matrix = (
-                gate.__class__(*gate.init_args, *gate.parameters)
-                if isinstance(gate, ParametrizedGate)
-                else gate.__class__(*gate.init_args)
-            )
         matrix = matrix.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
