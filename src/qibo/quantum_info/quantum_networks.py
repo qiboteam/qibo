@@ -714,12 +714,8 @@ class QuantumComb(QuantumNetwork):
         dim_out = self.partition[-1]
         dim_in = self.partition[-2]
 
-        trace_out = backend.cast(
-            TraceOperation(dim_out, backend=backend).full(), dtype=self._tensor.dtype
-        )
-        trace_in = backend.cast(
-            TraceOperation(dim_in, backend=backend).full(), dtype=self._tensor.dtype
-        )
+        trace_out = TraceOperation(dim_out, backend=backend).full()
+        trace_in = TraceOperation(dim_in, backend=backend).full()
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
             reduced = self._tensordot(self.full(), trace_out, dims=([-1], [0]))
@@ -850,12 +846,8 @@ class QuantumChannel(QuantumComb):
         dim_out = self.partition[1]
         dim_in = self.partition[0]
 
-        trace_out = backend.cast(
-            TraceOperation(dim_out, backend=backend).full(), dtype=self._tensor.dtype
-        )
-        trace_in = backend.cast(
-            TraceOperation(dim_in, backend=backend).full(), dtype=self._tensor.dtype
-        )
+        trace_out = TraceOperation(dim_out, backend=backend).full()
+        trace_in = TraceOperation(dim_in, backend=backend).full()
 
         if self._backend.__class__.__name__ == "PyTorchBackend":
             reduced = self._tensordot(self.full(), trace_in, dims=([0], [0]))
@@ -1041,7 +1033,9 @@ class IdentityChannel(QuantumChannel):
 
     def __init__(self, dim: int, backend=None):
 
-        super().__init__(np.eye(dim), [dim, dim], pure=True, backend=backend)
+        super().__init__(
+            np.eye(dim, dtype=np.complex128), [dim, dim], pure=True, backend=backend
+        )
 
 
 class TraceOperation(QuantumNetwork):
@@ -1056,4 +1050,6 @@ class TraceOperation(QuantumNetwork):
 
     def __init__(self, dim: int, backend=None):
 
-        super().__init__(np.eye(dim), [dim], [True], pure=False, backend=backend)
+        super().__init__(
+            np.eye(dim, dtype=np.complex128), [dim], [True], pure=False, backend=backend
+        )
