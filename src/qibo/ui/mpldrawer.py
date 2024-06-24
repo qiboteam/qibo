@@ -473,8 +473,16 @@ def _set_style(style):
             plot_params.update(style)
 
 
-def plot(circuit, scale=0.6, cluster_gates=True, style=None, save_file=None):
+def plot(circuit, scale=0.6, cluster_gates=True, style=None):
+    """Main matplotlib plot function for Qibo circuit
+    circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
+    scale           Scale the ouput plot
+    cluster_gates   Group single-qubit gates
+    style           Style applied to the circuit (built-in styles: garnacha, fardelejo, quantumspain, color-blind)
 
+    ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
+    fig             A Figure object (type: matplotlib.figure.Figure)
+    """
     _set_style(style)
 
     inits = list(range(circuit.nqubits))
