@@ -158,7 +158,7 @@ class NumpyBackend(Backend):
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
-        matrix = matrix.matrix(self)
+        matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
