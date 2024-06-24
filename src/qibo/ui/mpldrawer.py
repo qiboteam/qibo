@@ -487,10 +487,12 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
         if type(style) is dict:
             _set_style(style)
         else:
-            _set_style(STYLE[style] if style in list(STYLE.keys()) else STYLE["default"])
+            _set_style(
+                STYLE[style] if style in list(STYLE.keys()) else STYLE["default"]
+            )
     else:
         _set_style(STYLE["default"])
-        
+
     inits = list(range(circuit.nqubits))
 
     labels = []
