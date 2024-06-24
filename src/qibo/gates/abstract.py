@@ -325,7 +325,7 @@ class Gate:
         .. note::
             Some gate classes default to another gate class depending on the number of controls
             present. For instance, an :math:`1`-controlled :class:`qibo.gates.X` gate
-            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`1`-controlled
+            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`2`-controlled
             :class:`qibo.gates.X` gate defaults to a :class:`qibo.gates.TOFFOLI` gate.
             Other gates affected by this method are: :class:`qibo.gates.Y`, :class:`qibo.gates.Z`,
             :class:`qibo.gates.RX`, :class:`qibo.gates.RY`, :class:`qibo.gates.RZ`,
