@@ -521,22 +521,28 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
             ):
                 init_label = init_label[1:]
 
-            item = ()
-            item += (init_label,)
-
-            for qbit in gate._target_qubits:
-                if qbit is tuple:
-                    item += ("q_" + str(qbit[0]),)
-                else:
+            if init_label in ["ID", "MEASURE"]:
+                for qbit in gate._target_qubits:
+                    item = (init_label,)
                     item += ("q_" + str(qbit),)
+                    gates_plot.append(item)
+            else:
+                item = ()
+                item += (init_label,)
 
-            for qbit in gate._control_qubits:
-                if qbit is tuple:
-                    item += ("q_" + str(qbit[0]),)
-                else:
-                    item += ("q_" + str(qbit),)
+                for qbit in gate._target_qubits:
+                    if qbit is tuple:
+                            item += ("q_" + str(qbit[0]),)
+                    else:
+                        item += ("q_" + str(qbit),)
 
-            gates_plot.append(item)
+                for qbit in gate._control_qubits:
+                    if qbit is tuple:
+                        item += ("q_" + str(qbit[0]),)
+                    else:
+                        item += ("q_" + str(qbit),)
+
+                gates_plot.append(item)
 
         if cluster_gates:
             gates_cluster = _make_cluster_gates(gates_plot)
