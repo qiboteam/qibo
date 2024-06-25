@@ -24,6 +24,26 @@ plot_params = dict(
     controlcolor="#000000",
 )
 
+symbols = dict(
+    NOP="",
+    CPHASE="Z",
+    ID="I",
+    CX="X",
+    CY="Y",
+    CZ="Z",
+    FSIM="F",
+    SYC="SYC",
+    GENERALIZEDFSIM="GF",
+    DEUTSCH="DE",
+    UNITARY="U",
+    MEASURE="M",
+    ISWAP="I",
+    SISWAP="SI",
+    FSWAP="FX",
+    SX=r"$\rm\sqrt{X}$",
+    CSX=r"$\rm\sqrt{X}$",
+)
+
 
 def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwargs):
     """Use Matplotlib to plot a quantum circuit.
@@ -202,29 +222,34 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
     for ci in control_indices:
         x = gate_grid[i]
         y = wire_grid[ci]
-        if name in ["SWAP", "ISWAP", "SISWAP", "FSWAP"]:
+        if name in ["SWAP"]:
             _swapx(ax, x, y, plot_params)
+        elif name in [
+            "ISWAP",
+            "SISWAP",
+            "FSWAP",
+            "FSIM",
+            "SYC",
+            "GENERALIZEDFSIM",
+            "RXX",
+            "RYY",
+            "RZZ",
+            "RZX",
+            "RXXYY",
+            "G",
+            "RBS",
+            "ECR",
+            "MS",
+        ]:
+            symbol = symbols.get(name, name)
+            _text(ax, x, y, symbol, plot_params, box=True)
         else:
             _cdot(ax, x, y, plot_params)
 
 
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
-    target_symbols = dict(
-        # CNOT="X",
-        CPHASE="Z",
-        NOP="",
-        CX="X",
-        CY="Y",
-        CZ="Z",
-        CCX="X",
-        DEUTSCH="DE",
-        UNITARY="U",
-        MEASURE="M",
-        SX=r"$\rm\sqrt{X}$",
-        CSX=r"$\rm\sqrt{X}$",
-    )
     name, target = gate[:2]
-    symbol = target_symbols.get(name, name)  # override name with target_symbols
+    symbol = symbols.get(name, name)  # override name with symbols
     x = gate_grid[i]
     target_index = _get_flipped_index(target, labels)
     y = wire_grid[target_index]
@@ -234,9 +259,11 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         _oplus(ax, x, y, plot_params)
     elif name in ["CPHASE"]:
         _cdot(ax, x, y, plot_params)
-    elif name in ["SWAP", "ISWAP", "SISWAP", "FSWAP"]:
+    elif name in ["SWAP"]:
         _swapx(ax, x, y, plot_params)
     else:
+        if name == "ALIGN":
+            symbol = "A({0})".format(target[2:])
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
@@ -481,7 +508,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     style           Style applied to the circuit (built-in styles: garnacha, fardelejo, quantumspain, color-blind and cachirulo)
 
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
-    fig             A Figure object (type: matplotlib.figure.Figure)
+    ax.figure       A Figure object (type: matplotlib.figure.Figure)
     """
     if style is not None:
         if type(style) is dict:
