@@ -31,7 +31,7 @@ def get_backend(backend_name):
         name, platform = backend_name.split("-")
     else:
         name, platform = backend_name, None
-    return construct_backend(backend=name, platform=platform)
+    return construct_backend(name, platform=platform)
 
 
 # ignore backends that are not available in the current testing environment
