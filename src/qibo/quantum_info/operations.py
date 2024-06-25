@@ -1,7 +1,5 @@
 """Module with the most common linear algebra operations for quantum information."""
 
-import numpy as np
-
 from qibo.config import raise_error
 
 
