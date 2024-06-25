@@ -435,20 +435,27 @@ def _render_label(label, inits={}):
 
 
 def _make_cluster_gates(gates_items):
-    cluster_gates = []
+
     temp_gates = []
     temp_mgates = []
-    for i in list(range(len(gates_items))):
-        item = gates_items[i]
+    cluster_gates = []
 
-        if (len(item) == 2) and i > 0 and "MEASURE" not in item[0]:
-            if len(temp_gates) > 0 and item[1] == gates_items[i - 1][1]:
-                gates = []
-            temp_gates.append(item)
-        elif "MEASURE" in item[0]:
-            temp_mgates.append(item)
+    for item in gates_items:
+        if len(item) == 2:  # single qubit gates
+            if "MEASURE" in item[0]:
+                temp_mgates.append(item)
+            else:
+                if len(temp_gates) > 0:
+                    if item[1] in [tup[1] for tup in temp_gates]:
+                        cluster_gates.append(temp_gates)
+                        temp_gates = []
+                        temp_gates.append(item)
+                    else:
+                        temp_gates.append(item)
+                else:
+                    temp_gates.append(item)
         else:
-            if len(temp_gates) != 0:
+            if len(temp_gates) > 0:
                 cluster_gates.append(temp_gates)
                 temp_gates = []
 
@@ -456,9 +463,7 @@ def _make_cluster_gates(gates_items):
                 cluster_gates.append(temp_mgates)
                 temp_mgates = []
 
-            if "MEASURE" not in item[0]:
-                cluster_gates.append([item])
-        i = i + 1
+            cluster_gates.append([item])
 
     if len(temp_gates) > 0:
         cluster_gates.append(temp_gates)
