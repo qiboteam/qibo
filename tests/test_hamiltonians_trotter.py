@@ -148,7 +148,9 @@ def test_symbolic_hamiltonian_circuit_different_dts(backend):
     ham = hamiltonians.SymbolicHamiltonian(symbols.Z(0))
     a = ham.circuit(0.1)
     b = ham.circuit(0.1)
-    assert np.linalg.norm(ham.circuit(0.2).unitary() - (a + b).unitary()) == 0
+    matrix1 = ham.circuit(0.2).unitary(backend)
+    matrix2 = (a + b).unitary(backend)
+    np.testing.assert_allclose(matrix1, matrix2)
 
 
 def test_old_trotter_hamiltonian_errors():
