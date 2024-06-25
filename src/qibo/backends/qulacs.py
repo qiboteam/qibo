@@ -45,6 +45,7 @@ class QulacsBackend(NumpyBackend):
     def execute_circuit(
         self,
         circuit: "qibo.Circuit",
+        initial_state=None,
         nshots: int = 1000,
     ):
         """Execute a circuit with qulacs.
