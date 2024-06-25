@@ -40,7 +40,7 @@ def commutator(operator_1, operator_2):
 
     if operator_1.shape != operator_2.shape:
         raise_error(
-            ValueError,
+            TypeError,
             "``operator_1`` and ``operator_2`` must have the same shape, "
             + f"but {operator_1.shape} != {operator_2.shape}",
         )
@@ -85,7 +85,7 @@ def anticommutator(operator_1, operator_2):
 
     if operator_1.shape != operator_2.shape:
         raise_error(
-            ValueError,
+            TypeError,
             "``operator_1`` and ``operator_2`` must have the same shape, "
             + f"but {operator_1.shape} != {operator_2.shape}",
         )

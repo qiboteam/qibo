@@ -12,10 +12,15 @@ def test_commutator(backend):
     matrix_2 = np.random.rand(2, 2)
     matrix_2 = backend.cast(matrix_2, dtype=matrix_2.dtype)
 
+    matrix_3 = np.random.rand(3, 3)
+    matrix_3 = backend.cast(matrix_3, dtype=matrix_3.dtype)
+
     with pytest.raises(TypeError):
         test = commutator(matrix_1, matrix_2)
     with pytest.raises(TypeError):
         test = commutator(matrix_2, matrix_1)
+    with pytest.raises(TypeError):
+        test = commutator(matrix_2, matrix_3)
 
     I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
     I = backend.cast(I, dtype=I.dtype)
@@ -43,10 +48,15 @@ def test_anticommutator(backend):
     matrix_2 = np.random.rand(2, 2)
     matrix_2 = backend.cast(matrix_2, dtype=matrix_2.dtype)
 
+    matrix_3 = np.random.rand(3, 3)
+    matrix_3 = backend.cast(matrix_3, dtype=matrix_3.dtype)
+
     with pytest.raises(TypeError):
         test = anticommutator(matrix_1, matrix_2)
     with pytest.raises(TypeError):
         test = anticommutator(matrix_2, matrix_1)
+    with pytest.raises(TypeError):
+        test = commutator(matrix_2, matrix_3)
 
     I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
     I = backend.cast(I, dtype=I.dtype)
