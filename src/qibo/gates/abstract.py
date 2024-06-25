@@ -14,7 +14,7 @@ REQUIRED_FIELDS = [
     "_target_qubits",
     "_control_qubits",
 ]
-REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
+REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam", "phi0", "phi1"]
 
 
 class Gate:

@@ -6,6 +6,7 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
+from qibo.transpiler.decompositions import standard_decompositions
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -322,6 +323,42 @@ def test_rz(backend, theta, apply_x):
         assert not gates.RZ(0, theta=theta).clifford
 
 
+def test_prx(backend):
+    theta = 0.52
+    phi = 0.24
+
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.PRX(0, theta, phi)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.PRX(0, theta, phi).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    cos = np.cos(theta / 2)
+    sin = np.sin(theta / 2)
+    exponent1 = -1.0j * np.exp(-1.0j * phi)
+    exponent2 = -1.0j * np.exp(1.0j * phi)
+    matrix = np.array([[cos, exponent1 * sin], [exponent2 * sin, cos]])
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    assert gates.PRX(0, theta, phi).qasm_label == "prx"
+    assert not gates.PRX(0, theta, phi).clifford
+    assert gates.PRX(0, theta, phi).unitary
+
+
 def test_gpi(backend):
     phi = 0.1234
     nqubits = 1
@@ -335,9 +372,7 @@ def test_gpi(backend):
     target_state = np.dot(matrix, initial_state)
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.GPI(0, phi).qasm_label
-
+    assert gates.GPI(0, phi).qasm_label == "gpi"
     assert not gates.GPI(0, phi).clifford
     assert gates.GPI(0, phi).unitary
 
@@ -357,9 +392,7 @@ def test_gpi2(backend):
     target_state = np.dot(matrix, initial_state)
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.GPI2(0, phi).qasm_label
-
+    assert gates.GPI2(0, phi).qasm_label == "gpi2"
     assert not gates.GPI2(0, phi).clifford
     assert gates.GPI2(0, phi).unitary
 
@@ -1029,8 +1062,6 @@ def test_ms(backend):
     phi1 = 0.4321
     theta = np.pi / 2
 
-    with pytest.raises(NotImplementedError):
-        gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=theta).qasm_label
     with pytest.raises(ValueError):
         gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=np.pi)
 
@@ -1054,11 +1085,9 @@ def test_ms(backend):
 
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        gates.MS(0, 1, phi0=phi0, phi1=phi1).qasm_label
-
-    assert not gates.RXX(0, 1, phi0, phi1).clifford
-    assert gates.RXX(0, 1, phi0, phi1).unitary
+    assert gates.MS(0, 1, phi0, phi1, theta).qasm_label == "ms"
+    assert not gates.MS(0, 1, phi0, phi1).clifford
+    assert gates.MS(0, 1, phi0, phi1).unitary
 
 
 def test_givens(backend):
@@ -1204,6 +1233,13 @@ def test_toffoli(backend, applyx):
     assert gatelist[-1].qasm_label == "ccx"
     assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
+
+    # test decomposition
+    decomposition = Circuit(3)
+    decomposition.add(standard_decompositions(gates.TOFFOLI(0, 1, 2)))
+    decomposition = decomposition.unitary(backend)
+
+    backend.assert_allclose(decomposition, backend.cast(matrices.TOFFOLI), atol=1e-10)
 
 
 def test_ccz(backend):
@@ -1572,6 +1608,7 @@ GATES = [
     ("RX", (0, 0.1)),
     ("RY", (0, 0.2)),
     ("RZ", (0, 0.3)),
+    ("PRX", (0, 0.1, 0.2)),
     ("GPI", (0, 0.1)),
     ("GPI2", (0, 0.2)),
     ("U1", (0, 0.1)),
