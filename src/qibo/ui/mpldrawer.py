@@ -263,7 +263,7 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         _swapx(ax, x, y, plot_params)
     else:
         if name == "ALIGN":
-            symbol = "A({0})".format(target[2:])
+            symbol = "A({})".format(target[2:])
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
