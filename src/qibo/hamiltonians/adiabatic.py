@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from itertools import chain
 
 from qibo.config import raise_error
 from qibo.hamiltonians import hamiltonians, terms
@@ -101,26 +102,6 @@ class BaseAdiabaticHamiltonian:
         )
 
 
-class TrotterCircuit(hamiltonians.TrotterCircuit):
-    """Object that caches the Trotterized evolution circuit.
-
-    See :class:`qibo.hamiltonians.hamiltonians.TrotterCircuit` for more details.
-    """
-
-    def set(self, dt, coefficients):
-        """Updates the circuit parameters for different values of ``t`` and ``dt``.
-
-        The update is done using the ``circuit.set_parameters`` method to avoid
-        recreating the circuit and gates.
-        """
-        params = {
-            gate: group.to_term(coefficients).exp(dt / 2.0)
-            for gate, group in self.gates.items()
-        }
-        self.dt = dt
-        self.circuit.set_parameters(params)
-
-
 class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
     """Adiabatic Hamiltonian that is sum of :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`."""
 
@@ -152,13 +133,21 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         Returns:
             A :class:`qibo.models.Circuit` implementing the Trotterized evolution.
         """
-        if self.trotter_circuit is None:
-            self.trotter_circuit = TrotterCircuit(
-                self.groups, dt, self.nqubits, accelerators
-            )
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+            TermGroup,
+        )
+
         # pylint: disable=E1102
         st = self.schedule(t / self.total_time) if t != 0 else 0
         # pylint: enable=E1102
         coefficients = {self.h0: 1 - st, self.h1: st}
-        self.trotter_circuit.set(dt, coefficients)
-        return self.trotter_circuit.circuit
+
+        groups = self.groups
+        circuit = Circuit(self.nqubits, accelerators=accelerators)
+        circuit.add(
+            group.to_term(coefficients).expgate(dt / 2.0)
+            for group in chain(groups, groups[::-1])
+        )
+
+        return circuit
