@@ -532,7 +532,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
 
                 for qbit in gate._target_qubits:
                     if qbit is tuple:
-                            item += ("q_" + str(qbit[0]),)
+                        item += ("q_" + str(qbit[0]),)
                     else:
                         item += ("q_" + str(qbit),)
 
