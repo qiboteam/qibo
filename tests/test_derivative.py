@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
+from qiboml.backends.pytorch import PyTorchBackend
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.backends.pytorch import PyTorchBackend
 from qibo.derivative import finite_differences, parameter_shift
 from qibo.symbols import Z
 

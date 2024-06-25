@@ -4,15 +4,10 @@ from itertools import product
 
 import numpy as np
 import pytest
+from qiboml.backends import PyTorchBackend, TensorflowBackend
 
 from qibo import Circuit, gates, set_backend
-from qibo.backends import (
-    CliffordBackend,
-    GlobalBackend,
-    NumpyBackend,
-    PyTorchBackend,
-    TensorflowBackend,
-)
+from qibo.backends import CliffordBackend, GlobalBackend, NumpyBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford

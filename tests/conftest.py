@@ -12,8 +12,8 @@ from qibo.backends import construct_backend
 # backends to be tested
 BACKENDS = [
     "numpy",
-    "tensorflow",
-    "pytorch",
+    "qiboml-tensorflow",
+    "qiboml-pytorch",
     "qibojit-numba",
     "qibojit-cupy",
     "qibojit-cuquantum",
