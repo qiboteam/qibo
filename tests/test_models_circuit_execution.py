@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.quantum_info import random_density_matrix
 
 
 def test_eager_execute(backend, accelerators):
@@ -91,8 +92,6 @@ def test_final_state_property(backend):
 
 
 def test_density_matrix_circuit(backend):
-    from qibo.quantum_info import random_density_matrix
-
     initial_rho = random_density_matrix(2**3, backend=backend)
 
     c = Circuit(3, density_matrix=True)
@@ -144,3 +143,14 @@ def test_initial_state_error(backend):
 
     with pytest.raises(ValueError):
         backend.execute_circuit(c, c1)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_initial_state_shape_error(backend, density_matrix):
+    nqubits = 2
+    c = Circuit(nqubits, density_matrix=density_matrix)
+    c.add(gates.X(i) for i in range(nqubits))
+
+    initial_state = random_density_matrix(2, backend=backend)
+    with pytest.raises(ValueError):
+        backend.execute_circuit(c, initial_state=initial_state)
