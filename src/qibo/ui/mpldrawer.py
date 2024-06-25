@@ -72,7 +72,7 @@ def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwarg
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
     gate_grid = np.arange(0.0, nt * scale, scale, dtype=float)
 
-    fig, ax = _setup_figure(nq, nt, gate_grid, wire_grid, plot_params)
+    ax, _ = _setup_figure(nq, nt, gate_grid, wire_grid, plot_params)
 
     measured = _measured_wires(schedule, labels, schedule=True)
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured)
@@ -113,7 +113,7 @@ def _plot_quantum_circuit(gates, inits, labels=[], plot_labels=True, **kwargs):
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
     gate_grid = np.arange(0.0, ng * scale, scale, dtype=float)
 
-    fig, ax = _setup_figure(nq, ng, gate_grid, wire_grid, plot_params)
+    ax, _ = _setup_figure(nq, ng, gate_grid, wire_grid, plot_params)
 
     measured = _measured_wires(gates, labels)
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured)
@@ -141,7 +141,7 @@ def _plot_lines_circuit(inits, labels, plot_labels=True, **kwargs):
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
     gate_grid = np.arange(0.0, nq * scale, scale, dtype=float)
 
-    fig, ax = _setup_figure(nq, nq, gate_grid, wire_grid, plot_params)
+    ax, _ = _setup_figure(nq, nq, gate_grid, wire_grid, plot_params)
 
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params)
 
@@ -352,7 +352,7 @@ def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     ax.set_xlim(gate_grid[0] - offset, gate_grid[-1] + offset)
     ax.set_ylim(wire_grid[0] - offset, wire_grid[-1] + offset)
     ax.set_aspect("equal")
-    return fig, ax
+    return ax, fig
 
 
 def _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
@@ -472,34 +472,6 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
-def _set_style(style):
-
-    if style is None:
-        default_values = dict(
-            scale=1.0,
-            fontsize=14.0,
-            linewidth=1.0,
-            control_radius=0.05,
-            not_radius=0.15,
-            swap_delta=0.08,
-            label_buffer=0.0,
-            facecolor="w",
-            edgecolor="#000000",
-            fillcolor="#000000",
-            linecolor="k",
-            textcolor="k",
-            gatecolor="w",
-            controlcolor="#000000",
-        )
-
-        plot_params.update(default_values)
-    else:
-        if type(style) is str:
-            plot_params.update(_get_style(style))
-        elif type(style) is dict:
-            plot_params.update(style)
-
-
 def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
@@ -512,13 +484,13 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """
     if style is not None:
         if type(style) is dict:
-            _set_style(style)
+            plot_params.update(style)
         else:
-            _set_style(
+            plot_params.update(
                 STYLE[style] if style in list(STYLE.keys()) else STYLE["default"]
             )
     else:
-        _set_style(STYLE["default"])
+        plot_params.update(STYLE["default"])
 
     inits = list(range(circuit.nqubits))
 
