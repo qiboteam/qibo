@@ -6,43 +6,24 @@ import matplotlib
 import numpy as np
 
 from .plot_styles import STYLE
+from .symbols import SYMBOLS
 
-plot_params = dict(
-    scale=1.0,
-    fontsize=14.0,
-    linewidth=1.0,
-    control_radius=0.05,
-    not_radius=0.15,
-    swap_delta=0.08,
-    label_buffer=0.0,
-    facecolor="w",
-    edgecolor="#000000",
-    fillcolor="#000000",
-    linecolor="k",
-    textcolor="k",
-    gatecolor="w",
-    controlcolor="#000000",
-)
-
-symbols = dict(
-    NOP="",
-    CPHASE="Z",
-    ID="I",
-    CX="X",
-    CY="Y",
-    CZ="Z",
-    FSIM="F",
-    SYC="SYC",
-    GENERALIZEDFSIM="GF",
-    DEUTSCH="DE",
-    UNITARY="U",
-    MEASURE="M",
-    ISWAP="I",
-    SISWAP="SI",
-    FSWAP="FX",
-    SX=r"$\rm\sqrt{X}$",
-    CSX=r"$\rm\sqrt{X}$",
-)
+plot_params = {
+    "scale": 1.0,
+    "fontsize": 14.0,
+    "linewidth": 1.0,
+    "control_radius": 0.05,
+    "not_radius": 0.15,
+    "swap_delta": 0.08,
+    "label_buffer": 0.0,
+    "facecolor": "w",
+    "edgecolor": "#000000",
+    "fillcolor": "#000000",
+    "linecolor": "k",
+    "textcolor": "k",
+    "gatecolor": "w",
+    "controlcolor": "#000000",
+}
 
 
 def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwargs):
@@ -241,7 +222,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             "ECR",
             "MS",
         ]:
-            symbol = symbols.get(name, name)
+            symbol = SYMBOLS.get(name, name)
             _text(ax, x, y, symbol, plot_params, box=True)
         else:
             _cdot(ax, x, y, plot_params)
@@ -249,7 +230,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
 
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     name, target = gate[:2]
-    symbol = symbols.get(name, name)  # override name with symbols
+    symbol = SYMBOLS.get(name, name)  # override name with symbols
     x = gate_grid[i]
     target_index = _get_flipped_index(target, labels)
     y = wire_grid[target_index]
@@ -521,8 +502,20 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
             ):
                 init_label = init_label[1:]
 
-            if init_label in ["ID", "MEASURE"]:
+            if init_label in [
+                "ID",
+                "MEASURE",
+                "KRAUSCHANNEL",
+                "UNITARYCHANNEL",
+                "DEPOLARIZINGCHANNEL",
+                "READOUTERRORCHANNEL",
+            ]:
                 for qbit in gate._target_qubits:
+                    item = (init_label,)
+                    item += ("q_" + str(qbit),)
+                    gates_plot.append(item)
+            elif init_label in "ENTANGLEMENTENTROPY":
+                for qbit in list(range(circuit.nqubits)):
                     item = (init_label,)
                     item += ("q_" + str(qbit),)
                     gates_plot.append(item)
