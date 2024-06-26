@@ -2500,6 +2500,18 @@ class GeneralizedRBS(ParametrizedGate):
             self.parameters[1],
         )
 
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{gRBS}` gate.
+
+        Decompose :math:`\\text{gRBS}` gate into :class:`qibo.gates.X`, :class:`qibo.gates.CNOT`,
+        :class:`qibo.gates.RY`, and :class:`qibo.gates.RZ`.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.

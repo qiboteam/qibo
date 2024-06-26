@@ -41,6 +41,9 @@ class GateDecompositions:
         decomposition = self.decompositions[gate.__class__]
         if callable(decomposition):
             decomposition = decomposition(gate)
+        print(gate.__class__.__name__)
+        print(decomposition)
+        print()
         return [
             g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
             for g in decomposition
@@ -402,6 +405,38 @@ opt_dec.add(
 )
 
 
+def _decomposition_generalized_RBS(ins, outs, theta, phi, controls):
+    """Generalized RBS gate as in Fig. 2 of arXiv:2405.20408"""
+    rotation_controls = ins[:-1] + outs
+    if controls is not None:
+        rotation_controls += controls
+
+    list_gates = []
+    list_gates.append(gates.X(ins[-1]))
+    list_gates.append(gates.X(outs[0]))
+    for target in ins[:-1]:
+        list_gates.append(gates.CNOT(ins[-1], target))
+    for target in outs[1:][::-1]:
+        list_gates.append(gates.CNOT(outs[0], target))
+    list_gates.append(gates.X(ins[-1]))
+    list_gates.append(gates.X(outs[0]))
+    list_gates.append(gates.CNOT(ins[-1], outs[0]))
+    list_gates.append(gates.RY(ins[-1], -2 * theta).controlled_by(*rotation_controls))
+    if phi != 0.0:
+        list_gates.append(gates.RZ(ins[-1], phi).controlled_by(*rotation_controls))
+    list_gates.append(gates.CNOT(ins[-1], outs[0]))
+    list_gates.append(gates.X(outs[0]))
+    list_gates.append(gates.X(ins[-1]))
+    for target in outs[1:]:
+        list_gates.append(gates.CNOT(outs[0], target))
+    for target in ins[:-1][::-1]:
+        list_gates.append(gates.CNOT(ins[-1], target))
+    list_gates.append(gates.X(outs[0]))
+    list_gates.append(gates.X(ins[-1]))
+
+    return list_gates
+
+
 # standard gate decompositions used by :meth:`qibo.gates.gates.Gate.decompose`
 standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
@@ -501,4 +536,26 @@ standard_decompositions.add(
         gates.H(2),
         gates.CNOT(0, 1),
     ],
+)
+standard_decompositions.add(
+    gates.GeneralizedRBS,
+    lambda gate: _decomposition_generalized_RBS(
+        ins=list(range(len(gate.init_args[0]))),
+        outs=list(
+            range(
+                len(gate.init_args[0]),
+                len(gate.init_args[0]) + len(gate.init_args[1]),
+            )
+        ),
+        theta=gate.init_kwargs["theta"],
+        phi=gate.init_kwargs["phi"],
+        controls=list(
+            range(
+                len(gate.init_args[0]) + len(gate.init_args[1]),
+                len(gate.init_args[0])
+                + len(gate.init_args[1])
+                + len(gate.control_qubits),
+            )
+        ),
+    ),
 )
