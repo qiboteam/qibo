@@ -420,7 +420,7 @@ def _decomposition_generalized_RBS(ins, outs, theta, phi, controls):
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
     list_gates.append(gates.RY(ins[-1], -2 * theta).controlled_by(*rotation_controls))
     if phi != 0.0:
-        list_gates.append(gates.RZ(ins[-1], phi).controlled_by(*rotation_controls))
+        list_gates.append(gates.RZ(ins[-1], 2 * phi).controlled_by(*rotation_controls))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
     list_gates.append(gates.X(outs[0]))
     list_gates.append(gates.X(ins[-1]))
