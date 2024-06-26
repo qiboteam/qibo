@@ -2492,6 +2492,11 @@ class GeneralizedRBS(ParametrizedGate):
     This unitary is also known as a (generalized)
     `Givens rotation  <https://en.wikipedia.org/wiki/Givens_rotation>`_.
 
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*.
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_
+
     Args:
         qubits_in (tuple or list): ids of "input" qubits.
         qubits_out (tuple or list): ids of "output" qubits.
