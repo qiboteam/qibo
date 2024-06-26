@@ -6,7 +6,7 @@
         "textcolor": "#ffffff",
         "fillcolor": "#ffffff",
         "gatecolor": "#5e2129",
-        "controlcolor": "#ffffff",
+        "controlcolor": "#ffffff"
     },
     "fardelejo": {
         "facecolor": "#e17a02",
@@ -15,7 +15,7 @@
         "textcolor": "#FFFFFF",
         "fillcolor": "#fef1e2",
         "gatecolor": "#8b4513",
-        "controlcolor": "#fef1e2",
+        "controlcolor": "#fef1e2"
     },
     "quantumspain": {
         "facecolor": "#EDEDF4",
@@ -24,7 +24,7 @@
         "textcolor": "#8561C3",
         "fillcolor": "#092D4E",
         "gatecolor": "#53E7CA",
-        "controlcolor": "#092D4E",
+        "controlcolor": "#092D4E"
     },
     "color-blind": {
         "facecolor": "#d55e00",
@@ -33,7 +33,7 @@
         "textcolor": "#f0e442",
         "fillcolor": "#cc79a7",
         "gatecolor": "#d55e00",
-        "controlcolor": "#f0e442",
+        "controlcolor": "#f0e442"
     },
     "cachirulo": {
         "facecolor": "#ffffff",
@@ -42,7 +42,7 @@
         "textcolor": "#000000",
         "fillcolor": "#ffffff",
         "gatecolor": "#ffffff",
-        "controlcolor": "#800000",
+        "controlcolor": "#800000"
     },
     "default": {
         "facecolor": "w",
@@ -51,6 +51,6 @@
         "textcolor": "k",
         "fillcolor": "#000000",
         "gatecolor": "w",
-        "controlcolor": "#000000",
+        "controlcolor": "#000000"
     },
 }
