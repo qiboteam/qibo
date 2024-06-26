@@ -47,16 +47,13 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
     """
     values = sorted(layout.values())
     physical_qubits = list(layout.keys())
-    if connectivity is not None:
-        if isinstance(physical_qubits[0], str):
-            ref_keys = ["q" + str(i) for i in list(connectivity.nodes)]
-        else:
-            ref_keys = list(connectivity.nodes)
+    nodes = (
+        list(range(len(values))) if connectivity is None else list(connectivity.nodes)
+    )
+    if isinstance(physical_qubits[0], str):
+        ref_keys = ["q" + str(i) for i in nodes]
     else:
-        if isinstance(physical_qubits[0], str):
-            ref_keys = ["q" + str(i) for i in range(len(values))]
-        else:
-            ref_keys = list(range(len(values)))
+        ref_keys = nodes
     if physical_qubits != ref_keys:
         raise_error(
             PlacementError,
