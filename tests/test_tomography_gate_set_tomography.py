@@ -262,7 +262,7 @@ def test_GST_non_invertible_matrix():
 def test_GST_with_transpiler(backend):
     import networkx as nx
 
-    target_gates = [gates.SX(0), gates.Z(0), gates.CY(0, 1)]
+    target_gates = [gates.SX(0), gates.Z(0), gates.CNOT(0, 1)]
     gate_set = [g.__class__ for g in target_gates]
     # standard not transpiled GST
     empty_1q, empty_2q, *approx_gates = GST(
