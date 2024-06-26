@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -2467,6 +2467,38 @@ class DEUTSCH(ParametrizedGate):
 
         self.init_args = [q0, q1, q2]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+
+class GeneralizedRBS(ParametrizedGate):
+    def __init__(
+        self,
+        qubits_in: Union[Tuple[int], List[int]],
+        qubits_out: Union[Tuple[int], List[int]],
+        theta: float,
+        phi: float,
+        trainable: bool = True,
+    ):
+        super().__init__(trainable)
+        self.name = "grbs"
+        self.draw_label = "gRBS"
+        self.target_qubits = tuple(qubits_in + qubits_out)
+        self.unitary = True
+
+        self.parameter_names = "theta"
+        self.parameters = theta, phi
+        self.nparams = 2
+
+        self.init_args = [qubits_in, qubits_out]
+        self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(
+            self.init_args[0],
+            self.init_args[1],
+            -self.parameters[0],
+            self.parameters[1],
+        )
 
 
 class Unitary(ParametrizedGate):
