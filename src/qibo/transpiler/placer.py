@@ -46,11 +46,20 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
             qubits of the original connectivity graph. Defaults to ``None``.
     """
     values = sorted(layout.values())
+    physical_qubits = list(layout.keys())
     if connectivity is not None:
-        ref_keys = ["q" + str(i) for i in list(connectivity.nodes)]
+        if isinstance(physical_qubits[0], str):
+            ref_keys = ["q" + str(i) for i in list(connectivity.nodes)]
+        else:
+            ref_keys = list(connectivity.nodes)
     else:
-        ref_keys = ["q" + str(i) for i in range(len(values))]
-    if list(layout.keys()) != ref_keys:
+        if isinstance(physical_qubits[0], str):
+            ref_keys = ["q" + str(i) for i in range(len(values))]
+        else:
+            ref_keys = list(range(len(values)))
+    print(ref_keys)
+    print(list(layout.keys()))
+    if physical_qubits != ref_keys:
         raise_error(
             PlacementError,
             "Some physical qubits in the layout may be missing or duplicated.",

@@ -176,7 +176,7 @@ class CircuitMap:
             self.circuit_blocks = blocks
         else:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
-        # Order the initial layout based on the hardware qubit name (this may create problems for a custom layout)
+        # Order the initial layout based on the hardware qubit names to avoid problems in custom layouts
         self.initial_layout = {
             key: value for key, value in sorted(initial_layout.items())
         }

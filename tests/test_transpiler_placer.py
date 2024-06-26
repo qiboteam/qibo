@@ -40,10 +40,14 @@ def star_circuit():
     return circuit
 
 
-def test_assert_placement_true():
-    layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
+@pytest.mark.parametrize("connectivity", [star_connectivity(), None])
+@pytest.mark.parametrize(
+    "layout",
+    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
+)
+def test_assert_placement_true(layout, connectivity):
     circuit = Circuit(5)
-    assert_placement(circuit, layout)
+    assert_placement(circuit, layout, connectivity=connectivity)
 
 
 @pytest.mark.parametrize("qubits", [5, 3])
@@ -56,8 +60,11 @@ def test_assert_placement_false(qubits, layout):
         assert_placement(circuit, layout)
 
 
-def test_mapping_consistency():
-    layout = {"q0": 0, "q1": 2, "q2": 1, "q3": 4, "q4": 3}
+@pytest.mark.parametrize(
+    "layout",
+    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
+)
+def test_mapping_consistency(layout):
     assert_mapping_consistency(layout)
 
 

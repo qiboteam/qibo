@@ -285,9 +285,8 @@ def test_custom_passes_wrong_pass():
         transpiled_circ, final_layout = custom_pipeline(circ)
 
 
-def test_bug_measurements():
-    connectivity = nx.Graph()
-    connectivity.add_edges_from([(0, 2), (1, 2), (2, 3), (2, 4)])
+def test_int_qubit_names():
+    connectivity = star_connectivity()
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
@@ -302,6 +301,13 @@ def test_bug_measurements():
     circuit.add(gates.I(0))
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
-    transpiled_circuit, _ = transpiler(circuit)
-    assert transpiled_circuit.queue[2].qubits == (1,)
-    assert transpiled_circuit.queue[3].qubits == (1,)
+    transpiled_circuit, final_map = transpiler(circuit)
+    initial_layout = transpiler.get_initial_layout()
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=connectivity,
+        initial_layout=initial_layout,
+        final_layout=final_map,
+        native_gates=NativeGates.default(),
+    )

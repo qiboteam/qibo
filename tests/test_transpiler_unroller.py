@@ -119,3 +119,5 @@ def test_measurements_non_comp_basis():
     circuit.add(gates.M(0, basis=gates.X))
     transpiled_circuit = unroller(circuit)
     assert isinstance(transpiled_circuit.queue[2], gates.M)
+    # After transpiling the measurement gate should be in the computational basis
+    assert transpiled_circuit.queue[2].basis == [gates.Z]
