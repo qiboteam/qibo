@@ -225,7 +225,7 @@ class Passes:
         physical (keys) to logical (values) qubit. If `int_qubit_name` is `True`
         each key `i` correspond to the `i-th` qubit in the graph.
         """
-        final_layout = self.initial_layout
+        self.initial_layout = None
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
@@ -234,6 +234,9 @@ class Passes:
                 transpiler_pass.connectivity = self.connectivity
                 if self.initial_layout == None:
                     self.initial_layout = transpiler_pass(circuit)
+                    final_layout = (
+                        self.initial_layout
+                    )  # This way the final layout will be the same as the initial layout if no router is used
                 else:
                     raise_error(
                         TranspilerPipelineError,

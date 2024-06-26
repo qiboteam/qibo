@@ -461,7 +461,7 @@ def von_neumann_entropy(
 
     if purity(state) == 1.0:
         if return_spectrum:
-            return 0.0, backend.cast([1.0], dtype=float)
+            return 0.0, backend.cast([0.0], dtype=float)
 
         return 0.0
 

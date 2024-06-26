@@ -1008,6 +1008,22 @@ U1q
     - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
+IQM native gates
+^^^^^^^^^^^^^^^^
+
+Phase-:math:`RX`
+""""""""""""""""
+
+.. autoclass:: qibo.gates.PRX
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other IQM two-qubit native gate is implemented in Qibo as:
+
+    - Controlled-:math:`Z` rotation: :class:`qibo.gates.CZ`
+
+
 _______________________
 
 
