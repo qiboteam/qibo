@@ -2470,9 +2470,11 @@ class DEUTSCH(ParametrizedGate):
 
 
 class GeneralizedRBS(ParametrizedGate):
-    """The generalized Reconfigurable Beam Splitter gate.
+    """The generalized Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
 
-    Corresponds to the following matrix:
+    Given a register called ``qubits_in`` containing :math:`m` qubits and a
+    register named ``qubits_out`` containing :math:`m'` qubits, the :math:`\\text{gRBS}`
+    is a :math:`(M + m')`-qubit gate that has the following matrix representation:
 
     .. math::
 
@@ -2482,9 +2484,13 @@ class GeneralizedRBS(ParametrizedGate):
               &  & I'       &    &  \\
               & -e^{i\\phi}\\sin\theta &      & e^{-i\\phi}\\cos\theta   &  \\
               &           &  &             &  I\\
-        \\end{pmatrix}
+        \\end{pmatrix} \\,\\, ,
 
-    This rotation is also called a Givens rotation.
+    where :math`I` and :math:`I'` are, respectively, identity matrices of size
+    :math:`2^{m} - 1` and :math:`2^{m}(2^{m'} - 2)`.
+
+    This unitary is also known as a (generalized)
+    `Givens rotation  <https://en.wikipedia.org/wiki/Givens_rotation>`_.
 
     Args:
         qubits_in (tuple or list): ids of "input" qubits.
