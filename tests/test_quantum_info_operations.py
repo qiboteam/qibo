@@ -56,7 +56,7 @@ def test_anticommutator(backend):
     with pytest.raises(TypeError):
         test = anticommutator(matrix_2, matrix_1)
     with pytest.raises(TypeError):
-        test = commutator(matrix_2, matrix_3)
+        test = anticommutator(matrix_2, matrix_3)
 
     I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
     I = backend.cast(I, dtype=I.dtype)
