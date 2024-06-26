@@ -1343,10 +1343,11 @@ def test_generalized_rbs(backend):
     )
 
     matrix = np.eye(2**nqubits, dtype=complex)
-    matrix[integer_in, integer_in] = np.exp(1j * phi) * np.cos(theta)
-    matrix[integer_in, integer_out] = -np.exp(1j * phi) * np.sin(theta)
-    matrix[integer_out, integer_in] = np.exp(-1j * phi) * np.sin(theta)
-    matrix[integer_out, integer_out] = np.exp(-1j * phi) * np.cos(theta)
+    exp, sin, cos = np.exp(1j * phi), np.sin(theta), np.cos(theta)
+    matrix[integer_in, integer_in] = exp * cos
+    matrix[integer_in, integer_out] = -exp * sin
+    matrix[integer_out, integer_in] = np.conj(exp) * sin
+    matrix[integer_out, integer_out] = np.conj(exp) * cos
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     target_state = matrix @ initial_state
