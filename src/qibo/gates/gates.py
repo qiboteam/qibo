@@ -2480,9 +2480,9 @@ class GeneralizedRBS(ParametrizedGate):
 
         \begin{pmatrix}
             I &           &  &             &  \\
-              & e^{i\\phi}\\cos\theta &      & e^{-i\\phi}\\sin\theta   &  \\
+              & e^{-i\\phi}\\cos\theta &      & e^{-i\\phi}\\sin\theta   &  \\
               &  & I'       &    &  \\
-              & -e^{i\\phi}\\sin\theta &      & e^{-i\\phi}\\cos\theta   &  \\
+              & -e^{i\\phi}\\sin\theta &      & e^{i\\phi}\\cos\theta   &  \\
               &           &  &             &  I\\
         \\end{pmatrix} \\,\\, ,
 
