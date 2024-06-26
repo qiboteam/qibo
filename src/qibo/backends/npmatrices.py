@@ -504,10 +504,10 @@ class NumpyMatrices:
             [1 + 0j if l == k else 0j for l in range(2**bitstring_length)]
             for k in range(2**bitstring_length)
         ]
-        matrix[integer_in][integer_in] = self.np.exp(1j * phi) * self.np.cos(theta)
+        matrix[integer_in][integer_in] = self.np.exp(-1j * phi) * self.np.cos(theta)
         matrix[integer_in][integer_out] = -self.np.exp(1j * phi) * self.np.sin(theta)
         matrix[integer_out][integer_in] = self.np.exp(-1j * phi) * self.np.sin(theta)
-        matrix[integer_out][integer_out] = self.np.exp(-1j * phi) * self.np.cos(theta)
+        matrix[integer_out][integer_out] = self.np.exp(1j * phi) * self.np.cos(theta)
 
         return self._cast(matrix, dtype=self.dtype)
 

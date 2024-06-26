@@ -2517,15 +2517,6 @@ class GeneralizedRBS(ParametrizedGate):
         self.init_args = [qubits_in, qubits_out]
         self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
 
-    def _dagger(self) -> "Gate":
-        """"""
-        return self.__class__(
-            self.init_args[0],
-            self.init_args[1],
-            -self.init_kwargs["theta"],
-            self.init_kwargs["phi"],
-        )
-
     def decompose(self) -> List[Gate]:
         """Decomposition of :math:`\\text{gRBS}` gate.
 
