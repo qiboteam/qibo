@@ -2522,8 +2522,8 @@ class GeneralizedRBS(ParametrizedGate):
         return self.__class__(
             self.init_args[0],
             self.init_args[1],
-            -self.parameters[0],
-            self.parameters[1],
+            -self.init_kwargs["theta"],
+            self.init_kwargs["phi"],
         )
 
     def decompose(self) -> List[Gate]:
