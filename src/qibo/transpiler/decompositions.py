@@ -41,9 +41,6 @@ class GateDecompositions:
         decomposition = self.decompositions[gate.__class__]
         if callable(decomposition):
             decomposition = decomposition(gate)
-        print(gate.__class__.__name__)
-        print(decomposition)
-        print()
         return [
             g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
             for g in decomposition
