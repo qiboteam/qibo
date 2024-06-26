@@ -216,8 +216,7 @@ def vqe_loss(params, circuit, hamiltonian):
 
 def matrix_to_pauli_operators(matrix):
     """Calculates the Pauli operators for a given matrix.
-    Code created as part of QuantumSpain Project (https://quantumspain-project.es/)
-    
+
     Args:
         matrix (np.ndarray): The filter threshold for each input dimension. Default is None.
 

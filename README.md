@@ -76,3 +76,4 @@ To get in touch with the community and the developers, consider joining the Qibo
 - National Supercomputing Centre (NSCC), Singapore.
 - RIKEN Center for Computational Science (R-CCS), Japan.
 - NVIDIA (cuQuantum), USA.
+- QuantumSpain Project (https://quantumspain-project.es/)
