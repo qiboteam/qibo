@@ -1319,6 +1319,47 @@ def test_deutsch(backend):
     assert gates.DEUTSCH(0, 1, 2, theta).unitary
 
 
+def test_generalized_rbs(backend):
+    theta, phi = 0.1234, 0.4321
+    qubits_in, qubits_out = [0, 1], [2, 3]
+    nqubits = len(qubits_in + qubits_out)
+    integer_in = "".join(["1" if k in qubits_in else "0" for k in range(nqubits)])
+    integer_out = "".join(["1" if k in qubits_out else "0" for k in range(nqubits)])
+    integer_in, integer_out = int(integer_in, 2), int(integer_out, 2)
+
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.eye(2**nqubits, dtype=complex)
+    matrix[integer_in, integer_in] = np.exp(1j * phi) * np.cos(theta)
+    matrix[integer_in, integer_out] = -np.exp(1j * phi) * np.sin(theta)
+    matrix[integer_out, integer_in] = np.exp(-1j * phi) * np.sin(theta)
+    matrix[integer_out, integer_out] = np.exp(-1j * phi) * np.cos(theta)
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).qasm_label
+
+    assert not gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).clifford
+    assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).unitary
+
+
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_unitary(backend, nqubits):
     initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
