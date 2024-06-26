@@ -57,8 +57,6 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
             ref_keys = ["q" + str(i) for i in range(len(values))]
         else:
             ref_keys = list(range(len(values)))
-    print(ref_keys)
-    print(list(layout.keys()))
     if physical_qubits != ref_keys:
         raise_error(
             PlacementError,
