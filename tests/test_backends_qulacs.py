@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import GlobalBackend, NumpyBackend, QulacsBackend, set_backend
+from qibo.backends import GlobalBackend, MetaBackend, NumpyBackend, set_backend
 from qibo.quantum_info import random_clifford, random_density_matrix, random_statevector
 
 numpy_bkd = NumpyBackend()
@@ -17,7 +17,7 @@ def test_qulacs(density_matrix, with_measurements):
     if with_measurements:
         measured_qubits = random.sample([0, 1, 2], 2)
         c.add(gates.M(*measured_qubits))
-    qulacs_bkd = QulacsBackend()
+    qulacs_bkd = MetaBackend.load("qulacs")
     nshots = 1000
     qulacs_res = qulacs_bkd.execute_circuit(c, nshots=nshots)
     numpy_res = numpy_bkd.execute_circuit(c, nshots=nshots)
@@ -32,7 +32,7 @@ def test_qulacs(density_matrix, with_measurements):
 
 def test_initial_state_error():
     c = Circuit(1)
-    qulacs_bkd = QulacsBackend()
+    qulacs_bkd = MetaBackend.load("qulacs")
     initial_state = np.array([0.0, 1.0])
     with pytest.raises(NotImplementedError):
         qulacs_bkd.execute_circuit(c, initial_state=initial_state)

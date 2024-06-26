@@ -8,7 +8,6 @@ from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.pytorch import PyTorchBackend
-from qibo.backends.qulacs import QulacsBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
@@ -41,6 +40,8 @@ class MetaBackend:
             kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
         elif backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend
+
             return QulacsBackend()
         else:
             raise_error(
