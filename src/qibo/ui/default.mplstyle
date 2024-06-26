@@ -1,0 +1,8 @@
+axes.facecolor: w
+axes.edgecolor: "#000000"
+lines.linecolor: k
+text.textcolor: k
+text.fillcolor: "#000000"
+circle.fc: w
+circle.controlcolor: "#000000"
+circle.ec: "#000000"

@@ -4,9 +4,14 @@
 #
 import matplotlib
 import numpy as np
+import json
+from os import path
 
-from .plot_styles import STYLE
-from .symbols import SYMBOLS
+global STYLE
+STYLE = {}
+
+global SYMBOLS
+SYMBOLS = {}
 
 plot_params = {
     "scale": 1.0,
@@ -458,6 +463,13 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
+def _build_path(filename):
+    file_path = path.abspath(__file__)  # full path of current file
+    dir_path = path.dirname(file_path)  # full path of the directory from file
+    final_path = path.join(dir_path, filename)  # absolute file path of given file
+    return final_path
+
+
 def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
@@ -468,6 +480,17 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
     ax.figure       A Figure object (type: matplotlib.figure.Figure)
     """
+
+    json_file = _build_path("symbols.json")
+
+    with open(json_file) as file:
+        SYMBOLS.update(json.load(file))
+
+    json_file = _build_path("styles.json")
+
+    with open(json_file) as file:
+        STYLE.update(json.load(file))
+
     if style is not None:
         if type(style) is dict:
             plot_params.update(style)
@@ -494,6 +517,9 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
 
             if "CX" in init_label:
                 init_label = "CNOT"
+
+            if init_label in ["SX", "CSX"]:
+                init_label = r"$\rm\sqrt{X}$"
 
             if (
                 len(gate._control_qubits) > 0

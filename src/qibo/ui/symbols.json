@@ -1,4 +1,4 @@
-SYMBOLS = {
+{
     "NOP": "",
     "CPHASE": "Z",
     "ID": "I",
@@ -14,8 +14,6 @@ SYMBOLS = {
     "ISWAP": "I",
     "SISWAP": "SI",
     "FSWAP": "FX",
-    "SX": r"$\rm\sqrt{X}$",
-    "CSX": r"$\rm\sqrt{X}$",
     "KRAUSCHANNEL": "K",
     "UNITARYCHANNEL": "U",
     "PAULINOISECHANNEL": "PN",
