@@ -275,43 +275,6 @@ class Hamiltonian(AbstractHamiltonian):
         )
 
 
-class TrotterCircuit:
-    """Object that caches the Trotterized evolution circuit.
-
-    This object holds a reference to the circuit models and updates its
-    parameters if a different time step ``dt`` is given without recreating
-    every gate from scratch.
-
-    Args:
-        groups (list): List of :class:`qibo.core.terms.TermGroup` objects that
-            correspond to the Trotter groups of terms in the time evolution
-            exponential operator.
-        dt (float): Time step for the Trotterization.
-        nqubits (int): Number of qubits in the system that evolves.
-        accelerators (dict): Dictionary with accelerators for distributed
-            circuits.
-    """
-
-    def __init__(self, groups, dt, nqubits, accelerators):
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
-
-        self.gates = {}
-        self.dt = dt
-        self.circuit = Circuit(nqubits, accelerators=accelerators)
-        for group in chain(groups, groups[::-1]):
-            gate = group.term.expgate(dt / 2.0)
-            self.gates[gate] = group
-            self.circuit.add(gate)
-
-    def set(self, dt):
-        if self.dt != dt:
-            params = {
-                gate: group.term.exp(dt / 2.0) for gate, group in self.gates.items()
-            }
-            self.dt = dt
-            self.circuit.set_parameters(params)
-
-
 class SymbolicHamiltonian(AbstractHamiltonian):
     """Hamiltonian based on a symbolic representation.
 
@@ -350,7 +313,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.symbol_map = symbol_map
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
-        self.trotter_circuit = None
 
         from qibo.symbols import Symbol  # pylint: disable=import-outside-toplevel
 
@@ -779,20 +741,24 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     def circuit(self, dt, accelerators=None):
-        """Circuit that implements a Trotter step of this Hamiltonian
-        for a given time step ``dt``.
-        """
-        if self.trotter_circuit is None:
-            from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
-                TermGroup,
-            )
+        """Circuit that implements a Trotter step of this Hamiltonian.
 
-            groups = TermGroup.from_terms(self.terms)
-            self.trotter_circuit = TrotterCircuit(
-                groups, dt, self.nqubits, accelerators
-            )
-        self.trotter_circuit.set(dt)
-        return self.trotter_circuit.circuit
+        Args:
+            dt (float): Time step used for Trotterization.
+            accelerators (dict): Dictionary with accelerators for distributed circuits.
+        """
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+            TermGroup,
+        )
+
+        groups = TermGroup.from_terms(self.terms)
+        circuit = Circuit(self.nqubits, accelerators=accelerators)
+        circuit.add(
+            group.term.expgate(dt / 2.0) for group in chain(groups, groups[::-1])
+        )
+
+        return circuit
 
 
 class TrotterHamiltonian:
