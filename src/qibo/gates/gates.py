@@ -2470,6 +2470,32 @@ class DEUTSCH(ParametrizedGate):
 
 
 class GeneralizedRBS(ParametrizedGate):
+    """The generalized Reconfigurable Beam Splitter gate.
+
+    Corresponds to the following matrix:
+
+    .. math::
+
+        \begin{pmatrix}
+            I &           &  &             &  \\
+              & e^{i\\phi}\\cos\theta &      & e^{-i\\phi}\\sin\theta   &  \\
+              &  & I'       &    &  \\
+              & -e^{i\\phi}\\sin\theta &      & e^{-i\\phi}\\cos\theta   &  \\
+              &           &  &             &  I\\
+        \\end{pmatrix}
+
+    This rotation is also called a Givens rotation.
+
+    Args:
+        qubits_in (tuple or list): ids of "input" qubits.
+        qubits_out (tuple or list): ids of "output" qubits.
+        theta (float): the rotation angle.
+        phi (float): the phase angle.
+        trainable (bool): whether gate parameter can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
     def __init__(
         self,
         qubits_in: Union[Tuple[int], List[int]],
