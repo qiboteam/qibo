@@ -427,7 +427,6 @@ class ParallelBFGS:  # pragma: no cover
 
 class Rotosolve:
     """Rotosolve gradient free optimizer. This implementation is based on https://doi.org/10.22331/q-2021-01-28-391 and https://10.1103/PhysRevResearch.2.043158
-    Code created as part of QuantumSpain Project (https://quantumspain-project.es/)
 
     Args:
         max_steps (int): Maximum number of iterations to minimize the circuit
