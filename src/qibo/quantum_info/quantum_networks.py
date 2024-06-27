@@ -959,7 +959,7 @@ def link_product(
 
     for i, operand in enumerate(operands):
         if not isinstance(operand, QuantumNetwork):
-            raise_error(TypeError, f"The {i}th operator is not a ``QuantumNetwork``.")
+            raise_error(TypeError, f"The {i}-th operator is not a ``QuantumNetwork``.")
 
     if backend is None:  # pragma: no cover
         backend = operands[0]._backend
