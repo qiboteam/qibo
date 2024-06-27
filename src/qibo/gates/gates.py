@@ -2478,15 +2478,15 @@ class GeneralizedRBS(ParametrizedGate):
 
     .. math::
 
-        \begin{pmatrix}
-            I &           &  &             &  \\
-              & e^{-i\\phi}\\cos\theta &      & e^{-i\\phi}\\sin\theta   &  \\
-              &  & I'       &    &  \\
-              & -e^{i\\phi}\\sin\theta &      & e^{i\\phi}\\cos\theta   &  \\
-              &           &  &             &  I\\
+        \\begin{pmatrix}
+            I &           &  &             &  \\\\
+              & e^{-i\\phi}\\cos\\theta &      & e^{-i\\phi}\\sin\\theta   &  \\\\
+              &  & I'       &    &  \\\\
+              & -e^{i\\phi}\\sin\\theta &      & e^{i\\phi}\\cos\\theta   &  \\\\
+              &           &  &             &  I\\\\
         \\end{pmatrix} \\,\\, ,
 
-    where :math`I` and :math:`I'` are, respectively, identity matrices of size
+    where :math:`I` and :math:`I'` are, respectively, identity matrices of size
     :math:`2^{m} - 1` and :math:`2^{m}(2^{m'} - 2)`.
 
     This unitary matrix is also known as a
