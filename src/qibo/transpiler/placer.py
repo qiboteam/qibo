@@ -32,7 +32,8 @@ def assert_placement(
     if circuit.nqubits < len(layout):
         raise_error(
             PlacementError,
-            "Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.",
+            "Layout can't be used on circuit. "
+            + "Ancillary extra qubits need to be added to the circuit.",
         )
 
 
@@ -118,7 +119,7 @@ class StarConnectivityPlacer(Placer):
                 Only single qubit gates and two qubits gates are supported by the router.
 
         Returns:
-            (dict): physical to logical qubit mapping.
+            dict: physical to logical qubit mapping.
         """
 
         # find the number of qubits for hardware circuit
@@ -268,7 +269,8 @@ class Subgraph(Placer):
         if len(gates_qubits_pairs) < 3:
             raise_error(
                 ValueError,
-                "Circuit must contain at least two two-qubit gates to implement subgraph placement.",
+                "Circuit must contain at least two two-qubit gates "
+                + "to implement subgraph placement.",
             )
         circuit_subgraph = nx.Graph()
         circuit_subgraph.add_nodes_from(list(range(circuit.nqubits)))
@@ -277,7 +279,7 @@ class Subgraph(Placer):
         )
         i = 0
         circuit_subgraph.add_edge(gates_qubits_pairs[i][0], gates_qubits_pairs[i][1])
-        while matcher.subgraph_is_monomorphic() == True:
+        while matcher.subgraph_is_monomorphic():
             result = matcher
             i += 1
             circuit_subgraph.add_edge(
@@ -336,9 +338,11 @@ class Random(Placer):
             mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)
+
             if cost == 0:
                 final_layout = dict(zip(dict_keys, list(mapping.values())))
                 return {key: value for key, value in sorted(final_layout.items())}
+
             if cost < final_cost:
                 final_graph = graph
                 final_mapping = mapping
@@ -383,7 +387,8 @@ class ReverseTraversal(Placer):
             on the circuit :math:`C-D-D-C-B-A`.
 
     References:
-        1. G. Li, Y. Ding, and Y. Xie, *Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices*.
+        1. G. Li, Y. Ding, and Y. Xie,
+        *Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices*.
         `arXiv:1809.02573 [cs.ET] <https://arxiv.org/abs/1809.02573>`_.
     """
 
@@ -423,7 +428,8 @@ class ReverseTraversal(Placer):
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): assembled circuit to perform Reverse Traversal placement.
+            (:class:`qibo.models.circuit.Circuit`): assembled circuit to perform
+                Reverse Traversal placement.
         """
 
         if self.depth is None:
