@@ -100,9 +100,10 @@ class QuantumNetwork:
         pure: bool = False,
         backend=None,
     ):
-        """Construct a :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object from a numpy array.
-        This method converts a Choi operator to the internal representation of :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`.
+        """Construct a :class:`qibo.quantum_info.QuantumNetwork` object from a ndarray.
 
+        This method converts a Choi operator to the internal representation of
+        :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`.
         The input array can be a pure state, a Choi operator, a unitary operator, etc.
 
         Args:
@@ -144,7 +145,8 @@ class QuantumNetwork:
             ):
                 raise_error(
                     ValueError,
-                    "The opertor must be a square operator where the first half of the shape is the same as the second half of the shape. "
+                    "The opertor must be a square operator where the first half of the shape "
+                    + "is the same as the second half of the shape. "
                     + f"However, the shape of the input is {arr.shape}. "
                     + "If the input is pure, set `pure=True`.",
                 )
@@ -220,7 +222,7 @@ class QuantumNetwork:
     def is_hermitian(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network is Hermitian.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` is Hermitian.
 
         Hermicity is calculated as distance between :math:`\\mathcal{J}` and
         :math:`\\mathcal{J}^{\\dagger}` with respect to a given norm.
@@ -230,7 +232,8 @@ class QuantumNetwork:
         parameter ``order`` for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
 
         Args:
             order (str or int, optional): order of the norm. Defaults to ``None``.
@@ -265,7 +268,7 @@ class QuantumNetwork:
         return float(norm) <= precision_tol
 
     def is_positive_semidefinite(self, precision_tol: float = 1e-8):
-        """Returns bool indicating if Choi operator :math:`\\mathcal{J}` of the network is positive-semidefinite.
+        """Returns bool indicating if Choi operator :math:`\\mathcal{J}` is positive-semidefinite.
 
         Args:
             precision_tol (float, optional): threshold value used to check if eigenvalues of
@@ -309,7 +312,8 @@ class QuantumNetwork:
         Args:
             subscripts (str, optional): Specifies the subscript for summation using
                 the Einstein summation convention. For more details, please refer to
-                `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
+                `numpy.einsum
+                <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
             second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
                 network to be applied to the original network.
 
@@ -321,7 +325,7 @@ class QuantumNetwork:
         return link_product(subscripts, self, second_network, backend=self._backend)
 
     def copy(self):
-        """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
+        """Returns a copy of the :class:`qibo.quantum_info.QuantumNetwork` object."""
         return self.__class__(
             np.copy(self._tensor),
             partition=self.partition,
@@ -600,7 +604,8 @@ class QuantumNetwork:
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
+                + f"Cannot reshape matrix of size {self._tensor.shape} "
+                + f"to partition {self.partition}",
             )
 
     def full(self, backend=None, update=False):
@@ -632,11 +637,14 @@ class QuantumNetwork:
 
 
 class QuantumComb(QuantumNetwork):
-    """Quantum comb is a quantum network such that the systems follows a sequential order.
+    """Stores a Quantum comb, which is a network in which the systems follows a sequential order.
+
     It is also called the *non-Markovian quantum process* in many literatures.
-    Specifically, a quantum comb is a quantum network of the form :math:`J[┍i1┑,┕o1┙,┍i2┑,┕o2┙, ...]`,
-    where the process first take an input state from system :math:`i1`, then output a state to system :math:`o1`, and so on.
-    This is a non-Markovian process as the output of the system :math:`o2` may depend on what happened in systems :math:`i1`, and :math:`o1`.
+    A quantum comb is a quantum network of the form :math:`J[┍i1┑,┕o1┙,┍i2┑,┕o2┙, ...]`,
+    where the process first take an input state from system :math:`i1`,
+    then output a state to system :math:`o1`, and so on.
+    This is a non-Markovian process as the output of the system :math:`o2` may depend on
+    what happened in systems :math:`i1`, and :math:`o1`.
 
     A quantum channel is a special case of quantum comb, where there are only one input
     system and one output system.
@@ -685,11 +693,11 @@ class QuantumComb(QuantumNetwork):
     def is_causal(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network satisfies the causal order condition.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` satisfies causal order
 
         Causality is calculated based on a recursive constrains.
-        This method reduce a n-comb to a (n-1)-comb at each step, and checks if the reduced comb is independent on the
-        last output system.
+        This method reduce a n-comb to a (n-1)-comb at each step,
+        and checks if the reduced comb is independent on the last output system.
 
         Args:
             order (str or int, optional): order of the norm. Defaults to ``None``.
@@ -751,13 +759,16 @@ class QuantumComb(QuantumNetwork):
 
 
 class QuantumChannel(QuantumComb):
-    """Quantum channel is a special case of quantum comb, where there are only one input
-    and one output.
-    This class includes all quantum chnanels, including unitary operators, quantum states, etc.
+    """Stores a Quantum channel, which is a special case of quantum comb.
+
+    A quantum channel is a quantum comb with only one input and one output.
+    This class includes all quantum channels, unitary operators, and quantum states.
+
     To construct a `QuantumChannel` object, one can use the `QuantumNetwork.from_nparray` method.
-    **Note**: if one try to construct a quantum network from a unitary operator or Choi operator, the first
-    system will be the output. However, here we assume the first system is the input system. It is
-    important to specify `inverse=True` when constructing by `QuantumNetwork.from_nparray`.
+    **Note**: if one try to construct a quantum network from a unitary operator or Choi operator,
+    the first system will be the output.
+    However, here we assume the first system is the input system.
+    It is important to specify `inverse=True` when constructing by `QuantumNetwork.from_nparray`.
 
     Args:
         tensor (ndarray): the tensor representations of the quantum Comb.
@@ -810,9 +821,9 @@ class QuantumChannel(QuantumComb):
     def is_unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
-        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` of the network is unital.
-        A map is unital if it preserves the identity operator.
+        """Returns bool indicating if the Choi operator :math:`\\mathcal{J}` is unital.
 
+        A map is unital if it preserves the identity operator.
         Unitality is calculated as distance between the partial trace of :math:`\\mathcal{J}`
         and the Identity operator :math:`I`, with respect to a given norm.
         Default is the ``Hilbert-Schmidt`` norm (also known as ``Frobenius`` norm).
@@ -821,7 +832,8 @@ class QuantumChannel(QuantumComb):
         parameter ``order`` for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
 
         Args:
             order (str or int, optional): order of the norm. Defaults to ``None``.
@@ -868,7 +880,8 @@ class QuantumChannel(QuantumComb):
         elif len(self.partition) == 2:
             return True
         else:
-            # Unital is defined for quantum channels only. But we can extend it to quantum combs as follows:
+            # Unital is defined for quantum channels only.
+            # But we can extend it to quantum combs as follows:
             return QuantumChannel(  # pragma: no cover
                 sub_comb, self.partition[2:], pure=False, backend=self._backend
             ).is_unital(order, precision_tol)
