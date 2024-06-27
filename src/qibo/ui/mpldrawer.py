@@ -4,9 +4,9 @@
 #
 import json
 from os import path
-
 import matplotlib
 import numpy as np
+from qibo import gates
 
 global STYLE
 STYLE = {}
@@ -446,7 +446,7 @@ def _make_cluster_gates(gates_items):
                 cluster_gates.append(temp_gates)
                 temp_gates = []
 
-            if len(temp_mgates) != 0:
+            if len(temp_mgates) > 0:
                 cluster_gates.append(temp_mgates)
                 temp_mgates = []
 
@@ -509,15 +509,32 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
         labels.append("q_" + str(i))
 
     if len(circuit.queue) > 0:
+
+        all_gates = []
+        for gate in circuit.queue:
+            if isinstance(gate, gates.FusedGate):
+                all_gates += gate.gates
+            else:
+                all_gates.append(gate)
+
         gates_plot = []
 
-        for gate in circuit.queue:
+        for gate in all_gates:
             init_label = gate.name.upper()
-            if "CCX" in init_label:
+            if init_label == "CCX":
                 init_label = "TOFFOLI"
 
-            if "CX" in init_label:
+            if init_label == "CX":
                 init_label = "CNOT"
+
+            if init_label == "Y":
+                init_label = "GATEY"
+
+            if init_label == "CY":
+                init_label = "GATECY"
+
+            if init_label == "RY":
+                init_label = "GATERY"
 
             if init_label in ["SX", "CSX"]:
                 init_label = r"$\rm\sqrt{X}$"
@@ -527,7 +544,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
                 and "C" in init_label[0]
                 and "CNOT" not in init_label
             ):
-                init_label = init_label[1:]
+                init_label = gate.draw_label.upper()
 
             if init_label in [
                 "ID",
