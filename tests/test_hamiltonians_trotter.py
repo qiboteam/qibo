@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import hamiltonians
+from qibo import hamiltonians, symbols
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian, random_statevector
 
@@ -141,6 +141,16 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     target_state = np.dot(u[1], np.dot(u[0], initial_state))
     target_state = np.dot(u[0], np.dot(u[1], target_state))
     backend.assert_allclose(final_state, target_state)
+
+
+def test_symbolic_hamiltonian_circuit_different_dts(backend):
+    """Issue: https://github.com/qiboteam/qibo/issues/1357."""
+    ham = hamiltonians.SymbolicHamiltonian(symbols.Z(0))
+    a = ham.circuit(0.1)
+    b = ham.circuit(0.1)
+    matrix1 = ham.circuit(0.2).unitary(backend)
+    matrix2 = (a + b).unitary(backend)
+    np.testing.assert_allclose(matrix1, matrix2)
 
 
 def test_old_trotter_hamiltonian_errors():
