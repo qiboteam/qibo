@@ -2470,11 +2470,11 @@ class DEUTSCH(ParametrizedGate):
 
 
 class GeneralizedRBS(ParametrizedGate):
-    """The generalized Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
+    """The generalized (complex) Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
 
     Given a register called ``qubits_in`` containing :math:`m` qubits and a
     register named ``qubits_out`` containing :math:`m'` qubits, the :math:`\\text{gRBS}`
-    is a :math:`(M + m')`-qubit gate that has the following matrix representation:
+    is a :math:`(m + m')`-qubit gate that has the following matrix representation:
 
     .. math::
 
@@ -2489,8 +2489,8 @@ class GeneralizedRBS(ParametrizedGate):
     where :math`I` and :math:`I'` are, respectively, identity matrices of size
     :math:`2^{m} - 1` and :math:`2^{m}(2^{m'} - 2)`.
 
-    This unitary is also known as a (generalized)
-    `Givens rotation  <https://en.wikipedia.org/wiki/Givens_rotation>`_.
+    This unitary matrix is also known as a
+    `Givens rotation <https://en.wikipedia.org/wiki/Givens_rotation>`_.
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
@@ -2501,7 +2501,7 @@ class GeneralizedRBS(ParametrizedGate):
         qubits_in (tuple or list): ids of "input" qubits.
         qubits_out (tuple or list): ids of "output" qubits.
         theta (float): the rotation angle.
-        phi (float): the phase angle.
+        phi (float): the phase angle. Defaults to :math:`0.0`.
         trainable (bool): whether gate parameter can be updated using
             :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
             Defaults to ``True``.
@@ -2512,7 +2512,7 @@ class GeneralizedRBS(ParametrizedGate):
         qubits_in: Union[Tuple[int], List[int]],
         qubits_out: Union[Tuple[int], List[int]],
         theta: float,
-        phi: float,
+        phi: float = 0.0,
         trainable: bool = True,
     ):
         super().__init__(trainable)

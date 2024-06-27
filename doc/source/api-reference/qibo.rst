@@ -950,7 +950,7 @@ Generalized Reconfigurable Beam Splitter (RBS)
 
 .. autoclass:: qibo.gates.GeneralizedRBS
     :members:
-    :member-only: bysource
+    :member-order: bysource
 
 
 Arbitrary unitary
