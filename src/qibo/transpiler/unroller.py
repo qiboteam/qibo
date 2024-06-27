@@ -52,10 +52,11 @@ class NativeGates(Flag):
         object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, gates.Gate):
             return cls.from_gate(gate.__class__)
+
         try:
             return getattr(cls, gate.__name__)
         except AttributeError:
-            raise ValueError(f"Gate {gate} cannot be used as native.")
+            raise_error(ValueError, f"Gate {gate} cannot be used as native.")
 
 
 # TODO: Make setting single-qubit native gates more flexible
@@ -113,7 +114,7 @@ def assert_decomposition(
         if len(gate.qubits) <= 2:
             try:
                 native_type_gate = NativeGates.from_gate(gate)
-                if not (native_type_gate & native_gates):
+                if not native_type_gate & native_gates:
                     raise_error(
                         DecompositionError,
                         f"{gate.name} is not a native gate.",
@@ -137,10 +138,11 @@ def translate_gate(
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use in the decomposition.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates
+            to use in the decomposition.
 
     Returns:
-        (list): List of native gates that decompose the input gate.
+        list: List of native gates that decompose the input gate.
     """
     if isinstance(gate, (gates.I, gates.Align)):
         return gate
@@ -150,15 +152,15 @@ def translate_gate(
         return gate
     elif len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates)
-    else:
-        decomposition_2q = _translate_two_qubit_gates(gate, native_gates)
-        final_decomposition = []
-        for gate in decomposition_2q:
-            if len(gate.qubits) == 1:
-                final_decomposition += _translate_single_qubit_gates(gate, native_gates)
-            else:
-                final_decomposition.append(gate)
-        return final_decomposition
+
+    decomposition_2q = _translate_two_qubit_gates(gate, native_gates)
+    final_decomposition = []
+    for gate in decomposition_2q:
+        if len(gate.qubits) == 1:
+            final_decomposition += _translate_single_qubit_gates(gate, native_gates)
+        else:
+            final_decomposition.append(gate)
+    return final_decomposition
 
 
 def _translate_single_qubit_gates(gate: gates.Gate, single_qubit_natives: NativeGates):
@@ -168,17 +170,19 @@ def _translate_single_qubit_gates(gate: gates.Gate, single_qubit_natives: Native
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
-        single_qubit_natives (:class:`qibo.transpiler.unroller.NativeGates`): single qubit native gates.
+        single_qubit_natives (:class:`qibo.transpiler.unroller.NativeGates`): single
+            qubit native gates.
 
     Returns:
-        (list): List of native gates that decompose the input gate.
+        list: List of native gates that decompose the input gate.
     """
     if NativeGates.U3 & single_qubit_natives:
         return u3_dec(gate)
-    elif NativeGates.GPI2 & single_qubit_natives:
+
+    if NativeGates.GPI2 & single_qubit_natives:
         return gpi2_dec(gate)
-    else:
-        raise DecompositionError("Use U3 or GPI2 as single qubit native gates")
+
+    raise_error(DecompositionError, "Use U3 or GPI2 as single qubit native gates")
 
 
 def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
@@ -188,10 +192,11 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates supported by the quantum hardware.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates
+            supported by the quantum hardware.
 
     Returns:
-        (list): List of native gates that decompose the input gate.
+        list: List of native gates that decompose the input gate.
     """
     if (
         native_gates & (NativeGates.CZ | NativeGates.iSWAP)
@@ -203,31 +208,34 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
         if not gate.__class__ in iswap_dec.decompositions:
             return cz_dec(gate)
         # Check the decomposition with less 2 qubit gates.
-        else:
-            if cz_dec.count_2q(gate) < iswap_dec.count_2q(gate):
-                return cz_dec(gate)
-            elif cz_dec.count_2q(gate) > iswap_dec.count_2q(gate):
-                return iswap_dec(gate)
-            # If equal check the decomposition with less 1 qubit gates.
-            # This is never used for now but may be useful for future generalization
-            elif cz_dec.count_1q(gate) < iswap_dec.count_1q(gate):  # pragma: no cover
-                return cz_dec(gate)
-            else:  # pragma: no cover
-                return iswap_dec(gate)
-    elif native_gates & NativeGates.CZ:
+
+        if cz_dec.count_2q(gate) < iswap_dec.count_2q(gate):
+            return cz_dec(gate)
+        if cz_dec.count_2q(gate) > iswap_dec.count_2q(gate):
+            return iswap_dec(gate)
+        # If equal check the decomposition with less 1 qubit gates.
+        # This is never used for now but may be useful for future generalization
+        if cz_dec.count_1q(gate) < iswap_dec.count_1q(gate):  # pragma: no cover
+            return cz_dec(gate)
+        return iswap_dec(gate)  # pragma: no cover
+
+    if native_gates & NativeGates.CZ:
         return cz_dec(gate)
-    elif native_gates & NativeGates.iSWAP:
+
+    if native_gates & NativeGates.iSWAP:
         if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
-        else:
-            # First decompose into CZ
-            cz_decomposed = cz_dec(gate)
-            # Then CZ are decomposed into iSWAP
-            iswap_decomposed = []
-            for g in cz_decomposed:
-                # Need recursive function as gates.Unitary is not in iswap_dec
-                for g_translated in translate_gate(g, native_gates=native_gates):
-                    iswap_decomposed.append(g_translated)
-            return iswap_decomposed
-    else:  # pragma: no cover
-        raise_error(DecompositionError, "Use only CZ and/or iSWAP as native gates")
+
+        # First decompose into CZ
+        cz_decomposed = cz_dec(gate)
+        # Then CZ are decomposed into iSWAP
+        iswap_decomposed = []
+        for g in cz_decomposed:
+            # Need recursive function as gates.Unitary is not in iswap_dec
+            for g_translated in translate_gate(g, native_gates=native_gates):
+                iswap_decomposed.append(g_translated)
+        return iswap_decomposed
+
+    raise_error(
+        DecompositionError, "Use only CZ and/or iSWAP as native gates"
+    )  # pragma: no cover
