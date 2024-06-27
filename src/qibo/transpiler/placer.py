@@ -352,7 +352,7 @@ class Random(Placer):
 
             if cost == 0:
                 final_layout = dict(zip(dict_keys, list(mapping.values())))
-                return {key: value for key, value in sorted(final_layout.items())}
+                return dict(sorted(final_layout.items()))
 
             if cost < final_cost:
                 final_graph = graph
