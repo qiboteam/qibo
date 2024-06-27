@@ -50,10 +50,9 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
     nodes = (
         list(range(len(values))) if connectivity is None else list(connectivity.nodes)
     )
-    if isinstance(physical_qubits[0], str):
-        ref_keys = ["q" + str(i) for i in nodes]
-    else:
-        ref_keys = nodes
+    ref_keys = (
+        ["q" + str(i) for i in nodes] if isinstance(physical_qubits[0], str) else nodes
+    )
     if physical_qubits != ref_keys:
         raise_error(
             PlacementError,
