@@ -157,11 +157,13 @@ def translate_gate(
 
     decomposition_2q = _translate_two_qubit_gates(gate, native_gates)
     final_decomposition = []
-    for gate in decomposition_2q:
-        if len(gate.qubits) == 1:
-            final_decomposition += _translate_single_qubit_gates(gate, native_gates)
+    for decomposed_2q_gate in decomposition_2q:
+        if len(decomposed_2q_gate.qubits) == 1:
+            final_decomposition += _translate_single_qubit_gates(
+                decomposed_2q_gate, native_gates
+            )
         else:
-            final_decomposition.append(gate)
+            final_decomposition.append(decomposed_2q_gate)
     return final_decomposition
 
 

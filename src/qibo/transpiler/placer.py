@@ -47,7 +47,7 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
             qubits of the original connectivity graph. Defaults to ``None``.
     """
     values = sorted(layout.values())
-    physical_qubits = list(layout.keys())
+    physical_qubits = list(layout)
     nodes = (
         list(range(len(values))) if connectivity is None else list(connectivity.nodes)
     )
@@ -208,9 +208,9 @@ class Custom(Placer):
             qubits of the original connectivity graph. Defaults to ``None``.
     """
 
-    def __init__(self, map: Union[list, dict], connectivity: nx.Graph = None):
+    def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph = None):
         self.connectivity = connectivity
-        self.map = map
+        self.initial_map = initial_map
 
     def __call__(self, circuit=None):
         """Return the custom placement if it can be applied to the given circuit (if given).
@@ -221,24 +221,30 @@ class Custom(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        if isinstance(self.map, dict):
+        if isinstance(self.initial_map, dict):
             pass
-        elif isinstance(self.map, list):
+        elif isinstance(self.initial_map, list):
             if self.connectivity is not None:
-                self.map = dict(
-                    zip(["q" + str(i) for i in self.connectivity.nodes()], self.map)
+                self.initial_map = dict(
+                    zip(
+                        ["q" + str(i) for i in self.connectivity.nodes()],
+                        self.initial_map,
+                    )
                 )
             else:
-                self.map = dict(
-                    zip(["q" + str(i) for i in range(len(self.map))], self.map)
+                self.initial_map = dict(
+                    zip(
+                        ["q" + str(i) for i in range(len(self.initial_map))],
+                        self.initial_map,
+                    )
                 )
         else:
             raise_error(TypeError, "Use dict or list to define mapping.")
         if circuit is not None:
-            assert_placement(circuit, self.map, connectivity=self.connectivity)
+            assert_placement(circuit, self.initial_map, connectivity=self.connectivity)
         else:
-            assert_mapping_consistency(self.map, connectivity=self.connectivity)
-        return self.map
+            assert_mapping_consistency(self.initial_map, connectivity=self.connectivity)
+        return self.initial_map
 
 
 class Subgraph(Placer):
