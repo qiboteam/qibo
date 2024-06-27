@@ -772,11 +772,11 @@ class QuantumChannel(QuantumComb):
     It is important to specify `inverse=True` when constructing by `QuantumNetwork.from_nparray`.
 
     Args:
-        tensor (ndarray): the tensor representations of the quantum Comb.
-            partition (List[int] or Tuple[int]): partition of ``matrix``. If not provided and
-            `system_input` is `None`, assume the input is a quantum state, whose input is a trivial
-            system. If `system_input` is set to `True`, assume the input is an observable, whose
-            output is a trivial system.
+        tensor (ndarray): the tensor representations of the quantum comb.
+        partition (List[int] or Tuple[int], optional): partition of ``matrix``.
+            If not provided and `system_input` is `None`, assume the input is a quantum state,
+            whose input is a trivial system. If `system_input` is set to `True`,
+            assume the input is an observable, whose output is a trivial system.
         system_input (List[bool] or Tuple[bool], optional): mask on the input system of the
             Choi operator. If ``None`` the default is ``(True,False)``.
             Defaults to ``None``.
