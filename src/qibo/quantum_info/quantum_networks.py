@@ -164,18 +164,19 @@ class QuantumNetwork:
             backend=backend,
         )
 
-    def operator(self, backend=None, full=False):
+    def operator(self, full: bool = False, backend=None):
         """Returns the Choi operator of the quantum network.
+
         The shape of the returned operator is :math:`(*self.partition, *self.partition)`.
 
         Args:
+            full (bool, optional): If this is ``False``, and the network is pure, the method
+                will only return the eigenvector (unique when the network is pure).
+                If ``True``, returns the full tensor of the quantum network. Defaults to ``False``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
                 to return the Choi operator. If ``None``, defaults to the backend defined
                 when initializing the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`
                 object. Defaults to ``None``.
-            full (bool, optional): If this is ``False``, and the network is pure, the method
-                will only return the eigenvector (unique when the network is pure).
-                If ``True``, returns the full tensor of the quantum network. Defaults to ``False``.
 
         Returns:
             ndarray: Choi operator of the quantum network.
@@ -608,7 +609,7 @@ class QuantumNetwork:
                 + f"to partition {self.partition}",
             )
 
-    def full(self, backend=None, update=False):
+    def full(self, update=False, backend=None):
         """Convert the internal representation to the full tensor of the network.
 
         Returns:
