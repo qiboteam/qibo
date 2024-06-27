@@ -360,7 +360,7 @@ class Random(Placer):
                 final_cost = cost
 
         final_layout = dict(zip(dict_keys, list(final_mapping.values())))
-        return {key: value for key, value in sorted(final_layout.items())}
+        return dict(sorted(final_layout.items()))
 
     def _cost(self, graph: nx.Graph, gates_qubits_pairs: list):
         """
