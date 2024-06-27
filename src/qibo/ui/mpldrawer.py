@@ -4,8 +4,10 @@
 #
 import json
 from os import path
+
 import matplotlib
 import numpy as np
+
 from qibo import gates
 
 global STYLE
