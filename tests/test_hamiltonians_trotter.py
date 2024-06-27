@@ -152,7 +152,7 @@ def test_symbolic_hamiltonian_circuit_different_dts(backend):
     b = ham.circuit(0.1)
     matrix1 = ham.circuit(0.2).unitary(backend)
     matrix2 = (a + b).unitary(backend)
-    np.testing.assert_allclose(matrix1, matrix2)
+    backend.assert_allclose(matrix1, matrix2)
 
 
 def test_old_trotter_hamiltonian_errors():
