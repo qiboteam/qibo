@@ -146,11 +146,13 @@ def translate_gate(
     """
     if isinstance(gate, (gates.I, gates.Align)):
         return gate
-    elif isinstance(gate, gates.M):
+
+    if isinstance(gate, gates.M):
         gate.basis_gates = len(gate.basis_gates) * [gates.Z]
         gate.basis = []
         return gate
-    elif len(gate.qubits) == 1:
+
+    if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates)
 
     decomposition_2q = _translate_two_qubit_gates(gate, native_gates)

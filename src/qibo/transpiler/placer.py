@@ -1,9 +1,9 @@
-import random
 from typing import Optional, Union
 
 import networkx as nx
 
 from qibo import gates
+from qibo.backends import _check_backend_and_local_state
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
@@ -309,9 +309,12 @@ class Random(Placer):
         connectivity (:class:`networkx.Graph`): chip connectivity.
         samples (int, optional): number of initial random layouts tested.
             Defaults to :math:`100`.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
+            random numbers or a fixed seed to initialize a generator. If ``None``,
+            initializes a generator with a random seed. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity, samples: int = 100, seed=42):
+    def __init__(self, connectivity, samples: int = 100, seed=None):
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
@@ -325,7 +328,7 @@ class Random(Placer):
         Returns:
             (dict): physical-to-logical qubit mapping.
         """
-        random.seed(self.seed)
+        _, local_state = _check_backend_and_local_state(self.seed, backend=None)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
@@ -335,7 +338,9 @@ class Random(Placer):
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
         final_cost = self._cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
-            mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
+            mapping = dict(
+                zip(keys, local_state.choice(range(nodes), nodes, replace=False))
+            )
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)
 
