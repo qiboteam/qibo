@@ -182,9 +182,7 @@ class CircuitMap:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
         # Order the initial layout based on the hardware qubit names
         # to avoid problems in custom layouts
-        self.initial_layout = {
-            key: value for key, value in sorted(initial_layout.items())
-        }
+        self.initial_layout = dict(sorted(initial_layout.items()))
         self._graph_qubits_names = [int(key[1:]) for key in self.initial_layout.keys()]
         self._circuit_logical = list(range(len(self.initial_layout)))
         self._physical_logical = list(self.initial_layout.values())
