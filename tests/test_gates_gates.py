@@ -1540,7 +1540,7 @@ def test_controlled_fsim(backend):
     gatelist.append(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
     final_state = apply_gates(backend, gatelist, 6)
 
-    target_state = np.ones_like(final_state) / np.sqrt(2**6)
+    target_state = np.ones(len(final_state), dtype=complex) / np.sqrt(2**6)
     rotation = np.array(
         [[np.cos(theta), -1j * np.sin(theta)], [-1j * np.sin(theta), np.cos(theta)]]
     )
@@ -1551,6 +1551,7 @@ def test_controlled_fsim(backend):
     target_state[ids] = np.matmul(matrix, target_state[ids])
     ids = [58, 59, 62, 63]
     target_state[ids] = np.matmul(matrix, target_state[ids])
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
