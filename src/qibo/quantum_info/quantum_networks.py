@@ -1033,13 +1033,13 @@ def link_product(
 
 
 class IdentityChannel(QuantumChannel):
-    """The identity channel with the given dimension.
+    """The Identity channel with the given dimension.
 
     Args:
-        dim (int): Dimension of the identity operator.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used
-            to return the identity operator. If ``None``, defaults to the backend defined
-            when initializing the :class:`qibo.quant
+        dim (int): Dimension of the Identity operator.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
 
     def __init__(self, dim: int, backend=None):
@@ -1050,10 +1050,10 @@ class IdentityChannel(QuantumChannel):
 
 
 class TraceOperation(QuantumNetwork):
-    """The trace operator with the given dimension.
+    """The Trace operator with the given dimension.
 
     Args:
-        dim (int): Dimension of the trace operator.
+        dim (int): Dimension of the Trace operator.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
             calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
