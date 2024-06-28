@@ -424,7 +424,9 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
             import torch  # pylint: disable=C0415
 
             phases = [
-                math.atan2(torch.linalg.norm(data[k + 1 :]), data[k])
+                math.atan2(
+                    torch.linalg.norm(data[k + 1 :]), data[k]
+                )  # pylint: disable=E1102
                 for k in range(len(data) - 2)
             ]
         else:
