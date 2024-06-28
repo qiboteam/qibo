@@ -187,10 +187,7 @@ class QuantumNetwork:
         if self.is_pure() and not full:
             return backend.cast(self._tensor, dtype=self._tensor.dtype)
 
-        if self.is_pure():
-            tensor = self.full(backend)
-        else:
-            tensor = self._tensor
+        tensor = self.full(backend) if self.is_pure() else self._tensor
 
         n = len(self.partition)
         order = self._order_tensor2operator(n)

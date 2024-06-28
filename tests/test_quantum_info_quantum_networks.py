@@ -96,11 +96,11 @@ def test_errors(backend):
 
     # Multiplying QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
-        network @ network.operator(backend)
+        network @ network.operator(backend=backend)
 
     # Linking QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
-        network.link_product(network.operator(backend))
+        network.link_product(network.operator(backend=backend))
 
     with pytest.raises(TypeError):
         network.link_product(network, subscripts=True)
@@ -175,36 +175,40 @@ def test_operational_logic(backend):
 
     # Sum with itself has to match multiplying by int
     backend.assert_allclose(
-        (network + network).operator(backend), (2 * network).operator(backend)
+        (network + network).operator(backend=backend),
+        (2 * network).operator(backend=backend),
     )
     backend.assert_allclose(
-        (network_state_pure + network_state_pure).operator(backend),
-        (2 * network_state_pure).operator(backend, full=True),
+        (network_state_pure + network_state_pure).operator(backend=backend),
+        (2 * network_state_pure).operator(full=True, backend=backend),
     )
 
     # Sum with itself has to match multiplying by float
     backend.assert_allclose(
-        (network + network).operator(backend), (2.0 * network).operator(backend)
+        (network + network).operator(backend=backend),
+        (2.0 * network).operator(backend=backend),
     )
     backend.assert_allclose(
-        (network_state_pure + network_state_pure).operator(backend),
-        (2.0 * network_state_pure).operator(backend, full=True),
+        (network_state_pure + network_state_pure).operator(backend=backend),
+        (2.0 * network_state_pure).operator(full=True, backend=backend),
     )
 
     # Multiplying and dividing by same scalar has to bring back to original network
     backend.assert_allclose(
-        ((2.0 * network) / 2).operator(backend), network.operator(backend)
+        ((2.0 * network) / 2).operator(backend=backend),
+        network.operator(backend=backend),
     )
 
     unitary = random_unitary(dims, backend=backend)
     network_unitary = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
     backend.assert_allclose(
-        (network_unitary / 2).operator(backend), unitary / np.sqrt(2), atol=1e-5
+        (network_unitary / 2).operator(backend=backend), unitary / np.sqrt(2), atol=1e-5
     )
 
     # Complex conjugate of a network has to match the complex conjugate of the operator
     backend.assert_allclose(
-        network.conj().operator(backend), backend.np.conj(network.operator(backend))
+        network.conj().operator(backend=backend),
+        backend.np.conj(network.operator(backend=backend)),
     )
 
 
@@ -379,7 +383,9 @@ def test_with_comb(backend):
         channel, channel_partition, system_input=channel_sys_in, backend=backend
     )
 
-    test = comb_choi.link_product(subscript, channel_choi).full(backend, update=True)
+    test = comb_choi.link_product(subscript, channel_choi).full(
+        update=True, backend=backend
+    )
     channel_choi2 = comb_choi @ channel_choi
 
     backend.assert_allclose(test, channel_choi2.full(backend), atol=1e-5)
