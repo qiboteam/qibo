@@ -6,6 +6,7 @@ import numpy as np
 from scipy.linalg import fractional_matrix_power
 
 from qibo.backends import _check_backend
+from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
 
@@ -68,7 +69,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = backend.np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
-    return complex(backend.to_numpy(shan_entropy)).real
+    return np.real(backend.to_numpy(shan_entropy))
 
 
 def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
@@ -455,17 +456,27 @@ def von_neumann_entropy(
         return 0.0
 
     if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
-        eigenvalues = np.linalg.eigvalsh(backend.to_numpy(state))
+        eigenvalues = (
+            backend.np.linalg.eigvalsh(state)
+            if isinstance(backend, PyTorchBackend)
+            else np.linalg.eigvalsh(state)
+        )
     else:
-        eigenvalues = np.linalg.eigvals(backend.to_numpy(state))
+        eigenvalues = (
+            backend.np.linalg.eigvals(state)
+            if isinstance(backend, PyTorchBackend)
+            else np.linalg.eigvals(state)
+        )
 
-    log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues) / np.log2(base), 0.0)
+    log_prob = backend.np.where(
+        backend.np.abs(eigenvalues) > 0.0,
+        backend.np.log2(eigenvalues) / np.log2(base),
+        0.0,
+    )
 
-    ent = -np.sum(eigenvalues * log_prob)
+    ent = -backend.np.sum(eigenvalues * log_prob)
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    ent = np.abs(ent) if ent == 0.0 else ent
-
-    ent = float(ent)
+    ent = backend.np.abs(ent) if ent == 0.0 else backend.np.real(ent)
 
     if return_spectrum:
         log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
