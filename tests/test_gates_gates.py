@@ -1546,21 +1546,22 @@ def test_controlled_fsim(backend):
 
 
 def test_controlled_unitary(backend):
-    matrix = np.random.random((2, 2))
-    # matrix = backend.cast(matrix)
+    matrix = random_unitary(2**1, backend=backend)
     gatelist = [gates.H(0), gates.H(1), gates.Unitary(matrix, 1).controlled_by(0)]
     final_state = apply_gates(backend, gatelist, 2)
-    target_state = np.ones_like(final_state) / 2.0
-    target_state[2:] = np.matmul(matrix, target_state[2:])
+    target_state = np.ones(len(final_state), dtype=complex) / 2.0
+    target_state[2:] = np.matmul(backend.to_numpy(matrix), target_state[2:])
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    matrix = np.random.random((4, 4))
+    matrix = random_unitary(2**2, backend=backend)
     gatelist = [gates.H(i) for i in range(4)]
     gatelist.append(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
     final_state = apply_gates(backend, gatelist, 4)
-    target_state = np.ones_like(final_state) / 4.0
+    target_state = np.ones(len(final_state), dtype=complex) / 4.0
     ids = [10, 11, 14, 15]
-    target_state[ids] = np.matmul(matrix, target_state[ids])
+    target_state[ids] = np.matmul(backend.to_numpy(matrix), target_state[ids])
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
