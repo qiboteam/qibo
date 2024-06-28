@@ -235,7 +235,7 @@ def GST(
 
     backend = _check_backend(backend)
 
-    if backend.name == "qibolab" and transpiler is None:
+    if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
         transpiler = Passes(
             connectivity=backend.platform.topology,
             passes=[
