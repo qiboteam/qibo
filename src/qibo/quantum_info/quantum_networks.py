@@ -214,7 +214,7 @@ class QuantumNetwork:
         Returns:
             ndarray: Choi operator of the quantum network.
         """
-        return self.operator(backend, full=True).reshape((self.dims, self.dims))
+        return self.operator(full=True, backend=backend).reshape((self.dims, self.dims))
 
     def is_pure(self):
         """Returns bool indicading if the Choi operator of the network is pure."""
