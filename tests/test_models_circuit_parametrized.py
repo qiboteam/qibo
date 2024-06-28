@@ -5,7 +5,6 @@ import sys
 import numpy as np
 import pytest
 
-import qibo
 from qibo import Circuit, gates
 
 

@@ -2542,9 +2542,9 @@ class Unitary(ParametrizedGate):
             import torch  # pylint: disable=C0145
 
             reshape_function = torch.reshape
+            x = x[0]
         else:
             reshape_function = np.reshape
-        x = x[0]
         self._parameters = (reshape_function(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
