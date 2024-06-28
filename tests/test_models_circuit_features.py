@@ -58,6 +58,28 @@ def test_circuit_unitary_and_inverse_with_noise_channel(backend):
         circuit.invert()
 
 
+def test_circuit_unitary_non_trivial(backend):
+    target = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+        ],
+        dtype=complex,
+    )
+    target = backend.cast(target, dtype=target.dtype)
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.SWAP(0, 2).controlled_by(1))
+    unitary = circuit.unitary(backend)
+    backend.assert_allclose(unitary, target)
+
+
 @pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""

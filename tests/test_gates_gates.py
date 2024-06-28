@@ -518,8 +518,7 @@ def test_cnot(backend, applyx):
 
 @pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
-@pytest.mark.parametrize("controlled_by", [False, True])
-def test_cy(backend, controlled_by, seed_state, seed_observable):
+def test_cy(backend, seed_state, seed_observable):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     matrix = np.array(
@@ -541,14 +540,9 @@ def test_cy(backend, controlled_by, seed_state, seed_observable):
         initial_state=initial_state,
     )
 
-    if controlled_by:
-        gate = gates.Y(1).controlled_by(0)
-    else:
-        gate = gates.CY(0, 1)
+    gate = gates.CY(0, 1)
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
-
-    assert gate.name == "cy"
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -564,15 +558,15 @@ def test_cy(backend, controlled_by, seed_state, seed_observable):
         atol=1e-6,
     )
 
-    assert gates.CY(0, 1).qasm_label == "cy"
-    assert gates.CY(0, 1).clifford
-    assert gates.CY(0, 1).unitary
+    assert gate.name == "cy"
+    assert gate.qasm_label == "cy"
+    assert gate.clifford
+    assert gate.unitary
 
 
 @pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
-@pytest.mark.parametrize("controlled_by", [False, True])
-def test_cz(backend, controlled_by, seed_state, seed_observable):
+def test_cz(backend, seed_state, seed_observable):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     matrix = np.eye(4)
@@ -588,14 +582,9 @@ def test_cz(backend, controlled_by, seed_state, seed_observable):
         initial_state=initial_state,
     )
 
-    if controlled_by:
-        gate = gates.Z(1).controlled_by(0)
-    else:
-        gate = gates.CZ(0, 1)
+    gate = gates.CZ(0, 1)
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
-
-    assert gate.name == "cz"
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -611,9 +600,10 @@ def test_cz(backend, controlled_by, seed_state, seed_observable):
         atol=1e-6,
     )
 
-    assert gates.CZ(0, 1).qasm_label == "cz"
-    assert gates.CZ(0, 1).clifford
-    assert gates.CZ(0, 1).unitary
+    assert gate.name == "cz"
+    assert gate.qasm_label == "cz"
+    assert gate.clifford
+    assert gate.unitary
 
 
 def test_csx(backend):
@@ -1571,23 +1561,6 @@ def test_controlled_unitary(backend):
     target_state = np.ones_like(final_state) / 4.0
     ids = [10, 11, 14, 15]
     target_state[ids] = np.matmul(matrix, target_state[ids])
-    backend.assert_allclose(final_state, target_state, atol=1e-6)
-
-
-def test_controlled_unitary_matrix(backend):
-    nqubits = 2
-    initial_state = random_statevector(2**nqubits, backend=backend)
-
-    matrix = np.random.random((2, 2))
-    gate = gates.Unitary(matrix, 1).controlled_by(0)
-
-    target_state = apply_gates(backend, [gate], nqubits, initial_state)
-
-    u = backend.control_matrix(gate)
-    u = backend.cast(u, dtype=u.dtype)
-
-    final_state = backend.np.matmul(u, initial_state)
-
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
