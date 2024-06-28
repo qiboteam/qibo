@@ -152,7 +152,7 @@ def test_star_circuit():
 
 
 def test_star_circuit_custom_map():
-    placer = Custom(map=[1, 0, 2, 3, 4], connectivity=star_connectivity())
+    placer = Custom(initial_map=[1, 0, 2, 3, 4], connectivity=star_connectivity())
     initial_layout = placer()
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
