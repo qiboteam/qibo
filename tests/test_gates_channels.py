@@ -20,7 +20,7 @@ def test_general_channel(backend):
         * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     )
     initial_state = random_density_matrix(2**2, backend=backend)
-    m_1 = backend.np.kron(backend.np.eye(2), a_1)
+    m_1 = backend.np.kron(backend.identity_density_matrix(1, normalize=False), a_1)
     m_1 = backend.cast(m_1, dtype=m_1.dtype)
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
     target_state = backend.np.matmul(
@@ -154,7 +154,7 @@ def test_unitary_channel(backend):
         channel, backend.np.copy(initial_state), 4
     )
 
-    eye = backend.np.eye(2)
+    eye = backend.identity_density_matrix(1, normalize=False)
     ma_1 = backend.np.kron(backend.np.kron(a_1, eye), backend.np.kron(eye, eye))
     ma_2 = backend.np.kron(backend.np.kron(eye, eye), a_2)
     ma_1 = backend.cast(ma_1, dtype=ma_1.dtype)
