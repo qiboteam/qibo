@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 from scipy import sparse
+from scipy.linalg import block_diag
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -114,17 +115,17 @@ class NumpyBackend(Backend):
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        matrix = getattr(self.matrices, name)
+        _matrix = getattr(self.matrices, name)
         if name == "GeneralizedRBS":
-            matrix = matrix(
+            _matrix = _matrix(
                 qubits_in=gate.init_args[0],
                 qubits_out=gate.init_args[1],
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
         else:
-            matrix = matrix(*gate.parameters)
-        return self.cast(matrix, dtype=matrix.dtype)
+            _matrix = _matrix(*gate.parameters)
+        return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
@@ -135,6 +136,13 @@ class NumpyBackend(Backend):
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
             gmatrix = self.to_numpy(gate.matrix(self))
+            # add controls if controls were instantiated using
+            # the ``Gate.controlled_by`` method
+            num_controls = len(gate.control_qubits)
+            if num_controls > 0:
+                gmatrix = block_diag(
+                    np.eye(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
+                )
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)))
@@ -155,30 +163,6 @@ class NumpyBackend(Backend):
             matrix = sparse.csr_matrix(gmatrix).dot(matrix)
 
         return self.cast(matrix.toarray())
-
-    def control_matrix(self, gate):
-        if len(gate.control_qubits) > 1:
-            raise_error(
-                NotImplementedError,
-                "Cannot calculate controlled "
-                "unitary for more than two "
-                "control qubits.",
-            )
-        matrix = gate.matrix(self)
-        shape = matrix.shape
-        if shape != (2, 2):
-            raise_error(
-                ValueError,
-                "Cannot use ``control_unitary`` method on "
-                + f"gate matrix of shape {shape}.",
-            )
-        zeros = self.np.zeros((2, 2), dtype=self.dtype)
-        zeros = self.cast(zeros, dtype=zeros.dtype)
-        identity = self.np.eye(2, dtype=self.dtype)
-        identity = self.cast(identity, dtype=identity.dtype)
-        part1 = self.np.concatenate([identity, zeros], axis=0)
-        part2 = self.np.concatenate([zeros, matrix], axis=0)
-        return self.np.concatenate([part1, part2], axis=1)
 
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
