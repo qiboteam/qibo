@@ -40,10 +40,14 @@ def star_circuit():
     return circuit
 
 
-def test_assert_placement_true():
-    layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
+@pytest.mark.parametrize("connectivity", [star_connectivity(), None])
+@pytest.mark.parametrize(
+    "layout",
+    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
+)
+def test_assert_placement_true(layout, connectivity):
     circuit = Circuit(5)
-    assert_placement(circuit, layout)
+    assert_placement(circuit, layout, connectivity=connectivity)
 
 
 @pytest.mark.parametrize("qubits", [5, 3])
@@ -56,8 +60,11 @@ def test_assert_placement_false(qubits, layout):
         assert_placement(circuit, layout)
 
 
-def test_mapping_consistency():
-    layout = {"q0": 0, "q1": 2, "q2": 1, "q3": 4, "q4": 3}
+@pytest.mark.parametrize(
+    "layout",
+    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
+)
+def test_mapping_consistency(layout):
     assert_mapping_consistency(layout)
 
 
@@ -153,7 +160,7 @@ def test_custom(custom_layout, give_circuit, give_connectivity):
         connectivity = star_connectivity()
     else:
         connectivity = None
-    placer = Custom(connectivity=connectivity, map=custom_layout)
+    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
     layout = placer(circuit)
     assert layout == {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}
 
@@ -163,7 +170,7 @@ def test_custom_restricted(custom_layout):
     circuit = Circuit(2)
     connectivity = star_connectivity()
     restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
-    placer = Custom(connectivity=restricted_connectivity, map=custom_layout)
+    placer = Custom(connectivity=restricted_connectivity, initial_map=custom_layout)
     layout = placer(circuit)
     assert layout == {"q0": 1, "q2": 0}
     assert_placement(
@@ -175,7 +182,7 @@ def test_custom_error_circuit():
     circuit = Circuit(3)
     custom_layout = [4, 3, 2, 1, 0]
     connectivity = star_connectivity()
-    placer = Custom(connectivity=connectivity, map=custom_layout)
+    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
     with pytest.raises(PlacementError):
         layout = placer(circuit)
 
@@ -183,7 +190,7 @@ def test_custom_error_circuit():
 def test_custom_error_no_circuit():
     connectivity = star_connectivity()
     custom_layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
-    placer = Custom(connectivity=connectivity, map=custom_layout)
+    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
     with pytest.raises(PlacementError):
         layout = placer()
 
@@ -192,7 +199,7 @@ def test_custom_error_type():
     circuit = Circuit(5)
     connectivity = star_connectivity()
     layout = 1
-    placer = Custom(connectivity=connectivity, map=layout)
+    placer = Custom(connectivity=connectivity, initial_map=layout)
     with pytest.raises(TypeError):
         layout = placer(circuit)
 
