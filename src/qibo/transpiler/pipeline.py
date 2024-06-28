@@ -225,7 +225,7 @@ class Passes:
         physical (keys) to logical (values) qubit. If `int_qubit_name` is `True`
         each key `i` correspond to the `i-th` qubit in the graph.
         """
-        self.initial_layout = None
+        final_layout = self.initial_layout = None
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
@@ -259,8 +259,7 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
-        # TODO: use directly integers keys
-        if self.int_qubit_names:
+        if self.int_qubit_names and final_layout is not None:
             final_layout = {int(key[1:]): value for key, value in final_layout.items()}
         return circuit, final_layout
 
