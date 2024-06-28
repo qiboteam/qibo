@@ -1912,6 +1912,24 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Linear Algebra Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Collection of linear algebra operations that are commonly used in quantum information theory.
+
+
+Commutator
+""""""""""
+
+.. autofunction:: qibo.quantum_info.commutator
+
+
+Anticommutator
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.anticommutator
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
