@@ -140,37 +140,6 @@ def _measurement_basis(j, nqubits):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-# this is not needed anymore
-def _expectation_value(nqubits, circuit, j, nshots=int(1e4), backend=None):
-    """Executes a circuit used in gate set tomography and processes the
-        measurement outcomes for the Pauli Transfer Matrix notation. The circuit
-        should already have noise models implemented, if any, prior to using this
-        function.
-
-        The function returns the expectation value given by either
-        :math:`\\text{tr}(M_j rho_k)` or :math:`\\Tr(M_j O_l rho_k)`,
-        where :math:`k` is the index of the state prepared by ``circuit``, :math:`j` is the index
-        of the measurement basis, and :math:`O_l` is the :math:`i`-th gate of
-        the circuit.
-
-    Args:
-        circuit (:class:`qibo.models.Circuit`): The Qibo circuit realizing the k-th state to measure the observable on.
-        j (int): The index of the measurement basis and observable.
-        nshots (int, optional): Number of shots to execute the circuit with.
-    Returns:
-        float: Expectation value.
-    """
-
-    if j == 0:
-        return 1.0
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    result = backend.execute_circuit(circuit, nshots=nshots)
-    observable = _get_observable(j, nqubits)
-    return result.expectation_from_samples(observable)
-
-
 def _gate_tomography(
     nqubits,
     gate=None,

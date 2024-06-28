@@ -6,13 +6,12 @@ import pytest
 from sympy import S
 
 import qibo
-from qibo import Circuit, gates, symbols
+from qibo import gates
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
-    _expectation_value,
     _gate_tomography,
     _get_observable,
     _measurement_basis,
