@@ -1063,7 +1063,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         backend = GlobalBackend()
     elif backend.name == "qibolab":  # pragma: no cover
         backend.transpiler.passes[1] = Custom(
-            map=qubit_map, connectivity=backend.platform.topology
+            initial_map=qubit_map, connectivity=backend.platform.topology
         )
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
