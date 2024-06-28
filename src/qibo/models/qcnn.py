@@ -85,7 +85,7 @@ class QuantumCNN:
             else:
                 self.copy_init_state = False
 
-        if self.twoqubitansatz == None:
+        if self.twoqubitansatz is None:
             self.nparams_conv = 15
         else:
             self.nparams_conv = len(self.twoqubitansatz.get_parameters())
@@ -382,7 +382,7 @@ class QuantumCNN:
         Returns:
             float with the proportion of states classified successfully.
         """
-        if sign == True:
+        if sign:
             labels = [np.sign(label) for label in labels]
             predictions = [np.sign(prediction) for prediction in predictions]
 

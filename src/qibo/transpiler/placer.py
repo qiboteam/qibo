@@ -274,7 +274,7 @@ class Subgraph(Placer):
         )
         i = 0
         circuit_subgraph.add_edge(gates_qubits_pairs[i][0], gates_qubits_pairs[i][1])
-        while matcher.subgraph_is_monomorphic() == True:
+        while matcher.subgraph_is_monomorphic():
             result = matcher
             i += 1
             circuit_subgraph.add_edge(
