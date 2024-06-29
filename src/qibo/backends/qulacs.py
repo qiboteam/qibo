@@ -64,9 +64,9 @@ class QulacsBackend(NumpyBackend):
             )
         circ = circuit_to_qulacs(circuit)
         state = (
-            self.qulacs.DensityMatrix(circuit.nqubits)  # pylint: disable=no-member
+            qulacs.DensityMatrix(circuit.nqubits)  # pylint: disable=no-member
             if circuit.density_matrix
-            else self.qulacs.QuantumState(circuit.nqubits)  # pylint: disable=no-member
+            else qulacs.QuantumState(circuit.nqubits)  # pylint: disable=no-member
         )
         sim = QuantumCircuitSimulator(circ, state)
         sim.simulate()
