@@ -37,7 +37,6 @@ class QulacsBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
 
-        self.qulacs = qulacs
         self.name = "qulacs"
         self.versions = {"qibo": __version__, "qulacs": qulacs.__version__}
         self.device = "CPU"
