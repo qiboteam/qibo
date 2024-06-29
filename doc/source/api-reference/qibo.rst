@@ -1008,6 +1008,22 @@ U1q
     - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
+IQM native gates
+^^^^^^^^^^^^^^^^
+
+Phase-:math:`RX`
+""""""""""""""""
+
+.. autoclass:: qibo.gates.PRX
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other IQM two-qubit native gate is implemented in Qibo as:
+
+    - Controlled-:math:`Z` rotation: :class:`qibo.gates.CZ`
+
+
 _______________________
 
 
@@ -1894,6 +1910,24 @@ Frame Potential
 """""""""""""""
 
 .. autofunction:: qibo.quantum_info.frame_potential
+
+
+Linear Algebra Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Collection of linear algebra operations that are commonly used in quantum information theory.
+
+
+Commutator
+""""""""""
+
+.. autofunction:: qibo.quantum_info.commutator
+
+
+Anticommutator
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.anticommutator
 
 
 Quantum Networks
