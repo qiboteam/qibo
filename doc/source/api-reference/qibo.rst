@@ -2365,6 +2365,71 @@ Parameterized quantum circuit integral
 .. autofunction:: qibo.quantum_info.pqc_integral
 
 
+.. _GST:
+
+Gate Set Tomography
+-------------------
+
+Gate Set Tomography (GST) is a powerful technique employed in quantum information processing to characterize the behavior of quantum gates on quantum hardware [1, 2, 3]. The primary objective of GST is to provide a robust framework for obtaining a representation of quantum gates within a predefined gate set when subjected to noise inherent to the quantum hardware.
+
+By characterizing the impact of noise on quantum gates, GST enables the identification and quantification of errors, laying the groundwork for subsequent error mitigation strategies. The insights gained from GST are instrumental, for instance, in setting up the necessary parameters for Probabilistic Error Cancellation (PEC).
+
+In practice, given a set of operators (or gates), :math:`\mathcal{O}=\{O_0, O_1, \dots, O_n\}`, a set of initial states :math:`\{\rho_k\}`, and a set of measurement bases :math:`\{M_j\}`, one performs GST on the :math:`l`-th operator by choosing an initial state :math:`\rho_k`, applying the gate :math:`O_l \in \mathcal{O}`, measuring in the :math:`M_j` basis in order to obtain the following matrix:
+
+.. math::
+   \{\tilde{O}_l\}_{jk} = \text{tr}(M_j\,O_l\,\rho_k)
+
+which provides an estimated representation of the operator :math:`O_l` in the specific system.
+
+This implementation makes use, in particular, of :math:`\rho_k \in \{ |0\rangle\langle0|, |1\rangle\langle1|, |+\rangle\langle +|, |y+\rangle\langle y+| \}^{\otimes n}` and :math:`M_j \in \{ I, X, Y, Z\}^{\otimes n}` [4] with :math:`n\in\{1,2\}` being the number of qubits.
+
+Note, however, that :math:`\{\tilde{O}_l\}_{jk}` is not yet given in the Pauli-Liouville representation, more commonly known as the Pauli Transfer Matrix notation. To obtain the Pauli-Liouville representation, one needs the two matrices, :math:`\{\tilde{g}\}_{jk}` and :math:`T`, where
+
+.. math::
+   \tilde{g}_{jk} = \text{tr}(M_j\,\rho_k)
+
+which is essentially obtained by measuring the initial states :math:`\{\rho_k\}` in each basis :math:`\{M_j\}` without any gates' application, and
+
+.. math::
+    T = \begin{pmatrix} 1 & 1 & 1 & 1 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 1 & -1 & 0 & 0 \end{pmatrix}
+
+that is the matrix, in a common gauge, implementing the change of basis.
+
+Therefore, the Pauli-Liouville representation can be recovered as
+
+.. math::
+    O_l^{PL} = T\,g^{-1}\,\tilde{O_l}\,T^{-1}
+
+References:
+
+[1] Blume-Kohout, Robin, et al. "Robust, self-consistent, closed-form tomography of quantum logic gates on a trapped ion qubit." arXiv preprint arXiv:1310.4492 (2013).
+
+[2] Greenbaum, Daniel. "Introduction to quantum gate set tomography." arXiv preprint arXiv:1509.02921 (2015).
+
+[3] Nielsen, Erik, et al. "Gate set tomography." Quantum 5 (2021): 557.
+
+[4] Endo, Suguru, Simon C. Benjamin, and Ying Li. "Practical quantum error mitigation for near-future applications." Physical Review X 8.3 (2018): 031027.
+
+.. autofunction:: qibo.tomography.gate_set_tomography.GST
+
+.. autofunction:: qibo.tomography.gate_set_tomography._gate_tomography
+
+.. autofunction:: qibo.tomography.gate_set_tomography._expectation_value
+
+.. autofunction:: qibo.tomography.gate_set_tomography._measurement_basis
+
+.. autofunction:: qibo.tomography.gate_set_tomography._prepare_state
+
+.. autofunction:: qibo.tomography.gate_set_tomography._get_observable
+
+.. autofunction:: qibo.tomography.gate_set_tomography._measurements
+
+.. autofunction:: qibo.tomography.gate_set_tomography._gates
+
+.. autofunction:: qibo.tomography.gate_set_tomography._observables
+
+
+
 .. _Parallel:
 
 Parallelism
@@ -2506,11 +2571,9 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
     circuit = random_clifford(nqubits)
     result = Clifford.from_circuit(circuit)
 
-
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
-
 
 Cloud Backends
 ^^^^^^^^^^^^^^
