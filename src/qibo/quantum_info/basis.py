@@ -100,7 +100,7 @@ def pauli_basis(
     else:
         basis_full = basis_single
 
-    basis_full = backend.cast(basis_full)
+    basis_full = backend.cast(basis_full, dtype=basis_full[0].dtype)
 
     if vectorize and sparse:
         basis, indexes = [], []
@@ -116,19 +116,19 @@ def pauli_basis(
             del row
     elif vectorize and not sparse:
         basis = [
-            vectorization(backend.cast(matrix), order=order, backend=backend)
+            vectorization(backend.cast(matrix, dtype=matrix.dtype), order=order, backend=backend)
             for matrix in basis_full
         ]
     else:
         basis = basis_full
 
-    basis = backend.cast(basis)
+    basis = backend.cast(basis, dtype=basis[0].dtype)
 
     if normalize:
         basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = backend.cast(indexes)
+        indexes = backend.cast(indexes, dtype=indexes[0][0].dtype)
 
         return basis, indexes
 
@@ -278,7 +278,11 @@ def pauli_to_comp_basis(
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = list(np.flatnonzero(backend.to_numpy(row)))
+            index_list = (
+                backend.np.nonzero(row).flatten()
+                if isinstance(backend, PyTorchBackend)
+                else list(np.flatnonzero(row))
+            )
             indexes.append(index_list)
             elements.append(row[index_list])
 
