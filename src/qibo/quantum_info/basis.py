@@ -106,7 +106,11 @@ def pauli_basis(
         basis, indexes = [], []
         for row in basis_full:
             row = vectorization(row, order=order, backend=backend)
-            row_indexes = list(np.flatnonzero(backend.to_numpy(row)))
+            row_indexes = (
+                backend.np.nonzero(row).flatten()
+                if isinstance(backend, PyTorchBackend)
+                else list(np.flatnonzero(row))
+            )
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
