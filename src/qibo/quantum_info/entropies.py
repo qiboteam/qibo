@@ -462,14 +462,10 @@ def von_neumann_entropy(
             else np.linalg.eigvalsh(state)
         )
     else:
-        eigenvalues = (
-            backend.np.linalg.eigvals(state)
-            if isinstance(backend, PyTorchBackend)
-            else np.linalg.eigvals(state)
-        )
+        eigenvalues = backend.calculate_eigenvalues(state)
 
     log_prob = backend.np.where(
-        backend.np.abs(eigenvalues) > 0.0,
+        backend.np.real(eigenvalues) > 0.0,
         backend.np.log2(eigenvalues) / np.log2(base),
         0.0,
     )

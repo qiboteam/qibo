@@ -108,7 +108,7 @@ def pauli_basis(
             row = vectorization(row, order=order, backend=backend)
             row_indexes = (
                 backend.np.nonzero(row).flatten()
-                if isinstance(backend, PyTorchBackend)
+                if backend.__class__.__name__ == "PyTorchBackend"
                 else list(np.flatnonzero(row))
             )
             indexes.append(row_indexes)
@@ -282,7 +282,7 @@ def pauli_to_comp_basis(
         for row in unitary:
             index_list = (
                 backend.np.nonzero(row).flatten()
-                if isinstance(backend, PyTorchBackend)
+                if backend.__class__.__name__ == "PyTorchBackend"
                 else list(np.flatnonzero(row))
             )
             indexes.append(index_list)

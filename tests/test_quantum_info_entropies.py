@@ -754,5 +754,4 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
         check_hermitian=check_hermitian,
         backend=backend,
     )
-
     backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
