@@ -944,6 +944,15 @@ Deutsch
     :members:
     :member-order: bysource
 
+
+Generalized Reconfigurable Beam Splitter (RBS)
+""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.GeneralizedRBS
+    :members:
+    :member-order: bysource
+
+
 Arbitrary unitary
 """""""""""""""""
 
