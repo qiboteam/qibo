@@ -211,7 +211,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
     for ci in control_indices:
         x = gate_grid[i]
         y = wire_grid[ci]
-        if name in ["SWAP"]:
+        if name == "SWAP":
             _swapx(ax, x, y, plot_params)
         elif name in [
             "ISWAP",
@@ -246,9 +246,9 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         return
     if name in ["CNOT", "TOFFOLI"]:
         _oplus(ax, x, y, plot_params)
-    elif name in ["CPHASE"]:
+    elif name == "CPHASE":
         _cdot(ax, x, y, plot_params)
-    elif name in ["SWAP"]:
+    elif name == "SWAP":
         _swapx(ax, x, y, plot_params)
     else:
         if name == "ALIGN":
@@ -431,7 +431,7 @@ def _make_cluster_gates(gates_items):
 
     for item in gates_items:
         if len(item) == 2:  # single qubit gates
-            if "MEASURE" in item[0]:
+            if item[0] == "MEASURE":
                 temp_mgates.append(item)
             else:
                 if len(temp_gates) > 0:
@@ -529,15 +529,6 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
             if init_label == "CX":
                 init_label = "CNOT"
 
-            if init_label == "Y":
-                init_label = "GATEY"
-
-            if init_label == "CY":
-                init_label = "GATECY"
-
-            if init_label == "RY":
-                init_label = "GATERY"
-
             if init_label in ["SX", "CSX"]:
                 init_label = r"$\rm\sqrt{X}$"
 
@@ -560,7 +551,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
                     item = (init_label,)
                     item += ("q_" + str(qbit),)
                     gates_plot.append(item)
-            elif init_label in "ENTANGLEMENTENTROPY":
+            elif init_label == "ENTANGLEMENTENTROPY":
                 for qbit in list(range(circuit.nqubits)):
                     item = (init_label,)
                     item += ("q_" + str(qbit),)
