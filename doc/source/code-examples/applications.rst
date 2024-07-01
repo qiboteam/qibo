@@ -157,7 +157,7 @@ Diagonalization
 .. toctree::
     :maxdepth: 1
 
-    tutorials/dbi/dbi.ipynb
+    tutorials/dbi/dbi_tutorial_basic_intro.ipynb
 
 FALQON
 ^^^^^^
