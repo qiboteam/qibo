@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 import qibo
-from qibo import gates
+from qibo import gates, set_backend
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
@@ -13,6 +13,7 @@ angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
 def test_classifier_circuit2():
     """ """
+    set_backend("numpy")
     nqubits = 2
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
@@ -77,6 +78,7 @@ def get_real_vector2():
 
 def test_classifier_circuit4():
     """ """
+    set_backend("numpy")
     nqubits = 4
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
@@ -277,6 +279,8 @@ def test_1_qubit_classifier_circuit_error():
 
 def test_qcnn_training():
     import random
+
+    set_backend("numpy")
 
     # generate 2 random states and labels for pytest
     data = np.zeros([2, 16])

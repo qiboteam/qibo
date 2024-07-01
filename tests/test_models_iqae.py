@@ -7,7 +7,7 @@ from qibo import Circuit, gates
 from qibo.models.iqae import IQAE
 
 
-def test_iqae_init(backend=None):
+def test_iqae_init(backend):
     A = Circuit(3 + 1)
     Q = Circuit(3 + 1)
     alpha = 0.05
@@ -23,7 +23,7 @@ def test_iqae_init(backend=None):
     assert iqae.method == method
 
 
-def test_iqae_init_raising_errors(backend=None):
+def test_iqae_init_raising_errors(backend):
     A = Circuit(3 + 1)
     Q = Circuit(4 + 1)
     # incorrect values of:
@@ -50,7 +50,7 @@ def test_iqae_init_raising_errors(backend=None):
     results = iqae.execute(backend=backend)
 
 
-def test_iqae_execution(backend=None):
+def test_iqae_execution(backend):
     # Let's check if we get the correct result for the integral of Sin(x)^2 from 0 to 1
     nbit = 3
     A = A_circ(qx=list(range(nbit)), qx_measure=nbit, nbit=nbit, b_max=1, b_min=0)

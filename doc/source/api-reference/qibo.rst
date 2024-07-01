@@ -2451,6 +2451,16 @@ The default backend order is qibojit (if available), tensorflow (if available),
 numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
 variable.
 
+Qibo optionally provides an interface to `qulacs <https://github.com/qulacs/qulacs>`_ through the :class:`qibo.backends.qulacs.QulacsBackend`. To use ``qulacs`` for simulating a quantum circuit you can globally set the backend as in the other cases
+
+.. testcode:: python
+
+   import qibo
+   qibo.set_backend("qulacs")
+
+.. note::
+   GPU simulation through ``qulacs`` is not supported yet.
+
 .. autoclass:: qibo.backends.abstract.Backend
     :members:
     :member-order: bysource

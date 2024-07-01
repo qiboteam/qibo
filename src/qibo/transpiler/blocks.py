@@ -124,7 +124,7 @@ class CircuitBlocks:
         return self.block_list
 
     def search_by_index(self, index: int):
-        """Find a block from its index, requires index_names == True"""
+        """Find a block from its index, requires index_names to be ``True``."""
         if not self._index_names:
             raise_error(
                 BlockingError,
