@@ -211,6 +211,12 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
     for ci in control_indices:
         x = gate_grid[i]
         y = wire_grid[ci]
+
+        is_dagger = False
+        if name[-2:] == "DG":
+            name = name.replace("DG", "")
+            is_dagger = True
+
         if name == "SWAP":
             _swapx(ax, x, y, plot_params)
         elif name in [
@@ -230,7 +236,12 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             "ECR",
             "MS",
         ]:
+
             symbol = SYMBOLS.get(name, name)
+
+            if is_dagger:
+                symbol += r"$\rm{^{\dagger}}$"
+
             _text(ax, x, y, symbol, plot_params, box=True)
         else:
             _cdot(ax, x, y, plot_params)
@@ -238,7 +249,17 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
 
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     name, target = gate[:2]
+
+    is_dagger = False
+    if name[-2:] == "DG":
+        name = name.replace("DG", "")
+        is_dagger = True
+
     symbol = SYMBOLS.get(name, name)  # override name with symbols
+
+    if is_dagger:
+        symbol += r"$\rm{^{\dagger}}$"
+
     x = gate_grid[i]
     target_index = _get_flipped_index(target, labels)
     y = wire_grid[target_index]
@@ -473,6 +494,13 @@ def _build_path(filename):
     return final_path
 
 
+def _check_list_str(list, str):
+    for item in list:
+        if item in str:
+            return True
+    return False
+
+
 def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
@@ -523,14 +551,18 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
 
         for gate in all_gates:
             init_label = gate.name.upper()
+
             if init_label == "CCX":
                 init_label = "TOFFOLI"
 
             if init_label == "CX":
                 init_label = "CNOT"
 
-            if init_label in ["SX", "CSX"]:
-                init_label = r"$\rm\sqrt{X}$"
+            if _check_list_str(["SX", "CSX"], init_label):
+                is_dagger = init_label[-2:] == "DG"
+                init_label = (
+                    r"$\rm{\sqrt{X}}^{\dagger}$" if is_dagger else r"$\rm{\sqrt{X}}$"
+                )
 
             if (
                 len(gate._control_qubits) > 0
