@@ -281,7 +281,8 @@ def sgd(
             backend,
             callback=callback,
         )
-    elif backend.name == "pytorch":
+
+    if backend.name == "pytorch":
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."
@@ -289,10 +290,8 @@ def sgd(
         return _sgd_torch(
             loss, initial_parameters, args, sgd_options, backend, callback=callback
         )
-    else:
-        raise_error(
-            RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend."
-        )
+
+    raise_error(RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend.")
 
 
 def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):

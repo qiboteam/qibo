@@ -93,10 +93,11 @@ class VQE:
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
-            if str(dtype) == "torch.float64":
-                loss = lambda p, c, h: loss_func(p, c, h).item()
-            else:
-                loss = lambda p, c, h: dtype(loss_func(p, c, h))
+            loss = (
+                (lambda p, c, h: loss_func(p, c, h).item())
+                if str(dtype) == "torch.float64"
+                else (lambda p, c, h: dtype(loss_func(p, c, h)))
+            )
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
         result, parameters, extra = self.optimizers.optimize(

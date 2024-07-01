@@ -23,7 +23,7 @@ class NumpyMatrices:
 
     @cached_property
     def H(self):
-        return self._cast([[1, 1], [1, -1]], dtype=self.dtype) / cmath.sqrt(2)
+        return self._cast([[1, 1], [1, -1]], dtype=self.dtype) / math.sqrt(2)
 
     @cached_property
     def X(self):
@@ -56,13 +56,13 @@ class NumpyMatrices:
     @cached_property
     def T(self):
         return self._cast(
-            [[1 + 0j, 0], [0, cmath.exp(1j * cmath.pi / 4.0)]], dtype=self.dtype
+            [[1 + 0j, 0], [0, cmath.exp(1j * math.pi / 4.0)]], dtype=self.dtype
         )
 
     @cached_property
     def TDG(self):
         return self._cast(
-            [[1 + 0j, 0], [0, cmath.exp(-1j * cmath.pi / 4.0)]], dtype=self.dtype
+            [[1 + 0j, 0], [0, cmath.exp(-1j * math.pi / 4.0)]], dtype=self.dtype
         )
 
     def I(self, n=2):
@@ -298,8 +298,8 @@ class NumpyMatrices:
         return self._cast(
             [
                 [1 + 0j, 0j, 0j, 0j],
-                [0j, 1 / cmath.sqrt(2) + 0j, 1j / cmath.sqrt(2), 0j],
-                [0j, 1j / cmath.sqrt(2), 1 / cmath.sqrt(2) + 0j, 0j],
+                [0j, 1 / math.sqrt(2) + 0j, 1j / math.sqrt(2), 0j],
+                [0j, 1j / math.sqrt(2), 1 / math.sqrt(2) + 0j, 0j],
                 [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
@@ -310,8 +310,8 @@ class NumpyMatrices:
         return self._cast(
             [
                 [1 + 0j, 0j, 0j, 0j],
-                [0j, 1 / cmath.sqrt(2) + 0j, -1j / cmath.sqrt(2), 0j],
-                [0j, -1j / cmath.sqrt(2), 1 / cmath.sqrt(2) + 0j, 0j],
+                [0j, 1 / math.sqrt(2) + 0j, -1j / math.sqrt(2), 0j],
+                [0j, -1j / math.sqrt(2), 1 / math.sqrt(2) + 0j, 0j],
                 [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
@@ -341,9 +341,9 @@ class NumpyMatrices:
 
     @cached_property
     def SYC(self):
-        cost = cmath.cos(cmath.pi / 2) + 0j
-        isint = -1j * cmath.sin(cmath.pi / 2)
-        phase = cmath.exp(-1j * cmath.pi / 6)
+        cost = math.cos(math.pi / 2) + 0j
+        isint = -1j * math.sin(math.pi / 2)
+        phase = cmath.exp(-1j * math.pi / 6)
         return self._cast(
             [
                 [1 + 0j, 0, 0, 0],
@@ -479,7 +479,7 @@ class NumpyMatrices:
                 [-1j, 1 + 0j, 0j, 0j],
             ],
             dtype=self.dtype,
-        ) / cmath.sqrt(2)
+        ) / math.sqrt(2)
 
     @cached_property
     def TOFFOLI(self):
