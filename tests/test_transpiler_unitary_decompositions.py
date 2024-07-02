@@ -69,7 +69,7 @@ def test_eigenbasis_entanglement(backend, seed):
         backend.assert_allclose(backend.np.abs(eigvals), np.ones(4))
         for state in states.T:
             state = backend.partial_trace(state, [1], 2)
-            backend.assert_allclose(purity(state), 0.5)
+            backend.assert_allclose(purity(state, backend=backend), 0.5)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])

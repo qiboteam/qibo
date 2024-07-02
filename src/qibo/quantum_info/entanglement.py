@@ -229,7 +229,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
         rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
 
-        trace = purity(rho_r)
+        trace = purity(rho_r, backend=backend)
 
         ent += trace
 

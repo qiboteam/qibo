@@ -94,7 +94,8 @@ def schmidt_decompose(state, backend=None):
 
     """
     backend = _check_backend(backend)
-    if backend.__class__.__name__ == "TensorflowBackend":
+    # tf.linalg.svd has a different behaviour
+    if backend.name == "tensorflow":
         u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
     else:
         u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))

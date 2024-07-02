@@ -449,7 +449,7 @@ def von_neumann_entropy(
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
-    if purity(state) == 1.0:
+    if purity(state, backend=backend) == 1.0:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=float)
 
@@ -537,7 +537,7 @@ def relative_von_neumann_entropy(
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
-    if purity(state) == 1.0 and purity(target) == 1.0:
+    if purity(state, backend=backend) == 1.0 and purity(target, backend=backend) == 1.0:
         return 0.0
 
     if len(state.shape) == 1:
@@ -635,7 +635,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if abs(purity(state) - 1.0) < PRECISION_TOL:
+    if abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
         return 0.0
 
     if alpha == 0.0:
@@ -730,9 +730,9 @@ def relative_renyi_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    purity_target = purity(target)
+    purity_target = purity(target, backend=backend)
     if (
-        abs(purity(state) - 1.0) < PRECISION_TOL
+        abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL
         and abs(purity_target - 1) < PRECISION_TOL
     ):
         return 0.0
@@ -811,7 +811,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if abs(purity(state) - 1.0) < PRECISION_TOL:
+    if abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
         return 0.0
 
     if alpha == 1.0:
