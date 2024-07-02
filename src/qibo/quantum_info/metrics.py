@@ -9,7 +9,7 @@ from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def purity(state):
+def purity(state, backend=None):
     """Purity of a quantum state :math:`\\rho`.
 
     This is given by
@@ -22,8 +22,7 @@ def purity(state):
     Returns:
         float: Purity of quantum ``state`` :math:`\\rho`.
     """
-    if state.__class__.__name__ == "Tensor":
-        state = state.detach().numpy()
+    backend = _check_backend(backend)
     if (
         (len(state.shape) >= 3)
         or (len(state) == 0)
@@ -35,18 +34,13 @@ def purity(state):
         )
 
     if len(state.shape) == 1:
-        pur = np.abs(np.matmul(np.conj(state), state)) ** 2
+        pur = backend.np.real(backend.calculate_norm(state)) ** 2
     else:
-        pur = np.real(np.trace(np.matmul(state, state)))
-
-    # this is necessary to remove the float from inside
-    # a 0-dim ndarray
-    pur = float(pur)
-
-    return pur
+        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
+    return float(backend.to_numpy(pur))
 
 
-def impurity(state):
+def impurity(state, backend=None):
     """Impurity of quantum state :math:`\\rho`.
 
     This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
@@ -58,7 +52,7 @@ def impurity(state):
     Returns:
         float: impurity of ``state`` :math:`\\rho`.
     """
-    return 1 - purity(state)
+    return 1 - purity(state, backend=backend)
 
 
 def trace_distance(state, target, check_hermitian: bool = False, backend=None):
@@ -232,8 +226,8 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
     # check purity if both states are density matrices
     if len(state.shape) == 2 and len(target.shape) == 2:
-        purity_state = purity(state)
-        purity_target = purity(target)
+        purity_state = purity(state, backend=backend)
+        purity_target = purity(target, backend=backend)
 
         # if both states are mixed, default to full fidelity calculation
         if (

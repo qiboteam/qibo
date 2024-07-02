@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo.backends import PyTorchBackend
+from qibo.backends import PyTorchBackend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -139,8 +139,13 @@ class Hamiltonian(AbstractHamiltonian):
         )
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.backend.to_numpy(self.matrix)
-        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
+        obs = self.matrix
+        if (
+            self.backend.np.count_nonzero(
+                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
+            )
+            != 0
+        ):
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())
         if qubit_map is None:
@@ -153,7 +158,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return np.real(expval)
+        return self.backend.np.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""

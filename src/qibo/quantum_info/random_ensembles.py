@@ -230,18 +230,18 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
 
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
-        Q, R = np.linalg.qr(backend.to_numpy(unitary))
-        D = np.diag(R)
-        D = D / np.abs(D)
-        R = np.diag(D)
-        unitary = np.dot(Q, R)
+        # Tensorflow experi
+        Q, R = backend.np.linalg.qr(unitary)
+        D = backend.np.diag(R)
+        D = D / backend.np.abs(D)
+        R = backend.np.diag(D)
+        unitary = backend.np.matmul(Q, R)
     elif measure is None:
         from scipy.linalg import expm
 
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -436,10 +436,9 @@ def random_statevector(dims: int, seed=None, backend=None):
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    state = local_state.standard_normal(dims).astype(complex)
-    state += 1.0j * local_state.standard_normal(dims)
-    state /= np.linalg.norm(state)
-    state = backend.cast(state)
+    state = backend.cast(local_state.standard_normal(dims).astype(complex))
+    state = state + 1.0j * backend.cast(local_state.standard_normal(dims))
+    state = state / backend.np.linalg.norm(state)
 
     return state
 

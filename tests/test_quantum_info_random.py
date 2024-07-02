@@ -234,7 +234,11 @@ def test_random_statevector(backend, seed):
     # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims, seed=seed, backend=backend)
-    backend.assert_allclose(abs(purity(state) - 1.0) < PRECISION_TOL, True)
+    print(state)
+    print(purity(state, backend=backend))
+    backend.assert_allclose(
+        abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize("normalize", [False, True])
@@ -292,9 +296,13 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             backend.assert_allclose(
                 np.real(np.trace(backend.to_numpy(state))) >= 1.0 - PRECISION_TOL, True
             )
-            backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
+            backend.assert_allclose(
+                purity(state, backend=backend) <= 1.0 + PRECISION_TOL, True
+            )
             if pure is True:
-                backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
+                backend.assert_allclose(
+                    purity(state, backend=backend) >= 1.0 - PRECISION_TOL, True
+                )
             norm = np.abs(
                 backend.to_numpy(
                     norm_function(state - backend.np.conj(state).T, order=2)

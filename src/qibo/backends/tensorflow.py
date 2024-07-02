@@ -19,6 +19,7 @@ class TensorflowMatrices(NumpyMatrices):
 
         self.tf = tf
         self.np = tnp
+        self.np.linalg = tf.linalg
 
     def _cast(self, x, dtype):
         return self.tf.cast(x, dtype=dtype)

@@ -32,23 +32,27 @@ def test_purity_and_impurity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = purity(state)
+        test = purity(state, backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
+    backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     state = backend.np.outer(backend.np.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
+    backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     dim = 4
     state = backend.identity_density_matrix(2)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0 / dim, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 1.0 - 1.0 / dim, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        purity(state, backend=backend), 1.0 / dim, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        impurity(state, backend=backend), 1.0 - 1.0 / dim, atol=PRECISION_TOL
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
