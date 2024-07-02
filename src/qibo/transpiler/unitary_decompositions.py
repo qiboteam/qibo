@@ -71,8 +71,8 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
-    if backend.name == "tensorflow":
-        # tf.lialg.eig return a different result than np.linalg.eig
+    if backend.name != "pytorch":
+        # eigenvalues decomposition seems to have a different behavior based on backend/hardware
         eigvals, psi_magic = np.linalg.eig(ut_u)
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
