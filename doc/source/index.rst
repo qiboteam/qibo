@@ -115,3 +115,4 @@ Supporters and collaborators
 * National Supercomputing Centre (NSCC), Singapore.
 * RIKEN Center for Computational Science (R-CCS), Japan.
 * NVIDIA (cuQuantum), USA.
+* QuantumSpain Project (https://quantumspain-project.es/)

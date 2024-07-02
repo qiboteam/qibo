@@ -1,3 +1,5 @@
+import numpy as np
+
 from qibo.config import log, raise_error
 
 
@@ -91,6 +93,32 @@ def optimize(
         backend = _check_backend(backend)
 
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
+    elif method == "rotosolve":
+
+        if not "num_params" in options:
+            raise Exception(f"Params needed for Rotosolve")
+
+        num_params = options["num_params"]
+
+        if "max_steps" in options:
+            max_steps = options["max_steps"]
+        else:
+            max_steps = 10
+
+        if "step_size" in options:
+            step_size = options["step_size"]
+        else:
+            step_size = 1
+
+        rotosolver = Rotosolve(max_steps=max_steps, step_size=step_size)
+
+        return rotosolver.optimize(
+            num_params,
+            loss,
+            args,
+            initial_parameters=initial_parameters,
+            callback=callback,
+        )
     else:
         from qibo.backends import _check_backend
 
@@ -395,3 +423,152 @@ class ParallelBFGS:  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+class Rotosolve:
+    """Rotosolve gradient free optimizer. This implementation is based on https://doi.org/10.22331/q-2021-01-28-391 and https://10.1103/PhysRevResearch.2.043158
+
+    Args:
+        max_steps (int): Maximum number of iterations to minimize the circuit
+        step_size (int): Size between iteration steps
+        num_vars (int): Number of parameters to optimize from variational circuit
+        loss_function: Loss as a function for variational parameters to be optimized
+        args (tuple): Optional arguments for the loss function.
+        initial_parameters (nd.array): Initial guess for the variational parameters
+        callback (callable): Callback function for intermidiate expectation values
+
+    """
+
+    def __init__(self, max_steps: int = 10, step_size: int = 1):
+
+        super().__init__()
+
+        self._max_steps = max_steps
+        self._step_size = step_size
+
+    def optimize(
+        self, num_vars, loss_function, args, initial_parameters=None, callback=None
+    ):
+        """Executes parametrized gate angle minimization
+        Args:
+            num_vars (int): Number of parameters to optimize from variational circuit
+            loss_function: Loss as a function for variational parameters to be optimized
+            args (tuple): Optional arguments for the loss function.
+            initial_parameters (nd.array): Initial guess for the variational parameters
+            callback (callable): Callback function for intermidiate expectation values
+
+        Returns:
+            list: expectation values obtained on each optimization loop
+            nd.array: optimized parameters (angles) obtained on each optimization loop
+            dict: summary with all information obtained from optimization process
+        """
+        if initial_parameters is None:
+            initial_parameters = np.random.uniform(-np.pi, +np.pi, num_vars)
+
+        return self._minimize(
+            fun=loss_function, args=args, x0=initial_parameters, callback=callback
+        )
+
+    def _minimize(self, fun, args, x0, callback):
+
+        factor = 1
+
+        def f(x, args):
+            return fun(x / factor, args[0], args[1])
+
+        theta_optimal, optimal_value, expectation_vals, nevals = self._rotosolve(
+            f, args, x0, self._max_steps, self._step_size, callback
+        )
+
+        self.energy_values = expectation_vals
+
+        extra = {}
+        extra["x"] = theta_optimal  # optimal parameters
+        extra["fun"] = optimal_value  # optimal function value
+        extra["exp_vals"] = expectation_vals
+        extra["nfev"] = nevals
+
+        parameters = theta_optimal
+        result = expectation_vals
+
+        return result, parameters, extra
+
+    def _rotosolve(self, f, args, initial_parameters, max_steps, step_size, callback):
+
+        D = len(initial_parameters)
+        theta = initial_parameters
+        f_evals = 0
+
+        def f_counter(params, args):
+            return f(params, args)
+
+        f_current = f_counter(initial_parameters, args)
+        f_evals += 1
+
+        converged = False
+        steps = 0
+
+        theta_values = []
+        f_values = []
+
+        print("Rotosolve circuit optimization steps")
+        print("====================================")
+
+        while not converged:
+
+            for d in range(D):
+
+                phi = np.random.uniform(-np.pi, +np.pi)
+                theta_d = phi
+                theta[d] = theta_d
+                m_vals = {"phi+0": 0, "phi+pi/2": 0, "phi-pi/2": 0}
+
+                m_vals["phi+0"] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = theta[d] + np.pi / 2
+
+                m_vals["phi+pi/2"] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = theta[d] - np.pi
+
+                m_vals["phi-pi/2"] = f_counter(theta, args)
+                f_evals += 1
+                theta[d] = (
+                    phi
+                    - np.pi / 2
+                    - np.arctan2(
+                        2 * m_vals["phi+0"] - m_vals["phi+pi/2"] - m_vals["phi-pi/2"],
+                        m_vals["phi+pi/2"] - m_vals["phi-pi/2"],
+                    )
+                )
+
+                phi = 0
+                theta_d = 0
+
+            theta_values.append(theta)
+
+            expectation_value = f(theta, args)
+            f_values.append(expectation_value)
+
+            if callback != None:
+                callback(theta, expectation_value, steps)
+
+            print(
+                "Step {step}. Current expectation value: {ev: .8f}".format(
+                    step=steps, ev=expectation_value
+                )
+            )
+
+            steps += step_size
+
+            if steps >= max_steps + 1:
+                converged = True
+
+        f_current = f_counter(theta, args)
+        f_evals += 1
+
+        min_index = np.argmin(f_values)
+        f_min = f_values[min_index]
+        theta_min = theta_values[min_index]
+
+        return theta_min, f_min, f_values, f_evals
