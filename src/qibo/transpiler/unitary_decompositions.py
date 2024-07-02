@@ -2,7 +2,7 @@ import numpy as np
 
 from qibo import gates, matrices
 from qibo.backends import NumpyBackend, _check_backend
-from qibo.config import raise_error
+from qibo.config import PRECISION_TOL, raise_error
 
 magic_basis = np.array(
     [[1, -1j, 0, 0], [0, 0, 1, -1j], [0, 0, -1, -1j], [1, 1j, 0, 0]]
@@ -71,10 +71,8 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
-    # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
-    # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries. This problem only happens with Tensorflow backend.
     if backend.name == "tensorflow":
-        eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
+        eigvals, psi_magic = np.linalg.eig(ut_u)
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
@@ -121,8 +119,11 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     """
     backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
-    if not np.allclose(
-        backend.to_numpy(psi_magic).imag, np.zeros_like(backend.to_numpy(psi_magic))
+    if (
+        backend.np.abs(
+            backend.calculate_norm_density_matrix(backend.np.imag(psi_magic))
+        )
+        > PRECISION_TOL
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
