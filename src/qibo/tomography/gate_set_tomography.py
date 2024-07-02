@@ -18,6 +18,17 @@ from qibo.transpiler.placer import Random
 from qibo.transpiler.router import Sabre
 from qibo.transpiler.unroller import NativeGates, Unroller
 
+SUPPORTED_NQUBITS = [1, 2]
+"""Supported nqubits for GST."""
+
+
+def _check_nqubits(nqubits):
+    if nqubits not in SUPPORTED_NQUBITS:
+        raise_error(
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
+        )
+
 
 @cache
 def _gates(nqubits):
@@ -76,11 +87,8 @@ def _get_observable(j, nqubits):
         list(:class:`qibo.hamiltonians.SymbolicHamiltonian`): Symbolic hamiltonian of the observable.
     """
 
-    if j == 0 and nqubits not in (1, 2):
-        raise_error(
-            ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
-        )
+    if j == 0:
+        _check_nqubits(nqubits)
     observables = _observables(nqubits)[j]
     observable = S(1)
     for q, obs in enumerate(observables):
@@ -105,11 +113,7 @@ def _prepare_state(k, nqubits):
         list(:class:`qibo.gates.abstract.Gate`): list of the gates that prepare the k-th state.
     """
 
-    if not nqubits in (1, 2):
-        raise_error(
-            ValueError,
-            f"nqubits needs to be either 1 or 2, but is {nqubits}.",
-        )
+    _check_nqubits(nqubits)
     gates = _gates(nqubits)[k]
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
@@ -130,12 +134,7 @@ def _measurement_basis(j, nqubits):
         of the Pauli measurement basis.
     """
 
-    if not nqubits in (1, 2):
-        raise_error(
-            ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
-        )
-
+    _check_nqubits(nqubits)
     measurements = _measurements(nqubits)[j]
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
@@ -164,14 +163,9 @@ def _gate_tomography(
     """
 
     # Check if gate is 1 or 2 qubit gate.
-    if not nqubits in (1, 2):
-        raise_error(
-            ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
-        )
+    _check_nqubits(nqubits)
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend()
 
     if gate is not None:
         if nqubits != len(gate.qubits):
@@ -249,7 +243,7 @@ def GST(
     matrices = []
     empty_matrices = []
     if include_empty or Pauli_Liouville:
-        for nqubits in range(1, 3):
+        for nqubits in SUPPORTED_NQUBITS:
             empty_matrix = _gate_tomography(
                 nqubits=nqubits,
                 gate=None,
