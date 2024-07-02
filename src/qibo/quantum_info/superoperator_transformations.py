@@ -461,16 +461,16 @@ def choi_to_kraus(
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
-            eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(choi_super_op))
-            eigenvectors = np.transpose(eigenvectors)
+            eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+            eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(eigenvalues < -PRECISION_TOL))
+            non_cp = bool(any(backend.np.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
-        eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(choi_super_op))
-        eigenvectors = np.transpose(eigenvectors)
+        eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+        eigenvectors = eigenvectors.T
 
     if non_cp:
         warnings.warn("Input choi_super_op is a non-completely positive map.")
@@ -496,8 +496,8 @@ def choi_to_kraus(
         # when choi_super_op is CP
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
-            if np.abs(eig) > precision_tol:
-                eig = np.sqrt(eig)
+            if backend.np.abs(eig) > precision_tol:
+                eig = backend.np.sqrt(eig)
                 kraus_ops.append(
                     eig * unvectorization(kraus, order=order, backend=backend)
                 )

@@ -174,11 +174,15 @@ class TensorflowBackend(NumpyBackend):
             return self.np.trace(state)
         return self.tf.norm(state, ord=order)
 
-    def calculate_eigenvalues(self, matrix, k=6):
-        return self.tf.linalg.eigvalsh(matrix)
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.tf.linalg.eigvalsh(matrix)
+        return self.tf.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6):
-        return self.tf.linalg.eigh(matrix)
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.tf.linalg.eigh(matrix)
+        return self.tf.linalg.eig(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):

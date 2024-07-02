@@ -922,12 +922,15 @@ def random_pauli_hamiltonian(
 
     hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
 
-    eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(hamiltonian))
+    eigenvalues, eigenvectors = backend.calculate_eigenvectors(hamiltonian)
+    if backend.name == "tensorflow":
+        eigenvalues = backend.to_numpy(eigenvalues)
+        eigenvectors = backend.to_numpy(eigenvectors)
 
     if normalize is True:
-        eigenvalues -= eigenvalues[0]
+        eigenvalues = eigenvalues - eigenvalues[0]
 
-        eigenvalues /= eigenvalues[1]
+        eigenvalues = eigenvalues / eigenvalues[1]
 
         shift = 2
         eigenvectors[:, shift:] = (
@@ -939,10 +942,10 @@ def random_pauli_hamiltonian(
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
-            eigenvalues[1:], np.transpose(eigenvectors)[1:]
+            eigenvalues[1:], backend.np.transpose(eigenvectors, (1, 0))[1:]
         ):
-            hamiltonian = hamiltonian + backend.cast(eigenvalue) * backend.cast(
-                np.outer(eigenvector, np.conj(eigenvector))
+            hamiltonian = hamiltonian + eigenvalue * backend.np.outer(
+                eigenvector, backend.np.conj(eigenvector)
             )
 
     U = comp_basis_to_pauli(
@@ -951,7 +954,7 @@ def random_pauli_hamiltonian(
 
     hamiltonian = backend.np.real(U @ vectorization(hamiltonian, backend=backend))
 
-    return hamiltonian, backend.cast(eigenvalues)
+    return hamiltonian, eigenvalues
 
 
 def random_stochastic_matrix(

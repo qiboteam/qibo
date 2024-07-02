@@ -241,21 +241,21 @@ class QuantumNetwork:
         self._matrix = self._full()
         self._pure = False
 
-        reshaped = self._backend.to_numpy(
-            self._backend.np.reshape(self._matrix, (self.dims, self.dims))
-        )
-
+        reshaped = self._backend.np.reshape(self._matrix, (self.dims, self.dims))
         if self.is_hermitian():
-            eigenvalues = np.linalg.eigvalsh(reshaped)
+            eigenvalues = self.backend.calculate_eigenvalues(reshaped)
         else:
             if self._backend.__class__.__name__ in [
                 "CupyBackend",
                 "CuQuantumBackend",
             ]:  # pragma: no cover
                 reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
-            eigenvalues = np.linalg.eigvals(reshaped)
+            eigenvalues = self.backend.calculate_eigenvalues(reshaped, hermitian=False)
 
-        return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
+        return all(
+            self.backend.np.real(eigenvalue) >= -precision_tol
+            for eigenvalue in eigenvalues
+        )
 
     def is_channel(
         self,

@@ -173,11 +173,15 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_eigenvalues(self, matrix, k=6):
-        return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+        return self.np.linalg.eigvals(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix, k=6):
-        return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
+        return self.np.linalg.eig(matrix)  # pylint: disable=not-callable
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):

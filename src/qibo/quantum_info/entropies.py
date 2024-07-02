@@ -455,14 +455,12 @@ def von_neumann_entropy(
 
         return 0.0
 
-    if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
-        eigenvalues = (
-            backend.np.linalg.eigvalsh(state)
-            if isinstance(backend, PyTorchBackend)
-            else np.linalg.eigvalsh(state)
-        )
-    else:
-        eigenvalues = backend.calculate_eigenvalues(state)
+    eigenvalues = backend.calculate_eigenvalues(
+        state,
+        hermitian=(
+            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
+        ),
+    )
 
     log_prob = backend.np.where(
         backend.np.real(eigenvalues) > 0.0,
@@ -548,29 +546,26 @@ def relative_von_neumann_entropy(
     if len(target.shape) == 1:
         target = backend.np.outer(target, backend.np.conj(target))
 
-    if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
-        eigenvalues_state = backend.cast(
-            np.linalg.eigvalsh(backend.to_numpy(state)), dtype=float
-        )
-    else:
-        eigenvalues_state = backend.cast(
-            np.linalg.eigvals(backend.to_numpy(state)), dtype=float
-        )
-
-    if not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend):
-        eigenvalues_target = backend.cast(
-            np.linalg.eigvalsh(backend.to_numpy(target)), dtype=float
-        )
-    else:
-        eigenvalues_target = backend.cast(
-            np.linalg.eigvals(backend.to_numpy(target)), dtype=float
-        )
+    eigenvalues_state = backend.calculate_eigenvalues(
+        state,
+        hermitian=(
+            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
+        ),
+    )
+    eigenvalues_target = backend.calculate_eigenvalues(
+        target,
+        hermitian=(
+            not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend)
+        ),
+    )
 
     log_state = backend.np.where(
-        eigenvalues_state > 0, backend.np.log2(eigenvalues_state) / np.log2(base), 0.0
+        backend.np.real(eigenvalues_state) > 0,
+        backend.np.log2(eigenvalues_state) / np.log2(base),
+        0.0,
     )
     log_target = backend.np.where(
-        eigenvalues_target > 0,
+        backend.np.real(eigenvalues_target) > 0,
         backend.np.log2(eigenvalues_target) / np.log2(base),
         -np.inf,
     )
@@ -581,7 +576,7 @@ def relative_von_neumann_entropy(
 
     relative = backend.np.sum(eigenvalues_state * log_target)
 
-    return float(backend.to_numpy(entropy_state - relative))
+    return float(backend.to_numpy(backend.np.real(entropy_state - relative)))
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):

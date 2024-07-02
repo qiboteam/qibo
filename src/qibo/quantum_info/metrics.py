@@ -131,17 +131,13 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
                 "CupyBackend does not support `np.linalg.eigvals`"
                 + "for non-Hermitian `state - target`.",
             )
-        eigenvalues = (
-            np.linalg.eigvalsh(backend.to_numpy(difference))
-            if hermitian
-            else np.linalg.eigvals(backend.to_numpy(difference))
-        )
+        eigenvalues = backend.calculate_eigenvalues(difference, hermitian=hermitian)
     else:
-        eigenvalues = np.linalg.eigvalsh(backend.to_numpy(difference))
+        eigenvalues = backend.calculate_eigenvalues(difference)
 
-    distance = np.sum(np.absolute(eigenvalues)) / 2
+    distance = backend.np.sum(backend.np.absolute(eigenvalues)) / 2
 
-    return backend.cast(distance, dtype=backend.np.float64)
+    return distance
 
 
 def hilbert_schmidt_distance(state, target, backend=None):
@@ -245,16 +241,21 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             and abs(purity_target - 1) > PRECISION_TOL
         ):
             # using eigh since rho is supposed to be Hermitian
-            if check_hermitian is False or _check_hermitian_or_not_gpu(
-                state, backend=backend
-            ):
-                eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(state))
-            else:
-                eigenvalues, eigenvectors = np.linalg.eig(backend.to_numpy(state))
+            eigenvalues, eigenvectors = backend.calculate_eigenvectors(
+                state,
+                hermitian=(
+                    check_hermitian is False
+                    or _check_hermitian_or_not_gpu(state, backend=backend)
+                ),
+            )
             state = np.zeros(state.shape, dtype=complex)
             state = backend.cast(state, dtype=state.dtype)
-            for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
-                matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
+            for eig, eigvec in zip(
+                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
+            ):
+                matrix = backend.np.sqrt(eig) * backend.np.outer(
+                    eigvec, backend.np.conj(eigvec)
+                )
                 matrix = backend.cast(matrix, dtype=matrix.dtype)
                 state = state + matrix
                 del matrix
@@ -262,17 +263,22 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             fid = state @ target @ state
 
             # since sqrt(rho) is Hermitian, we can use eigh again
-            if check_hermitian is False or _check_hermitian_or_not_gpu(
-                fid, backend=backend
-            ):
-                eigenvalues, eigenvectors = np.linalg.eigh(backend.to_numpy(fid))
-            else:
-                eigenvalues, eigenvectors = np.linalg.eig(backend.to_numpy(fid))
+            eigenvalues, eigenvectors = backend.calculate_eigenvectors(
+                fid,
+                hermitian=(
+                    check_hermitian is False
+                    or _check_hermitian_or_not_gpu(state, backend=backend)
+                ),
+            )
             fid = np.zeros(state.shape, dtype=complex)
             fid = backend.cast(fid, dtype=fid.dtype)
-            for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
-                if eig > PRECISION_TOL:
-                    matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
+            for eig, eigvec in zip(
+                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
+            ):
+                if backend.np.real(eig) > PRECISION_TOL:
+                    matrix = backend.np.sqrt(eig) * backend.np.outer(
+                        eigvec, backend.np.conj(eigvec)
+                    )
                     matrix = backend.cast(matrix, dtype=matrix.dtype)
                     fid = fid + matrix
                     del matrix

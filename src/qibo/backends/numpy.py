@@ -727,16 +727,18 @@ class NumpyBackend(Backend):
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6):
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
         if self.issparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
                 "sparse modules do not provide ``eigvals`` method."
             )
             return self.calculate_eigenvectors(matrix, k=k)[0]
-        return np.linalg.eigvalsh(matrix)
+        if hermitian:
+            return np.linalg.eigvalsh(matrix)
+        return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6):
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
         if self.issparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
@@ -744,7 +746,9 @@ class NumpyBackend(Backend):
                 return eigsh(matrix, k=k, which="SA")
             else:  # pragma: no cover
                 matrix = self.to_numpy(matrix)
-        return np.linalg.eigh(matrix)
+        if hermitian:
+            return np.linalg.eigh(matrix)
+        return np.linalg.eig(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):

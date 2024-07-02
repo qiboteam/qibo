@@ -72,16 +72,14 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
     # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
-    # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries.
-    if backend.__class__.__name__ == "TensorflowBackend":
+    # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries. This problem only happens with Tensorflow backend.
+    if backend.name == "tensorflow":
         eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
-        psi_magic, _ = np.linalg.qr(psi_magic)
     else:
-        eigvals, psi_magic = np.linalg.eig(
-            np.round(backend.to_numpy(ut_u), decimals=20)
-        )
-        # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-        psi_magic, _ = np.linalg.qr(psi_magic)
+        eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
+    # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
+    psi_magic = backend.to_numpy(psi_magic)
+    psi_magic, _ = np.linalg.qr(psi_magic)
     # write psi in computational basis
     psi = backend.np.matmul(magic_basis, backend.cast(psi_magic))
     return psi, backend.cast(eigvals)
