@@ -72,6 +72,7 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
     if backend.name == "tensorflow":
+        # tf.lialg.eig return a different result than np.linalg.eig
         eigvals, psi_magic = np.linalg.eig(ut_u)
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
@@ -120,7 +121,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
     if (
-        backend.np.abs(
+        backend.np.real(
             backend.calculate_norm_density_matrix(backend.np.imag(psi_magic))
         )
         > PRECISION_TOL
