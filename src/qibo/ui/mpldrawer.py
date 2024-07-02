@@ -287,7 +287,12 @@ def _line(ax, x1, x2, y1, y2, plot_params):
 
 def _text(ax, x, y, textstr, plot_params, box=False):
     linewidth = plot_params["linewidth"]
-    fontsize = plot_params["fontsize"]
+    fontsize = (
+        12.0
+        if _check_list_str(["dagger", "sqrt"], textstr)
+        else plot_params["fontsize"]
+    )
+
     if box:
         bbox = dict(
             ec=plot_params["edgecolor"],
