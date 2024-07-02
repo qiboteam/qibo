@@ -77,11 +77,10 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-    psi_magic = backend.to_numpy(psi_magic)
-    psi_magic, _ = np.linalg.qr(psi_magic)
+    psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
-    psi = backend.np.matmul(magic_basis, backend.cast(psi_magic))
-    return psi, backend.cast(eigvals)
+    psi = backend.np.matmul(magic_basis, psi_magic)
+    return psi, eigvals
 
 
 def schmidt_decompose(state, backend=None):
