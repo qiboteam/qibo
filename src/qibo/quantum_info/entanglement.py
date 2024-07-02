@@ -50,7 +50,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     nqubits = int(np.log2(state.shape[0]))
 
     if check_purity is True:
-        purity_total_system = purity(state)
+        purity_total_system = purity(state, backend=backend)
 
         mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
         if mixed is True:
@@ -65,7 +65,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
         else backend.partial_trace_density_matrix(state, bipartition, nqubits)
     )
 
-    purity_reduced = purity(reduced_density_matrix)
+    purity_reduced = purity(reduced_density_matrix, backend=backend)
     if purity_reduced - 1.0 > 0.0:
         purity_reduced = round(purity_reduced, 7)
 
