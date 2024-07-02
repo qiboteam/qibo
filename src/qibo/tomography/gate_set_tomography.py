@@ -165,7 +165,7 @@ def _gate_tomography(
     # Check if gate is 1 or 2 qubit gate.
     _check_nqubits(nqubits)
 
-    backend = _check_backend()
+    backend = _check_backend(backend)
 
     if gate is not None:
         if nqubits != len(gate.qubits):
