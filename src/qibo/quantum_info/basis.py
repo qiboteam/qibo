@@ -100,28 +100,37 @@ def pauli_basis(
     else:
         basis_full = basis_single
 
+    basis_full = backend.cast(basis_full, dtype=basis_full[0].dtype)
+
     if vectorize and sparse:
         basis, indexes = [], []
         for row in basis_full:
             row = vectorization(row, order=order, backend=backend)
-            row_indexes = list(np.flatnonzero(row))
+            row_indexes = (
+                backend.np.nonzero(row).flatten()
+                if backend.__class__.__name__ == "PyTorchBackend"
+                else list(np.flatnonzero(row))
+            )
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
     elif vectorize and not sparse:
         basis = [
-            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
+            vectorization(
+                backend.cast(matrix, dtype=matrix.dtype), order=order, backend=backend
+            )
+            for matrix in basis_full
         ]
     else:
         basis = basis_full
 
-    basis = backend.cast(basis, dtype=backend.dtype)
+    basis = backend.cast(basis, dtype=basis[0].dtype)
 
     if normalize:
-        basis /= np.sqrt(2**nqubits)
+        basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = backend.cast(indexes)
+        indexes = backend.cast(indexes, dtype=indexes[0][0].dtype)
 
         return basis, indexes
 
@@ -198,7 +207,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = np.conj(elements)
+        elements = backend.np.conj(elements)
 
         return elements, indexes
 
@@ -212,8 +221,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = np.conj(unitary)
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+    unitary = backend.np.conj(unitary)
 
     return unitary
 
@@ -267,12 +275,16 @@ def pauli_to_comp_basis(
         pauli_order=pauli_order,
         backend=backend,
     )
-    unitary = np.transpose(unitary)
+    unitary = unitary.T
 
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = list(np.flatnonzero(row))
+            index_list = (
+                backend.np.nonzero(row).flatten()
+                if backend.__class__.__name__ == "PyTorchBackend"
+                else list(np.flatnonzero(row))
+            )
             indexes.append(index_list)
             elements.append(row[index_list])
 

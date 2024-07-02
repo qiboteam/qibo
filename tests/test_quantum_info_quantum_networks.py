@@ -273,7 +273,7 @@ def test_apply(backend):
     network = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
 
     applied = network.apply(state)
-    target = unitary @ state @ np.transpose(np.conj(unitary))
+    target = unitary @ state @ backend.np.conj(unitary).T
 
     backend.assert_allclose(applied, target, atol=1e-8)
 

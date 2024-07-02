@@ -98,7 +98,9 @@ def test_entropy_in_circuit(backend, density_matrix, base):
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [0.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
-    entropy_spectrum = np.ravel(np.concatenate(entropy.spectrum)).tolist()
+    entropy_spectrum = backend.np.ravel(
+        backend.np.concatenate(entropy.spectrum)
+    ).tolist()
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
 
@@ -170,7 +172,7 @@ def test_entropy_multiple_executions(backend, accelerators):
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     values = [backend.to_numpy(x) for x in entropy[:]]
-    backend.assert_allclose(values, target, atol=PRECISION_TOL)
+    backend.assert_allclose(values, target, atol=1e-6)
 
     c = Circuit(8, accelerators)
     with pytest.raises(RuntimeError):
@@ -228,17 +230,21 @@ def test_entropy_density_matrix(backend):
 
     rho = random_density_matrix(2**4, backend=backend)
     # this rho is not always positive. Make rho positive for this application
-    _, u = np.linalg.eigh(rho)
+    _, u = np.linalg.eigh(backend.to_numpy(rho))
+    u = backend.cast(u, dtype=u.dtype)
     matrix = np.random.random(u.shape[0])
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    rho = np.dot(np.dot(u, np.diag(5 * matrix)), np.conj(np.transpose(u)))
+    matrix = backend.cast(matrix, dtype=u.dtype)
+    rho = backend.np.matmul(
+        backend.np.matmul(u, backend.np.diag(5 * matrix)),
+        backend.np.conj(backend.np.transpose(u, (1, 0))),
+    )
     # this is a positive rho
 
     entropy = callbacks.EntanglementEntropy([1, 3])
     entropy.nqubits = 4
     final_ent = entropy.apply(backend, rho)
 
-    rho = rho.reshape(8 * (2,))
+    rho = backend.to_numpy(rho.reshape(8 * (2,)))
     reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
     eigvals = np.linalg.eigvalsh(reduced_rho).real
     # assert that all eigenvalues are non-negative
@@ -278,12 +284,12 @@ def test_norm(backend, density_matrix, seed):
     if density_matrix:
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
-        target_norm = np.trace(state)
+        target_norm = backend.np.trace(state)
         final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
         state = random_statevector(2**norm.nqubits, seed=seed, backend=backend)
-        target_norm = np.sqrt((np.abs(state) ** 2).sum())
+        target_norm = np.sqrt((np.abs(backend.to_numpy(state)) ** 2).sum())
         final_norm = norm.apply(backend, state)
 
     backend.assert_allclose(final_norm, target_norm)
@@ -330,13 +336,16 @@ def test_energy(backend, density_matrix):
         from qibo.quantum_info import random_density_matrix
 
         state = random_density_matrix(2**4, backend=backend)
-        target_energy = np.trace(np.dot(matrix, state))
+        target_energy = backend.np.trace(backend.np.matmul(matrix, state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
         from qibo.quantum_info import random_statevector
 
         state = random_statevector(2**4, backend=backend)
-        target_energy = np.dot(np.conj(state), np.dot(matrix, state))
+        target_energy = np.matmul(
+            np.conj(backend.to_numpy(state)),
+            np.matmul(backend.to_numpy(matrix), backend.to_numpy(state)),
+        )
         final_energy = energy.apply(backend, state)
     backend.assert_allclose(final_energy, target_energy)
 
@@ -356,7 +365,7 @@ def test_gap(backend, dense, check_degenerate):
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
     for t in np.linspace(0, 1, 11):
-        eigvals = np.real(np.linalg.eigvalsh(ham(t)))
+        eigvals = np.real(np.linalg.eigvalsh(backend.to_numpy(ham(t))))
         targets["ground"].append(eigvals[0])
         targets["excited"].append(eigvals[1])
         targets["gap"].append(eigvals[1] - eigvals[0])

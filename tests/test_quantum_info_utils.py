@@ -162,9 +162,12 @@ def test_hellinger(backend, validate, kind):
     prob_q = np.random.rand(10)
     prob_p /= np.sum(prob_p)
     prob_q /= np.sum(prob_q)
+    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
+    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.calculate_norm(np.sqrt(prob_p) - np.sqrt(prob_q)) / np.sqrt(2)
+        backend.calculate_norm(backend.np.sqrt(prob_p) - backend.np.sqrt(prob_q))
+        / np.sqrt(2)
     )
 
     prob_p = (
@@ -248,6 +251,6 @@ def test_pqc_integral(backend):
 
     pqc_int = pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = fidelity(pqc_int, pqc_int)
+    fid = fidelity(pqc_int, pqc_int, backend=backend)
 
     backend.assert_allclose(fid, 1.0, atol=PRECISION_TOL)

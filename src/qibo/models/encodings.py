@@ -420,10 +420,20 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         list: list of phases for RBS gates.
     """
     if architecture == "diagonal":
-        phases = [
-            math.atan2(np.linalg.norm(data[k + 1 :]), data[k])
-            for k in range(len(data) - 2)
-        ]
+        if data.__class__.__name__ == "Tensor":
+            import torch  # pylint: disable=C0415
+
+            phases = [
+                math.atan2(
+                    torch.linalg.norm(data[k + 1 :]), data[k]  # pylint: disable=E1102
+                )
+                for k in range(len(data) - 2)
+            ]
+        else:
+            phases = [
+                math.atan2(np.linalg.norm(data[k + 1 :]), data[k])
+                for k in range(len(data) - 2)
+            ]
         phases.append(math.atan2(data[-1], data[-2]))
 
     if architecture == "tree":

@@ -291,7 +291,9 @@ class MeasurementOutcomes:
             probs[state] = freq / self.nshots
         probs = self.backend.cast(probs)
         self._probs = probs
-        return self.backend.calculate_probabilities(np.sqrt(probs), qubits, nqubits)
+        return self.backend.calculate_probabilities(
+            self.backend.np.sqrt(probs), qubits, nqubits
+        )
 
     def has_samples(self):
         """Check whether the samples are available already.
@@ -353,7 +355,7 @@ class MeasurementOutcomes:
                 qubit_map = {
                     q: i for i, q in enumerate(self.measurement_gate.target_qubits)
                 }
-                self._samples = self.backend.cast(samples, "int32")
+                self._samples = samples
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                     gate.result.register_samples(

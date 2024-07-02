@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo.backends import PyTorchBackend
+from qibo.backends import PyTorchBackend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -140,7 +140,12 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
+        if (
+            self.backend.np.count_nonzero(
+                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
+            )
+            != 0
+        ):
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())
         if qubit_map is None:
@@ -153,7 +158,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return np.real(expval)
+        return self.backend.np.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -180,8 +185,8 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = h2.expectation(state, normalize=True)
-        return np.sqrt(np.abs(average_h2 - energy**2))
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
 
     def __add__(self, o):
         if isinstance(o, self.__class__):

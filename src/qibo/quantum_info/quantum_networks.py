@@ -119,10 +119,11 @@ class QuantumNetwork:
         self._pure = False
 
         reshaped = self._backend.cast(
-            np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
+            self._backend.np.reshape(self._matrix, (self.dims, self.dims)),
+            dtype=self._matrix.dtype,
         )
         reshaped = self._backend.cast(
-            np.transpose(np.conj(reshaped)) - reshaped, dtype=reshaped.dtype
+            self._backend.np.conj(reshaped).T - reshaped, dtype=reshaped.dtype
         )
         norm = self._backend.calculate_norm_density_matrix(reshaped, order=order)
 
@@ -240,19 +241,21 @@ class QuantumNetwork:
         self._matrix = self._full()
         self._pure = False
 
-        reshaped = np.reshape(self._matrix, (self.dims, self.dims))
-
+        reshaped = self._backend.np.reshape(self._matrix, (self.dims, self.dims))
         if self.is_hermitian():
-            eigenvalues = np.linalg.eigvalsh(reshaped)
+            eigenvalues = self._backend.calculate_eigenvalues(reshaped)
         else:
             if self._backend.__class__.__name__ in [
                 "CupyBackend",
                 "CuQuantumBackend",
             ]:  # pragma: no cover
                 reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
-            eigenvalues = np.linalg.eigvals(reshaped)
+            eigenvalues = self._backend.calculate_eigenvalues(reshaped, hermitian=False)
 
-        return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
+        return all(
+            self._backend.np.real(eigenvalue) >= -precision_tol
+            for eigenvalue in eigenvalues
+        )
 
     def is_channel(
         self,
@@ -295,7 +298,9 @@ class QuantumNetwork:
         matrix = self._backend.cast(self._matrix, copy=True)
 
         if self.is_pure():
-            return self._einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
+            return self._einsum(
+                "kj,ml,jl -> km", matrix, self._backend.np.conj(matrix), state
+            )
 
         return self._einsum("jklm,km -> jl", matrix, state)
 
@@ -355,6 +360,7 @@ class QuantumNetwork:
             return QuantumNetwork(
                 self._einsum(cexpr, first_matrix, second_matrix),
                 [self.partition[0] + self.partition[-1]],
+                backend=self._backend,
             )
 
         cexpr = "jkab,klbc->jlac"
@@ -363,17 +369,19 @@ class QuantumNetwork:
             return QuantumNetwork(
                 self._einsum(cexpr, second_matrix, first_matrix),
                 [second_network.partition[0], self.partition[1]],
+                backend=self._backend,
             )
 
         return QuantumNetwork(
             self._einsum(cexpr, first_matrix, second_matrix),
             [self.partition[0], second_network.partition[1]],
+            backend=self._backend,
         )
 
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
         return self.__class__(
-            np.copy(self._matrix),
+            self._backend.np.copy(self._matrix),
             partition=self.partition,
             system_output=self.system_output,
             pure=self._pure,
@@ -640,10 +648,10 @@ class QuantumNetwork:
 
         try:
             if self._pure:
-                self._matrix = np.reshape(self._matrix, self.partition)
+                self._matrix = self._backend.np.reshape(self._matrix, self.partition)
             else:
                 matrix_partition = self.partition * 2
-                self._matrix = np.reshape(self._matrix, matrix_partition)
+                self._matrix = self._backend.np.reshape(self._matrix, matrix_partition)
         except:
             raise_error(
                 ValueError,
@@ -666,7 +674,9 @@ class QuantumNetwork:
         matrix = self._backend.cast(self._matrix, copy=True)
 
         if self.is_pure():
-            matrix = self._einsum("jk,lm -> kjml", matrix, np.conj(matrix))
+            matrix = self._einsum(
+                "jk,lm -> kjml", matrix, self._backend.np.conj(matrix)
+            )
 
         return matrix
 
