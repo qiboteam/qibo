@@ -243,17 +243,17 @@ class QuantumNetwork:
 
         reshaped = self._backend.np.reshape(self._matrix, (self.dims, self.dims))
         if self.is_hermitian():
-            eigenvalues = self.backend.calculate_eigenvalues(reshaped)
+            eigenvalues = self._backend.calculate_eigenvalues(reshaped)
         else:
             if self._backend.__class__.__name__ in [
                 "CupyBackend",
                 "CuQuantumBackend",
             ]:  # pragma: no cover
                 reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
-            eigenvalues = self.backend.calculate_eigenvalues(reshaped, hermitian=False)
+            eigenvalues = self._backend.calculate_eigenvalues(reshaped, hermitian=False)
 
         return all(
-            self.backend.np.real(eigenvalue) >= -precision_tol
+            self._backend.np.real(eigenvalue) >= -precision_tol
             for eigenvalue in eigenvalues
         )
 
