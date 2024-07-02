@@ -227,7 +227,7 @@ def GST(
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
         include_empty (bool, optional): If ``True``, additionally performs gate set tomography for 1- and 2-qubits empty circuits and returns the corresponding empty circuit matrices in the first and second position of the ouput list.
         Pauli_Liouville (bool, optional): If ``True``, returns the gates' matrices in the Pauli-Liouville representation.
-        T (ndarray): Gauge matrix transformation to the Puli-Liouville representation. Defaults to ``array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])``.
+        T (ndarray): Gauge matrix transformation to the Pauli-Liouville representation. Defaults to ``array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
         list(ndarray): Approximated matrices of the input gate_set.
