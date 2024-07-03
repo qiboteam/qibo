@@ -71,9 +71,10 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
-    if backend.name != "pytorch":
-        # eigenvalues decomposition seems to have a different behavior based on backend/hardware
-        eigvals, psi_magic = np.linalg.eig(ut_u)
+    if backend.__class__.__name__ != "PyTorchBackend":
+        # eig seems to have a different behavior based on backend/hardware,
+        # use np.round to increase precision seems to fix the issue
+        eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
@@ -95,7 +96,7 @@ def schmidt_decompose(state, backend=None):
     """
     backend = _check_backend(backend)
     # tf.linalg.svd has a different behaviour
-    if backend.name == "tensorflow":
+    if backend.__class__.__name__ == "TensorflowBackend":
         u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
     else:
         u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
