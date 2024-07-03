@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.9"
+version = "0.2.10"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -35,6 +35,7 @@ numpy = "^1.26.4"
 networkx = "^3.2.1"
 tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 torch = { version = "^2.1.1", optional = true }
+qulacs = { version = "^0.6.4", optional = true, markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'"}
 
 [tool.poetry.group.dev]
 optional = true
@@ -55,6 +56,7 @@ sphinx-markdown-tables = "^0.0.17"
 sphinx-copybutton = "^0.5.2"
 nbsphinx = "^0.8.12"
 ipython = "^8.10.0"
+qulacs = { version = "^0.6.4", markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'"}
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
 
@@ -74,6 +76,7 @@ torch = "^2.1.1"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 stim = "^1.12.0"
+qulacs = { version = "^0.6.4", markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
 
 [tool.poe.tasks]
 test = "pytest"
@@ -84,6 +87,7 @@ docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
 
+
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -92,6 +96,7 @@ cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
+
 
 [tool.poetry.group.cuda12]
 optional = true

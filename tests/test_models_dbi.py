@@ -59,6 +59,25 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
+def test_double_bracket_iteration_group_commutator_3rd_order(backend, nqubits):
+    """Check 3rd order group commutator mode."""
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
+    d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
+    dbi = DoubleBracketIteration(
+        Hamiltonian(nqubits, h0, backend=backend),
+        mode=DoubleBracketGeneratorType.group_commutator_third_order,
+    )
+    initial_off_diagonal_norm = dbi.off_diagonal_norm
+
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.group_commutator_third_order, step=0.01)
+    for _ in range(NSTEPS):
+        dbi(step=0.01, d=d)
+
+    assert initial_off_diagonal_norm > dbi.off_diagonal_norm
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_double_bracket_iteration_single_commutator(backend, nqubits):
     """Check single commutator mode."""
     h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
@@ -153,7 +172,7 @@ def test_polynomial_fail_cases(backend, nqubits):
     )
     with pytest.raises(ValueError):
         polynomial_step(dbi, n=2, n_max=1)
-    assert polynomial_step(dbi, n=1) == None
+    assert polynomial_step(dbi, n=1) is None
 
 
 def test_least_squares(backend):

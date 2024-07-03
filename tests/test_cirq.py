@@ -4,8 +4,9 @@ import cirq
 import numpy as np
 import pytest
 
-from qibo import gates, models
+from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend
+from qibo.models import QFT
 from qibo.quantum_info import random_statevector, random_unitary
 
 numpy_backend = NumpyBackend()
@@ -54,7 +55,7 @@ def assert_gates_equivalent(
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    c = models.Circuit(nqubits, accelerators)
+    c = Circuit(nqubits, accelerators)
     c.add(qibo_gate)
     assert c.depth == target_depth
     if accelerators and not backend.supports_multigpu:
@@ -307,7 +308,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
 
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(backend, accelerators, nqubits):
-    c = models.QFT(nqubits, accelerators=accelerators)
+    c = QFT(nqubits, accelerators=accelerators)
     initial_state = random_statevector(2**nqubits, backend=numpy_backend)
     final_state = backend.execute_circuit(c, np.copy(initial_state)).state()
     final_state = backend.cast(final_state, dtype=final_state.dtype)

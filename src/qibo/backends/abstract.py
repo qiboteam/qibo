@@ -134,11 +134,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def control_matrix(self, gate):  # pragma: no cover
-        """ "Calculate full matrix representation of a controlled gate."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         """Apply a gate to state vector."""
         raise_error(NotImplementedError)
