@@ -488,10 +488,9 @@ def _hadamard_transform_1d(array, backend=None):
     # necessary because of tf.EagerTensor
     # does not accept item assignment
     backend = _check_backend(backend)
-    if backend.name == "pytorch":
-        copy_func = backend.np.copy
-    else:
-        copy_func = np.copy
+    copy_func = (
+        backend.np.copy if backend.__class__.__name__ == "PyTorchBackend" else np.copy
+    )
     array_copied = copy_func(array)
 
     indexes = [2**k for k in range(int(np.log2(len(array_copied))))]

@@ -37,7 +37,7 @@ def purity(state, backend=None):
         pur = backend.np.real(backend.calculate_norm(state)) ** 2
     else:
         pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
-    return float(backend.to_numpy(pur))
+    return float(pur)
 
 
 def impurity(state, backend=None):
@@ -234,13 +234,12 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
+            hermitian = check_hermitian is False or _check_hermitian_or_not_gpu(
+                state, backend=backend
+            )
             # using eigh since rho is supposed to be Hermitian
             eigenvalues, eigenvectors = backend.calculate_eigenvectors(
-                state,
-                hermitian=(
-                    check_hermitian is False
-                    or _check_hermitian_or_not_gpu(state, backend=backend)
-                ),
+                state, hermitian=hermitian
             )
             state = np.zeros(state.shape, dtype=complex)
             state = backend.cast(state, dtype=state.dtype)
@@ -258,11 +257,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
             # since sqrt(rho) is Hermitian, we can use eigh again
             eigenvalues, eigenvectors = backend.calculate_eigenvectors(
-                fid,
-                hermitian=(
-                    check_hermitian is False
-                    or _check_hermitian_or_not_gpu(state, backend=backend)
-                ),
+                fid, hermitian=hermitian
             )
             fid = np.zeros(state.shape, dtype=complex)
             fid = backend.cast(fid, dtype=fid.dtype)
@@ -370,13 +365,10 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
         float: Bures distance between ``state`` and ``target``.
     """
     backend = _check_backend(backend)
-    distance = backend.np.sqrt(
-        2
-        * (
-            1
-            - backend.np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
-        )
+    sqrt_fid = backend.np.sqrt(
+        fidelity(state, target, check_hermitian, backend=backend)
     )
+    distance = backend.np.sqrt(2 * (1 - sqrt_fid))
 
     return distance
 

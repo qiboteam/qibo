@@ -57,7 +57,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
 
     total_sum = backend.np.sum(prob_dist)
 
-    if np.abs(backend.to_numpy(total_sum) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     log_prob = backend.np.where(
@@ -69,7 +69,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = backend.np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
-    return np.real(backend.to_numpy(shan_entropy))
+    return np.real(float(shan_entropy))
 
 
 def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
@@ -123,10 +123,10 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     total_sum_q = backend.np.sum(prob_dist_q)
 
-    if np.abs(backend.to_numpy(total_sum_p) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
 
-    if np.abs(backend.to_numpy(total_sum_q) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum_q) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Second probability array must sum to 1.")
 
     entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
@@ -209,7 +209,7 @@ def classical_renyi_entropy(
 
     total_sum = backend.np.sum(prob_dist)
 
-    if np.abs(backend.to_numpy(total_sum) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if alpha == 0.0:
@@ -303,10 +303,10 @@ def classical_relative_renyi_entropy(
     total_sum_p = backend.np.sum(prob_dist_p)
     total_sum_q = backend.np.sum(prob_dist_q)
 
-    if np.abs(backend.to_numpy(total_sum_p) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
 
-    if np.abs(backend.to_numpy(total_sum_q) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum_q) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Second probability array must sum to 1.")
 
     if alpha == 0.5:
@@ -386,7 +386,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
 
     total_sum = backend.np.sum(prob_dist)
 
-    if np.abs(backend.to_numpy(total_sum) - 1.0) > PRECISION_TOL:
+    if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if alpha == 1.0:
@@ -576,7 +576,7 @@ def relative_von_neumann_entropy(
 
     relative = backend.np.sum(eigenvalues_state * log_target)
 
-    return float(backend.to_numpy(backend.np.real(entropy_state - relative)))
+    return float(backend.np.real(entropy_state - relative))
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
