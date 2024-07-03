@@ -1758,11 +1758,11 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
 )
 def test_clifford_condition_update(backend, gate):
     """Test clifford condition update if setting new angle into the rotations."""
-    assert gate.clifford == True
+    assert gate.clifford
     gate.parameters = 0.5
-    assert gate.clifford == False
+    assert not gate.clifford
     gate.parameters = np.pi
-    assert gate.clifford == True
+    assert gate.clifford
 
 
 ###############################################################################

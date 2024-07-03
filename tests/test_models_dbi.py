@@ -172,7 +172,7 @@ def test_polynomial_fail_cases(backend, nqubits):
     )
     with pytest.raises(ValueError):
         polynomial_step(dbi, n=2, n_max=1)
-    assert polynomial_step(dbi, n=1) == None
+    assert polynomial_step(dbi, n=1) is None
 
 
 def test_least_squares(backend):

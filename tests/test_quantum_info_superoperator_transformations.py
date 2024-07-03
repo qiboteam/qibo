@@ -302,7 +302,7 @@ def test_to_pauli_liouville(backend, normalize, order, pauli_order):
 
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
     test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
 
     backend.assert_allclose(pauli, test_pauli, atol=PRECISION_TOL)
@@ -332,7 +332,7 @@ def test_to_chi(backend, normalize, order, pauli_order):
 
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
     test_chi = backend.cast(test_chi / aux, dtype=test_chi.dtype)
 
     backend.assert_allclose(chi, test_chi, atol=PRECISION_TOL)
@@ -360,7 +360,7 @@ def test_choi_to_liouville(backend, order, test_superop):
 def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1 if normalize == False else dim
+    aux = 1 if not normalize else dim
 
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
@@ -452,7 +452,7 @@ def test_choi_to_kraus(
 def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = 1 if normalize == False else dim
+    aux = 1 if not normalize else dim
 
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
@@ -566,7 +566,7 @@ def test_liouville_to_pauli(backend, normalize, order, pauli_order, test_superop
         liouville_to_pauli(test_superop[:-1, :], normalize, order, backend=backend)
 
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
     test_pauli = backend.cast(test_pauli)
@@ -615,7 +615,7 @@ def test_liouville_to_kraus(backend, order, test_a0, test_a1):
 def test_liouville_to_chi(backend, normalize, order, pauli_order, test_superop):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
@@ -718,7 +718,7 @@ def test_kraus_to_liouville(backend, order, test_superop):
 def test_kraus_to_pauli(backend, normalize, order, pauli_order, test_kraus):
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
@@ -736,7 +736,7 @@ def test_kraus_to_pauli(backend, normalize, order, pauli_order, test_kraus):
 def test_kraus_to_chi(backend, normalize, order, pauli_order, test_kraus):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
 
@@ -786,7 +786,7 @@ def test_pauli_to_liouville(backend, normalize, order, pauli_order, test_superop
         pauli_to_liouville(test_pauli[:-1, :], normalize, order, backend=backend)
 
     dim = int(np.sqrt(test_superop.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
     test_pauli = backend.cast(test_pauli)
@@ -806,7 +806,7 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
     test_pauli = pauli_superop(pauli_order)
 
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_pauli = backend.cast(test_pauli, dtype=backend.dtype)
     test_superop = backend.cast(test_superop, dtype=backend.dtype)
@@ -829,7 +829,7 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
 def test_pauli_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_pauli = backend.cast(test_pauli, dtype=backend.dtype)
 
@@ -868,7 +868,7 @@ def test_pauli_to_chi(backend, normalize, order, pauli_order):
     test_pauli = pauli_superop(pauli_order)
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=backend.dtype)
     test_pauli = backend.cast(test_pauli / aux, dtype=backend.dtype)
@@ -877,7 +877,7 @@ def test_pauli_to_chi(backend, normalize, order, pauli_order):
         test_pauli, normalize, order, pauli_order, backend=backend
     )
 
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
     backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
@@ -954,7 +954,7 @@ def test_pauli_to_stinespring(
 def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
     test_chi = chi_superop(pauli_order=pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=backend.dtype)
     test_superop = backend.cast(test_superop, dtype=backend.dtype)
@@ -978,7 +978,7 @@ def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
 def test_chi_to_liouville(backend, normalize, order, pauli_order, test_superop):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=backend.dtype)
     test_superop = backend.cast(test_superop, dtype=backend.dtype)
@@ -1017,7 +1017,7 @@ def test_chi_to_pauli(backend, normalize, order, pauli_order):
 def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
 
     test_chi = backend.cast(test_chi, dtype=backend.dtype)
 
@@ -1059,7 +1059,7 @@ def test_chi_to_stinespring(
     test_chi = backend.cast(test_chi, dtype=backend.dtype)
 
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = dim**2 if not normalize else dim
     test_a0 = backend.cast(test_a0, dtype=backend.dtype)
     test_a1 = backend.cast(test_a1, dtype=backend.dtype)
 
@@ -1156,7 +1156,7 @@ def test_stinespring_to_pauli(
 ):
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
     test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
@@ -1226,7 +1226,7 @@ def test_stinespring_to_chi(
 ):
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_chi.shape[0]))
-    aux = 1.0 if normalize == False else dim
+    aux = 1.0 if not normalize else dim
 
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)

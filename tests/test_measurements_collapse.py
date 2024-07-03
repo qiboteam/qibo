@@ -255,7 +255,7 @@ def test_collapse_error(backend):
     c = models.Circuit(1)
     m = c.add(gates.M(0, collapse=True))
     with pytest.raises(Exception) as exc_info:
-        c()
+        backend.execute_circuit(c)
     assert (
         str(exc_info.value)
         == "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
