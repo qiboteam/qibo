@@ -84,9 +84,9 @@ class Gate:
             if key in REQUIRED_FIELDS_INIT_KWARGS
         }
 
-        for value in encoded_simple:
-            if isinstance(encoded[value], set):
-                encoded_simple[value] = list(encoded_simple[value])
+        # for value in encoded_simple:
+        #    if isinstance(encoded[value], set):
+        #        encoded_simple[value] = list(encoded_simple[value])
 
         encoded_simple["_class"] = type(self).__name__
 
