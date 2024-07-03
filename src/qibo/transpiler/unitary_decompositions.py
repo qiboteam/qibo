@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import NumpyBackend, _check_backend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 magic_basis = np.array(
@@ -48,7 +48,7 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
         backend (:class:`qibo.backends.abstract.Backend`): Backend to use for calculations.
 
     Returns:
-        (ndarray) Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
+        ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
     backend = _check_backend(backend)
 
