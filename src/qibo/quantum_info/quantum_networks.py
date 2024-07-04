@@ -51,40 +51,63 @@ class QuantumNetwork:
         pure: bool = False,
         backend=None,
     ):
-        self._run_checks(partition, system_input, pure)
-
         self._tensor = tensor
-        self.partition = partition
+        self.partition = tuple(partition)
         self.system_input = system_input
         self._pure = pure
         self._backend = backend
 
+        self._run_checks(self.partition, self.system_input, self._pure)
+
         self._set_parameters()
 
-        if len(self.partition) > 0:
-            self.dims = reduce(mul, self.partition)
-        else:
-            self.dims = 1
+        self.dims = reduce(mul, self.partition) if len(self.partition) > 0 else 1
 
     @staticmethod
     def _order_tensor2operator(n: int):
+        """
+        Returns the order to reshape a tensor to an operator.
+        Given a tenosr of 2n leads, the order is [0, 2, 4, ..., 1, 3, 5, ...].
+        """
         order = list(range(0, n * 2, 2)) + list(range(1, n * 2, 2))
         return order
 
     @staticmethod
     def _order_operator2tensor(n: int):
+        """
+        Returns the order to reshape an operator to a tensor.
+        Given a operator of 2n systems, the order is [0, n, 1, n+1, 2, n+2, ...].
+        """
         order = list(sum(zip(list(range(0, n)), list(range(n, n * 2))), ()))
         return order
 
     @classmethod
     def _operator2tensor(cls, operator, partition: List[int]):
+        # check if tensorflow is installed
+        try:
+            from tensorflow import InvalidArgumentError
+        except ImportError:
+            InvalidArgumentError = ValueError
+
         n = len(partition)
         order = cls._order_operator2tensor(n)
 
         try:
             tensor = np.transpose(operator.reshape(list(partition) * 2), order)
             return tensor.reshape([dim**2 for dim in partition])
-        except:
+        except ValueError:
+            raise_error(
+                ValueError,
+                "``partition`` does not match the shape of the input matrix. "
+                + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
+            )
+        except InvalidArgumentError:
+            raise_error(
+                ValueError,
+                "``partition`` does not match the shape of the input matrix. "
+                + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
+            )
+        except RuntimeError:
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "
@@ -94,7 +117,7 @@ class QuantumNetwork:
     @classmethod
     def from_operator(
         cls,
-        arr: np.ndarray,
+        operator,
         partition: Optional[Union[List[int], Tuple[int]]] = None,
         system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
         pure: bool = False,
@@ -126,35 +149,35 @@ class QuantumNetwork:
 
         if pure:
             if partition is None:
-                partition = arr.shape
-                tensor = arr
+                partition = tuple(operator.shape)
+                tensor = operator
             else:
                 try:
-                    tensor = arr.reshape(partition)
+                    tensor = operator.reshape(partition)
                 except:
                     raise_error(
                         ValueError,
                         "``partition`` does not match the shape of the input matrix. "
-                        + f"Cannot reshape matrix of size {arr.shape} to partition {partition}",
+                        + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
                     )
         else:
             # check if arr is a valid choi operator
-            len_sys = len(arr.shape)
+            len_sys = len(operator.shape)
             if (len_sys % 2 != 0) or (
-                arr.shape[: len_sys // 2] != arr.shape[len_sys // 2 :]
+                operator.shape[: len_sys // 2] != operator.shape[len_sys // 2 :]
             ):
                 raise_error(
                     ValueError,
                     "The opertor must be a square operator where the first half of the shape "
                     + "is the same as the second half of the shape. "
-                    + f"However, the shape of the input is {arr.shape}. "
+                    + f"However, the shape of the input is {operator.shape}. "
                     + "If the input is pure, set `pure=True`.",
                 )
 
             if partition is None:
-                partition = arr.shape[: len_sys // 2]
+                partition = operator.shape[: len_sys // 2]
 
-            tensor = cls._operator2tensor(arr, partition)
+            tensor = cls._operator2tensor(operator, partition)
 
         return cls(
             tensor,
@@ -240,7 +263,9 @@ class QuantumNetwork:
                 the norm given by ``order``. Defaults to :math:`10^{-8}`.
 
         Returns:
-            bool: Hermiticity condition.
+            bool: Hermiticity condition. If the adjoint of the Choi operator is equal to the
+                Choi operator, the method returns ``True``.
+                If the input is pure, the its always Hermitian.
         """
         if precision_tol < 0.0:
             raise_error(
@@ -609,6 +634,12 @@ class QuantumNetwork:
     def full(self, update=False, backend=None):
         """Convert the internal representation to the full tensor of the network.
 
+        Args:
+            update (bool, optional): If ``True``, updates the internal representation of the
+                network to the full tensor. Defaults to ``False``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+                calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
         Returns:
             ndarray: The full reprentation of the quantum network.
         """
@@ -665,12 +696,11 @@ class QuantumComb(QuantumNetwork):
         self,
         tensor,
         partition: Optional[Union[List[int], Tuple[int]]] = None,
-        *,
         system_input: Optional[Union[List[bool], Tuple[bool]]] = None,
         pure: bool = False,
         backend=None,
     ):
-        if partition == None:
+        if partition is None:
             if pure:
                 partition = tensor.shape
             else:
@@ -736,18 +766,19 @@ class QuantumComb(QuantumNetwork):
 
         if float(norm) > precision_tol:
             return False
-        elif len(self.partition) == 2:
+
+        if len(self.partition) == 2:
             return True
-        else:
-            return QuantumComb(
-                sub_comb, self.partition[:-2], pure=False, backend=self._backend
-            ).is_causal(order, precision_tol)
+
+        return QuantumComb(
+            sub_comb, self.partition[:-2], pure=False, backend=self._backend
+        ).is_causal(order, precision_tol)
 
     @classmethod
     def from_operator(
-        cls, tensor, partition=None, pure=False, backend=None, inverse=False
+        cls, operator, partition=None, pure=False, backend=None, inverse=False
     ):
-        comb = super().from_operator(tensor, partition, None, pure, backend)
+        comb = super().from_operator(operator, partition, None, pure, backend)
         if (
             inverse
         ):  # Convert mathmetical convention of Choi operator to physical convention
@@ -803,7 +834,7 @@ class QuantumChannel(QuantumComb):
                     + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
                 )
             if len(partition) == 1:
-                if system_input == None:  # Assume the input is a quantum state
+                if system_input is None:  # Assume the input is a quantum state
                     partition = (1, partition[0])
                 else:
                     if isinstance(system_input, bool):
@@ -875,14 +906,15 @@ class QuantumChannel(QuantumComb):
         norm = self._backend.calculate_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:
             return False
-        elif len(self.partition) == 2:
+
+        if len(self.partition) == 2:
             return True
-        else:
-            # Unital is defined for quantum channels only.
-            # But we can extend it to quantum combs as follows:
-            return QuantumChannel(  # pragma: no cover
-                sub_comb, self.partition[2:], pure=False, backend=self._backend
-            ).is_unital(order, precision_tol)
+
+        # Unital is defined for quantum channels only.
+        # But we can extend it to quantum combs as follows:
+        return QuantumChannel(  # pragma: no cover
+            sub_comb, self.partition[2:], pure=False, backend=self._backend
+        ).is_unital(order, precision_tol)
 
     def is_channel(
         self,
@@ -932,7 +964,7 @@ class QuantumChannel(QuantumComb):
 
 
 def link_product(
-    subscripts: str = "ij,jk -> ik",
+    subscripts: str,
     *operands: QuantumNetwork,
     backend=None,
     surpress_warning=False,
@@ -1002,13 +1034,10 @@ def link_product(
                 if index < 0:
                     continue
                 found += 1
-                if found > 1:
-                    if is_input != operands[inds[i]].system_input[index]:
-                        pass
-                    else:
-                        warning(
-                            f"Index {ind} connects two {'input' if is_input else 'output'} systems."
-                        )
+                if found > 1 and is_input == operands[inds[i]].system_input[index]:
+                    warning(
+                        f"Index {ind} connects two {'input' if is_input else 'output'} systems."
+                    )
                 is_input = operands[inds[i]].system_input[index]
                 if found > 2:
                     warning(
@@ -1044,9 +1073,9 @@ class IdentityChannel(QuantumChannel):
 
     def __init__(self, dim: int, backend=None):
 
-        super().__init__(
-            np.eye(dim, dtype=np.complex128), [dim, dim], pure=True, backend=backend
-        )
+        identity = np.eye(dim, dtype=complex)
+        identity = backend.cast(identity, dtype=identity.dtype)
+        super().__init__(identity, [dim, dim], pure=True, backend=backend)
 
 
 class TraceOperation(QuantumNetwork):
@@ -1061,6 +1090,6 @@ class TraceOperation(QuantumNetwork):
 
     def __init__(self, dim: int, backend=None):
 
-        super().__init__(
-            np.eye(dim, dtype=np.complex128), [dim], [True], pure=False, backend=backend
-        )
+        identity = np.eye(dim, dtype=complex)
+        identity = backend.cast(identity, dtype=identity.dtype)
+        super().__init__(identity, [dim], [True], pure=False, backend=backend)

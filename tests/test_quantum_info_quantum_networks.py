@@ -130,6 +130,7 @@ def test_errors(backend):
         QuantumNetwork.from_operator(matrix, (1, 2), pure=True, backend=backend)
 
     vec = np.random.rand(4)
+    vec = backend.cast(vec, dtype=vec.dtype)
     with pytest.raises(ValueError):
         QuantumNetwork.from_operator(vec, backend=backend)
 
@@ -428,7 +429,7 @@ def test_non_hermitian_and_prints(backend):
     assert network.__str__() == "J[┍4┑, ┕4┙]"
 
 
-def test_uility_func():
+def test_uility_function():
     # _order_tensor2operator should convert
     # (a0,a1,b0,b1,...) to (a0,b0,..., a1,b1,...)
     old_shape = (0, 10, 1, 11, 2, 12, 3, 13)
@@ -471,6 +472,9 @@ def test_default_construction(backend):
     vec = np.random.rand(4).reshape([4, 1])
     mat = np.random.rand(16).reshape([2, 2, 2, 2])
     tensor = np.random.rand(16).reshape([4, 4])
+    vec = backend.cast(vec, dtype=vec.dtype)
+    mat = backend.cast(mat, dtype=mat.dtype)
+    tensor = backend.cast(tensor, dtype=tensor.dtype)
     network = QuantumNetwork.from_operator(vec, pure=True, backend=backend)
     assert network.partition == (4, 1)
     assert network.system_input == (True, False)
