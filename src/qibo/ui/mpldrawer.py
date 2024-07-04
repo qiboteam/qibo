@@ -9,6 +9,7 @@ import matplotlib
 import numpy as np
 
 from qibo import gates
+from .FusedGateBarrier import FusedStartGateBarrier, FusedGateEndBarrier
 
 global STYLE
 STYLE = {}
@@ -174,81 +175,110 @@ def _draw_gates(
 
 
 def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measured={}):
+
+    name, target = gate[:2]
+
+    if "FUSEDGATEENDBARRIER" in name:
+        return
+
     linewidth = plot_params["linewidth"]
     scale = plot_params["scale"]
     control_radius = plot_params["control_radius"]
 
-    name, target = gate[:2]
     target_index = _get_flipped_index(target, labels)
     controls = gate[2:]
     control_indices = _get_flipped_indices(controls, labels)
     gate_indices = control_indices + [target_index]
     min_wire = min(gate_indices)
     max_wire = max(gate_indices)
-    _line(
-        ax,
-        gate_grid[i],
-        gate_grid[i],
-        wire_grid[min_wire],
-        wire_grid[max_wire],
-        plot_params,
-    )
-    ismeasured = False
-    for index in control_indices:
-        if measured.get(index, 1000) < i:
-            ismeasured = True
-    if ismeasured:
-        dy = 0.04  # TODO: put in plot_params
+
+    if "FUSEDSTARTGATEBARRIER" in name:
+        equal_qbits = False
+        if "@EQUAL" in name:
+            name = name.replace("@EQUAL", "")
+            equal_qbits = True
+        nfused = int(name.replace("FUSEDSTARTGATEBARRIER", ""))
+        dx_right = 0.30
+        dx_left = 0.30
+        dy = 0.25
+        _rectangle(
+            ax,
+            gate_grid[i + 1] - dx_left,
+            gate_grid[i + nfused] + dx_right,
+            wire_grid[min_wire] - dy - (0 if not equal_qbits else -0.9 * scale),
+            wire_grid[max_wire] + dy,
+            plot_params,
+        )
+    else:
+
         _line(
             ax,
-            gate_grid[i] + dy,
-            gate_grid[i] + dy,
+            gate_grid[i],
+            gate_grid[i],
             wire_grid[min_wire],
             wire_grid[max_wire],
             plot_params,
         )
+        ismeasured = False
+        for index in control_indices:
+            if measured.get(index, 1000) < i:
+                ismeasured = True
+        if ismeasured:
+            dy = 0.04  # TODO: put in plot_params
+            _line(
+                ax,
+                gate_grid[i] + dy,
+                gate_grid[i] + dy,
+                wire_grid[min_wire],
+                wire_grid[max_wire],
+                plot_params,
+            )
 
-    for ci in control_indices:
-        x = gate_grid[i]
-        y = wire_grid[ci]
+        for ci in control_indices:
+            x = gate_grid[i]
+            y = wire_grid[ci]
 
-        is_dagger = False
-        if name[-2:] == "DG":
-            name = name.replace("DG", "")
-            is_dagger = True
+            is_dagger = False
+            if name[-2:] == "DG":
+                name = name.replace("DG", "")
+                is_dagger = True
 
-        if name == "SWAP":
-            _swapx(ax, x, y, plot_params)
-        elif name in [
-            "ISWAP",
-            "SISWAP",
-            "FSWAP",
-            "FSIM",
-            "SYC",
-            "GENERALIZEDFSIM",
-            "RXX",
-            "RYY",
-            "RZZ",
-            "RZX",
-            "RXXYY",
-            "G",
-            "RBS",
-            "ECR",
-            "MS",
-        ]:
+            if name == "SWAP":
+                _swapx(ax, x, y, plot_params)
+            elif name in [
+                "ISWAP",
+                "SISWAP",
+                "FSWAP",
+                "FSIM",
+                "SYC",
+                "GENERALIZEDFSIM",
+                "RXX",
+                "RYY",
+                "RZZ",
+                "RZX",
+                "RXXYY",
+                "G",
+                "RBS",
+                "ECR",
+                "MS",
+            ]:
 
-            symbol = SYMBOLS.get(name, name)
+                symbol = SYMBOLS.get(name, name)
 
-            if is_dagger:
-                symbol += r"$\rm{^{\dagger}}$"
+                if is_dagger:
+                    symbol += r"$\rm{^{\dagger}}$"
 
-            _text(ax, x, y, symbol, plot_params, box=True)
-        else:
-            _cdot(ax, x, y, plot_params)
+                _text(ax, x, y, symbol, plot_params, box=True)
+
+            else:
+                _cdot(ax, x, y, plot_params)
 
 
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     name, target = gate[:2]
+
+    if "FUSEDSTARTGATEBARRIER" in name or "FUSEDGATEENDBARRIER" in name:
+        return
 
     is_dagger = False
     if name[-2:] == "DG":
@@ -415,6 +445,24 @@ def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
         )
 
 
+def _get_min_max_qbits(gates):
+    def _get_all_tuple_items(iterable):
+        t = []
+        for each in iterable:
+            t.extend(list(each) if isinstance(each, tuple) else [each])
+        return tuple(t)
+
+    all_qbits = []
+    c_qbits = [t._control_qubits for t in gates.gates]
+    t_qbits = [t._target_qubits for t in gates.gates]
+    c_qbits = _get_all_tuple_items(c_qbits)
+    t_qbits = _get_all_tuple_items(t_qbits)
+    all_qbits.append(c_qbits + t_qbits)
+
+    flatten_arr = _get_all_tuple_items(all_qbits)
+    return min(flatten_arr), max(flatten_arr)
+
+
 def _get_flipped_index(target, labels):
     """Get qubit labels from the rest of the line,and return indices
 
@@ -426,6 +474,28 @@ def _get_flipped_index(target, labels):
     nq = len(labels)
     i = labels.index(target)
     return nq - i - 1
+
+
+def _rectangle(ax, x1, x2, y1, y2, plot_style):
+    Rectangle = matplotlib.patches.Rectangle
+    x = min(x1, x2)
+    y = min(y1, y2)
+    w = abs(x2 - x1)
+    h = abs(y2 - y1)
+    xm = x + w / 2.0
+    ym = y + h / 2.0
+
+    rect = Rectangle(
+        (x, y),
+        w,
+        h,
+        ec=plot_style["edgecolor"],
+        fc=plot_style["fillcolor"],
+        fill=False,
+        lw=plot_style["linewidth"],
+        label="",
+    )
+    ax.add_patch(rect)
 
 
 def _get_flipped_indices(targets, labels):
@@ -506,6 +576,69 @@ def _check_list_str(list, str):
     return False
 
 
+def _process_gates(array_gates):
+    gates_plot = []
+
+    for gate in array_gates:
+        init_label = gate.name.upper()
+
+        if init_label == "CCX":
+            init_label = "TOFFOLI"
+
+        if init_label == "CX":
+            init_label = "CNOT"
+
+        if _check_list_str(["SX", "CSX"], init_label):
+            is_dagger = init_label[-2:] == "DG"
+            init_label = (
+                r"$\rm{\sqrt{X}}^{\dagger}$" if is_dagger else r"$\rm{\sqrt{X}}$"
+            )
+
+        if (
+            len(gate._control_qubits) > 0
+            and "C" in init_label[0]
+            and "CNOT" != init_label
+        ):
+            init_label = gate.draw_label.upper()
+
+        if init_label in [
+            "ID",
+            "MEASURE",
+            "KRAUSCHANNEL",
+            "UNITARYCHANNEL",
+            "DEPOLARIZINGCHANNEL",
+            "READOUTERRORCHANNEL",
+        ]:
+            for qbit in gate._target_qubits:
+                item = (init_label,)
+                item += ("q_" + str(qbit),)
+                gates_plot.append(item)
+        elif init_label == "ENTANGLEMENTENTROPY":
+            for qbit in list(range(circuit.nqubits)):
+                item = (init_label,)
+                item += ("q_" + str(qbit),)
+                gates_plot.append(item)
+        else:
+            item = ()
+            item += (init_label,)
+
+            for qbit in gate._target_qubits:
+                if qbit is tuple:
+                    item += ("q_" + str(qbit[0]),)
+                else:
+                    item += ("q_" + str(qbit),)
+
+            for qbit in gate._control_qubits:
+                if qbit is tuple:
+                    item += ("q_" + str(qbit[0]),)
+                else:
+                    item += ("q_" + str(qbit),)
+
+            gates_plot.append(item)
+
+    return gates_plot
+
+
 def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
@@ -548,68 +681,32 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
         all_gates = []
         for gate in circuit.queue:
             if isinstance(gate, gates.FusedGate):
+                min_q, max_q = _get_min_max_qbits(gate)
+
+                fgates = None
+
+                if cluster_gates:
+                    fgates = _make_cluster_gates(_process_gates(gate.gates))
+                else:
+                    fgates = _process_gates(gate.gates)
+
+                l_gates = len(gate.gates)
+                equal_qbits = False
+                if min_q != max_q:
+                    l_gates = len(fgates)
+                else:
+                    max_q += 1
+                    equal_qbits = True
+
+                all_gates.append(
+                    FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
+                )
                 all_gates += gate.gates
+                all_gates.append(FusedGateEndBarrier(min_q, max_q))
             else:
                 all_gates.append(gate)
 
-        gates_plot = []
-
-        for gate in all_gates:
-            init_label = gate.name.upper()
-
-            if init_label == "CCX":
-                init_label = "TOFFOLI"
-
-            if init_label == "CX":
-                init_label = "CNOT"
-
-            if _check_list_str(["SX", "CSX"], init_label):
-                is_dagger = init_label[-2:] == "DG"
-                init_label = (
-                    r"$\rm{\sqrt{X}}^{\dagger}$" if is_dagger else r"$\rm{\sqrt{X}}$"
-                )
-
-            if (
-                len(gate._control_qubits) > 0
-                and "C" in init_label[0]
-                and "CNOT" not in init_label
-            ):
-                init_label = gate.draw_label.upper()
-
-            if init_label in [
-                "ID",
-                "MEASURE",
-                "KRAUSCHANNEL",
-                "UNITARYCHANNEL",
-                "DEPOLARIZINGCHANNEL",
-                "READOUTERRORCHANNEL",
-            ]:
-                for qbit in gate._target_qubits:
-                    item = (init_label,)
-                    item += ("q_" + str(qbit),)
-                    gates_plot.append(item)
-            elif init_label == "ENTANGLEMENTENTROPY":
-                for qbit in list(range(circuit.nqubits)):
-                    item = (init_label,)
-                    item += ("q_" + str(qbit),)
-                    gates_plot.append(item)
-            else:
-                item = ()
-                item += (init_label,)
-
-                for qbit in gate._target_qubits:
-                    if qbit is tuple:
-                        item += ("q_" + str(qbit[0]),)
-                    else:
-                        item += ("q_" + str(qbit),)
-
-                for qbit in gate._control_qubits:
-                    if qbit is tuple:
-                        item += ("q_" + str(qbit[0]),)
-                    else:
-                        item += ("q_" + str(qbit),)
-
-                gates_plot.append(item)
+        gates_plot = _process_gates(all_gates)
 
         if cluster_gates:
             gates_cluster = _make_cluster_gates(gates_plot)
