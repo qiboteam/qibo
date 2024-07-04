@@ -9,7 +9,8 @@ import matplotlib
 import numpy as np
 
 from qibo import gates
-from .FusedGateBarrier import FusedStartGateBarrier, FusedGateEndBarrier
+
+from .FusedGateBarrier import FusedGateEndBarrier, FusedStartGateBarrier
 
 global STYLE
 STYLE = {}
