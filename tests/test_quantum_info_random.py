@@ -49,9 +49,9 @@ def test_uniform_sampling_U3(backend, seed):
 
         expectation_values.append(
             [
-                np.conj(state) @ X @ state,
-                np.conj(state) @ Y @ state,
-                np.conj(state) @ Z @ state,
+                backend.np.conj(state) @ X @ state,
+                backend.np.conj(state) @ Y @ state,
+                backend.np.conj(state) @ Z @ state,
             ]
         )
     expectation_values = backend.cast(expectation_values)
