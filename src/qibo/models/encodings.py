@@ -148,13 +148,6 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
     if architecture not in ["diagonal", "tree"]:
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
-    if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
-        raise_error(
-            ValueError,
-            "When ``architecture = 'tree'``, len(data) must be a power of 2. "
-            + f"However, it is {len(data)}.",
-        )
-
     nqubits = len(data)
 
     circuit = Circuit(nqubits, **kwargs)
@@ -395,22 +388,28 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     """
 
     if architecture == "diagonal":
-        pairs_rbs = np.arange(nqubits)
+        pairs_rbs = np.arange(nqubits - 1, -1, -1)
         pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
 
     if architecture == "tree":
-        pairs_rbs = [[(0, int(nqubits / 2))]]
-        indexes = list(pairs_rbs[0][0])
-        for depth in range(2, int(math.log2(nqubits)) + 1):
-            pairs_rbs_per_depth = [
-                [(index, index + int(nqubits / 2**depth)) for index in indexes]
-            ]
-            pairs_rbs += pairs_rbs_per_depth
-            indexes = list(np.array(pairs_rbs_per_depth).flatten())
-
-    pairs_rbs = [
-        [(nqubits - 1 - a, nqubits - 1 - b) for a, b in row] for row in pairs_rbs
-    ]
+        depth = int(np.ceil(np.log2(nqubits)))
+        registers = [list(np.arange(nqubits - 1, -1, -1))]
+        pairs_rbs = []
+        for _ in range(depth):
+            new_registers, per_depth = [], []
+            for register in registers:
+                limit = (
+                    int(len(register) / 2)
+                    if len(register) % 2 == 0
+                    else int(len(register) / 2) + 1
+                )
+                new_registers.append(register[:limit])
+                new_registers.append(register[limit:])
+                if len(register[:limit]) + len(register[limit:]) >= 2:
+                    per_depth.append((register[:limit][0], register[limit:][0]))
+            pairs_rbs.append(per_depth)
+            registers = new_registers
+            new_registers = []
 
     circuit = Circuit(nqubits, **kwargs)
     for row in pairs_rbs:
