@@ -27,7 +27,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
 
 def test_h(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1)], nqubits=2)
-    target_state = np.ones_like(final_state) / 2
+    target_state = np.ones_like(backend.to_numpy(final_state)) / 2
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     assert gates.H(0).qasm_label == "h"
@@ -37,7 +37,7 @@ def test_h(backend):
 
 def test_x(backend):
     final_state = apply_gates(backend, [gates.X(0)], nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[2] = 1.0
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -48,7 +48,7 @@ def test_x(backend):
 
 def test_y(backend):
     final_state = apply_gates(backend, [gates.Y(1)], nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[1] = 1j
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -59,7 +59,7 @@ def test_y(backend):
 
 def test_z(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.Z(0)], nqubits=2)
-    target_state = np.ones_like(final_state) / 2.0
+    target_state = np.ones_like(backend.to_numpy(final_state)) / 2.0
     target_state[2] *= -1.0
     target_state[3] *= -1.0
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -194,7 +194,7 @@ def test_tdg(backend):
 def test_identity(backend):
     gatelist = [gates.H(0), gates.H(1), gates.I(0), gates.I(1)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
-    target_state = np.ones_like(final_state) / 2.0
+    target_state = np.ones_like(backend.to_numpy(final_state)) / 2.0
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     gatelist = [gates.H(0), gates.H(1), gates.I(0, 1)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
@@ -308,7 +308,7 @@ def test_rz(backend, theta, apply_x):
         gatelist = []
     gatelist.append(gates.RZ(0, theta))
     final_state = apply_gates(backend, gatelist, nqubits=nqubits)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     p = int(apply_x)
     target_state[p] = np.exp((2 * p - 1) * 1j * theta / 2.0)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -398,7 +398,7 @@ def test_gpi2(backend):
 def test_u1(backend):
     theta = 0.1234
     final_state = apply_gates(backend, [gates.X(0), gates.U1(0, theta)], nqubits=1)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[1] = np.exp(1j * theta)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -507,7 +507,7 @@ def test_cnot(backend, applyx):
         gatelist = []
     gatelist.append(gates.CNOT(0, 1))
     final_state = apply_gates(backend, gatelist, nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[3 * int(applyx)] = 1.0
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -725,7 +725,7 @@ def test_cun(backend, name, params):
 
 def test_swap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SWAP(0, 1)], nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[2] = 1.0
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -736,7 +736,7 @@ def test_swap(backend):
 
 def test_iswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.iSWAP(0, 1)], nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[2] = 1.0j
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -747,7 +747,7 @@ def test_iswap(backend):
 
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[1] = 1.0 / np.sqrt(2)
     target_state[2] = 1.0j / np.sqrt(2)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -806,7 +806,7 @@ def test_fsim(backend):
     phi = 0.4321
     gatelist = [gates.H(0), gates.H(1), gates.fSim(0, 1, theta, phi)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
-    target_state = np.ones_like(final_state) / 2.0
+    target_state = np.ones_like(backend.to_numpy(final_state)) / 2.0
     rotation = np.array(
         [[np.cos(theta), -1j * np.sin(theta)], [-1j * np.sin(theta), np.cos(theta)]]
     )
@@ -948,7 +948,7 @@ def test_rzz(backend):
     final_state = apply_gates(
         backend, [gates.X(0), gates.X(1), gates.RZZ(0, 1, theta=theta)], nqubits=2
     )
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[3] = np.exp(-1j * theta / 2.0)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1061,7 +1061,7 @@ def test_ms(backend):
         [gates.H(0), gates.H(1), gates.MS(0, 1, phi0=phi0, phi1=phi1)],
         nqubits=2,
     )
-    target_state = np.ones_like(final_state) / 2.0
+    target_state = np.ones_like(backend.to_numpy(final_state)) / 2.0
     plus = np.exp(1.0j * (phi0 + phi1))
     minus = np.exp(1.0j * (phi0 - phi1))
 
@@ -1215,7 +1215,7 @@ def test_toffoli(backend, applyx):
     else:
         gatelist = [gates.X(1), gates.TOFFOLI(0, 1, 2)]
     final_state = apply_gates(backend, gatelist, nqubits=3)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     if applyx:
         target_state[-1] = 1
     else:
@@ -1446,7 +1446,7 @@ def test_controlled_u1(backend):
     gatelist.append(gates.X(0))
     gatelist.append(gates.X(1))
     final_state = apply_gates(backend, gatelist, nqubits=3)
-    target_state = np.zeros_like(final_state)
+    target_state = np.zeros_like(backend.to_numpy(final_state))
     target_state[1] = np.exp(1j * theta)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     gate = gates.U1(0, theta).controlled_by(1)
