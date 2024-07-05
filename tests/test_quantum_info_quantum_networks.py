@@ -131,6 +131,7 @@ def test_errors(backend):
 
     vec = np.random.rand(4)
     vec = backend.cast(vec, dtype=vec.dtype)
+    vec = backend.cast(vec, dtype=vec.dtype)
     with pytest.raises(ValueError):
         QuantumNetwork.from_operator(vec, backend=backend)
 
