@@ -409,7 +409,9 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
             new_registers = []
 
     circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.RBS(*pair, 0.0, trainable=True) for row in pairs_rbs for pair in row)
+    circuit.add(
+        gates.RBS(*pair, 0.0, trainable=True) for row in pairs_rbs for pair in row
+    )
 
     return circuit, pairs_rbs
 
