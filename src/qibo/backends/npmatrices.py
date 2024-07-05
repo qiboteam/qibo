@@ -78,7 +78,7 @@ class NumpyMatrices:
         theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
-        return self.np.stack([cos, isin, isin, cos]).reshape(2, 2)
+        return self._cast([[cos, isin], [isin, cos]], dtype=self.dtype)
 
     def RY(self, theta):
         theta = self._cast_parameter(theta)

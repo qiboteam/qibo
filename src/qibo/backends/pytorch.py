@@ -24,7 +24,9 @@ class TorchMatrices(NumpyMatrices):
         self.requires_grad = requires_grad
 
     def _cast(self, x, dtype):
-        return self.np.as_tensor(x, dtype=dtype)
+        flattened = [item for sublist in x for item in sublist]
+        tensor_list = [self.np.as_tensor(i, dtype=dtype) for i in flattened]
+        return self.np.stack(tensor_list).reshape(len(x), len(x))
 
     def _cast_parameter(self, x):
         return self.np.tensor(x, dtype=self.dtype, requires_grad=self.requires_grad)
