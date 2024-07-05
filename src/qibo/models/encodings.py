@@ -218,9 +218,6 @@ def unary_encoder_random_gaussian(
             f"Currently, this function only accepts ``architecture=='tree'``.",
         )
 
-    if not math.log2(nqubits).is_integer():
-        raise_error(ValueError, f"nqubits must be a power of 2, but it is {nqubits}.")
-
     if (
         seed is not None
         and not isinstance(seed, int)
@@ -389,14 +386,14 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
 
     if architecture == "diagonal":
         pairs_rbs = np.arange(nqubits - 1, -1, -1)
-        pairs_rbs = [pair for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
+        pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
 
     if architecture == "tree":
         depth = int(np.ceil(np.log2(nqubits)))
         registers = [list(np.arange(nqubits - 1, -1, -1))]
         pairs_rbs = []
         for _ in range(depth):
-            new_registers = []
+            new_registers, per_depth = [], []
             for register in registers:
                 limit = (
                     int(len(register) / 2)
@@ -406,12 +403,13 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
                 new_registers.append(register[:limit])
                 new_registers.append(register[limit:])
                 if len(register[:limit]) + len(register[limit:]) >= 2:
-                    pairs_rbs.append((register[:limit][0], register[limit:][0]))
+                    per_depth.append((register[:limit][0], register[limit:][0]))
+            pairs_rbs.append(per_depth)
             registers = new_registers
             new_registers = []
 
     circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.RBS(*pair, 0.0, trainable=True) for pair in pairs_rbs)
+    circuit.add(gates.RBS(*pair, 0.0, trainable=True) for row in pairs_rbs for pair in row)
 
     return circuit, pairs_rbs
 
