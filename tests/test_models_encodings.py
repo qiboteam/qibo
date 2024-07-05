@@ -17,7 +17,7 @@ from qibo.models.encodings import (
 )
 
 
-def gaussian(x, a, b, c):
+def _gaussian(x, a, b, c):
     """Gaussian used in the `unary_encoder_random_gaussian test"""
     return np.exp(a * x**2 + b * x + c)
 
@@ -42,10 +42,11 @@ def test_comp_basis_encoder(backend, basis_element):
     target = np.kron(one, np.kron(zero, one))
     target = backend.cast(target, dtype=target.dtype)
 
-    if isinstance(basis_element, int):
-        state = comp_basis_encoder(basis_element, nqubits=3)
-    else:
-        state = comp_basis_encoder(basis_element)
+    state = (
+        comp_basis_encoder(basis_element, nqubits=3)
+        if isinstance(basis_element, int)
+        else comp_basis_encoder(basis_element)
+    )
 
     state = backend.execute_circuit(state).state()
 
@@ -171,7 +172,7 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     y, x = np.histogram(amplitudes, bins=50, density=True)
     x = (x[:-1] + x[1:]) / 2
 
-    params, _ = curve_fit(gaussian, x, y)
+    params, _ = curve_fit(_gaussian, x, y)
 
     stddev = np.sqrt(-1 / (2 * params[0]))
     mean = stddev**2 * params[1]
@@ -255,3 +256,22 @@ def _helper_entangling_test(gate, qubit_0, qubit_1=None):
         gate = gates.CNOT
 
     return gate(qubit_0, qubit_1)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_circuit_kwargs(density_matrix):
+    test = comp_basis_encoder(5, 7, density_matrix=density_matrix)
+    assert test.density_matrix is density_matrix
+
+    test = entangling_layer(5, density_matrix=density_matrix)
+    assert test.density_matrix is density_matrix
+
+    data = np.random.rand(5)
+    test = phase_encoder(data, density_matrix=density_matrix)
+    assert test.density_matrix is density_matrix
+
+    test = unary_encoder(data, "diagonal", density_matrix=density_matrix)
+    assert test.density_matrix is density_matrix
+
+    test = unary_encoder_random_gaussian(4, density_matrix=density_matrix)
+    assert test.density_matrix is density_matrix
