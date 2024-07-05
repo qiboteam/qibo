@@ -116,8 +116,6 @@ class NumpyBackend(Backend):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)(*gate.parameters)
-        print(self.matrices)
-        print(_matrix)
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):
