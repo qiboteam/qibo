@@ -389,14 +389,14 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
 
     if architecture == "diagonal":
         pairs_rbs = np.arange(nqubits - 1, -1, -1)
-        pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
+        pairs_rbs = [pair for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
 
     if architecture == "tree":
         depth = int(np.ceil(np.log2(nqubits)))
         registers = [list(np.arange(nqubits - 1, -1, -1))]
         pairs_rbs = []
         for _ in range(depth):
-            new_registers, per_depth = [], []
+            new_registers = []
             for register in registers:
                 limit = (
                     int(len(register) / 2)
@@ -406,15 +406,12 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
                 new_registers.append(register[:limit])
                 new_registers.append(register[limit:])
                 if len(register[:limit]) + len(register[limit:]) >= 2:
-                    per_depth.append((register[:limit][0], register[limit:][0]))
-            pairs_rbs.append(per_depth)
+                    pairs_rbs.append((register[:limit][0], register[limit:][0]))
             registers = new_registers
             new_registers = []
 
     circuit = Circuit(nqubits, **kwargs)
-    for row in pairs_rbs:
-        for pair in row:
-            circuit.add(gates.RBS(*pair, 0.0, trainable=True))
+    circuit.add(gates.RBS(*pair, 0.0, trainable=True) for pair in pairs_rbs)
 
     return circuit, pairs_rbs
 
