@@ -400,7 +400,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
                     limit += 1
                 new_registers.append(register[:limit])
                 new_registers.append(register[limit:])
-                if len(register[:limit]) + len(register[limit:]) >= 2:
+                if len(register) >= 2:
                     per_depth.append((register[:limit][0], register[limit:][0]))
             pairs_rbs.append(per_depth)
             registers = new_registers
