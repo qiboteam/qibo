@@ -64,6 +64,8 @@ class PyTorchBackend(NumpyBackend):
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift
+        self.np.sign = self.np.sgn
+        self.np.flatnonzero = lambda x: self.np.nonzero(x).flatten()
 
     def requires_grad(self, requires_grad):
         """Enable or disable gradient calculation."""
@@ -107,7 +109,6 @@ class PyTorchBackend(NumpyBackend):
 
         if dtype is None:
             dtype = self.dtype
-
         elif isinstance(dtype, type):
             dtype = self._torch_dtype(dtype.__name__)
         elif not isinstance(dtype, self.np.dtype):

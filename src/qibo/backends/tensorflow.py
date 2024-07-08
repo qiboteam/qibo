@@ -43,6 +43,8 @@ class TensorflowBackend(NumpyBackend):
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
+        self.np.flatnonzero = np.flatnonzero
+        self.np.copy = np.copy
 
         self.versions = {
             "qibo": __version__,

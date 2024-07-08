@@ -106,11 +106,7 @@ def pauli_basis(
         basis, indexes = [], []
         for row in basis_full:
             row = vectorization(row, order=order, backend=backend)
-            row_indexes = (
-                backend.np.nonzero(row).flatten()
-                if backend.__class__.__name__ == "PyTorchBackend"
-                else list(np.flatnonzero(row))
-            )
+            row_indexes = backend.np.flatnonzero(row)
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
@@ -280,11 +276,7 @@ def pauli_to_comp_basis(
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = (
-                backend.np.nonzero(row).flatten()
-                if backend.__class__.__name__ == "PyTorchBackend"
-                else list(np.flatnonzero(row))
-            )
+            index_list = backend.np.flatnonzero(row)
             indexes.append(index_list)
             elements.append(row[index_list])
 

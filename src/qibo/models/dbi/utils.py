@@ -78,8 +78,6 @@ def cs_angle_sgn(dbi_object, d, backend=None):
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    if backend.name == "pytorch":
-        return backend.np.real(backend.np.sgn(norm))
     return backend.np.real(backend.np.sign(norm))
 
 
@@ -275,20 +273,14 @@ def copy_dbi_object(dbi_object):
     Return a copy of the DoubleBracketIteration object.
     This is necessary for the `select_best_dbr_generator` function as pytorch do not support deepcopy for leaf tensors.
     """
-    backend = dbi_object.backend
-    backend = _check_backend(backend)
     from copy import copy, deepcopy  # pylint: disable=import-outside-toplevel
 
     dbi_class = dbi_object.__class__
     new = dbi_class.__new__(dbi_class)
 
-    # Manually copy each attribute
-    new.h = copy(dbi_object.h)
-    new.h0 = copy(dbi_object.h0)
-    new.mode = deepcopy(dbi_object.mode)
-    new.scheduling = deepcopy(dbi_object.scheduling)
-    new.cost = deepcopy(dbi_object.cost)
-    new.ref_state = (
-        deepcopy(dbi_object.ref_state) if dbi_object.ref_state is not None else None
-    )
+    # Manually copy h and h0 as they may be torch tensors
+    new.h, new.h0 = copy(dbi_object.h), copy(dbi_object.h0)
+    # Deepcopy the rest of the attributes
+    for attr in ("mode", "scheduling", "cost", "ref_state"):
+        setattr(new, attr, deepcopy(getattr(dbi_object, attr, None)))
     return new
