@@ -435,22 +435,32 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         phases.append(math.atan2(data[-1], data[-2]))
 
     if architecture == "tree":
-        j_max = int(nqubits / 2)
+        rest = np.log2(nqubits)
+        new_nqubits = int(2 ** np.ceil(rest))
+        if not rest.is_integer():
+            new_data = np.zeros(new_nqubits, dtype=data.dtype)
+            pad = len(new_data) - nqubits
+            new_data[: pad - 1] = data[: pad - 1]
+            padded = list(zip(data[pad - 1 :], np.zeros(pad)))
+            new_data[pad - 1 :] = np.array(padded).flatten()
 
-        r_array = np.zeros(nqubits - 1, dtype=float)
-        phases = np.zeros(nqubits - 1, dtype=float)
+        j_max = int(new_nqubits / 2)
+
+        r_array = np.zeros(new_nqubits - 1, dtype=float)
+        phases = np.zeros(new_nqubits - 1, dtype=float)
         for j in range(1, j_max + 1):
             r_array[j_max + j - 2] = math.sqrt(
-                data[2 * j - 1] ** 2 + data[2 * j - 2] ** 2
+                new_data[2 * j - 1] ** 2 + new_data[2 * j - 2] ** 2
             )
-            theta = math.acos(data[2 * j - 2] / r_array[j_max + j - 2])
-            if data[2 * j - 1] < 0.0:
+            theta = math.acos(new_data[2 * j - 2] / r_array[j_max + j - 2])
+            if new_data[2 * j - 1] < 0.0:
                 theta = 2 * math.pi - theta
             phases[j_max + j - 2] = theta
-
         for j in range(j_max - 1, 0, -1):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
+
+        phases = phases[: nqubits - 1]
 
     return phases
 

@@ -103,7 +103,7 @@ def test_phase_encoder(backend, rotation, kind):
 
 @pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
-@pytest.mark.parametrize("nqubits", [8])
+@pytest.mark.parametrize("nqubits", list(range(4, 8 + 1)))
 def test_unary_encoder(backend, nqubits, architecture, kind):
     sampler = np.random.default_rng(1)
 
