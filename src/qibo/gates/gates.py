@@ -2525,6 +2525,8 @@ class Unitary(ParametrizedGate):
     def parameters(self, x):
         shape = self.parameters[0].shape
         engine = _check_engine(self.parameters[0])
+        # Reshape doesn't accept a tuple if engine is pytorch.
+        x = x[0] if type(x) is tuple else x
         self._parameters = (engine.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
