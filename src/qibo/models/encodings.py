@@ -404,7 +404,6 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
                     per_depth.append((register[0], register[limit]))
             pairs_rbs.append(per_depth)
             registers = new_registers
-            new_registers = []
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(
