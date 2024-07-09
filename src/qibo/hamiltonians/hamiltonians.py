@@ -138,10 +138,16 @@ class Hamiltonian(AbstractHamiltonian):
             + f"value for state of type {type(state)}",
         )
 
-    def expectation_from_samples(self, freq, qubit_map=None):
+    def expectation_from_samples(self, freq, qubit_map=None, input_samples=False):
         obs = self.matrix
         if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
+        if input_samples:
+            nqubits = freq.shape[-1]
+            freq = self.backend.calculate_frequencies(
+                self.backend.samples_to_decimal(freq, nqubits=nqubits)
+            )
+            freq = {format(k, f"0{nqubits}b"): v for k, v in freq.items()}
         keys = list(freq.keys())
         if qubit_map is None:
             qubit_map = list(range(int(np.log2(len(obs)))))
