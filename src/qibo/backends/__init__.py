@@ -11,7 +11,7 @@ from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch")
+QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch", "qulacs")
 QIBO_NON_NATIVE_BACKENDS = ("qibojit", "qibolab", "qibo-cloud-backends", "qibotn")
 
 
@@ -39,6 +39,10 @@ class MetaBackend:
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
+        elif backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend
+
+            return QulacsBackend()
         else:
             raise_error(
                 ValueError,
@@ -133,6 +137,7 @@ class QiboMatrices:
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
         self.TOFFOLI = self.matrices.TOFFOLI
+        self.CCZ = self.matrices.CCZ
 
 
 matrices = QiboMatrices()

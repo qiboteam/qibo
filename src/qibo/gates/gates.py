@@ -686,6 +686,66 @@ class RZ(_Rn_):
         return 0.5
 
 
+class PRX(ParametrizedGate):
+    """Phase :math:`RX` gate.
+
+    Corresponds to the following unitary matrix
+
+        .. math::
+            \\begin{pmatrix}
+                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
+                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+            \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the first angle corresponding to a rotation angle.
+        phi (float): the second angle correspoding to a phase angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "prx"
+        self.draw_label = "prx"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+        self.theta = theta
+        self.phi = phi
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "trainable": trainable,
+        }
+
+    @property
+    def qasm_label(self):
+        return "prx"
+
+    def _dagger(self) -> "Gate":
+        theta = -self.theta
+        phi = self.phi
+        return self.__class__(
+            self.target_qubits[0], theta, phi
+        )  # pylint: disable=E1130
+
+    def decompose(self):
+        """Decomposition of Phase-:math:`RX` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
+
 class GPI(ParametrizedGate):
     """The GPI gate.
 
@@ -718,6 +778,10 @@ class GPI(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi"
 
 
 class GPI2(ParametrizedGate):
@@ -752,6 +816,10 @@ class GPI2(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -2075,6 +2143,10 @@ class MS(ParametrizedGate):
             "trainable": trainable,
         }
 
+    @property
+    def qasm_label(self):
+        return "ms"
+
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
@@ -2306,6 +2378,56 @@ class TOFFOLI(Gate):
             CNOT(control1, target),
             RY(target, math.pi / 4),
         ]
+
+
+class CCZ(Gate):
+    """The controlled-CZ gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2):
+        super().__init__()
+        self.name = "ccz"
+        self.draw_label = "Z"
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
+        self.init_args = [q0, q1, q2]
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "ccz"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CCZ}` gate.
+
+        Decompose :math:`\\text{CCZ}` gate into :class:`qibo.gates.H` in
+        the target qubit, followed by :class:`qibo.gates.TOFFOLI`, followed
+        by a :class:`qibo.gates.H` in the target qubit.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class DEUTSCH(ParametrizedGate):
