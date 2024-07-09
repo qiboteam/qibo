@@ -2518,7 +2518,7 @@ class GeneralizedRBS(ParametrizedGate):
         super().__init__(trainable)
         self.name = "grbs"
         self.draw_label = "gRBS"
-        self.target_qubits = tuple(qubits_in + qubits_out)
+        self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
         self.unitary = True
 
         self.parameter_names = "theta"
