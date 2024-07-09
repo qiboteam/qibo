@@ -547,7 +547,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         if input_samples:
             nqubits = freq.shape[-1]
-            freq = self.backend.calculate_frequencies(freq)
+            freq = self.backend.calculate_frequencies(
+                self.backend.samples_to_decimal(freq, nqubits=nqubits)
+            )
             freq = {format(k, f"0{nqubits}b"): v for k, v in freq.items()}
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
