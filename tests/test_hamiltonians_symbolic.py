@@ -308,7 +308,8 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
             local_ev = local_ham.expectation(state)
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize("use_samples", [False, True])
+def test_hamiltonian_expectation_from_samples(backend, use_samples):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(0)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
@@ -323,8 +324,8 @@ def test_hamiltonian_expectation_from_samples(backend):
     c.add(gates.M(0, 1, 2, 3))
     nshots = 10**5
     result = backend.execute_circuit(c, nshots=nshots)
-    freq = result.frequencies(binary=True)
-    ev0 = h0.expectation_from_samples(freq, qubit_map=None)
+    freq = result.samples() if use_samples else result.frequencies(binary=True)
+    ev0 = h0.expectation_from_samples(freq, qubit_map=None, input_samples=use_samples)
     ev1 = h1.expectation(result.state())
     backend.assert_allclose(ev0, ev1, atol=20 / np.sqrt(nshots))
 
