@@ -36,6 +36,7 @@ import numpy as np
 from qibo import gates, models
 from qibo.config import raise_error
 
+
 class QDP_memory_type(Enum):
     """
     Enumerated type representing memory types for quantum dynamic programming.

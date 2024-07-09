@@ -2,12 +2,12 @@ import numpy as np
 import scipy
 
 from qibo import gates
-from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 from qibo.models.qdp.quantum_dynamic_programming import (
-    QDPSequentialInstruction,
     QDPMeasurementEmulation,
-    QDPMeasurementReset
-    )
+    QDPMeasurementReset,
+    QDPSequentialInstruction,
+)
+from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 
 
 class DensityMatrixExponentiation(QDPSequentialInstruction):
