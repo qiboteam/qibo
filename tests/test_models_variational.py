@@ -125,8 +125,9 @@ def test_vqe(backend, method, options, compile, filename):
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
-    if backend.name == "pytorch":
-        initial_parameters = backend.np.tensor(initial_parameters, requires_grad=True)
+    initial_parameters = backend.cast(
+        initial_parameters, dtype=initial_parameters.dtype
+    )
     v = models.VQE(circuit, hamiltonian)
 
     loss_values = []

@@ -234,8 +234,6 @@ def test_random_statevector(backend, seed):
     # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims, seed=seed, backend=backend)
-    print(state)
-    print(purity(state, backend=backend))
     backend.assert_allclose(
         abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL, True
     )
