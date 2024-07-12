@@ -1,5 +1,6 @@
 """Module with functions that encode classical data into quantum circuits."""
 
+# %%
 import math
 from inspect import signature
 from typing import Optional, Union
@@ -437,12 +438,14 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     if architecture == "tree":
         rest = np.log2(nqubits)
         new_nqubits = int(2 ** np.ceil(rest))
-        if not rest.is_integer():
+        if rest.is_integer():
+            new_data = data
+        else:
             new_data = np.zeros(new_nqubits, dtype=data.dtype)
-            pad = len(new_data) - nqubits
-            new_data[: pad - 1] = data[: pad - 1]
-            padded = list(zip(data[pad - 1 :], np.zeros(pad)))
-            new_data[pad - 1 :] = np.array(padded).flatten()
+            num_of_zeros = len(new_data) - len(data)
+            new_data[: -2 * num_of_zeros] = data[:-num_of_zeros]
+            padded = list(zip(data[-num_of_zeros:], np.zeros(num_of_zeros)))
+            new_data[-2 * num_of_zeros :] = np.ravel(padded)
 
         j_max = int(new_nqubits / 2)
 
@@ -460,7 +463,21 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
 
-        phases = phases[: nqubits - 1]
+        print(phases)
+        phases = phases[:-num_of_zeros]
+        print(phases)
+        print()
+        # if data[2] < 0.0:
+        #     phases[1] = -phases[1]
+
+        # if data[3] < 0.0 and data[4] >= 0.0:
+        #     phases[2] = math.pi - phases[2]
+        # elif data[3] >= 0.0 and data[4] < 0.0:
+        #     phases[2] = -phases[2]
+        # elif data[3] < 0.0 and data[4] < 0.0:
+        #     phases[2] = math.pi + phases[2]
+        # print(len(data[pad:]), len(phases[pad - 1 :]))
+        # phases[pad - 1 :] = np.sign(data[pad:]) * phases[pad - 1 :]
 
     return phases
 
@@ -471,3 +488,18 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
         return gate(q0, q1, *params)
 
     return gate(q0, q1)
+
+
+# %%
+nqubits = 7
+
+x = 2 * np.random.rand(nqubits) - 1
+print(x / np.linalg.norm(x))
+print()
+
+circuit = unary_encoder(x, "tree")
+state = circuit().state().real
+print(state[np.abs(state) > 1e-15])
+print()
+
+print(circuit.draw())
