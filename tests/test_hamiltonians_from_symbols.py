@@ -18,7 +18,6 @@ def test_symbols_pickling(symbol):
     dumped_symbol = pickle.dumps(symbol)
     new_symbol = pickle.loads(dumped_symbol)
     for attr in ("target_qubit", "name", "_gate"):
-        print(attr)
         assert getattr(symbol, attr) == getattr(new_symbol, attr)
     np.testing.assert_allclose(symbol.matrix, new_symbol.matrix)
 
