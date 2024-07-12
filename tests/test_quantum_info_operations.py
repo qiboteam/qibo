@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 
 from qibo import matrices
-from qibo.quantum_info.operations import anticommutator, commutator
+from qibo.quantum_info.operations import anticommutator, commutator, partial_trace
+from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
 
 
 def test_commutator(backend):
@@ -75,3 +76,19 @@ def test_anticommutator(backend):
 
     anticomm = anticommutator(X, Z)
     backend.assert_allclose(anticomm, 0.0)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_partial_trace(backend, density_matrix):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2, 2).astype(complex)
+        state += 1j * np.random.rand(2, 2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        test = partial_trace(state, 1, backend=backend)
+    with pytest.raises(ValueError):
+        state = (
+            random_density_matrix(5, backend=backend)
+            if density_matrix
+            else random_statevector(5, backend=backend)
+        )
+        test = partial_trace(state, 1, backend=backend)
