@@ -1,7 +1,7 @@
 """Module with the most common linear algebra operations for quantum information."""
 
 import math
-from typing import Union, List, Tuple
+from typing import List, Tuple, Union
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
@@ -115,10 +115,11 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 
     if not nqubits.is_integer():
         raise_error(
-            ValueError, "dimension(s) of ``state`` must be a power of 2, "
-            + f"but it is {2**nqubits}."
+            ValueError,
+            "dimension(s) of ``state`` must be a power of 2, "
+            + f"but it is {2**nqubits}.",
         )
-    
+
     nqubits = int(nqubits)
 
     statevector = True if len(state.shape) == 1 else False
