@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import matrices
+from qibo import Circuit, gates, matrices
 from qibo.quantum_info.operations import anticommutator, commutator, partial_trace
 from qibo.quantum_info.random_ensembles import random_statevector, random_density_matrix
 
@@ -92,3 +92,16 @@ def test_partial_trace(backend, density_matrix):
             else random_statevector(5, backend=backend)
         )
         test = partial_trace(state, 1, backend=backend)
+
+    nqubits = 4
+
+    circuit = Circuit(nqubits, density_matrix=density_matrix)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, qubit + 1) for qubit in range(1, nqubits - 1))
+    state = backend.execute_circuit(circuit).state()
+
+    traced = partial_trace(state, (1, 2, 3), backend=backend)
+
+    Id = backend.identity_density_matrix(1, normalize=True)
+
+    backend.assert_allclose(traced, Id)
