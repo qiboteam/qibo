@@ -8,6 +8,7 @@ from scipy.linalg import fractional_matrix_power
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
+from qibo.quantum_info.operations import partial_trace
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
@@ -863,13 +864,7 @@ def entanglement_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    nqubits = int(np.log2(state.shape[0]))
-
-    reduced_density_matrix = (
-        backend.partial_trace(state, bipartition, nqubits)
-        if len(state.shape) == 1
-        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
-    )
+    reduced_density_matrix = partial_trace(state, bipartition)
 
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,

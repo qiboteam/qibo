@@ -5,6 +5,7 @@ import numpy as np
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import fidelity, purity
+from qibo.quantum_info.operations import partial_trace
 
 
 def concurrence(state, bipartition, check_purity: bool = True, backend=None):
@@ -47,8 +48,6 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
             f"check_purity must be type bool, but it is type {type(check_purity)}.",
         )
 
-    nqubits = int(np.log2(state.shape[0]))
-
     if check_purity is True:
         purity_total_system = purity(state)
 
@@ -59,11 +58,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
                 "concurrence only implemented for pure quantum states.",
             )
 
-    reduced_density_matrix = (
-        backend.partial_trace(state, bipartition, nqubits)
-        if len(state.shape) == 1
-        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
-    )
+    reduced_density_matrix = partial_trace(state, bipartition)
 
     purity_reduced = purity(reduced_density_matrix)
     if purity_reduced - 1.0 > 0.0:
@@ -227,7 +222,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
 
-        rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
+        rho_r = partial_trace(rho, trace_q)
 
         trace = purity(rho_r)
 
