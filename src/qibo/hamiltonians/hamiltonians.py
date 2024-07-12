@@ -569,7 +569,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     expval_k = -1
                 expval_q += expval_k * counts[i]
             expval += expval_q * self.terms[j].coefficient.real
-        return expval + self.constant
+        return expval + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
