@@ -547,7 +547,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
-        coeff = list(self.form.as_coefficients_dict().values())
         qubits = []
         for term in terms:
             qubits_term = []
@@ -566,8 +565,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if subk.count(1) % 2 == 1:
                     expval_k = -1
                 expval_q += expval_k * counts[i]
-            expval += expval_q * float(coeff[j])
-        return expval
+            expval += expval_q * self.terms[j].coefficient.real
+        return expval + self.constant
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
