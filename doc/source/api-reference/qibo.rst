@@ -1930,6 +1930,12 @@ Anticommutator
 .. autofunction:: qibo.quantum_info.anticommutator
 
 
+Partial trace
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_trace
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
