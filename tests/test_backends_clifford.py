@@ -267,13 +267,15 @@ def test_noise_channels(backend, seed):
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
-    noise = NoiseModel()
-    noise.add(PauliError([("X", 0.5)]), gates.X)
-    noise.add(DepolarizingError(0.1), gates.CZ)
-
     nqubits = 3
 
     c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
+
+    noise = NoiseModel()
+    noisy_gates = np.random.choice(c.queue, size=1, replace=False)
+    noise.add(PauliError([("X", 0.3)]), gates.H)
+    noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
+
     c.add(gates.M(*range(nqubits)))
     c_copy = c.copy()
 
