@@ -5,6 +5,7 @@ from scipy.linalg import expm
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
+from qibo.quantum_info.operations import partial_trace
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.unitary_decompositions import (
     bell_basis,
@@ -67,7 +68,7 @@ def test_eigenbasis_entanglement(backend, seed):
         eigvals = backend.cast(eigvals, dtype=eigvals.dtype)
         backend.assert_allclose(np.abs(eigvals), np.ones(4))
         for state in np.transpose(states):
-            state = backend.partial_trace(state, [1], 2)
+            state = partial_trace(state, [1], backend=backend)
             backend.assert_allclose(purity(state), 0.5)
 
 

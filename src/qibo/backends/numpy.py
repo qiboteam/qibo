@@ -316,7 +316,7 @@ class NumpyBackend(Backend):
         shape = state.shape
         q = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
-        trace = partial_trace(state, (q,))
+        trace = partial_trace(state, (q,), backend=self)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
         zero = self.np.tensordot(trace, zero, 0)
@@ -340,7 +340,7 @@ class NumpyBackend(Backend):
         shape = state.shape
         q = gate.target_qubits
         lam = gate.init_kwargs["lam"]
-        trace = partial_trace(state, q)
+        trace = partial_trace(state, q, backend=self)
         trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
         identity = self.identity_density_matrix(len(q))
         identity = self.np.reshape(identity, 2 * len(q) * (2,))
