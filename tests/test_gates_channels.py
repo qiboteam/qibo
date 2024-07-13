@@ -337,9 +337,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         m_z = backend.cast(m_z, dtype=m_z.dtype)
         z_rho = m_z @ initial_state @ m_z
 
-        trace = backend.to_numpy(
-            partial_trace(initial_state, (0,), backend=backend)
-        )
+        trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
         trace = np.reshape(trace, 4 * (2,))
         zeros = np.tensordot(
             trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0
@@ -410,9 +408,7 @@ def test_reset_channel(backend):
     gate = gates.ResetChannel(0, [0.2, 0.2])
     final_state = backend.reset_error_density_matrix(gate, np.copy(initial_state), 3)
 
-    trace = backend.to_numpy(
-        partial_trace(initial_state, (0,), backend=backend)
-    )
+    trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
     trace = np.reshape(trace, 4 * (2,))
 
     zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
