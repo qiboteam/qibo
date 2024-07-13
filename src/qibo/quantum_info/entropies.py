@@ -864,7 +864,7 @@ def entanglement_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    reduced_density_matrix = partial_trace(state, bipartition)
+    reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
 
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
