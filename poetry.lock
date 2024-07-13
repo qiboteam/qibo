@@ -4193,8 +4193,13 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
+<<<<<<< HEAD
 reference = "grbs"
 resolved_reference = "db0bf468dbe1e8bf95eda400fe3bf51bfc0bdeb3"
+=======
+reference = "HEAD"
+resolved_reference = "a92806f8335b16350d38a09a71ada37c5ae3c132"
+>>>>>>> master
 
 [[package]]
 name = "qibotn"
