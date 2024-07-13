@@ -58,7 +58,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
                 "concurrence only implemented for pure quantum states.",
             )
 
-    reduced_density_matrix = partial_trace(state, bipartition)
+    reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
 
     purity_reduced = purity(reduced_density_matrix)
     if purity_reduced - 1.0 > 0.0:
@@ -222,7 +222,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
 
-        rho_r = partial_trace(rho, trace_q)
+        rho_r = partial_trace(rho, trace_q, backend=backend)
 
         trace = purity(rho_r)
 
