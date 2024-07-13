@@ -691,27 +691,6 @@ class NumpyBackend(Backend):
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
-    def partial_trace(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = self.np.reshape(state, nqubits * (2,))
-        axes = 2 * [list(qubits)]
-        rho = self.np.tensordot(state, self.np.conj(state), axes)
-        shape = 2 * (2 ** (nqubits - len(qubits)),)
-        return self.np.reshape(rho, shape)
-
-    def partial_trace_density_matrix(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = self.np.reshape(state, 2 * nqubits * (2,))
-
-        order = tuple(sorted(qubits))
-        order += tuple(i for i in range(nqubits) if i not in qubits)
-        order += tuple(i + nqubits for i in order)
-        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-
-        state = self.np.transpose(state, order)
-        state = self.np.reshape(state, shape)
-        return self.np.einsum("abac->bc", state)
-
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
         return self.np.linalg.norm(state, order)

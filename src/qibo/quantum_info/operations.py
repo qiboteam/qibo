@@ -98,6 +98,20 @@ def anticommutator(operator_1, operator_2):
 
 
 def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=None):
+    """Returns the density matrix resulting from tracing out ``traced_qubits`` from ``state``.
+
+    Total number of qubits is inferred by the shape of ``state``.
+
+    Args:
+        state (ndarray): density matrix or statevector.
+        traced_qubits (Union[List[int], Tuple[int]]): indices of qubits to be traced out.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Density matrix of the remaining qubit(s).
+    """
     if (
         (len(state.shape) >= 3)
         or (len(state) == 0)

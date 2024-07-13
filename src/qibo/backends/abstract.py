@@ -282,16 +282,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def partial_trace(self, state, qubits, nqubits):  # pragma: no cover
-        """Trace out specific qubits of a state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def partial_trace_density_matrix(self, state, qubits, nqubits):  # pragma: no cover
-        """Trace out specific qubits of a density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_norm(self, state, order=2):  # pragma: no cover
         """Calculate norm of a state vector.
 
