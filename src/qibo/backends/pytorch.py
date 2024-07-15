@@ -149,15 +149,6 @@ class PyTorchBackend(NumpyBackend):
     def calculate_eigenvectors(self, matrix, k=6):
         return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
 
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.issparse(matrix):
-            return self.np.linalg.matrix_exp(  # pylint: disable=not-callable
-                -1j * a * matrix
-            )
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.conj(eigenvectors).T
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
-
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [

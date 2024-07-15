@@ -3,6 +3,9 @@
 import math
 from typing import List, Tuple, Union
 
+from scipy.linalg import expm as expm_scipy
+from scipy.sparse.linalg import expm as expm_sparse_scipy
+
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -157,3 +160,30 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
     state = backend.np.reshape(state, shape)
 
     return backend.np.einsum("abac->bc", state)
+
+
+def matrix_exponentiation(
+    phase, matrix, eigenvalues=None, eigenvectors=None, backend=None
+):
+    backend = _check_backend(backend)
+    backend_class_name = backend.__class__.__name__
+
+    is_sparse = backend.issparse(matrix)
+
+    matrix = -1j * phase * matrix
+
+    if eigenvectors is None or is_sparse:
+        if backend_class_name == "TensorflowBackend":
+            return backend.tf.linalg.expm(matrix)
+
+        if backend_class_name == "PyTorchBackend":
+            return backend.np.linalg.matrix_exp(matrix)
+
+        expm = expm_sparse_scipy if is_sparse else expm_scipy
+
+        return expm(matrix)
+
+    exp_diag = backend.np.diag(backend.np.exp(eigenvalues))
+    ud = backend.np.transpose(backend.np.conj(eigenvectors))
+
+    return backend.np.matmul(eigenvectors, backend.np.matmul(exp_diag, ud))

@@ -9,6 +9,7 @@ import sympy
 from qibo.backends import PyTorchBackend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.quantum_info.linalg_operations import matrix_exponentiation
 from qibo.symbols import Z
 
 
@@ -109,8 +110,8 @@ class Hamiltonian(AbstractHamiltonian):
     def exp(self, a):
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = self.backend.calculate_matrix_exp(
-                a, self.matrix, self._eigenvectors, self._eigenvalues
+            self._exp["result"] = matrix_exponentiation(
+                a, self.matrix, self._eigenvectors, self._eigenvalues, self.backend
             )
         return self._exp.get("result")
 
