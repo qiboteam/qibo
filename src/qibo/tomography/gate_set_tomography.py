@@ -158,6 +158,7 @@ def _gate_tomography(
         nshots (int, optional): Number of shots used.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied to simulate noisy computation.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
+
     Returns:
         ndarray: matrix approximating the input gate.
     """
