@@ -1,4 +1,4 @@
-"""Module with the most common linear algebra operations for quantum information."""
+"""Module with common linear algebra operations for quantum information."""
 
 import math
 from typing import List, Tuple, Union
