@@ -10,11 +10,11 @@ Classes:
     AbstractQuantumDynamicProgramming: Base class representing the QDP implementation framework.
         - Implements methods for memory usage query, instruction qubit management, and circuit handling.
         - Must be subclassed to define specific memory handling strategies.
-    QDPSequentialInstruction: Subclass implementing sequential instruction execution strategy.
+    SequentialInstruction: Subclass implementing sequential instruction execution strategy.
         - Executes memory call circuit sequentially for each instruction qubit.
-    QDPMeasurementEmulation: Subclass implementing quantum measurement emulation strategy.
+    MeasurementEmulation: Subclass implementing quantum measurement emulation strategy.
         - Emulates quantum measurement using rotation gates.
-    QDPMeasurementReset: Subclass implementing memory reset strategy.
+    MeasurementReset: Subclass implementing memory reset strategy.
         - Resets instruction qubits based on measurement outcomes.
 
 References:
@@ -144,7 +144,7 @@ class AbstractQuantumDynamicProgramming:
         return self.c
 
 
-class QDPSequentialInstruction(AbstractQuantumDynamicProgramming):
+class SequentialInstruction(AbstractQuantumDynamicProgramming):
     def memory_call_circuit(self, num_instruction_qubits_per_query):
         """
         Executes the memory call circuit. Every instruction qubit is used once then discarded.
@@ -170,7 +170,7 @@ class QDPSequentialInstruction(AbstractQuantumDynamicProgramming):
             self.instruction_reg_delegation()
 
 
-class QDPMeasurementEmulation(AbstractQuantumDynamicProgramming):
+class MeasurementEmulation(AbstractQuantumDynamicProgramming):
     def __init__(
         self,
         num_work_qubits,
@@ -217,7 +217,7 @@ class QDPMeasurementEmulation(AbstractQuantumDynamicProgramming):
             self.instruction_reg_delegation()
 
 
-class QDPMeasurementReset(AbstractQuantumDynamicProgramming):
+class MeasurementReset(AbstractQuantumDynamicProgramming):
 
     def memory_call_circuit(self, num_instruction_qubits_per_query):
         """

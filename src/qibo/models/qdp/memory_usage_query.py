@@ -3,14 +3,14 @@ import scipy
 
 from qibo import gates
 from qibo.models.qdp.quantum_dynamic_programming import (
-    QDPMeasurementEmulation,
-    QDPMeasurementReset,
-    QDPSequentialInstruction,
+    MeasurementEmulation,
+    MeasurementReset,
+    SequentialInstruction,
 )
 from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 
 
-class DensityMatrixExponentiation(QDPSequentialInstruction):
+class DensityMatrixExponentiation(SequentialInstruction):
     """
     Subclass of AbstractQuantumDynamicProgramming for density matrix exponentiation,
     where we attempt to instruct the work qubit to do an X rotation, using SWAP gate.
@@ -65,7 +65,7 @@ class DensityMatrixExponentiation(QDPSequentialInstruction):
             self.c.add(gates.X(instruction_qubit))
 
 
-class DME_reset(QDPMeasurementReset):
+class DME_reset(MeasurementReset):
     """
     Warning: Functional, but without a way to actually do reset.
     DME using reset method.
