@@ -1936,6 +1936,12 @@ Partial trace
 .. autofunction:: qibo.quantum_info.partial_trace
 
 
+Matrix exponentiation
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_exponentiation
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
