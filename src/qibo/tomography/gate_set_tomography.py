@@ -61,7 +61,7 @@ def _measurements(nqubits: int):
 
 
 @cache
-def _observables(nqubits):
+def _observables(nqubits: int):
     """All the observables measured in GST.
 
     Args:
