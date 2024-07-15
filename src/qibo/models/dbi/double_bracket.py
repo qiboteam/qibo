@@ -12,7 +12,7 @@ from qibo.models.dbi.utils_scheduling import (
     polynomial_step,
     simulated_annealing_step,
 )
-from qibo.quantum_info.linalg_operations import matrix_exponentiation
+from qibo.quantum_info.linalg_operations import commutator, matrix_exponentiation
 
 
 class DoubleBracketGeneratorType(Enum):
@@ -201,7 +201,7 @@ class DoubleBracketIteration:
     @staticmethod
     def commutator(a, b):
         """Compute commutator between two arrays."""
-        return a @ b - b @ a
+        return commutator(a, b)
 
     @property
     def diagonal_h_matrix(self):
