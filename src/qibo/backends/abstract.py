@@ -342,6 +342,16 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def calculate_matrix_exp(
+        self, a, matrix, eigenvectors=None, eigenvalues=None
+    ):  # pragma: no cover
+        """Calculate matrix exponential of a matrix.
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_hamiltonian_matrix_product(
         self, matrix1, matrix2
     ):  # pragma: no cover
