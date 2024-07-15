@@ -3,9 +3,6 @@
 import math
 from typing import List, Tuple, Union
 
-from scipy.linalg import expm as expm_scipy
-from scipy.sparse.linalg import expm as expm_sparse_scipy
-
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -197,31 +194,5 @@ def matrix_exponentiation(
         ndarray: matrix exponential of :math:`-i \\, \\theta \\, H`.
     """
     backend = _check_backend(backend)
-    backend_class_name = backend.__class__.__name__
 
-    is_sparse = backend.is_sparse(matrix)
-
-    if eigenvectors is None or is_sparse:
-        matrix *= -1j * phase
-
-        if backend_class_name == "TensorflowBackend":
-            return backend.tf.linalg.expm(matrix)
-
-        if backend_class_name == "PyTorchBackend":
-            return backend.np.linalg.matrix_exp(matrix)
-
-        if is_sparse:
-            expm = expm_sparse_scipy
-        elif backend_class_name in ["CupyBackend", "CuQuantumBackend"]:
-            from cupyx.scipy.linalg import expm as expm_cupy  # pylint: disable=E0401
-
-            expm = expm_cupy
-        else:
-            expm = expm_scipy
-
-        return expm(matrix)
-
-    exp_diag = backend.np.diag(backend.np.exp(-1j * phase * eigenvalues))
-    u_dagger = backend.np.conj(eigenvectors).T
-
-    return backend.np.matmul(eigenvectors, backend.np.matmul(exp_diag, u_dagger))
+    return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
