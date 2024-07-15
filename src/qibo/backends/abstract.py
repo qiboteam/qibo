@@ -374,7 +374,7 @@ class Backend(abc.ABC):
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     @abc.abstractmethod
-    def test_regressions(self, name):  # pragma: no cover
+    def _test_regressions(self, name):  # pragma: no cover
         """Correct outcomes for tests that involve random numbers.
 
         The outcomes of such tests depend on the backend.

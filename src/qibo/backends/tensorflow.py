@@ -206,7 +206,7 @@ class TensorflowBackend(NumpyBackend):
                 f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
             )
 
-    def test_regressions(self, name):
+    def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
                 [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],

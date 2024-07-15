@@ -158,7 +158,7 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def test_regressions(self, name):
+    def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],

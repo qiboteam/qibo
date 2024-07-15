@@ -774,7 +774,7 @@ class NumpyBackend(Backend):
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
-    def test_regressions(self, name):
+    def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
