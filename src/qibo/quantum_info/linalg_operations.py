@@ -139,7 +139,7 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 
     nqubits = int(nqubits)
 
-    statevector = True if len(state.shape) == 1 else False
+    statevector = bool(len(state.shape) == 1)
 
     factor = 1 if statevector else 2
     state = backend.np.reshape(state, factor * nqubits * (2,))
@@ -213,9 +213,7 @@ def matrix_exponentiation(
         if is_sparse:
             expm = expm_sparse_scipy
         elif backend_class_name in ["CupyBackend", "CuQuantumBackend"]:
-            from cupyx.scipy.linalg import (
-                expm as expm_cupy,  # pylint: disable=import-error
-            )
+            from cupyx.scipy.linalg import expm as expm_cupy  # pylint: disable=C0415
 
             expm = expm_cupy
         else:
@@ -224,6 +222,6 @@ def matrix_exponentiation(
         return expm(matrix)
 
     exp_diag = backend.np.diag(backend.np.exp(-1j * phase * eigenvalues))
-    ud = backend.np.conj(eigenvectors).T
+    u_dagger = backend.np.conj(eigenvectors).T
 
-    return backend.np.matmul(eigenvectors, backend.np.matmul(exp_diag, ud))
+    return backend.np.matmul(eigenvectors, backend.np.matmul(exp_diag, u_dagger))
