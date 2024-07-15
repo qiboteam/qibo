@@ -199,7 +199,7 @@ def matrix_exponentiation(
     backend = _check_backend(backend)
     backend_class_name = backend.__class__.__name__
 
-    is_sparse = backend.issparse(matrix)
+    is_sparse = backend.is_sparse(matrix)
 
     if eigenvectors is None or is_sparse:
         matrix *= -1j * phase
@@ -210,7 +210,14 @@ def matrix_exponentiation(
         if backend_class_name == "PyTorchBackend":
             return backend.np.linalg.matrix_exp(matrix)
 
-        expm = expm_sparse_scipy if is_sparse else expm_scipy
+        if is_sparse:
+            expm = expm_sparse_scipy
+        elif backend_class_name in ["CupyBackend", "CuQuantumBackend"]:
+            from cupyx.scipy.linalg import expm as expm_cupy  # pylint: diable=C0415
+
+            expm = expm_cupy
+        else:
+            expm = expm_scipy
 
         return expm(matrix)
 

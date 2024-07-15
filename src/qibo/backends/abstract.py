@@ -66,7 +66,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def issparse(self, x):  # pragma: no cover
+    def is_sparse(self, x):  # pragma: no cover
         """Determine if a given array is a sparse tensor."""
         raise_error(NotImplementedError)
 

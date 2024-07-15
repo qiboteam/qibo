@@ -89,7 +89,7 @@ class TensorflowBackend(NumpyBackend):
             return self.tf.identity(x)
         return x
 
-    def issparse(self, x):
+    def is_sparse(self, x):
         return isinstance(x, self.tf.sparse.SparseTensor)
 
     def to_numpy(self, x):
@@ -181,7 +181,7 @@ class TensorflowBackend(NumpyBackend):
         return self.tf.linalg.eigh(matrix)
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        if self.issparse(matrix1) or self.issparse(matrix2):
+        if self.is_sparse(matrix1) or self.is_sparse(matrix2):
             raise_error(
                 NotImplementedError,
                 "Multiplication of sparse matrices is not supported with Tensorflow.",

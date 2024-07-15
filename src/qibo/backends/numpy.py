@@ -61,17 +61,17 @@ class NumpyBackend(Backend):
             dtype = self.dtype
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
-        elif self.issparse(x):
+        elif self.is_sparse(x):
             return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
 
-    def issparse(self, x):
+    def is_sparse(self, x):
         from scipy import sparse
 
         return sparse.issparse(x)
 
     def to_numpy(self, x):
-        if self.issparse(x):
+        if self.is_sparse(x):
             return x.toarray()
         return x
 
@@ -712,7 +712,7 @@ class NumpyBackend(Backend):
         )
 
     def calculate_eigenvalues(self, matrix, k=6):
-        if self.issparse(matrix):
+        if self.is_sparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
                 "sparse modules do not provide ``eigvals`` method."
@@ -721,7 +721,7 @@ class NumpyBackend(Backend):
         return np.linalg.eigvalsh(matrix)
 
     def calculate_eigenvectors(self, matrix, k=6):
-        if self.issparse(matrix):
+        if self.is_sparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
 

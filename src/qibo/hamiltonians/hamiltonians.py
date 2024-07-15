@@ -31,7 +31,7 @@ class Hamiltonian(AbstractHamiltonian):
 
         if not (
             isinstance(matrix, self.backend.tensor_types)
-            or self.backend.issparse(matrix)
+            or self.backend.is_sparse(matrix)
         ):
             raise_error(
                 TypeError,
@@ -253,7 +253,7 @@ class Hamiltonian(AbstractHamiltonian):
         if self._eigenvalues is not None:
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
-            elif not self.backend.issparse(self.matrix):
+            elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
                 r._eigenvalues = o * self.backend.np.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
