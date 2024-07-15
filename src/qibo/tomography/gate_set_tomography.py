@@ -140,9 +140,9 @@ def _measurement_basis(j, nqubits):
 
 
 def _gate_tomography(
-    nqubits,
-    gate=None,
-    nshots=int(1e4),
+    nqubits: int,
+    gate: gates.Gate = None,
+    nshots: int = int(1e4),
     noise_model=None,
     backend=None,
     transpiler=None,
