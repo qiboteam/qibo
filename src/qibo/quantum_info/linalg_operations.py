@@ -165,8 +165,8 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 def matrix_exponentiation(
     phase: Union[float, complex],
     matrix,
-    eigenvalues=None,
     eigenvectors=None,
+    eigenvalues=None,
     backend=None,
 ):
     """Calculates the exponential of a matrix.
@@ -183,12 +183,12 @@ def matrix_exponentiation(
     Args:
         phase (float or complex): phase that multiplies the matrix.
         matrix (ndarray): matrix to be exponentiated.
-        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
-            to calculate ``matrix`` exponentiation as part of diagonalization.
-            Defaults to ``None``.
         eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
             to calculate ``matrix`` exponentiation as part of diagonalization.
-            Defaults to ``None``.
+            Must be used together with ``eigenvalues``. Defaults to ``None``.
+        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
+            to calculate ``matrix`` exponentiation as part of diagonalization.
+            Must be used together with ``eigenvectors``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -201,9 +201,9 @@ def matrix_exponentiation(
 
     is_sparse = backend.issparse(matrix)
 
-    matrix = -1j * phase * matrix
-
     if eigenvectors is None or is_sparse:
+        matrix *= -1j * phase
+
         if backend_class_name == "TensorflowBackend":
             return backend.tf.linalg.expm(matrix)
 
@@ -214,7 +214,7 @@ def matrix_exponentiation(
 
         return expm(matrix)
 
-    exp_diag = backend.np.diag(backend.np.exp(eigenvalues))
-    ud = backend.np.transpose(backend.np.conj(eigenvectors))
+    exp_diag = backend.np.diag(backend.np.exp(-1j * phase * eigenvalues))
+    ud = backend.np.conj(eigenvectors).T
 
     return backend.np.matmul(eigenvectors, backend.np.matmul(exp_diag, ud))
