@@ -2,14 +2,13 @@ from functools import cache
 from inspect import signature
 from itertools import product
 from random import Random
-from typing import Union
+from typing import List, Union
 
 import numpy as np
-from networkx import connectivity
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import GlobalBackend, _check_backend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.transpiler.optimizer import Preprocessing
@@ -31,7 +30,7 @@ def _check_nqubits(nqubits):
 
 
 @cache
-def _gates(nqubits):
+def _gates(nqubits) -> List:
     """Gates implementing all the GST state preparations.
 
     Args:
@@ -48,7 +47,7 @@ def _gates(nqubits):
 
 
 @cache
-def _measurements(nqubits: int):
+def _measurements(nqubits: int) -> List:
     """Measurement gates implementing all the GST measurement bases.
 
     Args:
@@ -61,7 +60,7 @@ def _measurements(nqubits: int):
 
 
 @cache
-def _observables(nqubits: int):
+def _observables(nqubits: int) -> List:
     """All the observables measured in GST.
 
     Args:
