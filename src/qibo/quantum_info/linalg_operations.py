@@ -163,8 +163,39 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 
 
 def matrix_exponentiation(
-    phase, matrix, eigenvalues=None, eigenvectors=None, backend=None
+    phase: Union[float, complex],
+    matrix,
+    eigenvalues=None,
+    eigenvectors=None,
+    backend=None,
 ):
+    """Calculates the exponential of a matrix.
+
+    Given a ``matrix`` :math:`H` and a ``phase`` :math:`\\theta`,
+    it returns the exponential of the form
+
+    .. math::
+        \\exp\\left(-i \\, \\theta \\, H \\right) \\, .
+
+    If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
+    is used for the exponentiation.
+
+    Args:
+        phase (float or complex): phase that multiplies the matrix.
+        matrix (ndarray): matrix to be exponentiated.
+        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
+            to calculate ``matrix`` exponentiation as part of diagonalization.
+            Defaults to ``None``.
+        eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
+            to calculate ``matrix`` exponentiation as part of diagonalization.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: matrix exponential of :math:`-i \\, \\theta \\, H`.
+    """
     backend = _check_backend(backend)
     backend_class_name = backend.__class__.__name__
 

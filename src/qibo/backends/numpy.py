@@ -730,17 +730,6 @@ class NumpyBackend(Backend):
                 matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
 
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.issparse(matrix):
-            if self.issparse(matrix):
-                from scipy.sparse.linalg import expm
-            else:
-                from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.transpose(np.conj(eigenvectors))
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
-
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)
         hstate = hamiltonian @ state
