@@ -4,8 +4,8 @@ import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info.metrics import fidelity, purity
 from qibo.quantum_info.linalg_operations import partial_trace
+from qibo.quantum_info.metrics import fidelity, purity
 
 
 def concurrence(state, bipartition, check_purity: bool = True, backend=None):
