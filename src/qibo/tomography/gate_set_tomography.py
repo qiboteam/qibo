@@ -74,7 +74,7 @@ def _observables(nqubits: int) -> List:
 
 
 @cache
-def _get_observable(j, nqubits):
+def _get_observable(j: int, nqubits: int):
     """Returns the j-th observable. Here,
 
     .. math::
