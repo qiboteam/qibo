@@ -120,7 +120,7 @@ def _prepare_state(k, nqubits):
 
 @cache
 def _measurement_basis(j, nqubits):
-    """Constructs the j-th measurement basis for an :math:`n`-qubits (`nqubits`) circuit, where
+    """Constructs the j-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit, where
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
