@@ -48,7 +48,7 @@ def _gates(nqubits):
 
 
 @cache
-def _measurements(nqubits):
+def _measurements(nqubits: int):
     """Measurement gates implementing all the GST measurement bases.
 
     Args:
