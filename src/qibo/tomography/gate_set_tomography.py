@@ -126,11 +126,11 @@ def _measurement_basis(j, nqubits):
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
 
     Args:
-        j (int): The index of the measurement basis.
-        nqubits (int): Number of qubits.
+        j (int): index of the measurement basis element.
+        nqubits (int): number of qubits.
 
     Returns:
-        list[:class:`qibo.gates.abstract.Gate`]: list of gates forming the :math:`j`-th element
+        List[:class:`qibo.gates.abstract.Gate`]: gates forming the :math:`j`-th element
         of the Pauli measurement basis.
     """
 
