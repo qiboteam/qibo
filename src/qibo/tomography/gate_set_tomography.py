@@ -90,7 +90,7 @@ def _get_observable(j: int, nqubits: int):
     if j == 0:
         _check_nqubits(nqubits)
     observables = _observables(nqubits)[j]
-    observable = S(1)
+    observable = symbols.S(1)
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
             observable *= obs(q)
