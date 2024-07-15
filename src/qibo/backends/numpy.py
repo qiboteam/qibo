@@ -745,6 +745,17 @@ class NumpyBackend(Backend):
             ev /= norm
         return ev
 
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.issparse(matrix):
+            if self.issparse(matrix):
+                from scipy.sparse.linalg import expm
+            else:
+                from scipy.linalg import expm
+            return expm(-1j * a * matrix)
+        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+        ud = self.np.transpose(np.conj(eigenvectors))
+        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         return matrix1 @ matrix2

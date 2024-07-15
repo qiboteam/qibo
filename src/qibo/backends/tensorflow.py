@@ -180,6 +180,11 @@ class TensorflowBackend(NumpyBackend):
     def calculate_eigenvectors(self, matrix, k=6):
         return self.tf.linalg.eigh(matrix)
 
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.issparse(matrix):
+            return self.tf.linalg.expm(-1j * a * matrix)
+        return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):
             raise_error(
