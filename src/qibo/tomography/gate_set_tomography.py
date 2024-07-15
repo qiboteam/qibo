@@ -5,7 +5,6 @@ from random import Random
 from typing import List, Union
 
 import numpy as np
-from sympy import S
 
 from qibo import Circuit, gates, symbols
 from qibo.backends import _check_backend
