@@ -2,7 +2,7 @@ from functools import cache
 from inspect import signature
 from itertools import product
 from random import Random
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 from networkx import connectivity
