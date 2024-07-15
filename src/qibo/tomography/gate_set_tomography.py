@@ -81,10 +81,11 @@ def _get_observable(j: int, nqubits: int):
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
 
     Args:
-        j (int): The index of the measurement basis.
-        nqubits (int): Number of qubits.
+        j (int): index of the measurement basis.
+        nqubits (int): number of qubits.
+
     Returns:
-        list(:class:`qibo.hamiltonians.SymbolicHamiltonian`): Symbolic hamiltonian of the observable.
+        List[:class:`qibo.hamiltonians.SymbolicHamiltonian`]: observables represented by symbolic Hamiltonians.
     """
 
     if j == 0:
