@@ -213,7 +213,9 @@ def matrix_exponentiation(
         if is_sparse:
             expm = expm_sparse_scipy
         elif backend_class_name in ["CupyBackend", "CuQuantumBackend"]:
-            from cupyx.scipy.linalg import expm as expm_cupy  # pylint: diable=C0415
+            from cupyx.scipy.linalg import (
+                expm as expm_cupy,  # pylint: disable=import-error
+            )
 
             expm = expm_cupy
         else:
