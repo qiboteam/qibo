@@ -177,7 +177,7 @@ class DoubleBracketIteration:
                     step * (np.sqrt(5) + 1) / 2, d, backend=self.backend
                 )
                 @ self.h.exp(-step * (3 - np.sqrt(5)) / 2)
-                @ matrix_exponentiation(-step, d, self.backend)
+                @ matrix_exponentiation(-step, d, backend=self.backend)
             )
             operator = (
                 matrix_exponentiation(step, d, backend=self.backend)
