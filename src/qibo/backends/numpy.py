@@ -746,8 +746,8 @@ class NumpyBackend(Backend):
         return ev
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.issparse(matrix):
-            if self.issparse(matrix):
+        if eigenvectors is None or self.is_sparse(matrix):
+            if self.is_sparse(matrix):
                 from scipy.sparse.linalg import expm
             else:
                 from scipy.linalg import expm
