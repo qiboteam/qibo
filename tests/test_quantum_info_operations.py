@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.quantum_info.operations import anticommutator, commutator, partial_trace
+from qibo.quantum_info.linalg_operations import (
+    anticommutator,
+    commutator,
+    partial_trace,
+)
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
 

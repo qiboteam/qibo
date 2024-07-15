@@ -310,7 +310,7 @@ class NumpyBackend(Backend):
 
     def reset_error_density_matrix(self, gate, state, nqubits):
         from qibo.gates import X  # pylint: disable=C0415
-        from qibo.quantum_info.operations import partial_trace  # pylint: disable=C0415
+        from qibo.quantum_info.linalg_operations import partial_trace  # pylint: disable=C0415
 
         state = self.cast(state)
         shape = state.shape
@@ -334,7 +334,7 @@ class NumpyBackend(Backend):
         return self.np.reshape(state, shape)
 
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
-        from qibo.quantum_info.operations import partial_trace  # pylint: disable=C0415
+        from qibo.quantum_info.linalg_operations import partial_trace  # pylint: disable=C0415
 
         state = self.cast(state)
         shape = state.shape

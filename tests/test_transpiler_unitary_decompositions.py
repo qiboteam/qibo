@@ -4,8 +4,8 @@ from scipy.linalg import expm
 
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.metrics import purity
-from qibo.quantum_info.operations import partial_trace
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.unitary_decompositions import (
     bell_basis,
