@@ -61,12 +61,13 @@ def _measurements(nqubits: int) -> List:
 
 @cache
 def _observables(nqubits: int) -> List:
-    """All the observables measured in GST.
+    """All the observables measured in the GST protocol.
 
     Args:
-        nqubits (int): Number of qubits for the circuit.
+        nqubits (int): number of qubits for the circuit.
+
     Returns:
-        list(:class:`qibo.symbols.Symbol`): list of the possible observables measured.
+        List[:class:`qibo.symbols.Symbol`]: all possible observables to be measured.
     """
 
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
