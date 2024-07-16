@@ -456,5 +456,5 @@ def test_hamiltonian_energy_fluctuation(backend):
     gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
     zs_energy_fluctuation = ham.energy_fluctuation(zero_state)
 
-    assert np.isclose(gs_energy_fluctuation, 0, atol=1e-5)
+    assert np.isclose(backend.to_numpy(gs_energy_fluctuation), 0, atol=1e-5)
     assert gs_energy_fluctuation < zs_energy_fluctuation

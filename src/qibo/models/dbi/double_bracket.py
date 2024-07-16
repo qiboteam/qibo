@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 from enum import Enum, auto
 from typing import Optional
 
@@ -88,7 +88,7 @@ class DoubleBracketIteration:
         ref_state: np.array = None,
     ):
         self.h = hamiltonian
-        self.h0 = deepcopy(self.h)
+        self.h0 = copy(self.h)
         self.mode = mode
         self.scheduling = scheduling
         self.cost = cost
@@ -262,7 +262,7 @@ class DoubleBracketIteration:
             look_ahead (int): number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
-        h_copy = deepcopy(self.h)
+        h_copy = copy(self.h)
 
         for _ in range(look_ahead):
             self.__call__(mode=self.mode, step=step, d=d)
@@ -314,7 +314,9 @@ class DoubleBracketIteration:
         if self.cost is DoubleBracketCostFunction.off_diagonal_norm:
             coef = off_diagonal_norm_polynomial_expansion_coef(self, d, n)
         elif self.cost is DoubleBracketCostFunction.least_squares:
-            coef = least_squares_polynomial_expansion_coef(self, d, n)
+            coef = least_squares_polynomial_expansion_coef(
+                self, d, n, backend=self.backend
+            )
         elif self.cost is DoubleBracketCostFunction.energy_fluctuation:
             coef = energy_fluctuation_polynomial_expansion_coef(
                 self, d, n, self.ref_state

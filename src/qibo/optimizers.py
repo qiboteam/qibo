@@ -241,7 +241,9 @@ def sgd(
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
-    for a list of the available optimizers.
+    for a list of the available optimizers for Tensorflow.
+    See `torch.optim <https://pytorch.org/docs/stable/optim.html>`_ for a list of the available
+    optimizers for PyTorch.
 
     Args:
         loss (callable): Loss as a function of variational parameters to be
@@ -260,9 +262,6 @@ def sgd(
               a message of the loss function.
     """
 
-    if not backend.name == "tensorflow":
-        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
-
     sgd_options = {
         "nepochs": 1000000,
         "nmessage": 1000,
@@ -272,7 +271,53 @@ def sgd(
     if options is not None:
         sgd_options.update(options)
 
-    # proceed with the training
+    if backend.name == "tensorflow":
+        return _sgd_tf(
+            loss,
+            initial_parameters,
+            args,
+            sgd_options,
+            compile,
+            backend,
+            callback=callback,
+        )
+
+    if backend.name == "pytorch":
+        if compile:
+            log.warning(
+                "PyTorch does not support compilation of the optimization graph."
+            )
+        return _sgd_torch(
+            loss, initial_parameters, args, sgd_options, backend, callback=callback
+        )
+
+    raise_error(RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend.")
+
+
+def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):
+
+    vparams = initial_parameters
+    optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
+        params=[vparams], lr=sgd_options["learning_rate"]
+    )
+
+    for e in range(sgd_options["nepochs"]):
+        optimizer.zero_grad()
+        l = loss(vparams, *args)
+        l.backward()
+        optimizer.step()
+        if callback is not None:
+            callback(backend.to_numpy(vparams))
+        if e % sgd_options["nmessage"] == 1:
+            log.info("ite %d : loss %f", e, l.item())
+
+    return loss(vparams, *args).item(), vparams.detach().numpy(), sgd_options
+
+
+def _sgd_tf(
+    loss, initial_parameters, args, sgd_options, compile, backend, callback=None
+):
+
     vparams = backend.tf.Variable(initial_parameters)
     optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"]
