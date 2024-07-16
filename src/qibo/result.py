@@ -325,7 +325,11 @@ class MeasurementOutcomes:
         if self._samples is None:
             if self.measurements[0].result.has_samples():
                 self._samples = self.backend.np.concatenate(
-                    [gate.result.samples() for gate in self.measurements], axis=1
+                    [
+                        self.backend.cast(gate.result.samples())
+                        for gate in self.measurements
+                    ],
+                    axis=1,
                 )
             else:
                 if self._frequencies is not None:
