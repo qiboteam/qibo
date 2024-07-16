@@ -101,12 +101,10 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
-    if backend.name == "pytorch":
-        pytest.skip("Skipping VQE test for pytorch backend.")
-    if (method == "sgd" or compile) and backend.name != "tensorflow":
+    if (method == "sgd" or compile) and (backend.name not in ("tensorflow", "pytorch")):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name == "tensorflow":
-        pytest.skip("Skipping scipy optimizers for tensorflow.")
+    if method != "sgd" and backend.name in ("tensorflow", "pytorch"):
+        pytest.skip("Skipping scipy optimizers for tensorflow and pytorch.")
     n_threads = backend.nthreads
     backend.set_threads(1)
     nqubits = 3
@@ -127,6 +125,9 @@ def test_vqe(backend, method, options, compile, filename):
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
+    initial_parameters = backend.cast(
+        initial_parameters, dtype=initial_parameters.dtype
+    )
     v = models.VQE(circuit, hamiltonian)
 
     loss_values = []
@@ -183,7 +184,7 @@ def test_qaoa_execution(backend, solver, dense, accel=None):
     else:
         atol = 0
 
-    target_state = np.copy(state)
+    target_state = backend.cast(state, copy=True)
     h_matrix = backend.to_numpy(h.matrix)
     m_matrix = backend.to_numpy(m.matrix)
     for i, p in enumerate(params):
@@ -268,11 +269,14 @@ test_values = [
 
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, dense, filename):
-    if method == "sgd" and backend.name != "tensorflow":
+    if (method == "sgd") and (backend.name not in ["tensorflow", "pytorch"]):
         pytest.skip("Skipping SGD test for unsupported backend.")
+    if method != "sgd" and backend.name in ("tensorflow", "pytorch"):
+        pytest.skip("Skipping scipy optimizers for tensorflow and pytorch.")
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
+    initial_p = backend.cast(initial_p, dtype=np.float64)
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
@@ -319,8 +323,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
-    if backend.name == "pytorch":
-        pytest.skip("Skipping VQE test for pytorch backend.")
+
     nqubits = 4
     layers = 1
     circuit = models.Circuit(nqubits)
