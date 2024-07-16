@@ -185,11 +185,10 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
         return array
 
-    array = _hadamard_transform_1d(array)
+    array = _hadamard_transform_1d(array, backend=backend)
 
     if len(array.shape) == 2:
-        array = _hadamard_transform_1d(np.transpose(array))
-        array = np.transpose(array)
+        array = _hadamard_transform_1d(array.T, backend=backend).T
 
     # needed for the tensorflow backend
     array = backend.cast(array, dtype=array.dtype)
@@ -252,7 +251,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
-        backend.calculate_norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)
+        backend.calculate_norm(
+            backend.np.sqrt(prob_dist_p) - backend.np.sqrt(prob_dist_q)
+        )
+        / np.sqrt(2)
     )
 
     return distance
@@ -396,11 +398,15 @@ def haar_integral(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
         for _ in range(samples):
-            haar_state = np.reshape(random_statevector(dim, backend=backend), (-1, 1))
+            haar_state = backend.np.reshape(
+                random_statevector(dim, backend=backend), (-1, 1)
+            )
 
-            rho = haar_state @ np.conj(np.transpose(haar_state))
+            rho = haar_state @ backend.np.conj(haar_state).T
 
-            rand_unit_density += reduce(np.kron, [rho] * power_t)
+            rand_unit_density = rand_unit_density + reduce(
+                backend.np.kron, [rho] * power_t
+            )
 
         integral = rand_unit_density / samples
 
@@ -414,14 +420,16 @@ def haar_integral(
     ]
 
     identity = np.eye(dim**power_t, dtype=float)
-    identity = backend.cast(identity, dtype=identity.dtype)
     identity = np.reshape(identity, (dim,) * (2 * power_t))
+    identity = backend.cast(identity, dtype=identity.dtype)
 
     integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
     integral = backend.cast(integral, dtype=integral.dtype)
     for indices in permutations_list:
-        integral += np.reshape(np.transpose(identity, indices), (-1, dim**power_t))
-    integral *= normalization
+        integral = integral + backend.np.reshape(
+            backend.np.transpose(identity, indices), (-1, dim**power_t)
+        )
+    integral = integral * normalization
 
     return integral
 
@@ -469,25 +477,26 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
 
         rho = backend.execute_circuit(circuit).state()
 
-        rand_unit_density += reduce(np.kron, [rho] * power_t)
+        rand_unit_density = rand_unit_density + reduce(np.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 
     return integral
 
 
-def _hadamard_transform_1d(array):
+def _hadamard_transform_1d(array, backend=None):
     # necessary because of tf.EagerTensor
     # does not accept item assignment
-    array_copied = np.copy(array)
+    backend = _check_backend(backend)
+    array_copied = backend.np.copy(array)
 
     indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
     for index in indexes:
         for k in range(0, len(array_copied), 2 * index):
             for j in range(k, k + index):
                 # copy necessary because of cupy backend
-                elem_1 = np.copy(array_copied[j])
-                elem_2 = np.copy(array_copied[j + index])
+                elem_1 = backend.np.copy(array_copied[j])
+                elem_2 = backend.np.copy(array_copied[j + index])
                 array_copied[j] = elem_1 + elem_2
                 array_copied[j + index] = elem_1 - elem_2
         array_copied /= 2.0

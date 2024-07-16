@@ -66,27 +66,28 @@ def str_to_symbolic(name: str):
     return tensor_op
 
 
-def cs_angle_sgn(dbi_object, d):
+def cs_angle_sgn(dbi_object, d, backend=None):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
-    d = dbi_object.backend.cast(d)
-    norm = np.trace(
-        np.dot(
-            np.conjugate(
+    backend = _check_backend(backend)
+    d = backend.cast(d)
+    norm = backend.np.trace(
+        backend.np.matmul(
+            backend.np.conj(
                 dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
             ).T,
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    return np.real(np.sign(norm))
+    return backend.np.real(backend.np.sign(norm))
 
 
-def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list):
+def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list, backend=None):
     """finds the decomposition of hamiltonian `h_matrix` into Pauli-Z operators"""
     nqubits = int(np.log2(h_matrix.shape[0]))
-
+    backend = _check_backend(backend)
     decomposition = []
     for Z_i in pauli_operators:
-        expect = np.trace(h_matrix @ Z_i) / 2**nqubits
+        expect = backend.np.trace(h_matrix @ Z_i) / 2**nqubits
         decomposition.append(expect)
     return decomposition
 
@@ -184,7 +185,7 @@ def params_to_diagonal_operator(
     # TODO: write proper tests for normalize=True
     if normalize:  # pragma: no cover
         d = d / np.linalg.norm(d)
-    return d
+    return backend.cast(d)
 
 
 def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
@@ -211,16 +212,18 @@ def off_diagonal_norm_polynomial_expansion_coef(dbi_object, d, n):
     return coef
 
 
-def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3):
+def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3, backend=None):
     """Return the Taylor expansion coefficients of least square cost of `dbi_object.h` and diagonal operator `d` with respect to double bracket rotation duration `s`."""
     # generate Gamma's where $\Gamma_{k+1}=[W, \Gamma_{k}], $\Gamma_0=H
+    backend = _check_backend(backend)
     Gamma_list = dbi_object.generate_gamma_list(n + 1, d)
     exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
     # coefficients
     coef = np.empty(n)
     for i in range(n):
-        coef[i] = np.real(
-            exp_list[i] * np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
+        coef[i] = backend.np.real(
+            exp_list[i]
+            * backend.np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
         )
     coef = list(reversed(coef))
     return coef
@@ -263,3 +266,21 @@ def energy_fluctuation_polynomial_expansion_coef(
     )
     coef = list(reversed(coef))
     return coef
+
+
+def copy_dbi_object(dbi_object):
+    """
+    Return a copy of the DoubleBracketIteration object.
+    This is necessary for the `select_best_dbr_generator` function as pytorch do not support deepcopy for leaf tensors.
+    """
+    from copy import copy, deepcopy  # pylint: disable=import-outside-toplevel
+
+    dbi_class = dbi_object.__class__
+    new = dbi_class.__new__(dbi_class)
+
+    # Manually copy h and h0 as they may be torch tensors
+    new.h, new.h0 = copy(dbi_object.h), copy(dbi_object.h0)
+    # Deepcopy the rest of the attributes
+    for attr in ("mode", "scheduling", "cost", "ref_state"):
+        setattr(new, attr, deepcopy(getattr(dbi_object, attr, None)))
+    return new

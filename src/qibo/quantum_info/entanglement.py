@@ -49,7 +49,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
         )
 
     if check_purity is True:
-        purity_total_system = purity(state)
+        purity_total_system = purity(state, backend=backend)
 
         mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
         if mixed is True:
@@ -60,7 +60,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
 
     reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
 
-    purity_reduced = purity(reduced_density_matrix)
+    purity_reduced = purity(reduced_density_matrix, backend=backend)
     if purity_reduced - 1.0 > 0.0:
         purity_reduced = round(purity_reduced, 7)
 
@@ -224,7 +224,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
         rho_r = partial_trace(rho, trace_q, backend=backend)
 
-        trace = purity(rho_r)
+        trace = purity(rho_r, backend=backend)
 
         ent += trace
 
