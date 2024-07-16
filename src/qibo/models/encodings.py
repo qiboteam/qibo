@@ -153,11 +153,13 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
 
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
-    circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture, **kwargs)
+    circuit_rbs, pairs_rbs = _generate_rbs_pairs(
+        nqubits, architecture=architecture, **kwargs
+    )
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, nqubits, architecture)
+    phases = _generate_rbs_angles(data, nqubits, architecture, pairs_rbs)
     circuit.set_parameters(phases)
 
     return circuit
@@ -414,19 +416,25 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     return circuit, pairs_rbs
 
 
-def _generate_rbs_angles(data, nqubits: int, architecture: str):
+def _generate_rbs_angles(data, nqubits: int, architecture: str, pairs_rbs: list):
     """Generating list of angles for RBS gates based on ``architecture``.
+
+    When ``architecture == "tree"`` and ``len(data)`` is not a power of :math:`2`,
+    ``data`` needs to be padded with zeros such that `len(new_data)`` is a power of :math:`2`.
+    Then,  angles can be calculated using ``new_data``.
 
     Args:
         data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
         nqubits (int): number of qubits.
-        architecture(str, optional): circuit architecture used for the unary loader.
+        architecture (str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        pairs_rbs (list): indices of target qubits per depth.
+            Only a strict requirement when ``architecture == "tree"``.
 
     Returns:
-        list: list of phases for RBS gates.
+        list: phases of :class:`qibo.gates.RBS` gates.
     """
     if architecture == "diagonal":
         phases = [
@@ -440,6 +448,7 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         new_nqubits = int(2 ** np.ceil(rest))
         if rest.is_integer():
             new_data = data
+            num_of_zeros = None
         else:
             new_data = np.zeros(new_nqubits, dtype=data.dtype)
             num_of_zeros = len(new_data) - len(data)
@@ -463,21 +472,12 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
 
-        print(phases)
-        phases = phases[:-num_of_zeros]
-        print(phases)
-        print()
-        # if data[2] < 0.0:
-        #     phases[1] = -phases[1]
+        if num_of_zeros is not None:
+            phases = phases[:-num_of_zeros]
 
-        # if data[3] < 0.0 and data[4] >= 0.0:
-        #     phases[2] = math.pi - phases[2]
-        # elif data[3] >= 0.0 and data[4] < 0.0:
-        #     phases[2] = -phases[2]
-        # elif data[3] < 0.0 and data[4] < 0.0:
-        #     phases[2] = math.pi + phases[2]
-        # print(len(data[pad:]), len(phases[pad - 1 :]))
-        # phases[pad - 1 :] = np.sign(data[pad:]) * phases[pad - 1 :]
+            ###
+            phases = _hardcoded_quadrant_check(data, phases)
+            ###
 
     return phases
 
@@ -491,7 +491,73 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
 
 
 # %%
-nqubits = 7
+def _check_two_quadrants(angle: float, data: float):
+    """Rotates angle to the correct quadrant in the unit-sphere given the sign of the data."""
+
+    # if first_data > 0.0 and second_data > 0.0,
+    # angle stays the same i.e. first quadrant
+
+    if data < 0.0:
+        # second quadrant
+        return -angle
+
+    return angle
+
+
+def _check_four_quadrants(angle: float, first_data: float, second_data: float):
+    """Rotates angle to the correct quadrant in the unit-sphere given the sign of the data."""
+
+    # if first_data > 0.0 and second_data > 0.0,
+    # angle stays the same i.e. first quadrant
+
+    if first_data < 0.0 and second_data >= 0.0:
+        # second quadrant
+        return np.pi - angle
+
+    if first_data >= 0.0 and second_data < 0.0:
+        # fourth quadrant
+        return -angle
+
+    if first_data < 0.0 and first_data < 0.0:
+        # third quadrant
+        return np.pi + angle
+
+    return angle
+
+
+def _hardcoded_quadrant_check(data, phases):
+    nqubits = len(phases) + 1
+
+    if nqubits == 5:
+        phases[1] = _check_two_quadrants(phases[1], data[2])
+        phases[2] = _check_four_quadrants(phases[2], data[3], data[4])
+
+    elif nqubits == 6:
+        phases[1] = _check_two_quadrants(phases[1], data[2])
+        phases[2] = _check_two_quadrants(phases[2], data[-1])
+
+    elif nqubits == 7:
+        phases[2] = _check_two_quadrants(phases[2], data[-1])
+
+    elif nqubits == 9:
+        phases[3] = _check_two_quadrants(phases[3], data[2])
+        phases[4] = _check_four_quadrants(phases[4], data[3], data[4])
+        phases[5] = _check_four_quadrants(phases[4], data[5], data[6])
+        phases[6] = _check_four_quadrants(phases[4], data[7], data[8])
+
+    elif nqubits == 10:
+        phases[3] = _check_two_quadrants(phases[3], data[2])
+        phases[4] = _check_four_quadrants(phases[4], data[3], data[4])
+        phases[5] = _check_two_quadrants(phases[5], data[7])
+        phases[6] = _check_four_quadrants(phases[6], data[8], data[-1])
+        phases[7] = _check_four_quadrants(phases[7], data[0], data[1])
+        phases[8] = _check_four_quadrants(phases[8], data[5], data[6])
+
+    return phases
+
+
+# %%
+nqubits = 10
 
 x = 2 * np.random.rand(nqubits) - 1
 print(x / np.linalg.norm(x))
