@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo.backends import PyTorchBackend
+from qibo.backends import PyTorchBackend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -140,7 +140,12 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
+        if (
+            self.backend.np.count_nonzero(
+                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
+            )
+            != 0
+        ):
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())
         if qubit_map is None:
@@ -153,7 +158,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return np.real(expval)
+        return self.backend.np.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -180,8 +185,8 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = h2.expectation(state, normalize=True)
-        return np.sqrt(np.abs(average_h2 - energy**2))
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -328,8 +333,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.nqubits = nqubits
 
     @property
-    def dense(self):
-        """Creates the equivalent :class:`qibo.hamiltonians.MatrixHamiltonian`."""
+    def dense(self) -> "MatrixHamiltonian":
+        """Creates the equivalent Hamiltonian matrix."""
         if self._dense is None:
             log.warning(
                 "Calculating the dense form of a symbolic Hamiltonian. "
@@ -380,8 +385,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def terms(self):
-        """List of :class:`qibo.core.terms.HamiltonianTerm` objects
-        of which the Hamiltonian is a sum of.
+        """List of terms of which the Hamiltonian is a sum of.
+
+        Terms will be objects of type :class:`qibo.core.terms.HamiltonianTerm`.
         """
         if self._terms is None:
             # Calculate terms based on ``self.form``
@@ -407,7 +413,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def matrix(self):
-        """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
+        """Returns the full matrix representation.
+
+        Consisting of ``(2 ** nqubits, 2 ** nqubits)`` elements.
+        """
         return self.dense.matrix
 
     def eigenvalues(self, k=6):
@@ -495,17 +504,16 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return result
 
-    def _calculate_dense_from_form(self):
-        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using symbolic form.
+    def _calculate_dense_from_form(self) -> Hamiltonian:
+        """Calculates equivalent Hamiltonian using symbolic form.
+
         Useful when the term representation is not available.
         """
         matrix = self._get_symbol_matrix(self.form)
         return Hamiltonian(self.nqubits, matrix, backend=self.backend)
 
-    def _calculate_dense_from_terms(self):
-        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian`
-        using the term representation.
-        """
+    def _calculate_dense_from_terms(self) -> Hamiltonian:
+        """Calculates equivalent Hamiltonian using the term representation."""
         if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -547,7 +555,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
-        coeff = list(self.form.as_coefficients_dict().values())
         qubits = []
         for term in terms:
             qubits_term = []
@@ -566,8 +573,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if subk.count(1) % 2 == 1:
                     expval_k = -1
                 expval_q += expval_k * counts[i]
-            expval += expval_q * float(coeff[j])
-        return expval
+            expval += expval_q * self.terms[j].coefficient.real
+        return expval + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -682,7 +689,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return new_ham
 
     def apply_gates(self, state, density_matrix=False):
-        """Applies gates corresponding to the Hamiltonian terms to a given state.
+        """Applies gates corresponding to the Hamiltonian terms.
+
+        Gates are applied to the given state.
+
         Helper method for ``__matmul__``.
         """
         total = 0

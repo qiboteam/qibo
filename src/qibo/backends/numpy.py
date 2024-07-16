@@ -156,7 +156,6 @@ class NumpyBackend(Backend):
         return self.cast(matrix.toarray())
 
     def apply_gate(self, gate, state, nqubits):
-        state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
@@ -718,23 +717,27 @@ class NumpyBackend(Backend):
         return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
-        return self.np.abs(self.np.sum(np.conj(self.cast(state1)) * self.cast(state2)))
+        return self.np.abs(
+            self.np.sum(self.np.conj(self.cast(state1)) * self.cast(state2))
+        )
 
     def calculate_overlap_density_matrix(self, state1, state2):
         return self.np.trace(
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6):
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
         if self.issparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
                 "sparse modules do not provide ``eigvals`` method."
             )
             return self.calculate_eigenvectors(matrix, k=k)[0]
-        return np.linalg.eigvalsh(matrix)
+        if hermitian:
+            return np.linalg.eigvalsh(matrix)
+        return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6):
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
         if self.issparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
@@ -742,7 +745,9 @@ class NumpyBackend(Backend):
                 return eigsh(matrix, k=k, which="SA")
             else:  # pragma: no cover
                 matrix = self.to_numpy(matrix)
-        return np.linalg.eigh(matrix)
+        if hermitian:
+            return np.linalg.eigh(matrix)
+        return np.linalg.eig(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):

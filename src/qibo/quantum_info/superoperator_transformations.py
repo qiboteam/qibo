@@ -64,12 +64,13 @@ def vectorization(state, order: str = "row", backend=None):
     backend = _check_backend(backend)
 
     if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
+        state = backend.np.outer(state, backend.np.conj(state))
 
     if order == "row":
-        state = np.reshape(state, (1, -1), order="C")[0]
+        state = backend.np.reshape(state, (1, -1))[0]
     elif order == "column":
-        state = np.reshape(state, (1, -1), order="F")[0]
+        state = state.T
+        state = backend.np.reshape(state, (1, -1))[0]
     else:
         dim = len(state)
         nqubits = int(np.log2(dim))
@@ -78,11 +79,9 @@ def vectorization(state, order: str = "row", backend=None):
         for qubit in range(nqubits):
             new_axis += [qubit + nqubits, qubit]
 
-        state = np.reshape(state, [2] * 2 * nqubits)
-        state = np.transpose(state, axes=new_axis)
-        state = np.reshape(state, -1)
-
-    state = backend.cast(state, dtype=state.dtype)
+        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        state = backend.np.transpose(state, new_axis)
+        state = backend.np.reshape(state, (-1,))
 
     return state
 
@@ -130,20 +129,21 @@ def unvectorization(state, order: str = "row", backend=None):
             )
 
     backend = _check_backend(backend)
+    state = backend.cast(state)
 
     dim = int(np.sqrt(len(state)))
 
     if order in ["row", "column"]:
         order = "C" if order == "row" else "F"
-        state = np.reshape(state, (dim, dim), order=order)
+        state = backend.cast(
+            np.reshape(backend.to_numpy(state), (dim, dim), order=order)
+        )
     else:
         nqubits = int(np.log2(dim))
         axes_old = list(np.arange(0, 2 * nqubits))
-        state = np.reshape(state, [2] * 2 * nqubits)
-        state = np.transpose(state, axes=axes_old[1::2] + axes_old[0::2])
-        state = np.reshape(state, [2**nqubits] * 2)
-
-    state = backend.cast(state, dtype=state.dtype)
+        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        state = backend.np.transpose(state, axes_old[1::2] + axes_old[0::2])
+        state = backend.np.reshape(state, [2**nqubits] * 2)
 
     return state
 
@@ -171,7 +171,7 @@ def to_choi(channel, order: str = "row", backend=None):
         ndarray: quantum channel in its Choi representation.
     """
     channel = vectorization(channel, order=order, backend=backend)
-    channel = np.outer(channel, np.conj(channel))
+    channel = backend.np.outer(channel, backend.np.conj(channel))
 
     return channel
 
@@ -239,7 +239,7 @@ def to_pauli_liouville(
         nqubits, normalize, pauli_order=pauli_order, backend=backend
     )
 
-    channel = unitary @ channel @ np.transpose(np.conj(unitary))
+    channel = unitary @ channel @ backend.np.conj(unitary).T
 
     return channel
 
@@ -448,11 +448,12 @@ def choi_to_kraus(
         )
 
     backend = _check_backend(backend)
+    choi_super_op = backend.cast(choi_super_op)
 
     if validate_cp:
         norm = float(
             backend.calculate_norm_density_matrix(
-                choi_super_op - np.transpose(np.conj(choi_super_op)), order=2
+                choi_super_op - backend.np.conj(choi_super_op).T, order=2
             )
         )
         if norm > PRECISION_TOL:
@@ -460,22 +461,22 @@ def choi_to_kraus(
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
-            eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
-            eigenvectors = np.transpose(eigenvectors)
+            eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+            eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(eigenvalues < -PRECISION_TOL))
+            non_cp = bool(any(backend.np.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
-        eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
-        eigenvectors = np.transpose(eigenvectors)
+        eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+        eigenvectors = eigenvectors.T
 
     if non_cp:
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = np.linalg.svd(choi_super_op)
+        U, coefficients, V = np.linalg.svd(backend.to_numpy(choi_super_op))
         U = np.transpose(U)
         coefficients = np.sqrt(coefficients)
         V = np.conj(V)
@@ -495,8 +496,8 @@ def choi_to_kraus(
         # when choi_super_op is CP
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
-            if np.abs(eig) > precision_tol:
-                eig = np.sqrt(eig)
+            if backend.np.abs(eig) > precision_tol:
+                eig = backend.np.sqrt(eig)
                 kraus_ops.append(
                     eig * unvectorization(kraus, order=order, backend=backend)
                 )
@@ -664,7 +665,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op += np.outer(kraus_op, np.conj(kraus_op))
+        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -802,7 +803,7 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op += np.outer(kraus_op, np.conj(kraus_op))
+        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -872,7 +873,7 @@ def kraus_to_stinespring(
 
     # only utility is for outer product,
     # so np.conj here to only do it once
-    initial_state_env = np.conj(initial_state_env)
+    initial_state_env = backend.np.conj(initial_state_env)
 
     stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
@@ -884,9 +885,9 @@ def kraus_to_stinespring(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
-        stinespring += np.kron(
+        stinespring = stinespring + backend.np.kron(
             kraus_op,
-            np.outer(vector_alpha, initial_state_env),
+            backend.np.outer(vector_alpha, initial_state_env),
         )
         del kraus_op, vector_alpha
 
@@ -979,7 +980,7 @@ def liouville_to_pauli(
         backend=backend,
     )
 
-    return comp_to_pauli @ super_op @ np.conj(np.transpose(comp_to_pauli))
+    return comp_to_pauli @ super_op @ backend.np.conj(comp_to_pauli.T)
 
 
 def liouville_to_kraus(
@@ -1180,7 +1181,7 @@ def pauli_to_liouville(
         backend=backend,
     )
 
-    return pauli_to_comp @ pauli_op @ np.conj(np.transpose(pauli_to_comp))
+    return pauli_to_comp @ pauli_op @ backend.np.conj(pauli_to_comp).T
 
 
 def pauli_to_choi(
@@ -1908,15 +1909,15 @@ def stinespring_to_kraus(
             initial_state_env, dtype=initial_state_env.dtype
         )
 
-    stinespring = np.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.np.reshape(stinespring, (dim, dim_env, dim, dim_env))
+    stinespring = backend.np.swapaxes(stinespring, 1, 2)
 
     kraus_ops = []
     for alpha in range(dim_env):
         vector_alpha = np.zeros(dim_env, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        kraus = np.conj(vector_alpha) @ stinespring @ initial_state_env
+        kraus = backend.np.conj(vector_alpha) @ stinespring @ initial_state_env
         kraus_ops.append(kraus)
 
     return kraus_ops
@@ -2057,7 +2058,7 @@ def kraus_to_unitaries(
         operator = (1 - np.sum(x0)) * np.eye(dim**2, dtype=complex)
         operator = backend.cast(operator, dtype=operator.dtype)
         for prob, oper in zip(x0, operators):
-            operator += prob * oper
+            operator = operator + prob * oper
 
         return float(backend.calculate_norm_density_matrix(target - operator, order=2))
 
@@ -2123,6 +2124,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
+    super_op = backend.cast(super_op)
 
     if not isinstance(order, str):
         raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
@@ -2152,13 +2154,12 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     dim = int(dim)
-    super_op = np.reshape(super_op, [dim] * 4)
+    super_op = backend.np.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = np.swapaxes(super_op, *axes)
+    super_op = backend.np.swapaxes(super_op, *axes)
 
-    super_op = np.reshape(super_op, [dim**2, dim**2])
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
+    super_op = backend.np.reshape(super_op, [dim**2, dim**2])
 
     return super_op
 
@@ -2217,7 +2218,7 @@ def _individual_kraus_to_liouville(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = np.outer(kraus_op, np.conj(kraus_op))
+        kraus_op = backend.np.outer(kraus_op, backend.np.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops

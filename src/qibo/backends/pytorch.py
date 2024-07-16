@@ -8,17 +8,28 @@ from qibo.backends.numpy import NumpyBackend
 
 
 class TorchMatrices(NumpyMatrices):
-    """Matrix representation of every gate as a torch Tensor."""
+    """Matrix representation of every gate as a torch Tensor.
 
-    def __init__(self, dtype):
+    Args:
+        dtype (torch.dtype): Data type of the matrices.
+        requires_grad (bool): If ``True`` the matrices require gradient.
+    """
+
+    def __init__(self, dtype, requires_grad):
         import torch  # pylint: disable=import-outside-toplevel
 
         super().__init__(dtype)
-        self.torch = torch
+        self.np = torch
         self.dtype = dtype
+        self.requires_grad = requires_grad
 
     def _cast(self, x, dtype):
-        return self.torch.as_tensor(x, dtype=dtype)
+        flattened = [item for sublist in x for item in sublist]
+        tensor_list = [self.np.as_tensor(i, dtype=dtype) for i in flattened]
+        return self.np.stack(tensor_list).reshape(len(x), len(x))
+
+    def _cast_parameter(self, x):
+        return self.np.tensor(x, dtype=self.dtype, requires_grad=self.requires_grad)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)
@@ -28,6 +39,9 @@ class PyTorchBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
         import torch  # pylint: disable=import-outside-toplevel
+
+        # Global variable to enable or disable gradient calculation
+        self.gradients = True
 
         self.np = torch
 
@@ -39,16 +53,24 @@ class PyTorchBackend(NumpyBackend):
         }
 
         self.dtype = self._torch_dtype(self.dtype)
-        self.matrices = TorchMatrices(self.dtype)
+        self.matrices = TorchMatrices(self.dtype, requires_grad=self.gradients)
         self.device = self.np.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.tensor_types = (self.np.Tensor, np.ndarray)
 
         # These functions in Torch works in a different way than numpy or have different names
         self.np.transpose = self.np.permute
+        self.np.copy = self.np.clone
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift
+        self.np.sign = self.np.sgn
+        self.np.flatnonzero = lambda x: self.np.nonzero(x).flatten()
+
+    def requires_grad(self, requires_grad):
+        """Enable or disable gradient calculation."""
+        self.gradients = requires_grad
+        self.matrices.requires_grad = requires_grad
 
     def _torch_dtype(self, dtype):
         if dtype == "float":
@@ -63,6 +85,7 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
+        requires_grad: bool = None,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -77,7 +100,13 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
+            requires_grad (bool, optional): If ``True``, the input tensor requires gradient.
+                If ``False``, the input tensor does not require gradient.
+                If ``None``, the default gradient setting of the backend is used.
         """
+        if requires_grad is None:
+            requires_grad = self.gradients
+
         if dtype is None:
             dtype = self.dtype
         elif isinstance(dtype, type):
@@ -85,12 +114,16 @@ class PyTorchBackend(NumpyBackend):
         elif not isinstance(dtype, self.np.dtype):
             dtype = self._torch_dtype(str(dtype))
 
+        # check if dtype is an integer to remove gradients
+        if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
+            requires_grad = False
+
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
         elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
             x = self.np.stack(x)
         else:
-            x = self.np.tensor(x, dtype=dtype)
+            x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
 
         if copy:
             return x.clone()
@@ -143,11 +176,15 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_eigenvalues(self, matrix, k=6):
-        return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+        return self.np.linalg.eigvals(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix, k=6):
-        return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
+        return self.np.linalg.eig(matrix)  # pylint: disable=not-callable
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):

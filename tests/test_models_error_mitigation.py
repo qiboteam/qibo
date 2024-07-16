@@ -133,7 +133,7 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
         backend=backend,
     )
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -192,7 +192,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -275,7 +275,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
@@ -372,4 +372,4 @@ def test_ics(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)

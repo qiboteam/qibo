@@ -132,7 +132,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
 
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
-    indexes = np.flatnonzero(state)
+    indexes = np.flatnonzero(backend.to_numpy(state))
     state = backend.np.real(state[indexes])
 
     backend.assert_allclose(state, backend.cast(data) / backend.calculate_norm(data, 2))
@@ -165,7 +165,7 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     for _ in range(samples):
         circuit = unary_encoder_random_gaussian(nqubits, seed=local_state)
         state = backend.execute_circuit(circuit).state()
-        indexes = np.flatnonzero(state)
+        indexes = np.flatnonzero(backend.to_numpy(state))
         state = np.real(state[indexes])
         amplitudes += [float(elem) for elem in list(state)]
 
