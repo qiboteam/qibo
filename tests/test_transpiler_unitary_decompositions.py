@@ -72,6 +72,7 @@ def test_eigenbasis_entanglement(backend, seed):
             state = partial_trace(state, [1], backend=backend)
             backend.assert_allclose(purity(state, backend=backend), 0.5)
 
+
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_v_decomposition(backend, seed):
     """Check that V_A V_B |psi_k> = |phi_k> according to Lemma 1."""
