@@ -64,7 +64,7 @@ class QuantumNetwork:
         self.dims = reduce(mul, self.partition) if len(self.partition) > 0 else 1
 
     @staticmethod
-    def _order_tensor2operator(n: int):
+    def _order_tensor_to_operator(n: int):
         """
         Returns the order to reshape a tensor to an operator.
         Given a tenosr of 2n leads, the order is [0, 2, 4, ..., 1, 3, 5, ...].
