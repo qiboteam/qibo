@@ -6,6 +6,7 @@ import pytest
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info import (
+    partial_trace,
     random_density_matrix,
     random_statevector,
     random_stochastic_matrix,
@@ -257,14 +258,14 @@ def test_depolarizing_channel_errors():
 
 def test_depolarizing_channel(backend):
     """"""
-    initial_state = random_density_matrix(2**3, backend=backend)
     lam = 0.3
-    initial_state_r = backend.partial_trace_density_matrix(initial_state, (2,), 3)
+    initial_state = random_density_matrix(2**3, backend=backend)
+    initial_state_r = partial_trace(initial_state, (2,), backend=backend)
     channel = gates.DepolarizingChannel((0, 1), lam)
     final_state = channel.apply_density_matrix(
         backend, backend.np.copy(initial_state), 3
     )
-    final_state_r = backend.partial_trace_density_matrix(final_state, (2,), 3)
+    final_state_r = partial_trace(final_state, (2,), backend=backend)
     target_state_r = (1 - lam) * initial_state_r + lam * backend.cast(
         np.identity(4)
     ) / 4
@@ -360,9 +361,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         m_z = backend.cast(m_z, dtype=m_z.dtype)
         z_rho = m_z @ initial_state @ m_z
 
-        trace = backend.to_numpy(
-            backend.partial_trace_density_matrix(initial_state, (0,), 3)
-        )
+        trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
         trace = np.reshape(trace, 4 * (2,))
         zeros = np.tensordot(
             trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0
@@ -437,9 +436,7 @@ def test_reset_channel(backend):
         gate, backend.np.copy(initial_state), 3
     )
 
-    trace = backend.to_numpy(
-        backend.partial_trace_density_matrix(initial_state, (0,), 3)
-    )
+    trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
     trace = np.reshape(trace, 4 * (2,))
 
     zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
