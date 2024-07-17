@@ -82,7 +82,7 @@ class QuantumNetwork:
         return order
 
     @classmethod
-    def _operator2tensor(cls, operator, partition: List[int]):
+    def _operator_to_tensor(cls, operator, partition: List[int]):
         # check if tensorflow is installed
         try:
             from tensorflow import InvalidArgumentError
