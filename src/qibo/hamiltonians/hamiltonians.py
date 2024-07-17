@@ -31,7 +31,7 @@ class Hamiltonian(AbstractHamiltonian):
 
         if not (
             isinstance(matrix, self.backend.tensor_types)
-            or self.backend.issparse(matrix)
+            or self.backend.is_sparse(matrix)
         ):
             raise_error(
                 TypeError,
@@ -107,10 +107,14 @@ class Hamiltonian(AbstractHamiltonian):
         return self._eigenvectors
 
     def exp(self, a):
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            matrix_exponentiation,
+        )
+
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = self.backend.calculate_matrix_exp(
-                a, self.matrix, self._eigenvectors, self._eigenvalues
+            self._exp["result"] = matrix_exponentiation(
+                a, self.matrix, self._eigenvectors, self._eigenvalues, self.backend
             )
         return self._exp.get("result")
 
@@ -254,7 +258,7 @@ class Hamiltonian(AbstractHamiltonian):
         if self._eigenvalues is not None:
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
-            elif not self.backend.issparse(self.matrix):
+            elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
                 r._eigenvalues = o * self.backend.np.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:

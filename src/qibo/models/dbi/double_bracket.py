@@ -13,6 +13,7 @@ from qibo.models.dbi.utils_scheduling import (
     polynomial_step,
     simulated_annealing_step,
 )
+from qibo.quantum_info.linalg_operations import commutator, matrix_exponentiation
 
 
 class DoubleBracketGeneratorType(Enum):
@@ -180,43 +181,53 @@ class DoubleBracketIteration:
             mode = self.mode
 
         if mode is DoubleBracketGeneratorType.canonical:
-            operator = self.backend.calculate_matrix_exp(
+            operator = matrix_exponentiation(
                 -1.0j * step,
                 self.commutator(self.diagonal_h_matrix, self.h.matrix),
+                backend=self.backend,
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
-            operator = self.backend.calculate_matrix_exp(
+            operator = matrix_exponentiation(
                 -1.0j * step,
                 self.commutator(self.backend.cast(d), self.h.matrix),
+                backend=self.backend,
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = (
                 self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(-step, d)
+                @ matrix_exponentiation(-step, d, backend=self.backend)
                 @ self.h.exp(-step)
-                @ self.backend.calculate_matrix_exp(step, d)
+                @ matrix_exponentiation(step, d, backend=self.backend)
             )
         elif mode is DoubleBracketGeneratorType.group_commutator_third_order:
             if d is None:
                 d = self.diagonal_h_matrix
             operator = (
                 self.h.exp(-step * (np.sqrt(5) - 1) / 2)
-                @ self.backend.calculate_matrix_exp(-step * (np.sqrt(5) - 1) / 2, d)
+                @ matrix_exponentiation(
+                    -step * (np.sqrt(5) - 1) / 2, d, backend=self.backend
+                )
                 @ self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(step * (np.sqrt(5) + 1) / 2, d)
+                @ matrix_exponentiation(
+                    step * (np.sqrt(5) + 1) / 2, d, backend=self.backend
+                )
                 @ self.h.exp(-step * (3 - np.sqrt(5)) / 2)
-                @ self.backend.calculate_matrix_exp(-step, d)
+                @ matrix_exponentiation(-step, d, backend=self.backend)
             )
             operator = (
-                self.backend.calculate_matrix_exp(step, d)
+                matrix_exponentiation(step, d, backend=self.backend)
                 @ self.h.exp(step * (3 - np.sqrt(5)) / 2)
-                @ self.backend.calculate_matrix_exp(-step * (np.sqrt(5) + 1) / 2, d)
+                @ matrix_exponentiation(
+                    -step * (np.sqrt(5) + 1) / 2, d, backend=self.backend
+                )
                 @ self.h.exp(-step)
-                @ self.backend.calculate_matrix_exp(step * (np.sqrt(5) - 1) / 2, d)
+                @ matrix_exponentiation(
+                    step * (np.sqrt(5) - 1) / 2, d, backend=self.backend
+                )
                 @ self.h.exp(step * (np.sqrt(5) - 1) / 2)
             )
         else:
@@ -229,7 +240,7 @@ class DoubleBracketIteration:
     @staticmethod
     def commutator(a, b):
         """Compute commutator between two arrays."""
-        return a @ b - b @ a
+        return commutator(a, b)
 
     @property
     def diagonal_h_matrix(self):
