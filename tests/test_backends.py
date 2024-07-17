@@ -128,3 +128,19 @@ def test_list_available_backends():
         "qibotn": {"cutensornet": False, "qutensornet": True},
     }
     assert available_backends == list_available_backends()
+
+
+def test_gradients_pytorch():
+    from qibo.backends import PyTorchBackend  # pylint: disable=import-outside-toplevel
+
+    backend = PyTorchBackend()
+    gate = gates.RX(0, 0.1)
+    matrix = gate.matrix(backend)
+    assert matrix.requires_grad
+    assert backend.gradients
+    backend.requires_grad(False)
+    gate = gates.RX(0, 0.1)
+    matrix = gate.matrix(backend)
+    assert not matrix.requires_grad
+    assert not backend.gradients
+    assert not backend.matrices.requires_grad

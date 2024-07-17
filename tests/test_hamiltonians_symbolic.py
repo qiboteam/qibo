@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 import sympy
+from pytest import approx
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
@@ -386,3 +387,13 @@ def test_trotter_hamiltonian_operation_errors(backend):
     h2 = hamiltonians.XXZ(3, dense=False, backend=backend)
     with pytest.raises(NotImplementedError):
         h = h1 @ h2
+
+
+def test_symbolic_hamiltonian_with_constant(backend):
+    c = Circuit(1)
+    c.add(gates.H(0))
+    c.add(gates.M(0))
+    h = hamiltonians.SymbolicHamiltonian(1e6 - Z(0), backend=backend)
+
+    result = c.execute(nshots=10000)
+    assert result.expectation_from_samples(h) == approx(1e6, rel=1e-5, abs=0.0)

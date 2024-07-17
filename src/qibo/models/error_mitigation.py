@@ -229,17 +229,20 @@ def sample_training_circuit_cdr(
 
         replacement.append(rep_gates)
         distance.append(
-            np.linalg.norm(
-                gate.matrix(backend)
-                - backend.cast([rep_gate.matrix(backend) for rep_gate in rep_gates]),
-                ord="fro",
-                axis=(1, 2),
+            backend.np.real(
+                backend.np.linalg.norm(
+                    gate.matrix(backend)
+                    - backend.cast(
+                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
+                    ),
+                    ord="fro",
+                    axis=(1, 2),
+                )
             )
         )
 
-    distance = np.vstack(distance)
-    prob = np.exp(-(distance**2) / sigma**2)
-    prob = backend.cast(prob, dtype=prob.dtype)
+    distance = backend.np.vstack(distance)
+    prob = backend.np.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),

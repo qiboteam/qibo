@@ -1,5 +1,7 @@
 """Test dense matrix of Hamiltonians constructed using symbols."""
 
+import pickle
+
 import numpy as np
 import pytest
 import sympy
@@ -8,6 +10,16 @@ from qibo import hamiltonians, matrices
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
+
+
+@pytest.mark.parametrize("symbol", [I, X, Y, Z])
+def test_symbols_pickling(symbol):
+    symbol = symbol(int(np.random.randint(4)))
+    dumped_symbol = pickle.dumps(symbol)
+    new_symbol = pickle.loads(dumped_symbol)
+    for attr in ("target_qubit", "name", "_gate"):
+        assert getattr(symbol, attr) == getattr(new_symbol, attr)
+    np.testing.assert_allclose(symbol.matrix, new_symbol.matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])

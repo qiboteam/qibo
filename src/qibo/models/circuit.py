@@ -699,13 +699,7 @@ class Circuit:
     @property
     def measurement_tuples(self):
         # used for testing only
-        registers = {}
-        for m in self.measurements:
-            if m.register_name not in registers:
-                registers[m.register_name] = m.target_qubits
-            else:
-                registers[m.register_name] += m.target_qubits
-        return {name: qubits for name, qubits in registers.items()}
+        return {m.register_name: m.target_qubits for m in self.measurements}
 
     @property
     def ngates(self) -> int:
