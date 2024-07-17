@@ -123,23 +123,25 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     # Test that the `TrotterHamiltonian` dense matrix is correct
     eye = np.eye(2, dtype=complex)
     eye = backend.cast(eye, dtype=eye.dtype)
-    mm1 = np.kron(m1, eye)
-    mm2 = np.kron(np.kron(eye, eye), m2)
-    mm3 = np.kron(np.kron(eye, m3), np.kron(eye, eye))
+    mm1 = backend.np.kron(m1, eye)
+    mm2 = backend.np.kron(backend.np.kron(eye, eye), m2)
+    mm3 = backend.np.kron(backend.np.kron(eye, m3), backend.np.kron(eye, eye))
     target_ham = hamiltonians.Hamiltonian(4, mm1 + mm2 + mm3, backend=backend)
     backend.assert_allclose(ham.matrix, target_ham.matrix)
 
     dt = 1e-2
     initial_state = random_statevector(2**4, backend=backend)
     circuit = ham.circuit(dt=dt)
-    final_state = backend.execute_circuit(circuit, np.copy(initial_state)).state()
+    final_state = backend.execute_circuit(
+        circuit, backend.np.copy(initial_state)
+    ).state()
     mm1 = backend.to_numpy(mm1)
     mm2 = backend.to_numpy(mm2)
     mm3 = backend.to_numpy(mm3)
     u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
     u = backend.cast(u)
-    target_state = np.dot(u[1], np.dot(u[0], initial_state))
-    target_state = np.dot(u[0], np.dot(u[1], target_state))
+    target_state = backend.np.matmul(u[1], backend.np.matmul(u[0], initial_state))
+    target_state = backend.np.matmul(u[0], backend.np.matmul(u[1], target_state))
     backend.assert_allclose(final_state, target_state)
 
 
@@ -150,7 +152,7 @@ def test_symbolic_hamiltonian_circuit_different_dts(backend):
     b = ham.circuit(0.1)
     matrix1 = ham.circuit(0.2).unitary(backend)
     matrix2 = (a + b).unitary(backend)
-    np.testing.assert_allclose(matrix1, matrix2)
+    backend.assert_allclose(matrix1, matrix2)
 
 
 def test_old_trotter_hamiltonian_errors():

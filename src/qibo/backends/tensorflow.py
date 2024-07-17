@@ -19,6 +19,7 @@ class TensorflowMatrices(NumpyMatrices):
 
         self.tf = tf
         self.np = tnp
+        self.np.linalg = tf.linalg
 
     def _cast(self, x, dtype):
         return self.tf.cast(x, dtype=dtype)
@@ -42,6 +43,8 @@ class TensorflowBackend(NumpyBackend):
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
+        self.np.flatnonzero = np.flatnonzero
+        self.np.copy = np.copy
 
         self.versions = {
             "qibo": __version__,
@@ -89,7 +92,7 @@ class TensorflowBackend(NumpyBackend):
             return self.tf.identity(x)
         return x
 
-    def issparse(self, x):
+    def is_sparse(self, x):
         return isinstance(x, self.tf.sparse.SparseTensor)
 
     def to_numpy(self, x):
@@ -174,20 +177,23 @@ class TensorflowBackend(NumpyBackend):
             return self.np.trace(state)
         return self.tf.norm(state, ord=order)
 
-    def calculate_eigenvalues(self, matrix, k=6):
-        return self.tf.linalg.eigvalsh(matrix)
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.tf.linalg.eigvalsh(matrix)
+        return self.tf.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6):
-        return self.tf.linalg.eigh(matrix)
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+        if hermitian:
+            return self.tf.linalg.eigh(matrix)
+        return self.tf.linalg.eig(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.issparse(matrix):
+        if eigenvectors is None or self.is_sparse(matrix):
             return self.tf.linalg.expm(-1j * a * matrix)
-        else:
-            return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+        return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        if self.issparse(matrix1) or self.issparse(matrix2):
+        if self.is_sparse(matrix1) or self.is_sparse(matrix2):
             raise_error(
                 NotImplementedError,
                 "Multiplication of sparse matrices is not supported with Tensorflow.",
@@ -206,7 +212,7 @@ class TensorflowBackend(NumpyBackend):
                 f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
             )
 
-    def test_regressions(self, name):
+    def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
                 [4, 0, 0, 1, 0, 0, 1, 0, 0, 0],

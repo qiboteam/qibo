@@ -83,11 +83,6 @@ class QuantumNetwork:
 
     @classmethod
     def _operator_to_tensor(cls, operator, partition: List[int]):
-        # check if tensorflow is installed
-        try:
-            from tensorflow import InvalidArgumentError
-        except ImportError:
-            InvalidArgumentError = ValueError
 
         n = len(partition)
         order = cls._order_operator_to_tensor(n)
@@ -102,7 +97,12 @@ class QuantumNetwork:
                 + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
             )
 
-        tensor = np.transpose(operator.reshape(list(partition) * 2), order)
+        # Check if `operator` is a pytourch tensor
+        tensor = operator.reshape(list(partition) * 2)
+        if operator.__class__.__name__ == "Tensor":
+            tensor = tensor.permute(order)
+        else:
+            tensor = tensor.transpose(order)
         return tensor.reshape([dim**2 for dim in partition])
 
     @classmethod
@@ -206,7 +206,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor_to_operator(n)
 
-        operator = np.transpose(
+        operator = self._backend.np.transpose(
             tensor.reshape(tuple(np.repeat(self.partition, 2))), order
         )
 
@@ -274,9 +274,12 @@ class QuantumNetwork:
             self.matrix(),
             dtype=self._tensor.dtype,
         )
-        mat_diff = self._backend.cast(
-            np.transpose(np.conj(reshaped)) - reshaped, dtype=reshaped.dtype
-        )
+        if self._backend.__class__.__name__ == "PyTorchBackend":
+            adjoint = self._backend.np.transpose(reshaped, (1, 0))
+        else:
+            adjoint = self._backend.np.transpose(reshaped)
+
+        mat_diff = self._backend.np.conj(adjoint) - reshaped
         norm = self._backend.calculate_norm_density_matrix(mat_diff, order=order)
 
         return float(norm) <= precision_tol
@@ -309,11 +312,14 @@ class QuantumNetwork:
         )
 
         if self.is_hermitian():
-            eigenvalues = np.linalg.eigvalsh(reshaped)
+            eigenvalues = self._backend.calculate_eigenvalues(reshaped)
         else:
             return False
 
-        return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
+        return all(
+            self._backend.np.real(eigenvalue) >= -precision_tol
+            for eigenvalue in eigenvalues
+        )
 
     def link_product(self, subscripts: str, second_network):
         """Link product between two quantum networks.
@@ -341,7 +347,7 @@ class QuantumNetwork:
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.QuantumNetwork` object."""
         return self.__class__(
-            np.copy(self._tensor),
+            self._backend.np.copy(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -351,7 +357,7 @@ class QuantumNetwork:
     def conj(self):
         """Returns the conjugate of the quantum network."""
         return self.__class__(
-            np.conj(self._tensor),
+            self._backend.np.conj(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -607,20 +613,27 @@ class QuantumNetwork:
 
         self._einsum = self._backend.np.einsum
         self._tensordot = self._backend.np.tensordot
+        self._tensor = self._backend.cast(self._tensor, dtype=self._tensor.dtype)
 
-        try:
-            if self._pure:
-                self._tensor = np.reshape(self._tensor, self.partition)
-            else:
-                matrix_partition = [d**2 for d in self.partition]
-                self._tensor = np.reshape(self._tensor, matrix_partition)
-        except:
-            raise_error(
-                ValueError,
-                "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshape matrix of size {self._tensor.shape} "
-                + f"to partition {self.partition}",
-            )
+        if self._pure:
+            if np.prod(tuple(self._tensor.shape)) != np.prod(tuple(self.partition)):
+                raise_error(
+                    ValueError,
+                    "``partition`` does not match the shape of the input matrix. "
+                    + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
+                )
+            self._tensor = self._backend.np.reshape(self._tensor, self.partition)
+        else:
+            if np.prod(tuple(self._tensor.shape)) != np.prod(
+                tuple([dim**2 for dim in self.partition])
+            ):
+                raise_error(
+                    ValueError,
+                    "``partition`` does not match the shape of the input matrix. "
+                    + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
+                )
+            matrix_partition = [dim**2 for dim in self.partition]
+            self._tensor = self._backend.np.reshape(self._tensor, matrix_partition)
 
     def full(self, update: bool = False, backend=None):
         """Convert the internal representation to the full tensor of the network.
@@ -637,7 +650,7 @@ class QuantumNetwork:
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
-        tensor = np.copy(self._tensor)
+        tensor = self._backend.np.copy(self._tensor)
         tensor = backend.cast(tensor, dtype=self._tensor.dtype)
         conj = backend.np.conj
 
