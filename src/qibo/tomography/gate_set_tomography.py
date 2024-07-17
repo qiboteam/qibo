@@ -74,13 +74,13 @@ def _observables(nqubits: int) -> List:
 
 @cache
 def _get_observable(j: int, nqubits: int):
-    """Returns the j-th observable. Here,
+    """Returns the :math:`j`-th observable. The :math:`j`-th observable is given in base-4 indexing and is given by
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
 
     Args:
-        j (int): index of the measurement basis.
+        j (int): index of the measurement basis (in base-4)
         nqubits (int): number of qubits.
 
     Returns:
@@ -99,7 +99,8 @@ def _get_observable(j: int, nqubits: int):
 
 @cache
 def _prepare_state(k, nqubits):
-    """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit, where
+    """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
+    Using base-4 indexing for :math:`k`,
 
     .. math::
         k \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ 0\\rangle\\langle0|, |1\\rangle\\langle1|,
@@ -110,7 +111,7 @@ def _prepare_state(k, nqubits):
         nqubits (int): Number of qubits.
 
     Returns:
-        list(:class:`qibo.gates.abstract.Gate`): list of the gates that prepare the k-th state.
+        list(:class:`qibo.gates.abstract.Gate`): list of the gates that prepare the :math:`k`-th state.
     """
 
     _check_nqubits(nqubits)
@@ -120,7 +121,8 @@ def _prepare_state(k, nqubits):
 
 @cache
 def _measurement_basis(j, nqubits):
-    """Constructs the j-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit, where
+    """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
+    Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
