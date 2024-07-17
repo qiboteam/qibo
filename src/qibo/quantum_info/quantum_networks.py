@@ -73,7 +73,7 @@ class QuantumNetwork:
         return order
 
     @staticmethod
-    def _order_operator2tensor(n: int):
+    def _order_operator_to_tensor(n: int):
         """
         Returns the order to reshape an operator to a tensor.
         Given a operator of 2n systems, the order is [0, n, 1, n+1, 2, n+2, ...].
