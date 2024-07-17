@@ -163,7 +163,7 @@ class DoubleBracketIteration:
         because
 
         .. math::
-            `e^{-i\\,r\\,H} \\, D \\, e^{i\\,r\\,H} = D + i\\,r\\,[D, H] +O(r^2)
+            e^{-i\\,r\\,H} \\, D \\, e^{i\\,r\\,H} = D + i\\,r\\,[D, H] +O(r^2)
 
         so
 
