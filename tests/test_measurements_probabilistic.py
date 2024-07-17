@@ -25,7 +25,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    decimal_frequencies = backend.test_regressions("test_probabilistic_measurement")
+    decimal_frequencies = backend._test_regressions("test_probabilistic_measurement")
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
@@ -64,7 +64,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    decimal_frequencies = backend.test_regressions(
+    decimal_frequencies = backend._test_regressions(
         "test_unbalanced_probabilistic_measurement"
     )
 
@@ -115,7 +115,7 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(3, p0=probs[2]))
     result = backend.execute_circuit(c, nshots=30)
     freqs = result.frequencies(binary=False)
-    targets = backend.test_regressions("test_post_measurement_bitflips_on_circuit")
+    targets = backend._test_regressions("test_post_measurement_bitflips_on_circuit")
     assert freqs == targets[i]
 
 
@@ -153,6 +153,6 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result._samples = backend.cast(np.zeros((10, 3)), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)
-    targets = backend.test_regressions("test_measurementresult_apply_bitflips")
+    targets = backend._test_regressions("test_measurementresult_apply_bitflips")
     noisy_samples = backend.samples_to_decimal(noisy_samples, 3)
     backend.assert_allclose(noisy_samples, targets[i])
