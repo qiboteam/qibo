@@ -783,7 +783,7 @@ class QuantumComb(QuantumNetwork):
             inverse
         ):  # Convert mathmetical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
-            comb._tensor = np.transpose(comb._tensor)
+            comb._tensor = comb._tensor.T
         return comb
 
 
