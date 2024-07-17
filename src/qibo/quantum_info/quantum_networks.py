@@ -631,7 +631,7 @@ class QuantumNetwork:
                 + f"to partition {self.partition}",
             )
 
-    def full(self, update=False, backend=None):
+    def full(self, update: bool = False, backend=None):
         """Convert the internal representation to the full tensor of the network.
 
         Args:
@@ -640,8 +640,9 @@ class QuantumNetwork:
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
                 calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
                 Defaults to ``None``.
+
         Returns:
-            ndarray: The full reprentation of the quantum network.
+            ndarray: full reprentation of the quantum network.
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
