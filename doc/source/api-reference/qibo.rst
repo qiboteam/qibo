@@ -1939,6 +1939,18 @@ Anticommutator
 .. autofunction:: qibo.quantum_info.anticommutator
 
 
+Partial trace
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_trace
+
+
+Matrix exponentiation
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_exponentiation
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 

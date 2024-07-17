@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import callbacks, gates
+from qibo import callbacks, gates, hamiltonians
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
 from qibo.config import PRECISION_TOL
@@ -353,14 +353,9 @@ def test_energy(backend, density_matrix):
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("check_degenerate", [False, True])
 def test_gap(backend, dense, check_degenerate):
-    from qibo import hamiltonians
-
     h0 = hamiltonians.X(4, dense=dense, backend=backend)
-    if check_degenerate:
-        # use h=0 to make this Hamiltonian degenerate
-        h1 = hamiltonians.TFIM(4, h=0, dense=dense, backend=backend)
-    else:
-        h1 = hamiltonians.TFIM(4, h=1, dense=dense, backend=backend)
+    h = 0 if check_degenerate else 1
+    h1 = hamiltonians.TFIM(4, h=h, dense=dense, backend=backend)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
