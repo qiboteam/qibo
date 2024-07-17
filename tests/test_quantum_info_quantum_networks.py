@@ -159,7 +159,7 @@ def test_errors(backend):
 def test_class_methods(backend):
     matrix = random_density_matrix(2**2, backend=backend)
     with pytest.raises(ValueError):
-        QuantumNetwork._operator2tensor(matrix, (3,))
+        QuantumNetwork._operator_to_tensor(matrix, (3,))
 
 
 def test_operational_logic(backend):
@@ -437,8 +437,8 @@ def test_uility_function():
     test_ls = np.ones(old_shape)
     n = len(test_ls.shape) // 2
 
-    order2op = QuantumNetwork._order_tensor2operator(n)
-    order2tensor = QuantumNetwork._order_operator2tensor(n)
+    order2op = QuantumNetwork._order_tensor_to_operator(n)
+    order2tensor = QuantumNetwork._order_operator_to_tensor(n)
 
     new_shape = test_ls.transpose(order2op).shape
     for i in range(n):

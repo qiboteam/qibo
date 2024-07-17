@@ -90,29 +90,20 @@ class QuantumNetwork:
             InvalidArgumentError = ValueError
 
         n = len(partition)
-        order = cls._order_operator2tensor(n)
+        order = cls._order_operator_to_tensor(n)
 
-        try:
-            tensor = np.transpose(operator.reshape(list(partition) * 2), order)
-            return tensor.reshape([dim**2 for dim in partition])
-        except ValueError:
+        # Check if the `partition` matches the shape of the input matrix
+        if np.prod(tuple(operator.shape)) != np.prod(
+            tuple([dim**2 for dim in partition])
+        ):
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "
                 + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
             )
-        except InvalidArgumentError:
-            raise_error(
-                ValueError,
-                "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
-            )
-        except RuntimeError:
-            raise_error(
-                ValueError,
-                "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
-            )
+
+        tensor = np.transpose(operator.reshape(list(partition) * 2), order)
+        return tensor.reshape([dim**2 for dim in partition])
 
     @classmethod
     def from_operator(
@@ -144,7 +135,7 @@ class QuantumNetwork:
                 Defaults to ``None``.
 
         Returns:
-            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: The quantum network constructed from the input Choi operator.
         """
 
         if pure:
@@ -177,7 +168,7 @@ class QuantumNetwork:
             if partition is None:
                 partition = operator.shape[: len_sys // 2]
 
-            tensor = cls._operator2tensor(operator, partition)
+            tensor = cls._operator_to_tensor(operator, partition)
 
         return cls(
             tensor,
@@ -213,7 +204,7 @@ class QuantumNetwork:
         tensor = self.full(backend) if self.is_pure() else self._tensor
 
         n = len(self.partition)
-        order = self._order_tensor2operator(n)
+        order = self._order_tensor_to_operator(n)
 
         operator = np.transpose(
             tensor.reshape(tuple(np.repeat(self.partition, 2))), order
@@ -657,7 +648,7 @@ class QuantumNetwork:
                 tensor = self._tensordot(tensor, conj(tensor), dims=0)
             else:
                 tensor = self._tensordot(tensor, conj(tensor), axes=0)
-            tensor = self._operator2tensor(tensor, self.partition)
+            tensor = self._operator_to_tensor(tensor, self.partition)
 
             if update:
                 self._tensor = tensor
