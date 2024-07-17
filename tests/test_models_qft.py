@@ -67,7 +67,7 @@ def test_qft_execution(backend, nqubits, random, density_matrix):
     if density_matrix:
         initial_state = backend.np.outer(initial_state, backend.np.conj(initial_state))
 
-    final_state = backend.execute_circuit(c, np.copy(initial_state))._state
+    final_state = backend.execute_circuit(c, backend.np.copy(initial_state))._state
     target_state = exact_qft(initial_state, density_matrix, backend)
     backend.assert_allclose(final_state, target_state)
 
