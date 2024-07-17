@@ -840,10 +840,9 @@ class QuantumChannel(QuantumComb):
                     if isinstance(system_input, bool):
                         system_input = (system_input,)
 
-                    if system_input[0]:
-                        partition = (partition[0], 1)
-                    else:
-                        partition = (1, partition[0])
+                    partition = (
+                        (partition[0], 1) if system_input[0] else (1, partition[0])
+                    )
 
         super().__init__(tensor, partition, pure=pure, backend=backend)
 
