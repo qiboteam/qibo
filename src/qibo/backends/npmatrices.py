@@ -532,6 +532,8 @@ class NumpyMatrices:
         )
 
     def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
+        theta = self._cast_parameter(theta)
+        phi = self._cast_parameter(phi)
         bitstring_length = len(qubits_in) + len(qubits_out)
         integer_in = "".join(
             ["1" if k in qubits_in else "0" for k in range(bitstring_length)]
