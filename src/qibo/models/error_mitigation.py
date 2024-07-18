@@ -70,21 +70,25 @@ def get_noisy_circuit(
     """
 
     if global_unitary_folding:  # pragma: no cover
-        circuit_no_meas = circuit.__class__(**circuit.init_kwargs)
-        circuit_meas = circuit.__class__(**circuit.init_kwargs)
-        for gate in circuit.queue:
-            if gate.name != "measure":
-                circuit_no_meas.add(gate)
-            else:
-                circuit_meas.add(gate)
+        from qibo import Circuit, gates
 
-        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
-        noisy_circuit = circuit_no_meas
+        # Create a copy of input circuit without measurements
+        copy_c = Circuit(**circuit.init_kwargs)
+        for g in circuit.queue:
+            if not isinstance(g, gates.M):
+                copy_c.add(g)
+
+        # Initialize noisy circuit
+        noisy_circuit = copy_c
+
+        # Add (U^+ U)s
         for _ in range(num_insertions):
-            noisy_circuit += circuit_no_meas.invert() + circuit_no_meas
+            noisy_circuit += copy_c.invert() + copy_c
 
-        noisy_circuit += circuit_meas
-
+        # Add measurements according to the original circuit
+        for m in circuit.measurements:
+            noisy_circuit.add(m)
+        
     else:  # pragma: no cover
         if insertion_gate is None or insertion_gate not in (
             "CNOT",
