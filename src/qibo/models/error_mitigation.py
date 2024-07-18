@@ -70,7 +70,7 @@ def get_noisy_circuit(
     """
 
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
-    
+
     if global_unitary_folding:  # pragma: no cover
 
         # Create a copy of input circuit without measurements
