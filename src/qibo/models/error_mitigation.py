@@ -88,7 +88,7 @@ def get_noisy_circuit(
         # Add measurements according to the original circuit
         for m in circuit.measurements:
             noisy_circuit.add(m)
-        
+
     else:  # pragma: no cover
         if insertion_gate is None or insertion_gate not in (
             "CNOT",
