@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 from scipy.optimize import curve_fit
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.backends import GlobalBackend, _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 
@@ -69,6 +69,8 @@ def get_noisy_circuit(
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
 
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    
     if global_unitary_folding:  # pragma: no cover
 
         # Create a copy of input circuit without measurements
