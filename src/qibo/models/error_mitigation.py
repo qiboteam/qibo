@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 from scipy.optimize import curve_fit
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 
