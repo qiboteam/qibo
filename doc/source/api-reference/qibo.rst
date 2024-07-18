@@ -930,6 +930,13 @@ Toffoli
     :members:
     :member-order: bysource
 
+CCZ
+"""
+
+.. autoclass:: qibo.gates.CCZ
+    :members:
+    :member-order: bysource
+
 Deutsch
 """""""
 
@@ -999,6 +1006,22 @@ U1q
     - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
     - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
     - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
+
+
+IQM native gates
+^^^^^^^^^^^^^^^^
+
+Phase-:math:`RX`
+""""""""""""""""
+
+.. autoclass:: qibo.gates.PRX
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other IQM two-qubit native gate is implemented in Qibo as:
+
+    - Controlled-:math:`Z` rotation: :class:`qibo.gates.CZ`
 
 
 _______________________
@@ -1889,6 +1912,36 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Linear Algebra Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Collection of linear algebra operations that are commonly used in quantum information theory.
+
+
+Commutator
+""""""""""
+
+.. autofunction:: qibo.quantum_info.commutator
+
+
+Anticommutator
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.anticommutator
+
+
+Partial trace
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_trace
+
+
+Matrix exponentiation
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_exponentiation
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
@@ -2398,6 +2451,16 @@ The active platform can be switched using
 The default backend order is qibojit (if available), tensorflow (if available),
 numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
 variable.
+
+Qibo optionally provides an interface to `qulacs <https://github.com/qulacs/qulacs>`_ through the :class:`qibo.backends.qulacs.QulacsBackend`. To use ``qulacs`` for simulating a quantum circuit you can globally set the backend as in the other cases
+
+.. testcode:: python
+
+   import qibo
+   qibo.set_backend("qulacs")
+
+.. note::
+   GPU simulation through ``qulacs`` is not supported yet.
 
 .. autoclass:: qibo.backends.abstract.Backend
     :members:

@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo.backends import PyTorchBackend
+from qibo.backends import PyTorchBackend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -31,7 +31,7 @@ class Hamiltonian(AbstractHamiltonian):
 
         if not (
             isinstance(matrix, self.backend.tensor_types)
-            or self.backend.issparse(matrix)
+            or self.backend.is_sparse(matrix)
         ):
             raise_error(
                 TypeError,
@@ -107,10 +107,14 @@ class Hamiltonian(AbstractHamiltonian):
         return self._eigenvectors
 
     def exp(self, a):
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            matrix_exponentiation,
+        )
+
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = self.backend.calculate_matrix_exp(
-                a, self.matrix, self._eigenvectors, self._eigenvalues
+            self._exp["result"] = matrix_exponentiation(
+                a, self.matrix, self._eigenvectors, self._eigenvalues, self.backend
             )
         return self._exp.get("result")
 
@@ -140,7 +144,12 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
+        if (
+            self.backend.np.count_nonzero(
+                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
+            )
+            != 0
+        ):
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())
         if qubit_map is None:
@@ -153,7 +162,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return np.real(expval)
+        return self.backend.np.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -180,8 +189,8 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = h2.expectation(state, normalize=True)
-        return np.sqrt(np.abs(average_h2 - energy**2))
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -249,7 +258,7 @@ class Hamiltonian(AbstractHamiltonian):
         if self._eigenvalues is not None:
             if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
-            elif not self.backend.issparse(self.matrix):
+            elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
                 r._eigenvalues = o * self.backend.np.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
@@ -273,43 +282,6 @@ class Hamiltonian(AbstractHamiltonian):
             NotImplementedError,
             f"Hamiltonian matmul to {type(o)} not implemented.",
         )
-
-
-class TrotterCircuit:
-    """Object that caches the Trotterized evolution circuit.
-
-    This object holds a reference to the circuit models and updates its
-    parameters if a different time step ``dt`` is given without recreating
-    every gate from scratch.
-
-    Args:
-        groups (list): List of :class:`qibo.core.terms.TermGroup` objects that
-            correspond to the Trotter groups of terms in the time evolution
-            exponential operator.
-        dt (float): Time step for the Trotterization.
-        nqubits (int): Number of qubits in the system that evolves.
-        accelerators (dict): Dictionary with accelerators for distributed
-            circuits.
-    """
-
-    def __init__(self, groups, dt, nqubits, accelerators):
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
-
-        self.gates = {}
-        self.dt = dt
-        self.circuit = Circuit(nqubits, accelerators=accelerators)
-        for group in chain(groups, groups[::-1]):
-            gate = group.term.expgate(dt / 2.0)
-            self.gates[gate] = group
-            self.circuit.add(gate)
-
-    def set(self, dt):
-        if self.dt != dt:
-            params = {
-                gate: group.term.exp(dt / 2.0) for gate, group in self.gates.items()
-            }
-            self.dt = dt
-            self.circuit.set_parameters(params)
 
 
 class SymbolicHamiltonian(AbstractHamiltonian):
@@ -350,7 +322,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.symbol_map = symbol_map
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
-        self.trotter_circuit = None
 
         from qibo.symbols import Symbol  # pylint: disable=import-outside-toplevel
 
@@ -366,8 +337,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.nqubits = nqubits
 
     @property
-    def dense(self):
-        """Creates the equivalent :class:`qibo.hamiltonians.MatrixHamiltonian`."""
+    def dense(self) -> "MatrixHamiltonian":
+        """Creates the equivalent Hamiltonian matrix."""
         if self._dense is None:
             log.warning(
                 "Calculating the dense form of a symbolic Hamiltonian. "
@@ -418,8 +389,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def terms(self):
-        """List of :class:`qibo.core.terms.HamiltonianTerm` objects
-        of which the Hamiltonian is a sum of.
+        """List of terms of which the Hamiltonian is a sum of.
+
+        Terms will be objects of type :class:`qibo.core.terms.HamiltonianTerm`.
         """
         if self._terms is None:
             # Calculate terms based on ``self.form``
@@ -445,7 +417,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def matrix(self):
-        """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
+        """Returns the full matrix representation.
+
+        Consisting of ``(2 ** nqubits, 2 ** nqubits)`` elements.
+        """
         return self.dense.matrix
 
     def eigenvalues(self, k=6):
@@ -533,17 +508,16 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return result
 
-    def _calculate_dense_from_form(self):
-        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using symbolic form.
+    def _calculate_dense_from_form(self) -> Hamiltonian:
+        """Calculates equivalent Hamiltonian using symbolic form.
+
         Useful when the term representation is not available.
         """
         matrix = self._get_symbol_matrix(self.form)
         return Hamiltonian(self.nqubits, matrix, backend=self.backend)
 
-    def _calculate_dense_from_terms(self):
-        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian`
-        using the term representation.
-        """
+    def _calculate_dense_from_terms(self) -> Hamiltonian:
+        """Calculates equivalent Hamiltonian using the term representation."""
         if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -585,7 +559,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
-        coeff = list(self.form.as_coefficients_dict().values())
         qubits = []
         for term in terms:
             qubits_term = []
@@ -604,8 +577,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if subk.count(1) % 2 == 1:
                     expval_k = -1
                 expval_q += expval_k * counts[i]
-            expval += expval_q * float(coeff[j])
-        return expval
+            expval += expval_q * self.terms[j].coefficient.real
+        return expval + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -720,7 +693,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return new_ham
 
     def apply_gates(self, state, density_matrix=False):
-        """Applies gates corresponding to the Hamiltonian terms to a given state.
+        """Applies gates corresponding to the Hamiltonian terms.
+
+        Gates are applied to the given state.
+
         Helper method for ``__matmul__``.
         """
         total = 0
@@ -779,20 +755,24 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     def circuit(self, dt, accelerators=None):
-        """Circuit that implements a Trotter step of this Hamiltonian
-        for a given time step ``dt``.
-        """
-        if self.trotter_circuit is None:
-            from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
-                TermGroup,
-            )
+        """Circuit that implements a Trotter step of this Hamiltonian.
 
-            groups = TermGroup.from_terms(self.terms)
-            self.trotter_circuit = TrotterCircuit(
-                groups, dt, self.nqubits, accelerators
-            )
-        self.trotter_circuit.set(dt)
-        return self.trotter_circuit.circuit
+        Args:
+            dt (float): Time step used for Trotterization.
+            accelerators (dict): Dictionary with accelerators for distributed circuits.
+        """
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+            TermGroup,
+        )
+
+        groups = TermGroup.from_terms(self.terms)
+        circuit = Circuit(self.nqubits, accelerators=accelerators)
+        circuit.add(
+            group.term.expgate(dt / 2.0) for group in chain(groups, groups[::-1])
+        )
+
+        return circuit
 
 
 class TrotterHamiltonian:

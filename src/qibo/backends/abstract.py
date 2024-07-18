@@ -66,7 +66,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def issparse(self, x):  # pragma: no cover
+    def is_sparse(self, x):  # pragma: no cover
         """Determine if a given array is a sparse tensor."""
         raise_error(NotImplementedError)
 
@@ -131,11 +131,6 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def control_matrix(self, gate):  # pragma: no cover
-        """ "Calculate full matrix representation of a controlled gate."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -287,16 +282,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def partial_trace(self, state, qubits, nqubits):  # pragma: no cover
-        """Trace out specific qubits of a state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def partial_trace_density_matrix(self, state, qubits, nqubits):  # pragma: no cover
-        """Trace out specific qubits of a density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_norm(self, state, order=2):  # pragma: no cover
         """Calculate norm of a state vector.
 
@@ -343,17 +328,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_matrix_exp(
-        self, matrix, a, eigenvectors=None, eigenvalues=None
-    ):  # pragma: no cover
-        """Calculate matrix exponential of a matrix.
-
-        If the eigenvectors and eigenvalues are given the matrix diagonalization is
-        used for exponentiation.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_expectation_state(
         self, hamiltonian, state, normalize
     ):  # pragma: no cover
@@ -365,6 +339,16 @@ class Backend(abc.ABC):
         self, hamiltonian, state, normalize
     ):  # pragma: no cover
         """Calculate expectation value of a density matrix given the observable matrix."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_exp(
+        self, a, matrix, eigenvectors=None, eigenvalues=None
+    ):  # pragma: no cover
+        """Calculate matrix exponential of a matrix.
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -389,7 +373,7 @@ class Backend(abc.ABC):
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     @abc.abstractmethod
-    def test_regressions(self, name):  # pragma: no cover
+    def _test_regressions(self, name):  # pragma: no cover
         """Correct outcomes for tests that involve random numbers.
 
         The outcomes of such tests depend on the backend.

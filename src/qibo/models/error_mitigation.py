@@ -259,17 +259,20 @@ def sample_training_circuit_cdr(
 
         replacement.append(rep_gates)
         distance.append(
-            np.linalg.norm(
-                gate.matrix(backend)
-                - backend.cast([rep_gate.matrix(backend) for rep_gate in rep_gates]),
-                ord="fro",
-                axis=(1, 2),
+            backend.np.real(
+                backend.np.linalg.norm(
+                    gate.matrix(backend)
+                    - backend.cast(
+                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
+                    ),
+                    ord="fro",
+                    axis=(1, 2),
+                )
             )
         )
 
-    distance = np.vstack(distance)
-    prob = np.exp(-(distance**2) / sigma**2)
-    prob = backend.cast(prob, dtype=prob.dtype)
+    distance = backend.np.vstack(distance)
+    prob = backend.np.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),
@@ -1093,7 +1096,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         backend = GlobalBackend()
     elif backend.name == "qibolab":  # pragma: no cover
         backend.transpiler.passes[1] = Custom(
-            map=qubit_map, connectivity=backend.platform.topology
+            initial_map=qubit_map, connectivity=backend.platform.topology
         )
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)

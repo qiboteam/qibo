@@ -503,16 +503,16 @@ class I(Gate):
         return "id"
 
 
-class Align(Gate):
+class Align(ParametrizedGate):
     """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
 
     Args:
-        *q (int): The qubit ID numbers.
+        q (int): The qubit ID.
         delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
             Defaults to ``0`` (zero).
     """
 
-    def __init__(self, *q, delay: int = 0):
+    def __init__(self, q, delay=0, trainable=True):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -520,13 +520,14 @@ class Align(Gate):
         if delay < 0.0:
             raise_error(ValueError, "Delay must not be negative.")
 
-        super().__init__()
+        super().__init__(trainable)
         self.name = "align"
-        self.delay = delay
         self.draw_label = f"A({delay})"
-        self.init_args = q
-        self.init_kwargs = {"delay": delay}
-        self.target_qubits = tuple(q)
+        self.init_args = [q]
+        self.init_kwargs = {"name": self.name, "delay": delay, "trainable": trainable}
+        self.target_qubits = (q,)
+        self._parameters = (delay,)
+        self.nparams = 1
 
 
 def _is_clifford_given_angle(angle):
@@ -685,6 +686,66 @@ class RZ(_Rn_):
         return 0.5
 
 
+class PRX(ParametrizedGate):
+    """Phase :math:`RX` gate.
+
+    Corresponds to the following unitary matrix
+
+        .. math::
+            \\begin{pmatrix}
+                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
+                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+            \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the first angle corresponding to a rotation angle.
+        phi (float): the second angle correspoding to a phase angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "prx"
+        self.draw_label = "prx"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+        self.theta = theta
+        self.phi = phi
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "trainable": trainable,
+        }
+
+    @property
+    def qasm_label(self):
+        return "prx"
+
+    def _dagger(self) -> "Gate":
+        theta = -self.theta
+        phi = self.phi
+        return self.__class__(
+            self.target_qubits[0], theta, phi
+        )  # pylint: disable=E1130
+
+    def decompose(self):
+        """Decomposition of Phase-:math:`RX` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
+
 class GPI(ParametrizedGate):
     """The GPI gate.
 
@@ -717,6 +778,10 @@ class GPI(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi"
 
 
 class GPI2(ParametrizedGate):
@@ -751,6 +816,10 @@ class GPI2(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "gpi2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -2074,6 +2143,10 @@ class MS(ParametrizedGate):
             "trainable": trainable,
         }
 
+    @property
+    def qasm_label(self):
+        return "ms"
+
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
@@ -2307,6 +2380,56 @@ class TOFFOLI(Gate):
         ]
 
 
+class CCZ(Gate):
+    """The controlled-CZ gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2):
+        super().__init__()
+        self.name = "ccz"
+        self.draw_label = "Z"
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
+        self.init_args = [q0, q1, q2]
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "ccz"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CCZ}` gate.
+
+        Decompose :math:`\\text{CCZ}` gate into :class:`qibo.gates.H` in
+        the target qubit, followed by :class:`qibo.gates.TOFFOLI`, followed
+        by a :class:`qibo.gates.H` in the target qubit.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
+
 class DEUTSCH(ParametrizedGate):
     """The Deutsch gate.
 
@@ -2385,24 +2508,12 @@ class Unitary(ParametrizedGate):
         }
 
         if check_unitary:
-            if unitary.__class__.__name__ == "Tensor":
-                import torch  # pylint: disable=C0145
-
-                diag_function = torch.diag
-                all_function = torch.all
-                conj_function = torch.conj
-                transpose_function = torch.transpose
-            else:
-                diag_function = np.diag
-                all_function = np.all
-                conj_function = np.conj
-                transpose_function = np.transpose
-
-            product = transpose_function(conj_function(unitary), (1, 0)) @ unitary
-            diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
+            engine = _check_engine(unitary)
+            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
+            diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
             off_diagonals = bool(
-                all_function(
-                    np.abs(product - diag_function(diag_function(product)))
+                engine.all(
+                    engine.abs(product - engine.diag(engine.diag(product)))
                     < PRECISION_TOL
                 )
             )
@@ -2413,7 +2524,10 @@ class Unitary(ParametrizedGate):
     @Gate.parameters.setter
     def parameters(self, x):
         shape = self.parameters[0].shape
-        self._parameters = (np.reshape(x, shape),)
+        engine = _check_engine(self.parameters[0])
+        # Reshape doesn't accept a tuple if engine is pytorch.
+        x = x[0] if type(x) is tuple else x
+        self._parameters = (engine.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
@@ -2436,5 +2550,16 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        ud = np.conj(np.transpose(self.parameters[0]))
+        engine = _check_engine(self.parameters[0])
+        ud = engine.conj(self.parameters[0].T)
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
+
+def _check_engine(array):
+    """Check if the array is a numpy or torch tensor and return the corresponding library."""
+    if array.__class__.__name__ == "Tensor":
+        import torch  # pylint: disable=C0415
+
+        return torch
+    else:
+        return np

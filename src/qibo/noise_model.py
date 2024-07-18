@@ -64,7 +64,7 @@ def noisy_circuit(circuit, params):
         # for each time step, I look for each qubit what gate are applied
         for qubit in range(circuit.nqubits):
             # if there's no gate, move on!
-            if circuit.queue.moments[t][qubit] == None:
+            if circuit.queue.moments[t][qubit] is None:
                 pass
             # measurement gates
             elif isinstance(circuit.queue.moments[t][qubit], gates.measurements.M):
@@ -75,7 +75,7 @@ def noisy_circuit(circuit, params):
                     if len(circuit.measurement_tuples[key]) > 1:
                         q1 = circuit.measurement_tuples[key][0]
                         q2 = circuit.measurement_tuples[key][1]
-                        if current_time[q1] != current_time[q2] and idle_qubits == True:
+                        if current_time[q1] != current_time[q2] and idle_qubits:
                             q_min = q1
                             q_max = q2
                             if current_time[q1] > current_time[q2]:
@@ -128,7 +128,7 @@ def noisy_circuit(circuit, params):
             else:
                 q1 = circuit.queue.moments[t][qubit].qubits[0]
                 q2 = circuit.queue.moments[t][qubit].qubits[1]
-                if current_time[q1] != current_time[q2] and idle_qubits == True:
+                if current_time[q1] != current_time[q2] and idle_qubits:
                     q_min = q1
                     q_max = q2
                     if current_time[q1] > current_time[q2]:
@@ -251,10 +251,10 @@ def loss(parameters, *args):
 
     hellinger_fid = hellinger_fidelity(target_prob, prob)
 
-    if error == True:
+    if error:
         return [-hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
-    else:
-        return -hellinger_fid
+
+    return -hellinger_fid
 
 
 class CompositeNoiseModel:
@@ -329,7 +329,7 @@ class CompositeNoiseModel:
         idle_qubits = self.params["idle_qubits"]
         qubits = target_result.nqubits
 
-        if bounds == True:
+        if bounds:
             qubits = target_result.nqubits
             lb = np.zeros(4 * qubits + 4)
             ub = [10000] * (2 * qubits + 2) + [4 / 3, 16 / 15] + [1] * 2 * qubits
@@ -345,7 +345,7 @@ class CompositeNoiseModel:
             initial_params = np.random.uniform(lb, ub)
             result = loss(initial_params, *args)
 
-        if f_min_rtol == None:
+        if f_min_rtol is None:
             f_min_rtol = result[1]
 
         args = list(args)

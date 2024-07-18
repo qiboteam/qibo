@@ -322,7 +322,9 @@ class IQAE:
 
             # Calling and executing the quantum circuit
             qc = self.construct_qae_circuit(k_i)
-            samples = qc(nshots=n_shots_i).frequencies(binary=True)["1"]
+            samples = backend.execute_circuit(qc, nshots=n_shots_i).frequencies(
+                binary=True
+            )["1"]
 
             samples_history.append(samples)
             n_shots_history.append(n_shots_i)
