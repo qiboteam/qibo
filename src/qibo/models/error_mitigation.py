@@ -70,7 +70,6 @@ def get_noisy_circuit(
     """
 
     if global_unitary_folding:  # pragma: no cover
-        from qibo import Circuit, gates
 
         # Create a copy of input circuit without measurements
         copy_c = Circuit(**circuit.init_kwargs)
