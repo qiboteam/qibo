@@ -238,11 +238,24 @@ def GST(
             matrices in the first and second position of the ouput list.
         pauli_liouville (bool, optional): if ``True``, returns the matrices in the
             Pauli-Liouville representation. Defaults to ``False``.
-        gauge_matrix (ndarray, optional): gauge matrix transformation to the Pauli-Liouville representation. Defaults to ``array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])``.
-        backend (:class:`qibo.backends.Backend`, optional): Calculation engine.
+        gauge_matrix (ndarray, optional): gauge matrix transformation to the Pauli-Liouville
+            representation. Defaults to
+
+            .. math::
+                \\begin{pmatrix}
+                    1 & 1 & 1 & 1 \\\\
+                    0 & 0 & 1 & 0 \\\\
+                    0 & 0 & 0 & 1 \\\\
+                    1 & -1 & 0 & 0 \\\\
+                \\end{pmatrix}
+
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
 
     Returns:
-        list(ndarray): Approximated matrices of the input gate_set.
+        List(ndarray): input ``gate_set`` represented by matrices estimaded via GST.
     """
 
     backend = _check_backend(backend)
