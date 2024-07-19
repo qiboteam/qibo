@@ -5,6 +5,7 @@ from random import Random
 from typing import List, Union
 
 import numpy as np
+from sympy import S
 
 from qibo import Circuit, gates, symbols
 from qibo.backends import _check_backend
@@ -90,7 +91,7 @@ def _get_observable(j: int, nqubits: int):
     if j == 0:
         _check_nqubits(nqubits)
     observables = _observables(nqubits)[j]
-    observable = symbols.S(1)
+    observable = S(1)
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
             observable *= obs(q)
