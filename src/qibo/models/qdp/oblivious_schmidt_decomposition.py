@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+
 from qibo import gates
 from qibo.models.qdp.oblivious_schmidt_decomposition import *
 from qibo.models.qdp.quantum_dynamic_programming import (
@@ -51,8 +52,12 @@ class ObliviousSchmidtDecompositionSingleQubit(SequentialInstruction):
         number_muq_per_call (int, optional): Number of memory units per call. Defaults to 1.
     """
 
-    def __init__(self, t, num_work_qubits, num_instruction_qubits, number_muq_per_call=1):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None)
+    def __init__(
+        self, t, num_work_qubits, num_instruction_qubits, number_muq_per_call=1
+    ):
+        super().__init__(
+            num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+        )
         self.t = t
         self.id_current_work_reg = self.list_id_work_reg[0]
 
@@ -67,8 +72,17 @@ class ObliviousSchmidtDecompositionSingleQubit(SequentialInstruction):
         unitary_D = unitary_expm(D, self.t)
         self.c.add(gates.Unitary(unitary_D, self.id_current_work_reg))
 
-        delta_swap = unitary_expm(gates.SWAP(self.id_current_work_reg, self.id_current_instruction_reg).matrix(), self.t)
-        for decomposed_gate in two_qubit_decomposition(self.id_current_work_reg, self.id_current_instruction_reg, unitary=delta_swap):
+        delta_swap = unitary_expm(
+            gates.SWAP(
+                self.id_current_work_reg, self.id_current_instruction_reg
+            ).matrix(),
+            self.t,
+        )
+        for decomposed_gate in two_qubit_decomposition(
+            self.id_current_work_reg,
+            self.id_current_instruction_reg,
+            unitary=delta_swap,
+        ):
             self.c.add(decomposed_gate)
 
         unitary_minus_D = unitary_expm(-D, self.t)
@@ -96,17 +110,24 @@ class TwoQubitsSequentialInstruction(AbstractQuantumDynamicProgramming):
         Args:
             num_instruction_qubits_per_query (int): Number of instruction qubits per query.
         """
-        current_instruction_index = self.instruction_index(self.id_current_instruction_reg)
+        current_instruction_index = self.instruction_index(
+            self.id_current_instruction_reg
+        )
         self.list_id_current_instruction_reg = self.list_id_instruction_reg[
-            current_instruction_index : self.M * num_instruction_qubits_per_query + current_instruction_index
+            current_instruction_index : self.M * num_instruction_qubits_per_query
+            + current_instruction_index
         ]
         self.instruction_qubits_initialization()
         for _register in self.list_id_current_instruction_reg[0::2]:
             self.memory_usage_query_circuit()
             self.trace_one_instruction_qubit(_register)
-            if self.instruction_index(_register) + 1 < len(list(self.list_id_current_instruction_reg)):
+            if self.instruction_index(_register) + 1 < len(
+                list(self.list_id_current_instruction_reg)
+            ):
                 self.trace_one_instruction_qubit(_register + 1)
-            if self.instruction_index(_register) + 2 < len(list(self.list_id_current_instruction_reg)):
+            if self.instruction_index(_register) + 2 < len(
+                list(self.list_id_current_instruction_reg)
+            ):
                 self.increment_current_instruction_register()
                 self.increment_current_instruction_register()
             self.instruction_reg_delegation()
@@ -123,8 +144,12 @@ class ObliviousSchmidtDecompositionTwoQubits(TwoQubitsSequentialInstruction):
         number_muq_per_call (int, optional): Number of memory units per call. Defaults to 1.
     """
 
-    def __init__(self, t, num_work_qubits, num_instruction_qubits, number_muq_per_call=1):
-        super().__init__(num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None)
+    def __init__(
+        self, t, num_work_qubits, num_instruction_qubits, number_muq_per_call=1
+    ):
+        super().__init__(
+            num_work_qubits, num_instruction_qubits, number_muq_per_call, circuit=None
+        )
         self.t = t
         self.id_current_work_reg = self.list_id_work_reg[0]
 
@@ -140,11 +165,24 @@ class ObliviousSchmidtDecompositionTwoQubits(TwoQubitsSequentialInstruction):
         self.c.add(gates.Unitary(unitary_Z, self.id_current_work_reg))
         self.c.add(gates.Unitary(unitary_Z, self.id_current_work_reg + 1))
 
-        delta_swap = unitary_expm(gates.SWAP(self.id_current_work_reg, self.id_current_instruction_reg).matrix(), self.t)
-        for decomposed_gate in two_qubit_decomposition(self.id_current_work_reg, self.id_current_instruction_reg, unitary=delta_swap):
+        delta_swap = unitary_expm(
+            gates.SWAP(
+                self.id_current_work_reg, self.id_current_instruction_reg
+            ).matrix(),
+            self.t,
+        )
+        for decomposed_gate in two_qubit_decomposition(
+            self.id_current_work_reg,
+            self.id_current_instruction_reg,
+            unitary=delta_swap,
+        ):
             self.c.add(decomposed_gate)
 
-        for decomposed_gate in two_qubit_decomposition(self.id_current_work_reg + 1, self.id_current_instruction_reg + 1, unitary=delta_swap):
+        for decomposed_gate in two_qubit_decomposition(
+            self.id_current_work_reg + 1,
+            self.id_current_instruction_reg + 1,
+            unitary=delta_swap,
+        ):
             self.c.add(decomposed_gate)
 
         unitary_minus_Z = unitary_expm(-Z, self.t)
