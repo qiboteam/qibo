@@ -367,3 +367,65 @@ def test_block_on_qubits():
     assert new_block.gates[2].qubits == (3,)
     assert new_block.gates[3].qubits == (3, 2)
     assert new_block.gates[4].qubits == (3,)
+
+
+####
+import numpy as np
+from qibo import gates
+from qibo.transpiler.blocks import Block
+import pytest
+
+
+@pytest.mark.parametrize("gates", [[], [gates.CNOT(0, 1)]])
+def test_block_kak_error(gates):
+    """
+    Test the KAK decomposition when KAK is not needed.
+    """
+    block = Block(qubits=(0, 1), gates=gates)
+    with pytest.raises(BlockingError):
+        block.kak_decompose()
+
+
+# No ERROR
+@pytest.mark.parametrize("gates", [[gates.H(0), gates.S(1), gates.TDG(0), gates.CNOT(0, 1), gates.CNOT(1, 0)]])
+
+# ==== TODO: ERROR =====
+# @pytest.mark.parametrize("gates", [[gates.H(0), gates.S(1), gates.CNOT(1, 0), gates.TDG(0), gates.CNOT(0, 1), gates.CNOT(1, 0)]])
+def test_block_kak(gates):
+    """
+    Test the KAK decomposition of a block.
+    """
+    # Create a block with a sequence of gates
+    block = Block(qubits=(0, 1), gates=gates)
+
+    # Obtain the unitary matrix of the block
+    U = block._unitary()
+
+    # Perform the KAK decomposition
+    A0, A1, K, B0, B1 = block.kak_decompose()
+
+    # Reassemble the decomposed matrices
+    orig = (np.kron(A0, A1) @ heisenberg_unitary(K) @ np.kron(B0.conj().T, B1.conj().T))
+
+    # Check that the original and decomposed matrices are equal
+    assert ( np.linalg.norm(orig - U) < 1e-8 )
+
+
+
+# TODO: Move this helper function to a more appropriate location.
+def heisenberg_unitary(k):
+    """
+    Generate the heisenberg unitary from parameters k.
+    """
+    from scipy.linalg import expm
+
+    PAULI_X = np.array([[0, 1], [1, 0]])
+    PAULI_Y = np.array([[0, -1j], [1j, 0]])
+    PAULI_Z = np.array([[1, 0], [0, -1]])
+
+    PXX = np.kron(PAULI_X, PAULI_X)
+    PYY = np.kron(PAULI_Y, PAULI_Y)
+    PZZ = np.kron(PAULI_Z, PAULI_Z)
+
+    H = k[0] * np.eye(4) + k[1] * PXX + k[2] * PYY + k[3] * PZZ
+    return expm(1j * H)

@@ -328,3 +328,71 @@ def two_qubit_decomposition(q0, q1, unitary, backend=None):
         gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
 
     return gatelist
+
+### for transpiler.blocks.kak_decompose
+def orthogonal_decomposition_of_unitary(X):
+    """Decomposes unitary X = Ql @ exp(i Theta) @ Qr'
+    into orthogonal matrices Ql, Qr and angles Theta.
+
+    """
+
+    # one can also directly decompose XX^T and infer Ql from Qr. This might save about 3 eigh / qrs
+    # I will here try to implement something where I understand the proof, why it works.
+    # The benefit here is that we reliably work with real orthogonal matrices all the time.
+    Xr = X.real
+    Xi = X.imag
+    _, Ql = np.linalg.eigh(Xr @ Xi.transpose())
+    _, Qr = np.linalg.eigh(Xr.transpose() @ Xi)
+
+    Dr = Ql.transpose() @ Xr @ Qr
+    # if Xi injective this is diagonal, if not there is an arbitrary SO(dim ker(xi)) too much
+    # fixing the kernels, I don't know if there is a smarted way to do this!
+    if not np.allclose(Dr, np.diag(np.diag(Dr))):
+        Q, R = np.linalg.qr(Dr)
+        Dr = np.diag(R).copy()
+        Ql = Ql @ Q
+    else:
+        Dr = np.diag(Dr).copy()
+
+    Di = Ql.transpose() @ Xi @ Qr
+    # if Xr injective this is diagonal, if not there is an arbitrary SO(dim ker(Xr)) too much
+    if not np.allclose(Di, np.diag(np.diag(Di))):
+        Q, R = np.linalg.qr(Di.T)
+        Di = np.diag(R).copy()
+        Qr = Qr @ Q
+
+    else:
+        Di = np.diag(Di).copy()
+
+    # ensure Ql, Qr are in SO
+    if np.linalg.det(Ql) < 0:
+        Ql[:, 0] = -Ql[:, 0]
+        Dr[0] = -Dr[0]
+        Di[0] = -Di[0]
+
+    if np.linalg.det(Qr) < 0:
+        Qr[:, 0] = -Qr[:, 0]
+        Dr[0] = -Dr[0]
+        Di[0] = -Di[0]
+
+    Theta = np.angle(Dr + 1j * Di)
+
+    return Theta, Qr, Ql
+
+def unit_kronecker_rank_approx(X, verbose=False):
+    """Approximates a n^2 x m^2 matrix X  as A otimes B"""
+    # better check for square dimensions
+
+    n, m = np.sqrt(X.shape).astype(int)
+
+    Y = X.reshape(n, n, m, m).transpose((0, 2, 1, 3)).reshape(n * m, n * m)
+    U, S, Vh = np.linalg.svd(Y)
+
+    if verbose:
+        print("Truncating the spectrum", S)
+
+    U = U @ np.sqrt(np.diag(S))
+    Vh = np.sqrt(np.diag(S)) @ Vh
+    A = U[:, 0].reshape(n, m)
+    B = Vh[0, :].reshape(n, m)
+    return A, B
