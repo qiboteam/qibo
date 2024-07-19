@@ -248,14 +248,14 @@ def test_GST(backend, target_gates, pauli_liouville):
 
 def test_GST_invertible_matrix():
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, T=T)
+    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
     assert True
 
 
 def test_GST_non_invertible_matrix():
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], pauli_liouville=True, T=T)
+        matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
 
 
 def test_GST_with_transpiler(backend):
