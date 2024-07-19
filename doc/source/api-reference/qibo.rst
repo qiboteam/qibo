@@ -2422,23 +2422,8 @@ References:
 
 [4] Endo, Suguru, Simon C. Benjamin, and Ying Li. "Practical quantum error mitigation for near-future applications." Physical Review X 8.3 (2018): 031027.
 
+
 .. autofunction:: qibo.tomography.gate_set_tomography.GST
-
-.. autofunction:: qibo.tomography.gate_set_tomography._gate_tomography
-
-.. autofunction:: qibo.tomography.gate_set_tomography._expectation_value
-
-.. autofunction:: qibo.tomography.gate_set_tomography._measurement_basis
-
-.. autofunction:: qibo.tomography.gate_set_tomography._prepare_state
-
-.. autofunction:: qibo.tomography.gate_set_tomography._get_observable
-
-.. autofunction:: qibo.tomography.gate_set_tomography._measurements
-
-.. autofunction:: qibo.tomography.gate_set_tomography._gates
-
-.. autofunction:: qibo.tomography.gate_set_tomography._observables
 
 
 
