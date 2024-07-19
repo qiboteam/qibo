@@ -2171,5 +2171,5 @@ Similarly, the Pauli-Liouville representation of the gates can be directly retur
        gate_set = gate_set,
        nshots = 10000,
        noise_model = noise_model,
-       Pauli_Liouville = True,
+       pauli_liouville = True,
    )

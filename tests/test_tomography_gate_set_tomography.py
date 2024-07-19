@@ -207,8 +207,8 @@ def test_gate_tomography_noise_model(backend):
     "target_gates",
     [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]],
 )
-@pytest.mark.parametrize("Pauli_Liouville", [False, True])
-def test_GST(backend, target_gates, Pauli_Liouville):
+@pytest.mark.parametrize("pauli_liouville", [False, True])
+def test_GST(backend, target_gates, pauli_liouville):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
     target_matrices = [g.matrix() for g in target_gates]
     # superoperator representation of the target gates in the Pauli basis
@@ -220,13 +220,13 @@ def test_GST(backend, target_gates, Pauli_Liouville):
             gate_set=gate_set,
             nshots=int(1e4),
             include_empty=True,
-            Pauli_Liouville=Pauli_Liouville,
+            pauli_liouville=pauli_liouville,
             backend=backend,
         )
 
         T_2q = np.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
-            if not Pauli_Liouville:
+            if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ np.linalg.inv(G) @ estimate @ np.linalg.inv(G)
@@ -241,21 +241,21 @@ def test_GST(backend, target_gates, Pauli_Liouville):
                 gate_set=[g.__class__ for g in target_gates],
                 nshots=int(1e4),
                 include_empty=True,
-                Pauli_Liouville=Pauli_Liouville,
+                pauli_liouville=pauli_liouville,
                 backend=backend,
             )
 
 
 def test_GST_invertible_matrix():
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], Pauli_Liouville=True, T=T)
+    matrices = GST(gate_set=[], pauli_liouville=True, T=T)
     assert True
 
 
 def test_GST_non_invertible_matrix():
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], Pauli_Liouville=True, T=T)
+        matrices = GST(gate_set=[], pauli_liouville=True, T=T)
 
 
 def test_GST_with_transpiler(backend):
@@ -268,7 +268,7 @@ def test_GST_with_transpiler(backend):
         gate_set=gate_set,
         nshots=int(1e4),
         include_empty=True,
-        Pauli_Liouville=False,
+        pauli_liouville=False,
         backend=backend,
         transpiler=None,
     )
@@ -291,7 +291,7 @@ def test_GST_with_transpiler(backend):
         gate_set=gate_set,
         nshots=int(1e4),
         include_empty=True,
-        Pauli_Liouville=False,
+        pauli_liouville=False,
         backend=backend,
         transpiler=transpiler,
     )
