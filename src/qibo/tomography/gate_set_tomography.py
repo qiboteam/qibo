@@ -108,7 +108,7 @@ def _prepare_state(k, nqubits):
         |+\\rangle\\langle +|, |y+\\rangle\\langle y+|\\}^{\\otimes n}.
 
     Args:
-        k (int): The index of the state to be prepared.
+        k (int): index of the state to be prepared.
         nqubits (int): Number of qubits.
 
     Returns:
