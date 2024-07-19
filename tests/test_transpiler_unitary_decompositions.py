@@ -4,6 +4,7 @@ from scipy.linalg import expm
 
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.unitary_decompositions import (
@@ -20,20 +21,21 @@ from qibo.transpiler.unitary_decompositions import (
 )
 
 
-def bell_unitary(hx, hy, hz):
+def bell_unitary(hx, hy, hz, backend):
     ham = (
-        hx * np.kron(matrices.X, matrices.X)
-        + hy * np.kron(matrices.Y, matrices.Y)
-        + hz * np.kron(matrices.Z, matrices.Z)
+        hx * backend.cast(np.kron(matrices.X, matrices.X))
+        + hy * backend.cast(np.kron(matrices.Y, matrices.Y))
+        + hz * backend.cast(np.kron(matrices.Z, matrices.Z))
     )
-    return expm(-1j * ham)
+    return backend.cast(expm(-1j * backend.to_numpy(ham)))
 
 
 def assert_single_qubits(backend, psi, ua, ub):
     """Assert UA, UB map the maximally entangled basis ``psi`` to the magic basis."""
-    uaub = np.kron(ua, ub)
+    uaub = backend.to_numpy(backend.np.kron(ua, ub))
+    psi = backend.to_numpy(psi)
     for i, j in zip(range(4), [0, 1, 3, 2]):
-        final_state = np.dot(uaub, psi[:, i])
+        final_state = np.matmul(uaub, psi[:, i])
         target_state = magic_basis[:, j]
         fidelity = np.abs(np.dot(np.conj(target_state), final_state))
         backend.assert_allclose(fidelity, 1)
@@ -65,10 +67,10 @@ def test_eigenbasis_entanglement(backend, seed):
         """Check that the eigenvectors of UT_U are maximally entangled."""
         states, eigvals = calculate_psi(unitary, backend=backend)
         eigvals = backend.cast(eigvals, dtype=eigvals.dtype)
-        backend.assert_allclose(np.abs(eigvals), np.ones(4))
-        for state in np.transpose(states):
-            state = backend.partial_trace(state, [1], 2)
-            backend.assert_allclose(purity(state), 0.5)
+        backend.assert_allclose(backend.np.abs(eigvals), np.ones(4))
+        for state in states.T:
+            state = partial_trace(state, [1], backend=backend)
+            backend.assert_allclose(purity(state, backend=backend), 0.5)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
@@ -93,7 +95,9 @@ def test_u_decomposition(backend, seed):
             calculate_psi(unitary, backend=backend)
     else:
         psi, eigvals = calculate_psi(unitary, backend=backend)
-        psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
+        psi_tilde = backend.np.conj(backend.np.sqrt(eigvals)) * backend.np.matmul(
+            unitary, psi
+        )
         ua_dagger, ub_dagger = calculate_single_qubit_unitaries(
             psi_tilde, backend=backend
         )
@@ -133,14 +137,14 @@ def test_calculate_h_vector(backend, seed):
         _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
         ud_diag = to_bell_diagonal(ud, backend=backend)
         assert ud_diag is not None
-        hx, hy, hz = calculate_h_vector(ud_diag)
-        target_matrix = bell_unitary(hx, hy, hz)
+        hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
+        target_matrix = bell_unitary(hx, hy, hz, backend)
         backend.assert_allclose(ud, target_matrix, atol=PRECISION_TOL)
 
 
 def test_cnot_decomposition(backend):
     hx, hy, hz = np.random.random(3)
-    target_matrix = bell_unitary(hx, hy, hz)
+    target_matrix = bell_unitary(hx, hy, hz, backend)
     c = Circuit(2)
     c.add(cnot_decomposition(0, 1, hx, hy, hz, backend))
     final_matrix = c.unitary(backend)
@@ -149,7 +153,7 @@ def test_cnot_decomposition(backend):
 
 def test_cnot_decomposition_light(backend):
     hx, hy = np.random.random(2)
-    target_matrix = bell_unitary(hx, hy, 0)
+    target_matrix = bell_unitary(hx, hy, 0, backend)
     c = Circuit(2)
     c.add(cnot_decomposition_light(0, 1, hx, hy, backend))
     final_matrix = c.unitary(backend)
@@ -195,7 +199,7 @@ def test_two_qubit_decomposition_bell_unitary(backend, hz_zero):
     hx, hy, hz = (2 * np.random.random(3) - 1) * np.pi
     if hz_zero:
         hz = 0
-    unitary = backend.cast(bell_unitary(hx, hy, hz))
+    unitary = backend.cast(bell_unitary(hx, hy, hz, backend))
     c = Circuit(2)
     c.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
     final_matrix = c.unitary(backend)
