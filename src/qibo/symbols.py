@@ -161,13 +161,3 @@ class Z(PauliSymbol):
     """
 
     pass
-
-
-class S(PauliSymbol):
-    """Qibo symbol for the S operator.
-
-    Args:
-        q (int): Target qubit id.
-    """
-
-    pass
