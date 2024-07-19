@@ -75,7 +75,7 @@ def _observables(nqubits: int) -> List:
 
 @cache
 def _get_observable(j: int, nqubits: int):
-    """Returns the :math:`j`-th observable. The :math:`j`-th observable is given in base-4 indexing and is given by
+    """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
