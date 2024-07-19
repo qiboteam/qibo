@@ -2,7 +2,6 @@
 
 from functools import reduce
 from logging import warning
-from numbers import Number
 from operator import mul
 from typing import List, Optional, Tuple, Union
 
@@ -405,7 +404,7 @@ class QuantumNetwork:
             backend=self._backend,
         )
 
-    def __mul__(self, number: Union[float, int, Number]):
+    def __mul__(self, number: Union[float, int]):
         """Returns quantum network with its Choi operator multiplied by a scalar.
 
         If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
@@ -420,7 +419,7 @@ class QuantumNetwork:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
                 Choi operator multiplied by ``number``.
         """
-        if not isinstance(number, Number):
+        if not isinstance(number, Union[float, int]):
             raise_error(
                 TypeError,
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
@@ -445,11 +444,11 @@ class QuantumNetwork:
             backend=self._backend,
         )
 
-    def __rmul__(self, number: Union[float, int, Number]):
+    def __rmul__(self, number: Union[float, int]):
         """"""
         return self.__mul__(number)
 
-    def __truediv__(self, number: Union[float, int, Number]):
+    def __truediv__(self, number: Union[float, int]):
         """Returns quantum network with its Choi operator divided by a scalar.
 
         If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
@@ -464,7 +463,7 @@ class QuantumNetwork:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
                 Choi operator divided by ``number``.
         """
-        if not isinstance(number, Number):
+        if not isinstance(number, Union[float, int]):
             raise_error(
                 TypeError,
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
