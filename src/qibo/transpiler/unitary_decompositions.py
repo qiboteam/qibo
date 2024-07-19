@@ -329,6 +329,7 @@ def two_qubit_decomposition(q0, q1, unitary, backend=None):
 
     return gatelist
 
+
 ### for transpiler.blocks.kak_decompose
 def orthogonal_decomposition_of_unitary(X):
     """Decomposes unitary X = Ql @ exp(i Theta) @ Qr'
@@ -378,6 +379,7 @@ def orthogonal_decomposition_of_unitary(X):
     Theta = np.angle(Dr + 1j * Di)
 
     return Theta, Qr, Ql
+
 
 def unit_kronecker_rank_approx(X, verbose=False):
     """Approximates a n^2 x m^2 matrix X  as A otimes B"""

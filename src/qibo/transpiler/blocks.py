@@ -6,7 +6,10 @@ from qibo import Circuit, gates
 from qibo.config import raise_error
 from qibo.gates import Gate
 from qibo.transpiler._exceptions import BlockingError
-from qibo.transpiler.unitary_decompositions import orthogonal_decomposition_of_unitary, unit_kronecker_rank_approx
+from qibo.transpiler.unitary_decompositions import (
+    orthogonal_decomposition_of_unitary,
+    unit_kronecker_rank_approx,
+)
 
 
 class Block:
@@ -28,7 +31,6 @@ class Block:
         # Cache the unitary matrix of the block
         self.unitary = None
 
-    
     @property
     def entangled(self):
         """Returns ``True`` if the block contains two-qubit gates."""
@@ -113,25 +115,36 @@ class Block:
             self.unitary = circuit.unitary()
         return self.unitary
 
-    def kak_decompose(self): 
+    def kak_decompose(self):
         """Return the KAK decomposition of the block.
         This should be done only if the block is entangled and the number of
         two qubit gates is higher than the number after the decomposition.
         """
         if not self.entangled:
-            raise_error(BlockingError, "The block is not entangled and doesn't require KAK decomposition.")
+            raise_error(
+                BlockingError,
+                "The block is not entangled and doesn't require KAK decomposition.",
+            )
         if self._count_2q_gates() <= 1:
-            raise_error(BlockingError, "The block is entangled but doesn't require KAK decomposition.")
+            raise_error(
+                BlockingError,
+                "The block is entangled but doesn't require KAK decomposition.",
+            )
         else:
             U = self._unitary()
-            
+
             MAGIC_BASIS = np.array(
                 [[1, 0, 0, 1j], [0, 1j, 1, 0], [0, 1j, -1, 0], [1, 0, 0, -1j]]
             ) / np.sqrt(2)
 
-            HADAMARD = np.array([[1, 1, -1, 1], [1, 1, 1, -1], [1, -1, -1, -1], [1, -1, 1, 1]]) / 2
+            HADAMARD = (
+                np.array([[1, 1, -1, 1], [1, 1, 1, -1], [1, -1, -1, -1], [1, -1, 1, 1]])
+                / 2
+            )
 
-            Theta, Qr, Ql = orthogonal_decomposition_of_unitary(MAGIC_BASIS.conj().T @ U @ MAGIC_BASIS)
+            Theta, Qr, Ql = orthogonal_decomposition_of_unitary(
+                MAGIC_BASIS.conj().T @ U @ MAGIC_BASIS
+            )
             A0, A1 = unit_kronecker_rank_approx(MAGIC_BASIS @ Ql @ MAGIC_BASIS.conj().T)
             B0, B1 = unit_kronecker_rank_approx(MAGIC_BASIS @ Qr @ MAGIC_BASIS.conj().T)
             K = HADAMARD.T @ Theta / 2
@@ -144,9 +157,8 @@ class Block:
                 return np.sqrt(np.linalg.det(X).conj()) * X
 
             A0, A1, B0, B1 = map(make_special, (A0, A1, B0, B1))
-            
+
             return A0, A1, K, B0, B1
-        
 
 
 class CircuitBlocks:

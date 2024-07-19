@@ -371,9 +371,10 @@ def test_block_on_qubits():
 
 ####
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.transpiler.blocks import Block
-import pytest
 
 
 @pytest.mark.parametrize("gates", [[], [gates.CNOT(0, 1)]])
@@ -387,7 +388,10 @@ def test_block_kak_error(gates):
 
 
 # No ERROR
-@pytest.mark.parametrize("gates", [[gates.H(0), gates.S(1), gates.TDG(0), gates.CNOT(0, 1), gates.CNOT(1, 0)]])
+@pytest.mark.parametrize(
+    "gates",
+    [[gates.H(0), gates.S(1), gates.TDG(0), gates.CNOT(0, 1), gates.CNOT(1, 0)]],
+)
 
 # ==== TODO: ERROR =====
 # @pytest.mark.parametrize("gates", [[gates.H(0), gates.S(1), gates.CNOT(1, 0), gates.TDG(0), gates.CNOT(0, 1), gates.CNOT(1, 0)]])
@@ -405,11 +409,10 @@ def test_block_kak(gates):
     A0, A1, K, B0, B1 = block.kak_decompose()
 
     # Reassemble the decomposed matrices
-    orig = (np.kron(A0, A1) @ heisenberg_unitary(K) @ np.kron(B0.conj().T, B1.conj().T))
+    orig = np.kron(A0, A1) @ heisenberg_unitary(K) @ np.kron(B0.conj().T, B1.conj().T)
 
     # Check that the original and decomposed matrices are equal
-    assert ( np.linalg.norm(orig - U) < 1e-8 )
-
+    assert np.linalg.norm(orig - U) < 1e-8
 
 
 # TODO: Move this helper function to a more appropriate location.
