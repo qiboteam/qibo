@@ -2,13 +2,15 @@ from qibo.models.qdp.oblivious_schmidt_decomposition import *
 import numpy as np
 from qibo import gates
 import scipy
-from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 from qibo.models.qdp.quantum_dynamic_programming import (
-    AbstractQuantumDynamicProgramming
-    )
+    AbstractQuantumDynamicProgramming,
+    SequentialInstruction,
+)
+from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 
-def unitary_expm(H,t):
-    U = scipy.linalg.expm( -1j * t * H)
+
+def unitary_expm(H, t):
+    U = scipy.linalg.expm(-1j * t * H)
     return U
 
 def off_diagonal_norm(H):
@@ -20,6 +22,7 @@ def off_diagonal_norm(H):
     return np.sqrt(
         np.real(np.trace((off_diag_h_dag @ off_diag_h)))
     )
+
 
 class ObliviousSchmidtDecompositionSingleQubit(SequentialInstruction):
     """
@@ -159,5 +162,5 @@ class ObliviousSchmidtDecompositionTwoQubits(TwoQubitsSequentialInstruction):
     def instruction_qubits_initialization(self):
         """Initializes the instruction qubits."""
         for instruction_qubit in self.list_id_current_instruction_reg:
-            self.c.add(gates.RX(instruction_qubit,np.pi/2)) #rho_A
-            #self.c.add(gates.X(instruction_qubit+1)) #rho_B
+            self.c.add(gates.RX(instruction_qubit, np.pi / 2))  # rho_A
+            # self.c.add(gates.X(instruction_qubit+1)) #rho_B
