@@ -65,6 +65,9 @@ def test_errors(backend):
     with pytest.raises(TypeError):
         QuantumNetwork(channel.to_choi(backend=backend), partition=(1, 2), pure="True")
 
+    with pytest.raises(TypeError):
+        QuantumNetwork(channel.to_choi(backend=backend), partition=1, pure=True)
+
     with pytest.raises(ValueError):
         network.is_hermitian(precision_tol=-1e-8)
 
@@ -125,6 +128,9 @@ def test_errors(backend):
 
     with pytest.raises(ValueError):
         QuantumNetwork(matrix, (1, 2), backend=backend)
+
+    with pytest.raises(ValueError):
+        QuantumNetwork(matrix, (1, 1), pure=True, backend=backend)
 
     with pytest.raises(ValueError):
         QuantumNetwork.from_operator(matrix, (1, 2), pure=True, backend=backend)
