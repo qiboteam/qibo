@@ -148,7 +148,7 @@ class QuantumNetwork:
                 Defaults to ``None``.
 
         Returns:
-            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: 
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`:
                 quantum network constructed from the input Choi operator.
         """
 
@@ -157,7 +157,9 @@ class QuantumNetwork:
                 partition = tuple(operator.shape)
                 tensor = operator
             else:
-                if np.prod(tuple(operator.shape)) != np.prod(tuple(dim**2 for dim in partition)):
+                if np.prod(tuple(operator.shape)) != np.prod(
+                    tuple(dim**2 for dim in partition)
+                ):
                     raise_error(
                         ValueError,
                         "``partition`` does not match the shape of the input matrix. "
