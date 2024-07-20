@@ -59,7 +59,7 @@ ipython = "^8.10.0"
 qulacs = { version = "^0.6.4", markers="(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'"}
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "grbs" }
 
 [tool.poetry.group.tests]
 optional = true
