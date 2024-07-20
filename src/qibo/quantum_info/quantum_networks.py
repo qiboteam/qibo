@@ -63,22 +63,36 @@ class QuantumNetwork:
         self.dims = reduce(mul, self.partition) if len(self.partition) > 0 else 1
 
     @staticmethod
-    def _order_tensor_to_operator(n: int):
+    def _order_tensor_to_operator(dims: int):
+        """Returns the order to reshape a tensor into an operator.
+
+        Given a tenosr of ``2 * dims`` leads, the order is
+        :math:`[0, 2, 4, ..., 1, 3, 5, ...]`.
+
+        Args:
+            dims (int): dimension.
+
+        Returns:
+            list: order to reshape tensor into an operator.
         """
-        Returns the order to reshape a tensor to an operator.
-        Given a tenosr of 2n leads, the order is [0, 2, 4, ..., 1, 3, 5, ...].
-        """
-        order = list(range(0, n * 2, 2)) + list(range(1, n * 2, 2))
-        return order
+        return list(range(0, 2 * dims, 2)) + list(range(1, 2 * dims, 2))
 
     @staticmethod
-    def _order_operator_to_tensor(n: int):
+    def _order_operator_to_tensor(nsystems: int):
+        """Returns the order to reshape an operator to a tensor.
+
+        Given a operator of :math:`2n` systems, the order is
+        :math:`[0, n, 1, n+1, 2, n+2, ...]`.
+
+        Args:
+            nsystems (int): number of systems.
+
+        Returns:
+            list: order to reshape operator into tensor.
         """
-        Returns the order to reshape an operator to a tensor.
-        Given a operator of 2n systems, the order is [0, n, 1, n+1, 2, n+2, ...].
-        """
-        order = list(sum(zip(list(range(0, n)), list(range(n, n * 2))), ()))
-        return order
+        return list(
+            sum(zip(list(range(0, nsystems)), list(range(nsystems, nsystems * 2))), ())
+        )
 
     @classmethod
     def _operator_to_tensor(cls, operator, partition: List[int]):
@@ -88,7 +102,7 @@ class QuantumNetwork:
 
         # Check if the `partition` matches the shape of the input matrix
         if np.prod(tuple(operator.shape)) != np.prod(
-            tuple([dim**2 for dim in partition])
+            tuple(dim**2 for dim in partition)
         ):
             raise_error(
                 ValueError,
@@ -134,7 +148,8 @@ class QuantumNetwork:
                 Defaults to ``None``.
 
         Returns:
-            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: The quantum network constructed from the input Choi operator.
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: 
+                quantum network constructed from the input Choi operator.
         """
 
         if pure:
@@ -142,14 +157,15 @@ class QuantumNetwork:
                 partition = tuple(operator.shape)
                 tensor = operator
             else:
-                try:
-                    tensor = operator.reshape(partition)
-                except:
+                if np.prod(tuple(operator.shape)) != np.prod(tuple(dim**2 for dim in partition)):
                     raise_error(
                         ValueError,
                         "``partition`` does not match the shape of the input matrix. "
-                        + f"Cannot reshape matrix of size {operator.shape} to partition {partition}",
+                        + f"Cannot reshape matrix of size {operator.shape} "
+                        + f"to partition {partition}",
                     )
+
+                tensor = operator.reshape(partition)
         else:
             # check if arr is a valid choi operator
             len_sys = len(operator.shape)
@@ -619,7 +635,8 @@ class QuantumNetwork:
                 raise_error(
                     ValueError,
                     "``partition`` does not match the shape of the input matrix. "
-                    + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
+                    + f"Cannot reshape matrix of size {self._tensor.shape} "
+                    + f"to partition {self.partition}.",
                 )
             self._tensor = self._backend.np.reshape(self._tensor, self.partition)
         else:
@@ -629,7 +646,8 @@ class QuantumNetwork:
                 raise_error(
                     ValueError,
                     "``partition`` does not match the shape of the input matrix. "
-                    + f"Cannot reshape matrix of size {self._tensor.shape} to partition {self.partition}",
+                    + f"Cannot reshape matrix of size {self._tensor.shape} "
+                    + f"to partition {self.partition}.",
                 )
             matrix_partition = [dim**2 for dim in self.partition]
             self._tensor = self._backend.np.reshape(self._tensor, matrix_partition)
