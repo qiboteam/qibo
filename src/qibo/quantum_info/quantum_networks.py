@@ -438,7 +438,7 @@ class QuantumNetwork:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
                 Choi operator multiplied by ``number``.
         """
-        if not isinstance(number, Union[float, int]):
+        if not isinstance(number, (float, int)):
             raise_error(
                 TypeError,
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
@@ -482,7 +482,7 @@ class QuantumNetwork:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
                 Choi operator divided by ``number``.
         """
-        if not isinstance(number, Union[float, int]):
+        if not isinstance(number, (float, int)):
             raise_error(
                 TypeError,
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
