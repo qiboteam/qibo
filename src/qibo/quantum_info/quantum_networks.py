@@ -157,9 +157,10 @@ class QuantumNetwork:
                 partition = tuple(operator.shape)
                 tensor = operator
             else:
-                if np.prod(tuple(operator.shape)) != np.prod(
-                    tuple(dim**2 for dim in partition)
-                ):
+                if tuple(partition) not in [
+                    tuple(operator.shape),
+                    tuple(int(np.sqrt(dim)) for dim in operator.shape) * 2,
+                ]:
                     raise_error(
                         ValueError,
                         "``partition`` does not match the shape of the input matrix. "
@@ -803,9 +804,8 @@ class QuantumComb(QuantumNetwork):
         cls, operator, partition=None, inverse=False, pure=False, backend=None
     ):  # pylint: disable=W0237
         comb = super().from_operator(operator, partition, None, pure, backend)
-        if (
-            inverse
-        ):  # Convert mathmetical convention of Choi operator to physical convention
+        if inverse:
+            # Convert mathmetical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
             comb._tensor = comb._tensor.T  # pylint: disable=W0212
         return comb
@@ -854,7 +854,7 @@ class QuantumChannel(QuantumComb):
             if len(partition) > 2:
                 raise_error(
                     ValueError,
-                    "A quantum channel should only contain one input system and one output system. "
+                    "A quantum channel should only contain one input system and one output system."
                     + "For general quantum networks, one should use the ``QuantumNetwork`` class.",
                 )
             if len(partition) == 1:
