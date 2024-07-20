@@ -170,6 +170,8 @@ def to_choi(channel, order: str = "row", backend=None):
     Returns:
         ndarray: quantum channel in its Choi representation.
     """
+    backend = _check_backend(backend)
+
     channel = vectorization(channel, order=order, backend=backend)
     channel = backend.np.outer(channel, backend.np.conj(channel))
 
@@ -194,6 +196,8 @@ def to_liouville(channel, order: str = "row", backend=None):
     Returns:
         ndarray: quantum channel in its Liouville representation.
     """
+    backend = _check_backend(backend)
+
     channel = to_choi(channel, order=order, backend=backend)
     channel = _reshuffling(channel, order=order, backend=backend)
 
@@ -229,7 +233,9 @@ def to_pauli_liouville(
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
+
+    backend = _check_backend(backend)
 
     nqubits = int(np.log2(channel.shape[0]))
 
@@ -779,7 +785,7 @@ def kraus_to_chi(
     Returns:
         ndarray: Chi-matrix representation of the Kraus channel.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
@@ -1159,7 +1165,7 @@ def pauli_to_liouville(
     Returns:
         ndarray: superoperator in the Liouville representation.
     """
-    from qibo.quantum_info.basis import pauli_to_comp_basis
+    from qibo.quantum_info.basis import pauli_to_comp_basis  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
