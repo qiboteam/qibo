@@ -556,7 +556,7 @@ class QuantumNetwork:
                 + "Use `link_product` method to specify the subscript.",
             )
 
-        return self.link_product(subscripts, second_network)
+        return self.link_product(subscripts, second_network)  # pylint: disable=E0606
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
@@ -643,7 +643,7 @@ class QuantumNetwork:
             self._tensor = self._backend.np.reshape(self._tensor, self.partition)
         else:
             if np.prod(tuple(self._tensor.shape)) != np.prod(
-                tuple([dim**2 for dim in self.partition])
+                tuple(dim**2 for dim in self.partition)
             ):
                 raise_error(
                     ValueError,
@@ -674,7 +674,7 @@ class QuantumNetwork:
         conj = backend.np.conj
 
         if self.is_pure():
-            """Reshapes input matrix based on purity."""
+            # Reshapes input matrix based on purity.
             tensor.reshape(self.dims)
             if self._backend.__class__.__name__ == "PyTorchBackend":
                 tensor = self._tensordot(tensor, conj(tensor), dims=0)
@@ -800,14 +800,14 @@ class QuantumComb(QuantumNetwork):
 
     @classmethod
     def from_operator(
-        cls, operator, partition=None, pure=False, backend=None, inverse=False
-    ):
+        cls, operator, partition=None, inverse=False, pure=False, backend=None
+    ):  # pylint: disable=W0237
         comb = super().from_operator(operator, partition, None, pure, backend)
         if (
             inverse
         ):  # Convert mathmetical convention of Choi operator to physical convention
             comb.partition = comb.partition[::-1]
-            comb._tensor = comb._tensor.T
+            comb._tensor = comb._tensor.T  # pylint: disable=W0212
         return comb
 
 
@@ -1028,13 +1028,13 @@ def link_product(
             raise_error(TypeError, f"The {i}-th operator is not a ``QuantumNetwork``.")
 
     if backend is None:  # pragma: no cover
-        backend = operands[0]._backend
+        backend = operands[0]._backend  # pylint: disable=W0212
 
     tensors = [
         (
             backend.to_numpy(operand.full())
             if operand.is_pure()
-            else backend.to_numpy(operand._tensor)
+            else backend.to_numpy(operand._tensor)  # pylint: disable=W0212
         )
         for operand in operands
     ]
