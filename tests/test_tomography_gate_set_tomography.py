@@ -5,11 +5,10 @@ import numpy as np
 import pytest
 from sympy import S
 
-import qibo
-from qibo import gates
+from qibo import gates, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
-from qibo.quantum_info import to_pauli_liouville
+from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
     _gate_tomography,
@@ -123,27 +122,27 @@ def test__get_observable(j, nqubits):
     correct_observables = {
         1: [
             (S(1),),
-            (qibo.symbols.Z(0),),
-            (qibo.symbols.Z(0),),
-            (qibo.symbols.Z(0),),
+            (symbols.Z(0),),
+            (symbols.Z(0),),
+            (symbols.Z(0),),
         ],
         2: [
             (S(1), S(1)),
-            (S(1), qibo.symbols.Z(1)),
-            (S(1), qibo.symbols.Z(1)),
-            (S(1), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), S(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), S(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), S(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
-            (qibo.symbols.Z(0), qibo.symbols.Z(1)),
+            (S(1), symbols.Z(1)),
+            (S(1), symbols.Z(1)),
+            (S(1), symbols.Z(1)),
+            (symbols.Z(0), S(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), S(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), S(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
+            (symbols.Z(0), symbols.Z(1)),
         ],
     }
     correct_observables[1] = [
@@ -210,9 +209,12 @@ def test_gate_tomography_noise_model(backend):
 @pytest.mark.parametrize("pauli_liouville", [False, True])
 def test_GST(backend, target_gates, pauli_liouville):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    target_matrices = [g.matrix() for g in target_gates]
+    T = backend.cast(T, dtype=T.dtype)
+    target_matrices = [g.matrix(backend=backend) for g in target_gates]
     # superoperator representation of the target gates in the Pauli basis
-    target_matrices = [to_pauli_liouville(m, normalize=True) for m in target_matrices]
+    target_matrices = [
+        to_pauli_liouville(m, normalize=True, backend=backend) for m in target_matrices
+    ]
     gate_set = [g.__class__ for g in target_gates]
 
     if len(target_gates) == 3:
@@ -223,13 +225,14 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-
+        print(type(empty_1q), type(empty_2q))
         T_2q = np.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
+                G_inv = np.linalg.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
-                estimate = T_matrix @ np.linalg.inv(G) @ estimate @ np.linalg.inv(G)
+                estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
                 target,
                 estimate,
