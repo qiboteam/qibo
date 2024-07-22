@@ -185,6 +185,7 @@ def test_routing_with_measurements():
         initial_map=initial_layout,
     )
 
+
 def test_routing_looping():
     qubit_array = [(7, 2), (6, 0), (5, 6), (4, 8), (3, 5), (9, 1)]
 
@@ -196,7 +197,9 @@ def test_routing_looping():
     # line connectivity
     chip = nx.Graph()
     chip.add_nodes_from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)])
+    chip.add_edges_from(
+        [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)]
+    )
 
     placer = Trivial(connectivity=chip)
     initial_layout = placer(loop_circ)
@@ -209,7 +212,6 @@ def test_routing_looping():
             count += 1
 
     assert count < 50
-
 
 
 def test_circuit_map():

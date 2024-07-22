@@ -793,7 +793,6 @@ class Sabre(Router):
         self.circuit.update(best_candidate)
         self._added_swaps += 1
 
-
     def _compute_cost(self, candidate: int):
         """Compute the cost associated to a possible SWAP candidate."""
         temporary_circuit = CircuitMap(
@@ -891,7 +890,7 @@ class Sabre(Router):
         self._delta_register = [1.0 for _ in self._delta_register]
         self._added_swaps = 0
         self._saved_circuit = deepcopy(self.circuit)
-    
+
     def _route_to_nearest_gate(self):
         """Route the circuit to the nearest gate by adding SWAPs.
 
@@ -905,16 +904,21 @@ class Sabre(Router):
             Q1 = self.circuit.get_physical_qubits(block)[0]
             Q2 = self.circuit.get_physical_qubits(block)[1]
             path = nx.bidirectional_shortest_path(self.connectivity, Q1, Q2)
-            
+
             # Between the gates in the front layer, the one requiring the minimum #SWAPs is selected
             if len(path) < min_distance:
                 min_distance = len(path)
                 shortest_path = path
 
         # Q1 is moved
-        swaps = [(self.circuit.physical_to_logical(shortest_path[i]),
-                  self.circuit.physical_to_logical(shortest_path[i+1])) for i in range(len(shortest_path)-2)]
-        
+        swaps = [
+            (
+                self.circuit.physical_to_logical(shortest_path[i]),
+                self.circuit.physical_to_logical(shortest_path[i + 1]),
+            )
+            for i in range(len(shortest_path) - 2)
+        ]
+
         for swap in swaps:
             self.circuit.update(swap)
 
