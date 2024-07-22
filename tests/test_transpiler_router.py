@@ -185,6 +185,32 @@ def test_routing_with_measurements():
         initial_map=initial_layout,
     )
 
+def test_routing_looping():
+    qubit_array = [(7, 2), (6, 0), (5, 6), (4, 8), (3, 5), (9, 1)]
+
+    loop_circ = Circuit(10)
+
+    for qubit in qubit_array:
+        loop_circ.add(gates.CZ(*qubit))
+
+    # line connectivity
+    chip = nx.Graph()
+    chip.add_nodes_from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)])
+
+    placer = Trivial(connectivity=chip)
+    initial_layout = placer(loop_circ)
+    router = Sabre(connectivity=chip)
+    routed_circuit, final_layout = router(loop_circ, initial_layout=initial_layout)
+
+    count = 0
+    for gate in routed_circuit.queue:
+        if isinstance(gate, gates.SWAP):
+            count += 1
+
+    assert count < 50
+
+
 
 def test_circuit_map():
     circ = Circuit(4)
