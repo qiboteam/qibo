@@ -553,6 +553,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None, input_samples=False):
+        # breakpoint()
         terms = self.terms
         for term in terms:
             # pylint: disable=E1101
@@ -590,7 +591,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     expval_k = -1
                 expval_q += expval_k * counts[i]
             expval += expval_q * self.terms[j].coefficient.real
-        return expval + self.constant.real
+        return self.backend.cast(expval + self.constant.real)
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
