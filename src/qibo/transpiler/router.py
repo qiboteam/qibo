@@ -687,7 +687,7 @@ class Sabre(Router):
             # If the number of added swaps is too high, the algorithm is stuck.
             # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
             if (
-                self._temporary_added_swaps > 1.5 * longest_path
+                self._temporary_added_swaps > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
                 self.circuit = deepcopy(self._saved_circuit)
                 self._route_to_nearest_gate()
