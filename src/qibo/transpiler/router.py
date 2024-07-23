@@ -892,7 +892,7 @@ class Sabre(Router):
         self._saved_circuit = deepcopy(self.circuit)
 
     def _route_to_nearest_gate(self):
-        """Route the circuit to the nearest gate by adding SWAPs.
+        """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
 
         Method works in-place.
         """
