@@ -686,7 +686,9 @@ class Sabre(Router):
 
             # If the number of added swaps is too high, the algorithm is stuck.
             # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
-            if self._temporary_added_swaps > 1.5 * longest_path:  # threshold is arbitrary
+            if (
+                self._temporary_added_swaps > 1.5 * longest_path
+            ):  # threshold is arbitrary
                 self.circuit = deepcopy(self._saved_circuit)
                 self._route_to_nearest_gate()
 
@@ -916,7 +918,9 @@ class Sabre(Router):
                 min_distance = distance
                 shortest_path_qubits = [q1, q2]
 
-        shortest_path = nx.bidirectional_shortest_path(self.connectivity, shortest_path_qubits[0], shortest_path_qubits[1])
+        shortest_path = nx.bidirectional_shortest_path(
+            self.connectivity, shortest_path_qubits[0], shortest_path_qubits[1]
+        )
 
         # Q1 is moved
         swaps = [
