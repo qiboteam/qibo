@@ -690,7 +690,7 @@ class Sabre(Router):
                 self._temporary_added_swaps > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
                 self.circuit = deepcopy(self._saved_circuit)
-                self._route_to_nearest_gate()
+                self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
         circuit_kwargs["wire_names"] = list(initial_layout.keys())
@@ -900,7 +900,7 @@ class Sabre(Router):
         self._temporary_added_swaps = 0
         self._saved_circuit = deepcopy(self.circuit)
 
-    def _route_to_nearest_gate(self):
+    def _shortest_path_routing(self):
         """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
 
         Method works in-place.
