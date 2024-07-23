@@ -212,10 +212,10 @@ def test_sabre_looping():
             count += 1
 
     assert count < 50
-    
+
 
 def test_sabre_shortest_path_routing():
-    gate_array = [(0, 9), (5, 9), (2, 8)]      # The gate (2, 8) should be routed next
+    gate_array = [(0, 9), (5, 9), (2, 8)]  # The gate (2, 8) should be routed next
 
     loop_circ = Circuit(10)
     for qubits in gate_array:
@@ -233,7 +233,7 @@ def test_sabre_shortest_path_routing():
     router = Sabre(connectivity=chip)
 
     router._preprocessing(circuit=loop_circ, initial_layout=initial_layout)
-    router._shortest_path_routing()     # q2 should be moved adjacent to q8
+    router._shortest_path_routing()  # q2 should be moved adjacent to q8
 
     gate_28 = router.circuit.circuit_blocks.block_list[2]
     gate_28_qubits = router.circuit.get_physical_qubits(gate_28)
