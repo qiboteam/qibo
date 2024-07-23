@@ -629,7 +629,7 @@ class Sabre(Router):
         swap_threshold (float, optional): limits the number of added SWAPs in every routing iteration.
             This threshold is multiplied by the length of the longest path in the circuit connectivity.
             If the number of added SWAPs exceeds the threshold before a gate is routed,
-            the circuit is reset to the last saved state.
+            shortestpath routing is applied.
             Defaults to :math:`1.5`.
 
     References:
