@@ -8,7 +8,12 @@ from qibo.models.qdp.quantum_dynamic_programming import (
     SequentialInstruction,
 )
 from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.symbols import X, Y, Z
 
+Heisenberg = SymbolicHamiltonian(X(0)*X(1) + Y(0)*Y(1) + Z(0)*Z(1),2)
+def dSWAP(t):
+    return Heisenberg.exp(t*np.pi/4)
 
 class DensityMatrixExponentiation(SequentialInstruction):
     """
@@ -45,13 +50,7 @@ class DensityMatrixExponentiation(SequentialInstruction):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        delta_swap = scipy.linalg.expm(
-            -1j
-            * gates.SWAP(
-                self.id_current_work_reg, self.id_current_instruction_reg
-            ).matrix()
-            * self.delta
-        )
+        delta_swap = dSWAP(self.delta)
         for decomposed_gate in two_qubit_decomposition(
             self.id_current_work_reg,
             self.id_current_instruction_reg,
@@ -102,17 +101,11 @@ class DME_reset(MeasurementReset):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        delta_SWAP = scipy.linalg.expm(
-            -1j
-            * gates.SWAP(
-                self.id_current_work_reg, self.id_current_instruction_reg
-            ).matrix()
-            * self.delta
-        )
+        delta_swap = dSWAP(self.delta)
         for decomposed_gate in two_qubit_decomposition(
             self.id_current_work_reg,
             self.id_current_instruction_reg,
-            unitary=delta_SWAP,
+            unitary=delta_swap,
         ):
             self.c.add(decomposed_gate)
 

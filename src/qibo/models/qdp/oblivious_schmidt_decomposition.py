@@ -1,5 +1,4 @@
 import numpy as np
-import scipy
 
 from qibo import gates
 from qibo.models.qdp.oblivious_schmidt_decomposition import *
@@ -9,21 +8,15 @@ from qibo.models.qdp.quantum_dynamic_programming import (
 )
 from qibo.transpiler.unitary_decompositions import two_qubit_decomposition
 
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.symbols import X, Y, Z
 
-def unitary_expm(H, t):
-    """
-    Compute the matrix exponential of the Hamiltonian H scaled by time t.
+sigma_Z_1q = SymbolicHamiltonian(Z(0),1)
+#sigma_Z_2q = SymbolicHamiltonian(Z(0),2)
 
-    Args:
-        H (numpy.ndarray): The Hamiltonian matrix.
-        t (float): Time parameter.
-
-    Returns:
-        numpy.ndarray: The unitary matrix resulting from the exponential of -1j * t * H.
-    """
-    U = scipy.linalg.expm(-1j * t * H)
-    return U
-
+Heisenberg = SymbolicHamiltonian(X(0)*X(1) + Y(0)*Y(1) + Z(0)*Z(1),2)
+def dSWAP(t):
+    return Heisenberg.exp(t*np.pi/4)
 
 def off_diagonal_norm(H):
     """
@@ -68,16 +61,12 @@ class ObliviousSchmidtDecompositionSingleQubit(SequentialInstruction):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        D = np.array([[1, 0], [0, -1]])
-        unitary_D = unitary_expm(D, self.t)
-        self.c.add(gates.Unitary(unitary_D, self.id_current_work_reg))
 
-        delta_swap = unitary_expm(
-            gates.SWAP(
-                self.id_current_work_reg, self.id_current_instruction_reg
-            ).matrix(),
-            self.t,
-        )
+        # Add e^-itZ
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(-self.t), self.id_current_work_reg))
+        
+        # Add e^it rho using DME
+        delta_swap = dSWAP(self.t)
         for decomposed_gate in two_qubit_decomposition(
             self.id_current_work_reg,
             self.id_current_instruction_reg,
@@ -85,8 +74,8 @@ class ObliviousSchmidtDecompositionSingleQubit(SequentialInstruction):
         ):
             self.c.add(decomposed_gate)
 
-        unitary_minus_D = unitary_expm(-D, self.t)
-        self.c.add(gates.Unitary(unitary_minus_D, self.id_current_work_reg))
+        # Add e^itZ
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(self.t), self.id_current_work_reg))
 
     def instruction_qubits_initialization(self):
         """Initializes the instruction qubits by applying the RX gate with a pi/2 rotation."""
@@ -160,17 +149,12 @@ class ObliviousSchmidtDecompositionTwoQubits(TwoQubitsSequentialInstruction):
 
     def memory_usage_query_circuit(self):
         """Defines the memory usage query circuit."""
-        Z = np.array([[1, 0], [0, -1]])
-        unitary_Z = unitary_expm(Z, self.t)
-        self.c.add(gates.Unitary(unitary_Z, self.id_current_work_reg))
-        self.c.add(gates.Unitary(unitary_Z, self.id_current_work_reg + 1))
+        # Add e^-itZ
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(-self.t), self.id_current_work_reg))
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(-self.t), self.id_current_work_reg+1))
 
-        delta_swap = unitary_expm(
-            gates.SWAP(
-                self.id_current_work_reg, self.id_current_instruction_reg
-            ).matrix(),
-            self.t,
-        )
+        # Add e^it rho using DME to both data qubits
+        delta_swap = dSWAP(self.t)
         for decomposed_gate in two_qubit_decomposition(
             self.id_current_work_reg,
             self.id_current_instruction_reg,
@@ -185,10 +169,10 @@ class ObliviousSchmidtDecompositionTwoQubits(TwoQubitsSequentialInstruction):
         ):
             self.c.add(decomposed_gate)
 
-        unitary_minus_Z = unitary_expm(-Z, self.t)
-        self.c.add(gates.Unitary(unitary_minus_Z, self.id_current_work_reg))
-        self.c.add(gates.Unitary(unitary_minus_Z, self.id_current_work_reg + 1))
-
+        # Add e^itZ
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(self.t), self.id_current_work_reg))
+        self.c.add(gates.Unitary(sigma_Z_1q.exp(self.t), self.id_current_work_reg+1))
+    
     def instruction_qubits_initialization(self):
         """Initializes the instruction qubits by applying the RX gate with a pi/2 rotation."""
         for instruction_qubit in self.list_id_current_instruction_reg:
