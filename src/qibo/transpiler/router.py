@@ -898,7 +898,7 @@ class Sabre(Router):
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
         self._temporary_added_swaps = 0
-        self._saved_circuit = deepcopy(self.circuit)
+        self._saved_circuit = self.circuit.copy(deep=True)
 
     def _shortest_path_routing(self):
         """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
