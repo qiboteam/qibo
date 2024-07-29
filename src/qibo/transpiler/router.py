@@ -910,8 +910,7 @@ class Sabre(Router):
         shortest_path_qubits = None
 
         for block in self._front_layer:
-            q1 = self.circuit.get_physical_qubits(block)[0]
-            q2 = self.circuit.get_physical_qubits(block)[1]
+            q1, q2 = self.circuit.get_physical_qubits(block)
             distance = self._dist_matrix[q1, q2]
 
             if distance < min_distance:
