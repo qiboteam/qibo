@@ -202,8 +202,8 @@ def test_sabre_looping():
 
     placer = Trivial(connectivity=chip)
     initial_layout = placer(loop_circ)
-    router_old = Sabre(connectivity=chip, swap_threshold=np.inf)    # Old
-    router_new = Sabre(connectivity=chip)                           # New
+    router_old = Sabre(connectivity=chip, swap_threshold=np.inf)  # Old
+    router_new = Sabre(connectivity=chip)  # New
     routed_circuit_old, _ = router_old(loop_circ, initial_layout=initial_layout)
     routed_circuit_new, _ = router_new(loop_circ, initial_layout=initial_layout)
 
@@ -216,7 +216,7 @@ def test_sabre_looping():
 
     count_old = count_swaps(routed_circuit_old)
     count_new = count_swaps(routed_circuit_new)
-    
+
     assert count_new < count_old
 
 
