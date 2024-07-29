@@ -689,7 +689,7 @@ class Sabre(Router):
             if (
                 self._temporary_added_swaps > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
-                self.circuit = deepcopy(self._saved_circuit)
+                self.circuit = self._saved_circuit.copy(deep=True)
                 self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
