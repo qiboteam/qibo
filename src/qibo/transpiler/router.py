@@ -674,7 +674,7 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
         """
         self._preprocessing(circuit=circuit, initial_layout=initial_layout)
-        self._saved_circuit = deepcopy(self.circuit)
+        self._saved_circuit = self.circuit.copy(deep=True)
         longest_path = np.max(self._dist_matrix)
 
         while self._dag.number_of_nodes() != 0:
