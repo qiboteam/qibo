@@ -207,8 +207,12 @@ def test_sabre_looping():
     )  # Without reset
     router_threshold = Sabre(connectivity=chip)  # With reset
 
-    routed_no_threshold, final_mapping_no_threshold = router_no_threshold(loop_circ, initial_layout=initial_layout)
-    routed_threshold, final_mapping_threshold = router_threshold(loop_circ, initial_layout=initial_layout)
+    routed_no_threshold, final_mapping_no_threshold = router_no_threshold(
+        loop_circ, initial_layout=initial_layout
+    )
+    routed_threshold, final_mapping_threshold = router_threshold(
+        loop_circ, initial_layout=initial_layout
+    )
 
     count_no_threshold = router_no_threshold.added_swaps
     count_threshold = router_threshold.added_swaps
