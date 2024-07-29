@@ -187,31 +187,37 @@ def test_routing_with_measurements():
 
 
 def test_sabre_looping():
+    # Setup where the looping occurs
+    # Line connectivity, gates with gate_array, Trivial placer
     gate_array = [(7, 2), (6, 0), (5, 6), (4, 8), (3, 5), (9, 1)]
-
     loop_circ = Circuit(10)
-
     for qubits in gate_array:
         loop_circ.add(gates.CZ(*qubits))
 
-    # line connectivity
     chip = nx.Graph()
-    chip.add_nodes_from(range(10))
+    chip.add_nodes_from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     chip.add_edges_from(
         [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)]
     )
 
     placer = Trivial(connectivity=chip)
     initial_layout = placer(loop_circ)
-    router = Sabre(connectivity=chip)
-    routed_circuit, final_layout = router(loop_circ, initial_layout=initial_layout)
+    router_old = Sabre(connectivity=chip, swap_threshold=np.inf)    # Old
+    router_new = Sabre(connectivity=chip)                           # New
+    routed_circuit_old, _ = router_old(loop_circ, initial_layout=initial_layout)
+    routed_circuit_new, _ = router_new(loop_circ, initial_layout=initial_layout)
 
-    count = 0
-    for gate in routed_circuit.queue:
-        if isinstance(gate, gates.SWAP):
-            count += 1
+    def count_swaps(circuit):
+        count = 0
+        for gate in circuit.queue:
+            if isinstance(gate, gates.SWAP):
+                count += 1
+        return count
 
-    assert count < 50
+    count_old = count_swaps(routed_circuit_old)
+    count_new = count_swaps(routed_circuit_new)
+    
+    assert count_new < count_old
 
 
 def test_sabre_shortest_path_routing():

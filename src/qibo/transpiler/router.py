@@ -674,7 +674,7 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
         """
         self._preprocessing(circuit=circuit, initial_layout=initial_layout)
-        self._saved_circuit = self.circuit.copy(deep=True)
+        self._saved_circuit = deepcopy(self.circuit)
         longest_path = np.max(self._dist_matrix)
 
         while self._dag.number_of_nodes() != 0:
@@ -689,7 +689,7 @@ class Sabre(Router):
             if (
                 self._temporary_added_swaps > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
-                self.circuit = self._saved_circuit.copy(deep=True)
+                self.circuit = deepcopy(self._saved_circuit)
                 self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
@@ -898,7 +898,7 @@ class Sabre(Router):
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
         self._temporary_added_swaps = 0
-        self._saved_circuit = self.circuit.copy(deep=True)
+        self._saved_circuit = deepcopy(self.circuit)
 
     def _shortest_path_routing(self):
         """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
