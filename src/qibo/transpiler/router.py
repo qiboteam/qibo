@@ -922,13 +922,8 @@ class Sabre(Router):
         )
 
         # Q1 is moved
-        swaps = [
-            (
-                self.circuit.physical_to_logical(shortest_path[i]),
-                self.circuit.physical_to_logical(shortest_path[i + 1]),
-            )
-            for i in range(len(shortest_path) - 2)
-        ]
+        shortest_path = [self.circuit.physical_to_logical(q) for q in shortest_path[:-1]]
+        swaps = list(zip(shortest_path[:-1], shortest_path[1:]))
 
         for swap in swaps:
             self.circuit.update(swap)

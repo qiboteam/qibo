@@ -202,10 +202,10 @@ def test_sabre_looping():
 
     placer = Trivial(connectivity=chip)
     initial_layout = placer(loop_circ)
-    router_old = Sabre(connectivity=chip, swap_threshold=np.inf)  # Old
-    router_new = Sabre(connectivity=chip)  # New
-    routed_circuit_old, _ = router_old(loop_circ, initial_layout=initial_layout)
-    routed_circuit_new, _ = router_new(loop_circ, initial_layout=initial_layout)
+    router_no_threshold = Sabre(connectivity=chip, swap_threshold=np.inf)  # Without reset
+    router_threshold = Sabre(connectivity=chip)  # With reset
+    routed_no_threshold, _ = router_no_threshold(loop_circ, initial_layout=initial_layout)
+    routed_threshold, _ = router_threshold(loop_circ, initial_layout=initial_layout)
 
     def count_swaps(circuit):
         count = 0
@@ -214,10 +214,10 @@ def test_sabre_looping():
                 count += 1
         return count
 
-    count_old = count_swaps(routed_circuit_old)
-    count_new = count_swaps(routed_circuit_new)
+    count_no_threshold = count_swaps(routed_no_threshold)
+    count_threshold = count_swaps(routed_threshold)
 
-    assert count_new < count_old
+    assert count_no_threshold > count_threshold
 
 
 def test_sabre_shortest_path_routing():
