@@ -273,7 +273,7 @@ def test_process_fidelity_and_infidelity(backend):
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
-        channel = random_hermitian(d**2, backend=backend)
+        channel = random_hermitian(d**2, seed=10, backend=backend)
         test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
         channel = 10 * np.random.rand(d**2, d**2)
