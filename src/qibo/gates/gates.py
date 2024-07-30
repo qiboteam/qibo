@@ -821,6 +821,10 @@ class GPI2(ParametrizedGate):
     def qasm_label(self):
         return "gpi2"
 
+    @property
+    def clifford(self):
+        return _is_clifford_given_angle(self.parameters[0])
+
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
