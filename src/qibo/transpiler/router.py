@@ -250,10 +250,8 @@ class CircuitMap:
         physical_swap = self.logical_to_physical(swap, index=True)
         if undo:
             last_swap_block = self._routed_blocks.return_last_block()
-            if (
-                last_swap_block.gates[0].__class__ != gates.SWAP
-                or last_swap_block.qubits != physical_swap
-            ):
+            if last_swap_block.gates[0].__class__ != gates.SWAP or \
+                last_swap_block.qubits != physical_swap:
                 raise_error(
                     TranspilerPipelineError,
                     "The last block does not match the current swap.",
@@ -672,8 +670,6 @@ class Sabre(Router):
         self.circuit = None
         self._memory_map = None
         self._final_measurements = None
-        # self._temporary_added_swaps = 0
-        # self._saved_circuit = None
         self._temp_added_swaps = []
         random.seed(seed)
 
@@ -688,7 +684,6 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
         """
         self._preprocessing(circuit=circuit, initial_layout=initial_layout)
-        self._saved_circuit = deepcopy(self.circuit)
         longest_path = np.max(self._dist_matrix)
 
         while self._dag.number_of_nodes() != 0:
@@ -701,9 +696,8 @@ class Sabre(Router):
             # If the number of added swaps is too high, the algorithm is stuck.
             # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
             if (
-                self._temporary_added_swaps > self.swap_threshold * longest_path
+                len(self._temp_added_swaps) > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
-                # self.circuit = deepcopy(self._saved_circuit)
                 while self._temp_added_swaps:
                     swap = self._temp_added_swaps.pop()
                     self.circuit.update(swap, undo=True)
@@ -817,9 +811,9 @@ class Sabre(Router):
 
         for qubit in self.circuit.logical_to_physical(best_candidate, index=True):
             self._delta_register[qubit] += self.delta
-        # self.circuit.update(best_candidate)
-        # self._temporary_added_swaps += 1
+        self.circuit.update(best_candidate)
         self._temp_added_swaps.append(best_candidate)
+
 
     def _compute_cost(self, candidate: int):
         """Compute the cost associated to a possible SWAP candidate."""
@@ -916,8 +910,6 @@ class Sabre(Router):
         self._update_front_layer()
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
-        # self._temporary_added_swaps = 0
-        # self._saved_circuit = deepcopy(self.circuit)
         self._temp_added_swaps = []
 
     def _shortest_path_routing(self):
