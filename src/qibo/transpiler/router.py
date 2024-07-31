@@ -250,8 +250,10 @@ class CircuitMap:
         physical_swap = self.logical_to_physical(swap, index=True)
         if undo:
             last_swap_block = self._routed_blocks.return_last_block()
-            if last_swap_block.gates[0].__class__ != gates.SWAP or \
-                last_swap_block.qubits != physical_swap:
+            if (
+                last_swap_block.gates[0].__class__ != gates.SWAP
+                or last_swap_block.qubits != physical_swap
+            ):
                 raise_error(
                     TranspilerPipelineError,
                     "The last block does not match the current swap.",
@@ -818,7 +820,6 @@ class Sabre(Router):
         # self.circuit.update(best_candidate)
         # self._temporary_added_swaps += 1
         self._temp_added_swaps.append(best_candidate)
-
 
     def _compute_cost(self, candidate: int):
         """Compute the cost associated to a possible SWAP candidate."""
