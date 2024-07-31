@@ -659,8 +659,9 @@ class Sabre(Router):
         self.circuit = None
         self._memory_map = None
         self._final_measurements = None
-        self._temporary_added_swaps = 0
-        self._saved_circuit = None
+        # self._temporary_added_swaps = 0
+        # self._saved_circuit = None
+        self._temp_added_swaps = []
         random.seed(seed)
 
     def __call__(self, circuit: Circuit, initial_layout: dict):
@@ -689,7 +690,11 @@ class Sabre(Router):
             if (
                 self._temporary_added_swaps > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
-                self.circuit = deepcopy(self._saved_circuit)
+                # self.circuit = deepcopy(self._saved_circuit)
+                while self._temp_added_swaps:
+                    swap = self._temp_added_swaps.pop()
+                    self.circuit.update(swap) # -1
+                self._temp_added_swaps = []
                 self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
@@ -799,8 +804,10 @@ class Sabre(Router):
 
         for qubit in self.circuit.logical_to_physical(best_candidate, index=True):
             self._delta_register[qubit] += self.delta
-        self.circuit.update(best_candidate)
-        self._temporary_added_swaps += 1
+        # self.circuit.update(best_candidate)
+        # self._temporary_added_swaps += 1
+        self._temp_added_swaps.append(best_candidate)
+
 
     def _compute_cost(self, candidate: int):
         """Compute the cost associated to a possible SWAP candidate."""
@@ -897,8 +904,9 @@ class Sabre(Router):
         self._update_front_layer()
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
-        self._temporary_added_swaps = 0
-        self._saved_circuit = deepcopy(self.circuit)
+        # self._temporary_added_swaps = 0
+        # self._saved_circuit = deepcopy(self.circuit)
+        self._temp_added_swaps = []
 
     def _shortest_path_routing(self):
         """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
