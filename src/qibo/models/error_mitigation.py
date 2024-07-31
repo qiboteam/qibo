@@ -1,5 +1,6 @@
 """Error Mitigation Methods."""
 
+import math
 from itertools import product
 
 import numpy as np
@@ -36,13 +37,13 @@ def get_gammas(noise_levels, analytical: bool = True):
         zne_coefficients = np.array(
             [
                 1
-                / (2 ** (2 * max_noise_level) * np.math.factorial(i))
+                / (2 ** (2 * max_noise_level) * math.factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * max_noise_level)
+                * math.factorial(1 + 2 * max_noise_level)
                 / (
-                    np.math.factorial(max_noise_level)
-                    * np.math.factorial(max_noise_level - i)
+                    math.factorial(max_noise_level)
+                    * math.factorial(max_noise_level - i)
                 )
                 for i in noise_levels
             ]
@@ -229,17 +230,20 @@ def sample_training_circuit_cdr(
 
         replacement.append(rep_gates)
         distance.append(
-            np.linalg.norm(
-                gate.matrix(backend)
-                - backend.cast([rep_gate.matrix(backend) for rep_gate in rep_gates]),
-                ord="fro",
-                axis=(1, 2),
+            backend.np.real(
+                backend.np.linalg.norm(
+                    gate.matrix(backend)
+                    - backend.cast(
+                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
+                    ),
+                    ord="fro",
+                    axis=(1, 2),
+                )
             )
         )
 
-    distance = np.vstack(distance)
-    prob = np.exp(-(distance**2) / sigma**2)
-    prob = backend.cast(prob, dtype=prob.dtype)
+    distance = backend.np.vstack(distance)
+    prob = backend.np.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),

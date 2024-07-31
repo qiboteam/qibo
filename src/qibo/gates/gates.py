@@ -821,6 +821,10 @@ class GPI2(ParametrizedGate):
     def qasm_label(self):
         return "gpi2"
 
+    @property
+    def clifford(self):
+        return _is_clifford_given_angle(self.parameters[0])
+
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
@@ -2508,24 +2512,12 @@ class Unitary(ParametrizedGate):
         }
 
         if check_unitary:
-            if unitary.__class__.__name__ == "Tensor":
-                import torch  # pylint: disable=C0145
-
-                diag_function = torch.diag
-                all_function = torch.all
-                conj_function = torch.conj
-                transpose_function = torch.transpose
-            else:
-                diag_function = np.diag
-                all_function = np.all
-                conj_function = np.conj
-                transpose_function = np.transpose
-
-            product = transpose_function(conj_function(unitary), (1, 0)) @ unitary
-            diagonals = all(np.abs(1 - diag_function(product)) < PRECISION_TOL)
+            engine = _check_engine(unitary)
+            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
+            diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
             off_diagonals = bool(
-                all_function(
-                    np.abs(product - diag_function(diag_function(product)))
+                engine.all(
+                    engine.abs(product - engine.diag(engine.diag(product)))
                     < PRECISION_TOL
                 )
             )
@@ -2536,7 +2528,10 @@ class Unitary(ParametrizedGate):
     @Gate.parameters.setter
     def parameters(self, x):
         shape = self.parameters[0].shape
-        self._parameters = (np.reshape(x, shape),)
+        engine = _check_engine(self.parameters[0])
+        # Reshape doesn't accept a tuple if engine is pytorch.
+        x = x[0] if type(x) is tuple else x
+        self._parameters = (engine.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
@@ -2559,5 +2554,16 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        ud = np.conj(np.transpose(self.parameters[0]))
+        engine = _check_engine(self.parameters[0])
+        ud = engine.conj(self.parameters[0].T)
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
+
+def _check_engine(array):
+    """Check if the array is a numpy or torch tensor and return the corresponding library."""
+    if array.__class__.__name__ == "Tensor":
+        import torch  # pylint: disable=C0415
+
+        return torch
+    else:
+        return np

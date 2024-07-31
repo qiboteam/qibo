@@ -5,7 +5,6 @@ import sys
 import numpy as np
 import pytest
 
-import qibo
 from qibo import Circuit, gates
 
 
@@ -21,14 +20,14 @@ def test_rx_parameter_setter(backend):
 
     theta = 0.1234
     gate = gates.RX(0, theta=theta)
-    initial_state = np.ones(2) / np.sqrt(2)
+    initial_state = backend.cast(np.ones(2) / np.sqrt(2))
     final_state = backend.apply_gate(gate, initial_state, 1)
     target_state = exact_state(theta)
     backend.assert_allclose(final_state, target_state)
 
     theta = 0.4321
     gate.parameters = theta
-    initial_state = np.ones(2) / np.sqrt(2)
+    initial_state = backend.cast(np.ones(2) / np.sqrt(2))
     final_state = backend.apply_gate(gate, initial_state, 1)
     target_state = exact_state(theta)
     backend.assert_allclose(final_state, target_state)
