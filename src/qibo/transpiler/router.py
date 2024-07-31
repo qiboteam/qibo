@@ -8,7 +8,7 @@ import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import ConnectivityError
+from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
 
@@ -238,7 +238,7 @@ class CircuitMap:
 
         return dict(sorted(unsorted_dict.items()))
 
-    def update(self, swap: tuple):
+    def update(self, swap: tuple, undo: bool = False):
         """Updates the logical-physical qubit mapping after applying a ``SWAP``
 
         Adds the :class:`qibo.gates.gates.SWAP` gate to the routed blocks.
@@ -248,10 +248,20 @@ class CircuitMap:
             swap (tuple): tuple containing the logical qubits to be swapped.
         """
         physical_swap = self.logical_to_physical(swap, index=True)
-        self._routed_blocks.add_block(
-            Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
-        )
-        self._swaps += 1
+        if undo:
+            last_swap_block = self._routed_blocks.return_last_block()
+            if last_swap_block.gates[0].__class__ != gates.SWAP:
+                raise_error(
+                    TranspilerPipelineError,
+                    "Last block is not a SWAP gate. Cannot undo SWAP.",
+                )
+            self._routed_blocks.remove_block(last_swap_block)
+            self._swaps -= 1
+        else:
+            self._routed_blocks.add_block(
+                Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
+            )
+            self._swaps += 1
         idx_0, idx_1 = self._circuit_logical.index(
             swap[0]
         ), self._circuit_logical.index(swap[1])
