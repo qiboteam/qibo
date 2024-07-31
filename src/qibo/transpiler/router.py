@@ -247,7 +247,7 @@ class CircuitMap:
         Args:
             swap (tuple): tuple containing the logical qubits to be swapped.
         """
-        physical_swap = self.logical_to_physical(swap, index=True)
+        physical_swap = tuple(sorted(self.logical_to_physical(swap, index=True)))
         if undo:
             last_swap_block = self._routed_blocks.return_last_block()
             if (
