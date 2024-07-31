@@ -250,10 +250,11 @@ class CircuitMap:
         physical_swap = self.logical_to_physical(swap, index=True)
         if undo:
             last_swap_block = self._routed_blocks.return_last_block()
-            if last_swap_block.gates[0].__class__ != gates.SWAP:
+            if last_swap_block.gates[0].__class__ != gates.SWAP or \
+                last_swap_block.qubits != physical_swap:
                 raise_error(
                     TranspilerPipelineError,
-                    "Last block is not a SWAP gate. Cannot undo SWAP.",
+                    "The last block does not match the current swap.",
                 )
             self._routed_blocks.remove_block(last_swap_block)
             self._swaps -= 1
@@ -703,7 +704,7 @@ class Sabre(Router):
                 # self.circuit = deepcopy(self._saved_circuit)
                 while self._temp_added_swaps:
                     swap = self._temp_added_swaps.pop()
-                    self.circuit.update(swap) # -1
+                    self.circuit.update(swap, undo=True)
                 self._temp_added_swaps = []
                 self._shortest_path_routing()
 
