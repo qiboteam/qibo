@@ -261,7 +261,8 @@ def test_hamiltonian_expectation_errors(backend):
         h.expectation("test")
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize("use_samples", [False, True])
+def test_hamiltonian_expectation_from_samples(backend, use_samples):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(12)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
@@ -278,11 +279,11 @@ def test_hamiltonian_expectation_from_samples(backend):
     nshots = 10**5
     # result = c(nshots=nshots)
     result = backend.execute_circuit(c, nshots=nshots)
-    freq = result.frequencies(binary=True)
+    freq = result.samples() if use_samples else result.frequencies(binary=True)
 
     Obs0 = hamiltonians.Hamiltonian(
         3, matrix, backend=backend
-    ).expectation_from_samples(freq, qubit_map=None)
+    ).expectation_from_samples(freq, qubit_map=None, input_samples=use_samples)
     Obs0 = backend.cast(Obs0, dtype=Obs0.dtype)
 
     Obs1 = h1.expectation(result.state())
