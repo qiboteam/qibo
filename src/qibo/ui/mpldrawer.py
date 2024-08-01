@@ -563,8 +563,7 @@ def _make_cluster_gates(gates_items):
 def _build_path(filename):
     file_path = path.abspath(__file__)  # full path of current file
     dir_path = path.dirname(file_path)  # full path of the directory from file
-    final_path = path.join(dir_path, filename)  # absolute file path of given file
-    return final_path
+    return path.join(dir_path, filename)  # absolute file path of given file
 
 
 def _check_list_str(substrings, string):
