@@ -4,6 +4,7 @@
 #
 import json
 from os import path
+from pathlib import Path
 
 import matplotlib
 import numpy as np
@@ -11,7 +12,6 @@ import numpy as np
 from qibo import gates
 
 from .FusedGateBarrier import FusedEndGateBarrier, FusedStartGateBarrier
-from pathlib import Path
 
 UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
