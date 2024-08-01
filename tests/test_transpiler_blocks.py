@@ -367,3 +367,17 @@ def test_block_on_qubits():
     assert new_block.gates[2].qubits == (3,)
     assert new_block.gates[3].qubits == (3, 2)
     assert new_block.gates[4].qubits == (3,)
+
+def test_return_last_block():
+    circ = Circuit(4)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 3))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(2, 3))
+    circuit_blocks = CircuitBlocks(circ)
+    last_block = circuit_blocks.return_last_block()
+    assert_gates_equality(last_block.gates, [gates.CZ(2, 3)])
+
+    circuit_blocks.remove_block(last_block)
+    last_block_2 = circuit_blocks.return_last_block()
+    assert_gates_equality(last_block_2.gates, [gates.CZ(1, 2)])
