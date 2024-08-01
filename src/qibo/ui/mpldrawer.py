@@ -11,9 +11,11 @@ import numpy as np
 from qibo import gates
 
 from .FusedGateBarrier import FusedEndGateBarrier, FusedStartGateBarrier
+from pathlib import Path
 
-STYLE = {}
-SYMBOLS = {}
+UI = Path(__file__).parent
+STYLE = json.loads((UI / "styles.json").read_text())
+SYMBOLS = json.loads((UI / "symbols.json").read_text())
 
 plot_params = {
     "scale": 1.0,
@@ -624,16 +626,6 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
     ax.figure       A Figure object (type: matplotlib.figure.Figure)
     """
-
-    json_file = _build_path("symbols.json")
-
-    with open(json_file) as file:
-        SYMBOLS.update(json.load(file))
-
-    json_file = _build_path("styles.json")
-
-    with open(json_file) as file:
-        STYLE.update(json.load(file))
 
     if style is not None:
         if type(style) is dict:
