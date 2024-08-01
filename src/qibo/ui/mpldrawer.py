@@ -12,10 +12,8 @@ from qibo import gates
 
 from .FusedGateBarrier import FusedGateEndBarrier, FusedStartGateBarrier
 
-global STYLE
 STYLE = {}
 
-global SYMBOLS
 SYMBOLS = {}
 
 plot_params = {
