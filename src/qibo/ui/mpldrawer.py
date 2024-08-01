@@ -34,7 +34,9 @@ PLOT_PARAMS = {
 }
 
 
-def _plot_quantum_schedule(schedule, inits, plot_params, labels=[], plot_labels=True, **kwargs):
+def _plot_quantum_schedule(
+    schedule, inits, plot_params, labels=[], plot_labels=True, **kwargs
+):
     """Use Matplotlib to plot a quantum circuit.
     schedule  List of time steps, each containing a sequence of gates during that step.
               Each gate is a tuple containing (name,target,control1,control2...).
@@ -76,7 +78,9 @@ def _plot_quantum_schedule(schedule, inits, plot_params, labels=[], plot_labels=
     return ax
 
 
-def _plot_quantum_circuit(gates, inits, plot_params, labels=[], plot_labels=True, **kwargs):
+def _plot_quantum_circuit(
+    gates, inits, plot_params, labels=[], plot_labels=True, **kwargs
+):
     """Use Matplotlib to plot a quantum circuit.
     gates     List of tuples for each gate in the quantum circuit.
               (name,target,control1,control2...). Targets and controls initially
@@ -669,7 +673,9 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
 
         if cluster_gates:
             gates_cluster = _make_cluster_gates(gates_plot)
-            ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
+            ax = _plot_quantum_schedule(
+                gates_cluster, inits, params, labels, scale=scale
+            )
             return ax, ax.figure
 
         ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
