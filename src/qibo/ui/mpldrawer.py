@@ -620,15 +620,13 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax.figure       A Figure object (type: matplotlib.figure.Figure)
     """
 
-    if style is not None:
-        if type(style) is dict:
-            plot_params.update(style)
-        else:
-            plot_params.update(
-                STYLE[style] if style in list(STYLE.keys()) else STYLE["default"]
-            )
-    else:
-        plot_params.update(STYLE["default"])
+	params = PLOT_PARAMS.copy()
+    if not isinstance(style, dict):
+        try:
+            style = STYLE.get(style)
+        except AttributeError:
+            style = STYLE["default"]
+    params.update(style)
 
     inits = list(range(circuit.nqubits))
 
