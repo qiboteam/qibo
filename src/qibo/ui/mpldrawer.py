@@ -17,7 +17,7 @@ UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
 SYMBOLS = json.loads((UI / "symbols.json").read_text())
 
-plot_params = {
+PLOT_PARAMS = {
     "scale": 1.0,
     "fontsize": 14.0,
     "linewidth": 1.0,
