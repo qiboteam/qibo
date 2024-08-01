@@ -34,7 +34,7 @@ PLOT_PARAMS = {
 }
 
 
-def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwargs):
+def _plot_quantum_schedule(schedule, inits, plot_params, labels=[], plot_labels=True, **kwargs):
     """Use Matplotlib to plot a quantum circuit.
     schedule  List of time steps, each containing a sequence of gates during that step.
               Each gate is a tuple containing (name,target,control1,control2...).
@@ -44,6 +44,7 @@ def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwarg
 
     kwargs    Can override plot_parameters
     """
+
     plot_params.update(kwargs)
     scale = plot_params["scale"]
 
@@ -75,7 +76,7 @@ def _plot_quantum_schedule(schedule, inits, labels=[], plot_labels=True, **kwarg
     return ax
 
 
-def _plot_quantum_circuit(gates, inits, labels=[], plot_labels=True, **kwargs):
+def _plot_quantum_circuit(gates, inits, plot_params, labels=[], plot_labels=True, **kwargs):
     """Use Matplotlib to plot a quantum circuit.
     gates     List of tuples for each gate in the quantum circuit.
               (name,target,control1,control2...). Targets and controls initially
@@ -85,6 +86,7 @@ def _plot_quantum_circuit(gates, inits, labels=[], plot_labels=True, **kwargs):
 
     kwargs    Can override plot_parameters
     """
+
     plot_params.update(kwargs)
     scale = plot_params["scale"]
 
@@ -114,14 +116,13 @@ def _plot_quantum_circuit(gates, inits, labels=[], plot_labels=True, **kwargs):
     return ax
 
 
-def _plot_lines_circuit(inits, labels, plot_labels=True, **kwargs):
+def _plot_lines_circuit(inits, labels, plot_params, plot_labels=True, **kwargs):
     """Use Matplotlib to plot a quantum circuit.
     inits     Initialization list of gates
     labels    List of qubit labels
 
     kwargs    Can override plot_parameters
     """
-
     plot_params.update(kwargs)
     scale = plot_params["scale"]
 
@@ -620,14 +621,14 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     ax.figure       A Figure object (type: matplotlib.figure.Figure)
     """
 
-	params = PLOT_PARAMS.copy()
+    params = PLOT_PARAMS.copy()
     if not isinstance(style, dict):
         try:
-            style = STYLE.get(style)
+            style = STYLE.get(style) if (style is not None) else STYLE["default"]
         except AttributeError:
             style = STYLE["default"]
-    params.update(style)
 
+    params.update(style)
     inits = list(range(circuit.nqubits))
 
     labels = []
@@ -668,11 +669,11 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
 
         if cluster_gates:
             gates_cluster = _make_cluster_gates(gates_plot)
-            ax = _plot_quantum_schedule(gates_cluster, inits, labels, scale=scale)
+            ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
             return ax, ax.figure
 
-        ax = _plot_quantum_circuit(gates_plot, inits, labels, scale=scale)
+        ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
         return ax, ax.figure
     else:
-        ax = _plot_lines_circuit(inits, labels, scale=scale)
+        ax = _plot_lines_circuit(inits, labels, params, scale=scale)
         return ax, ax.figure
