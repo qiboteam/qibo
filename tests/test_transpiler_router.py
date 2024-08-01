@@ -474,11 +474,12 @@ def test_star_router(nqubits, depth, middle_qubit, measurements, unitaries):
         initial_map=initial_layout,
     )
 
+
 def test_update_undo():
     circ = Circuit(4)
     initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
-    
+
     # Two SWAP gates are added
     circuit_map.update((1, 2))
     circuit_map.update((2, 3))
@@ -502,7 +503,7 @@ def test_update_undo_error():
     circ = Circuit(4)
     initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
-    
+
     circuit_map.update((1, 2))
     circuit_map.update((2, 3))
 
@@ -518,5 +519,3 @@ def test_update_undo_error():
     # The last block is a CZ gate
     with pytest.raises(TranspilerPipelineError):
         circuit_map_cz.update((0, 1), undo=True)
-    
-    

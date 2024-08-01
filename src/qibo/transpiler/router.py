@@ -248,14 +248,13 @@ class CircuitMap:
         Args:
             swap (tuple): tuple containing the logical qubits to be swapped.
             undo (bool, optional): If ``True``, the last swap is undone. Defaults to ``False``.
-        """        
-        physical_swap = self.logical_to_physical(swap, index=True)        
+        """
+        physical_swap = self.logical_to_physical(swap, index=True)
         if undo:
             last_swap_block = self._routed_blocks.return_last_block()
-            if (
-                last_swap_block.gates[0].__class__ != gates.SWAP
-                or sorted(last_swap_block.qubits) != sorted(physical_swap)
-            ):
+            if last_swap_block.gates[0].__class__ != gates.SWAP or sorted(
+                last_swap_block.qubits
+            ) != sorted(physical_swap):
                 raise_error(
                     TranspilerPipelineError,
                     "The last block does not match the swap to undo.",

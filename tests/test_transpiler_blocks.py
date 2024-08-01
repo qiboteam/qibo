@@ -368,6 +368,7 @@ def test_block_on_qubits():
     assert new_block.gates[3].qubits == (3, 2)
     assert new_block.gates[4].qubits == (3,)
 
+
 def test_return_last_block():
     circ = Circuit(4)
     circ.add(gates.CZ(0, 1))
