@@ -540,9 +540,6 @@ def _make_cluster_gates(gates_items):
     if len(temp_mgates) > 0:
         cluster_gates.append(temp_mgates)
 
-    temp_gates = []
-    temp_mgates = []
-
     return cluster_gates
 
 
