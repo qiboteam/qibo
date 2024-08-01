@@ -550,11 +550,8 @@ def _build_path(filename):
     return final_path
 
 
-def _check_list_str(list, str):
-    for item in list:
-        if item in str:
-            return True
-    return False
+def _check_list_str(substrings, string):
+    return any(item in str for item in list)
 
 
 def _process_gates(array_gates):
