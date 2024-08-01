@@ -382,3 +382,11 @@ def test_return_last_block():
     circuit_blocks.remove_block(last_block)
     last_block_2 = circuit_blocks.return_last_block()
     assert_gates_equality(last_block_2.gates, [gates.CZ(1, 2)])
+
+def test_return_last_block_error():
+    circ = Circuit(4)
+    circuit_blocks = CircuitBlocks(circ)
+
+    # No blocks in the circuit
+    with pytest.raises(BlockingError):
+        last_block = circuit_blocks.return_last_block()
