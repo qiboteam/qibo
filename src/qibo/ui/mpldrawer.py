@@ -412,6 +412,7 @@ def _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
             plot_params,
         )
 
+
 def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
     label_buffer = plot_params["label_buffer"]
