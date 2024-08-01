@@ -10,12 +10,9 @@ import numpy as np
 
 from qibo import gates
 
-from .FusedGateBarrier import FusedGateEndBarrier, FusedStartGateBarrier
+from .FusedGateBarrier import FusedEndGateBarrier, FusedStartGateBarrier
 
-global STYLE
 STYLE = {}
-
-global SYMBOLS
 SYMBOLS = {}
 
 plot_params = {
@@ -179,7 +176,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
 
     name, target = gate[:2]
 
-    if "FUSEDGATEENDBARRIER" in name:
+    if "FUSEDENDGATEBARRIER" in name:
         return
 
     linewidth = plot_params["linewidth"]
@@ -278,7 +275,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     name, target = gate[:2]
 
-    if "FUSEDSTARTGATEBARRIER" in name or "FUSEDGATEENDBARRIER" in name:
+    if "FUSEDSTARTGATEBARRIER" in name or "FUSEDENDGATEBARRIER" in name:
         return
 
     is_dagger = False
@@ -414,20 +411,6 @@ def _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
             wire_grid[i],
             plot_params,
         )
-
-    # Add the doubling for measured wires:
-    # dy = 0.04  # TODO: add to plot_params
-    # for i in measured:
-    #    j = measured[i]
-    #    _line(
-    #        ax,
-    #        gate_grid[j],
-    #        gate_grid[-1] + scale,
-    #        wire_grid[i] + dy,
-    #        wire_grid[i] + dy,
-    #        plot_params,
-    #    )
-
 
 def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
@@ -703,7 +686,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
                     FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
                 )
                 all_gates += gate.gates
-                all_gates.append(FusedGateEndBarrier(min_q, max_q))
+                all_gates.append(FusedEndGateBarrier(min_q, max_q))
             else:
                 all_gates.append(gate)
 

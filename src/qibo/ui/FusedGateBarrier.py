@@ -19,11 +19,11 @@ class FusedStartGateBarrier(Gate):
         self.nfused = nfused
 
 
-class FusedGateEndBarrier(Gate):
+class FusedEndGateBarrier(Gate):
     def __init__(self, q_ctrl, q_trgt):
 
         super().__init__()
-        self.name = "FusedGateEndBarrier"
+        self.name = "FusedEndGateBarrier"
         self.draw_label = ""
         self.control_qubits = (q_ctrl,)
         self.target_qubits = (q_trgt,) if q_ctrl != q_trgt else ()
