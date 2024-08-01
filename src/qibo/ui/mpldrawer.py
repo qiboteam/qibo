@@ -3,7 +3,6 @@
 # https://github.com/rpmuller/PlotQCircuit
 #
 import json
-from os import path
 from pathlib import Path
 
 import matplotlib
