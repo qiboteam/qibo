@@ -551,7 +551,7 @@ def _build_path(filename):
 
 
 def _check_list_str(substrings, string):
-    return any(item in str for item in list)
+    return any(item in string for item in substrings)
 
 
 def _process_gates(array_gates):
@@ -562,17 +562,14 @@ def _process_gates(array_gates):
 
         if init_label == "CCX":
             init_label = "TOFFOLI"
-
-        if init_label == "CX":
+        elif init_label == "CX":
             init_label = "CNOT"
-
-        if _check_list_str(["SX", "CSX"], init_label):
+        elif _check_list_str(["SX", "CSX"], init_label):
             is_dagger = init_label[-2:] == "DG"
             init_label = (
                 r"$\rm{\sqrt{X}}^{\dagger}$" if is_dagger else r"$\rm{\sqrt{X}}$"
             )
-
-        if (
+        elif (
             len(gate._control_qubits) > 0
             and "C" in init_label[0]
             and "CNOT" != init_label
