@@ -4,7 +4,7 @@
 #
 import json
 from pathlib import Path
-
+from typing import Union
 import matplotlib
 import numpy as np
 
@@ -587,6 +587,16 @@ def _process_gates(array_gates):
     return gates_plot
 
 
+def _plot_params(style: Union[dict, str, None]) -> dict:
+    if not isinstance(style, dict):
+        try:
+            style = STYLE.get(style) if (style is not None) else STYLE["default"]
+        except AttributeError:
+            style = STYLE["default"]
+
+    return style
+
+
 def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
@@ -599,13 +609,7 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     """
 
     params = PLOT_PARAMS.copy()
-    if not isinstance(style, dict):
-        try:
-            style = STYLE.get(style) if (style is not None) else STYLE["default"]
-        except AttributeError:
-            style = STYLE["default"]
-
-    params.update(style)
+    params.update(_plot_params(style))
     inits = list(range(circuit.nqubits))
 
     labels = []
