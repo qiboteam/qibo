@@ -88,16 +88,12 @@ def _plot_quantum_circuit(
 
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
 
-    EMPTY_GATES = True if ng == 0 else False
-
-    gate_grid = np.arange(0.0, (nq if EMPTY_GATES else ng) * scale, scale, dtype=float)
+    gate_grid = np.arange(0.0, (nq if ng == 0 else ng) * scale, scale, dtype=float)
     ax, _ = _setup_figure(
-        nq, (nq if EMPTY_GATES else ng), gate_grid, wire_grid, plot_params
+        nq, (nq if ng == 0 else ng), gate_grid, wire_grid, plot_params
     )
 
-    measured = (
-        None if EMPTY_GATES else _measured_wires(gates, labels, schedule=schedule)
-    )
+    measured = None if ng == 0 else _measured_wires(gates, labels, schedule=schedule)
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured)
 
     if plot_labels:
