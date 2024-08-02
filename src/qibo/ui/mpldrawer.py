@@ -5,6 +5,7 @@
 import json
 from pathlib import Path
 from typing import Union
+
 import matplotlib
 import numpy as np
 
