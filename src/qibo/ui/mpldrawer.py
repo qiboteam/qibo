@@ -47,39 +47,19 @@ def _plot_quantum_schedule(
     kwargs    Can override plot_parameters
     """
 
-    plot_params.update(kwargs)
-    scale = plot_params["scale"]
-
-    # Create labels from gates. This will become slow if there are a lot
-    #  of gates, in which case move to an ordered dictionary
-    if not labels:
-        labels = []
-        for i, gate in _enumerate_gates(schedule, schedule=True):
-            for label in gate[1:]:
-                if label not in labels:
-                    labels.append(label)
-
-    nq = len(labels)
-    nt = len(schedule)
-    wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
-    gate_grid = np.arange(0.0, nt * scale, scale, dtype=float)
-
-    ax, _ = _setup_figure(nq, nt, gate_grid, wire_grid, plot_params)
-
-    measured = _measured_wires(schedule, labels, schedule=True)
-    _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured)
-
-    if plot_labels:
-        _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params)
-
-    _draw_gates(
-        ax, schedule, labels, gate_grid, wire_grid, plot_params, measured, schedule=True
+    return _plot_quantum_circuit(
+        schedule,
+        inits,
+        plot_params,
+        labels=labels,
+        plot_labels=plot_labels,
+        schedule=True,
+        **kwargs
     )
-    return ax
 
 
 def _plot_quantum_circuit(
-    gates, inits, plot_params, labels=[], plot_labels=True, **kwargs
+    gates, inits, plot_params, labels=[], plot_labels=True, schedule=False, **kwargs
 ):
     """Use Matplotlib to plot a quantum circuit.
     gates     List of tuples for each gate in the quantum circuit.
@@ -98,49 +78,42 @@ def _plot_quantum_circuit(
     #  of gates, in which case move to an ordered dictionary
     if not labels:
         labels = []
-        for i, gate in _enumerate_gates(gates):
+        for i, gate in _enumerate_gates(gates, schedule=schedule):
             for label in gate[1:]:
                 if label not in labels:
                     labels.append(label)
 
     nq = len(labels)
     ng = len(gates)
+
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
-    gate_grid = np.arange(0.0, ng * scale, scale, dtype=float)
 
-    ax, _ = _setup_figure(nq, ng, gate_grid, wire_grid, plot_params)
+    EMPTY_GATES = True if ng == 0 else False
 
-    measured = _measured_wires(gates, labels)
+    gate_grid = np.arange(0.0, (nq if EMPTY_GATES else ng) * scale, scale, dtype=float)
+    ax, _ = _setup_figure(
+        nq, (nq if EMPTY_GATES else ng), gate_grid, wire_grid, plot_params
+    )
+
+    measured = (
+        None if EMPTY_GATES else _measured_wires(gates, labels, schedule=schedule)
+    )
     _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured)
 
     if plot_labels:
         _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params)
 
-    _draw_gates(ax, gates, labels, gate_grid, wire_grid, plot_params, measured)
-    return ax
-
-
-def _plot_lines_circuit(inits, labels, plot_params, plot_labels=True, **kwargs):
-    """Use Matplotlib to plot a quantum circuit.
-    inits     Initialization list of gates
-    labels    List of qubit labels
-
-    kwargs    Can override plot_parameters
-    """
-    plot_params.update(kwargs)
-    scale = plot_params["scale"]
-
-    nq = len(labels)
-
-    wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
-    gate_grid = np.arange(0.0, nq * scale, scale, dtype=float)
-
-    ax, _ = _setup_figure(nq, nq, gate_grid, wire_grid, plot_params)
-
-    _draw_wires(ax, nq, gate_grid, wire_grid, plot_params)
-
-    if plot_labels:
-        _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params)
+    if ng > 0:
+        _draw_gates(
+            ax,
+            gates,
+            labels,
+            gate_grid,
+            wire_grid,
+            plot_params,
+            measured,
+            schedule=schedule,
+        )
 
     return ax
 
@@ -555,6 +528,10 @@ def _check_list_str(substrings, string):
 
 
 def _process_gates(array_gates):
+
+    if len(array_gates) == 0:
+        return []
+
     gates_plot = []
 
     for gate in array_gates:
@@ -639,47 +616,38 @@ def plot(circuit, scale=0.6, cluster_gates=True, style=None):
     for i in range(circuit.nqubits):
         labels.append("q_" + str(i))
 
-    if len(circuit.queue) > 0:
+    all_gates = []
+    for gate in circuit.queue:
+        if isinstance(gate, gates.FusedGate):
+            min_q, max_q = _get_min_max_qbits(gate)
 
-        all_gates = []
-        for gate in circuit.queue:
-            if isinstance(gate, gates.FusedGate):
-                min_q, max_q = _get_min_max_qbits(gate)
+            fgates = None
 
-                fgates = None
-
-                if cluster_gates:
-                    fgates = _make_cluster_gates(_process_gates(gate.gates))
-                else:
-                    fgates = _process_gates(gate.gates)
-
-                l_gates = len(gate.gates)
-                equal_qbits = False
-                if min_q != max_q:
-                    l_gates = len(fgates)
-                else:
-                    max_q += 1
-                    equal_qbits = True
-
-                all_gates.append(
-                    FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
-                )
-                all_gates += gate.gates
-                all_gates.append(FusedEndGateBarrier(min_q, max_q))
+            if cluster_gates:
+                fgates = _make_cluster_gates(_process_gates(gate.gates))
             else:
-                all_gates.append(gate)
+                fgates = _process_gates(gate.gates)
 
-        gates_plot = _process_gates(all_gates)
+            l_gates = len(gate.gates)
+            equal_qbits = False
+            if min_q != max_q:
+                l_gates = len(fgates)
+            else:
+                max_q += 1
+                equal_qbits = True
 
-        if cluster_gates:
-            gates_cluster = _make_cluster_gates(gates_plot)
-            ax = _plot_quantum_schedule(
-                gates_cluster, inits, params, labels, scale=scale
-            )
-            return ax, ax.figure
+            all_gates.append(FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits))
+            all_gates += gate.gates
+            all_gates.append(FusedEndGateBarrier(min_q, max_q))
+        else:
+            all_gates.append(gate)
 
-        ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
+    gates_plot = _process_gates(all_gates)
+
+    if cluster_gates and len(gates_plot) > 0:
+        gates_cluster = _make_cluster_gates(gates_plot)
+        ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
         return ax, ax.figure
-    else:
-        ax = _plot_lines_circuit(inits, labels, params, scale=scale)
-        return ax, ax.figure
+
+    ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
+    return ax, ax.figure
