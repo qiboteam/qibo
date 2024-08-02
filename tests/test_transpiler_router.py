@@ -8,7 +8,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
-from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.blocks import Block
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
@@ -475,7 +475,7 @@ def test_star_router(nqubits, depth, middle_qubit, measurements, unitaries):
     )
 
 
-def test_update_undo():
+def test_undo():
     circ = Circuit(4)
     initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
@@ -487,19 +487,19 @@ def test_update_undo():
     assert len(circuit_map._routed_blocks.block_list) == 2
 
     # Undo the last SWAP gate
-    circuit_map.update((2, 3), undo=True)
+    circuit_map.undo((2, 3))
     assert circuit_map._circuit_logical == [0, 2, 1, 3]
     assert circuit_map._swaps == 1
     assert len(circuit_map._routed_blocks.block_list) == 1
 
     # Undo the first SWAP gate
-    circuit_map.update((1, 2), undo=True)
+    circuit_map.undo((1, 2))
     assert circuit_map._circuit_logical == [0, 1, 2, 3]
     assert circuit_map._swaps == 0
     assert len(circuit_map._routed_blocks.block_list) == 0
 
 
-def test_update_undo_error():
+def test_undo_error():
     circ = Circuit(4)
     initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
@@ -508,8 +508,8 @@ def test_update_undo_error():
     circuit_map.update((2, 3))
 
     # The last block is a SWAP gate on qubits (2, 3)
-    with pytest.raises(TranspilerPipelineError):
-        circuit_map.update((1, 2), undo=True)
+    with pytest.raises(ConnectivityError):
+        circuit_map.undo((1, 2))
 
     circ_cz = Circuit(4)
     circuit_map_cz = CircuitMap(initial_layout=initial_layout, circuit=circ_cz)
@@ -517,5 +517,5 @@ def test_update_undo_error():
     circuit_map_cz._routed_blocks.add_block(block)
 
     # The last block is a CZ gate
-    with pytest.raises(TranspilerPipelineError):
-        circuit_map_cz.update((0, 1), undo=True)
+    with pytest.raises(ConnectivityError):
+        circuit_map_cz.undo((0, 1))

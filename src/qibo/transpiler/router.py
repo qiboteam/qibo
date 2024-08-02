@@ -8,7 +8,7 @@ import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
 
@@ -238,34 +238,46 @@ class CircuitMap:
 
         return dict(sorted(unsorted_dict.items()))
 
-    def update(self, swap: tuple, undo: bool = False):
-        """Updates the logical-physical qubit mapping after applying / undoing a ``SWAP.``
+    def update(self, swap: tuple):
+        """Updates the logical-physical qubit mapping after applying a ``SWAP``
 
         Adds the :class:`qibo.gates.gates.SWAP` gate to the routed blocks.
-        Undo the last swap if ``undo`` is ``True``. Qubits of the last swap must be the same as the input swap.
         Method works in-place.
 
         Args:
             swap (tuple): tuple containing the logical qubits to be swapped.
-            undo (bool, optional): If ``True``, the last swap is undone. Defaults to ``False``.
         """
         physical_swap = self.logical_to_physical(swap, index=True)
-        if undo:
-            last_swap_block = self._routed_blocks.return_last_block()
-            if last_swap_block.gates[0].__class__ != gates.SWAP or sorted(
-                last_swap_block.qubits
-            ) != sorted(physical_swap):
-                raise_error(
-                    TranspilerPipelineError,
-                    "The last block does not match the swap to undo.",
-                )
-            self._routed_blocks.remove_block(last_swap_block)
-            self._swaps -= 1
-        else:
-            self._routed_blocks.add_block(
-                Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
+        self._routed_blocks.add_block(
+            Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
+        )
+        self._swaps += 1
+        idx_0, idx_1 = self._circuit_logical.index(
+            swap[0]
+        ), self._circuit_logical.index(swap[1])
+        self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
+
+    def undo(self, swap: tuple):
+        """Undo the last swap.
+
+        If the last block is not a swap or does not match the swap to undo, an error is raised.
+        Method works in-place.
+
+        Args:
+            swap (tuple): tuple containing the logical qubits to be swapped.
+        """
+        physical_swap = self.logical_to_physical(swap, index=True)
+        last_swap_block = self._routed_blocks.return_last_block()
+        if last_swap_block.gates[0].__class__ != gates.SWAP or sorted(
+            last_swap_block.qubits
+        ) != sorted(physical_swap):
+            raise_error(
+                ConnectivityError,
+                "The last block does not match the swap to undo.",
             )
-            self._swaps += 1
+        self._routed_blocks.remove_block(last_swap_block)
+        self._swaps -= 1
+
         idx_0, idx_1 = self._circuit_logical.index(
             swap[0]
         ), self._circuit_logical.index(swap[1])
@@ -703,7 +715,7 @@ class Sabre(Router):
             ):  # threshold is arbitrary
                 while self._temp_added_swaps:
                     swap = self._temp_added_swaps.pop()
-                    self.circuit.update(swap, undo=True)
+                    self.circuit.undo(swap)
                 self._temp_added_swaps = []
                 self._shortest_path_routing()
 
