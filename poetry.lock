@@ -5611,10 +5611,11 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 
 [extras]
 qinfo = []
+qulacs = ["qulacs"]
 tensorflow = ["tensorflow"]
 torch = ["torch"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "aae6addee9eeafec56d8349fee21e5c67826a0195f6fe233cc38283f5825f493"
+content-hash = "bb1ae3d1fd342754f07fd73c3068f2aeb5826e3bf2af2a4501c27fbcaea7bbbc"

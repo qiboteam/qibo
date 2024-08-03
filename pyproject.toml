@@ -112,6 +112,7 @@ qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 tensorflow = ["tensorflow"]
 torch = ["torch"]
 qinfo = ["stim"]
+qulacs = ["qulacs"]
 
 [tool.pylint.main]
 ignored-modules = ["cvxpy"]
