@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.10"
+version = "0.2.11"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -112,6 +112,7 @@ qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 tensorflow = ["tensorflow"]
 torch = ["torch"]
 qinfo = ["stim"]
+qulacs = ["qulacs"]
 
 [tool.pylint.main]
 ignored-modules = ["cvxpy"]
