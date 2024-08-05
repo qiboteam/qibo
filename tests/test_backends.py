@@ -127,7 +127,9 @@ def test_list_available_backends():
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
     }
-    assert available_backends == list_available_backends()
+    assert available_backends == list_available_backends(
+        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn"
+    )
 
 
 def test_gradients_pytorch():
