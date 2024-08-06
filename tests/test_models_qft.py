@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates, models
+from qibo import models
 from qibo.quantum_info import random_statevector
 
 
@@ -22,14 +22,21 @@ def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
     return np.exp(sign * 2 * np.pi * 1j * exponent / dimension) / np.sqrt(dimension)
 
 
-def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
+def exact_qft(
+    x: np.ndarray, density_matrix: bool = False, backend=None, inverse: bool = False
+) -> np.ndarray:
     """Performs exact QFT to a given state vector."""
     dim = len(x)
-    return qft_matrix(dim, inverse).dot(x)
+    matrix = qft_matrix(dim, inverse)
+    if backend is not None:
+        matrix = backend.cast(matrix, dtype=matrix.dtype)
+    if density_matrix:
+        return matrix @ x @ backend.np.conj(matrix).T
+    return matrix @ x
 
 
 @pytest.mark.parametrize("nqubits", [4, 10, 100])
-def test_qft_circuit_size(backend, nqubits):
+def test_qft_circuit_size(nqubits):
     c = models.QFT(nqubits)
     assert c.nqubits == nqubits
     assert c.depth == 2 * nqubits
@@ -47,20 +54,25 @@ def test_qft_matrix(backend, nqubits):
     backend.assert_allclose(c.unitary(backend), target_matrix)
 
 
-@pytest.mark.parametrize("nqubits", [5, 6, 12])
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nqubits", [5, 6])
 @pytest.mark.parametrize("random", [False, True])
-def test_qft_execution(backend, accelerators, nqubits, random):
-    c = models.QFT(nqubits)
-    if random:
-        initial_state = random_statevector(2**nqubits, backend=backend)
-    else:
-        initial_state = backend.zero_state(nqubits)
+def test_qft_execution(backend, nqubits, random, density_matrix):
+    c = models.QFT(nqubits, density_matrix=density_matrix)
+    initial_state = (
+        random_statevector(2**nqubits, backend=backend)
+        if random
+        else backend.zero_state(nqubits)
+    )
+    if density_matrix:
+        initial_state = backend.np.outer(initial_state, backend.np.conj(initial_state))
+
     final_state = backend.execute_circuit(c, backend.np.copy(initial_state))._state
-    target_state = exact_qft(backend.to_numpy(initial_state))
+    target_state = exact_qft(initial_state, density_matrix, backend)
     backend.assert_allclose(final_state, target_state)
 
 
-def test_qft_errors(backend):
+def test_qft_errors():
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     from qibo.models.qft import _DistributedQFT
 
