@@ -327,7 +327,7 @@ class MeasurementOutcomes:
                 self._samples = self.backend.np.concatenate(
                     [
                         self.backend.cast(
-                            gate.result.samples(), dtype=self.backend.np.uint8
+                            gate.result.samples(), dtype=self.backend.np.int32
                         )
                         for gate in self.measurements
                     ],
