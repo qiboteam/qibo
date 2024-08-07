@@ -78,3 +78,4 @@ If you have a question about the project, please contact us with [📫](mailto:q
 - National Supercomputing Centre (NSCC), Singapore.
 - RIKEN Center for Computational Science (R-CCS), Japan.
 - NVIDIA (cuQuantum), USA.
+- QuantumSpain Project (https://quantumspain-project.es/)
