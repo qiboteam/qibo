@@ -58,7 +58,7 @@ class NumpyBackend(Backend):
 
     def cast(self, x, dtype=None, copy=False):
         if dtype is None:
-            dtype = type(x)
+            dtype = self.dtype
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
         elif self.is_sparse(x):
