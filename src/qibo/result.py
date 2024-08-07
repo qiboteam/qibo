@@ -326,7 +326,9 @@ class MeasurementOutcomes:
             if self.measurements[0].result.has_samples():
                 self._samples = self.backend.np.concatenate(
                     [
-                        self.backend.cast(gate.result.samples(), dtype=bool)
+                        self.backend.cast(
+                            gate.result.samples(), dtype=self.backend.np.uint8
+                        )
                         for gate in self.measurements
                     ],
                     axis=1,
