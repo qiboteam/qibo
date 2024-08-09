@@ -59,11 +59,10 @@ def get_noisy_circuit(
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to modify.
         num_insertions (int): number of insertion gate pairs / global unitary folds to add.
-        global_unitary_folding (bool): Default True. Global unitary folding is carried out by default.
-            Global unitary folding takes precedence over insertion_gate.
-        insertion_gate (str, optional): gate to be used in the insertion.
-            If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Otherwise, the other gate is ``"CNOT"``.
+        global_unitary_folding (bool): If ``True``, noise is increased by global unitary folding.
+            If ``False``, local unitary folding is used. Defaults to ``True``.
+        insertion_gate (str, optional): gate to be folded in the local unitary folding.
+            If ``RX``, the gate used is :math:``RX(\\pi / 2)``. Otherwise, it is the ``CNOT`` gate.
 
     Returns:
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
@@ -71,26 +70,22 @@ def get_noisy_circuit(
 
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
-    if global_unitary_folding:  # pragma: no cover
+    if global_unitary_folding:
 
-        # Create a copy of input circuit without measurements
         copy_c = Circuit(**circuit.init_kwargs)
         for g in circuit.queue:
             if not isinstance(g, gates.M):
                 copy_c.add(g)
 
-        # Initialize noisy circuit
         noisy_circuit = copy_c
 
-        # Add (U^+ U)s
         for _ in range(num_insertions):
             noisy_circuit += copy_c.invert() + copy_c
 
-        # Add measurements according to the original circuit
         for m in circuit.measurements:
             noisy_circuit.add(m)
 
-    else:  # pragma: no cover
+    else:
         if insertion_gate is None or insertion_gate not in (
             "CNOT",
             "RX",
@@ -109,7 +104,7 @@ def get_noisy_circuit(
         i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
 
         theta = np.pi / 2
-        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+        noisy_circuit = Circuit(**circuit.init_kwargs)
 
         for gate in circuit.queue:
             noisy_circuit.add(gate)
@@ -121,9 +116,9 @@ def get_noisy_circuit(
                     for _ in range(num_insertions):
                         noisy_circuit.add(gates.CNOT(control, target))
                         noisy_circuit.add(gates.CNOT(control, target))
-                # elif gate.init_kwargs["theta"] == theta:
                 elif insertion_gate == "RX":
                     qubit = gate.qubits[0]
+                    theta = gate.init_kwargs["theta"]
                     for _ in range(num_insertions):
                         noisy_circuit.add(gates.RX(qubit, theta=theta))
                         noisy_circuit.add(gates.RX(qubit, theta=-theta))
@@ -160,9 +155,10 @@ def ZNE(
         nshots (int, optional): Number of shots. Defaults to :math:`10000`.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
             equations to obtain the ``gamma`` coefficients. Default is ``False``.
-        insertion_gate (str, optional): gate to be used in the insertion.
-            If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Defaults to ``"CNOT"``.
+        global_unitary_folding (bool, optional): If ``True``, noise is increased by global unitary folding.
+            If ``False``, local unitary folding is used. Defaults to ``True``.
+        insertion_gate (str, optional): gate to be folded in the local unitary folding.
+            If ``RX``, the gate used is :math:``RX(\\pi / 2)``. Otherwise, it is the ``CNOT`` gate.
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
@@ -212,7 +208,7 @@ def ZNE(
 
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
 
-    return np.sum(gamma * expected_values)
+    return expected_values, gamma, np.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
