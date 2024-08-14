@@ -258,8 +258,7 @@ class CircuitMap:
         self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
 
     def undo(self):
-        """Undo the last swap. Method works in-place.
-        """
+        """Undo the last swap. Method works in-place."""
         last_swap_block = self._routed_blocks.return_last_block()
         swap = tuple(self.physical_to_logical(q) for q in last_swap_block.qubits)
         self._routed_blocks.remove_block(last_swap_block)
