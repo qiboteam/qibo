@@ -487,35 +487,13 @@ def test_undo():
     assert len(circuit_map._routed_blocks.block_list) == 2
 
     # Undo the last SWAP gate
-    circuit_map.undo((2, 3))
+    circuit_map.undo()
     assert circuit_map._circuit_logical == [0, 2, 1, 3]
     assert circuit_map._swaps == 1
     assert len(circuit_map._routed_blocks.block_list) == 1
 
     # Undo the first SWAP gate
-    circuit_map.undo((1, 2))
+    circuit_map.undo()
     assert circuit_map._circuit_logical == [0, 1, 2, 3]
     assert circuit_map._swaps == 0
     assert len(circuit_map._routed_blocks.block_list) == 0
-
-
-def test_undo_error():
-    circ = Circuit(4)
-    initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
-    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
-
-    circuit_map.update((1, 2))
-    circuit_map.update((2, 3))
-
-    # The last block is a SWAP gate on qubits (2, 3)
-    with pytest.raises(ConnectivityError):
-        circuit_map.undo((1, 2))
-
-    circ_cz = Circuit(4)
-    circuit_map_cz = CircuitMap(initial_layout=initial_layout, circuit=circ_cz)
-    block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
-    circuit_map_cz._routed_blocks.add_block(block)
-
-    # The last block is a CZ gate
-    with pytest.raises(ConnectivityError):
-        circuit_map_cz.undo((0, 1))
