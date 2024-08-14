@@ -411,7 +411,6 @@ class ReverseTraversal(Placer):
     ):
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
-        self.routing_algorithm.connectivity = connectivity
         self.depth = depth
 
     def __call__(self, circuit: Circuit):
@@ -425,6 +424,7 @@ class ReverseTraversal(Placer):
         """
         initial_placer = Trivial(self.connectivity)
         initial_placement = initial_placer(circuit=circuit)
+        self.routing_algorithm.connectivity = self.connectivity
         new_circuit = self._assemble_circuit(circuit)
         final_placement = self._routing_step(initial_placement, new_circuit)
 
