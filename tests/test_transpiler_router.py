@@ -9,6 +9,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
+from qibo.transpiler.blocks import Block
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     assert_circuit_equivalence,
@@ -472,3 +473,27 @@ def test_star_router(nqubits, depth, middle_qubit, measurements, unitaries):
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
+
+
+def test_undo():
+    circ = Circuit(4)
+    initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
+    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
+
+    # Two SWAP gates are added
+    circuit_map.update((1, 2))
+    circuit_map.update((2, 3))
+    assert circuit_map._circuit_logical == [0, 3, 1, 2]
+    assert len(circuit_map._routed_blocks.block_list) == 2
+
+    # Undo the last SWAP gate
+    circuit_map.undo()
+    assert circuit_map._circuit_logical == [0, 2, 1, 3]
+    assert circuit_map._swaps == 1
+    assert len(circuit_map._routed_blocks.block_list) == 1
+
+    # Undo the first SWAP gate
+    circuit_map.undo()
+    assert circuit_map._circuit_logical == [0, 1, 2, 3]
+    assert circuit_map._swaps == 0
+    assert len(circuit_map._routed_blocks.block_list) == 0
