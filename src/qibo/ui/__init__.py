@@ -1,1 +1,1 @@
-from qibo.ui.mpldrawer import plot
+from qibo.ui.mpldrawer import plot_circuit

@@ -11,7 +11,7 @@ import numpy as np
 
 from qibo import gates
 
-from .FusedGateBarrier import FusedEndGateBarrier, FusedStartGateBarrier
+from .drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
 
 UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
@@ -41,8 +41,9 @@ def _plot_quantum_schedule(
     """Use Matplotlib to plot a quantum circuit.
     schedule  List of time steps, each containing a sequence of gates during that step.
               Each gate is a tuple containing (name,target,control1,control2...).
-              Targets and controls initially defined in terms of labels.
+              Targets and controls initially defined in terms of labels
     inits     Initialization list of gates
+    plot_params Style plot configuration
     labels    List of qubit labels, optional
 
     kwargs    Can override plot_parameters
@@ -67,6 +68,7 @@ def _plot_quantum_circuit(
               (name,target,control1,control2...). Targets and controls initially
               defined in terms of labels.
     inits     Initialization list of gates
+    plot_params Style plot configuration
     labels    List of qubit labels. optional
 
     kwargs    Can override plot_parameters
@@ -115,14 +117,14 @@ def _plot_quantum_circuit(
     return ax
 
 
-def _enumerate_gates(l, schedule=False):
+def _enumerate_gates(gates_plot, schedule=False):
     "Enumerate the gates in a way that can take l as either a list of gates or a schedule"
     if schedule:
-        for i, gates in enumerate(l):
+        for i, gates in enumerate(gates_plot):
             for gate in gates:
                 yield i, gate
     else:
-        for i, gate in enumerate(l):
+        for i, gate in enumerate(gates_plot):
             yield i, gate
 
 
@@ -598,7 +600,7 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
     return style
 
 
-def plot(circuit, scale=0.6, cluster_gates=True, style=None):
+def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
     circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
     scale           Scale the ouput plot

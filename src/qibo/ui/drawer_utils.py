@@ -2,6 +2,8 @@ from qibo.gates.abstract import Gate
 
 
 class FusedStartGateBarrier(Gate):
+    """Special gate barrier gate to pin the starting point of fused gates"""
+
     def __init__(self, q_ctrl, q_trgt, nfused, equal_qbits=False):
 
         super().__init__()
@@ -20,6 +22,8 @@ class FusedStartGateBarrier(Gate):
 
 
 class FusedEndGateBarrier(Gate):
+    """Special gate barrier gate to pin the ending point of fused gates"""
+
     def __init__(self, q_ctrl, q_trgt):
 
         super().__init__()
