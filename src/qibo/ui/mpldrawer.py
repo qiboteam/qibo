@@ -128,10 +128,10 @@ def _enumerate_gates(gates_plot, schedule=False):
             yield i, gate
 
 
-def _measured_wires(l, labels, schedule=False):
+def _measured_wires(gates_plot, labels, schedule=False):
     "measured[i] = j means wire i is measured at step j"
     measured = {}
-    for i, gate in _enumerate_gates(l, schedule=schedule):
+    for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         name, target = gate[:2]
         j = _get_flipped_index(target, labels)
         if name.startswith("M"):
@@ -140,9 +140,9 @@ def _measured_wires(l, labels, schedule=False):
 
 
 def _draw_gates(
-    ax, l, labels, gate_grid, wire_grid, plot_params, measured={}, schedule=False
+    ax, gates_plot, labels, gate_grid, wire_grid, plot_params, measured={}, schedule=False
 ):
-    for i, gate in _enumerate_gates(l, schedule=schedule):
+    for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params)
         if len(gate) > 2:  # Controlled
             _draw_controls(
