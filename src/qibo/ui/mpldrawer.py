@@ -140,7 +140,14 @@ def _measured_wires(gates_plot, labels, schedule=False):
 
 
 def _draw_gates(
-    ax, gates_plot, labels, gate_grid, wire_grid, plot_params, measured={}, schedule=False
+    ax,
+    gates_plot,
+    labels,
+    gate_grid,
+    wire_grid,
+    plot_params,
+    measured={},
+    schedule=False,
 ):
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params)
