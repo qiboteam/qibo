@@ -411,6 +411,7 @@ class ReverseTraversal(Placer):
     ):
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
+        self.routing_algorithm.connectivity = connectivity
         self.depth = depth
 
     def __call__(self, circuit: Circuit):

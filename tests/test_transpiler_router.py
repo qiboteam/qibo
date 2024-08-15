@@ -9,6 +9,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
+from qibo.transpiler.blocks import Block
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     assert_circuit_equivalence,
@@ -184,6 +185,81 @@ def test_routing_with_measurements():
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
+
+
+def test_sabre_looping():
+    # Setup where the looping occurs
+    # Line connectivity, gates with gate_array, Trivial placer
+    gate_array = [(7, 2), (6, 0), (5, 6), (4, 8), (3, 5), (9, 1)]
+    loop_circ = Circuit(10)
+    for qubits in gate_array:
+        loop_circ.add(gates.CZ(*qubits))
+
+    chip = nx.Graph()
+    chip.add_nodes_from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    chip.add_edges_from(
+        [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)]
+    )
+
+    placer = Trivial(connectivity=chip)
+    initial_layout = placer(loop_circ)
+    router_no_threshold = Sabre(
+        connectivity=chip, swap_threshold=np.inf
+    )  # Without reset
+    router_threshold = Sabre(connectivity=chip)  # With reset
+
+    routed_no_threshold, final_mapping_no_threshold = router_no_threshold(
+        loop_circ, initial_layout=initial_layout
+    )
+    routed_threshold, final_mapping_threshold = router_threshold(
+        loop_circ, initial_layout=initial_layout
+    )
+
+    count_no_threshold = router_no_threshold.added_swaps
+    count_threshold = router_threshold.added_swaps
+
+    assert count_no_threshold > count_threshold
+    assert_circuit_equivalence(
+        original_circuit=loop_circ,
+        transpiled_circuit=routed_no_threshold,
+        final_map=final_mapping_no_threshold,
+        initial_map=initial_layout,
+    )
+    assert_circuit_equivalence(
+        original_circuit=loop_circ,
+        transpiled_circuit=routed_threshold,
+        final_map=final_mapping_threshold,
+        initial_map=initial_layout,
+    )
+
+
+def test_sabre_shortest_path_routing():
+    gate_array = [(0, 9), (5, 9), (2, 8)]  # The gate (2, 8) should be routed next
+
+    loop_circ = Circuit(10)
+    for qubits in gate_array:
+        loop_circ.add(gates.CZ(*qubits))
+
+    # line connectivity
+    chip = nx.Graph()
+    chip.add_nodes_from(range(10))
+    chip.add_edges_from(
+        [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)]
+    )
+
+    placer = Trivial(connectivity=chip)
+    initial_layout = placer(loop_circ)
+    router = Sabre(connectivity=chip)
+
+    router._preprocessing(circuit=loop_circ, initial_layout=initial_layout)
+    router._shortest_path_routing()  # q2 should be moved adjacent to q8
+
+    gate_28 = router.circuit.circuit_blocks.block_list[2]
+    gate_28_qubits = router.circuit.get_physical_qubits(gate_28)
+
+    # Check if the physical qubits of the gate (2, 8) are adjacent
+    assert gate_28_qubits[1] in list(router.connectivity.neighbors(gate_28_qubits[0]))
+    assert gate_28_qubits[0] in list(router.connectivity.neighbors(gate_28_qubits[1]))
 
 
 def test_circuit_map():
@@ -397,3 +473,27 @@ def test_star_router(nqubits, depth, middle_qubit, measurements, unitaries):
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
+
+
+def test_undo():
+    circ = Circuit(4)
+    initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
+    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
+
+    # Two SWAP gates are added
+    circuit_map.update((1, 2))
+    circuit_map.update((2, 3))
+    assert circuit_map._circuit_logical == [0, 3, 1, 2]
+    assert len(circuit_map._routed_blocks.block_list) == 2
+
+    # Undo the last SWAP gate
+    circuit_map.undo()
+    assert circuit_map._circuit_logical == [0, 2, 1, 3]
+    assert circuit_map._swaps == 1
+    assert len(circuit_map._routed_blocks.block_list) == 1
+
+    # Undo the first SWAP gate
+    circuit_map.undo()
+    assert circuit_map._circuit_logical == [0, 1, 2, 3]
+    assert circuit_map._swaps == 0
+    assert len(circuit_map._routed_blocks.block_list) == 0

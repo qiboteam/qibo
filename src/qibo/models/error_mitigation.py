@@ -1,5 +1,6 @@
 """Error Mitigation Methods."""
 
+import math
 from itertools import product
 
 import numpy as np
@@ -36,13 +37,13 @@ def get_gammas(noise_levels, analytical: bool = True):
         zne_coefficients = np.array(
             [
                 1
-                / (2 ** (2 * max_noise_level) * np.math.factorial(i))
+                / (2 ** (2 * max_noise_level) * math.factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * max_noise_level)
+                * math.factorial(1 + 2 * max_noise_level)
                 / (
-                    np.math.factorial(max_noise_level)
-                    * np.math.factorial(max_noise_level - i)
+                    math.factorial(max_noise_level)
+                    * math.factorial(max_noise_level - i)
                 )
                 for i in noise_levels
             ]

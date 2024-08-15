@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Optional, Union
 
 import networkx as nx
+import numpy as np
 
 from qibo import gates
 from qibo.config import log, raise_error
@@ -251,6 +252,18 @@ class CircuitMap:
             Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
         )
         self._swaps += 1
+        idx_0, idx_1 = self._circuit_logical.index(
+            swap[0]
+        ), self._circuit_logical.index(swap[1])
+        self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
+
+    def undo(self):
+        """Undo the last swap. Method works in-place."""
+        last_swap_block = self._routed_blocks.return_last_block()
+        swap = tuple(self.physical_to_logical(q) for q in last_swap_block.qubits)
+        self._routed_blocks.remove_block(last_swap_block)
+        self._swaps -= 1
+
         idx_0, idx_1 = self._circuit_logical.index(
             swap[0]
         ), self._circuit_logical.index(swap[1])
@@ -625,6 +638,11 @@ class Sabre(Router):
             Defaults to math:`10^{-3}`.
         seed (int, optional): seed for the candidate random choice as tiebraker.
             Defaults to ``None``.
+        swap_threshold (float, optional): limits the number of added SWAPs in every routing iteration.
+            This threshold is multiplied by the length of the longest path in the circuit connectivity.
+            If the number of added SWAPs exceeds the threshold before a gate is routed,
+            shortestpath routing is applied.
+            Defaults to :math:`1.5`.
 
     References:
         1. G. Li, Y. Ding, and Y. Xie,
@@ -638,12 +656,14 @@ class Sabre(Router):
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,
+        swap_threshold: float = 1.5,
         seed: Optional[int] = None,
     ):
         self.connectivity = connectivity
         self.lookahead = lookahead
         self.decay = decay_lookahead
         self.delta = delta
+        self.swap_threshold = swap_threshold
         self._delta_register = None
         self._dist_matrix = None
         self._dag = None
@@ -651,6 +671,7 @@ class Sabre(Router):
         self.circuit = None
         self._memory_map = None
         self._final_measurements = None
+        self._temp_added_swaps = []
         random.seed(seed)
 
     def __call__(self, circuit: Circuit, initial_layout: dict):
@@ -664,12 +685,25 @@ class Sabre(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
         """
         self._preprocessing(circuit=circuit, initial_layout=initial_layout)
+        longest_path = np.max(self._dist_matrix)
+
         while self._dag.number_of_nodes() != 0:
             execute_block_list = self._check_execution()
             if execute_block_list is not None:
                 self._execute_blocks(execute_block_list)
             else:
                 self._find_new_mapping()
+
+            # If the number of added swaps is too high, the algorithm is stuck.
+            # Reset the circuit to the last saved state and make the nearest gate executable by manually adding SWAPs.
+            if (
+                len(self._temp_added_swaps) > self.swap_threshold * longest_path
+            ):  # threshold is arbitrary
+                while self._temp_added_swaps:
+                    swap = self._temp_added_swaps.pop()
+                    self.circuit.undo()
+                self._temp_added_swaps = []
+                self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
         circuit_kwargs["wire_names"] = list(initial_layout.keys())
@@ -779,6 +813,7 @@ class Sabre(Router):
         for qubit in self.circuit.logical_to_physical(best_candidate, index=True):
             self._delta_register[qubit] += self.delta
         self.circuit.update(best_candidate)
+        self._temp_added_swaps.append(best_candidate)
 
     def _compute_cost(self, candidate: int):
         """Compute the cost associated to a possible SWAP candidate."""
@@ -875,6 +910,37 @@ class Sabre(Router):
         self._update_front_layer()
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
+        self._temp_added_swaps = []
+
+    def _shortest_path_routing(self):
+        """Route a gate in the front layer using the shortest path. This method is executed when the standard SABRE fails to find an optimized solution.
+
+        Method works in-place.
+        """
+
+        min_distance = float("inf")
+        shortest_path_qubits = None
+
+        for block in self._front_layer:
+            q1, q2 = self.circuit.get_physical_qubits(block)
+            distance = self._dist_matrix[q1, q2]
+
+            if distance < min_distance:
+                min_distance = distance
+                shortest_path_qubits = [q1, q2]
+
+        shortest_path = nx.bidirectional_shortest_path(
+            self.connectivity, shortest_path_qubits[0], shortest_path_qubits[1]
+        )
+
+        # Q1 is moved
+        shortest_path = [
+            self.circuit.physical_to_logical(q) for q in shortest_path[:-1]
+        ]
+        swaps = list(zip(shortest_path[:-1], shortest_path[1:]))
+
+        for swap in swaps:
+            self.circuit.update(swap)
 
 
 def _create_dag(gates_qubits_pairs: list):
