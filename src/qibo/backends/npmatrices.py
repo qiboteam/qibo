@@ -531,6 +531,31 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
+        theta = self._cast_parameter(theta)
+        phi = self._cast_parameter(phi)
+        bitstring_length = len(qubits_in) + len(qubits_out)
+        integer_in = "".join(
+            ["1" if k in qubits_in else "0" for k in range(bitstring_length)]
+        )
+        integer_in = int(integer_in, 2)
+        integer_out = "".join(
+            ["1" if k in qubits_out else "0" for k in range(bitstring_length)]
+        )
+        integer_out = int(integer_out, 2)
+
+        matrix = [
+            [1 + 0j if l == k else 0j for l in range(2**bitstring_length)]
+            for k in range(2**bitstring_length)
+        ]
+        exp, sin, cos = self.np.exp(1j * phi), self.np.sin(theta), self.np.cos(theta)
+        matrix[integer_in][integer_in] = exp * cos
+        matrix[integer_in][integer_out] = -exp * sin
+        matrix[integer_out][integer_in] = self.np.conj(exp) * sin
+        matrix[integer_out][integer_out] = self.np.conj(exp) * cos
+
+        return self._cast(matrix, dtype=self.dtype)
+
     def Unitary(self, u):
         return self.np.array(u, dtype=self.dtype, copy=False)
 
