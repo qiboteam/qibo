@@ -209,7 +209,7 @@ def ZNE(
 
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
 
-    return expected_values, gamma, np.sum(gamma * expected_values)
+    return np.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
