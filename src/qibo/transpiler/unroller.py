@@ -4,7 +4,14 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
-from qibo.transpiler.decompositions import cz_dec, gpi2_dec, iswap_dec, opt_dec, u3_dec, cnot_dec_temp
+from qibo.transpiler.decompositions import (
+    cnot_dec_temp,
+    cz_dec,
+    gpi2_dec,
+    iswap_dec,
+    opt_dec,
+    u3_dec,
+)
 
 
 class NativeGates(Flag):
@@ -32,7 +39,7 @@ class NativeGates(Flag):
     U3 = auto()
     CZ = auto()
     iSWAP = auto()
-    CNOT = auto()       # For testing purposes
+    CNOT = auto()  # For testing purposes
 
     @classmethod
     def default(cls):
@@ -240,11 +247,11 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
             for g_translated in translate_gate(g, native_gates=native_gates):
                 iswap_decomposed.append(g_translated)
         return iswap_decomposed
-    
+
     # For testing purposes
     # No CZ, iSWAP gates in the native gate set
     # Decompose CNOT, CZ, SWAP gates into CNOT gates
-    if native_gates & NativeGates.CNOT:       
+    if native_gates & NativeGates.CNOT:
         return cnot_dec_temp(gate)
 
     raise_error(
