@@ -122,6 +122,7 @@ def test_measurements_non_comp_basis():
     # After transpiling the measurement gate should be in the computational basis
     assert transpiled_circuit.queue[2].basis == []
 
+
 def test_temp_cnot_decomposition():
     from qibo.transpiler.pipeline import Passes
 
@@ -134,22 +135,22 @@ def test_temp_cnot_decomposition():
 
     glist = [gates.GPI2, gates.RZ, gates.Z, gates.M, gates.CNOT]
     native_gates = NativeGates(0).from_gatelist(glist)
-    
+
     custom_pipeline = Passes([Unroller(native_gates=native_gates)])
     transpiled_circuit, _ = custom_pipeline(circ)
 
     # H
-    assert transpiled_circuit.queue[0].name == 'z'
-    assert transpiled_circuit.queue[1].name == 'gpi2'
+    assert transpiled_circuit.queue[0].name == "z"
+    assert transpiled_circuit.queue[1].name == "gpi2"
     # CNOT
-    assert transpiled_circuit.queue[2].name == 'cx'
+    assert transpiled_circuit.queue[2].name == "cx"
     # SWAP
-    assert transpiled_circuit.queue[3].name == 'cx'
-    assert transpiled_circuit.queue[4].name == 'cx'
-    assert transpiled_circuit.queue[5].name == 'cx'
+    assert transpiled_circuit.queue[3].name == "cx"
+    assert transpiled_circuit.queue[4].name == "cx"
+    assert transpiled_circuit.queue[5].name == "cx"
     # CZ
-    assert transpiled_circuit.queue[6].name == 'z'
-    assert transpiled_circuit.queue[7].name == 'gpi2'
-    assert transpiled_circuit.queue[8].name == 'cx'
-    assert transpiled_circuit.queue[9].name == 'z'
-    assert transpiled_circuit.queue[10].name == 'gpi2'
+    assert transpiled_circuit.queue[6].name == "z"
+    assert transpiled_circuit.queue[7].name == "gpi2"
+    assert transpiled_circuit.queue[8].name == "cx"
+    assert transpiled_circuit.queue[9].name == "z"
+    assert transpiled_circuit.queue[10].name == "gpi2"
