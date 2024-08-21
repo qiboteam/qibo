@@ -228,7 +228,7 @@ def construct_backend(backend, **kwargs) -> Backend:
         if provider not in e.msg:
             raise e
         raise_error(
-            ValueError,
+            ImportError,
             f"The '{backend}' backends' provider is not available. Check that a Python "
             f"package named '{provider}' is installed, and it is exposing valid Qibo "
             "backends.",
