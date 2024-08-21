@@ -103,7 +103,9 @@ class M(Gate):
                 self.basis.append(gate)
 
     @staticmethod
-    def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:
+    def _get_bitflip_tuple(
+        qubits: Tuple[int, ...], probs: "ProbsType"
+    ) -> Tuple[float, ...]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
                 raise_error(ValueError, f"Invalid bitflip probability {probs}.")

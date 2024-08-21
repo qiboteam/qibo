@@ -216,7 +216,7 @@ def test_custom_passes(placer, routing, gates, qubits):
 @pytest.mark.parametrize("gates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
-def test_custom_passes_restict(gates, placer, routing):
+def test_custom_passes_restrict(gates, placer, routing):
     circ = generate_random_circuit(nqubits=3, ngates=gates)
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))

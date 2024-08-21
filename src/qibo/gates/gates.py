@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -820,6 +820,10 @@ class GPI2(ParametrizedGate):
     @property
     def qasm_label(self):
         return "gpi2"
+
+    @property
+    def clifford(self):
+        return _is_clifford_given_angle(self.parameters[0])
 
     def _dagger(self) -> "Gate":
         """"""
@@ -2467,6 +2471,78 @@ class DEUTSCH(ParametrizedGate):
 
         self.init_args = [q0, q1, q2]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+
+class GeneralizedRBS(ParametrizedGate):
+    """The generalized (complex) Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
+
+    Given a register called ``qubits_in`` containing :math:`m` qubits and a
+    register named ``qubits_out`` containing :math:`m'` qubits, the :math:`\\text{gRBS}`
+    is a :math:`(m + m')`-qubit gate that has the following matrix representation:
+
+    .. math::
+
+        \\begin{pmatrix}
+            I &           &  &             &  \\\\
+              & e^{-i\\phi}\\cos\\theta &      & e^{-i\\phi}\\sin\\theta   &  \\\\
+              &  & I'       &    &  \\\\
+              & -e^{i\\phi}\\sin\\theta &      & e^{i\\phi}\\cos\\theta   &  \\\\
+              &           &  &             &  I\\\\
+        \\end{pmatrix} \\,\\, ,
+
+    where :math:`I` and :math:`I'` are, respectively, identity matrices of size
+    :math:`2^{m} - 1` and :math:`2^{m}(2^{m'} - 2)`.
+
+    This unitary matrix is also known as a
+    `Givens rotation <https://en.wikipedia.org/wiki/Givens_rotation>`_.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*.
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_
+
+    Args:
+        qubits_in (tuple or list): ids of "input" qubits.
+        qubits_out (tuple or list): ids of "output" qubits.
+        theta (float): the rotation angle.
+        phi (float): the phase angle. Defaults to :math:`0.0`.
+        trainable (bool): whether gate parameter can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(
+        self,
+        qubits_in: Union[Tuple[int], List[int]],
+        qubits_out: Union[Tuple[int], List[int]],
+        theta: float,
+        phi: float = 0.0,
+        trainable: bool = True,
+    ):
+        super().__init__(trainable)
+        self.name = "grbs"
+        self.draw_label = "gRBS"
+        self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
+        self.unitary = True
+
+        self.parameter_names = "theta"
+        self.parameters = theta, phi
+        self.nparams = 2
+
+        self.init_args = [qubits_in, qubits_out]
+        self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{gRBS}` gate.
+
+        Decompose :math:`\\text{gRBS}` gate into :class:`qibo.gates.X`, :class:`qibo.gates.CNOT`,
+        :class:`qibo.gates.RY`, and :class:`qibo.gates.RZ`.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class Unitary(ParametrizedGate):
