@@ -93,7 +93,7 @@ class GlobalBackend(NumpyBackend):
                 try:
                     cls._instance = construct_backend(**kwargs)
                     break
-                except MissingBackend:
+                except (ImportError, MissingBackend):
                     pass
 
         if cls._instance is None:  # pragma: no cover
