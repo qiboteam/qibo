@@ -3,7 +3,6 @@ import platform
 import shutil
 import sys
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import numpy as np
 import pytest
@@ -117,26 +116,30 @@ def test_construct_backend(backend):
     )
 
 
-# @pytest.fixture
-# def uninstall_qibojit():
-#     p = Path(qibojit.__file__).parent
-#     modules = list(sys.modules.keys())
-#     for mod in modules:
-#         if mod.startswith("qibojit"):
-#             del sys.modules[mod]
-#     with TemporaryDirectory() as tdir:
-#         shutil.move(p, tdir)
-#         yield
-#         shutil.move(Path(tdir) / p.name, p)
-#     importlib.import_module("qibojit")
-#
-#
-# def test_default_backend(uninstall_qibojit):
-#     """Reproducing https://github.com/qiboteam/qibo/issues/1424."""
-#     # reset global backend
-#     GlobalBackend._instance = None
-#     # attempt loading
-#     default_backend = get_backend()
+@pytest.fixture
+def uninstall_qibojit():
+    p = Path(qibojit.__file__).parent
+    modules = list(sys.modules.keys())
+    for mod in modules:
+        if mod.startswith("qibojit"):
+            del sys.modules[mod]
+
+    # avoid using directly cwd since it would still in the PYTHONPATH
+    tdir = Path.cwd() / "tmp"
+    tdir.mkdir()
+    shutil.move(p, tdir)
+    yield
+    shutil.move(tdir / p.name, p)
+    tdir.rmdir()
+    importlib.import_module("qibojit")
+
+
+def test_default_backend(uninstall_qibojit):
+    """Reproducing https://github.com/qiboteam/qibo/issues/1424."""
+    # reset global backend
+    GlobalBackend._instance = None
+    # attempt loading
+    default_backend = get_backend()
 
 
 def test_list_available_backends():
