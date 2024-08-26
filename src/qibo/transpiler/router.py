@@ -206,6 +206,13 @@ class CircuitMap:
 
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
+    
+
+    def _update_mappings_swap(self, logical_swap: tuple, physical_swap: tuple):
+        """Updates the qubit mapping after applying a SWAP gate."""
+        self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = logical_swap[1], logical_swap[0]
+        self._l2p[logical_swap[0]], self._l2p[logical_swap[1]] = physical_swap[1], physical_swap[0]
+
 
     # 1# previous: set_circuit_logical
     def set_p2l(self, p2l_map: list):
@@ -257,7 +264,7 @@ class CircuitMap:
 
         return dict(sorted(unsorted_dict.items()))
 
-    def update(self, swap_l: tuple):
+    def update(self, logical_swap: tuple):
         """Updates the qubit mapping after applying a ``SWAP``
 
         Adds the :class:`qibo.gates.gates.SWAP` gate to the routed blocks.
@@ -267,34 +274,28 @@ class CircuitMap:
             swap (tuple): tuple containing the logical qubits to be swapped.
         """
 
-        swap_p = self.logical_pair_to_physical(swap_l)
+        physical_swap = self.logical_pair_to_physical(logical_swap)
 
         # 2# add the real SWAP gate, not a temporary circuit
         if not self._temporary:
             self._routed_blocks.add_block(
-                Block(qubits=swap_p, gates=[gates.SWAP(*swap_p)])
+                Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
             )
             self._swaps += 1
 
         # 1# update the bidirectional mapping
-        p1, p2 = swap_p
-        l1, l2 = swap_l
-        self._p2l[p1], self._p2l[p2] = l2, l1
-        self._l2p[l1], self._l2p[l2] = p2, p1
+        self._update_mappings_swap(logical_swap, physical_swap)
 
     def undo(self):
         """Undo the last swap. Method works in-place."""
         last_swap_block = self._routed_blocks.return_last_block()
-        swap_p = last_swap_block.qubits
-        swap_l = self._p2l[swap_p[0]], self._p2l[swap_p[1]]
+        physical_swap = last_swap_block.qubits
+        logical_swap = self._p2l[physical_swap[0]], self._p2l[physical_swap[1]]
         self._routed_blocks.remove_block(last_swap_block)
         self._swaps -= 1
 
         # 1# update the bidirectional mapping
-        p1, p2 = swap_p
-        l1, l2 = swap_l
-        self._p2l[p1], self._p2l[p2] = l2, l1
-        self._l2p[l1], self._l2p[l2] = p2, p1
+        self._update_mappings_swap(logical_swap, physical_swap)
 
     def get_physical_qubits(self, block: Union[int, Block]):
         """Returns the physical qubits where a block is acting on.
