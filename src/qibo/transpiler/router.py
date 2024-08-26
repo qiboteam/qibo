@@ -206,13 +206,17 @@ class CircuitMap:
 
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
-    
 
     def _update_mappings_swap(self, logical_swap: tuple, physical_swap: tuple):
         """Updates the qubit mapping after applying a SWAP gate."""
-        self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = logical_swap[1], logical_swap[0]
-        self._l2p[logical_swap[0]], self._l2p[logical_swap[1]] = physical_swap[1], physical_swap[0]
-
+        self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = (
+            logical_swap[1],
+            logical_swap[0],
+        )
+        self._l2p[logical_swap[0]], self._l2p[logical_swap[1]] = (
+            physical_swap[1],
+            physical_swap[0],
+        )
 
     # 1# previous: set_circuit_logical
     def set_p2l(self, p2l_map: list):
