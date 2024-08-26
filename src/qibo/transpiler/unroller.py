@@ -29,6 +29,7 @@ class NativeGates(Flag):
         - :class:`qibo.gates.gates.U3`
         - :class:`qibo.gates.gates.CZ`
         - :class:`qibo.gates.gates.iSWAP`
+        - :class:`qibo.gates.gates.CNOT`
     """
 
     I = auto()
@@ -255,5 +256,5 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
         return cnot_dec_temp(gate)
 
     raise_error(
-        DecompositionError, "Use only CZ and/or iSWAP as native gates"
+        DecompositionError, "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits where the two-qubit gates are limited to CZ, CNOT, and SWAP."
     )  # pragma: no cover
