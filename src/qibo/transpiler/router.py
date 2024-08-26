@@ -216,7 +216,7 @@ class CircuitMap:
     def logical_to_physical(self):
         """Returns the logical to physical qubit mapping."""
         return self._l2p
-    
+
     @physical_to_logical.setter
     def physical_to_logical(self, p2l_map: list):
         """Sets the physical to logical qubit mapping and updates the logical to physical mapping.
@@ -464,9 +464,19 @@ class ShortestPaths(Router):
         backward = list(reversed(path[meeting_point + 1 :]))
         # 1# apply logical swaps
         for f in forward[1:]:
-            circuitmap.update((circuitmap.physical_to_logical[f], circuitmap.physical_to_logical[forward[0]]))
+            circuitmap.update(
+                (
+                    circuitmap.physical_to_logical[f],
+                    circuitmap.physical_to_logical[forward[0]],
+                )
+            )
         for b in backward[1:]:
-            circuitmap.update((circuitmap.physical_to_logical[b], circuitmap.physical_to_logical[backward[0]]))
+            circuitmap.update(
+                (
+                    circuitmap.physical_to_logical[b],
+                    circuitmap.physical_to_logical[backward[0]],
+                )
+            )
 
     def _compute_cost(self, candidate: tuple):
         """Greedy algorithm that decides which path to take and how qubits should be walked.
