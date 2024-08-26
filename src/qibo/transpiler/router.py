@@ -207,6 +207,42 @@ class CircuitMap:
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
 
+    @property
+    def physical_to_logical(self):
+        """Returns the physical to logical qubit mapping."""
+        return self._p2l
+
+    @property
+    def logical_to_physical(self):
+        """Returns the logical to physical qubit mapping."""
+        return self._l2p
+    
+    @physical_to_logical.setter
+    def physical_to_logical(self, p2l_map: list):
+        """Sets the physical to logical qubit mapping and updates the logical to physical mapping.
+
+        Args:
+            p2l_map (list): physical to logical mapping.
+        """
+        # 1# update bidirectional mapping
+        # 4# use shallow copy
+        self._p2l = p2l_map.copy()
+        for i, l in enumerate(self._p2l):
+            self._l2p[l] = i
+
+    @logical_to_physical.setter
+    def logical_to_physical(self, l2p_map: list):
+        """Sets the logical to physical qubit mapping and updates the physical to logical mapping.
+
+        Args:
+            l2p_map (list): logical to physical mapping.
+        """
+        # 1# update bidirectional mapping
+        # 4# use shallow copy
+        self._l2p = l2p_map.copy()
+        for i, p in enumerate(self._l2p):
+            self._p2l[p] = i
+
     def _update_mappings_swap(self, logical_swap: tuple, physical_swap: tuple):
         """Updates the qubit mapping after applying a SWAP gate."""
         self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = (
@@ -217,21 +253,6 @@ class CircuitMap:
             physical_swap[1],
             physical_swap[0],
         )
-
-    # 1# previous: set_circuit_logical
-    def set_p2l(self, p2l_map: list):
-        """Sets the current physical to logical qubit mapping.
-
-        Method works in-place.
-
-        Args:
-            p2l_map (list): physical to logical mapping.
-        """
-        # 1# update bidirectional mapping
-        # 4# use shallow copy
-        self._p2l = p2l_map.copy()
-        for i, l in enumerate(self._p2l):
-            self._l2p[l] = i
 
     def blocks_logical_qubits_pairs(self):
         """Returns a list containing the logical qubit pairs of each block."""
@@ -443,9 +464,9 @@ class ShortestPaths(Router):
         backward = list(reversed(path[meeting_point + 1 :]))
         # 1# apply logical swaps
         for f in forward[1:]:
-            circuitmap.update((circuitmap._p2l[f], circuitmap._p2l[forward[0]]))
+            circuitmap.update((circuitmap.physical_to_logical[f], circuitmap.physical_to_logical[forward[0]]))
         for b in backward[1:]:
-            circuitmap.update((circuitmap._p2l[b], circuitmap._p2l[backward[0]]))
+            circuitmap.update((circuitmap.physical_to_logical[b], circuitmap.physical_to_logical[backward[0]]))
 
     def _compute_cost(self, candidate: tuple):
         """Greedy algorithm that decides which path to take and how qubits should be walked.
@@ -465,8 +486,8 @@ class ShortestPaths(Router):
             blocks=deepcopy(self.circuit.circuit_blocks),
         )
 
-        # 1# use set_p2l
-        temporary_circuit.set_p2l(self.circuit._p2l)
+        # 1# copy the current physical to logical mapping
+        temporary_circuit.physical_to_logical = self.circuit.physical_to_logical
         self._add_swaps(candidate, temporary_circuit)
         temporary_dag = deepcopy(self._dag)
         successive_executed_gates = 0
@@ -601,7 +622,7 @@ class ShortestPaths(Router):
             original_qubits = measurement.qubits
             routed_qubits = list(
                 # 1# use l2p to get physical qubit numbers
-                self.circuit._l2p[qubit]
+                self.circuit.logical_to_physical[qubit]
                 for qubit in original_qubits
             )
             routed_circuit.add(
@@ -778,7 +799,7 @@ class Sabre(Router):
             original_qubits = measurement.qubits
             routed_qubits = list(
                 # 1# use l2p to get physical qubit numbers
-                self.circuit._l2p[qubit]
+                self.circuit.logical_to_physical[qubit]
                 for qubit in original_qubits
             )
             routed_circuit.add(
@@ -826,7 +847,7 @@ class Sabre(Router):
         candidates_evaluation = {}
 
         # 4# use shallow copy
-        self._memory_map.append(self.circuit._p2l.copy())
+        self._memory_map.append(self.circuit.physical_to_logical.copy())
         for candidate in self._swap_candidates():
             candidates_evaluation[candidate] = self._compute_cost(candidate)
 
@@ -852,12 +873,12 @@ class Sabre(Router):
             temp=True,
         )
 
-        # 1# use set_p2l
-        temporary_circuit.set_p2l(self.circuit._p2l)
+        # 1# copy the current physical to logical mapping
+        temporary_circuit.physical_to_logical = self.circuit.physical_to_logical
         temporary_circuit.update(candidate)
 
         # 1# use p2l to check if the mapping is already in the memory
-        if temporary_circuit._p2l in self._memory_map:
+        if temporary_circuit.physical_to_logical in self._memory_map:
             return float("inf")
 
         tot_distance = 0.0
@@ -897,8 +918,8 @@ class Sabre(Router):
                     candidate = tuple(
                         sorted(
                             (
-                                self.circuit._p2l[qubit],
-                                self.circuit._p2l[connected],
+                                self.circuit.physical_to_logical[qubit],
+                                self.circuit.physical_to_logical[connected],
                             )
                         )
                     )
@@ -974,9 +995,9 @@ class Sabre(Router):
 
         # move q1
         # 1# qubit moving algorithm is changed
-        q1 = self.circuit._p2l[shortest_path[0]]
+        q1 = self.circuit.physical_to_logical[shortest_path[0]]
         for q2 in shortest_path[1:-1]:
-            self.circuit.update((q1, self.circuit._p2l[q2]))
+            self.circuit.update((q1, self.circuit.physical_to_logical[q2]))
 
 
 def _create_dag(gates_qubits_pairs: list):
