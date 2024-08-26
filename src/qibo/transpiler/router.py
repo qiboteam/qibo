@@ -222,7 +222,7 @@ class CircuitMap:
         for i, l in enumerate(self._p2l):
             self._l2p[l] = i
 
-    def blocks_qubits_pairs(self):
+    def blocks_logical_qubits_pairs(self):
         """Returns a list containing the logical qubit pairs of each block."""
         return [block.qubits for block in self.circuit_blocks()]
 
@@ -565,7 +565,7 @@ class ShortestPaths(Router):
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit = CircuitMap(new_initial_layout, copied_circuit)
-        self._dag = _create_dag(self.circuit.blocks_qubits_pairs())
+        self._dag = _create_dag(self.circuit.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
     def _detach_final_measurements(self, circuit: Circuit):
@@ -741,7 +741,7 @@ class Sabre(Router):
         self._final_measurements = self._detach_final_measurements(copied_circuit)
         self.circuit = CircuitMap(new_initial_layout, copied_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
-        self._dag = _create_dag(self.circuit.blocks_qubits_pairs())
+        self._dag = _create_dag(self.circuit.blocks_logical_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
         self._update_front_layer()
