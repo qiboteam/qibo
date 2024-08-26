@@ -219,7 +219,6 @@ class CircuitMap:
         # 1# update bidirectional mapping
         # 4# use shallow copy
         self._p2l = p2l_map.copy()
-        self._l2p = [0] * len(self._p2l)
         for i, l in enumerate(self._p2l):
             self._l2p[l] = i
 
