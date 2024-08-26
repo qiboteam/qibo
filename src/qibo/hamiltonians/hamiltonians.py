@@ -84,7 +84,7 @@ class Hamiltonian(AbstractHamiltonian):
                 Defaults to ``None``.
 
         Returns:
-            :class:`qibo.hamiltonians.SymbolicHamiltonian`: object that implements the 
+            :class:`qibo.hamiltonians.SymbolicHamiltonian`: object that implements the
             Hamiltonian represented by the given symbolic expression.
         """
         log.warning(
@@ -177,7 +177,7 @@ class Hamiltonian(AbstractHamiltonian):
         Evaluate energy fluctuation:
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\bra{\\mu} \\, H^{2} \\, \\ket{\\mu} 
+            \\Xi_{k}(\\mu) = \\sqrt{\\bra{\\mu} \\, H^{2} \\, \\ket{\\mu}
                 - \\bra{\\mu} \\, H \\, \\ket{\\mu}^2} \\, .
 
         for a given state :math:`\\ket{\\mu}`.

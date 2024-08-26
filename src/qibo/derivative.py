@@ -21,8 +21,8 @@ def parameter_shift(
     parameter and an external object, such as a training variable in a Quantum
     Machine Learning problem. For example, performing a re-uploading strategy
     to embed some data into a circuit, we apply to the quantum state rotations
-    whose angles are in the form :math:`\\theta^{\\prime} = x \\, \\theta`, 
-    where :math:`\\theta` is a variational parameter, and :math:`x` an input variable. 
+    whose angles are in the form :math:`\\theta^{\\prime} = x \\, \\theta`,
+    where :math:`\\theta` is a variational parameter, and :math:`x` an input variable.
     The PSR allows to calculate the derivative with respect to :math:`\\theta^{\\prime}`.
     However, if we want to optimize a system with respect to its
     variational parameters, we need to "free" this procedure from the :math:`x` depencency.
@@ -41,7 +41,7 @@ def parameter_shift(
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
         initial_state (ndarray, optional): initial state on which the circuit
-            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`. 
+            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`.
             Defaults to ``None``.
         scale_factor (float, optional): parameter scale factor. Defaults to :math:`1`.
         nshots (int, optional): number of shots if derivative is evaluated on
@@ -184,7 +184,7 @@ def finite_differences(
         parameter_index (int): the index which identifies the target parameter
             in the :meth:`qibo.models.Circuit.get_parameters` list.
         initial_state (ndarray, optional): initial state on which the circuit
-            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`. 
+            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`.
             Defaults to ``None``.
         step_size (float, optional): step size used to evaluate the finite difference.
             Defaults to :math:`10^{-7}`.

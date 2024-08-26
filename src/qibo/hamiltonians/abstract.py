@@ -70,7 +70,7 @@ class AbstractHamiltonian:
 
         Args:
             state (ndarray): state in which to calculate the expectation value.
-            normalize (bool, optional): If ``True``, the expectation value 
+            normalize (bool, optional): If ``True``, the expectation value
                 :math:`\\ell_{2}`-normalized. Defaults to ``False``.
 
         Returns:
@@ -80,15 +80,15 @@ class AbstractHamiltonian:
 
     @abstractmethod
     def expectation_from_samples(self, freq, qubit_map=None):  # pragma: no cover
-        """Computes the expectation value of a diagonal observable, 
+        """Computes the expectation value of a diagonal observable,
         given computational-basis measurement frequencies.
 
         Args:
             freq (collections.Counter): the keys are the observed values in binary form
                 and the values the corresponding frequencies, that is the number
                 of times each measured value/bitstring appears.
-            qubit_map (tuple): Mapping between frequencies and qubits. 
-                If ``None``, then defaults to 
+            qubit_map (tuple): Mapping between frequencies and qubits.
+                If ``None``, then defaults to
                 :math:`[1, \\, 2, \\, \\cdots, \\, \\mathrm{len}(\\mathrm{key})]`.
                 Defaults to ``None``.
 

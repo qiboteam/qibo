@@ -1213,7 +1213,7 @@ Matrix Hamiltonian
 ^^^^^^^^^^^^^^^^^^
 
 The first implementation of Hamiltonians uses the full matrix representation
-of the Hamiltonian operator in the computational basis. 
+of the Hamiltonian operator in the computational basis.
 For :math:`n` qubits, this matrix has size :math:`2^{n} \times 2^{n}`.
 Therefore, its construction is feasible only when :math:`n` is small.
 
