@@ -294,7 +294,8 @@ The following gates support parameter setting:
   should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
-a flat list. Using :meth:`qibo.models.circuit.Circuit.set_parameters` is more
+a flat list (``torch.Tensor`` is required when using the pytorch backend).
+Using :meth:`qibo.models.circuit.Circuit.set_parameters` is more
 efficient than recreating a new circuit with new parameter values. The inverse
 method :meth:`qibo.models.circuit.Circuit.get_parameters` is also available
 and returns a list, dictionary or flat list with the current parameter values
@@ -551,9 +552,9 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 For more information on the available options of the ``vqe.minimize`` call we
 refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
 Note that if the Stochastic Gradient Descent optimizer is used then the user
-has to use a backend based on tensorflow primitives and not the default custom
+has to use a backend based on tensorflow or pytorch primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
-To switch the backend one can do ``qibo.set_backend("tensorflow")``.
+To switch the backend one can do ``qibo.set_backend("tensorflow")`` or ``qibo.set_backend("pytorch")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
@@ -694,6 +695,8 @@ the model. For example the previous example would have to be modified as:
 
 How to use automatic differentiation?
 -------------------------------------
+
+ADD HERE PYTORCH EXAMPLE?
 
 As a deep learning framework, Tensorflow supports
 `automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
