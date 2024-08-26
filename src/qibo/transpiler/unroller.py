@@ -256,5 +256,6 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
         return cnot_dec_temp(gate)
 
     raise_error(
-        DecompositionError, "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits where the two-qubit gates are limited to CZ, CNOT, and SWAP."
+        DecompositionError,
+        "Use only CZ and/or iSWAP as native gates. CNOT is allowed in circuits where the two-qubit gates are limited to CZ, CNOT, and SWAP.",
     )  # pragma: no cover
