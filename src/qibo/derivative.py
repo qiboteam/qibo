@@ -36,7 +36,7 @@ def parameter_shift(
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli:math:`Z` and :math:`n = 1`):
+            provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
             ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
