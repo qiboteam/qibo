@@ -115,7 +115,16 @@ class NumpyBackend(Backend):
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        _matrix = getattr(self.matrices, name)(*gate.parameters)
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+        else:
+            _matrix = _matrix(*gate.parameters)
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):

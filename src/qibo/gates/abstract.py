@@ -123,17 +123,17 @@ class Gate:
         return json.dumps(self.raw)
 
     @property
-    def target_qubits(self) -> Tuple[int]:
+    def target_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of target qubits."""
         return self._target_qubits
 
     @property
-    def control_qubits(self) -> Tuple[int]:
+    def control_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of control qubits sorted in increasing order."""
         return tuple(sorted(self._control_qubits))
 
     @property
-    def qubits(self) -> Tuple[int]:
+    def qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
