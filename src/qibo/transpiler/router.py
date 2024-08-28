@@ -244,7 +244,12 @@ class CircuitMap:
             self._p2l[p] = i
 
     def _update_mappings_swap(self, logical_swap: tuple, physical_swap: tuple):
-        """Updates the qubit mapping after applying a SWAP gate."""
+        """Updates the qubit mappings after applying a SWAP gate.
+        
+        Args:
+            logical_swap (tuple[int]): the indices of the logical qubits to be swapped.
+            physical_swap (tuple[int]): the indices of the corresponding physical qubits to be swapped.
+        """
         self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = (
             logical_swap[1],
             logical_swap[0],
