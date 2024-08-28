@@ -164,7 +164,7 @@ class CircuitMap:
     Also implements the initial two-qubit block decompositions.
 
     Args:
-        initial_layout (dict): initial logical-to-physical qubit mapping.
+        initial_layout (dict): initial physical to logical qubit mapping.
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
         blocks (:class:`qibo.transpiler.blocks.CircuitBlocks`, optional): circuit
             block representation. If ``None``, the blocks will be computed from the circuit.
@@ -364,7 +364,7 @@ class ShortestPaths(Router):
     def __init__(self, connectivity: nx.Graph, seed: Optional[int] = None):
         self.connectivity = connectivity
         self._front_layer = None
-        self.circuit = None
+        self.circuit_map = None
         self._dag = None
         self._final_measurements = None
         self._node_mapping_inv = None
@@ -375,7 +375,7 @@ class ShortestPaths(Router):
     @property
     def added_swaps(self):
         """Returns the number of SWAP gates added to the circuit during routing."""
-        return self.circuit._swaps
+        return self.circuit_map._swaps
 
     def __call__(self, circuit: Circuit, initial_layout: dict):
         """Circuit connectivity matching.
@@ -399,14 +399,14 @@ class ShortestPaths(Router):
 
         circuit_kwargs = circuit.init_kwargs
         circuit_kwargs["wire_names"] = list(initial_layout.keys())
-        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit_kwargs)
+        routed_circuit = self.circuit_map.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
                 routed_circuit=routed_circuit
             )
 
         # 1# final layout is reverted to the original labeling
-        final_layout = self.circuit.final_layout()
+        final_layout = self.circuit_map.final_layout()
         final_layout_restored = {
             "q" + str(self.node_mapping_inv[int(k[1:])]): v
             for k, v in final_layout.items()
@@ -429,13 +429,13 @@ class ShortestPaths(Router):
             if candidate[1] == best_cost
         ]
         best_candidate = random.choice(best_candidates)
-        self._add_swaps(best_candidate, self.circuit)
+        self._add_swaps(best_candidate, self.circuit_map)
 
     def _candidates(self):
         """Returns all possible shortest paths in a ``list`` that contains
         the new mapping and a second ``list`` containing the path meeting point.
         """
-        target_qubits = self.circuit.get_physical_qubits(self._front_layer[0])
+        target_qubits = self.circuit_map.get_physical_qubits(self._front_layer[0])
         path_list = list(
             nx.all_shortest_paths(
                 self.connectivity, source=target_qubits[0], target=target_qubits[1]
@@ -491,13 +491,13 @@ class ShortestPaths(Router):
         """
         # 2# CircuitMap might be used
         temporary_circuit = CircuitMap(
-            initial_layout=self.circuit.initial_layout,
-            circuit=Circuit(len(self.circuit.initial_layout)),
-            blocks=deepcopy(self.circuit.circuit_blocks),
+            initial_layout=self.circuit_map.initial_layout,
+            circuit=Circuit(len(self.circuit_map.initial_layout)),
+            blocks=deepcopy(self.circuit_map.circuit_blocks),
         )
 
         # 1# copy the current physical to logical mapping
-        temporary_circuit.physical_to_logical = self.circuit.physical_to_logical
+        temporary_circuit.physical_to_logical = self.circuit_map.physical_to_logical
         self._add_swaps(candidate, temporary_circuit)
         temporary_dag = deepcopy(self._dag)
         successive_executed_gates = 0
@@ -540,8 +540,8 @@ class ShortestPaths(Router):
         for block in self._front_layer:
             if (
                 # 3# might be changed to use _get_dag_layer(qubits=True) to avoid using get_physical_qubits(block_num)
-                self.circuit.get_physical_qubits(block) in self.connectivity.edges
-                or not self.circuit.circuit_blocks.search_by_index(block).entangled
+                self.circuit_map.get_physical_qubits(block) in self.connectivity.edges
+                or not self.circuit_map.circuit_blocks.search_by_index(block).entangled
             ):
                 executable_blocks.append(block)
         if len(executable_blocks) == 0:
@@ -561,8 +561,8 @@ class ShortestPaths(Router):
             blocklist (list): list of blocks.
         """
         for block_id in blocklist:
-            block = self.circuit.circuit_blocks.search_by_index(block_id)
-            self.circuit.execute_block(block)
+            block = self.circuit_map.circuit_blocks.search_by_index(block_id)
+            self.circuit_map.execute_block(block)
             self._dag.remove_node(block_id)
         self._update_front_layer()
 
@@ -600,8 +600,8 @@ class ShortestPaths(Router):
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit = CircuitMap(new_initial_layout, copied_circuit)
-        self._dag = _create_dag(self.circuit.blocks_logical_qubits_pairs())
+        self.circuit_map = CircuitMap(new_initial_layout, copied_circuit)
+        self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
     def _detach_final_measurements(self, circuit: Circuit):
@@ -632,7 +632,7 @@ class ShortestPaths(Router):
             original_qubits = measurement.qubits
             routed_qubits = list(
                 # 1# use l2p to get physical qubit numbers
-                self.circuit.logical_to_physical[qubit]
+                self.circuit_map.logical_to_physical[qubit]
                 for qubit in original_qubits
             )
             routed_circuit.add(
@@ -689,7 +689,7 @@ class Sabre(Router):
         self._dist_matrix = None
         self._dag = None
         self._front_layer = None
-        self.circuit = None
+        self.circuit_map = None
         self._memory_map = None
         self._final_measurements = None
         self._temp_added_swaps = []
@@ -722,20 +722,20 @@ class Sabre(Router):
             ):  # threshold is arbitrary
                 while self._temp_added_swaps:
                     swap = self._temp_added_swaps.pop()
-                    self.circuit.undo()
+                    self.circuit_map.undo()
                 self._temp_added_swaps = []
                 self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
         circuit_kwargs["wire_names"] = list(initial_layout.keys())
-        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit_kwargs)
+        routed_circuit = self.circuit_map.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
                 routed_circuit=routed_circuit
             )
 
         # 1# final layout is reverted to the original labeling
-        final_layout = self.circuit.final_layout()
+        final_layout = self.circuit_map.final_layout()
         final_layout_restored = {
             "q" + str(self.node_mapping_inv[int(k[1:])]): v
             for k, v in final_layout.items()
@@ -745,7 +745,7 @@ class Sabre(Router):
     @property
     def added_swaps(self):
         """Returns the number of SWAP gates added to the circuit during routing."""
-        return self.circuit._swaps
+        return self.circuit_map._swaps
 
     def _preprocessing(self, circuit: Circuit, initial_layout: dict):
         """The following objects will be initialised:
@@ -775,9 +775,9 @@ class Sabre(Router):
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit = CircuitMap(new_initial_layout, copied_circuit)
+        self.circuit_map = CircuitMap(new_initial_layout, copied_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
-        self._dag = _create_dag(self.circuit.blocks_logical_qubits_pairs())
+        self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
         self._update_front_layer()
@@ -809,7 +809,7 @@ class Sabre(Router):
             original_qubits = measurement.qubits
             routed_qubits = list(
                 # 1# use l2p to get physical qubit numbers
-                self.circuit.logical_to_physical[qubit]
+                self.circuit_map.logical_to_physical[qubit]
                 for qubit in original_qubits
             )
             routed_circuit.add(
@@ -835,20 +835,20 @@ class Sabre(Router):
 
     def _get_dag_layer(self, n_layer, qubits=False):
         """Return the :math:`n`-topological layer of the dag.
-        If ``qubits=True``, return the target qubits of the blocks in the layer.
-        Otherwise, return the block numbers.
+
+        Args:
+            n_layer (int): layer number.
+            qubits (bool, optional): if ``True``, return the target qubits of the blocks in the layer.
+                If ``False``, return the block numbers. Defaults to ``False``. 
+        
+        Returns:
+            (list): list of block numbers or target qubits.
         """
 
         # 3# depend on the 'qubits' flag, return the block number or target qubits
         # 3# return target qubits -> to avoid using get_physical_qubits(block_num)
         if qubits:
-            layer_qubits = []
-            nodes = self._dag.nodes(data=True)
-            for node in nodes:
-                if node[1]["layer"] == n_layer:
-                    # return target qubits
-                    layer_qubits.append(node[1]["qubits"])
-            return layer_qubits
+            return [node[1]["qubits"] for node in self._dag.nodes(data=True) if node[1]["layer"] == n_layer]
 
         return [node[0] for node in self._dag.nodes(data="layer") if node[1] == n_layer]
 
@@ -857,7 +857,7 @@ class Sabre(Router):
         candidates_evaluation = {}
 
         # 4# use shallow copy
-        self._memory_map.append(self.circuit.physical_to_logical.copy())
+        self._memory_map.append(self.circuit_map.physical_to_logical.copy())
         for candidate in self._swap_candidates():
             candidates_evaluation[candidate] = self._compute_cost(candidate)
 
@@ -867,9 +867,9 @@ class Sabre(Router):
         ]
         best_candidate = random.choice(best_candidates)
 
-        for qubit in self.circuit.logical_pair_to_physical(best_candidate):
+        for qubit in self.circuit_map.logical_pair_to_physical(best_candidate):
             self._delta_register[qubit] += self.delta
-        self.circuit.update(best_candidate)
+        self.circuit_map.update(best_candidate)
         self._temp_added_swaps.append(best_candidate)
 
     def _compute_cost(self, candidate: int):
@@ -879,12 +879,12 @@ class Sabre(Router):
         # 2# no gates, no block decomposition, no Circuit object
         # 2# just logical-physical mapping
         temporary_circuit = CircuitMap(
-            initial_layout=self.circuit.initial_layout,
+            initial_layout=self.circuit_map.initial_layout,
             temp=True,
         )
 
         # 1# copy the current physical to logical mapping
-        temporary_circuit.physical_to_logical = self.circuit.physical_to_logical
+        temporary_circuit.physical_to_logical = self.circuit_map.physical_to_logical
         temporary_circuit.update(candidate)
 
         # 1# use p2l to check if the mapping is already in the memory
@@ -923,13 +923,13 @@ class Sabre(Router):
         candidates = []
         # 3# might be changed to use _get_dag_layer(qubits=True) to avoid using get_physical_qubits(block_num)
         for block in self._front_layer:
-            for qubit in self.circuit.get_physical_qubits(block):
+            for qubit in self.circuit_map.get_physical_qubits(block):
                 for connected in self.connectivity.neighbors(qubit):
                     candidate = tuple(
                         sorted(
                             (
-                                self.circuit.physical_to_logical[qubit],
-                                self.circuit.physical_to_logical[connected],
+                                self.circuit_map.physical_to_logical[qubit],
+                                self.circuit_map.physical_to_logical[connected],
                             )
                         )
                     )
@@ -948,8 +948,8 @@ class Sabre(Router):
         for block in self._front_layer:
             if (
                 # 3# might be changed to use _get_dag_layer(qubits=True) to avoid using get_physical_qubits(block_num)
-                self.circuit.get_physical_qubits(block) in self.connectivity.edges
-                or not self.circuit.circuit_blocks.search_by_index(block).entangled
+                self.circuit_map.get_physical_qubits(block) in self.connectivity.edges
+                or not self.circuit_map.circuit_blocks.search_by_index(block).entangled
             ):
                 executable_blocks.append(block)
 
@@ -971,8 +971,8 @@ class Sabre(Router):
             blocklist (list): list of blocks.
         """
         for block_id in blocklist:
-            block = self.circuit.circuit_blocks.search_by_index(block_id)
-            self.circuit.execute_block(block)
+            block = self.circuit_map.circuit_blocks.search_by_index(block_id)
+            self.circuit_map.execute_block(block)
             self._dag.remove_node(block_id)
         self._update_dag_layers()
         self._update_front_layer()
@@ -992,7 +992,7 @@ class Sabre(Router):
         for block in self._front_layer:
             # 3# return node numbers (physical qubits) in the connectivity graph
             # 3# might be changed to use _get_dag_layer(qubits=True) to avoid using get_physical_qubits(block_num)
-            q1, q2 = self.circuit.get_physical_qubits(block)
+            q1, q2 = self.circuit_map.get_physical_qubits(block)
             distance = self._dist_matrix[q1, q2]
 
             if distance < min_distance:
@@ -1005,9 +1005,9 @@ class Sabre(Router):
 
         # move q1
         # 1# qubit moving algorithm is changed
-        q1 = self.circuit.physical_to_logical[shortest_path[0]]
+        q1 = self.circuit_map.physical_to_logical[shortest_path[0]]
         for q2 in shortest_path[1:-1]:
-            self.circuit.update((q1, self.circuit.physical_to_logical[q2]))
+            self.circuit_map.update((q1, self.circuit_map.physical_to_logical[q2]))
 
 
 def _create_dag(gates_qubits_pairs: list):

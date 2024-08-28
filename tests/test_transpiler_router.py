@@ -254,8 +254,8 @@ def test_sabre_shortest_path_routing():
     router._preprocessing(circuit=loop_circ, initial_layout=initial_layout)
     router._shortest_path_routing()  # q2 should be moved adjacent to q8
 
-    gate_28 = router.circuit.circuit_blocks.block_list[2]
-    gate_28_qubits = router.circuit.get_physical_qubits(gate_28)
+    gate_28 = router.circuit_map.circuit_blocks.block_list[2]
+    gate_28_qubits = router.circuit_map.get_physical_qubits(gate_28)
 
     # Check if the physical qubits of the gate (2, 8) are adjacent
     assert gate_28_qubits[1] in list(router.connectivity.neighbors(gate_28_qubits[0]))
