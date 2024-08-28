@@ -844,8 +844,8 @@ class Sabre(Router):
         Args:
             n_layer (int): layer number.
             qubits (bool, optional): if ``True``, return the target qubits of the blocks in the layer.
-                If ``False``, return the block numbers. Defaults to ``False``. 
-        
+                If ``False``, return the block numbers. Defaults to ``False``.
+
         Returns:
             (list): list of block numbers or target qubits.
         """
@@ -853,7 +853,11 @@ class Sabre(Router):
         # 3# depend on the 'qubits' flag, return the block number or target qubits
         # 3# return target qubits -> to avoid using get_physical_qubits(block_num)
         if qubits:
-            return [node[1]["qubits"] for node in self._dag.nodes(data=True) if node[1]["layer"] == n_layer]
+            return [
+                node[1]["qubits"]
+                for node in self._dag.nodes(data=True)
+                if node[1]["layer"] == n_layer
+            ]
 
         return [node[0] for node in self._dag.nodes(data="layer") if node[1] == n_layer]
 
