@@ -96,6 +96,11 @@ class MeasurementResult:
         nshots = self.nshots
         return f"MeasurementResult(qubits={qubits}, nshots={nshots})"
 
+    @property
+    def raw(self) -> dict:
+        samples = self._samples.tolist() if self.has_samples() else self._samples
+        return {"samples": samples}
+
     def add_shot(self, probs):
         qubits = sorted(self.measurement_gate.target_qubits)
         shot = self.backend.sample_shots(probs, 1)
@@ -117,12 +122,12 @@ class MeasurementResult:
     def has_samples(self):
         return self._samples is not None
 
-    def register_samples(self, samples, backend=None):
+    def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples
         self.nshots = len(samples)
 
-    def register_frequencies(self, frequencies, backend=None):
+    def register_frequencies(self, frequencies):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
         self.nshots = sum(frequencies.values())

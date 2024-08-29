@@ -14,7 +14,18 @@ REQUIRED_FIELDS = [
     "_target_qubits",
     "_control_qubits",
 ]
-REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam", "phi0", "phi1"]
+REQUIRED_FIELDS_INIT_KWARGS = [
+    "theta",
+    "phi",
+    "lam",
+    "phi0",
+    "phi1",
+    "register_name",
+    "collapse",
+    "basis",
+    "p0",
+    "p1",
+]
 
 
 class Gate:
@@ -107,6 +118,8 @@ class Gate:
             raise ValueError(f"Unknown gate {raw['_class']}")
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
+        if raw["_class"] == "M" and raw["samples"] is not None:
+            gate.result.register_samples(self.backend.cast(raw["samples"], int))
         try:
             return gate.controlled_by(*raw["_control_qubits"])
         except RuntimeError as e:

@@ -70,6 +70,7 @@ class M(Gate):
         self.init_kwargs = {
             "register_name": register_name,
             "collapse": collapse,
+            "basis": self.basis_gates,
             "p0": p0,
             "p1": p1,
         }
@@ -101,6 +102,22 @@ class M(Gate):
             gate = basis_cls(qubit).basis_rotation()
             if gate is not None:
                 self.basis.append(gate)
+
+    @property
+    def raw(self) -> dict:
+        """Serialize to dictionary.
+
+        The values used in the serialization should be compatible with a
+        JSON dump (or any other one supporting a minimal set of scalar
+        types). Though the specific implementation is up to the specific
+        gate.
+        """
+        encoded_simple = super().raw
+        encoded_simple.pop("_control_qubits")
+        basis = [g.__name__ for g in encoded_simple["init_kwargs"]["basis"]]
+        encoded_simple["init_kwargs"]["basis"] = basis
+        encoded_simple.update(self.result.raw)
+        return encoded_simple
 
     @staticmethod
     def _get_bitflip_tuple(
@@ -203,13 +220,6 @@ class M(Gate):
         sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
         self.result.add_shot_from_sample(sample[0])
         return state
-
-    def to_json(self):
-        """Serializes the measurement gate to json."""
-        encoding = json.loads(super().to_json())
-        encoding.pop("_control_qubits")
-        encoding.update({"basis": [g.__name__ for g in self.basis_gates]})
-        return json.dumps(encoding)
 
     @classmethod
     def load(cls, payload):
