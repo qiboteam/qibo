@@ -195,7 +195,7 @@ class CircuitMap:
 
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
-        
+
         if initial_layout is None:
             return
 
@@ -243,7 +243,7 @@ class CircuitMap:
 
     def _update_mappings_swap(self, logical_swap: tuple, physical_swap: tuple):
         """Updates the qubit mappings after applying a SWAP gate.
-        
+
         Args:
             logical_swap (tuple[int]): the indices of the logical qubits to be swapped.
             physical_swap (tuple[int]): the indices of the corresponding physical qubits to be swapped.
