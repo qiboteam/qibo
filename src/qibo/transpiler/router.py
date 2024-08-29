@@ -173,23 +173,12 @@ class CircuitMap:
 
     def __init__(
         self,
-        initial_layout: dict,
+        initial_layout: Optional[dict] = None,
         circuit: Optional[Circuit] = None,
         blocks: Optional[CircuitBlocks] = None,
         temp: Optional[bool] = False,  # 2# for temporary circuit
     ):
-        self.initial_layout = dict(sorted(initial_layout.items()))
-
-        # 1# bidirectional mapping
-        # 1# self._p2l: physical qubit number i -> logical qubit number _p2l[i]
-        # 1# self._l2p: logical qubit number i -> physical qubit number _l2p[i]
-        self._l2p, self._p2l = [0] * len(self.initial_layout), [0] * len(
-            self.initial_layout
-        )
-        for mapping in self.initial_layout.items():
-            physical_qubit, logical_qubit = int(mapping[0][1:]), mapping[1]
-            self._l2p[logical_qubit] = physical_qubit
-            self._p2l[physical_qubit] = logical_qubit
+        self._p2l, self._l2p = [], []
 
         self._temporary = temp
         if self._temporary:  # 2# if temporary circuit, no need to store the blocks
@@ -206,6 +195,13 @@ class CircuitMap:
 
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
+        
+        if initial_layout is None:
+            return
+
+        # 1# initialize physical to logical mapping
+        self.wire_names = list(initial_layout.keys())
+        self.physical_to_logical = list(initial_layout.values())
 
     @property
     def physical_to_logical(self):
@@ -227,6 +223,7 @@ class CircuitMap:
         # 1# update bidirectional mapping
         # 4# use shallow copy
         self._p2l = p2l_map.copy()
+        self._l2p = [0] * len(self._p2l)
         for i, l in enumerate(self._p2l):
             self._l2p[l] = i
 
@@ -240,6 +237,7 @@ class CircuitMap:
         # 1# update bidirectional mapping
         # 4# use shallow copy
         self._l2p = l2p_map.copy()
+        self._p2l = [0] * len(self._l2p)
         for i, p in enumerate(self._l2p):
             self._p2l[p] = i
 
@@ -289,10 +287,8 @@ class CircuitMap:
     def final_layout(self):
         """Returns the final physical-logical qubits mapping."""
 
-        # 1# return {"q0": lq_num0, "q1": lq_num1, ...}
-        unsorted_dict = {"q" + str(i): self._p2l[i] for i in range(self._nqubits)}
-
-        return dict(sorted(unsorted_dict.items()))
+        # 1# return {"A": lq_num0, "B": lq_num1, ...}
+        return {self.wire_names[i]: self._p2l[i] for i in range(self._nqubits)}
 
     def update(self, logical_swap: tuple):
         """Updates the qubit mapping after applying a ``SWAP``
@@ -410,13 +406,7 @@ class ShortestPaths(Router):
                 routed_circuit=routed_circuit
             )
 
-        # 1# final layout is reverted to the original labeling
-        final_layout = self.circuit_map.final_layout()
-        final_layout_restored = {
-            "q" + str(self.node_mapping_inv[int(k[1:])]): v
-            for k, v in final_layout.items()
-        }
-        return routed_circuit, final_layout_restored
+        return routed_circuit, self.circuit_map.final_layout()
 
     def _find_new_mapping(self):
         """Find new qubit mapping. Mapping is found by looking for the shortest path.
@@ -496,8 +486,7 @@ class ShortestPaths(Router):
         """
         # 2# CircuitMap might be used
         temporary_circuit = CircuitMap(
-            initial_layout=self.circuit_map.initial_layout,
-            circuit=Circuit(len(self.circuit_map.initial_layout)),
+            circuit=Circuit(self.circuit_map._nqubits),
             blocks=deepcopy(self.circuit_map.circuit_blocks),
         )
 
@@ -594,18 +583,15 @@ class ShortestPaths(Router):
             initial_layout (dict): initial physical-to-logical qubit mapping.
         """
 
-        # 1# To simplify routing, some data is relabeled before routing begins.
-        node_mapping, new_initial_layout = {}, {}
-        for i, node in enumerate(self.connectivity.nodes):
+        # 1# Relabel the nodes of the connectivity graph
+        node_mapping = {}
+        for i, node in enumerate(list(initial_layout.keys())):
             node_mapping[node] = i
-            new_initial_layout["q" + str(i)] = initial_layout["q" + str(node)]
-
         self.connectivity = nx.relabel_nodes(self.connectivity, node_mapping)
-        self.node_mapping_inv = {v: k for k, v in node_mapping.items()}
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit_map = CircuitMap(new_initial_layout, copied_circuit)
+        self.circuit_map = CircuitMap(initial_layout, copied_circuit)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
@@ -684,8 +670,6 @@ class Sabre(Router):
         seed: Optional[int] = None,
     ):
         self.connectivity = connectivity
-        # 1# map to revert the final layout to the original labeling
-        self.node_mapping_inv = None
         self.lookahead = lookahead
         self.decay = decay_lookahead
         self.delta = delta
@@ -726,7 +710,7 @@ class Sabre(Router):
                 len(self._temp_added_swaps) > self.swap_threshold * longest_path
             ):  # threshold is arbitrary
                 while self._temp_added_swaps:
-                    swap = self._temp_added_swaps.pop()
+                    self._temp_added_swaps.pop()
                     self.circuit_map.undo()
                 self._temp_added_swaps = []
                 self._shortest_path_routing()
@@ -739,13 +723,7 @@ class Sabre(Router):
                 routed_circuit=routed_circuit
             )
 
-        # 1# final layout is reverted to the original labeling
-        final_layout = self.circuit_map.final_layout()
-        final_layout_restored = {
-            "q" + str(self.node_mapping_inv[int(k[1:])]): v
-            for k, v in final_layout.items()
-        }
-        return routed_circuit, final_layout_restored
+        return routed_circuit, self.circuit_map.final_layout()
 
     @property
     def added_swaps(self):
@@ -768,19 +746,15 @@ class Sabre(Router):
             initial_layout (dict): initial physical-to-logical qubit mapping.
         """
 
-        # 1# To simplify routing, some data is relabeled before routing begins.
-        # 1# physical qubit is reassigned to a range from 0 to len(self.connectivity.nodes) - 1.
-        node_mapping, new_initial_layout = {}, {}
-        for i, node in enumerate(self.connectivity.nodes):
+        # 1# Relabel the nodes of the connectivity graph
+        node_mapping = {}
+        for i, node in enumerate(list(initial_layout.keys())):
             node_mapping[node] = i
-            new_initial_layout["q" + str(i)] = initial_layout["q" + str(node)]
-
         self.connectivity = nx.relabel_nodes(self.connectivity, node_mapping)
-        self.node_mapping_inv = {v: k for k, v in node_mapping.items()}
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit_map = CircuitMap(new_initial_layout, copied_circuit)
+        self.circuit_map = CircuitMap(initial_layout, copied_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
@@ -887,10 +861,7 @@ class Sabre(Router):
         # 2# use CircuitMap for temporary circuit to save time
         # 2# no gates, no block decomposition, no Circuit object
         # 2# just logical-physical mapping
-        temporary_circuit = CircuitMap(
-            initial_layout=self.circuit_map.initial_layout,
-            temp=True,
-        )
+        temporary_circuit = CircuitMap(temp=True)
 
         # 1# copy the current physical to logical mapping
         temporary_circuit.physical_to_logical = self.circuit_map.physical_to_logical
