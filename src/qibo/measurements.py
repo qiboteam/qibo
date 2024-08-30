@@ -7,6 +7,13 @@ from qibo import gates
 from qibo.config import raise_error
 
 
+def _check_backend(backend):
+    """This is only needed due to the circular import with qibo.backends."""
+    from qibo.backends import _check_backend
+
+    return _check_backend(backend)
+
+
 def frequencies_to_binary(frequencies, nqubits):
     return collections.Counter(
         {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
@@ -79,11 +86,8 @@ class MeasurementResult:
             to use for calculations.
     """
 
-    def __init__(self, gate, nshots=0, backend=None):
-        from qibo.backends import _check_backend
-
+    def __init__(self, gate):
         self.measurement_gate = gate
-        self.backend = _check_backend(backend)
         self.circuit = None
 
         self._samples = None
@@ -109,10 +113,11 @@ class MeasurementResult:
         elif self._frequencies is not None:
             return sum(self._frequencies.values())
 
-    def add_shot(self, probs):
+    def add_shot(self, probs, backend=None):
+        backend = _check_backend(backend)
         qubits = sorted(self.measurement_gate.target_qubits)
-        shot = self.backend.sample_shots(probs, 1)
-        bshot = self.backend.samples_to_binary(shot, len(qubits))
+        shot = backend.sample_shots(probs, 1)
+        bshot = backend.samples_to_binary(shot, len(qubits))
         if self._samples:
             self._samples.append(bshot[0])
         else:
@@ -130,7 +135,7 @@ class MeasurementResult:
 
     def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
-        self._samples = self.backend.cast(samples, self.backend.np.int64)
+        self._samples = samples
 
     def register_frequencies(self, frequencies):
         """Register frequencies to the ``MeasurementResult`` object."""
@@ -153,7 +158,7 @@ class MeasurementResult:
 
         return self._symbols
 
-    def samples(self, binary=True, registers=False):
+    def samples(self, binary=True, registers=False, backend=None):
         """Returns raw measurement samples.
 
         Args:
@@ -168,6 +173,7 @@ class MeasurementResult:
                 samples are returned in decimal form as a tensor
                 of shape `(nshots,)`.
         """
+        backend = _check_backend(backend)
         if self._samples is None:
             if self.circuit is None:
                 raise_error(
@@ -181,9 +187,9 @@ class MeasurementResult:
             return self._samples
 
         qubits = self.measurement_gate.target_qubits
-        return self.backend.samples_to_decimal(self._samples, len(qubits))
+        return backend.samples_to_decimal(self._samples, len(qubits))
 
-    def frequencies(self, binary=True, registers=False):
+    def frequencies(self, binary=True, registers=False, backend=None):
         """Returns the frequencies of measured samples.
 
         Args:
@@ -201,8 +207,9 @@ class MeasurementResult:
             If `binary` is `False`
                 the keys of the `Counter` are integers.
         """
+        backend = _check_backend(backend)
         if self._frequencies is None:
-            self._frequencies = self.backend.calculate_frequencies(
+            self._frequencies = backend.calculate_frequencies(
                 self.samples(binary=False)
             )
         if binary:
