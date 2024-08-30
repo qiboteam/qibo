@@ -1,48 +1,52 @@
+from functools import reduce
+
 from qibo.backends import matrices
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
 
 
-def multikron(matrix_list):
+def _multikron(matrix_list):
     """Calculates Kronecker product of a list of matrices.
 
     Args:
-        matrices (list): List of matrices as ``np.ndarray``s.
+        matrix_list (list): List of matrices as ``ndarray``.
 
     Returns:
-        ``np.ndarray`` of the Kronecker product of all ``matrices``.
+        ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
     import numpy as np
 
-    h = 1
-    for m in matrix_list:
-        # TODO: check if we observe GPU deterioration
-        h = np.kron(h, m)
-    return h
+    return reduce(np.kron, matrix_list)
 
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
     h = sum(
-        multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
+        _multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
         for i in range(nqubits)
     )
     return h
 
 
-def XXZ(nqubits, delta=0.5, dense=True, backend=None):
-    """Heisenberg XXZ model with periodic boundary conditions.
+def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
+    """Heisenberg :math:`\\mathrm{XXZ}` model with periodic boundary conditions.
 
     .. math::
-        H = \\sum _{i=0}^N \\left ( X_iX_{i + 1} + Y_iY_{i + 1} + \\delta Z_iZ_{i + 1} \\right ).
+        H = \\sum _{k=0}^N \\, \\left( X_{k} \\, X_{k + 1} + Y_{k} \\, Y_{k + 1}
+            + \\delta Z_{k} \\, Z_{k + 1} \\right) \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
-        delta (float): coefficient for the Z component (default 0.5).
-        dense (bool): If ``True`` it creates the Hamiltonian as a
+        nqubits (int): number of qubits.
+        delta (float, optional): coefficient for the :math:`Z` component.
+            Defaults to :math:`0.5`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Example:
         .. testcode::
@@ -60,9 +64,9 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
         matrix = hx + hy + delta * hz
         return Hamiltonian(nqubits, matrix, backend=backend)
 
-    hx = multikron([matrices.X, matrices.X])
-    hy = multikron([matrices.Y, matrices.Y])
-    hz = multikron([matrices.Z, matrices.Z])
+    hx = _multikron([matrices.X, matrices.X])
+    hy = _multikron([matrices.Y, matrices.Y])
+    hz = _multikron([matrices.Z, matrices.Z])
     matrix = hx + hy + delta * hz
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
@@ -71,8 +75,8 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
     return ham
 
 
-def _OneBodyPauli(nqubits, matrix, dense=True, backend=None):
-    """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+def _OneBodyPauli(nqubits, matrix, dense: bool = True, backend=None):
+    """Helper method for constracting non-interacting :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(nqubits, matrix, condition)
@@ -85,63 +89,74 @@ def _OneBodyPauli(nqubits, matrix, dense=True, backend=None):
     return ham
 
 
-def X(nqubits, dense=True, backend=None):
-    """Non-interacting Pauli-X Hamiltonian.
+def X(nqubits, dense: bool = True, backend=None):
+    """Non-interacting Pauli-:math:`X` Hamiltonian.
 
     .. math::
-        H = - \\sum _{i=0}^N X_i.
+        H = - \\sum _{k=0}^N \\, X_{k} \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
-        dense (bool): If ``True`` it creates the Hamiltonian as a
+        nqubits (int): number of qubits.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.X, dense, backend=backend)
 
 
-def Y(nqubits, dense=True, backend=None):
-    """Non-interacting Pauli-Y Hamiltonian.
+def Y(nqubits, dense: bool = True, backend=None):
+    """Non-interacting Pauli-:math:`Y` Hamiltonian.
 
     .. math::
-        H = - \\sum _{i=0}^N Y_i.
+        H = - \\sum _{k=0}^{N} \\, Y_{k} \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
+        nqubits (int): number of qubits.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.Y, dense, backend=backend)
 
 
-def Z(nqubits, dense=True, backend=None):
-    """Non-interacting Pauli-Z Hamiltonian.
+def Z(nqubits, dense: bool = True, backend=None):
+    """Non-interacting Pauli-:math:`Z` Hamiltonian.
 
     .. math::
-        H = - \\sum _{i=0}^N Z_i.
+        H = - \\sum _{k=0}^{N} \\, Z_{k} \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
+        nqubits (int): number of qubits.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.Z, dense, backend=backend)
 
 
-def TFIM(nqubits, h=0.0, dense=True, backend=None):
+def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::
-        H = - \\sum _{i=0}^N \\left ( Z_i Z_{i + 1} + h X_i \\right ).
+        H = - \\sum _{k=0}^{N} \\, \\left(Z_{k} \\, Z_{k + 1} + h \\, X_{k}\\right) \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
-        h (float): value of the transverse field.
-        dense (bool): If ``True`` it creates the Hamiltonian as a
+        nqubits (int): number of qubits.
+        h (float, optional): value of the transverse field. Defaults to :math:`0.0`.
+        dense (bool, optional): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
@@ -154,7 +169,7 @@ def TFIM(nqubits, h=0.0, dense=True, backend=None):
         return Hamiltonian(nqubits, ham, backend=backend)
 
     matrix = -(
-        multikron([matrices.Z, matrices.Z]) + h * multikron([matrices.X, matrices.I])
+        _multikron([matrices.Z, matrices.Z]) + h * _multikron([matrices.X, matrices.I])
     )
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
@@ -163,17 +178,20 @@ def TFIM(nqubits, h=0.0, dense=True, backend=None):
     return ham
 
 
-def MaxCut(nqubits, dense=True, backend=None):
+def MaxCut(nqubits, dense: bool = True, backend=None):
     """Max Cut Hamiltonian.
 
     .. math::
-        H = - \\sum _{i,j=0}^N  \\frac{1 - Z_i Z_j}{2}.
+        H = -\\frac{1}{2} \\, \\sum _{j, k = 0}^{N}  \\, \\left(1 - Z_{j} \\, Z_{k}\\right) \\, .
 
     Args:
-        nqubits (int): number of quantum bits.
+        nqubits (int): number of qubits.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
     import sympy as sp
     from numpy import ones
