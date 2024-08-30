@@ -119,7 +119,7 @@ class Gate:
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
         if raw["_class"] == "M" and raw["samples"] is not None:
-            gate.result.register_samples(self.backend.cast(raw["samples"], int))
+            gate.result.register_samples(raw["samples"])
         try:
             return gate.controlled_by(*raw["_control_qubits"])
         except RuntimeError as e:

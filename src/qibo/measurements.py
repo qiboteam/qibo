@@ -124,7 +124,7 @@ class MeasurementResult:
 
     def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
-        self._samples = samples
+        self._samples = self.backend.cast(samples, int)
         self.nshots = len(samples)
 
     def register_frequencies(self, frequencies):
