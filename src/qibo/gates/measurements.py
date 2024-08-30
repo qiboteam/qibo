@@ -115,7 +115,7 @@ class M(Gate):
         gate.
         """
         encoded_simple = super().raw
-        encoded_simple.update(self.result.raw)
+        encoded_simple.update({"measurement_result": self.result.raw})
         return encoded_simple
 
     @staticmethod
