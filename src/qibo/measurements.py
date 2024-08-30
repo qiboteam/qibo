@@ -84,7 +84,6 @@ class MeasurementResult:
 
         self.measurement_gate = gate
         self.backend = _check_backend(backend)
-        self.nshots = nshots
         self.circuit = None
 
         self._samples = None
@@ -103,6 +102,13 @@ class MeasurementResult:
         samples = self._samples.tolist() if self.has_samples() else self._samples
         return {"samples": samples}
 
+    @property
+    def nshots(self) -> int:
+        if self.has_samples():
+            return len(self._samples)
+        elif self._frequencies is not None:
+            return sum(self._frequencies.values())
+
     def add_shot(self, probs):
         qubits = sorted(self.measurement_gate.target_qubits)
         shot = self.backend.sample_shots(probs, 1)
@@ -111,7 +117,6 @@ class MeasurementResult:
             self._samples.append(bshot[0])
         else:
             self._samples = [bshot[0]]
-        self.nshots += 1
         return shot
 
     def add_shot_from_sample(self, sample):
@@ -119,7 +124,6 @@ class MeasurementResult:
             self._samples.append(sample)
         else:
             self._samples = [sample]
-        self.nshots += 1
 
     def has_samples(self):
         return self._samples is not None
@@ -127,12 +131,10 @@ class MeasurementResult:
     def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = self.backend.cast(samples, self.backend.np.int64)
-        self.nshots = len(samples)
 
     def register_frequencies(self, frequencies):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
-        self.nshots = sum(frequencies.values())
 
     def reset(self):
         """Remove all registered samples and frequencies."""
