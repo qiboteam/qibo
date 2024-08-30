@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 from qibo import gates
 from qibo.config import raise_error
@@ -23,11 +23,13 @@ class M(Gate):
             performed. Can be used only for single shot measurements.
             If ``True`` the collapsed state vector is returned. If ``False``
             the measurement result is returned.
-        basis (:class:`qibo.gates.Gate`, list): Basis to measure.
-            Can be a qibo gate or a callable that accepts a qubit,
-            for example: ``lambda q: gates.RX(q, 0.2)``
-            or a list of these, if a different basis will be used for each
-            measurement qubit.
+        basis (:class:`qibo.gates.Gate`, str, list): Basis to measure.
+            Can be either:
+            - a qibo gate
+            - the string representing the gate
+            - a callable that accepts a qubit, for example: ``lambda q: gates.RX(q, 0.2)``
+            - a list of the above, if a different basis will be used for each
+              measurement qubit.
             Default is Z.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
@@ -46,7 +48,7 @@ class M(Gate):
         *q,
         register_name: Optional[str] = None,
         collapse: bool = False,
-        basis: Gate = Z,
+        basis: Union[Gate, str] = Z,
         p0: Optional["ProbsType"] = None,
         p1: Optional["ProbsType"] = None,
     ):
@@ -61,16 +63,24 @@ class M(Gate):
         # relevant for experiments only
         self.pulses = None
         # saving basis for __repr__ ans save to file
+        to_gate = lambda x: getattr(gates, x) if isinstance(x, str) else x
         if not isinstance(basis, list):
-            self.basis_gates = len(q) * [basis]
+            self.basis_gates = len(q) * [to_gate(basis)]
+            basis = len(self.target_qubits) * [basis]
+        elif len(basis) != len(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"Given basis list has length {len(basis)} while "
+                f"we are measuring {len(self.target_qubits)} qubits.",
+            )
         else:
-            self.basis_gates = basis
+            self.basis_gates = [to_gate(g) for g in basis]
 
         self.init_args = q
         self.init_kwargs = {
             "register_name": register_name,
             "collapse": collapse,
-            "basis": self.basis_gates,
+            "basis": [g.__name__ for g in self.basis_gates],
             "p0": p0,
             "p1": p1,
         }
@@ -89,16 +99,8 @@ class M(Gate):
 
         # list of gates that will be added to the circuit before the
         # measurement, in order to rotate to the given basis
-        if not isinstance(basis, list):
-            basis = len(self.target_qubits) * [basis]
-        elif len(basis) != len(self.target_qubits):
-            raise_error(
-                ValueError,
-                f"Given basis list has length {len(basis)} while "
-                f"we are measuring {len(self.target_qubits)} qubits.",
-            )
         self.basis = []
-        for qubit, basis_cls in zip(self.target_qubits, basis):
+        for qubit, basis_cls in zip(self.target_qubits, self.basis_gates):
             gate = basis_cls(qubit).basis_rotation()
             if gate is not None:
                 self.basis.append(gate)
@@ -113,9 +115,6 @@ class M(Gate):
         gate.
         """
         encoded_simple = super().raw
-        encoded_simple.pop("_control_qubits")
-        basis = [g.__name__ for g in encoded_simple["init_kwargs"]["basis"]]
-        encoded_simple["init_kwargs"]["basis"] = basis
         encoded_simple.update(self.result.raw)
         return encoded_simple
 
@@ -226,13 +225,7 @@ class M(Gate):
         """Constructs a measurement gate starting from a json serialized
         one."""
         args = json.loads(payload)
-        # drop general serialization data, unused in this specialized loader
-        for key in ("name", "init_args", "_class"):
-            args.pop(key)
-        qubits = args.pop("_target_qubits")
-        args["basis"] = [getattr(gates, g) for g in args["basis"]]
-        args.update(args.pop("init_kwargs"))
-        return cls(*qubits, **args)
+        return cls.from_dict(args)
 
     # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
     def on_qubits(self, qubit_map) -> "Gate":

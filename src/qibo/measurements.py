@@ -80,8 +80,10 @@ class MeasurementResult:
     """
 
     def __init__(self, gate, nshots=0, backend=None):
+        from qibo.backends import _check_backend
+
         self.measurement_gate = gate
-        self.backend = backend
+        self.backend = _check_backend(backend)
         self.nshots = nshots
         self.circuit = None
 
@@ -124,7 +126,7 @@ class MeasurementResult:
 
     def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
-        self._samples = self.backend.cast(samples, int)
+        self._samples = self.backend.cast(samples, self.backend.np.int64)
         self.nshots = len(samples)
 
     def register_frequencies(self, frequencies):
