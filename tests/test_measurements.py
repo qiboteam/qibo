@@ -1,5 +1,6 @@
 """Test circuit result measurements and measurement gate and as part of circuit."""
 
+import json
 import pickle
 
 import numpy as np
@@ -494,3 +495,21 @@ def test_measurementresult_nshots(backend):
     freq = dict(zip(states, counts.tolist()))
     result.register_frequencies(freq)
     assert result.nshots == nshots
+
+
+def test_measurement_serialization(backend):
+    kwargs = {
+        "register_name": "test",
+        "collapse": False,
+        "basis": ["Z", "X", "Y"],
+        "p0": 0.1,
+        "p1": 0.2,
+    }
+    gate = gates.M(*range(3), **kwargs)
+    samples = backend.cast(np.random.randint(2, size=(100, 3)), backend.np.int64)
+    gate.result.register_samples(samples)
+    dump = gate.to_json()
+    load = gates.M.from_dict(json.loads(dump))
+    for k, v in kwargs.items():
+        assert load.init_kwargs[k] == v
+    backend.assert_allclose(samples, load.result.samples())
