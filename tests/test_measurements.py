@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+from qibo.measurements import MeasurementResult
 
 
 def assert_result(
@@ -473,3 +474,23 @@ def test_measurementsymbol_pickling(backend):
         assert symbol.index == new_symbol.index
         assert symbol.name == new_symbol.name
         backend.assert_allclose(symbol.result.samples(), new_symbol.result.samples())
+
+
+def test_measurementresult_nshots(backend):
+    gate = gates.M(*range(3))
+    result = MeasurementResult(gate)
+    # nshots starting from samples
+    nshots = 10
+    samples = backend.cast(
+        [[i % 2, i % 2, i % 2] for i in range(nshots)], backend.np.int64
+    )
+    result.register_samples(samples)
+    assert result.nshots == nshots
+    # nshots starting from frequencies
+    result = MeasurementResult(gate)
+    states, counts = np.unique(samples, axis=0, return_counts=True)
+    to_str = lambda x: [str(item) for item in x]
+    states = ["".join(to_str(s)) for s in states.tolist()]
+    freq = dict(zip(states, counts.tolist()))
+    result.register_frequencies(freq)
+    assert result.nshots == nshots
