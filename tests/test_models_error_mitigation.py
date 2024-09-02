@@ -315,7 +315,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
         c, obs, noise, nshots, readout, backend=backend
     )
 
-    assert np.abs(true_val - mit_val) <= np.abs(true_val - noisy_val)
+    assert backend.np.abs(true_val - mit_val) <= backend.np.abs(true_val - noisy_val)
 
 
 @pytest.mark.parametrize("nqubits", [3])

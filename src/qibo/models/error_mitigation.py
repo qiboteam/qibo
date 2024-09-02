@@ -381,19 +381,14 @@ def _curve_fit(backend, model, params, xdata, ydata, lr=1e-2, max_iter=int(1e3))
         params = backend.cast(params, dtype=backend.np.float64)
         optimizer = backend.np.optim.LBFGS([params], lr=lr, max_iter=max_iter)
 
-        # losses = []
         def closure():
-            for param in params:
-                param.grad = None
-            # optimizer.zero_grad()
+            optimizer.zero_grad()
             output = model(xdata, params.reshape(-1, 1))
             loss_val = loss(output, ydata)
             loss_val.backward()
-            # losses.append(loss_val.clone())
             return loss_val
 
         optimizer.step(closure)
-        # losses = backend.cast(losses)
         return params
     elif backend.name == "tensorflow":
         wrapped_model = lambda x, *params: model(x, np.asarray(params).reshape(-1, 1))
@@ -502,7 +497,6 @@ def vnCDR(
     optimal_params = _curve_fit(
         backend, model, params, noisy_array.T, train_val["noise-free"]
     )
-    # optimal_params = curve_fit(model, noisy_array.T, train_val["noise-free"], p0=params)
 
     val = []
     for level in noise_levels:
@@ -520,7 +514,8 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, backend.np.float64).reshape(-1, 1), optimal_params
+        backend.cast(val, backend.np.float64).reshape(-1, 1),
+        optimal_params.reshape(-1, 1),
     )[0]
 
     if full_output:
@@ -1048,8 +1043,9 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    dep_param = np.mean(lambda_list)
-    dep_param_std = np.std(lambda_list)
+    lambda_list = backend.cast(lambda_list, backend.np.float64)
+    dep_param = backend.np.mean(lambda_list)
+    dep_param_std = backend.np.std(lambda_list)
 
     noisy_expectation = get_expectation_val_with_readout_mitigation(
         circuit,
