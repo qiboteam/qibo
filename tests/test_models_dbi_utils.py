@@ -27,7 +27,7 @@ def test_generate_Z_operators(backend, nqubits):
 
     delta_h0 = dbi.diagonal_h_matrix
     dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops]) + h0) / 2**nqubits
-    norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
+    norm_diff = np.linalg.norm(backend.to_numpy(delta_h0 - dephasing_channel))
 
     assert norm_diff < 1e-3
 
@@ -46,7 +46,16 @@ def test_select_best_dbr_generator(backend, nqubits, step):
 
     for _ in range(NSTEPS):
         dbi, idx, step_optimize, flip = select_best_dbr_generator(
-            dbi, Z_ops, step=step, compare_canonical=True, n_trials=5
+            dbi, Z_ops, step=step, compare_canonical=True, max_evals=5
         )
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
+
+
+def test_copy_dbi(backend):
+    h0 = random_hermitian(4, seed=1, backend=backend)
+    dbi = DoubleBracketIteration(Hamiltonian(2, h0, backend=backend))
+    dbi_copy = copy_dbi_object(dbi)
+
+    assert dbi is not dbi_copy
+    assert dbi.h.nqubits == dbi_copy.h.nqubits

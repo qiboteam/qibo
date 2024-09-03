@@ -699,13 +699,7 @@ class Circuit:
     @property
     def measurement_tuples(self):
         # used for testing only
-        registers = {}
-        for m in self.measurements:
-            if m.register_name not in registers:
-                registers[m.register_name] = m.target_qubits
-            else:
-                registers[m.register_name] += m.target_qubits
-        return {name: qubits for name, qubits in registers.items()}
+        return {m.register_name: m.target_qubits for m in self.measurements}
 
     @property
     def ngates(self) -> int:
@@ -737,13 +731,17 @@ class Circuit:
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
 
+        This method can be affected by how :meth:`qibo.gates.Gate.controlled_by`
+        behaves with certain gates. To see how :meth:`qibo.gates.Gate.controlled_by`
+        affects gates, we refer to the documentation of :meth:`qibo.gates.Gate.controlled_by`.
+
         Args:
-            gate (str, type): The QASM name of a gate or the corresponding gate class.
+            gate (str or type): The name of a gate or the corresponding gate class.
 
         Returns:
-            List with all gates that are in the circuit and have the same type
-            with the given ``gate``. The list contains tuples ``(i, g)`` where
-            ``i`` is the index of the gate ``g`` in the circuit's gate queue.
+            list: gates that are in the circuit and have the same type as ``gate``.
+                The list contains tuples ``(k, g)`` where ``k`` is the index of the gate
+                ``g`` in the circuit's gate queue.
         """
         if isinstance(gate, str):
             return [(i, g) for i, g in enumerate(self.queue) if g.name == gate]

@@ -1,5 +1,7 @@
 """Test circuit result measurements and measurement gate and as part of circuit."""
 
+import pickle
+
 import numpy as np
 import pytest
 
@@ -424,7 +426,7 @@ def test_measurement_basis(backend, nqubits, outcome):
         c.add(gates.X(q) for q in range(nqubits))
     c.add(gates.H(q) for q in range(nqubits))
     c.add(gates.M(*range(nqubits), basis=gates.X))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     assert result.frequencies() == {nqubits * str(outcome): 100}
 
 
@@ -435,7 +437,7 @@ def test_measurement_basis_list(backend):
     c.add(gates.H(2))
     c.add(gates.X(3))
     c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     assert result.frequencies() == {"0011": 100}
     assert (
         c.draw()
@@ -457,3 +459,17 @@ def test_measurement_same_qubit_different_registers_error(backend):
     c.add(gates.M(0, 1, 3, register_name="a"))
     with pytest.raises(KeyError):
         c.add(gates.M(1, 2, 3, register_name="a"))
+
+
+def test_measurementsymbol_pickling(backend):
+    from qibo.models import QFT
+
+    c = QFT(3)
+    c.add(gates.M(0, 2, basis=[gates.X, gates.Z]))
+    backend.execute_circuit(c).samples()
+    for symbol in c.measurements[0].result.symbols:
+        dumped_symbol = pickle.dumps(symbol)
+        new_symbol = pickle.loads(dumped_symbol)
+        assert symbol.index == new_symbol.index
+        assert symbol.name == new_symbol.name
+        backend.assert_allclose(symbol.result.samples(), new_symbol.result.samples())

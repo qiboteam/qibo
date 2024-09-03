@@ -246,11 +246,13 @@ def test_initial_state(backend):
     backend.assert_allclose(numpy_state, clifford_state)
 
 
-def test_bitflip_noise(backend):
+@pytest.mark.parametrize("seed", [10])
+def test_bitflip_noise(backend, seed):
+    rng = np.random.default_rng(seed)
     clifford_bkd = construct_clifford_backend(backend)
-    c = random_clifford(5, backend=backend)
+    c = random_clifford(5, seed=rng, backend=backend)
     c_copy = c.copy()
-    qubits = np.random.choice(range(3), size=2, replace=False)
+    qubits = rng.choice(range(3), size=2, replace=False)
     c.add(gates.M(*qubits, p0=0.1, p1=0.5))
     c_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
     numpy_res = numpy_bkd.execute_circuit(c_copy)
@@ -267,13 +269,15 @@ def test_noise_channels(backend, seed):
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
-    noise = NoiseModel()
-    noise.add(PauliError([("X", 0.5)]), gates.X)
-    noise.add(DepolarizingError(0.1), gates.CZ)
-
     nqubits = 3
 
     c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
+
+    noise = NoiseModel()
+    noisy_gates = np.random.choice(c.queue, size=1, replace=False)
+    noise.add(PauliError([("X", 0.3)]), gates.H)
+    noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
+
     c.add(gates.M(*range(nqubits)))
     c_copy = c.copy()
 

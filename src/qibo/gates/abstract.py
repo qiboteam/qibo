@@ -14,7 +14,7 @@ REQUIRED_FIELDS = [
     "_target_qubits",
     "_control_qubits",
 ]
-REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
+REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam", "phi0", "phi1"]
 
 
 class Gate:
@@ -84,10 +84,6 @@ class Gate:
             if key in REQUIRED_FIELDS_INIT_KWARGS
         }
 
-        for value in encoded_simple:
-            if isinstance(encoded[value], set):
-                encoded_simple[value] = list(encoded_simple[value])
-
         encoded_simple["_class"] = type(self).__name__
 
         return encoded_simple
@@ -127,19 +123,18 @@ class Gate:
         return json.dumps(self.raw)
 
     @property
-    def target_qubits(self) -> Tuple[int]:
+    def target_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of target qubits."""
         return self._target_qubits
 
     @property
-    def control_qubits(self) -> Tuple[int]:
+    def control_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of control qubits sorted in increasing order."""
         return tuple(sorted(self._control_qubits))
 
     @property
-    def qubits(self) -> Tuple[int]:
-        """Tuple with ids of all qubits (control and target) that the gate
-        acts."""
+    def qubits(self) -> Tuple[int, ...]:
+        """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
     @property
@@ -197,8 +192,7 @@ class Gate:
 
     @staticmethod
     def _find_repeated(qubits: Sequence[int]) -> int:
-        """Finds the first qubit id that is repeated in a sequence of qubit
-        ids."""
+        """Finds the first qubit id that is repeated in a sequence of qubit ids."""
         temp_set = set()
         for qubit in qubits:
             if qubit in temp_set:
@@ -213,14 +207,14 @@ class Gate:
         if common:
             raise_error(
                 ValueError,
-                f"{set(self._target_qubits) & set(self._control_qubits)} qubits are both targets and controls "
+                f"{set(self._target_qubits) & set(self._control_qubits)}"
+                + "qubits are both targets and controls "
                 + f"for gate {self.__class__.__name__}.",
             )
 
     @property
     def parameters(self):
-        """Returns a tuple containing the current value of gate's
-        parameters."""
+        """Returns a tuple containing the current value of gate's parameters."""
         return self._parameters
 
     def commutes(self, gate: "Gate") -> bool:
@@ -230,7 +224,7 @@ class Gate:
             gate: Gate to check if it commutes with the current gate.
 
         Returns:
-            ``True`` if the gates commute, otherwise ``False``.
+            bool: ``True`` if the gates commute, ``False`` otherwise.
         """
         if isinstance(gate, SpecialGate):  # pragma: no cover
             return False
@@ -297,8 +291,7 @@ class Gate:
         action of dagger will be lost.
 
         Returns:
-            A :class:`qibo.gates.Gate` object representing the dagger of
-            the original gate.
+            :class:`qibo.gates.Gate`: object representing the dagger of the original gate.
         """
         new_gate = self._dagger()
         new_gate.is_controlled_by = self.is_controlled_by
@@ -322,12 +315,24 @@ class Gate:
     def controlled_by(self, *qubits: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
+        To see how this method affects the underlying matrix representation of a gate,
+        please see the documentation of :meth:`qibo.gates.Gate.matrix`.
+
+        .. note::
+            Some gate classes default to another gate class depending on the number of controls
+            present. For instance, an :math:`1`-controlled :class:`qibo.gates.X` gate
+            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`2`-controlled
+            :class:`qibo.gates.X` gate defaults to a :class:`qibo.gates.TOFFOLI` gate.
+            Other gates affected by this method are: :class:`qibo.gates.Y`, :class:`qibo.gates.Z`,
+            :class:`qibo.gates.RX`, :class:`qibo.gates.RY`, :class:`qibo.gates.RZ`,
+            :class:`qibo.gates.U1`, :class:`qibo.gates.U2`, and :class:`qibo.gates.U3`.
+
         Args:
             *qubits (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
-            A :class:`qibo.gates.Gate` object in with the corresponding
-            gate being controlled in the given qubits.
+            :class:`qibo.gates.Gate`: object in with the corresponding
+                gate being controlled in the given qubits.
         """
         if qubits:
             self.is_controlled_by = True
@@ -343,7 +348,7 @@ class Gate:
             free: Ids of free qubits to use for the gate decomposition.
 
         Returns:
-            List with gates that have the same effect as applying the original gate.
+            list: gates that have the same effect as applying the original gate.
         """
         # TODO: Implement this method for all gates not supported by OpenQASM.
         # Currently this is implemented only for multi-controlled X gates.
@@ -353,6 +358,28 @@ class Gate:
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
+
+        If gate has controlled qubits inserted by :meth:`qibo.gates.Gate.controlled_by`,
+        then :meth:`qibo.gates.Gate.matrix` returns the matrix of the original gate.
+
+        .. code-block:: python
+
+            from qibo import gates
+
+            gate = gates.SWAP(3, 4).controlled_by(0, 1, 2)
+            print(gate.matrix())
+
+        To return the full matrix that takes the control qubits into account,
+        one should use :meth:`qibo.models.Circuit.unitary`, e.g.
+
+        .. code-block:: python
+
+            from qibo import Circuit, gates
+
+            nqubits = 5
+            circuit = Circuit(nqubits)
+            circuit.add(gates.SWAP(3, 4).controlled_by(0, 1, 2))
+            print(circuit.unitary())
 
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
@@ -374,7 +401,7 @@ class Gate:
         """This function returns the eigenvalues of the gate's generator.
 
         Returns:
-            (float) eigenvalue of the generator.
+            float: eigenvalue of the generator.
         """
 
         raise_error(

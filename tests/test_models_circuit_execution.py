@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.quantum_info import random_density_matrix
 
 
 def test_eager_execute(backend, accelerators):
@@ -91,8 +92,6 @@ def test_final_state_property(backend):
 
 
 def test_density_matrix_circuit(backend):
-    from qibo.quantum_info import random_density_matrix
-
     initial_rho = random_density_matrix(2**3, backend=backend)
 
     c = Circuit(3, density_matrix=True)
@@ -100,7 +99,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
+    final_rho = backend.execute_circuit(c, backend.np.copy(initial_rho)).state()
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -108,11 +107,9 @@ def test_density_matrix_circuit(backend):
     m2 = np.kron(cnot, np.eye(2))
     m3 = np.kron(np.eye(4), h)
 
-    m1 = backend.cast(m1, dtype=m1.dtype)
-    m2 = backend.cast(m2, dtype=m2.dtype)
-    m3 = backend.cast(m3, dtype=m3.dtype)
-
-    target_rho = np.dot(m1, np.dot(initial_rho, np.transpose(np.conj(m1))))
+    target_rho = np.dot(
+        m1, np.dot(backend.to_numpy(initial_rho), np.transpose(np.conj(m1)))
+    )
     target_rho = np.dot(m2, np.dot(target_rho, np.transpose(np.conj(m2))))
     target_rho = np.dot(m3, np.dot(target_rho, np.transpose(np.conj(m3))))
 
@@ -146,3 +143,14 @@ def test_initial_state_error(backend):
 
     with pytest.raises(ValueError):
         backend.execute_circuit(c, c1)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_initial_state_shape_error(backend, density_matrix):
+    nqubits = 2
+    c = Circuit(nqubits, density_matrix=density_matrix)
+    c.add(gates.X(i) for i in range(nqubits))
+
+    initial_state = random_density_matrix(2, backend=backend)
+    with pytest.raises(ValueError):
+        backend.execute_circuit(c, initial_state=initial_state)

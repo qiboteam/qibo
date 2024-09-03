@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import hamiltonians, set_backend
+from qibo import hamiltonians
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketCostFunction,
@@ -52,6 +52,25 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
 
     # test first iteration with default d
     dbi(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
+    for _ in range(NSTEPS):
+        dbi(step=0.01, d=d)
+
+    assert initial_off_diagonal_norm > dbi.off_diagonal_norm
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_double_bracket_iteration_group_commutator_3rd_order(backend, nqubits):
+    """Check 3rd order group commutator mode."""
+    h0 = random_hermitian(2**nqubits, backend=backend, seed=seed)
+    d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
+    dbi = DoubleBracketIteration(
+        Hamiltonian(nqubits, h0, backend=backend),
+        mode=DoubleBracketGeneratorType.group_commutator_third_order,
+    )
+    initial_off_diagonal_norm = dbi.off_diagonal_norm
+
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.group_commutator_third_order, step=0.01)
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
 
@@ -153,7 +172,7 @@ def test_polynomial_fail_cases(backend, nqubits):
     )
     with pytest.raises(ValueError):
         polynomial_step(dbi, n=2, n_max=1)
-    assert polynomial_step(dbi, n=1) == None
+    assert polynomial_step(dbi, n=1) is None
 
 
 def test_least_squares(backend):
@@ -210,12 +229,14 @@ def test_params_to_diagonal_operator(backend, step):
             nqubits=nqubits,
             parameterization=ParameterizationTypes.pauli,
             pauli_operator_dict=pauli_operator_dict,
+            backend=backend,
         ),
     )
     operator_element = params_to_diagonal_operator(
         params,
         nqubits=nqubits,
         parameterization=ParameterizationTypes.computational,
+        backend=backend,
     )
     for i in range(len(params)):
         backend.assert_allclose(
@@ -242,7 +263,7 @@ def test_gradient_descent(backend, order):
     pauli_operators = list(pauli_operator_dict.values())
     # let initial d be approximation of $\Delta(H)
     d_coef_pauli = decompose_into_pauli_basis(
-        dbi.diagonal_h_matrix, pauli_operators=pauli_operators
+        dbi.diagonal_h_matrix, pauli_operators=pauli_operators, backend=backend
     )
     d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
     loss_hist_pauli, d_params_hist_pauli, s_hist_pauli = gradient_descent(
@@ -252,6 +273,7 @@ def test_gradient_descent(backend, order):
         ParameterizationTypes.pauli,
         pauli_operator_dict=pauli_operator_dict,
         pauli_parameterization_order=order,
+        backend=backend,
     )
     assert loss_hist_pauli[-1] < initial_off_diagonal_norm
 
@@ -262,6 +284,10 @@ def test_gradient_descent(backend, order):
         _,
         _,
     ) = gradient_descent(
-        dbi, NSTEPS, d_coef_computational_partial, ParameterizationTypes.computational
+        dbi,
+        NSTEPS,
+        d_coef_computational_partial,
+        ParameterizationTypes.computational,
+        backend=backend,
     )
     assert loss_hist_computational_partial[-1] < initial_off_diagonal_norm

@@ -188,7 +188,7 @@ class QuantumClassifer:
         Returns:
             float with the proportion of states classified successfully
         """
-        if sign == True:
+        if sign:
             labels = [np.sign(label) for label in labels]
             predictions = [np.sign(prediction) for prediction in predictions]
 

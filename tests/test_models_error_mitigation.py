@@ -95,7 +95,8 @@ resp_matrix_2q = random_stochastic_matrix(
     ],
 )
 @pytest.mark.parametrize("solve", [False, True])
-def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
+@pytest.mark.parametrize("GUF", [False, True])
+def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     """Test that ZNE reduces the noise."""
     if backend.name == "tensorflow":
         import tensorflow as tf
@@ -128,12 +129,13 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
+        global_unitary_folding=GUF,
         insertion_gate=insertion_gate,
         readout=readout,
         backend=backend,
     )
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -192,7 +194,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -275,7 +277,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
@@ -372,4 +374,4 @@ def test_ics(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+    assert backend.np.abs(exact - estimate) <= backend.np.abs(exact - noisy)

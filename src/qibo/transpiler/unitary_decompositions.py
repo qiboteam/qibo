@@ -1,8 +1,8 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import NumpyBackend, _check_backend
-from qibo.config import raise_error
+from qibo.backends import _check_backend
+from qibo.config import PRECISION_TOL, raise_error
 
 magic_basis = np.array(
     [[1, -1j, 0, 0], [0, 0, 1, -1j], [0, 0, -1, -1j], [1, 1j, 0, 0]]
@@ -48,7 +48,7 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
         backend (:class:`qibo.backends.abstract.Backend`): Backend to use for calculations.
 
     Returns:
-        (ndarray) Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
+        ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
     backend = _check_backend(backend)
 
@@ -71,15 +71,14 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
-    # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
-    # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries.
-    if backend.__class__.__name__ == "TensorflowBackend":
+    if backend.__class__.__name__ != "PyTorchBackend":
+        # eig seems to have a different behavior based on backend/hardware,
+        # use np.round to increase precision seems to fix the issue
         eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
-        psi_magic, _ = np.linalg.qr(psi_magic)
     else:
-        eigvals, psi_magic = backend.np.linalg.eig(np.round(ut_u, decimals=20))
-        # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-        psi_magic, _ = backend.np.linalg.qr(psi_magic)
+        eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
+    # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
+    psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
     psi = backend.np.matmul(magic_basis, psi_magic)
     return psi, eigvals
@@ -96,11 +95,12 @@ def schmidt_decompose(state, backend=None):
 
     """
     backend = _check_backend(backend)
+    # tf.linalg.svd has a different behaviour
     if backend.__class__.__name__ == "TensorflowBackend":
         u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
     else:
         u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
-    if not np.allclose(d, [1, 0]):  # pragma: no cover
+    if not np.allclose(backend.to_numpy(d), [1, 0]):  # pragma: no cover
         raise_error(
             ValueError,
             f"Unexpected singular values: {d}\nCan only decompose product states.",
@@ -121,8 +121,11 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     """
     backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
-    if not np.allclose(
-        backend.to_numpy(psi_magic).imag, np.zeros_like(psi_magic)
+    if (
+        backend.np.real(
+            backend.calculate_norm_density_matrix(backend.np.imag(psi_magic))
+        )
+        > PRECISION_TOL
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
@@ -210,10 +213,10 @@ def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
         backend.np.transpose(backend.np.conj(bell_basis), (1, 0)) @ ud @ bell_basis
     )
     ud_diag = backend.np.diag(ud_bell)
-    if not np.allclose(backend.np.diag(ud_diag), ud_bell):  # pragma: no cover
+    if not backend.np.allclose(backend.np.diag(ud_diag), ud_bell):  # pragma: no cover
         return None
     uprod = backend.np.prod(ud_diag)
-    if not np.allclose(uprod, 1):  # pragma: no cover
+    if not np.allclose(backend.to_numpy(uprod), 1):  # pragma: no cover
         return None
     return ud_diag
 
