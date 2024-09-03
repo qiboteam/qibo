@@ -167,11 +167,12 @@ class MeasurementResult:
             # calculate samples for the whole circuit so that
             # individual register samples are registered here
             self.circuit.final_state.samples()
+
         if binary:
-            return self.backend.cast(self._samples, dtype="int32")
-        else:
-            qubits = self.measurement_gate.target_qubits
-            return self.backend.samples_to_decimal(self._samples, len(qubits))
+            return self._samples
+
+        qubits = self.measurement_gate.target_qubits
+        return self.backend.samples_to_decimal(self._samples, len(qubits))
 
     def frequencies(self, binary=True, registers=False):
         """Returns the frequencies of measured samples.
@@ -198,8 +199,8 @@ class MeasurementResult:
         if binary:
             qubits = self.measurement_gate.target_qubits
             return frequencies_to_binary(self._frequencies, len(qubits))
-        else:
-            return self._frequencies
+
+        return self._frequencies
 
     def apply_bitflips(self, p0, p1=None):  # pragma: no cover
         return apply_bitflips(self, p0, p1)

@@ -47,55 +47,31 @@ def test_standard_parameter_shift(backend, nshots, atol, scale_factor, grads):
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
-        grad_0 = parameter_shift(
+        grad = parameter_shift(
             circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
         )
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = parameter_shift(
+        grad = parameter_shift(
             circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
         )
 
-    if isinstance(backend, PyTorchBackend):
-        with pytest.raises(NotImplementedError) as excinfo:
-            grad = parameter_shift(
-                circuit=c, hamiltonian=test_hamiltonian, parameter_index=0
-            )
-            assert (
-                str(excinfo.value)
-                == "PyTorchBackend for the parameter shift rule is not supported."
-            )
+    # executing all the procedure
+    grad = [
+        parameter_shift(
+            circuit=c,
+            hamiltonian=test_hamiltonian,
+            parameter_index=i,
+            scale_factor=scale_factor,
+            nshots=nshots,
+        )
+        for i in range(3)
+    ]
 
-    else:
-        # executing all the procedure
-        grad_0 = parameter_shift(
-            circuit=c,
-            hamiltonian=test_hamiltonian,
-            parameter_index=0,
-            scale_factor=scale_factor,
-            nshots=nshots,
-        )
-        grad_1 = parameter_shift(
-            circuit=c,
-            hamiltonian=test_hamiltonian,
-            parameter_index=1,
-            scale_factor=scale_factor,
-            nshots=nshots,
-        )
-        grad_2 = parameter_shift(
-            circuit=c,
-            hamiltonian=test_hamiltonian,
-            parameter_index=2,
-            scale_factor=scale_factor,
-            nshots=nshots,
-        )
-
-        # check of known values
-        # calculated using tf.GradientTape
-        backend.assert_allclose(grad_0, grads[0], atol=atol)
-        backend.assert_allclose(grad_1, grads[1], atol=atol)
-        backend.assert_allclose(grad_2, grads[2], atol=atol)
+    # check of known values
+    for i in range(3):
+        backend.assert_allclose(grad[i], grads[i], atol=atol)
 
 
 @pytest.mark.parametrize("step_size", [10**-i for i in range(5, 10, 1)])

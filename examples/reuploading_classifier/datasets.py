@@ -19,7 +19,7 @@ def create_dataset(name, grid=None, samples=1000, seed=0):
     Returns:
         Dataset for the given problem (x, y)
     """
-    if grid == None:
+    if grid is None:
         np.random.seed(seed)
         points = 1 - 2 * np.random.rand(samples, 2)
     else:

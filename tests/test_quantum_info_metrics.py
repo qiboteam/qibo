@@ -32,23 +32,27 @@ def test_purity_and_impurity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = purity(state)
+        test = purity(state, backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
+    backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
-    state = np.outer(np.conj(state), state)
+    state = backend.np.outer(backend.np.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
+    backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     dim = 4
     state = backend.identity_density_matrix(2)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0 / dim, atol=PRECISION_TOL)
-    backend.assert_allclose(impurity(state), 1.0 - 1.0 / dim, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        purity(state, backend=backend), 1.0 / dim, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        impurity(state, backend=backend), 1.0 - 1.0 / dim, atol=PRECISION_TOL
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
@@ -90,10 +94,8 @@ def test_trace_distance(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
         trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
         0.0,
@@ -136,19 +138,23 @@ def test_hilbert_schmidt_distance(backend):
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 0.0
+    )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 0.0
+    )
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
+    backend.assert_allclose(
+        hilbert_schmidt_distance(state, target, backend=backend), 2.0
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [True, False])
@@ -201,10 +207,8 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = np.outer(np.conj(state), state)
-    target = np.outer(np.conj(target), target)
-    state = backend.cast(state, dtype=state.dtype)
-    target = backend.cast(target, dtype=target.dtype)
+    state = backend.np.outer(backend.np.conj(state), state)
+    target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
         fidelity(state, target, check_hermitian, backend=backend),
         1.0,
@@ -260,20 +264,22 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         test = fidelity(state, target, check_hermitian=True, backend=backend)
 
 
-def test_process_fidelity_and_infidelity(backend):
+@pytest.mark.parametrize("seed", [10])
+def test_process_fidelity_and_infidelity(backend, seed):
     d = 2
+    rng = np.random.default_rng(seed)
     with pytest.raises(TypeError):
-        channel = np.random.rand(d**2, d**2)
-        target = np.random.rand(d**2, d**2, 1)
+        channel = rng.random(d**2, d**2)
+        target = rng.random(d**2, d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
-        channel = random_hermitian(d**2, backend=backend)
+        channel = random_hermitian(d**2, seed=rng, backend=backend)
         test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
-        channel = 10 * np.random.rand(d**2, d**2)
-        target = 10 * np.random.rand(d**2, d**2)
+        channel = 10 * rng.random(d**2, d**2)
+        target = 10 * rng.random(d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, check_unitary=True, backend=backend)

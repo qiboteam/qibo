@@ -9,13 +9,11 @@ from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy",)
-QIBO_NON_NATIVE_BACKENDS = (
-    "qibojit",
-    "qibolab",
-    "qibo-cloud-backends",
-    "qibotn",
-)
+QIBO_NATIVE_BACKENDS = ("numpy", "qulacs")
+
+
+class MissingBackend(ValueError):
+    """Impossible to locate backend provider package."""
 
 
 class MetaBackend:
@@ -38,6 +36,10 @@ class MetaBackend:
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
             return CliffordBackend(**kwargs)
+        elif backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend
+
+            return QulacsBackend()
         else:
             raise_error(
                 ValueError,
@@ -65,9 +67,9 @@ class GlobalBackend(NumpyBackend):
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
-        {"backend": "tensorflow"},
         {"backend": "numpy"},
-        {"backend": "pytorch"},
+        {"backend": "qiboml", "platform": "tensorflow"},
+        {"backend": "qiboml", "platform": "pytorch"},
     ]
 
     def __new__(cls):
@@ -85,7 +87,7 @@ class GlobalBackend(NumpyBackend):
                 try:
                     cls._instance = construct_backend(**kwargs)
                     break
-                except (ModuleNotFoundError, ImportError):
+                except (ImportError, MissingBackend):
                     pass
 
         if cls._instance is None:  # pragma: no cover
@@ -190,10 +192,10 @@ def _check_backend(backend):
     return backend
 
 
-def list_available_backends() -> dict:
+def list_available_backends(*providers: str) -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()
-    for backend in QIBO_NON_NATIVE_BACKENDS + ("qiboml",):
+    for backend in providers:
         try:
             module = import_module(backend.replace("-", "_"))
             available = getattr(module, "MetaBackend")().list_available()
@@ -212,20 +214,22 @@ def construct_backend(backend, **kwargs) -> Backend:
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
     """
-    # TODO: remove this as soon as possible (it might break things)
-    if backend == "tensorflow":
-        backend = "qiboml"
-        kwargs["platform"] = "tensorflow"
-
     if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
         return MetaBackend.load(backend, **kwargs)
-    elif backend in QIBO_NON_NATIVE_BACKENDS + ("qiboml",):
-        module = import_module(backend.replace("-", "_"))
+
+    provider = backend.replace("-", "_")
+    try:
+        module = import_module(provider)
         return getattr(module, "MetaBackend").load(**kwargs)
-    else:
+    except ImportError as e:
+        # pylint: disable=unsupported-membership-test
+        if provider not in e.msg:
+            raise e
         raise_error(
-            ValueError,
-            f"Backend {backend} is not available. To check which backends are installed use `qibo.list_available_backends()`.",
+            MissingBackend,
+            f"The '{backend}' backends' provider is not available. Check that a Python "
+            f"package named '{provider}' is installed, and it is exposing valid Qibo "
+            "backends.",
         )
 
 

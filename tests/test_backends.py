@@ -1,4 +1,5 @@
 import platform
+import sys
 
 import numpy as np
 import pytest
@@ -89,38 +90,6 @@ def test_matrix_rotations(backend, gate, target_matrix):
     backend.assert_allclose(gate.matrix(backend), target_matrix(theta))
 
 
-def test_control_matrix(backend):
-    theta = 0.1234
-    rotation = np.array(
-        [
-            [np.cos(theta / 2.0), -np.sin(theta / 2.0)],
-            [np.sin(theta / 2.0), np.cos(theta / 2.0)],
-        ]
-    )
-    target_matrix = np.eye(4, dtype=rotation.dtype)
-    target_matrix[2:, 2:] = rotation
-    gate = gates.RY(0, theta).controlled_by(1)
-    backend.assert_allclose(gate.matrix(backend), target_matrix)
-
-    gate = gates.RY(0, theta).controlled_by(1, 2)
-    with pytest.raises(NotImplementedError):
-        matrix = backend.control_matrix(gate)
-
-
-def test_control_matrix_unitary(backend):
-    u = np.random.random((2, 2))
-    gate = gates.Unitary(u, 0).controlled_by(1)
-    matrix = backend.control_matrix(gate)
-    target_matrix = np.eye(4, dtype=np.complex128)
-    target_matrix[2:, 2:] = u
-    backend.assert_allclose(matrix, target_matrix)
-
-    u = np.random.random((16, 16))
-    gate = gates.Unitary(u, 0, 1, 2, 3).controlled_by(4)
-    with pytest.raises(ValueError):
-        matrix = backend.control_matrix(gate)
-
-
 def test_plus_density_matrix(backend):
     matrix = backend.plus_density_matrix(4)
     target_matrix = np.ones((16, 16)) / 16
@@ -145,12 +114,34 @@ def test_construct_backend(backend):
 
 def test_list_available_backends():
     tensorflow = False if platform.system() == "Windows" else True
+    qulacs = (
+        False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
+    )
     available_backends = {
         "numpy": True,
+        "qulacs": qulacs,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
         "qiboml": {"tensorflow": tensorflow, "pytorch": True, "jax": True},
     }
-    assert available_backends == list_available_backends()
+    assert available_backends == list_available_backends(
+        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn"
+    )
+
+
+def test_gradients_pytorch():
+    from qibo.backends import PyTorchBackend  # pylint: disable=import-outside-toplevel
+
+    backend = PyTorchBackend()
+    gate = gates.RX(0, 0.1)
+    matrix = gate.matrix(backend)
+    assert matrix.requires_grad
+    assert backend.gradients
+    backend.requires_grad(False)
+    gate = gates.RX(0, 0.1)
+    matrix = gate.matrix(backend)
+    assert not matrix.requires_grad
+    assert not backend.gradients
+    assert not backend.matrices.requires_grad

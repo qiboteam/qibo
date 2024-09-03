@@ -1,5 +1,6 @@
 """Error Mitigation Methods."""
 
+import math
 from itertools import product
 
 import numpy as np
@@ -36,13 +37,13 @@ def get_gammas(noise_levels, analytical: bool = True):
         zne_coefficients = np.array(
             [
                 1
-                / (2 ** (2 * max_noise_level) * np.math.factorial(i))
+                / (2 ** (2 * max_noise_level) * math.factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * max_noise_level)
+                * math.factorial(1 + 2 * max_noise_level)
                 / (
-                    np.math.factorial(max_noise_level)
-                    * np.math.factorial(max_noise_level - i)
+                    math.factorial(max_noise_level)
+                    * math.factorial(max_noise_level - i)
                 )
                 for i in noise_levels
             ]
@@ -51,51 +52,77 @@ def get_gammas(noise_levels, analytical: bool = True):
     return zne_coefficients
 
 
-def get_noisy_circuit(circuit, num_insertions: int, insertion_gate: str = "CNOT"):
+def get_noisy_circuit(
+    circuit, num_insertions: int, global_unitary_folding=True, insertion_gate=None
+):
     """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to modify.
-        num_insertions (int): number of insertion gate pairs to add.
-        insertion_gate (str, optional): gate to be used in the insertion.
-            If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Default is ``"CNOT"``.
+        num_insertions (int): number of insertion gate pairs / global unitary folds to add.
+        global_unitary_folding (bool): If ``True``, noise is increased by global unitary folding.
+            If ``False``, local unitary folding is used. Defaults to ``True``.
+        insertion_gate (str, optional): gate to be folded in the local unitary folding.
+            If ``RX``, the gate used is :math:``RX(\\pi / 2)``. Otherwise, it is the ``CNOT`` gate.
 
     Returns:
-        :class:`qibo.models.Circuit`: circuit with the inserted gate pairs.
+        :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
-    if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
-        raise_error(
-            ValueError,
-            "Invalid insertion gate specification. Please select between 'CNOT' and 'RX'.",
-        )
-    if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
-        raise_error(
-            ValueError,
-            "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. "
-            + "Alternatively, try with the 'RX' insertion gate instead.",
-        )
 
-    i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
-    theta = np.pi / 2
-    noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+    if global_unitary_folding:
 
-    for gate in circuit.queue:
-        noisy_circuit.add(gate)
+        copy_c = Circuit(**circuit.init_kwargs)
+        for g in circuit.queue:
+            if not isinstance(g, gates.M):
+                copy_c.add(g)
 
-        if isinstance(gate, i_gate):
-            if insertion_gate == "CNOT":
-                control = gate.control_qubits[0]
-                target = gate.target_qubits[0]
-                for _ in range(num_insertions):
-                    noisy_circuit.add(gates.CNOT(control, target))
-                    noisy_circuit.add(gates.CNOT(control, target))
-            elif gate.init_kwargs["theta"] == theta:
-                qubit = gate.qubits[0]
-                for _ in range(num_insertions):
-                    noisy_circuit.add(gates.RX(qubit, theta=theta))
-                    noisy_circuit.add(gates.RX(qubit, theta=-theta))
+        noisy_circuit = copy_c
+
+        for _ in range(num_insertions):
+            noisy_circuit += copy_c.invert() + copy_c
+
+        for m in circuit.measurements:
+            noisy_circuit.add(m)
+
+    else:
+        if insertion_gate is None or insertion_gate not in (
+            "CNOT",
+            "RX",
+        ):  # pragma: no cover
+            raise_error(
+                ValueError,
+                "Invalid insertion gate specification. Please select between 'CNOT' and 'RX'.",
+            )
+        if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
+            raise_error(
+                ValueError,
+                "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. "
+                + "Alternatively, try with the 'RX' insertion gate instead.",
+            )
+
+        i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+
+        theta = np.pi / 2
+        noisy_circuit = Circuit(**circuit.init_kwargs)
+
+        for gate in circuit.queue:
+            noisy_circuit.add(gate)
+
+            if isinstance(gate, i_gate):
+                if insertion_gate == "CNOT":
+                    control = gate.control_qubits[0]
+                    target = gate.target_qubits[0]
+                    for _ in range(num_insertions):
+                        noisy_circuit.add(gates.CNOT(control, target))
+                        noisy_circuit.add(gates.CNOT(control, target))
+                elif insertion_gate == "RX":
+                    qubit = gate.qubits[0]
+                    theta = gate.init_kwargs["theta"]
+                    for _ in range(num_insertions):
+                        noisy_circuit.add(gates.RX(qubit, theta=theta))
+                        noisy_circuit.add(gates.RX(qubit, theta=-theta))
 
     return noisy_circuit
 
@@ -107,6 +134,7 @@ def ZNE(
     noise_model=None,
     nshots=10000,
     solve_for_gammas=False,
+    global_unitary_folding=True,
     insertion_gate="CNOT",
     readout=None,
     qubit_map=None,
@@ -128,9 +156,10 @@ def ZNE(
         nshots (int, optional): Number of shots. Defaults to :math:`10000`.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
             equations to obtain the ``gamma`` coefficients. Default is ``False``.
-        insertion_gate (str, optional): gate to be used in the insertion.
-            If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Defaults to ``"CNOT"``.
+        global_unitary_folding (bool, optional): If ``True``, noise is increased by global unitary folding.
+            If ``False``, local unitary folding is used. Defaults to ``True``.
+        insertion_gate (str, optional): gate to be folded in the local unitary folding.
+            If ``RX``, the gate used is :math:``RX(\\pi / 2)``. Otherwise, it is the ``CNOT`` gate.
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
@@ -161,7 +190,10 @@ def ZNE(
     expected_values = []
     for num_insertions in noise_levels:
         noisy_circuit = get_noisy_circuit(
-            circuit, num_insertions, insertion_gate=insertion_gate
+            circuit,
+            num_insertions,
+            global_unitary_folding,
+            insertion_gate=insertion_gate,
         )
         val = get_expectation_val_with_readout_mitigation(
             noisy_circuit,
@@ -229,17 +261,20 @@ def sample_training_circuit_cdr(
 
         replacement.append(rep_gates)
         distance.append(
-            np.linalg.norm(
-                gate.matrix(backend)
-                - backend.cast([rep_gate.matrix(backend) for rep_gate in rep_gates]),
-                ord="fro",
-                axis=(1, 2),
+            backend.np.real(
+                backend.np.linalg.norm(
+                    gate.matrix(backend)
+                    - backend.cast(
+                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
+                    ),
+                    ord="fro",
+                    axis=(1, 2),
+                )
             )
         )
 
-    distance = np.vstack(distance)
-    prob = np.exp(-(distance**2) / sigma**2)
-    prob = backend.cast(prob, dtype=prob.dtype)
+    distance = backend.np.vstack(distance)
+    prob = backend.np.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),
@@ -1063,7 +1098,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         backend = GlobalBackend()
     elif backend.name == "qibolab":  # pragma: no cover
         backend.transpiler.passes[1] = Custom(
-            map=qubit_map, connectivity=backend.platform.topology
+            initial_map=qubit_map, connectivity=backend.platform.topology
         )
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)

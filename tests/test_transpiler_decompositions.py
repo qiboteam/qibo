@@ -12,12 +12,12 @@ default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
 
 def assert_matrices_allclose(gate, natives, backend):
     target_matrix = gate.matrix(backend)
-    target_matrix = backend.cast(target_matrix, dtype=target_matrix.dtype)
     # Remove global phase from target matrix
     normalisation = np.power(
-        np.linalg.det(target_matrix), 1 / float(target_matrix.shape[0]), dtype=complex
+        np.linalg.det(backend.to_numpy(target_matrix)),
+        1 / float(target_matrix.shape[0]),
+        dtype=complex,
     )
-    normalisation = backend.cast(normalisation, dtype=normalisation.dtype)
     target_unitary = target_matrix / normalisation
 
     circuit = Circuit(len(gate.qubits))
@@ -25,15 +25,20 @@ def assert_matrices_allclose(gate, natives, backend):
     native_matrix = circuit.unitary(backend)
     # Remove global phase from native matrix
     normalisation = np.power(
-        np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
+        np.linalg.det(backend.to_numpy(native_matrix)),
+        1 / float(native_matrix.shape[0]),
+        dtype=complex,
     )
-    normalisation = backend.cast(normalisation, dtype=normalisation.dtype)
     native_unitary = native_matrix / normalisation
 
     # There can still be phase differences of -1, -1j, 1j
     c = 0
     for phase in [1, -1, 1j, -1j]:
-        if np.allclose(phase * native_unitary, target_unitary, atol=1e-12):
+        if np.allclose(
+            backend.to_numpy(phase * native_unitary),
+            backend.to_numpy(target_unitary),
+            atol=1e-12,
+        ):
             c = 1
     backend.assert_allclose(c, 1)
     assert_decomposition(circuit, natives)

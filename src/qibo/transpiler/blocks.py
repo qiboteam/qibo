@@ -124,7 +124,7 @@ class CircuitBlocks:
         return self.block_list
 
     def search_by_index(self, index: int):
-        """Find a block from its index, requires index_names == True"""
+        """Find a block from its index, requires index_names to be ``True``."""
         if not self._index_names:
             raise_error(
                 BlockingError,
@@ -168,6 +168,15 @@ class CircuitBlocks:
                 BlockingError,
                 "The block you are trying to remove is not present in the circuit blocks.",
             )
+
+    def return_last_block(self):
+        """Return the last block in the circuit blocks."""
+        if len(self.block_list) == 0:
+            raise_error(
+                BlockingError,
+                "No blocks found in the circuit blocks.",
+            )
+        return self.block_list[-1]
 
 
 def block_decomposition(circuit: Circuit, fuse: bool = True):

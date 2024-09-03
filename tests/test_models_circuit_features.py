@@ -58,6 +58,28 @@ def test_circuit_unitary_and_inverse_with_noise_channel(backend):
         circuit.invert()
 
 
+def test_circuit_unitary_non_trivial(backend):
+    target = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+        ],
+        dtype=complex,
+    )
+    target = backend.cast(target, dtype=target.dtype)
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.SWAP(0, 2).controlled_by(1))
+    unitary = circuit.unitary(backend)
+    backend.assert_allclose(unitary, target)
+
+
 @pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
@@ -137,10 +159,10 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
         else:
             c = c.fuse()
     invc = c.invert()
-    target_state = np.ones(2**4) / 4
+    target_state = np.ones(2**4) / 4.0
     final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))._state
     final_state = backend.execute_circuit(invc, initial_state=final_state)._state
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
 def test_circuit_invert_and_addition_execution(backend, accelerators):
