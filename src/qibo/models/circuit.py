@@ -1268,7 +1268,9 @@ class Circuit:
 
         return matrix, idx
 
-    def draw(self, line_wrap: int = 70, legend: bool = False, output_string: bool = False) -> str:
+    def draw(
+        self, line_wrap: int = 70, legend: bool = False, output_string: bool = False
+    ) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
