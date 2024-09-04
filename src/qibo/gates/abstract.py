@@ -255,7 +255,7 @@ class Gate:
                 c.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
                 c.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
                 c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
-                print(c.draw())
+                c.draw()
             .. testoutput::
 
                 q0: ───X─────

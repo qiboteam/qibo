@@ -310,7 +310,7 @@ For example
     from qibo.models import QFT
 
     c = QFT(5)
-    print(c.draw())
+    print(c.draw(output_string=True))
     # Prints
     '''
     q0: ─H─U1─U1─U1─U1───────────────────────────x───
