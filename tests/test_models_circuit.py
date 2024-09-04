@@ -861,7 +861,7 @@ def test_circuit_draw_labels():
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit == ref
+    assert circuit.draw(output_string=True) == ref
 
 
 def test_circuit_draw_names():
