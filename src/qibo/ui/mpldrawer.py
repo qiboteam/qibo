@@ -38,15 +38,22 @@ PLOT_PARAMS = {
 def _plot_quantum_schedule(
     schedule, inits, plot_params, labels=[], plot_labels=True, **kwargs
 ):
-    """Use Matplotlib to plot a quantum circuit.
-    schedule  List of time steps, each containing a sequence of gates during that step.
-              Each gate is a tuple containing (name,target,control1,control2...).
-              Targets and controls initially defined in terms of labels
-    inits     Initialization list of gates
-    plot_params Style plot configuration
-    labels    List of qubit labels, optional
+    """Use Matplotlib to plot a queue of quantum circuit.
 
-    kwargs    Can override plot_parameters
+    Args:
+        schedule (list):  List of time steps, each containing a sequence of gates during that step.
+        Each gate is a tuple containing (name,target,control1,control2...). Targets and controls initially defined in terms of labels.
+
+        inits (list): Initialization list of gates.
+
+        plot_params (list): Style plot configuration.
+
+        labels (list): List of qubit labels, optional.
+
+        kwargs (list): Variadic list that can override plot parameters.
+
+    Returns:
+        matplotlib.axes.Axes: An Axes object encapsulates all the plt elements of a plot in a figure.
     """
 
     return _plot_quantum_circuit(
@@ -64,14 +71,21 @@ def _plot_quantum_circuit(
     gates, inits, plot_params, labels=[], plot_labels=True, schedule=False, **kwargs
 ):
     """Use Matplotlib to plot a quantum circuit.
-    gates     List of tuples for each gate in the quantum circuit.
-              (name,target,control1,control2...). Targets and controls initially
-              defined in terms of labels.
-    inits     Initialization list of gates
-    plot_params Style plot configuration
-    labels    List of qubit labels. optional
 
-    kwargs    Can override plot_parameters
+    Args:
+        gates (list): List of tuples for each gate in the quantum circuit. (name,target,control1,control2...).
+        Targets and controls initially defined in terms of labels.
+
+        inits (list): Initialization list of gates.
+
+        plot_params (list): Style plot configuration.
+
+        labels (list): List of qubit labels. (optional).
+
+        kwargs (list): Variadic list that can override plot parameters.
+
+    Returns:
+        matplotlib.axes.Axes: An Axes object encapsulates all the plt elements of a plot in a figure.
     """
 
     plot_params.update(kwargs)
@@ -118,7 +132,19 @@ def _plot_quantum_circuit(
 
 
 def _enumerate_gates(gates_plot, schedule=False):
-    "Enumerate the gates in a way that can take l as either a list of gates or a schedule"
+    """Enumerate the gates in a way that can take l as either a list of gates or a schedule
+
+    Args:
+        gates_plot (list): List of gates to plot.
+
+        schedule (bool): Check whether process single gate or array of gates at a time.
+
+    Returns:
+        int: Index of gate or list of gates.
+
+        list: Processed list of gates ready to plot.
+    """
+
     if schedule:
         for i, gates in enumerate(gates_plot):
             for gate in gates:
@@ -129,7 +155,6 @@ def _enumerate_gates(gates_plot, schedule=False):
 
 
 def _measured_wires(gates_plot, labels, schedule=False):
-    "measured[i] = j means wire i is measured at step j"
     measured = {}
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         name, target = gate[:2]
@@ -140,7 +165,14 @@ def _measured_wires(gates_plot, labels, schedule=False):
 
 
 def _draw_gates(
-    ax, gates_plot, labels, gate_grid, wire_grid, plot_params, measured={}, schedule=False
+    ax,
+    gates_plot,
+    labels,
+    gate_grid,
+    wire_grid,
+    plot_params,
+    measured={},
+    schedule=False,
 ):
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params)
@@ -427,13 +459,6 @@ def _get_min_max_qbits(gates):
 
 
 def _get_flipped_index(target, labels):
-    """Get qubit labels from the rest of the line,and return indices
-
-    >>> _get_flipped_index('q0', ['q0', 'q1'])
-    1
-    >>> _get_flipped_index('q1', ['q0', 'q1'])
-    0
-    """
     nq = len(labels)
     i = labels.index(target)
     return nq - i - 1
@@ -466,13 +491,6 @@ def _get_flipped_indices(targets, labels):
 
 
 def _render_label(label, inits={}):
-    """Slightly more flexible way to render labels.
-
-    >>> _render_label('q0')
-    '$|q0\\\\rangle$'
-    >>> _render_label('q0', {'q0':'0'})
-    '$|0\\\\rangle$'
-    """
     if label in inits:
         s = inits[label]
         if s is None:
@@ -482,7 +500,20 @@ def _render_label(label, inits={}):
     return r"$|%s\rangle$" % label
 
 
+def _check_list_str(substrings, string):
+    return any(item in string for item in substrings)
+
+
 def _make_cluster_gates(gates_items):
+    """
+    Given a list of gates from a Qibo circuit, this fucntion gathers all gates to reduce the depth of the circuit making the circuit more user-friendly to avoid very large circuits printed on screen.
+
+    Args:
+        gates_items (list): List of gates to gather for circuit depth reduction.
+
+    Returns:
+        list: List of gathered gates.
+    """
 
     temp_gates = []
     temp_mgates = []
@@ -522,11 +553,16 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
-def _check_list_str(substrings, string):
-    return any(item in string for item in substrings)
-
-
 def _process_gates(array_gates):
+    """
+    Transforms the list of gates given by the Qibo circuit into a list of gates with a suitable structre to print on screen with matplotlib.
+
+    Args:
+        array_gates (list): List of gates provided by the Qibo circuit.
+
+    Returns:
+        list: List of suitable gates to plot with matplotlib.
+    """
 
     if len(array_gates) == 0:
         return []
@@ -591,6 +627,15 @@ def _process_gates(array_gates):
 
 
 def _plot_params(style: Union[dict, str, None]) -> dict:
+    """
+    Given a style name, the function gets the style configuration, if the style is not available, it return the default style. It is allowed to give a custom dictionary to give the circuit a style.
+
+    Args:
+        style (Union[dict, str, None]): Name of the style.
+
+    Returns:
+        dict: Style configuration.
+    """
     if not isinstance(style, dict):
         try:
             style = STYLE.get(style) if (style is not None) else STYLE["default"]
@@ -602,13 +647,59 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
 
 def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
-    circuit         A Qibo circuit to plot (type: qibo.models.circuit.Circuit)
-    scale           Scale the ouput plot
-    cluster_gates   Group single-qubit gates
-    style           Style applied to the circuit (built-in styles: garnacha, fardelejo, quantumspain, color-blind and cachirulo)
 
-    ax              An Axes object encapsulates all the elements of an individual plot in a figure (type: matplotlib.axes._axes.Axes)
-    ax.figure       A Figure object (type: matplotlib.figure.Figure)
+    Args:
+        circuit (qibo.models.circuit.Circuit): A Qibo circuit to plot.
+
+        scale (float): Scaling factor for matplotlib output drawing.
+
+        cluster_gates (boolean): Group (or not) circuit gates on drawing.
+
+        style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
+        (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
+
+    Returns:
+        matplotlib.axes.Axes: Axes object that encapsulates all the elements of an individual plot in a figure.
+
+        matplotlib.figure.Figure: A matplotlib figure object.
+
+    Example:
+
+        .. testcode::
+
+            import matplotlib.pyplot as plt
+            import qibo
+            from qibo import gates, models
+            from qibo.models import QFT
+
+            # new plot function based on matplotlib
+            from qibo.ui import plot_circuit
+
+            %matplotlib inline
+
+            # create a 5-qubits QFT circuit
+            c = QFT(5)
+            c.add(gates.M(qubit) for qubit in range(2))
+
+            # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
+            plot_circuit(c);
+
+            # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
+            # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
+            plot_circuit(c, scale = 0.8, cluster_gates = True, style="garnacha");
+
+            # plot the Qibo circuit with a custom style
+            custom_style = {
+                "facecolor" : "#6497bf",
+                "edgecolor" : "#01016f",
+                "linecolor" : "#01016f",
+                "textcolor" : "#01016f",
+                "fillcolor" : "#ffb9b9",
+                "gatecolor" : "#d8031c",
+                "controlcolor" : "#360000"
+            }
+
+            plot_circuit(c, scale = 0.8, cluster_gates = True, style=custom_style);
     """
 
     params = PLOT_PARAMS.copy()

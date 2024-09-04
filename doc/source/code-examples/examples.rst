@@ -327,3 +327,48 @@ For example
     q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
     q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
     q4: ────────────o──────────o───────o────o──H─x───
+
+How to visualize a circuit with style?
+--------------------------------------
+
+Qibo is able to draw a circuit using ``matplotlib`` library by calling the function ``plot_circuit``. It also have built-in styles ready to use
+and also it is possible to apply custom styles to the circuit. The function is able to cluster the gates to reduce the circuit depth.
+The built-in styles are:  ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind``, ``cachirulo`` or custom dictionary.
+
+For example, we can draw the QFT circuit for 5-qubits:
+
+.. testcode::
+
+        import matplotlib.pyplot as plt
+        import qibo
+        from qibo import gates, models
+        from qibo.models import QFT
+
+        # new plot function based on matplotlib
+        from qibo.ui import plot_circuit
+
+        %matplotlib inline
+
+        # create a 5-qubits QFT circuit
+        c = QFT(5)
+        c.add(gates.M(qubit) for qubit in range(2))
+
+        # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
+        plot_circuit(c);
+
+        # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
+        # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
+        plot_circuit(c, scale = 0.8, cluster_gates = True, style="garnacha");
+
+        # plot the Qibo circuit with a custom style
+        custom_style = {
+            "facecolor" : "#6497bf",
+            "edgecolor" : "#01016f",
+            "linecolor" : "#01016f",
+            "textcolor" : "#01016f",
+            "fillcolor" : "#ffb9b9",
+            "gatecolor" : "#d8031c",
+            "controlcolor" : "#360000"
+        }
+
+        plot_circuit(c, scale = 0.8, cluster_gates = True, style=custom_style);
