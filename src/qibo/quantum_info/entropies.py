@@ -6,7 +6,6 @@ import numpy as np
 from scipy.linalg import fractional_matrix_power
 
 from qibo.backends import _check_backend
-from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity

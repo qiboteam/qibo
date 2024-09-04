@@ -132,7 +132,9 @@ def test_list_available_backends():
 
 
 def test_gradients_pytorch():
-    from qibo.backends import PyTorchBackend  # pylint: disable=import-outside-toplevel
+    from qiboml.backends import (  # pylint: disable=import-outside-toplevel
+        PyTorchBackend,
+    )
 
     backend = PyTorchBackend()
     gate = gates.RX(0, 0.1)
