@@ -25,6 +25,7 @@ PLOT_PARAMS = {
     "not_radius": 0.15,
     "swap_delta": 0.08,
     "label_buffer": 0.0,
+    "dpi": 200,
     "facecolor": "w",
     "edgecolor": "#000000",
     "fillcolor": "#000000",
@@ -394,6 +395,8 @@ def _swapx(ax, x, y, plot_params):
 
 def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
+    matplotlib.pyplot.rcParams["figure.dpi"] = plot_params["dpi"]
+    matplotlib.pyplot.rcParams["savefig.dpi"] = plot_params["dpi"]
     fig = matplotlib.pyplot.figure(
         figsize=(ng * scale, nq * scale),
         facecolor=plot_params["facecolor"],
@@ -645,18 +648,16 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
     return style
 
 
-def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
+def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=200):
     """Main matplotlib plot function for Qibo circuit
 
     Args:
         circuit (qibo.models.circuit.Circuit): A Qibo circuit to plot.
-
         scale (float): Scaling factor for matplotlib output drawing.
-
         cluster_gates (boolean): Group (or not) circuit gates on drawing.
-
         style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
         (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
+        dpi: plot resolution, expressed in terms of dots per inches (DPI).
 
     Returns:
         matplotlib.axes.Axes: Axes object that encapsulates all the elements of an individual plot in a figure.
@@ -704,6 +705,8 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     params = PLOT_PARAMS.copy()
     params.update(_plot_params(style))
+    params["dpi"] = dpi
+
     inits = list(range(circuit.nqubits))
 
     labels = []
