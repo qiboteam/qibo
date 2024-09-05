@@ -565,3 +565,16 @@ def test_undo():
     assert circuit_map.logical_to_physical == [0, 1, 2, 3]
     assert circuit_map._swaps == 0
     assert len(circuit_map._routed_blocks.block_list) == 0
+
+def test_circuitmap_no_circuit():
+    # If a `CircuitMap` is not a temporary instance and is created without a circuit, it should raise an error.
+    with pytest.raises(ValueError):
+        circuit_map = CircuitMap()
+
+def test_logical_to_physical_setter():
+    circ = Circuit(4)
+    initial_layout = {"q0": 0, "q1": 3, "q2": 2, "q3": 1}
+    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
+    circuit_map.logical_to_physical = [2, 0, 1, 3]
+    assert circuit_map.logical_to_physical == [2, 0, 1, 3]
+    assert circuit_map.physical_to_logical == [1, 2, 0, 3]
