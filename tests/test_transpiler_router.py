@@ -566,10 +566,12 @@ def test_undo():
     assert circuit_map._swaps == 0
     assert len(circuit_map._routed_blocks.block_list) == 0
 
+
 def test_circuitmap_no_circuit():
     # If a `CircuitMap` is not a temporary instance and is created without a circuit, it should raise an error.
     with pytest.raises(ValueError):
         circuit_map = CircuitMap()
+
 
 def test_logical_to_physical_setter():
     circ = Circuit(4)
