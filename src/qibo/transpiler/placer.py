@@ -54,7 +54,7 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
     ref_keys = (
         ["q" + str(i) for i in nodes] if isinstance(physical_qubits[0], str) else nodes
     )
-    if physical_qubits != ref_keys:
+    if sorted(physical_qubits) != sorted(ref_keys):
         raise_error(
             PlacementError,
             "Some physical qubits in the layout may be missing or duplicated.",

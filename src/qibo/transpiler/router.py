@@ -34,12 +34,23 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
         if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
             raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
         if len(gate.qubits) == 2:
-            if (gate.qubits[0], gate.qubits[1]) not in connectivity.edges:
+            # physical_qubits = tuple(sorted((circuit.wire_names[gate.qubits[0]], circuit.wire_names[gate.qubits[1]])))
+            physical_qubits = tuple(sorted(gate.qubits))    # for q_i naming
+            if physical_qubits not in connectivity.edges:
                 raise_error(
                     ConnectivityError,
-                    f"Circuit does not respect connectivity. {gate.name} acts on {gate.qubits}.",
+                    f"Circuit does not respect connectivity. {gate.name} acts on {physical_qubits}.",
                 )
-
+                
+        
+def _relabel_connectivity(connectivity, initial_layout):
+    node_mapping = {}
+    initial_layout = dict(sorted(initial_layout.items(), key=lambda item: int(item[0][1:])))    # for q_i naming
+    for i, node in enumerate(list(initial_layout.keys())):
+        # node_mapping[node] = i
+        node_mapping[int(node[1:])] = i     # for q_i naming
+    new_connectivity = nx.relabel_nodes(connectivity, node_mapping)
+    return new_connectivity
 
 class StarConnectivityRouter(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
@@ -183,16 +194,15 @@ class CircuitMap:
         self._temporary = temp
         if self._temporary:  # 2# if temporary circuit, no need to store the blocks
             return
-
-        self._nqubits = circuit.nqubits  # 1# number of qubits
-        if circuit is None:
+        elif circuit is None:
             raise_error(ValueError, "Circuit must be provided.")
-
+        
         if blocks is not None:
             self.circuit_blocks = blocks
         else:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
 
+        self._nqubits = circuit.nqubits  # 1# number of qubits
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
 
@@ -584,10 +594,7 @@ class ShortestPaths(Router):
         """
 
         # 1# Relabel the nodes of the connectivity graph
-        node_mapping = {}
-        for i, node in enumerate(list(initial_layout.keys())):
-            node_mapping[node] = i
-        self.connectivity = nx.relabel_nodes(self.connectivity, node_mapping)
+        self.connectivity = _relabel_connectivity(self.connectivity, initial_layout)
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
@@ -747,10 +754,7 @@ class Sabre(Router):
         """
 
         # 1# Relabel the nodes of the connectivity graph
-        node_mapping = {}
-        for i, node in enumerate(list(initial_layout.keys())):
-            node_mapping[node] = i
-        self.connectivity = nx.relabel_nodes(self.connectivity, node_mapping)
+        self.connectivity = _relabel_connectivity(self.connectivity, initial_layout)
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
