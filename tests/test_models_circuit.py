@@ -864,7 +864,7 @@ def test_circuit_draw_labels():
     assert circuit.draw(output_string=True) == ref
 
 
-def test_circuit_draw_names():
+def test_circuit_draw_names(capsys):
     """Test circuit text draw."""
     ref = (
         "q0: ─H─cx─cx─cx─cx───────────────────────────x───\n"
@@ -883,6 +883,11 @@ def test_circuit_draw_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     assert circuit.draw(output_string=True) == ref
+
+    # Testing circuit text draw when ``output_string == False``
+    circuit.draw()
+    out, _  = capsys.readouterr()
+    assert out == ref
 
 
 def test_circuit_draw_error():
