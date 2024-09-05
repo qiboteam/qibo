@@ -553,12 +553,13 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
-def _process_gates(array_gates):
+def _process_gates(array_gates, nqubits):
     """
     Transforms the list of gates given by the Qibo circuit into a list of gates with a suitable structre to print on screen with matplotlib.
 
     Args:
         array_gates (list): List of gates provided by the Qibo circuit.
+        nqubits (int): Number of circuit qubits
 
     Returns:
         list: List of suitable gates to plot with matplotlib.
@@ -601,7 +602,7 @@ def _process_gates(array_gates):
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
-            for qbit in list(range(circuit.nqubits)):
+            for qbit in list(range(nqubits)):
                 item = (init_label,)
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
@@ -718,9 +719,9 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             fgates = None
 
             if cluster_gates:
-                fgates = _make_cluster_gates(_process_gates(gate.gates))
+                fgates = _make_cluster_gates(_process_gates(gate.gates, circuit.nqubits))
             else:
-                fgates = _process_gates(gate.gates)
+                fgates = _process_gates(gate.gates, circuit.nqubits)
 
             l_gates = len(gate.gates)
             equal_qbits = False
@@ -736,7 +737,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
         else:
             all_gates.append(gate)
 
-    gates_plot = _process_gates(all_gates)
+    gates_plot = _process_gates(all_gates, circuit.nqubits)
 
     if cluster_gates and len(gates_plot) > 0:
         gates_cluster = _make_cluster_gates(gates_plot)
