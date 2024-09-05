@@ -49,13 +49,15 @@ def grid_connectivity():
     chip.add_edges_from(graph_list)
     return chip
 
+
 def line_connectivity(n):
     Q = [i for i in range(n)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
-    graph_list = [(Q[i], (Q[i]+1) % n) for i in range(n-1)]
+    graph_list = [(Q[i], (Q[i] + 1) % n) for i in range(n - 1)]
     chip.add_edges_from(graph_list)
     return chip
+
 
 def generate_random_circuit(nqubits, ngates, seed=42):
     """Generate a random circuit with RX and CZ gates."""
@@ -142,6 +144,7 @@ def test_random_circuits_5q(gates, placer, connectivity):
         initial_map=initial_layout,
     )
 
+
 def test_random_circuits_15q_50g():
     nqubits, ngates = 15, 50
     connectivity = line_connectivity(nqubits)
@@ -162,7 +165,8 @@ def test_random_circuits_15q_50g():
         transpiled_circuit=transpiled_circuit,
         final_map=final_qubit_map,
         initial_map=initial_layout,
-    )    
+    )
+
 
 def test_star_circuit():
     placer = Subgraph(star_connectivity())
@@ -310,24 +314,33 @@ def test_circuit_map():
     assert isinstance(routed_circuit.queue[0], gates.H)
     assert len(routed_circuit.queue) == 4
     qubits = routed_circuit.queue[2].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q1" and routed_circuit.wire_names[qubits[1]] == "q2"
-    
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q2"
+    )
+
     # test update 1
     circuit_map.update((0, 2))
     routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[4], gates.SWAP)
     qubits = routed_circuit.queue[4].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q1" and routed_circuit.wire_names[qubits[1]] == "q0"
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q0"
+    )
     assert circuit_map._swaps == 1
     assert circuit_map.physical_to_logical == [0, 2, 1, 3]
     assert circuit_map.logical_to_physical == [0, 2, 1, 3]
-    
+
     # test update 2
     circuit_map.update((1, 2))
     routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[5], gates.SWAP)
     qubits = routed_circuit.queue[5].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q2" and routed_circuit.wire_names[qubits[1]] == "q1"
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q2"
+        and routed_circuit.wire_names[qubits[1]] == "q1"
+    )
     assert circuit_map._swaps == 2
     assert circuit_map.physical_to_logical == [0, 1, 2, 3]
     assert circuit_map.logical_to_physical == [0, 1, 2, 3]
@@ -340,11 +353,20 @@ def test_circuit_map():
     assert isinstance(routed_circuit.queue[6], gates.CZ)
 
     qubits = routed_circuit.queue[6].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q1" and routed_circuit.wire_names[qubits[1]] == "q2"
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q2"
+    )
     qubits = routed_circuit.queue[7].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q0" and routed_circuit.wire_names[qubits[1]] == "q1"
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q0"
+        and routed_circuit.wire_names[qubits[1]] == "q1"
+    )
     qubits = routed_circuit.queue[8].qubits
-    assert routed_circuit.wire_names[qubits[0]] == "q2" and routed_circuit.wire_names[qubits[1]] == "q3"
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q2"
+        and routed_circuit.wire_names[qubits[1]] == "q3"
+    )
     assert len(circuit_map.circuit_blocks()) == 0
     # test final layout
     assert circuit_map.final_layout() == {"q0": 0, "q1": 1, "q2": 2, "q3": 3}

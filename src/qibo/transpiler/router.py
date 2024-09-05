@@ -35,22 +35,25 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
             raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
         if len(gate.qubits) == 2:
             # physical_qubits = tuple(sorted((circuit.wire_names[gate.qubits[0]], circuit.wire_names[gate.qubits[1]])))
-            physical_qubits = tuple(sorted(gate.qubits))    # for q_i naming
+            physical_qubits = tuple(sorted(gate.qubits))  # for q_i naming
             if physical_qubits not in connectivity.edges:
                 raise_error(
                     ConnectivityError,
                     f"Circuit does not respect connectivity. {gate.name} acts on {physical_qubits}.",
                 )
-                
-        
+
+
 def _relabel_connectivity(connectivity, initial_layout):
     node_mapping = {}
-    initial_layout = dict(sorted(initial_layout.items(), key=lambda item: int(item[0][1:])))    # for q_i naming
+    initial_layout = dict(
+        sorted(initial_layout.items(), key=lambda item: int(item[0][1:]))
+    )  # for q_i naming
     for i, node in enumerate(list(initial_layout.keys())):
         # node_mapping[node] = i
-        node_mapping[int(node[1:])] = i     # for q_i naming
+        node_mapping[int(node[1:])] = i  # for q_i naming
     new_connectivity = nx.relabel_nodes(connectivity, node_mapping)
     return new_connectivity
+
 
 class StarConnectivityRouter(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
@@ -196,7 +199,7 @@ class CircuitMap:
             return
         elif circuit is None:
             raise_error(ValueError, "Circuit must be provided.")
-        
+
         if blocks is not None:
             self.circuit_blocks = blocks
         else:
