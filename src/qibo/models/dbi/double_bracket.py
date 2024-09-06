@@ -56,7 +56,7 @@ class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
     hyperopt = hyperopt_step
-    """Use hyperopt package."""
+    """Use optuna package to hyperoptimize the DBI step."""
     grid_search = grid_search_step
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step
