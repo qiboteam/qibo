@@ -719,7 +719,9 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             fgates = None
 
             if cluster_gates:
-                fgates = _make_cluster_gates(_process_gates(gate.gates, circuit.nqubits))
+                fgates = _make_cluster_gates(
+                    _process_gates(gate.gates, circuit.nqubits)
+                )
             else:
                 fgates = _process_gates(gate.gates, circuit.nqubits)
 
