@@ -7,7 +7,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import _Global, _check_backend, _check_backend_and_local_state
+from qibo.backends import _check_backend, _check_backend_and_local_state, _Global
 from qibo.config import raise_error
 
 

@@ -78,8 +78,8 @@ class _Global:
         {"backend": "pytorch"},
     ]
 
-    @classmethod 
-    def backend(cls):    # pragma: no cover  
+    @classmethod
+    def backend(cls):  # pragma: no cover
         if cls._backend is not None:
             return cls._backend
 
@@ -102,9 +102,9 @@ class _Global:
 
         log.info(f"Using {cls._backend} backend on {cls._backend.device}")
         return cls._backend
-    
+
     @classmethod
-    def set_backend(cls, backend, **kwargs):    # pragma: no cover
+    def set_backend(cls, backend, **kwargs):  # pragma: no cover
         if (
             cls._backend is None
             or cls._backend.name != backend
@@ -116,9 +116,9 @@ class _Global:
     @classmethod
     def get_backend(cls):
         return cls._backend
-    
+
     @classmethod
-    def transpiler(cls):    # pragma: no cover
+    def transpiler(cls):  # pragma: no cover
         from qibo.transpiler.pipeline import Passes
 
         if cls._transpiler is not None:
@@ -127,7 +127,7 @@ class _Global:
         cls._transpiler = Passes(passes=[])
         # TODO: add default passes or use Passes.default()
         return cls._transpiler
-    
+
     @classmethod
     def set_transpiler(cls, transpiler):  # pragma: no cover
         cls._transpiler = transpiler
@@ -136,7 +136,7 @@ class _Global:
     @classmethod
     def get_transpiler(cls):
         return cls._transpiler
-    
+
     @classmethod
     def resolve_global(cls):
         if cls._backend is None:
