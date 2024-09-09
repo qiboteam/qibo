@@ -15,12 +15,14 @@ def circuit(nqubits=2):
     c.add(gates.M(1))
     return c
 
+
 def test_plot_circuit():
     circ = circuit()
     ax, _ = plot_circuit(circ)
-    assert  ax.title == ax.title
+    assert ax.title == ax.title
 
-@pytest.mark.parametrize("style", ['default'])
+
+@pytest.mark.parametrize("style", ["default"])
 def test_plot_params(style):
     dict_style = _plot_params(style)
-    assert dict_style['facecolor'] == dict_style['facecolor']
+    assert dict_style["facecolor"] == dict_style["facecolor"]
