@@ -49,6 +49,27 @@ def test_plot_circuit_error_style():
     assert style == None
 
 
+@pytest.mark.parametrize("qubits", [3, 4, 5, 6])
+def test_bigger_circuit_gates(qubits):
+    """Test for a bigger circuit"""
+    c = Circuit(qubits)
+    c.add(gates.H(1))
+    c.add(gates.X(1))
+    c.add(gates.SX(2))
+    c.add(gates.CSX(0, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.SWAP(1, 2))
+    c.add(gates.SiSWAP(1, 2))
+    c.add(gates.FSWAP(1, 2))
+    c.add(gates.DEUTSCH(1, 0, 2, np.pi))
+    c.add(gates.X(1))
+    c.add(gates.X(0))
+    c.add(gates.M(qubit) for qubit in range(2))
+    ax, _ = plot_circuit(c)
+    assert ax.title == ax.title
+
+
 @pytest.mark.parametrize("clustered", [False, True])
 def test_complex_circuit(clustered):
     """Complex circuits for several cases"""
