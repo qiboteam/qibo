@@ -134,7 +134,7 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def get_transpiler(cls):  
+    def get_transpiler(cls):
         return cls._transpiler
 
     @classmethod
