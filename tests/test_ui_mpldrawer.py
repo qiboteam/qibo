@@ -1,7 +1,8 @@
 """Test that Qibo matplotlib drawer"""
 
-import pytest
 import matplotlib.pyplot
+import pytest
+
 from qibo import Circuit, gates
 from qibo.ui import plot_circuit
 
