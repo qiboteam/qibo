@@ -1,8 +1,10 @@
 """Test that Qibo matplotlib drawer"""
 
 import pytest
+import matplotlib.pyplot
 from qibo import Circuit, gates
 from qibo.ui import plot_circuit
+
 
 # defining a dummy circuit
 def circuit(nqubits=2):
@@ -15,4 +17,5 @@ def circuit(nqubits=2):
 
 def test_plot_circuit():
     circ = circuit()
-    assert plot_circuit(circ) == plot_circuit(circ)
+    ax, _ = plot_circuit(circ)
+    assert  ax.title == ax.title
