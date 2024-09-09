@@ -638,10 +638,11 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
         dict: Style configuration.
     """
     if not isinstance(style, dict):
-        try:
-            style = STYLE.get(style) if (style is not None) else STYLE["default"]
-        except AttributeError:
-            style = STYLE["default"]
+        style = (
+            STYLE.get(style)
+            if (style is not None and style in STYLE.keys())
+            else STYLE["default"]
+        )
 
     return style
 
