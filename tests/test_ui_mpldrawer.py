@@ -8,7 +8,7 @@ from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui import plot_circuit
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
-from qibo.ui.mpldrawer import _plot_params, _process_gates
+from qibo.ui.mpldrawer import _plot_params, _process_gates, _plot_quantum_circuit
 
 
 # defining a dummy circuit
@@ -180,3 +180,53 @@ def test_layered_circuit():
     ansatz.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(ansatz)
     assert ax.title == ax.title
+
+
+def test_plot_circuit():
+    gates_plot = [
+        ("H", "q_0"),
+        ("U1", "q_0", "q_1"),
+        ("U1", "q_0", "q_2"),
+        ("U1", "q_0", "q_3"),
+        ("U1", "q_0", "q_4"),
+        ("H", "q_1"),
+        ("U1", "q_1", "q_2"),
+        ("U1", "q_1", "q_3"),
+        ("U1", "q_1", "q_4"),
+        ("H", "q_2"),
+        ("U1", "q_2", "q_3"),
+        ("U1", "q_2", "q_4"),
+        ("H", "q_3"),
+        ("U1", "q_3", "q_4"),
+        ("H", "q_4"),
+        ("SWAP", "q_0", "q_4"),
+        ("SWAP", "q_1", "q_3"),
+        ("MEASURE", "q_0"),
+        ("MEASURE", "q_1"),
+    ]
+
+    inits = [0, 1, 2, 3, 4]
+
+    params = {
+        "scale": 1.0,
+        "fontsize": 14.0,
+        "linewidth": 1.0,
+        "control_radius": 0.05,
+        "not_radius": 0.15,
+        "swap_delta": 0.08,
+        "label_buffer": 0.0,
+        "facecolor": "#d55e00",
+        "edgecolor": "#f0e442",
+        "fillcolor": "#cc79a7",
+        "linecolor": "#f0e442",
+        "textcolor": "#f0e442",
+        "gatecolor": "#d55e00",
+        "controlcolor": "#f0e442",
+    }
+
+    labels = ["q_0", "q_1", "q_2", "q_3", "q_4"]
+
+    ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
+    ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
+    assert ax1.title == ax1.title
+    assert ax2.title == ax2.title
