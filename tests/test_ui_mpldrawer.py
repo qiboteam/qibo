@@ -19,12 +19,14 @@ def circuit(nqubits=2):
 
 
 def test_plot_circuit():
+    """Test for main plot function"""
     circ = circuit()
     ax, _ = plot_circuit(circ)
     assert ax.title == ax.title
 
 
 def test_fused_gates():
+    """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
     min_q = 0
     max_q = 1
     l_gates = 1
