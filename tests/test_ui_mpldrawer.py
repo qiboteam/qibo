@@ -1,4 +1,4 @@
-"""Test that Qibo matplotlib drawer"""
+"""Tests for Qibo matplotlib drawer"""
 
 import matplotlib.pyplot
 import numpy as np
@@ -154,4 +154,29 @@ def test_circuit_entangled_entropy():
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     ax, _ = plot_circuit(c)
+    assert ax.title == ax.title
+
+
+def test_layered_circuit():
+    """layeres Circuit test"""
+    nqubits = 4
+    nlayers = 3
+
+    # Create variational ansatz circuit Twolocal
+    ansatz = Circuit(nqubits)
+    for l in range(nlayers):
+
+        ansatz.add((gates.RY(q, theta=0) for q in range(nqubits)))
+
+        for i in range(nqubits - 3):
+            ansatz.add(gates.CNOT(i, i + 1))
+            ansatz.add(gates.CNOT(i, i + 2))
+            ansatz.add(gates.CNOT(i + 1, i + 2))
+            ansatz.add(gates.CNOT(i, i + 3))
+            ansatz.add(gates.CNOT(i + 1, i + 3))
+            ansatz.add(gates.CNOT(i + 2, i + 3))
+
+    ansatz.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    ansatz.add(gates.M(qubit) for qubit in range(2))
+    ax, _ = plot_circuit(ansatz)
     assert ax.title == ax.title
