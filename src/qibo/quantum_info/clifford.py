@@ -269,7 +269,7 @@ class Clifford:
             self._samples = self._backend.cast(samples, dtype="int32")
             for gate in self.measurements:
                 rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
-                gate.result.register_samples(self._samples[:, rqubits], self._backend)
+                gate.result.register_samples(self._samples[:, rqubits])
 
         if registers:
             return {
