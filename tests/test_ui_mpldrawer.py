@@ -309,3 +309,14 @@ def test_fuse_cluster():
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c.fuse())
     assert ax.title == ax.title
+
+
+def test_fuse_cluster():
+    """Test for clustering gates"""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.M(qubit) for qubit in range(2))
+    ax, _ = plot_circuit(c.fuse())
+    assert ax.title == ax.title
