@@ -8,7 +8,7 @@ from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui import plot_circuit
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
-from qibo.ui.mpldrawer import _plot_params, _process_gates, _plot_quantum_circuit
+from qibo.ui.mpldrawer import _plot_params, _plot_quantum_circuit, _process_gates
 
 
 # defining a dummy circuit
