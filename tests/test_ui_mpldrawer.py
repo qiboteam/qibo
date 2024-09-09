@@ -8,11 +8,11 @@ from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
 from qibo.ui.mpldrawer import (
+    _make_cluster_gates,
     _plot_params,
     _plot_quantum_circuit,
     _process_gates,
     _render_label,
-    _make_cluster_gates,
     plot_circuit,
 )
 
