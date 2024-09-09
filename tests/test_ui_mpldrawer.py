@@ -158,7 +158,7 @@ def test_circuit_entangled_entropy():
 
 
 def test_layered_circuit():
-    """layeres Circuit test"""
+    """Layered Circuit test"""
     nqubits = 4
     nlayers = 3
 
