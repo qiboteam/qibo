@@ -227,20 +227,6 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[max_wire],
             plot_params,
         )
-        ismeasured = False
-        for index in control_indices:
-            if measured.get(index, 1000) < i:
-                ismeasured = True
-        if ismeasured:
-            dy = 0.04  # TODO: put in plot_params
-            _line(
-                ax,
-                gate_grid[i] + dy,
-                gate_grid[i] + dy,
-                wire_grid[min_wire],
-                wire_grid[max_wire],
-                plot_params,
-            )
 
         for ci in control_indices:
             x = gate_grid[i]
