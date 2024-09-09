@@ -82,8 +82,10 @@ def test_complex_circuit(clustered):
     c.add(gates.DEUTSCH(1, 0, 2, np.pi))
     c.add(gates.X(0))
     c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
-    assert ax.title == ax.title
+    ax1, _ = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
+    ax2, _ = plot_circuit(c, cluster_gates=clustered, scale=0.70)
+    assert ax1.title == ax1.title
+    assert ax2.title == ax2.title
 
 
 def test_align_gate():
