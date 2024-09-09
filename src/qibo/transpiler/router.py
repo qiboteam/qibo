@@ -43,13 +43,20 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
                 )
 
 
-def _relabel_connectivity(connectivity, initial_layout):
+def _relabel_connectivity(connectivity, layout):
+    """Relabels the connectivity graph using the passed layout.
+    
+    Args:
+        connectivity (nx.Graph): input connectivity.
+        layout (dict): input qubit layout.
+    Returns:
+        (dict) the updated connectivity.
+    """
     node_mapping = {}
-    initial_layout = dict(
-        sorted(initial_layout.items(), key=lambda item: int(item[0][1:]))
+    layout = dict(
+        sorted(layout.items(), key=lambda item: int(item[0][1:]))
     )  # for q_i naming
-    for i, node in enumerate(list(initial_layout.keys())):
-        # node_mapping[node] = i
+    for i, node in enumerate(list(layout.keys())):
         node_mapping[int(node[1:])] = i  # for q_i naming
     new_connectivity = nx.relabel_nodes(connectivity, node_mapping)
     return new_connectivity
