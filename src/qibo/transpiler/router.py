@@ -45,7 +45,7 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
 
 def _relabel_connectivity(connectivity, layout):
     """Relabels the connectivity graph using the passed layout.
-    
+
     Args:
         connectivity (nx.Graph): input connectivity.
         layout (dict): input qubit layout.
