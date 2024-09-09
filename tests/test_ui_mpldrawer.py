@@ -11,6 +11,8 @@ from qibo.ui.mpldrawer import (
     _plot_params,
     _plot_quantum_circuit,
     _process_gates,
+    _render_label,
+    _make_cluster_gates,
     plot_circuit,
 )
 
@@ -146,11 +148,14 @@ def test_fused_gates():
     assert end_barrier.unitary == end_barrier.unitary
 
 
-def test_circuit_fused_gates():
+@pytest.mark.parametrize("clustered", [False, True])
+def test_circuit_fused_gates(clustered):
     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
     c = QFT(5)
     c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(c.fuse(), scale=0.8, cluster_gates=True, style="quantumspain")
+    ax, _ = plot_circuit(
+        c.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
+    )
     assert ax.title == ax.title
 
 
@@ -161,7 +166,8 @@ def test_empty_circuit():
     assert ax.title == ax.title
 
 
-def test_circuit_entangled_entropy():
+@pytest.mark.parametrize("clustered", [False, True])
+def test_circuit_entangled_entropy(clustered):
     """Circuit test for printing entanglement entropy circuit"""
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
@@ -170,7 +176,7 @@ def test_circuit_entangled_entropy():
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    ax, _ = plot_circuit(c)
+    ax, _ = plot_circuit(c, scale=0.8, cluster_gates=clustered)
     assert ax.title == ax.title
 
 
@@ -248,3 +254,58 @@ def test_plot_circuit():
     ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
     assert ax1.title == ax1.title
     assert ax2.title == ax2.title
+
+
+def test_fused_gates():
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.X(0))
+    c.add(gates.H(0))
+    c.add(gates.X(1))
+    c.add(gates.H(1))
+    ax, _ = plot_circuit(c.fuse(), scale=0.8, cluster_gates=False)
+    assert ax.title == ax.title
+
+
+def test_render_label():
+    """Test render labels"""
+    inits = [0]
+    assert _render_label("q_0", inits) != ""
+    assert _render_label("q_8", inits) != ""
+
+
+def test_cluster_gates():
+    """Test clustering gates"""
+    pgates = [
+        ("MEASURE", "q_0"),
+        ("GFF", "q_0", "q_1"),
+        ("U1", "q_0", "q_2"),
+        ("U1", "q_0", "q_3"),
+        ("U1", "q_0", "q_4"),
+        ("H", "q_1"),
+        ("U1", "q_1", "q_2"),
+        ("U1", "q_1", "q_3"),
+        ("U1", "q_1", "q_4"),
+        ("H", "q_2"),
+        ("U1", "q_2", "q_3"),
+        ("U1", "q_2", "q_4"),
+        ("H", "q_3"),
+        ("U1", "q_3", "q_4"),
+        ("H", "q_4"),
+        ("SWAP", "q_0", "q_4"),
+        ("SWAP", "q_1", "q_3"),
+        ("MEASURE", "q_0"),
+        ("MEASURE", "q_1"),
+    ]
+    assert _make_cluster_gates(pgates) != ""
+
+
+def test_fuse_cluster():
+    """Test for clustering gates"""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.M(qubit) for qubit in range(2))
+    ax, _ = plot_circuit(c.fuse())
+    assert ax.title == ax.title

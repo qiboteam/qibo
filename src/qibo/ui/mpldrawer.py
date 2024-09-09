@@ -301,12 +301,8 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     x = gate_grid[i]
     target_index = _get_flipped_index(target, labels)
     y = wire_grid[target_index]
-    if not symbol:
-        return
     if name in ["CNOT", "TOFFOLI"]:
         _oplus(ax, x, y, plot_params)
-    elif name == "CPHASE":
-        _cdot(ax, x, y, plot_params)
     elif name == "SWAP":
         _swapx(ax, x, y, plot_params)
     else:
