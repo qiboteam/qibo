@@ -166,7 +166,7 @@ def test_layered_circuit():
     ansatz = Circuit(nqubits)
     for l in range(nlayers):
 
-        ansatz.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
 
         for i in range(nqubits - 3):
             ansatz.add(gates.CNOT(i, i + 1))
@@ -176,7 +176,7 @@ def test_layered_circuit():
             ansatz.add(gates.CNOT(i + 1, i + 3))
             ansatz.add(gates.CNOT(i + 2, i + 3))
 
-    ansatz.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
     ansatz.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(ansatz)
     assert ax.title == ax.title
