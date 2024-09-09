@@ -39,7 +39,7 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
             if physical_qubits not in connectivity.edges:
                 raise_error(
                     ConnectivityError,
-                    f"Circuit does not respect connectivity. {gate.name} acts on {physical_qubits}.",
+                    f"The circuit does not respect the connectivity. {gate.name} acts on {physical_qubits} but only the following qubits are directly connected: {connectivity.edges}.",
                 )
 
 
