@@ -46,7 +46,7 @@ def test_circuit_measure(qubits):
 def test_plot_circuit_error_style():
     """Test for style error function"""
     style = _plot_params(style="test")
-    assert style['facecolor'] == 'w'
+    assert style["facecolor"] == "w"
 
 
 @pytest.mark.parametrize("qubits", [3, 4, 5, 6])
