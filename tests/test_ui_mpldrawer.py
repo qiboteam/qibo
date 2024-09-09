@@ -20,6 +20,7 @@ def circuit(nqubits=2):
     c.add(gates.M(1))
     return c
 
+
 @pytest.mark.parametrize("qubits", [0, 1])
 def test_plot_circuit(qubits):
     """Test for main plot function"""
@@ -32,11 +33,12 @@ def test_empty_gates():
     "Empty gates test"
     assert _process_gates([], 2) == []
 
+
 @pytest.mark.parametrize("qubits", [1, 2, 3])
 def test_circuit_measure(qubits):
     """Measure circuit"""
     c = Circuit(qubits)
-    c.add(gates.M(qubit) for qubit in range(qubits -1))
+    c.add(gates.M(qubit) for qubit in range(qubits - 1))
     ax, _ = plot_circuit(c)
     assert ax.title == ax.title
 
