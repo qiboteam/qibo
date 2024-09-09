@@ -1097,6 +1097,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     if backend is None:  # pragma: no cover
         backend = _Global.backend()
     elif backend.name == "qibolab":  # pragma: no cover
+        # TODO: Use _Global.set_transpiler
         backend.transpiler.passes[1] = Custom(
             initial_map=qubit_map, connectivity=backend.platform.topology
         )

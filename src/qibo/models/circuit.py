@@ -1102,7 +1102,7 @@ class Circuit:
             from qibo.backends import _Global
 
             _Global.resolve_global()
-            transpiled_circuit = _Global.get_transpiler()(self)
+            transpiled_circuit, _ = _Global.get_transpiler()(self)
 
             if self.accelerators:  # pragma: no cover
                 return _Global.get_backend().execute_distributed_circuit(

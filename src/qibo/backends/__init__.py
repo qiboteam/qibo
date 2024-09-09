@@ -69,7 +69,6 @@ class _Global:
     _backend = None
     _transpiler = None
 
-    # _instance = None
     _dtypes = {"double": "complex128", "single": "complex64"}
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
@@ -125,8 +124,8 @@ class _Global:
         if cls._transpiler is not None:
             return cls._transpiler
 
-        cls._transpiler = Passes()
-        # TODO: Add default passes
+        cls._transpiler = Passes(passes=[])
+        # TODO: add default passes or use Passes.default()
         return cls._transpiler
     
     @classmethod
