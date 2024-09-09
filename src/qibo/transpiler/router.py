@@ -619,8 +619,7 @@ class ShortestPaths(Router):
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
             routed_qubits = list(
-                self.circuit_map.logical_to_physical[qubit]
-                for qubit in original_qubits
+                self.circuit_map.logical_to_physical[qubit] for qubit in original_qubits
             )
             routed_circuit.add(
                 measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
@@ -779,8 +778,7 @@ class Sabre(Router):
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
             routed_qubits = list(
-                self.circuit_map.logical_to_physical[qubit]
-                for qubit in original_qubits
+                self.circuit_map.logical_to_physical[qubit] for qubit in original_qubits
             )
             routed_circuit.add(
                 measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
