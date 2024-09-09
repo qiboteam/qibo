@@ -6,9 +6,13 @@ import pytest
 
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
-from qibo.ui import plot_circuit
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
-from qibo.ui.mpldrawer import _plot_params, _plot_quantum_circuit, _process_gates
+from qibo.ui.mpldrawer import (
+    plot_circuit,
+    _plot_params,
+    _plot_quantum_circuit,
+    _process_gates,
+)
 
 
 # defining a dummy circuit
@@ -183,6 +187,7 @@ def test_layered_circuit():
 
 
 def test_plot_circuit():
+    """Test for circuit plotting"""
     gates_plot = [
         ("H", "q_0"),
         ("U1", "q_0", "q_1"),
