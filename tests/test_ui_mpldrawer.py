@@ -21,10 +21,10 @@ def circuit(nqubits=2):
     return c
 
 
-@pytest.mark.parametrize("qubits", [0, 1])
-def test_plot_circuit(qubits):
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_plot_circuit(nqubits):
     """Test for main plot function"""
-    circ = circuit()
+    circ = circuit(nqubits)
     ax, _ = plot_circuit(circ)
     assert ax.title == ax.title
 
