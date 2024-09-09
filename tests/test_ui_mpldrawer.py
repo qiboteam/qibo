@@ -1,13 +1,15 @@
 """Test that Qibo matplotlib drawer"""
 
-import pytest
 import matplotlib.pyplot
 import numpy as np
-from qibo import gates, callbacks, Circuit
+import pytest
+
+from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui import plot_circuit
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
 from qibo.ui.mpldrawer import _plot_params, _process_gates
+
 
 # defining a dummy circuit
 def circuit(nqubits=2):
