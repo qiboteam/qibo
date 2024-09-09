@@ -1261,9 +1261,9 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 
    from qibo.symbols import Z
    from qibo.hamiltonians import SymbolicHamiltonian
-   from qibo.backends import GlobalBackend
+   from qibo.backends import _Global
 
-   backend = GlobalBackend()
+   backend = _Global.backend()
 
    # Define the observable
    obs = np.prod([Z(i) for i in range(nqubits)])

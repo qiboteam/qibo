@@ -6,11 +6,11 @@ import qibo
 os.environ["NUMBA_NUM_THREADS"] = f"{qibo.get_threads()}"
 from qibotn.backends.quimb import QuimbBackend
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _Global
 
 
 def test_backend_qibotn():
     qibo.set_backend(backend="qibotn", platform="qutensornet", runcard=None)
-    assert isinstance(GlobalBackend(), QuimbBackend)
+    assert isinstance(_Global.get_backend(), QuimbBackend)
 
     qibo.set_backend("numpy")

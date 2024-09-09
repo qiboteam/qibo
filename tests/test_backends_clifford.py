@@ -8,7 +8,7 @@ import pytest
 from qibo import Circuit, gates, set_backend
 from qibo.backends import (
     CliffordBackend,
-    GlobalBackend,
+    _Global,
     NumpyBackend,
     PyTorchBackend,
     TensorflowBackend,
@@ -36,8 +36,8 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().platform
+    assert isinstance(_Global.get_backend(), CliffordBackend)
+    global_platform = _Global.get_backend().platform
     assert global_platform == platform
 
 
@@ -46,7 +46,7 @@ def test_global_backend(backend):
     set_backend(backend.name, platform=backend.platform)
     clifford_bkd = CliffordBackend()
     target = (
-        GlobalBackend().name if backend.name == "numpy" else GlobalBackend().platform
+        _Global.get_backend().name if backend.name == "numpy" else _Global.get_backend().platform
     )
     assert clifford_bkd.platform == target
     set_backend("numpy")

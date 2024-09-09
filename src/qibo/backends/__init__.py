@@ -65,10 +65,11 @@ class MetaBackend:
         return available_backends
 
 
-class GlobalBackend(NumpyBackend):
-    """The global backend will be used as default by ``circuit.execute()``."""
+class _Global:
+    _backend = None
+    _transpiler = None
 
-    _instance = None
+    # _instance = None
     _dtypes = {"double": "complex128", "single": "complex64"}
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
@@ -78,39 +79,71 @@ class GlobalBackend(NumpyBackend):
         {"backend": "pytorch"},
     ]
 
-    def __new__(cls):
-        if cls._instance is not None:
-            return cls._instance
+    @classmethod 
+    def backend(cls):    # pragma: no cover  
+        if cls._backend is not None:
+            return cls._backend
 
         backend = os.environ.get("QIBO_BACKEND")
-        if backend:  # pragma: no cover
+        if backend:
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = construct_backend(backend, platform=platform)
+            cls._backend = construct_backend(backend, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
                 try:
-                    cls._instance = construct_backend(**kwargs)
+                    cls._backend = construct_backend(**kwargs)
                     break
-                except (ImportError, MissingBackend):
+                except (ModuleNotFoundError, ImportError):
                     pass
 
-        if cls._instance is None:  # pragma: no cover
+        if cls._backend is None:
             raise_error(RuntimeError, "No backends available.")
 
-        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
-        return cls._instance
+        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+        return cls._backend
+    
+    @classmethod
+    def set_backend(cls, backend, **kwargs):    # pragma: no cover
+        if (
+            cls._backend is None
+            or cls._backend.name != backend
+            or cls._backend.platform != kwargs.get("platform")
+        ):
+            cls._backend = construct_backend(backend, **kwargs)
+        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
 
     @classmethod
-    def set_backend(cls, backend, **kwargs):  # pragma: no cover
-        if (
-            cls._instance is None
-            or cls._instance.name != backend
-            or cls._instance.platform != kwargs.get("platform")
-        ):
-            cls._instance = construct_backend(backend, **kwargs)
-        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
+    def get_backend(cls):
+        return cls._backend
+    
+    @classmethod
+    def transpiler(cls):    # pragma: no cover
+        from qibo.transpiler.pipeline import Passes
+
+        if cls._transpiler is not None:
+            return cls._transpiler
+
+        cls._transpiler = Passes()
+        # TODO: Add default passes
+        return cls._transpiler
+    
+    @classmethod
+    def set_transpiler(cls, transpiler):  # pragma: no cover
+        cls._transpiler = transpiler
+        # TODO: check if transpiler is valid on the backend
+
+    @classmethod
+    def get_transpiler(cls):
+        return cls._transpiler
+    
+    @classmethod
+    def resolve_global(cls):
+        if cls._backend is None:
+            cls._backend = cls.backend()
+        if cls._transpiler is None:
+            cls._transpiler = cls.transpiler()
 
 
 class QiboMatrices:
@@ -147,24 +180,24 @@ matrices = QiboMatrices()
 
 
 def get_backend():
-    return str(GlobalBackend())
+    return str(_Global.get_backend())
 
 
 def set_backend(backend, **kwargs):
-    GlobalBackend.set_backend(backend, **kwargs)
+    _Global.set_backend(backend, **kwargs)
 
 
 def get_precision():
-    return GlobalBackend().precision
+    return _Global.get_backend().precision
 
 
 def set_precision(precision):
-    GlobalBackend().set_precision(precision)
-    matrices.create(GlobalBackend().dtype)
+    _Global.get_backend().set_precision(precision)
+    matrices.create(_Global.get_backend().dtype)
 
 
 def get_device():
-    return GlobalBackend().device
+    return _Global.get_backend().device
 
 
 def set_device(device):
@@ -174,13 +207,13 @@ def set_device(device):
             ValueError,
             "Device name should follow the pattern: /{device type}:{device number}.",
         )
-    backend = GlobalBackend()
+    backend = _Global.get_backend()
     backend.set_device(device)
     log.info(f"Using {backend} backend on {backend.device}")
 
 
 def get_threads():
-    return GlobalBackend().nthreads
+    return _Global.get_backend().nthreads
 
 
 def set_threads(nthreads):
@@ -188,12 +221,12 @@ def set_threads(nthreads):
         raise_error(TypeError, "Number of threads must be integer.")
     if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
-    GlobalBackend().set_threads(nthreads)
+    _Global.get_backend().set_threads(nthreads)
 
 
 def _check_backend(backend):
     if backend is None:
-        return GlobalBackend()
+        return _Global.backend()
 
     return backend
 

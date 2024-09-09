@@ -5,12 +5,12 @@ from qibo import matrices
 
 
 def test_set_backend():
-    from qibo.backends import GlobalBackend
+    from qibo.backends import _Global
 
-    backend = GlobalBackend()
+    backend = _Global.backend()
     qibo.set_backend("numpy")
     assert qibo.get_backend() == "numpy"
-    assert GlobalBackend().name == "numpy"
+    assert _Global.get_backend().name == "numpy"
 
 
 def test_set_precision():
@@ -104,7 +104,7 @@ def test_check_backend(backend):
     test = None
     test = qibo.backends._check_backend(test)
 
-    target = qibo.backends.GlobalBackend()
+    target = qibo.backends._Global.backend()
 
     assert test.name == target.name
     assert test.__class__ == target.__class__

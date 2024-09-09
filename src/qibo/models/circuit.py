@@ -1099,14 +1099,17 @@ class Circuit:
             self._final_state = self.compiled.result(state, nshots)
             return self._final_state
         else:
-            from qibo.backends import GlobalBackend
+            from qibo.backends import _Global
+
+            _Global.resolve_global()
+            transpiled_circuit = _Global.get_transpiler()(self)
 
             if self.accelerators:  # pragma: no cover
-                return GlobalBackend().execute_distributed_circuit(
-                    self, initial_state, nshots
+                return _Global.get_backend().execute_distributed_circuit(
+                    transpiled_circuit, initial_state, nshots
                 )
             else:
-                return GlobalBackend().execute_circuit(self, initial_state, nshots)
+                return _Global.get_backend().execute_circuit(transpiled_circuit, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
