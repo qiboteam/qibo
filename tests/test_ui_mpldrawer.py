@@ -7,6 +7,7 @@ from qibo import Circuit, gates
 from qibo.ui import plot_circuit
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
 
+
 # defining a dummy circuit
 def circuit(nqubits=2):
     c = Circuit(nqubits)
@@ -21,6 +22,7 @@ def test_plot_circuit():
     circ = circuit()
     ax, _ = plot_circuit(circ)
     assert ax.title == ax.title
+
 
 def test_fused_gates():
     min_q = 0
