@@ -593,13 +593,13 @@ def _process_gates(array_gates, nqubits):
             item += (init_label,)
 
             for qbit in gate._target_qubits:
-                if qbit is tuple:
+                if type(qbit) is tuple:
                     item += ("q_" + str(qbit[0]),)
                 else:
                     item += ("q_" + str(qbit),)
 
             for qbit in gate._control_qubits:
-                if qbit is tuple:
+                if type(qbit) is tuple:
                     item += ("q_" + str(qbit[0]),)
                 else:
                     item += ("q_" + str(qbit),)

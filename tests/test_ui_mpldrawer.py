@@ -320,3 +320,12 @@ def test_fuse_cluster():
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c.fuse())
     assert ax.title == ax.title
+
+
+def test_target_control_qubts():
+    """Very dummy test to check the target and control qubits from gates"""
+    c = Circuit(3)
+    c.add(gates.CSX(0, 2))
+    c.queue[0]._target_qubits = ((0, 1), (0, 2))
+    c.queue[0]._control_qubits = ((0,), (0,))
+    assert _process_gates(c.queue, 3) != ""
