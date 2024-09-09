@@ -20,8 +20,8 @@ def circuit(nqubits=2):
     c.add(gates.M(1))
     return c
 
-
-def test_plot_circuit():
+@pytest.mark.parametrize("qubits", [0, 1])
+def test_plot_circuit(qubits):
     """Test for main plot function"""
     circ = circuit()
     ax, _ = plot_circuit(circ)
@@ -32,11 +32,11 @@ def test_empty_gates():
     "Empty gates test"
     assert _process_gates([], 2) == []
 
-
-def test_circuit_measure():
+@pytest.mark.parametrize("qubits", [1, 2, 3])
+def test_circuit_measure(qubits):
     """Measure circuit"""
-    c = Circuit(3)
-    c.add(gates.M(qubit) for qubit in range(2))
+    c = Circuit(qubits)
+    c.add(gates.M(qubit) for qubit in range(qubits -1))
     ax, _ = plot_circuit(c)
     assert ax.title == ax.title
 
@@ -82,6 +82,14 @@ def test_complex_circuit(clustered):
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
     assert ax.title == ax.title
+
+
+def test_align_gate():
+    """Test for Align gate"""
+    c = Circuit(3)
+    c.add(gates.M(qubit) for qubit in range(2))
+    c.add(gates.Align(0))
+    assert c != None
 
 
 def test_fused_gates():
