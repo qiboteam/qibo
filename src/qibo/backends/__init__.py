@@ -134,7 +134,7 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def get_transpiler(cls):    # pylint: disable=E1102
+    def get_transpiler(cls):  # pylint: disable=E1102
         return cls._transpiler
 
     @classmethod
