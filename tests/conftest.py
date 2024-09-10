@@ -43,13 +43,13 @@ for backend_name in BACKENDS:
         AVAILABLE_BACKENDS.append(backend_name)
         if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         pass
 
 try:
     get_backend("qulacs")
     QULACS_INSTALLED = True
-except ModuleNotFoundError:
+except ImportError:
     QULACS_INSTALLED = False
 
 

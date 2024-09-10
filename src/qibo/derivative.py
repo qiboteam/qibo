@@ -13,41 +13,43 @@ def parameter_shift(
     nshots=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
-    Given a circuit U and an observable H, the PSR allows to calculate the derivative
-    of the expected value of H on the final state with respect to a variational
+    Given a circuit :math:`U` and an observable :math:`H`, the PSR allows to calculate the derivative
+    of the expected value of :math:`H` on the final state with respect to a variational
     parameter of the circuit.
     There is also the possibility of setting a scale factor. It is useful when a
     circuit's parameter is obtained by combination of a variational
     parameter and an external object, such as a training variable in a Quantum
     Machine Learning problem. For example, performing a re-uploading strategy
     to embed some data into a circuit, we apply to the quantum state rotations
-    whose angles are in the form: theta' = theta * x, where theta is a variational
-    parameter and x an input variable. The PSR allows to calculate the derivative
-    with respect of theta' but, if we want to optimize a system with respect its
-    variational parameters we need to "free" this procedure from the x depencency.
-    If the `scale_factor` is not provided, it is set equal to one and doesn't
+    whose angles are in the form :math:`\\theta^{\\prime} = x \\, \\theta`,
+    where :math:`\\theta` is a variational parameter, and :math:`x` an input variable.
+    The PSR allows to calculate the derivative with respect to :math:`\\theta^{\\prime}`.
+    However, if we want to optimize a system with respect to its
+    variational parameters, we need to "free" this procedure from the :math:`x` depencency.
+    If the ``scale_factor`` is not provided, it is set equal to one and doesn't
     affect the calculation.
     If the PSR is needed to be executed on a real quantum device, it is important
-    to set `nshots` to some integer value. This enables the execution on the
+    to set ``nshots`` to some integer value. This enables the execution on the
     hardware by calling the proper methods.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli Z and ``nqubits=1``):
+            provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
             ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
         initial_state (ndarray, optional): initial state on which the circuit
-            acts. Default is ``None``.
-        scale_factor (float, optional): parameter scale factor. Default is ``1``.
+            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`.
+            Defaults to ``None``.
+        scale_factor (float, optional): parameter scale factor. Defaults to :math:`1`.
         nshots (int, optional): number of shots if derivative is evaluated on
             hardware. If ``None``, the simulation mode is executed.
-            Default is ``None``.
+            Defaults to ``None``.
 
     Returns:
-        (float): Value of the derivative of the expectation value of the hamiltonian
+        float: Value of the derivative of the expectation value of the hamiltonian
             with respect to the target variational parameter.
 
     Example:
@@ -167,27 +169,28 @@ def finite_differences(
     step_size=1e-7,
 ):
     """
-    Calculate derivative of the expectation value of `hamiltonian` on the
-    final state obtained by executing `circuit` on `initial_state` with
-    respect to the variational parameter identified by `parameter_index`
+    Calculate derivative of the expectation value of ``hamiltonian`` on the
+    final state obtained by executing ``circuit`` on ``initial_state`` with
+    respect to the variational parameter identified by ``parameter_index``
     in the circuit's parameters list. This method can be used only in
     exact simulation mode.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-            if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli Z and ``nqubits=1``):
+            To execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
             ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
-            in the ``circuit.get_parameters()`` list.
+            in the :meth:`qibo.models.Circuit.get_parameters` list.
         initial_state (ndarray, optional): initial state on which the circuit
-            acts. Default is ``None``.
-        step_size (float): step size used to evaluate the finite difference
-            (default 1e-7).
+            acts. If ``None``, defaults to the zero state :math:`\\ket{\\mathbf{0}}`.
+            Defaults to ``None``.
+        step_size (float, optional): step size used to evaluate the finite difference.
+            Defaults to :math:`10^{-7}`.
 
     Returns:
-        (float): Value of the derivative of the expectation value of the hamiltonian
+        float: Value of the derivative of the expectation value of the hamiltonian
             with respect to the target variational parameter.
     """
 

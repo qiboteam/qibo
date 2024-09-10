@@ -99,13 +99,13 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.hamiltonians.models import multikron
+        from qibo.hamiltonians.models import _multikron
 
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
         matrix_list.extend(matrices.I for _ in range(n))
-        return multikron(matrix_list)
+        return _multikron(matrix_list)
 
 
 class PauliSymbol(Symbol):

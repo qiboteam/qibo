@@ -8,12 +8,12 @@ from qibo.symbols import I, Z
 
 
 def test_measurement_result_repr():
-    result = MeasurementResult(gates.M(0), nshots=10)
-    assert str(result) == "MeasurementResult(qubits=(0,), nshots=10)"
+    result = MeasurementResult(gates.M(0))
+    assert str(result) == "MeasurementResult(qubits=(0,), nshots=None)"
 
 
 def test_measurement_result_error():
-    result = MeasurementResult(gates.M(0), nshots=10)
+    result = MeasurementResult(gates.M(0))
     with pytest.raises(RuntimeError):
         samples = result.samples()
 

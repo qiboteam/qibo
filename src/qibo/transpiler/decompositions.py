@@ -387,6 +387,12 @@ cz_dec.add(
     lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
 )
 
+# temporary CNOT decompositions for CNOT, CZ, SWAP
+cnot_dec_temp = GateDecompositions()
+cnot_dec_temp.add(gates.CNOT, [gates.CNOT(0, 1)])
+cnot_dec_temp.add(gates.CZ, [gates.H(1), gates.CNOT(0, 1), gates.H(1)])
+cnot_dec_temp.add(gates.SWAP, [gates.CNOT(0, 1), gates.CNOT(1, 0), gates.CNOT(0, 1)])
+
 # register other optimized gate decompositions
 opt_dec = GateDecompositions()
 opt_dec.add(
