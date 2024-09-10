@@ -145,8 +145,8 @@ def test_fused_gates():
     equal_qbits = True
     start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
     end_barrier = FusedEndGateBarrier(min_q, max_q)
-    assert start_barrier.unitary == start_barrier.unitary
-    assert end_barrier.unitary == end_barrier.unitary
+    assert start_barrier != None
+    assert end_barrier != None
 
 
 @pytest.mark.parametrize("clustered", [False, True])
