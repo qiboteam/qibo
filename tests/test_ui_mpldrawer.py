@@ -274,13 +274,16 @@ def test_render_label():
     assert _render_label("q_0", inits) != ""
     assert _render_label("q_8", inits) != ""
 
+
 def test_render_label_empty():
-    inits = {"q_0":None}
+    inits = {"q_0": None}
     assert _render_label("q_0", inits) == ""
 
+
 def test_render_label_not_empty():
-    inits = {"q_0":"\psi"}
+    inits = {"q_0": r"\psi"}
     _render_label("q_0", inits) != ""
+
 
 def test_cluster_gates():
     """Test clustering gates"""
