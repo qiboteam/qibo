@@ -289,9 +289,9 @@ The following gates support parameter setting:
 * :class:`qibo.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
 * :class:`qibo.gates.GeneralizedfSim`: Accepts a tuple of two parameters
   ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
-  array or ``tf.Tensor`` of shape ``(2, 2)``.
+  array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required when using the pytorch backend.
 * :class:`qibo.gates.Unitary`: Accepts a single ``unitary`` parameter. This
-  should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
+  should be an array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required when using the pytorch backend.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
 a flat list (``torch.Tensor`` is required when using the pytorch backend).
@@ -696,14 +696,13 @@ the model. For example the previous example would have to be modified as:
 How to use automatic differentiation?
 -------------------------------------
 
-ADD HERE PYTORCH EXAMPLE?
+The parameters of variational circuits can be optimized using the frameworks of
+Tensorflow or Pytorch.
 
 As a deep learning framework, Tensorflow supports
 `automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
-This can be used to optimize the parameters of variational circuits. For example
-the following script optimizes the parameters of two rotations so that the circuit
-output matches a target state using the fidelity as the corresponding loss
-function.
+The following script optimizes the parameters of two rotations so that the
+circuit output matches a target state using the fidelity as the corresponding loss function.
 
 Note that, as in the following example, the rotation angles have to assume real values
 to ensure the rotational gates are representing unitary operators.
@@ -779,6 +778,40 @@ that is supported by Tensorflow, such as defining
 `custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
 and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
 to train them.
+
+Similarly, Pytorch supports `automatic differentiation <https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorFor%20example%20tial.html>`_.
+The following script optimizes the parameters of the variational circuit of the first example using the Pytorch framework.
+
+.. code-block:: python
+
+    import qibo
+    qibo.set_backend("pytorch")
+    import torch
+    from qibo import gates, models
+
+    # Optimization parameters
+    nepochs = 1000
+    optimizer = torch.optim.Adam
+    target_state = torch.ones(4, dtype=torch.complex128) / 2.0
+
+    # Define circuit ansatz
+    params = torch.tensor(
+        torch.rand(2, dtype=torch.float64), requires_grad=True
+    )
+    c = models.Circuit(2)
+    c.add(gates.RX(0, params[0]))
+    c.add(gates.RY(1, params[1]))
+
+    optimizer = optimizer([params])
+
+    for _ in range(nepochs):
+        optimizer.zero_grad()
+        c.set_parameters(params)
+        final_state = c().state()
+        fidelity = torch.abs(torch.sum(torch.conj(target_state) * final_state))
+        loss = 1 - fidelity
+        loss.backward()
+        optimizer.step()
 
 
 .. _noisy-example:
