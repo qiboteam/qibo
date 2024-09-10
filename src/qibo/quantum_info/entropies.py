@@ -78,7 +78,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
-    ..math::
+    .. math::
         D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
             \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
 
