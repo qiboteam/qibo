@@ -2382,7 +2382,7 @@ Hellinger fidelity
 Hellinger shot error
 """"""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.hellinger_fidelity
+.. autofunction:: qibo.quantum_info.hellinger_shot_error
 
 
 Haar integral
