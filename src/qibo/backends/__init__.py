@@ -127,7 +127,6 @@ class _Global:
             return cls._transpiler
 
         cls._transpiler = Passes(passes=[])
-        # TODO: add default passes or use Passes.default()
         return cls._transpiler
 
     @classmethod
@@ -144,6 +143,7 @@ class _Global:
         if cls._backend is None:
             cls._backend = cls.backend()
         if cls._transpiler is None:
+            # TODO: add default transpiler for hardware backends
             cls._transpiler = cls.transpiler()
 
 
@@ -186,6 +186,14 @@ def get_backend():
 
 def set_backend(backend, **kwargs):
     _Global.set_backend(backend, **kwargs)
+
+
+def get_transpiler():
+    return str(_Global.get_transpiler())
+
+
+def set_transpiler(transpiler):
+    _Global.set_transpiler(transpiler)
 
 
 def get_precision():
