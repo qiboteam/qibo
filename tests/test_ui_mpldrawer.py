@@ -32,7 +32,7 @@ def test_plot_circuit(nqubits):
     """Test for main plot function"""
     circ = circuit(nqubits)
     ax, _ = plot_circuit(circ)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_empty_gates():
@@ -46,7 +46,7 @@ def test_circuit_measure(qubits):
     c = Circuit(qubits)
     c.add(gates.M(qubit) for qubit in range(qubits - 1))
     ax, _ = plot_circuit(c)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_plot_circuit_error_style():
@@ -86,7 +86,7 @@ def test_bigger_circuit_gates(qubits):
     c.add(gates.X(0))
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -124,8 +124,8 @@ def test_complex_circuit(clustered):
     c.add(gates.M(qubit) for qubit in range(2))
     ax1, _ = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
     ax2, _ = plot_circuit(c, cluster_gates=clustered, scale=0.70)
-    assert ax1.title == ax1.title
-    assert ax2.title == ax2.title
+    assert ax1 != None
+    assert ax2 != None
 
 
 def test_align_gate():
@@ -134,7 +134,7 @@ def test_align_gate():
     c.add(gates.Align(0))
     ax, _ = plot_circuit(c)
     assert c != None
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_fused_gates():
@@ -157,14 +157,14 @@ def test_circuit_fused_gates(clustered):
     ax, _ = plot_circuit(
         c.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
     )
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_empty_circuit():
     """Test for printing empty circuit"""
     c = Circuit(2)
     ax, _ = plot_circuit(c)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -178,7 +178,7 @@ def test_circuit_entangled_entropy(clustered):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     ax, _ = plot_circuit(c, scale=0.8, cluster_gates=clustered)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_layered_circuit():
@@ -203,7 +203,7 @@ def test_layered_circuit():
     ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
     ansatz.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(ansatz)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_plot_circuit():
@@ -253,8 +253,8 @@ def test_plot_circuit():
 
     ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
     ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
-    assert ax1.title == ax1.title
-    assert ax2.title == ax2.title
+    assert ax1 != None
+    assert ax2 != None
 
 
 def test_fused_gates():
@@ -265,7 +265,7 @@ def test_fused_gates():
     c.add(gates.X(1))
     c.add(gates.H(1))
     ax, _ = plot_circuit(c.fuse(), scale=0.8, cluster_gates=False)
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_render_label():
@@ -319,7 +319,7 @@ def test_fuse_cluster():
     c.add(gates.X(1))
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c.fuse())
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_fuse_cluster():
@@ -330,7 +330,7 @@ def test_fuse_cluster():
     c.add(gates.X(1))
     c.add(gates.M(qubit) for qubit in range(2))
     ax, _ = plot_circuit(c.fuse())
-    assert ax.title == ax.title
+    assert ax != None
 
 
 def test_target_control_qubts():
