@@ -601,7 +601,7 @@ def _process_gates(array_gates):
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
-            for qbit in list(range(circuit.nqubits)):
+            for qbit in list(range(circuit.nqubits)):  # pylint: disable=E0602
                 item = (init_label,)
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
