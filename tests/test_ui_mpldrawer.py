@@ -131,9 +131,10 @@ def test_complex_circuit(clustered):
 def test_align_gate():
     """Test for Align gate"""
     c = Circuit(3)
-    c.add(gates.M(qubit) for qubit in range(2))
     c.add(gates.Align(0))
+    ax, _ = plot_circuit(c)
     assert c != None
+    assert ax.title == ax.title
 
 
 def test_fused_gates():
@@ -273,6 +274,13 @@ def test_render_label():
     assert _render_label("q_0", inits) != ""
     assert _render_label("q_8", inits) != ""
 
+def test_render_label_empty():
+    inits = {"q_0":None}
+    assert _render_label("q_0", inits) == ""
+
+def test_render_label_not_empty():
+    inits = {"q_0":"\psi"}
+    _render_label("q_0", inits) != ""
 
 def test_cluster_gates():
     """Test clustering gates"""
