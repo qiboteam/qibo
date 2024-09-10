@@ -111,7 +111,9 @@ class _Global:
             or cls._backend.platform != kwargs.get("platform")
         ):
             cls._backend = construct_backend(backend, **kwargs)
-        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+            log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+        else:
+            log.info(f"Backend {backend} is already loaded.")
 
     @classmethod
     def get_backend(cls):

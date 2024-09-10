@@ -1102,9 +1102,8 @@ class Circuit:
             from qibo.backends import _Global
 
             _Global.resolve_global()
-            transpiled_circuit, _ = _Global.get_transpiler()(
-                self
-            )  # pylint: disable=E1102
+            transpiler = _Global.get_transpiler()
+            transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
 
             if self.accelerators:  # pragma: no cover
                 return _Global.get_backend().execute_distributed_circuit(
