@@ -28,7 +28,7 @@ def pauli_basis(
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
-        sparse (bool, optional) If ``True``, retuns Pauli basis in a sparse
+        sparse (bool, optional): If ``True``, retuns Pauli basis in a sparse
             representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
