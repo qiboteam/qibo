@@ -153,6 +153,7 @@ def comp_basis_to_pauli(
     where :math:`|P_{k})` is the vectorization of the :math:`k`-th
     Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
     of the :math:`k`-th computational basis element.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Example:
         .. code-block:: python
@@ -233,7 +234,12 @@ def pauli_to_comp_basis(
     The unitary :math:`U` is given by
 
     .. math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{P_{k}}{b_{k}} \\, .
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, |P_{k})(b_{k}| \\, ,
+
+    where :math:`|P_{k})` is the vectorization of the :math:`k`-th
+    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    of the :math:`k`-th computational basis element.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Args:
         nqubits (int): number of qubits.
