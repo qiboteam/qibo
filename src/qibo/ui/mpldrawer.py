@@ -599,7 +599,11 @@ def _process_gates(array_gates, nqubits):
                     item += ("q_" + str(qbit),)
 
             for qbit in gate._control_qubits:
-                item_add = ("q_" + str(qbit[0]),) if isinstance(qbit, tuple) else  ("q_" + str(qbit),)
+                item_add = (
+                    ("q_" + str(qbit[0]),)
+                    if isinstance(qbit, tuple)
+                    else ("q_" + str(qbit),)
+                )
                 item += item_add
 
             gates_plot.append(item)
