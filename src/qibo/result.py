@@ -244,7 +244,7 @@ class MeasurementOutcomes:
                             if int(bitstring[qubit_map.get(q)]):
                                 idx += 2 ** (len(rqubits) - i - 1)
                         rfreqs[idx] += freq
-                    gate.result.register_frequencies(rfreqs, self.backend)
+                    gate.result.register_frequencies(rfreqs)
             else:
                 self._frequencies = self.backend.calculate_frequencies(
                     self.samples(binary=False)
@@ -356,9 +356,7 @@ class MeasurementOutcomes:
                 self._samples = samples
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
-                    gate.result.register_samples(
-                        self._samples[:, rqubits], self.backend
-                    )
+                    gate.result.register_samples(self._samples[:, rqubits])
 
         if registers:
             return {
