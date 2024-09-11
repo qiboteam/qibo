@@ -227,20 +227,6 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[max_wire],
             plot_params,
         )
-        ismeasured = False
-        for index in control_indices:
-            if measured.get(index, 1000) < i:
-                ismeasured = True
-        if ismeasured:
-            dy = 0.04  # TODO: put in plot_params
-            _line(
-                ax,
-                gate_grid[i] + dy,
-                gate_grid[i] + dy,
-                wire_grid[min_wire],
-                wire_grid[max_wire],
-                plot_params,
-            )
 
         for ci in control_indices:
             x = gate_grid[i]
@@ -301,12 +287,8 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     x = gate_grid[i]
     target_index = _get_flipped_index(target, labels)
     y = wire_grid[target_index]
-    if not symbol:
-        return
     if name in ["CNOT", "TOFFOLI"]:
         _oplus(ax, x, y, plot_params)
-    elif name == "CPHASE":
-        _cdot(ax, x, y, plot_params)
     elif name == "SWAP":
         _swapx(ax, x, y, plot_params)
     else:
@@ -553,12 +535,13 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
-def _process_gates(array_gates):
+def _process_gates(array_gates, nqubits):
     """
     Transforms the list of gates given by the Qibo circuit into a list of gates with a suitable structre to print on screen with matplotlib.
 
     Args:
         array_gates (list): List of gates provided by the Qibo circuit.
+        nqubits (int): Number of circuit qubits
 
     Returns:
         list: List of suitable gates to plot with matplotlib.
@@ -601,7 +584,7 @@ def _process_gates(array_gates):
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
-            for qbit in list(range(circuit.nqubits)):  # pylint: disable=E0602
+            for qbit in list(range(nqubits)):
                 item = (init_label,)
                 item += ("q_" + str(qbit),)
                 gates_plot.append(item)
@@ -610,16 +593,18 @@ def _process_gates(array_gates):
             item += (init_label,)
 
             for qbit in gate._target_qubits:
-                if qbit is tuple:
+                if type(qbit) is tuple:
                     item += ("q_" + str(qbit[0]),)
                 else:
                     item += ("q_" + str(qbit),)
 
             for qbit in gate._control_qubits:
-                if qbit is tuple:
-                    item += ("q_" + str(qbit[0]),)
-                else:
-                    item += ("q_" + str(qbit),)
+                item_add = (
+                    ("q_" + str(qbit[0]),)
+                    if isinstance(qbit, tuple)
+                    else ("q_" + str(qbit),)
+                )
+                item += item_add
 
             gates_plot.append(item)
 
@@ -637,10 +622,11 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
         dict: Style configuration.
     """
     if not isinstance(style, dict):
-        try:
-            style = STYLE.get(style) if (style is not None) else STYLE["default"]
-        except AttributeError:
-            style = STYLE["default"]
+        style = (
+            STYLE.get(style)
+            if (style is not None and style in STYLE.keys())
+            else STYLE["default"]
+        )
 
     return style
 
@@ -718,9 +704,11 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             fgates = None
 
             if cluster_gates:
-                fgates = _make_cluster_gates(_process_gates(gate.gates))
+                fgates = _make_cluster_gates(
+                    _process_gates(gate.gates, circuit.nqubits)
+                )
             else:
-                fgates = _process_gates(gate.gates)
+                fgates = _process_gates(gate.gates, circuit.nqubits)
 
             l_gates = len(gate.gates)
             equal_qbits = False
@@ -736,7 +724,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
         else:
             all_gates.append(gate)
 
-    gates_plot = _process_gates(all_gates)
+    gates_plot = _process_gates(all_gates, circuit.nqubits)
 
     if cluster_gates and len(gates_plot) > 0:
         gates_cluster = _make_cluster_gates(gates_plot)
