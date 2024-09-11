@@ -43,8 +43,14 @@ for backend_name in BACKENDS:
         AVAILABLE_BACKENDS.append(backend_name)
         if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         pass
+
+try:
+    get_backend("qulacs")
+    QULACS_INSTALLED = True
+except ImportError:
+    QULACS_INSTALLED = False
 
 
 def pytest_runtest_setup(item):
@@ -54,6 +60,9 @@ def pytest_runtest_setup(item):
     if supported_platforms and plat not in supported_platforms:  # pragma: no cover
         # case not covered by workflows
         pytest.skip(f"Cannot run test on platform {plat}.")
+    elif not QULACS_INSTALLED and item.fspath.purebasename == "test_backends_qulacs":
+        # case not covered by workflows
+        pytest.skip(f"Cannot test `qulacs` on platform {plat}.")
 
 
 def pytest_configure(config):

@@ -61,17 +61,17 @@ class NumpyBackend(Backend):
             dtype = self.dtype
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
-        elif self.issparse(x):
+        elif self.is_sparse(x):
             return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
 
-    def issparse(self, x):
+    def is_sparse(self, x):
         from scipy import sparse
 
         return sparse.issparse(x)
 
     def to_numpy(self, x):
-        if self.issparse(x):
+        if self.is_sparse(x):
             return x.toarray()
         return x
 
@@ -115,7 +115,16 @@ class NumpyBackend(Backend):
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        _matrix = getattr(self.matrices, name)(*gate.parameters)
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+        else:
+            _matrix = _matrix(*gate.parameters)
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_fused(self, fgate):
@@ -156,7 +165,6 @@ class NumpyBackend(Backend):
         return self.cast(matrix.toarray())
 
     def apply_gate(self, gate, state, nqubits):
-        state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
@@ -309,13 +317,16 @@ class NumpyBackend(Backend):
         return self.np.reshape(state, shape)
 
     def reset_error_density_matrix(self, gate, state, nqubits):
-        from qibo.gates import X
+        from qibo.gates import X  # pylint: disable=C0415
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            partial_trace,
+        )
 
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
-        trace = self.partial_trace_density_matrix(state, (q,), nqubits)
+        trace = partial_trace(state, (q,), backend=self)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
         zero = self.np.tensordot(trace, zero, 0)
@@ -333,11 +344,15 @@ class NumpyBackend(Backend):
         return self.np.reshape(state, shape)
 
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            partial_trace,
+        )
+
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits
         lam = gate.init_kwargs["lam"]
-        trace = self.partial_trace_density_matrix(state, q, nqubits)
+        trace = partial_trace(state, q, backend=self)
         trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
         identity = self.identity_density_matrix(len(q))
         identity = self.np.reshape(identity, 2 * len(q) * (2,))
@@ -639,9 +654,7 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        ### This is faster just staying @ NumPy.
         qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        samples = self.to_numpy(samples)
         return np.mod(np.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
@@ -688,27 +701,6 @@ class NumpyBackend(Backend):
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
-    def partial_trace(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = self.np.reshape(state, nqubits * (2,))
-        axes = 2 * [list(qubits)]
-        rho = self.np.tensordot(state, self.np.conj(state), axes)
-        shape = 2 * (2 ** (nqubits - len(qubits)),)
-        return self.np.reshape(rho, shape)
-
-    def partial_trace_density_matrix(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = self.np.reshape(state, 2 * nqubits * (2,))
-
-        order = tuple(sorted(qubits))
-        order += tuple(i for i in range(nqubits) if i not in qubits)
-        order += tuple(i + nqubits for i in order)
-        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-
-        state = self.np.transpose(state, order)
-        state = self.np.reshape(state, shape)
-        return self.np.einsum("abac->bc", state)
-
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
         return self.np.linalg.norm(state, order)
@@ -718,42 +710,37 @@ class NumpyBackend(Backend):
         return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
-        return self.np.abs(self.np.sum(np.conj(self.cast(state1)) * self.cast(state2)))
+        return self.np.abs(
+            self.np.sum(self.np.conj(self.cast(state1)) * self.cast(state2))
+        )
 
     def calculate_overlap_density_matrix(self, state1, state2):
         return self.np.trace(
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6):
-        if self.issparse(matrix):
+    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+        if self.is_sparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
                 "sparse modules do not provide ``eigvals`` method."
             )
             return self.calculate_eigenvectors(matrix, k=k)[0]
-        return np.linalg.eigvalsh(matrix)
+        if hermitian:
+            return np.linalg.eigvalsh(matrix)
+        return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6):
-        if self.issparse(matrix):
+    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+        if self.is_sparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
 
                 return eigsh(matrix, k=k, which="SA")
             else:  # pragma: no cover
                 matrix = self.to_numpy(matrix)
-        return np.linalg.eigh(matrix)
-
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.issparse(matrix):
-            if self.issparse(matrix):
-                from scipy.sparse.linalg import expm
-            else:
-                from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
-        ud = self.np.transpose(np.conj(eigenvectors))
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+        if hermitian:
+            return np.linalg.eigh(matrix)
+        return np.linalg.eig(matrix)
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)
@@ -769,6 +756,17 @@ class NumpyBackend(Backend):
             norm = self.np.real(self.np.trace(state))
             ev /= norm
         return ev
+
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.is_sparse(matrix):
+            if self.is_sparse(matrix):
+                from scipy.sparse.linalg import expm
+            else:
+                from scipy.linalg import expm
+            return expm(-1j * a * matrix)
+        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+        ud = self.np.transpose(np.conj(eigenvectors))
+        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
@@ -792,7 +790,7 @@ class NumpyBackend(Backend):
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
-    def test_regressions(self, name):
+    def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],

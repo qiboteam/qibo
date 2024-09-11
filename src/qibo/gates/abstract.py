@@ -14,7 +14,18 @@ REQUIRED_FIELDS = [
     "_target_qubits",
     "_control_qubits",
 ]
-REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam", "phi0", "phi1"]
+REQUIRED_FIELDS_INIT_KWARGS = [
+    "theta",
+    "phi",
+    "lam",
+    "phi0",
+    "phi1",
+    "register_name",
+    "collapse",
+    "basis",
+    "p0",
+    "p1",
+]
 
 
 class Gate:
@@ -84,10 +95,6 @@ class Gate:
             if key in REQUIRED_FIELDS_INIT_KWARGS
         }
 
-        for value in encoded_simple:
-            if isinstance(encoded[value], set):
-                encoded_simple[value] = list(encoded_simple[value])
-
         encoded_simple["_class"] = type(self).__name__
 
         return encoded_simple
@@ -111,6 +118,8 @@ class Gate:
             raise ValueError(f"Unknown gate {raw['_class']}")
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
+        if raw["_class"] == "M" and raw["measurement_result"]["samples"] is not None:
+            gate.result.register_samples(raw["measurement_result"]["samples"])
         try:
             return gate.controlled_by(*raw["_control_qubits"])
         except RuntimeError as e:
@@ -127,17 +136,17 @@ class Gate:
         return json.dumps(self.raw)
 
     @property
-    def target_qubits(self) -> Tuple[int]:
+    def target_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of target qubits."""
         return self._target_qubits
 
     @property
-    def control_qubits(self) -> Tuple[int]:
+    def control_qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of control qubits sorted in increasing order."""
         return tuple(sorted(self._control_qubits))
 
     @property
-    def qubits(self) -> Tuple[int]:
+    def qubits(self) -> Tuple[int, ...]:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 

@@ -232,7 +232,7 @@ class Passes:
                 circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
-                if self.initial_layout == None:
+                if self.initial_layout is None:
                     self.initial_layout = transpiler_pass(circuit)
                     final_layout = (
                         self.initial_layout

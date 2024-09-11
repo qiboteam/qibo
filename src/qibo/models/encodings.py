@@ -8,11 +8,12 @@ import numpy as np
 
 from qibo import gates
 from qibo.config import raise_error
+from qibo.gates.gates import _check_engine
 from qibo.models.circuit import Circuit
 
 
 def comp_basis_encoder(
-    basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None
+    basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None, **kwargs
 ):
     """Creates circuit that performs encoding of bitstrings into computational basis states.
 
@@ -26,6 +27,8 @@ def comp_basis_encoder(
             If ``basis_element`` is ``int``, ``nqubits`` must be specified.
             If ``nqubits`` is ``None``, ``nqubits`` defaults to length of ``basis_element``.
             Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
        :class:`qibo.models.circuit.Circuit`: circuit encoding computational basis element.
@@ -62,7 +65,7 @@ def comp_basis_encoder(
 
     basis_element = list(map(int, basis_element))
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     for qubit, elem in enumerate(basis_element):
         if elem == 1:
             circuit.add(gates.X(qubit))
@@ -70,7 +73,7 @@ def comp_basis_encoder(
     return circuit
 
 
-def phase_encoder(data, rotation: str = "RY"):
+def phase_encoder(data, rotation: str = "RY", **kwargs):
     """Creates circuit that performs the phase encoding of ``data``.
 
     Args:
@@ -79,6 +82,8 @@ def phase_encoder(data, rotation: str = "RY"):
             If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
             If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
             Defaults to ``"RY"``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in phase encoding.
@@ -104,14 +109,14 @@ def phase_encoder(data, rotation: str = "RY"):
     nqubits = len(data)
     gate = getattr(gates, rotation.upper())
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
     circuit.set_parameters(data)
 
     return circuit
 
 
-def unary_encoder(data, architecture: str = "tree"):
+def unary_encoder(data, architecture: str = "tree", **kwargs):
     """Creates circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
@@ -120,6 +125,8 @@ def unary_encoder(data, architecture: str = "tree"):
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
@@ -151,9 +158,9 @@ def unary_encoder(data, architecture: str = "tree"):
 
     nqubits = len(data)
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
-    circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
+    circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture, **kwargs)
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
@@ -163,7 +170,9 @@ def unary_encoder(data, architecture: str = "tree"):
     return circuit
 
 
-def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed=None):
+def unary_encoder_random_gaussian(
+    nqubits: int, architecture: str = "tree", seed=None, **kwargs
+):
     """Creates a circuit that performs the unary encoding of a random Gaussian state.
 
     At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
@@ -184,6 +193,8 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads a random Gaussian array in unary representation.
@@ -239,9 +250,9 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
         a=0, b=2 * math.pi, seed=local_state
     )
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.X(nqubits - 1))
-    circuit_rbs, pairs_rbs = _generate_rbs_pairs(nqubits, architecture)
+    circuit_rbs, pairs_rbs = _generate_rbs_pairs(nqubits, architecture, **kwargs)
     circuit += circuit_rbs
 
     phases = []
@@ -258,6 +269,7 @@ def entangling_layer(
     architecture: str = "diagonal",
     entangling_gate: Union[str, gates.Gate] = "CNOT",
     closed_boundary: bool = False,
+    **kwargs,
 ):
     """Creates a layer of two-qubit, entangling gates.
 
@@ -273,6 +285,8 @@ def entangling_layer(
             all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
         closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
             to the entangling layer. Defaults to ``False``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
@@ -329,7 +343,7 @@ def entangling_layer(
     # If gate is parametrized, sets all angles to 0.0
     parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
 
     if architecture == "diagonal":
         circuit.add(
@@ -362,7 +376,7 @@ def entangling_layer(
     return circuit
 
 
-def _generate_rbs_pairs(nqubits: int, architecture: str):
+def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     """Generating list of indexes representing the RBS connections
 
     Creates circuit with all RBS initialised with 0.0 phase.
@@ -373,6 +387,8 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         (:class:`qibo.models.circuit.Circuit`, list): circuit composed of :class:`qibo.gates.gates.RBS`
@@ -397,7 +413,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
         [(nqubits - 1 - a, nqubits - 1 - b) for a, b in row] for row in pairs_rbs
     ]
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     for row in pairs_rbs:
         for pair in row:
             circuit.add(gates.RBS(*pair, 0.0, trainable=True))
@@ -420,8 +436,9 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         list: list of phases for RBS gates.
     """
     if architecture == "diagonal":
+        engine = _check_engine(data)
         phases = [
-            math.atan2(np.linalg.norm(data[k + 1 :]), data[k])
+            math.atan2(engine.linalg.norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
         phases.append(math.atan2(data[-1], data[-2]))

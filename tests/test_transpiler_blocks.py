@@ -31,9 +31,9 @@ def test_count_2q_gates():
 
 def test_add_gate_and_entanglement():
     block = Block(qubits=(0, 1), gates=[gates.H(0)])
-    assert block.entangled == False
+    assert not block.entangled
     block.add_gate(gates.CZ(0, 1))
-    assert block.entangled == True
+    assert block.entangled
     assert block._count_2q_gates() == 1
 
 
@@ -61,13 +61,13 @@ def test_fuse_blocks_error():
 def test_commute_false(qubits):
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=qubits, gates=[gates.CZ(*qubits)])
-    assert block_1.commute(block_2) == False
+    assert not block_1.commute(block_2)
 
 
 def test_commute_true():
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=(2, 3), gates=[gates.CZ(2, 3)])
-    assert block_1.commute(block_2) == True
+    assert block_1.commute(block_2)
 
 
 def test_count_multi_qubit_gates():
@@ -116,8 +116,8 @@ def test_initial_block_decomposition():
     assert len(blocks) == 4
     assert len(blocks[0].gates) == 3
     assert len(blocks[1].gates) == 1
-    assert blocks[2].entangled == True
-    assert blocks[3].entangled == False
+    assert blocks[2].entangled
+    assert not blocks[3].entangled
     assert len(blocks[3].gates) == 2
 
 
@@ -194,8 +194,8 @@ def test_block_decomposition_no_fuse():
     assert len(blocks) == 4
     assert len(blocks[0].gates) == 5
     assert len(blocks[1].gates) == 1
-    assert blocks[2].entangled == True
-    assert blocks[3].entangled == False
+    assert blocks[2].entangled
+    assert not blocks[3].entangled
 
 
 def test_block_decomposition():
@@ -367,3 +367,27 @@ def test_block_on_qubits():
     assert new_block.gates[2].qubits == (3,)
     assert new_block.gates[3].qubits == (3, 2)
     assert new_block.gates[4].qubits == (3,)
+
+
+def test_return_last_block():
+    circ = Circuit(4)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 3))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(2, 3))
+    circuit_blocks = CircuitBlocks(circ)
+    last_block = circuit_blocks.return_last_block()
+    assert_gates_equality(last_block.gates, [gates.CZ(2, 3)])
+
+    circuit_blocks.remove_block(last_block)
+    last_block_2 = circuit_blocks.return_last_block()
+    assert_gates_equality(last_block_2.gates, [gates.CZ(1, 2)])
+
+
+def test_return_last_block_error():
+    circ = Circuit(4)
+    circuit_blocks = CircuitBlocks(circ)
+
+    # No blocks in the circuit
+    with pytest.raises(BlockingError):
+        last_block = circuit_blocks.return_last_block()

@@ -147,6 +147,7 @@ class CliffordBackend(NumpyBackend):
         index = self.np.random.choice(
             range(len(probabilities)), size=1, p=probabilities
         )[0]
+        index = int(index)
         if index != len(channel.gates):
             gate = channel.gates[index]
             state = gate.apply_clifford(self, state, nqubits)
@@ -258,7 +259,7 @@ class CliffordBackend(NumpyBackend):
         samples = self.np.vstack(samples)
 
         for meas in circuit.measurements:
-            meas.result.register_samples(samples[:, meas.target_qubits], self)
+            meas.result.register_samples(samples[:, meas.target_qubits])
 
         result = Clifford(
             self.zero_state(circuit.nqubits),
