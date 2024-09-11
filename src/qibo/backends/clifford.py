@@ -90,13 +90,13 @@ class CliffordBackend(NumpyBackend):
         return collections.Counter(dict(zip(res, counts)))
 
     def zero_state(self, nqubits: int):
-        """Construct the zero state |00...00>.
+        """Construct the zero state :math`\\ket{00...00}`.
 
         Args:
-            nqubits (int): Number of qubits.
+            nqubits (int): number of qubits.
 
         Returns:
-            (ndarray): Symplectic matrix for the zero state.
+            ndarray: Symplectic matrix for the zero state.
         """
         identity = self.np.eye(nqubits)
         symplectic_matrix = self.np.zeros(

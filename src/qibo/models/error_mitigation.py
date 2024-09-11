@@ -658,8 +658,8 @@ def apply_randomized_readout_mitigation(
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
             ``int(nshots / ncircuits)`` shots. Defaults to 10.
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used.
-            Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's 
+            qubits is used. Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
@@ -667,15 +667,15 @@ def apply_randomized_readout_mitigation(
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
-    Return:
+    Returns:
         :class:`qibo.measurements.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
 
-    Reference:
+    References:
         1. Ewout van den Berg, Zlatko K. Minev et al,
         *Model-free readout-error mitigation for quantum expectation values*.
-           `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
+        `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel

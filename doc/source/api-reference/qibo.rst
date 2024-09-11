@@ -473,7 +473,8 @@ factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_
 .. math::
    \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
 
-.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+This process can be implemented with the aforementioned 
+:func:`qibo.models.error_mitigation.apply_randomized_readout_mitigation`.
 
 
 Zero Noise Extrapolation (ZNE)
