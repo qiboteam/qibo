@@ -148,15 +148,11 @@ def comp_basis_to_pauli(
     The unitary :math:`U` is given by
 
     .. math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{k}{P_{k}} \\,\\, ,
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, |k)(P_{k}| \\,\\, ,
 
-    where :math:`\\ket{P_{k}}` is the system-vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}`, and :math:`\\ket{k}` is the computational
-    basis element.
-
-    When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
-    representation :math:`\\ket{\\rho'}`, one should use ``order="system"``
-    in :func:`vectorization`.
+    where :math:`|P_{k})` is the vectorization of the :math:`k`-th
+    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    of the :math:`k`-th computational basis element.
 
     Example:
         .. code-block:: python
