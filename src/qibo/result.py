@@ -202,7 +202,7 @@ class MeasurementOutcomes:
             of times each measured value/bitstring appears.
 
             If ``binary`` is ``True``
-                the keys of the :class:`collections.Counter` are in binary form, 
+                the keys of the :class:`collections.Counter` are in binary form,
                 as strings of :math:`0` and :math`1`.
             If ``binary`` is ``False``
                 the keys of the :class:`collections.Counter` are integers.
@@ -210,7 +210,7 @@ class MeasurementOutcomes:
                 a `dict` of :class:`collections.Counter` is returned where keys are
                 the name of each register.
             If ``registers`` is ``False``
-                a single :class:`collections.Counter` is returned which contains samples 
+                a single :class:`collections.Counter` is returned which contains samples
                 from all the measured qubits, independently of their registers.
         """
         qubits = self.measurement_gate.qubits

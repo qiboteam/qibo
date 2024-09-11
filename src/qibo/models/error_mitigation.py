@@ -658,7 +658,7 @@ def apply_randomized_readout_mitigation(
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
             ``int(nshots / ncircuits)`` shots. Defaults to 10.
-        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's 
+        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's
             qubits is used. Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
