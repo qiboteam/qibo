@@ -29,14 +29,14 @@ def pauli_basis(
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
         sparse (bool, optional) If ``True``, retuns Pauli basis in a sparse
-            representation. Default is ``False``.
+            representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
-            forced. Default is ``None``.
+            forced. Defaults to ``None``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -174,13 +174,13 @@ def comp_basis_to_pauli(
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
-            sparse representation. Default is ``False``.
+            sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -244,13 +244,13 @@ def pauli_to_comp_basis(
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
-            sparse representation. Default is ``False``.
+            sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
