@@ -50,7 +50,7 @@ class Channel(Gate):
         .. math::
             \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha})(K_{\\alpha}| \\, ,
 
-        where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator 
+        where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
         :math:`K_{\\alpha}`.
         For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 

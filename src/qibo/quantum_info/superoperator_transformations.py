@@ -641,7 +641,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     .. math::
         \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha})( K_{\\alpha}|
 
-    where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator 
+    where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
     :math:`K_{\\alpha}`.
     For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
