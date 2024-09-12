@@ -274,6 +274,25 @@ def sample_training_circuit_cdr(
     return sampled_circuit
 
 
+def _curve_fit(backend, model, params, xdata, ydata, lr=1e-2, max_iter=int(1e3)):
+    if backend.name == "pytorch":
+        loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
+        optimizer = backend.np.optim.LBFGS([params], lr=lr, max_iter=max_iter)
+
+        def closure():
+            optimizer.zero_grad()
+            output = model(xdata, params.reshape(-1, 1))
+            loss_val = loss(output, ydata)
+            loss_val.backward()
+            return loss_val
+
+        optimizer.step(closure)
+        return params
+    else:
+        wrapped_model = lambda x, *params: model(x, np.asarray(params).reshape(-1, 1))
+        return curve_fit(wrapped_model, xdata, ydata, p0=params)[0]
+
+
 def CDR(
     circuit,
     observable,
@@ -374,30 +393,6 @@ def CDR(
     return mit_val
 
 
-def _curve_fit(backend, model, params, xdata, ydata, lr=1e-2, max_iter=int(1e3)):
-    loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
-    if backend.name == "pytorch":
-        ydata = backend.cast(ydata, backend.np.float64)
-        params = backend.cast(params, dtype=backend.np.float64)
-        optimizer = backend.np.optim.LBFGS([params], lr=lr, max_iter=max_iter)
-
-        def closure():
-            optimizer.zero_grad()
-            output = model(xdata, params.reshape(-1, 1))
-            loss_val = loss(output, ydata)
-            loss_val.backward()
-            return loss_val
-
-        optimizer.step(closure)
-        return params
-    elif backend.name == "tensorflow":
-        wrapped_model = lambda x, *params: model(x, np.asarray(params).reshape(-1, 1))
-        return curve_fit(wrapped_model, xdata, ydata, p0=params)[0]
-    else:
-        wrapped_model = lambda x, *params: model(x, np.asarray(params).reshape(-1, 1))
-        return curve_fit(wrapped_model, xdata, ydata, p0=params)[0]
-
-
 def vnCDR(
     circuit,
     observable,
@@ -489,13 +484,17 @@ def vnCDR(
             )
             train_val["noisy"].append(float(val))
 
-    noisy_array = backend.cast(train_val["noisy"], backend.np.float64).reshape(
+    noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
         -1, len(noise_levels)
     )
 
-    params = local_state.random(len(noise_levels))
+    params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
     optimal_params = _curve_fit(
-        backend, model, params, noisy_array.T, train_val["noise-free"]
+        backend,
+        model,
+        params,
+        noisy_array.T,
+        backend.cast(train_val["noise-free"], backend.precision),
     )
 
     val = []
@@ -514,7 +513,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, backend.np.float64).reshape(-1, 1),
+        backend.cast(val, backend.precision).reshape(-1, 1),
         optimal_params.reshape(-1, 1),
     )[0]
 
