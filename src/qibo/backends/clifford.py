@@ -259,7 +259,7 @@ class CliffordBackend(NumpyBackend):
         samples = self.np.vstack(samples)
 
         for meas in circuit.measurements:
-            meas.result.register_samples(samples[:, meas.target_qubits], self)
+            meas.result.register_samples(samples[:, meas.target_qubits])
 
         result = Clifford(
             self.zero_state(circuit.nqubits),

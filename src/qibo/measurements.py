@@ -7,6 +7,13 @@ from qibo import gates
 from qibo.config import raise_error
 
 
+def _check_backend(backend):
+    """This is only needed due to the circular import with qibo.backends."""
+    from qibo.backends import _check_backend
+
+    return _check_backend(backend)
+
+
 def frequencies_to_binary(frequencies, nqubits):
     return collections.Counter(
         {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
@@ -79,10 +86,8 @@ class MeasurementResult:
             to use for calculations.
     """
 
-    def __init__(self, gate, nshots=0, backend=None):
+    def __init__(self, gate):
         self.measurement_gate = gate
-        self.backend = backend
-        self.nshots = nshots
         self.circuit = None
 
         self._samples = None
@@ -96,15 +101,27 @@ class MeasurementResult:
         nshots = self.nshots
         return f"MeasurementResult(qubits={qubits}, nshots={nshots})"
 
-    def add_shot(self, probs):
+    @property
+    def raw(self) -> dict:
+        samples = self._samples.tolist() if self.has_samples() else self._samples
+        return {"samples": samples}
+
+    @property
+    def nshots(self) -> int:
+        if self.has_samples():
+            return len(self._samples)
+        elif self._frequencies is not None:
+            return sum(self._frequencies.values())
+
+    def add_shot(self, probs, backend=None):
+        backend = _check_backend(backend)
         qubits = sorted(self.measurement_gate.target_qubits)
-        shot = self.backend.sample_shots(probs, 1)
-        bshot = self.backend.samples_to_binary(shot, len(qubits))
+        shot = backend.sample_shots(probs, 1)
+        bshot = backend.samples_to_binary(shot, len(qubits))
         if self._samples:
             self._samples.append(bshot[0])
         else:
             self._samples = [bshot[0]]
-        self.nshots += 1
         return shot
 
     def add_shot_from_sample(self, sample):
@@ -112,20 +129,18 @@ class MeasurementResult:
             self._samples.append(sample)
         else:
             self._samples = [sample]
-        self.nshots += 1
 
     def has_samples(self):
         return self._samples is not None
 
-    def register_samples(self, samples, backend=None):
+    def register_samples(self, samples):
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples
-        self.nshots = samples.shape[0]  # len(samples)
+        self.nshots = samples.shape[0]
 
-    def register_frequencies(self, frequencies, backend=None):
+    def register_frequencies(self, frequencies):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
-        self.nshots = sum(frequencies.values())
 
     def reset(self):
         """Remove all registered samples and frequencies."""
@@ -144,7 +159,7 @@ class MeasurementResult:
 
         return self._symbols
 
-    def samples(self, binary=True, registers=False):
+    def samples(self, binary=True, registers=False, backend=None):
         """Returns raw measurement samples.
 
         Args:
@@ -159,6 +174,7 @@ class MeasurementResult:
                 samples are returned in decimal form as a tensor
                 of shape `(nshots,)`.
         """
+        backend = _check_backend(backend)
         if self._samples is None:
             if self.circuit is None:
                 raise_error(
@@ -172,9 +188,9 @@ class MeasurementResult:
             return self._samples
 
         qubits = self.measurement_gate.target_qubits
-        return self.backend.samples_to_decimal(self._samples, len(qubits))
+        return backend.samples_to_decimal(self._samples, len(qubits))
 
-    def frequencies(self, binary=True, registers=False):
+    def frequencies(self, binary=True, registers=False, backend=None):
         """Returns the frequencies of measured samples.
 
         Args:
@@ -192,8 +208,9 @@ class MeasurementResult:
             If `binary` is `False`
                 the keys of the `Counter` are integers.
         """
+        backend = _check_backend(backend)
         if self._frequencies is None:
-            self._frequencies = self.backend.calculate_frequencies(
+            self._frequencies = backend.calculate_frequencies(
                 self.samples(binary=False)
             )
         if binary:

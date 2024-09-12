@@ -17,14 +17,16 @@ class Hamiltonian(AbstractHamiltonian):
 
     Args:
         nqubits (int): number of quantum bits.
-        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
-            computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
-            Sparse matrices based on ``scipy.sparse`` for numpy/qibojit backends
-            or on ``tf.sparse`` for the tensorflow backend are also
-            supported.
+        matrix (ndarray): Matrix representation of the Hamiltonian in the
+            computational basis as an array of shape :math:`2^{n} \\times 2^{n}`.
+            Sparse matrices based on ``scipy.sparse`` for ``numpy`` / ``qibojit`` backends
+            (or on ``tf.sparse`` for the ``tensorflow`` backend) are also supported.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
 
-    def __init__(self, nqubits, matrix=None, backend=None):
+    def __init__(self, nqubits, matrix, backend=None):
         from qibo.backends import _check_backend
 
         self.backend = _check_backend(backend)
@@ -50,7 +52,7 @@ class Hamiltonian(AbstractHamiltonian):
     def matrix(self):
         """Returns the full matrix representation.
 
-        Can be a dense ``(2 ** nqubits, 2 ** nqubits)`` array or a sparse
+        For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
         matrix, depending on how the Hamiltonian was created.
         """
         return self._matrix
@@ -68,22 +70,22 @@ class Hamiltonian(AbstractHamiltonian):
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, backend=None):
-        """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
+        """Creates a :class:`qibo.hamiltonian.Hamiltonian` from a symbolic Hamiltonian.
 
-        We refer to the
-        :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
-        example for more details.
+        We refer to :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        for more details.
 
         Args:
-            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
-                with symbols.
+            symbolic_hamiltonian (sympy.Expr): full Hamiltonian written with ``sympy`` symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
-                the Hamiltonian to a pair of (target, matrix).
+                the Hamiltonian to a pair ``(target, matrix)``.
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+                in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
 
         Returns:
-            A :class:`qibo.hamiltonians.SymbolicHamiltonian` object
-            that implements the Hamiltonian represented by the given symbolic
-            expression.
+            :class:`qibo.hamiltonians.SymbolicHamiltonian`: object that implements the
+            Hamiltonian represented by the given symbolic expression.
         """
         log.warning(
             "`Hamiltonian.from_symbolic` and the use of symbol maps is "
@@ -175,15 +177,16 @@ class Hamiltonian(AbstractHamiltonian):
         Evaluate energy fluctuation:
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+            \\Xi_{k}(\\mu) = \\sqrt{\\bra{\\mu} \\, H^{2} \\, \\ket{\\mu}
+                - \\bra{\\mu} \\, H \\, \\ket{\\mu}^2} \\, .
 
-        for a given state :math:`|\\mu\\rangle`.
+        for a given state :math:`\\ket{\\mu}`.
 
         Args:
-            state (np.ndarray): quantum state to be used to compute the energy fluctuation.
+            state (ndarray): quantum state to be used to compute the energy fluctuation.
 
-        Return:
-            Energy fluctuation value (float).
+        Returns:
+            float: Energy fluctuation value.
         """
         state = self.backend.cast(state)
         energy = self.expectation(state)
@@ -311,6 +314,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             The symbol_map can also be used to pass non-quantum operator arguments
             to the symbolic Hamiltonian, such as the parameters in the
             :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
     """
 
     def __init__(self, form=None, nqubits=None, symbol_map={}, backend=None):
@@ -419,7 +425,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def matrix(self):
         """Returns the full matrix representation.
 
-        Consisting of ``(2 ** nqubits, 2 ** nqubits)`` elements.
+        Consisting of :math:`2^{n} \\times 2^{n}`` elements.
         """
         return self.dense.matrix
 
@@ -449,8 +455,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             term (sympy.Expr): Symbolic expression containing local operators.
 
         Returns:
-            Numerical matrix corresponding to the given expression as a numpy
-            array of size ``(2 ** self.nqubits, 2 ** self.nqubits).
+            ndarray: matrix corresponding to the given expression as an array
+            of shape ``(2 ** self.nqubits, 2 ** self.nqubits)``.
         """
         if isinstance(term, sympy.Add):
             # symbolic op for addition
@@ -698,7 +704,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Gates are applied to the given state.
 
-        Helper method for ``__matmul__``.
+        Helper method for :meth:`qibo.hamiltonians.SymbolicHamiltonian.__matmul__`.
         """
         total = 0
         for term in self.terms:
@@ -760,7 +766,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Args:
             dt (float): Time step used for Trotterization.
-            accelerators (dict): Dictionary with accelerators for distributed circuits.
+            accelerators (dict, optional): Dictionary with accelerators for distributed circuits.
+                Defaults to ``None``.
         """
         from qibo import Circuit  # pylint: disable=import-outside-toplevel
         from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
