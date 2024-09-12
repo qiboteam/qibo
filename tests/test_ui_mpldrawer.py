@@ -322,17 +322,6 @@ def test_fuse_cluster():
     assert ax != None
 
 
-def test_fuse_cluster():
-    """Test for clustering gates"""
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(c.fuse())
-    assert ax != None
-
-
 def test_target_control_qubts():
     """Very dummy test to check the target and control qubits from gates"""
     c = Circuit(3)
