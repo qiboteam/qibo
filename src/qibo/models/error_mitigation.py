@@ -1,6 +1,7 @@
 """Error Mitigation Methods."""
 
 import math
+from inspect import signature
 from itertools import product
 
 import numpy as np
@@ -208,9 +209,9 @@ def ZNE(
         expected_values.append(val)
 
     gamma = backend.cast(
-        get_gammas(noise_levels, analytical=solve_for_gammas), backend.np.float64
+        get_gammas(noise_levels, analytical=solve_for_gammas), backend.precision
     )
-    expected_values = backend.cast(expected_values, backend.np.float64)
+    expected_values = backend.cast(expected_values, backend.precision)
 
     return backend.np.sum(gamma * expected_values)
 
@@ -305,23 +306,26 @@ def sample_training_circuit_cdr(
     return sampled_circuit
 
 
-def _curve_fit(backend, model, params, xdata, ydata, lr=1e-2, max_iter=int(1e3)):
+def _curve_fit(
+    backend, model, params, xdata, ydata, lr=1, max_iter=int(1e2), tolerance_grad=1e-5
+):
     if backend.name == "pytorch":
         loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
-        optimizer = backend.np.optim.LBFGS([params], lr=lr, max_iter=max_iter)
+        optimizer = backend.np.optim.LBFGS(
+            [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
+        )
 
         def closure():
             optimizer.zero_grad()
-            output = model(xdata, params.reshape(-1, 1))
+            output = model(xdata, *params)
             loss_val = loss(output, ydata)
-            loss_val.backward()
+            loss_val.backward(retain_graph=True)
             return loss_val
 
         optimizer.step(closure)
         return params
     else:
-        wrapped_model = lambda x, *params: model(x, np.asarray(params).reshape(-1, 1))
-        return curve_fit(wrapped_model, xdata, ydata, p0=params)[0]
+        return curve_fit(model, xdata, ydata, p0=params)[0]
 
 
 def CDR(
@@ -391,7 +395,7 @@ def CDR(
     for circ in training_circuits:
         result = backend.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(float(val))
+        train_val["noise-free"].append(val)
         val = get_expectation_val_with_readout_mitigation(
             circ,
             observable,
@@ -402,9 +406,19 @@ def CDR(
             seed=local_state,
             backend=backend,
         )
-        train_val["noisy"].append(float(val))
+        train_val["noisy"].append(val)
 
-    optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
+    nparams = (
+        len(signature(model).parameters) - 1
+    )  # first arg is the input and the *params afterwards
+    params = backend.cast(local_state.random(nparams), backend.precision)
+    optimal_params = _curve_fit(
+        backend,
+        model,
+        params,
+        backend.cast(train_val["noisy"], backend.precision),
+        backend.cast(train_val["noise-free"], backend.precision),
+    )
 
     val = get_expectation_val_with_readout_mitigation(
         circuit,
@@ -486,7 +500,7 @@ def vnCDR(
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if model is None:
-        model = lambda x, params: backend.np.sum(x * params, axis=0)
+        model = lambda x, *params: backend.np.sum(x * backend.np.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -518,7 +532,6 @@ def vnCDR(
     noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
         -1, len(noise_levels)
     )
-
     params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
     optimal_params = _curve_fit(
         backend,
@@ -526,6 +539,8 @@ def vnCDR(
         params,
         noisy_array.T,
         backend.cast(train_val["noise-free"], backend.precision),
+        lr=1,
+        tolerance_grad=1e-7,
     )
 
     val = []
@@ -545,7 +560,7 @@ def vnCDR(
 
     mit_val = model(
         backend.cast(val, backend.precision).reshape(-1, 1),
-        optimal_params.reshape(-1, 1),
+        *optimal_params,
     )[0]
 
     if full_output:
@@ -1073,7 +1088,7 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    lambda_list = backend.cast(lambda_list, backend.np.float64)
+    lambda_list = backend.cast(lambda_list, backend.precision)
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 

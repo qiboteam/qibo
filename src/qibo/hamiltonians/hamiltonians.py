@@ -553,7 +553,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        # breakpoint()
         terms = self.terms
         for term in terms:
             # pylint: disable=E1101
@@ -565,7 +564,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if len(term.factors) != len(set(term.factors)):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
-        counts = np.array(list(freq.values())) / sum(freq.values())
+        counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
+            freq.values()
+        )
         qubits = []
         for term in terms:
             qubits_term = []
@@ -585,7 +586,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     expval_k = -1
                 expval_q += expval_k * counts[i]
             expval += expval_q * self.terms[j].coefficient.real
-        return self.backend.cast(expval + self.constant.real, self.backend.np.float64)
+        return expval + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
