@@ -324,8 +324,7 @@ def _curve_fit(
 
         optimizer.step(closure)
         return params
-    else:
-        return curve_fit(model, xdata, ydata, p0=params)[0]
+    return curve_fit(model, xdata, ydata, p0=params)[0]
 
 
 def CDR(
