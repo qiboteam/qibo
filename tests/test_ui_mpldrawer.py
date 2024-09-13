@@ -1,10 +1,12 @@
 """Tests for Qibo matplotlib drawer"""
 
-from PIL import Image
+from pathlib import Path
+
+import matplotlib.pyplot
 import numpy as np
 import pytest
-from pathlib import Path
-import matplotlib.pyplot
+from PIL import Image
+
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
@@ -18,6 +20,7 @@ from qibo.ui.mpldrawer import (
 )
 
 BASEPATH = str(Path(__file__).parent / "test_ui_images")
+
 
 # convert an image to RGBA numpy array
 def img2array(img_path):
