@@ -1,9 +1,10 @@
 """Tests for Qibo matplotlib drawer"""
 
-import matplotlib.pyplot
+from PIL import Image
 import numpy as np
 import pytest
-
+from pathlib import Path
+import matplotlib.pyplot
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
 from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
@@ -16,62 +17,63 @@ from qibo.ui.mpldrawer import (
     plot_circuit,
 )
 
+BASEPATH = str(Path(__file__).parent / "test_ui_images")
 
-# defining a dummy circuit
-def circuit(nqubits=2):
-    c = Circuit(nqubits)
-    c.add(gates.H(0))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.M(0))
-    c.add(gates.M(1))
-    return c
+# convert an image to RGBA numpy array
+def img2array(img_path):
+    img = Image.open(img_path)
+    img = img.convert("RGBA")
+    return np.asarray(img)
+
+
+# convert image file to numpy array
+def fig2array(fig):
+    fig.canvas.draw()
+    data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
+    return data
+
+
+# match a matplotlib figure with a image file
+def match_figure_image(fig, path_file):
+    return np.all(fig2array(fig) == img2array(path_file))
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_plot_circuit(nqubits):
     """Test for main plot function"""
-    circ = circuit(nqubits)
-    ax, _ = plot_circuit(circ)
-    assert ax != None
+    c = Circuit(nqubits)
+    c.add(gates.H(0))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.M(0))
+    c.add(gates.M(1))
+    _, fig = plot_circuit(c)
+    assert (
+        match_figure_image(
+            fig, BASEPATH + "/test_plot_circuit_" + str(nqubits) + ".png"
+        )
+        == True
+    )
 
 
-def test_empty_gates():
-    "Empty gates test"
-    assert _process_gates([], 2) == []
-
-
-@pytest.mark.parametrize("qubits", [1, 2, 3])
-def test_circuit_measure(qubits):
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_circuit_measure(nqubits):
     """Measure circuit"""
-    c = Circuit(qubits)
-    c.add(gates.M(qubit) for qubit in range(qubits - 1))
-    ax, _ = plot_circuit(c)
-    assert ax != None
+    c = Circuit(nqubits)
+    c.add(gates.M(qubit) for qubit in range(nqubits - 1))
+    _, fig = plot_circuit(c)
+    assert (
+        match_figure_image(
+            fig, BASEPATH + "/test_circuit_measure_" + str(nqubits) + ".png"
+        )
+        == True
+    )
 
 
-def test_plot_circuit_error_style():
-    """Test for style error function"""
-    style1 = _plot_params(style="test")
-    style2 = _plot_params(style="fardelejo")
-    custom_style = {
-        "facecolor": "#6497bf",
-        "edgecolor": "#01016f",
-        "linecolor": "#01016f",
-        "textcolor": "#01016f",
-        "fillcolor": "#ffb9b9",
-        "gatecolor": "#d8031c",
-        "controlcolor": "#360000",
-    }
-    style3 = _plot_params(style=custom_style)
-    assert style1["facecolor"] == "w"
-    assert style2["facecolor"] == "#e17a02"
-    assert style3["facecolor"] == "#6497bf"
-
-
-@pytest.mark.parametrize("qubits", [3, 4, 5, 6])
-def test_bigger_circuit_gates(qubits):
+@pytest.mark.parametrize("nqubits", [3, 4, 5, 6])
+def test_bigger_circuit_gates(nqubits):
     """Test for a bigger circuit"""
-    c = Circuit(qubits)
+    c = Circuit(nqubits)
     c.add(gates.H(1))
     c.add(gates.X(1))
     c.add(gates.SX(2))
@@ -85,8 +87,13 @@ def test_bigger_circuit_gates(qubits):
     c.add(gates.X(1))
     c.add(gates.X(0))
     c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(c)
-    assert ax != None
+    _, fig = plot_circuit(c)
+    assert (
+        match_figure_image(
+            fig, BASEPATH + "/test_bigger_circuit_gates_" + str(nqubits) + ".png"
+        )
+        == True
+    )
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -122,31 +129,36 @@ def test_complex_circuit(clustered):
     c.add(gates.DEUTSCH(1, 0, 2, np.pi))
     c.add(gates.X(0))
     c.add(gates.M(qubit) for qubit in range(2))
-    ax1, _ = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
-    ax2, _ = plot_circuit(c, cluster_gates=clustered, scale=0.70)
-    assert ax1 != None
-    assert ax2 != None
+    _, fig1 = plot_circuit(c.invert(), cluster_gates=clustered, scale=0.70)
+    _, fig2 = plot_circuit(c, cluster_gates=clustered, scale=0.70)
+    assert (
+        match_figure_image(
+            fig1,
+            BASEPATH
+            + "/test_complex_circuit_fig1_"
+            + ("true" if clustered else "false")
+            + ".png",
+        )
+        == True
+    )
+    assert (
+        match_figure_image(
+            fig2,
+            BASEPATH
+            + "/test_complex_circuit_fig2_"
+            + ("true" if clustered else "false")
+            + ".png",
+        )
+        == True
+    )
 
 
 def test_align_gate():
     """Test for Align gate"""
     c = Circuit(3)
     c.add(gates.Align(0))
-    ax, _ = plot_circuit(c)
-    assert c != None
-    assert ax != None
-
-
-def test_fused_gates():
-    """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
-    min_q = 0
-    max_q = 1
-    l_gates = 1
-    equal_qbits = True
-    start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
-    end_barrier = FusedEndGateBarrier(min_q, max_q)
-    assert start_barrier != None
-    assert end_barrier != None
+    _, fig = plot_circuit(c)
+    assert match_figure_image(fig, BASEPATH + "/test_align_gate.png") == True
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -154,17 +166,26 @@ def test_circuit_fused_gates(clustered):
     """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
     c = QFT(5)
     c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(
+    _, fig = plot_circuit(
         c.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
     )
-    assert ax != None
+    assert (
+        match_figure_image(
+            fig,
+            BASEPATH
+            + "/test_circuit_fused_gates_"
+            + ("true" if clustered else "false")
+            + ".png",
+        )
+        == True
+    )
 
 
 def test_empty_circuit():
     """Test for printing empty circuit"""
     c = Circuit(2)
-    ax, _ = plot_circuit(c)
-    assert ax != None
+    _, fig = plot_circuit(c)
+    assert match_figure_image(fig, BASEPATH + "/test_empty_circuit.png") == True
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -177,8 +198,17 @@ def test_circuit_entangled_entropy(clustered):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    ax, _ = plot_circuit(c, scale=0.8, cluster_gates=clustered)
-    assert ax != None
+    _, fig = plot_circuit(c, scale=0.8, cluster_gates=clustered)
+    assert (
+        match_figure_image(
+            fig,
+            BASEPATH
+            + "/test_circuit_entangled_entropy_"
+            + ("true" if clustered else "false")
+            + ".png",
+        )
+        == True
+    )
 
 
 def test_layered_circuit():
@@ -202,11 +232,33 @@ def test_layered_circuit():
 
     ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
     ansatz.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(ansatz)
-    assert ax != None
+    _, fig = plot_circuit(ansatz)
+    assert match_figure_image(fig, BASEPATH + "/test_layered_circuit.png") == True
 
 
-def test_plot_circuit():
+def test_fused_gates():
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.X(0))
+    c.add(gates.H(0))
+    c.add(gates.X(1))
+    c.add(gates.H(1))
+    _, fig = plot_circuit(c.fuse(), scale=0.8, cluster_gates=False)
+    assert match_figure_image(fig, BASEPATH + "/test_fused_gates.png") == True
+
+
+def test_fuse_cluster():
+    """Test for clustering gates"""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.M(qubit) for qubit in range(2))
+    _, fig = plot_circuit(c.fuse())
+    assert match_figure_image(fig, BASEPATH + "/test_fuse_cluster.png") == True
+
+
+def test_plot_circuit_internal():
     """Test for circuit plotting"""
     gates_plot = [
         ("H", "q_0"),
@@ -253,19 +305,50 @@ def test_plot_circuit():
 
     ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
     ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
-    assert ax1 != None
-    assert ax2 != None
+    assert (
+        match_figure_image(ax1.figure, BASEPATH + "/test_plot_circuit_internal_ax1.png")
+        == True
+    )
+    assert (
+        match_figure_image(ax2.figure, BASEPATH + "/test_plot_circuit_internal_ax2.png")
+        == True
+    )
+
+
+def test_empty_gates():
+    "Empty gates test"
+    assert _process_gates([], 2) == []
+
+
+def test_plot_circuit_error_style():
+    """Test for style error function"""
+    style1 = _plot_params(style="test")
+    style2 = _plot_params(style="fardelejo")
+    custom_style = {
+        "facecolor": "#6497bf",
+        "edgecolor": "#01016f",
+        "linecolor": "#01016f",
+        "textcolor": "#01016f",
+        "fillcolor": "#ffb9b9",
+        "gatecolor": "#d8031c",
+        "controlcolor": "#360000",
+    }
+    style3 = _plot_params(style=custom_style)
+    assert style1["facecolor"] == "w"
+    assert style2["facecolor"] == "#e17a02"
+    assert style3["facecolor"] == "#6497bf"
 
 
 def test_fused_gates():
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.X(0))
-    c.add(gates.H(0))
-    c.add(gates.X(1))
-    c.add(gates.H(1))
-    ax, _ = plot_circuit(c.fuse(), scale=0.8, cluster_gates=False)
-    assert ax != None
+    """Test for FusedStartGateBarrier and FusedEndGateBarrier"""
+    min_q = 0
+    max_q = 1
+    l_gates = 1
+    equal_qbits = True
+    start_barrier = FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits)
+    end_barrier = FusedEndGateBarrier(min_q, max_q)
+    assert start_barrier != None
+    assert end_barrier != None
 
 
 def test_render_label():
@@ -309,17 +392,6 @@ def test_cluster_gates():
         ("MEASURE", "q_1"),
     ]
     assert _make_cluster_gates(pgates) != ""
-
-
-def test_fuse_cluster():
-    """Test for clustering gates"""
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.M(qubit) for qubit in range(2))
-    ax, _ = plot_circuit(c.fuse())
-    assert ax != None
 
 
 def test_target_control_qubts():
