@@ -191,25 +191,27 @@ class MeasurementOutcomes:
         """Returns the frequencies of measured samples.
 
         Args:
-            binary (bool, optional): Return frequency keys in binary or decimal form.
+            binary (bool, optional): If ``True``, returns frequency keys in binary form.
+                If ``False``, returns them in decimal form. Defaults to ``True``.
             registers (bool, optional): Group frequencies according to registers.
+                Defaults to ``False``.
 
         Returns:
-            A `collections.Counter` where the keys are the observed values
+            A :class:`collections.Counter` where the keys are the observed values
             and the values the corresponding frequencies, that is the number
             of times each measured value/bitstring appears.
 
             If ``binary`` is ``True``
-                the keys of the `Counter` are in binary form, as strings of
-                :math:`0`s and :math`1`s.
+                the keys of the :class:`collections.Counter` are in binary form,
+                as strings of :math:`0` and :math`1`.
             If ``binary`` is ``False``
-                the keys of the ``Counter`` are integers.
+                the keys of the :class:`collections.Counter` are integers.
             If ``registers`` is ``True``
-                a `dict` of `Counter` s is returned where keys are the name of
-                each register.
+                a `dict` of :class:`collections.Counter` is returned where keys are
+                the name of each register.
             If ``registers`` is ``False``
-                a single ``Counter`` is returned which contains samples from all
-                the measured qubits, independently of their registers.
+                a single :class:`collections.Counter` is returned which contains samples
+                from all the measured qubits, independently of their registers.
         """
         qubits = self.measurement_gate.qubits
 
