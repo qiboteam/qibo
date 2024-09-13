@@ -14,18 +14,17 @@ from qibo.gates.special import FusedGate
 
 
 def vectorization(state, order: str = "row", backend=None):
-    """Returns state :math:`\\rho` in its Liouville
-    representation :math:`|\\rho\\rangle\\rangle`.
+    """Returns state :math:`\\rho` in its Liouville representation :math:`|\\rho)`.
 
     If ``order="row"``, then:
 
     .. math::
-        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l}
 
     If ``order="column"``, then:
 
     .. math::
-        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
 
     Args:
         state: state vector or density matrix.
@@ -88,12 +87,12 @@ def vectorization(state, order: str = "row", backend=None):
 
 def unvectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` from its Liouville
-    representation :math:`|\\rho\\rangle\\rangle`. This operation is
+    representation :math:`|\\rho)`. This operation is
     the inverse function of :func:`vectorization`, i.e.
 
     .. math::
         \\begin{align}
-            \\rho &= \\text{unvectorization}(|\\rho\\rangle\\rangle) \\nonumber \\\\
+            \\rho &= \\text{unvectorization}(|\\rho)) \\nonumber \\\\
             &= \\text{unvectorization}(\\text{vectorization}(\\rho)) \\nonumber
         \\end{align}
 
@@ -152,9 +151,9 @@ def to_choi(channel, order: str = "row", backend=None):
     """Converts quantum ``channel`` :math:`U` to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = | U \\rangle\\rangle \\langle\\langle U | \\, ,
+        \\Lambda = | U ) ( U | \\, ,
 
-    where :math:`| \\cdot \\rangle\\rangle` is the :func:`qibo.quantum_info.vectorization`
+    where :math:`| \\cdot )` is the :func:`qibo.quantum_info.vectorization`
     operation.
 
     Args:
@@ -376,7 +375,9 @@ def choi_to_kraus(
 
     .. math::
         \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\,
-            |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
+            |\\tilde{K}_{\\alpha})(\\tilde{K}_{\\alpha}| \\, .
+
+    where :math:`|\\cdot)` is the :func:`qibo.quantum_info.vectorization` operation.
 
     This is the spectral decomposition of :math:`\\Lambda`, Hence, the set
     :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
@@ -385,7 +386,7 @@ def choi_to_kraus(
 
     .. math::
         K_{\\alpha} = \\lambda_{\\alpha} \\,
-            \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
+            \\text{unvectorization}(|\\tilde{K}_{\\alpha})) \\, .
 
     If :math:`\\mathcal{E}` is not CP, then spectral composition is replaced by
     a singular value decomposition (SVD), i.e.
@@ -638,7 +639,11 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
+        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha})( K_{\\alpha}|
+
+    where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
+    :math:`K_{\\alpha}`.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -757,10 +762,11 @@ def kraus_to_chi(
     of quantum channel to  its :math:`\\chi`-matrix representation.
 
     .. math::
-        \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
+        \\chi = \\sum_{\\alpha} \\, |c_{\\alpha})( c_{\\alpha}|,
 
-    where :math:`|c_{\\alpha}\\rangle\\rangle \\cong |K_{\\alpha}\\rangle\\rangle`
-    in Pauli-Liouville basis.
+    where :math:`|c_{\\alpha}) \\cong |K_{\\alpha})` in Pauli-Liouville basis,
+    and :math:`| \\cdot )` is the :func:`qibo.quantum_info.vectorization`
+    operation.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
