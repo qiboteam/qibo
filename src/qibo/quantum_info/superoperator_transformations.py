@@ -2136,8 +2136,6 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
-    super_op = backend.cast(super_op)
-
     if not isinstance(order, str):
         raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
 
@@ -2155,6 +2153,8 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         )
 
     backend = _check_backend(backend)
+
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
 
     dim = np.sqrt(super_op.shape[0])
 
