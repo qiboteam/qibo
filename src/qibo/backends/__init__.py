@@ -135,7 +135,7 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def get_transpiler(cls):    # pragma: no cover
+    def get_transpiler(cls):  # pragma: no cover
         return cls._transpiler
 
     @classmethod

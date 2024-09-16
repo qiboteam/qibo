@@ -1,8 +1,9 @@
+import networkx as nx
 import pytest
 
 import qibo
 from qibo import matrices
-import networkx as nx
+
 
 def test_set_get_backend():
     from qibo.backends import _Global
@@ -109,6 +110,7 @@ def test_check_backend(backend):
     assert test.name == target.name
     assert test.__class__ == target.__class__
 
+
 def test_resolve_global():
     from qibo.backends import _Global
 
@@ -121,6 +123,7 @@ def test_resolve_global():
     assert issubclass(_Global._backend.__class__, qibo.backends.Backend)
     assert _Global._transpiler is not None
 
+
 def _star_connectivity():
     Q = [i for i in range(5)]
     chip = nx.Graph()
@@ -129,10 +132,11 @@ def _star_connectivity():
     chip.add_edges_from(graph_list)
     return chip
 
+
 def test_set_get_transpiler():
     from qibo.backends import _Global
-    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.optimizer import Preprocessing
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Random
     from qibo.transpiler.router import Sabre
     from qibo.transpiler.unroller import NativeGates, Unroller
@@ -145,9 +149,8 @@ def test_set_get_transpiler():
             Random(connectivity, seed=0),
             Sabre(connectivity),
             Unroller(NativeGates.default()),
-        ]
+        ],
     )
 
     _Global.set_transpiler(transpiler)
     assert _Global.get_transpiler() == transpiler
-
