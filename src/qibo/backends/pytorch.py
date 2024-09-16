@@ -1,5 +1,7 @@
 """PyTorch backend."""
 
+from typing import Optional
+
 import numpy as np
 
 from qibo import __version__
@@ -85,7 +87,7 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
-        requires_grad: bool = None,
+        requires_grad: Optional[bool] = None,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -117,7 +119,6 @@ class PyTorchBackend(NumpyBackend):
         # check if dtype is an integer to remove gradients
         if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
             requires_grad = False
-
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
         elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
@@ -128,6 +129,7 @@ class PyTorchBackend(NumpyBackend):
         if copy:
             return x.clone()
 
+        print("Casting", x)
         return x
 
     def is_sparse(self, x):
