@@ -48,8 +48,11 @@ class Channel(Gate):
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
         .. math::
-            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle
-                \\langle\\langle K_{\\alpha}|
+            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha})(K_{\\alpha}| \\, ,
+
+        where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
+        :math:`K_{\\alpha}`.
+        For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
         Args:
             nqubits (int, optional): total number of qubits to be considered
