@@ -193,7 +193,7 @@ class Backend(abc.ABC):
     def execute_circuits(
         self, circuits, initial_states=None, nshots=None
     ):  # pragma: no cover
-        """Execute multiple :class:`qibo.models.circuit.Circuit`s in parallel."""
+        """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
