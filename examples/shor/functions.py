@@ -393,8 +393,9 @@ def quantum_order_finding_semiclassical(N, a):
         circuit.add(gates.U1(q_reg, -angle))
         circuit.add(gates.H(q_reg))
         results.append(circuit.add(gates.M(q_reg, collapse=True)))
+    circuit.add(gates.M(q_reg))
 
-    circuit()  # execute
+    circuit(nshots=1)  # execute
     s = sum(int(r.symbols[0].outcome()) * (2**i) for i, r in enumerate(results))
     print(f"The quantum circuit measures s = {s}.\n")
     return s
