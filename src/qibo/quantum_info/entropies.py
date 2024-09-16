@@ -458,9 +458,7 @@ def von_neumann_entropy(
 
     eigenvalues = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
 
     log_prob = backend.np.where(
@@ -549,15 +547,11 @@ def relative_von_neumann_entropy(
 
     eigenvalues_state = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
     eigenvalues_target = backend.calculate_eigenvalues(
         target,
-        hermitian=(
-            not check_hermitian or _check_hermitian(target, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
     )
 
     log_state = backend.np.where(
