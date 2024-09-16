@@ -9,7 +9,7 @@ from qibo.backends import _check_backend
 from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
+from qibo.quantum_info.metrics import _check_hermitian, purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
@@ -459,7 +459,7 @@ def von_neumann_entropy(
     eigenvalues = backend.calculate_eigenvalues(
         state,
         hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
+            not check_hermitian or _check_hermitian(state, backend=backend)
         ),
     )
 
@@ -550,13 +550,13 @@ def relative_von_neumann_entropy(
     eigenvalues_state = backend.calculate_eigenvalues(
         state,
         hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
+            not check_hermitian or _check_hermitian(state, backend=backend)
         ),
     )
     eigenvalues_target = backend.calculate_eigenvalues(
         target,
         hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend)
+            not check_hermitian or _check_hermitian(target, backend=backend)
         ),
     )
 
