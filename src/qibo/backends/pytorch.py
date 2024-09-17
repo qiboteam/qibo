@@ -129,7 +129,6 @@ class PyTorchBackend(NumpyBackend):
         if copy:
             return x.clone()
 
-        print("Casting", x)
         return x
 
     def is_sparse(self, x):
