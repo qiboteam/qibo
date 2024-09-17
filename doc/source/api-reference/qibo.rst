@@ -2386,6 +2386,12 @@ Hellinger shot error
 .. autofunction:: qibo.quantum_info.hellinger_shot_error
 
 
+Total variation distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.total_variation_distance
+
+
 Haar integral
 """""""""""""
 
