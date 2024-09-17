@@ -339,15 +339,17 @@ def hellinger_shot_error(
     return hellinger_error
 
 
-def total_variation_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
+def total_variation_distance(
+    prob_dist_p, prob_dist_q, validate: bool = False, backend=None
+):
     """Calculates the total variation distance between two discrete probability distributions.
 
     For probabilities :math:`p` and :math:`q`, the total variation distance is defined as
 
     .. math::
-        \\operatorname{TVD}(p, q) = \frac{1}{2} \\, \\norm{p - q}_{1} 
+        \\operatorname{TVD}(p, q) = \frac{1}{2} \\, \\norm{p - q}_{1}
             = \\frac{1}{2} \\, \\sum_{x} \\, \\abs{p(x) - q(x)} \\, ,
-    
+
     where :math:`\\norm{\\cdot}_{1}` detones the :math:`\\ell_{1}`-norm.
 
     Args:
