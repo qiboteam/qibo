@@ -121,23 +121,34 @@ class PyTorchBackend(NumpyBackend):
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
         if name == "GeneralizedRBS":
+            for parameter in ["theta", "phi"]:
+                if not isinstance(gate.init_kwargs[parameter], self.np.Tensor):
+                    gate.init_kwargs[parameter] = self.cast_parameter(
+                        gate.init_kwargs[parameter], trainable=gate.trainable
+                    )
+                elif gate.init_kwargs[parameter].requires_grad == True:
+                    gate.trainable = True
+                else:
+                    gate.trainable = False
             _matrix = _matrix(
                 qubits_in=gate.init_args[0],
                 qubits_out=gate.init_args[1],
-                theta=self.cast_parameter(
-                    gate.init_kwargs["theta"], trainable=gate.trainable
-                ),
-                phi=self.cast_parameter(
-                    gate.init_kwargs["phi"], trainable=gate.trainable
-                ),
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
             )
         else:
-            parameters = (
-                self.cast_parameter(param, trainable=gate.trainable)
-                for param in gate.parameters
-            )
-            _matrix = _matrix(*parameters)
-        print("parameterized matrix:", _matrix)
+            if not isinstance(gate.parameters[0], self.np.Tensor):
+                parameters = tuple(
+                    self.cast_parameter(param, trainable=gate.trainable)
+                    for param in gate.parameters
+                )
+                gate.parameters = parameters
+            elif gate.parameters[0].requires_grad == True:
+                gate.trainable = True
+                print("gate.parameters:", *gate.parameters)
+            else:
+                gate.trainable = False
+            _matrix = _matrix(*gate.parameters)
         return _matrix
 
     def cast_parameter(self, x, trainable):

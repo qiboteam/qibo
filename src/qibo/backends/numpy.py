@@ -167,7 +167,6 @@ class NumpyBackend(Backend):
     def apply_gate(self, gate, state, nqubits):
         state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.matrix(self)
-        print("matrix applied:", matrix)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
@@ -437,10 +436,8 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_state(nqubits)
 
-                print("state before circuit execution:", state)
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
-                    print("state during circuit execution:", state)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
