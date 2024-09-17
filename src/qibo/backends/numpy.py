@@ -167,6 +167,7 @@ class NumpyBackend(Backend):
     def apply_gate(self, gate, state, nqubits):
         state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.matrix(self)
+        print("matrix applied:", matrix)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
@@ -397,7 +398,8 @@ class NumpyBackend(Backend):
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
-            initial_state = self.cast(initial_state)
+            if initial_state.dtype != self.dtype:
+                initial_state = self.cast(initial_state)
             valid_shape = (
                 2 * (2**circuit.nqubits,)
                 if circuit.density_matrix
@@ -427,9 +429,6 @@ class NumpyBackend(Backend):
             if circuit.density_matrix:
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
-                else:
-                    # cast to proper complex type
-                    state = self.cast(initial_state)
 
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
@@ -437,12 +436,11 @@ class NumpyBackend(Backend):
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
-                else:
-                    # cast to proper complex type
-                    state = self.cast(initial_state)
 
+                print("state before circuit execution:", state)
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
+                    print("state during circuit execution:", state)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise

@@ -1,7 +1,5 @@
 """PyTorch backend."""
 
-from typing import Optional
-
 import numpy as np
 
 from qibo import __version__
@@ -14,24 +12,19 @@ class TorchMatrices(NumpyMatrices):
 
     Args:
         dtype (torch.dtype): Data type of the matrices.
-        requires_grad (bool): If ``True`` the matrices require gradient.
     """
 
-    def __init__(self, dtype, requires_grad):
+    def __init__(self, dtype):
         import torch  # pylint: disable=import-outside-toplevel
 
         super().__init__(dtype)
         self.np = torch
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     def _cast(self, x, dtype):
         flattened = [item for sublist in x for item in sublist]
         tensor_list = [self.np.as_tensor(i, dtype=dtype) for i in flattened]
         return self.np.stack(tensor_list).reshape(len(x), len(x))
-
-    def _cast_parameter(self, x):
-        return self.np.tensor(x, dtype=self.dtype, requires_grad=self.requires_grad)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)
@@ -42,9 +35,6 @@ class PyTorchBackend(NumpyBackend):
         super().__init__()
         import torch  # pylint: disable=import-outside-toplevel
 
-        # Global variable to enable or disable gradient calculation
-        self.gradients = True
-
         self.np = torch
 
         self.name = "pytorch"
@@ -54,8 +44,11 @@ class PyTorchBackend(NumpyBackend):
             "torch": self.np.__version__,
         }
 
+        # Default data type used for the gate matrices is complex128
         self.dtype = self._torch_dtype(self.dtype)
-        self.matrices = TorchMatrices(self.dtype, requires_grad=self.gradients)
+        # Default parameters dtype is float64
+        self.parameters_dtype = torch.float64
+        self.matrices = TorchMatrices(self.dtype)
         self.device = self.np.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.tensor_types = (self.np.Tensor, np.ndarray)
@@ -68,11 +61,6 @@ class PyTorchBackend(NumpyBackend):
         self.np.right_shift = self.np.bitwise_right_shift
         self.np.sign = self.np.sgn
         self.np.flatnonzero = lambda x: self.np.nonzero(x).flatten()
-
-    def requires_grad(self, requires_grad):
-        """Enable or disable gradient calculation."""
-        self.gradients = requires_grad
-        self.matrices.requires_grad = requires_grad
 
     def _torch_dtype(self, dtype):
         if dtype == "float":
@@ -87,7 +75,7 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
-        requires_grad: Optional[bool] = None,
+        requires_grad: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -102,12 +90,9 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
-            requires_grad (bool, optional): If ``True``, the input tensor requires gradient.
+            requires_grad (bool): If ``True``, the input tensor requires gradient.
                 If ``False``, the input tensor does not require gradient.
-                If ``None``, the default gradient setting of the backend is used.
         """
-        if requires_grad is None:
-            requires_grad = self.gradients
 
         if dtype is None:
             dtype = self.dtype
@@ -129,8 +114,34 @@ class PyTorchBackend(NumpyBackend):
         if copy:
             return x.clone()
 
-        print("Casting", x)
         return x
+
+    def matrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=self.cast_parameter(
+                    gate.init_kwargs["theta"], trainable=gate.trainable
+                ),
+                phi=self.cast_parameter(
+                    gate.init_kwargs["phi"], trainable=gate.trainable
+                ),
+            )
+        else:
+            parameters = (
+                self.cast_parameter(param, trainable=gate.trainable)
+                for param in gate.parameters
+            )
+            _matrix = _matrix(*parameters)
+        print("parameterized matrix:", _matrix)
+        return _matrix
+
+    def cast_parameter(self, x, trainable):
+        return self.np.tensor(x, dtype=self.parameters_dtype, requires_grad=trainable)
 
     def is_sparse(self, x):
         if isinstance(x, self.np.Tensor):
