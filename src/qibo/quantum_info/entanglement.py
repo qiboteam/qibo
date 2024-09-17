@@ -194,14 +194,14 @@ def entanglement_fidelity(
 
 
 def meyer_wallach_entanglement(state, backend=None):
-    """Computes the Meyer-Wallach entanglement Q of `state`,
+    """Computes the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
         Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\,
-            \\text{tr}\\left(\\rho_{k^{2}}\\right) \\, ,
+            \\text{tr}\\left(\\rho_{k}^{2}\\right) \\, ,
 
-        where :math:`\\rho_{k^{2}}` is the reduced density matrix obtained by tracing out qubit :math:`k`
-        from the total system.
+    where :math:`\\rho_{k}^{2}` is the reduced density matrix obtained by tracing out qubit :math:`k`,
+    and :math:`N` is the total number of qubits in ``state``.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -245,16 +245,16 @@ def meyer_wallach_entanglement(state, backend=None):
 
 def entangling_capability(circuit, samples: int, seed=None, backend=None):
     """Returns the entangling capability :math:`\\text{Ent}` of a parametrized
-    circuit, which is average Meyer-Wallach entanglement Q of the circuit, i.e.
+    circuit, defined as the average Meyer-Wallach entanglement :math:`Q` of the ``circuit``, i.e.
 
     .. math::
-        \\text{Ent} = \\frac{2}{S}\\sum_{k}Q_k \\, ,
+        \\text{Ent} = \\frac{2}{|S|}\\sum_{\\theta_i\\in S}Q_{\\theta_i} \\, ,
 
-    where :math:`S` is the number of samples.
+    where :math:`S` is the set of sampled circuit parameters.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        samples (int): number of samples to estimate the integral.
+        samples (int): number of sampled circuit parameter vectors :math:`|S|`
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
