@@ -145,7 +145,6 @@ class PyTorchBackend(NumpyBackend):
                 gate.parameters = parameters
             elif gate.parameters[0].requires_grad == True:
                 gate.trainable = True
-                print("gate.parameters:", *gate.parameters)
             else:
                 gate.trainable = False
             _matrix = _matrix(*gate.parameters)
