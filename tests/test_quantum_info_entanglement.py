@@ -126,6 +126,11 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
 
 
 def test_meyer_wallach_entanglement(backend):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        test = meyer_wallach_entanglement(state, backend=backend)
+
     nqubits = 2
 
     circuit1 = Circuit(nqubits)
