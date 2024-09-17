@@ -130,17 +130,19 @@ def test_meyer_wallach_entanglement(backend):
 
     circuit1 = Circuit(nqubits)
     circuit1.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+    state1 = backend.execute_circuit(circuit1).state()
 
     circuit2 = Circuit(nqubits)
     circuit2.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
     circuit2.add(gates.CNOT(0, 1))
+    state2 = backend.execute_circuit(circuit2).state()
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=PRECISION_TOL
+        meyer_wallach_entanglement(state1, backend=backend), 0.0, atol=PRECISION_TOL
     )
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=PRECISION_TOL
+        meyer_wallach_entanglement(state2, backend=backend), 0.5, atol=PRECISION_TOL
     )
 
 

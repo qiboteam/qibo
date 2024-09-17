@@ -193,15 +193,18 @@ def entanglement_fidelity(
     return entang_fidelity
 
 
-def meyer_wallach_entanglement(circuit, backend=None):
-    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+def meyer_wallach_entanglement(state, backend=None):
+    """Computes the Meyer-Wallach entanglement Q of `state`,
 
     .. math::
         Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\,
-            \\text{tr}\\left(\\rho_{k^{2}}(\\theta)\\right) \\, .
+            \\text{tr}\\left(\\rho_{k^{2}}\\right) \\, ,
+
+        where :math:`\\rho_{k^{2}}` is the reduced density matrix obtained by tracing out qubit :math:`k`
+        from the total system.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        state (ndarray): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -212,17 +215,24 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
     backend = _check_backend(backend)
 
-    circuit.density_matrix = True
-    nqubits = circuit.nqubits
+    if (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
 
-    rho = backend.execute_circuit(circuit).state()
+    nqubits = int(np.log2(len(state))) if len(state.shape) == 1 else state.shape[0]
 
     ent = 0
     for j in range(nqubits):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
 
-        rho_r = partial_trace(rho, trace_q, backend=backend)
+        rho_r = partial_trace(state, trace_q, backend=backend)
 
         trace = purity(rho_r, backend=backend)
 
@@ -280,7 +290,8 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
     for _ in range(samples):
         params = local_state.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
-        entanglement = meyer_wallach_entanglement(circuit, backend=backend)
+        state = backend.execute_circuit(circuit).state()
+        entanglement = meyer_wallach_entanglement(state, backend=backend)
         res.append(entanglement)
 
     capability = 2 * np.real(np.sum(res)) / samples
