@@ -3,8 +3,6 @@
 import math
 from typing import List, Tuple, Union
 
-from scipy.linalg import fractional_matrix_power
-
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -200,21 +198,26 @@ def matrix_exponentiation(
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
 
 
-def matrix_power(matrix, alpha, backend):
-    """Calculates ``matrix ** alpha`` according to backend."""
-    # if backend.__class__.__name__ in [
-    #     "CupyBackend",
-    #     "CuQuantumBackend",
-    # ]:  # pragma: no cover
-    #     new_matrix = backend.to_numpy(matrix)
-    # else:
-    #     new_matrix = backend.np.copy(matrix)
+def matrix_power(matrix, power: Union[float, int], backend=None):
+    """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculates :math:`A^{\\alpha}`.
+    
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        power (float or int): power to raise ``matrix`` to.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
-    # if len(new_matrix.shape) == 1:
-    #     new_matrix = backend.np.outer(new_matrix, backend.np.conj(new_matrix))
+    Returns:
+        ndarray: matrix power :math:`A^{\\alpha}`.
+    """
 
-    # return backend.cast(fractional_matrix_power(backend.to_numpy(new_matrix), alpha))
+    if not isinstance(power, (float, int)):
+        raise_error(
+            TypeError, 
+            f"``power`` must be either float or int, but it is type {type(power)}.",
+        )
 
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_power(matrix, alpha)
+    return backend.calculate_matrix_power(matrix, power)
