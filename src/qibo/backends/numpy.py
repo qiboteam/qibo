@@ -772,7 +772,7 @@ class NumpyBackend(Backend):
     def calculate_matrix_power(self, matrix, power: Union[float, int]):
         if not isinstance(power, (float, int)):
             raise_error(
-                TypeError, 
+                TypeError,
                 f"``power`` must be either float or int, but it is type {type(power)}.",
             )
         return fractional_matrix_power(matrix, power)

@@ -353,8 +353,10 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_matrix_power(self, matrix, power: Union[float, int]):  # pragma: no cover
-        """Calculates the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`, 
+    def calculate_matrix_power(
+        self, matrix, power: Union[float, int]
+    ):  # pragma: no cover
+        """Calculates the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`."""
         raise_error(NotImplementedError)
 
