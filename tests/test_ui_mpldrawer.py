@@ -6,7 +6,6 @@ import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
-from PIL import Image
 
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
