@@ -1382,7 +1382,6 @@ class Circuit:
         )
         return self.__str__(line_wrap, legend)
 
-
     def _display(self, line_wrap: int = 70, legend: bool = False):
         """Draw text circuit using unicode symbols.
 
