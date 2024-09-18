@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.models import QFT
 from qibo.measurements import MeasurementResult
+from qibo.models import QFT
 
 
 def assert_result(
