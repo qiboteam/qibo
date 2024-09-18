@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
@@ -18,8 +19,6 @@ from qibo.ui.mpldrawer import (
     _render_label,
     plot_circuit,
 )
-
-import matplotlib
 
 matplotlib.use("agg")
 
