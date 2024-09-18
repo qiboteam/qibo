@@ -114,11 +114,13 @@ def test_partial_trace(backend, density_matrix):
 
 
 def test_matrix_power(backend):
-    nqubits, alpha = 2, 2
+    nqubits, power = 2, 2
     dims = 2**nqubits
 
     state = random_density_matrix(dims, backend=backend)
 
-    power = matrix_power(state, alpha, backend)
+    power = matrix_power(state, power, backend)
 
-    assert backend.np.real(backend.np.trace(power)) == purity(state, backend=backend)
+    backend.assert_allclose(
+        float(backend.np.real(backend.np.trace(power))), purity(state, backend=backend)
+    )

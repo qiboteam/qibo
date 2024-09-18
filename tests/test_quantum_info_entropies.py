@@ -603,8 +603,18 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
             if alpha == 1.0:
                 log = relative_von_neumann_entropy(state, target, base, backend=backend)
             elif alpha == np.inf:
-                new_state = matrix_power(state, 0.5, backend)
-                new_target = matrix_power(target, 0.5, backend)
+                state_outer = (
+                    backend.np.outer(state, backend.np.conj(state.T))
+                    if state_flag
+                    else state
+                )
+                target_outer = (
+                    backend.np.outer(target, backend.np.conj(target.T))
+                    if target_flag
+                    else target
+                )
+                new_state = matrix_power(state_outer, 0.5, backend)
+                new_target = matrix_power(target_outer, 0.5, backend)
 
                 log = backend.np.log2(
                     backend.calculate_norm_density_matrix(
