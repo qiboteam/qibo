@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, set_backend
+from qibo import Circuit, gates, set_backend, get_backend
 from qibo.backends import (
     CliffordBackend,
     NumpyBackend,
@@ -36,8 +36,8 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(_Global.get_backend(), CliffordBackend)
-    global_platform = _Global.get_backend().platform
+    assert isinstance(get_backend(), CliffordBackend)
+    global_platform = get_backend().platform
     assert global_platform == platform
 
 
@@ -46,9 +46,9 @@ def test_global_backend(backend):
     set_backend(backend.name, platform=backend.platform)
     clifford_bkd = CliffordBackend()
     target = (
-        _Global.get_backend().name
+        _Global._backend.name
         if backend.name == "numpy"
-        else _Global.get_backend().platform
+        else _Global._backend.platform
     )
     assert clifford_bkd.platform == target
     set_backend("numpy")

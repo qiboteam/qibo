@@ -1,18 +1,16 @@
 import os
 
-import qibo
+# import qibo
+from qibo import get_threads, set_backend, get_backend
 from qibo.backends import _Global
 
 # Force quimb to use qibojit default number of threads.
 _Global.backend()
-os.environ["NUMBA_NUM_THREADS"] = f"{qibo.get_threads()}"
+os.environ["NUMBA_NUM_THREADS"] = f"{get_threads()}"
 from qibotn.backends.quimb import QuimbBackend
 
-from qibo.backends import _Global
-
-
 def test_backend_qibotn():
-    qibo.set_backend(backend="qibotn", platform="qutensornet", runcard=None)
-    assert isinstance(_Global.get_backend(), QuimbBackend)
-
-    qibo.set_backend("numpy")
+    set_backend(backend="qibotn", platform="qutensornet", runcard=None)
+    assert isinstance(get_backend(), QuimbBackend)
+    set_backend("numpy")
+    assert get_backend().name == "numpy"

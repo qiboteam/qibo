@@ -9,6 +9,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
+from qibo.backends import _Global
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -1098,21 +1099,20 @@ class Circuit:
             state = self.compiled.executor(initial_state, nshots)
             self._final_state = self.compiled.result(state, nshots)
             return self._final_state
+
+        _Global.resolve_global()
+        transpiler = _Global.transpiler()
+        transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
+
+        backend = qibo.get_backend()
+        if self.accelerators:  # pragma: no cover
+            return backend.execute_distributed_circuit(
+                transpiled_circuit, initial_state, nshots
+            )
         else:
-            from qibo.backends import _Global
-
-            _Global.resolve_global()
-            transpiler = _Global.get_transpiler()
-            transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
-
-            if self.accelerators:  # pragma: no cover
-                return _Global.get_backend().execute_distributed_circuit(
-                    transpiled_circuit, initial_state, nshots
-                )
-            else:
-                return _Global.get_backend().execute_circuit(
-                    transpiled_circuit, initial_state, nshots
-                )
+            return backend.execute_circuit(
+                transpiled_circuit, initial_state, nshots
+            )
 
     def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""

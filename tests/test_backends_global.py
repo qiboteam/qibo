@@ -10,8 +10,8 @@ def test_set_get_backend():
 
     backend = _Global.backend()
     qibo.set_backend("numpy")
-    assert qibo.get_backend() == "numpy"
-    assert _Global.get_backend().name == "numpy"
+    assert qibo.get_backend(as_string=True) == "numpy"
+    assert qibo.get_backend().name == "numpy"
 
 
 def test_set_precision():
@@ -153,4 +153,4 @@ def test_set_get_transpiler():
     )
 
     _Global.set_transpiler(transpiler)
-    assert _Global.get_transpiler() == transpiler
+    assert _Global.transpiler() == transpiler
