@@ -1268,21 +1268,7 @@ class Circuit:
 
         return matrix, idx
 
-    def draw(
-        self, line_wrap: int = 70, legend: bool = False, output_string: bool = False
-    ) -> str:
-        """Draw text circuit using unicode symbols.
-
-        Args:
-            line_wrap (int, optional): maximum number of characters per line. This option
-                split the circuit text diagram in chunks of line_wrap characters.
-                Defaults to :math:`70`.
-            legend (bool, optional): If ``True`` prints a legend below the circuit for
-                callbacks and channels. Default is ``False``.
-
-        Returns:
-            String containing text circuit diagram.
-        """
+    def __str__(self, line_wrap: int = 70, legend: bool = False) -> str:
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
@@ -1372,10 +1358,20 @@ class Circuit:
         if legend:
             output += table
 
-        output = output.rstrip("\n")
+        return output.rstrip("\n")
 
-        if not output_string:
-            sys.stdout.write(output)
-            return
 
-        return output
+    def draw(self, line_wrap: int = 70, legend: bool = False):
+        """Draw text circuit using unicode symbols.
+
+        Args:
+            line_wrap (int, optional): maximum number of characters per line. This option
+                split the circuit text diagram in chunks of line_wrap characters.
+                Defaults to :math:`70`.
+            legend (bool, optional): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Defaults to ``False``.
+
+        Returns:
+            String containing text circuit diagram.
+        """
+        sys.stdout.write(self.__str__(line_wrap, legend))
