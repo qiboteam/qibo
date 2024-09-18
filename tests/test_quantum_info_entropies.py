@@ -1,10 +1,8 @@
 import numpy as np
 import pytest
-from scipy.linalg import sqrtm
 
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
-    _matrix_power,
     classical_relative_entropy,
     classical_relative_renyi_entropy,
     classical_renyi_entropy,
@@ -17,6 +15,7 @@ from qibo.quantum_info.entropies import (
     tsallis_entropy,
     von_neumann_entropy,
 )
+from qibo.quantum_info.linalg_operations import matrix_power
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_statevector,
@@ -604,8 +603,8 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
             if alpha == 1.0:
                 log = relative_von_neumann_entropy(state, target, base, backend=backend)
             elif alpha == np.inf:
-                new_state = _matrix_power(state, 0.5, backend)
-                new_target = _matrix_power(target, 0.5, backend)
+                new_state = matrix_power(state, 0.5, backend)
+                new_target = matrix_power(target, 0.5, backend)
 
                 log = backend.np.log2(
                     backend.calculate_norm_density_matrix(
@@ -621,8 +620,8 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 if len(target.shape) == 1:
                     target = backend.np.outer(target, backend.np.conj(target))
 
-                log = _matrix_power(state, alpha, backend)
-                log = log @ _matrix_power(target, 1 - alpha, backend)
+                log = matrix_power(state, alpha, backend)
+                log = log @ matrix_power(target, 1 - alpha, backend)
                 log = backend.np.log2(backend.np.trace(log))
 
                 log = (1 / (alpha - 1)) * log / np.log2(base)
@@ -668,7 +667,7 @@ def test_tsallis_entropy(backend, alpha, base):
         target = von_neumann_entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
-            backend.np.trace(_matrix_power(state, alpha, backend)) - 1
+            backend.np.trace(matrix_power(state, alpha, backend)) - 1
         )
 
     backend.assert_allclose(
