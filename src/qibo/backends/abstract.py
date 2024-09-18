@@ -352,6 +352,11 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def calculate_matrix_power(self, matrix, alpha: float):  # pragma: no cover
+        """Calculates the (fractional) power :math:`\\alpha` of ``matrix``."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_hamiltonian_matrix_product(
         self, matrix1, matrix2
     ):  # pragma: no cover
