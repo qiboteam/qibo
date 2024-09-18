@@ -634,7 +634,7 @@ def test_circuit_draw():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw(output_string=True) == ref
+    assert circuit.draw() == ref
 
 
 def test_circuit_wire_names_errors():
@@ -667,7 +667,7 @@ def test_circuit_draw_wire_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw(output_string=True) == ref
+    assert circuit.draw() == ref
 
 
 def test_circuit_draw_line_wrap():
@@ -723,8 +723,8 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert circuit.draw(line_wrap=50, output_string=True) == ref_line_wrap_50
-    assert circuit.draw(line_wrap=30, output_string=True) == ref_line_wrap_30
+    assert circuit.draw(line_wrap=50, ) == ref_line_wrap_50
+    assert circuit.draw(line_wrap=30, ) == ref_line_wrap_30
 
 
 def test_circuit_draw_line_wrap_names():
@@ -780,8 +780,8 @@ def test_circuit_draw_line_wrap_names():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert circuit.draw(line_wrap=50, output_string=True) == ref_line_wrap_50
-    assert circuit.draw(line_wrap=30, output_string=True) == ref_line_wrap_30
+    assert circuit.draw(line_wrap=50, ) == ref_line_wrap_50
+    assert circuit.draw(line_wrap=30, ) == ref_line_wrap_30
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -814,7 +814,7 @@ def test_circuit_draw_channels(legend):
             "| PauliNoiseChannel   | PN       |"
         )
 
-    assert circuit.draw(legend=legend, output_string=True) == ref
+    assert circuit.draw(legend=legend, ) == ref
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -840,7 +840,7 @@ def test_circuit_draw_callbacks(legend):
             "| EntanglementEntropy | EE       |"
         )
 
-    assert c.draw(legend=legend, output_string=True) == ref
+    assert c.draw(legend=legend, ) == ref
 
 
 def test_circuit_draw_labels():
@@ -861,7 +861,7 @@ def test_circuit_draw_labels():
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit.draw(output_string=True) == ref
+    assert circuit.draw() == ref
 
 
 def test_circuit_draw_names(capsys):
@@ -882,7 +882,7 @@ def test_circuit_draw_names(capsys):
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit.draw(output_string=True) == ref
+    assert circuit.draw() == ref
 
     # Testing circuit text draw when ``output_string == False``
     circuit._display()
@@ -899,4 +899,4 @@ def test_circuit_draw_error():
     circuit.add(error_gate)
 
     with pytest.raises(NotImplementedError):
-        circuit.draw(output_string=True)
+        circuit.draw()
