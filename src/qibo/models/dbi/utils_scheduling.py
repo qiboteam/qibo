@@ -1,9 +1,8 @@
 import math
-from functools import partial
 from typing import Optional
 
-import hyperopt
 import numpy as np
+import optuna
 
 error = 1e-3
 
@@ -41,47 +40,45 @@ def grid_search_step(
 
 
 def hyperopt_step(
-    dbi_object,
+    self,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 100,
-    space: callable = None,
-    optimizer: callable = None,
+    max_evals: int = 1000,
     look_ahead: int = 1,
-    d: Optional[np.array] = None,
+    verbose: bool = False,
+    d: np.array = None,
+    optimizer: optuna.samplers.BaseSampler = None,
 ):
     """
-    Optimize iteration step using hyperopt.
+    Optimize iteration step using Optuna.
 
     Args:
         step_min: lower bound of the search grid;
         step_max: upper bound of the search grid;
-        max_evals: maximum number of iterations done by the hyperoptimizer;
-        space: see hyperopt.hp possibilities;
-        optimizer: see hyperopt algorithms;
+        max_evals: maximum number of trials done by the optimizer;
         look_ahead: number of iteration steps to compute the loss function;
-        d: diagonal operator for generating double-bracket iterations.
+        verbose: level of verbosity;
+        d: diagonal operator for generating double-bracket iterations;
+        optimizer: Optuna sampler for the search algorithm (e.g.,
+            optuna.samplers.TPESampler()).
+            See: https://optuna.readthedocs.io/en/stable/reference/samplers/index.html
 
     Returns:
-        (float): optimized best iteration step (minimizing loss function).
+        (float): optimized best iteration step.
     """
-    if space is None:
-        space = hyperopt.hp.uniform
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    def objective(trial):
+        step = trial.suggest_float("step", step_min, step_max)
+        return self.loss(step, d=d, look_ahead=look_ahead)
+
     if optimizer is None:
-        optimizer = hyperopt.tpe
-    if d is None:
-        d = dbi_object.diagonal_h_matrix
+        optimizer = optuna.samplers.TPESampler()
 
-    space = space("step", step_min, step_max)
+    study = optuna.create_study(direction="minimize", sampler=optimizer)
+    study.optimize(objective, n_trials=max_evals, show_progress_bar=verbose)
 
-    best = hyperopt.fmin(
-        fn=partial(dbi_object.loss, d=d, look_ahead=look_ahead),
-        space=space,
-        algo=optimizer.suggest,
-        max_evals=max_evals,
-        show_progressbar=False,
-    )
-    return best["step"]
+    return study.best_params["step"]
 
 
 def polynomial_step(
