@@ -194,7 +194,7 @@ class PyTorchBackend(NumpyBackend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
-    
+
     def calculate_matrix_power(self, matrix, power):
         copied = self.to_numpy(self.np.copy(matrix))
         copied = super().calculate_matrix_power(copied, power)
