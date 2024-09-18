@@ -17,27 +17,26 @@ class M(Gate):
             If the qubits to measure are held in an iterable (eg. list) the ``*``
             operator can be used, for example ``gates.M(*[0, 1, 4])`` or
             ``gates.M(*range(5))``.
-        register_name (str): Optional name of the register to distinguish it
+        register_name (str, optional): Optional name of the register to distinguish it
             from other registers when used in circuits.
         collapse (bool): Collapse the state vector after the measurement is
             performed. Can be used only for single shot measurements.
             If ``True`` the collapsed state vector is returned. If ``False``
             the measurement result is returned.
-        basis (:class:`qibo.gates.Gate`, str, list): Basis to measure.
+        basis (:class:`qibo.gates.Gate` or str or list, optional): Basis to measure.
             Can be either:
             - a qibo gate
             - the string representing the gate
             - a callable that accepts a qubit, for example: ``lambda q: gates.RX(q, 0.2)``
-            - a list of the above, if a different basis will be used for each
-              measurement qubit.
-            Default is Z.
-        p0 (dict): Optional bitflip probability map. Can be:
+            - a list of the above, if a different basis will be used for each measurement qubit.
+            Defaults is to :class:`qibo.gates.Z`.
+        p0 (dict, optional): bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
             that it is flipped, a list or tuple that has the same length
             as the tuple of measured qubits or a single float number.
             If a single float is given the same probability will be used
             for all qubits.
-        p1 (dict): Optional bitflip probability map for asymmetric bitflips.
+        p1 (dict, optional): bitflip probability map for asymmetric bitflips.
             Same as ``p0`` but controls the 1->0 bitflip probability.
             If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
             1->0 bitflips.

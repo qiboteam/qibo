@@ -78,7 +78,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
-    ..math::
+    .. math::
         D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
             \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
 
@@ -680,7 +680,7 @@ def relative_renyi_entropy(
     This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
 
     .. note::
-        Function raises ``NotImplementedError`` when ``target`` :math:`sigma`
+        Function raises ``NotImplementedError`` when ``target`` :math:`\\sigma`
         is a pure state and :math:`\\alpha > 1`. This is due to the fact that
         it is not possible to calculate :math:`\\sigma^{1 - \\alpha}` when
         :math:`\\alpha > 1` and :math:`\\sigma` is a projector, i.e. a singular matrix.
