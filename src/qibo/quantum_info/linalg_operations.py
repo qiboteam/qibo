@@ -200,7 +200,7 @@ def matrix_exponentiation(
 
 def matrix_power(matrix, power: Union[float, int], backend=None):
     """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculates :math:`A^{\\alpha}`.
-    
+
     Args:
         matrix (ndarray): matrix whose power to calculate.
         power (float or int): power to raise ``matrix`` to.
@@ -214,7 +214,7 @@ def matrix_power(matrix, power: Union[float, int], backend=None):
 
     if not isinstance(power, (float, int)):
         raise_error(
-            TypeError, 
+            TypeError,
             f"``power`` must be either float or int, but it is type {type(power)}.",
         )
 
