@@ -1,4 +1,4 @@
-import hyperopt
+import optuna
 
 from qibo.backends import _check_backend
 from qibo.models.dbi.double_bracket import *
@@ -155,7 +155,7 @@ def gradient_descent(
     lr_max: float = 1,
     max_evals: int = 100,
     space: callable = None,
-    optimizer: callable = hyperopt.tpe,
+    optimizer: optuna.samplers.BaseSampler = optuna.samplers.TPESampler(),
     verbose: bool = False,
     backend=None,
 ):
@@ -173,61 +173,26 @@ def gradient_descent(
         normalize (bool, optional): option to normalize the diagonal operator. Defaults to False.
         lr_min (float, optional): the minimal gradient step. Defaults to 1e-5.
         lr_max (float, optional): the maximal gradient step. Defaults to 1.
-        max_evals (int, optional): maximum number of evaluations for `lr` using `hyperopt`. Defaults to 100.
-        space (callable, optional): evalutation space for `hyperopt`. Defaults to None.
-        optimizer (callable, optional): optimizer option for `hyperopt`. Defaults to `hyperopt.tpe`.
-        verbose (bool, optional): option for printing `hyperopt` process. Defaults to False.
+        max_evals (int, optional): maximum number of evaluations for `lr` using `optuna`. Defaults to 100.
+        space (callable, optional): evalutation space for `optuna`. Defaults to None.
+        optimizer (optuna.samplers.BaseSampler, optional): optimizer option for `optuna`. Defaults to `TPESampler()`.
+        verbose (bool, optional): option for printing `optuna` process. Defaults to False.
 
     Returns:
         loss_hist (list): list of history losses of `dbi_object` throughout the double bracket rotations.
         d_params_hist (list): list of history of `d` parameters after gradient descent.
         s_hist (list): list of history of optimal `s` found.
-    Example:
-        from qibo import set_backend
-        from qibo.hamiltonians import Hamiltonian
-        from qibo.models.dbi.double_bracket import *
-        from qibo.models.dbi.utils import *
-        from qibo.models.dbi.utils_dbr_strategies import gradient_descent
-        from qibo.quantum_info import random_hermitian
-
-        nqubits = 3
-        NSTEPS = 5
-        set_backend("numpy")
-        h0 = random_hermitian(2**nqubits)
-        dbi = DoubleBracketIteration(
-            Hamiltonian(nqubits, h0),
-            mode=DoubleBracketGeneratorType.single_commutator,
-            scheduling=DoubleBracketScheduling.hyperopt,
-            cost=DoubleBracketCostFunction.off_diagonal_norm,
-        )
-        initial_off_diagonal_norm = dbi.off_diagonal_norm
-        pauli_operator_dict = generate_pauli_operator_dict(
-            nqubits, parameterization_order=1
-        )
-        pauli_operators = list(pauli_operator_dict.values())
-        # let initial d be approximation of $\Delta(H)
-        d_coef_pauli = decompose_into_Pauli_basis(
-            dbi.diagonal_h_matrix, pauli_operators=pauli_operators
-        )
-        d_pauli = sum([d_coef_pauli[i] * pauli_operators[i] for i in range(nqubits)])
-        loss_hist_pauli, d_params_hist_pauli, s_hist_pauli = gradient_descent(
-            dbi,
-            NSTEPS,
-            d_coef_pauli,
-            ParameterizationTypes.pauli,
-            pauli_operator_dict=pauli_operator_dict,
-        )
     """
     backend = _check_backend(backend)
 
     nqubits = dbi_object.nqubits
-    # TODO: write tests where this condition applies
     if (
         parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
     ):  # pragma: no cover
         pauli_operator_dict = generate_pauli_operator_dict(
             nqubits=nqubits, parameterization_order=pauli_parameterization_order
         )
+
     d = params_to_diagonal_operator(
         d_params,
         nqubits,
@@ -236,21 +201,14 @@ def gradient_descent(
         normalize=normalize,
         backend=backend,
     )
+
     loss_hist = [dbi_object.loss(0.0, d=d)]
     d_params_hist = [d_params]
     s_hist = [0]
-    # TODO: write tests where this condition applies
-    if (
-        parameterization is ParameterizationTypes.pauli and pauli_operator_dict is None
-    ):  # pragma: no cover
-        pauli_operator_dict = generate_pauli_operator_dict(
-            nqubits=nqubits,
-            parameterization_order=pauli_parameterization_order,
-            backend=backend,
-        )
-    # first step
+
     s = dbi_object.choose_step(d=d)
     dbi_object(step=s, d=d)
+
     for _ in range(iterations):
         grad = gradient_numerical(
             dbi_object,
@@ -262,8 +220,8 @@ def gradient_descent(
             backend=backend,
         )
 
-        # set up hyperopt to find optimal lr
-        def func_loss_to_lr(lr):
+        def func_loss_to_lr(trial):
+            lr = trial.suggest_loguniform("lr", lr_min, lr_max)
             d_params_eval = [d_params[j] - grad[j] * lr for j in range(len(grad))]
             d_eval = params_to_diagonal_operator(
                 d_params_eval,
@@ -275,17 +233,14 @@ def gradient_descent(
             )
             return dbi_object.loss(step=s, d=d_eval)
 
-        if space is None:
-            space = hyperopt.hp.loguniform("lr", np.log(lr_min), np.log(lr_max))
+        # create a study using the specified optimizer (sampler)
+        study = optuna.create_study(sampler=optimizer, direction="minimize")
 
-        best = hyperopt.fmin(
-            fn=func_loss_to_lr,
-            space=space,
-            algo=optimizer.suggest,
-            max_evals=max_evals,
-            verbose=verbose,
-        )
-        lr = best["lr"]
+        # optimize the function
+        study.optimize(func_loss_to_lr, n_trials=max_evals)
+
+        # get the best learning rate
+        lr = study.best_params["lr"]
 
         d_params = [d_params[j] - grad[j] * lr for j in range(len(grad))]
         d = params_to_diagonal_operator(
@@ -303,4 +258,5 @@ def gradient_descent(
         loss_hist.append(dbi_object.loss(0.0, d=d))
         d_params_hist.append(d_params)
         s_hist.append(s)
+
     return loss_hist, d_params_hist, s_hist
