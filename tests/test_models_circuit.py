@@ -723,8 +723,18 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert circuit.draw(line_wrap=50, ) == ref_line_wrap_50
-    assert circuit.draw(line_wrap=30, ) == ref_line_wrap_30
+    assert (
+        circuit.draw(
+            line_wrap=50,
+        )
+        == ref_line_wrap_50
+    )
+    assert (
+        circuit.draw(
+            line_wrap=30,
+        )
+        == ref_line_wrap_30
+    )
 
 
 def test_circuit_draw_line_wrap_names():
@@ -780,8 +790,18 @@ def test_circuit_draw_line_wrap_names():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert circuit.draw(line_wrap=50, ) == ref_line_wrap_50
-    assert circuit.draw(line_wrap=30, ) == ref_line_wrap_30
+    assert (
+        circuit.draw(
+            line_wrap=50,
+        )
+        == ref_line_wrap_50
+    )
+    assert (
+        circuit.draw(
+            line_wrap=30,
+        )
+        == ref_line_wrap_30
+    )
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -814,7 +834,12 @@ def test_circuit_draw_channels(legend):
             "| PauliNoiseChannel   | PN       |"
         )
 
-    assert circuit.draw(legend=legend, ) == ref
+    assert (
+        circuit.draw(
+            legend=legend,
+        )
+        == ref
+    )
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -840,7 +865,12 @@ def test_circuit_draw_callbacks(legend):
             "| EntanglementEntropy | EE       |"
         )
 
-    assert c.draw(legend=legend, ) == ref
+    assert (
+        c.draw(
+            legend=legend,
+        )
+        == ref
+    )
 
 
 def test_circuit_draw_labels():
