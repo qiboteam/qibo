@@ -1791,6 +1791,12 @@ Relative von Neumann entropy
     an error will be raised when using `cupy` backend.
 
 
+Mutual information
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.mutual_information
+
+
 Rényi entropy
 """""""""""""
 
