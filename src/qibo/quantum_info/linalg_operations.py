@@ -3,6 +3,8 @@
 import math
 from typing import List, Tuple, Union
 
+from scipy.linalg import fractional_matrix_power
+
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -196,3 +198,23 @@ def matrix_exponentiation(
     backend = _check_backend(backend)
 
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+
+
+def matrix_power(matrix, alpha, backend):
+    """Calculates ``matrix ** alpha`` according to backend."""
+    # if backend.__class__.__name__ in [
+    #     "CupyBackend",
+    #     "CuQuantumBackend",
+    # ]:  # pragma: no cover
+    #     new_matrix = backend.to_numpy(matrix)
+    # else:
+    #     new_matrix = backend.np.copy(matrix)
+
+    # if len(new_matrix.shape) == 1:
+    #     new_matrix = backend.np.outer(new_matrix, backend.np.conj(new_matrix))
+
+    # return backend.cast(fractional_matrix_power(backend.to_numpy(new_matrix), alpha))
+
+    backend = _check_backend(backend)
+
+    return backend.calculate_matrix_power(matrix, alpha)
