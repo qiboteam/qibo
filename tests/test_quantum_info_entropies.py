@@ -5,11 +5,13 @@ from scipy.linalg import sqrtm
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
     _matrix_power,
+    classical_mutual_information,
     classical_relative_entropy,
     classical_relative_renyi_entropy,
     classical_renyi_entropy,
     classical_tsallis_entropy,
     entanglement_entropy,
+    mutual_information,
     relative_renyi_entropy,
     relative_von_neumann_entropy,
     renyi_entropy,
@@ -123,6 +125,25 @@ def test_classical_relative_entropy(backend, base, kind):
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
 
     backend.assert_allclose(divergence, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_classical_mutual_information(backend, base):
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    joint_dist = np.kron(prob_p, prob_q)
+    joint_dist /= np.sum(joint_dist)
+
+    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
+    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    joint_dist = backend.cast(joint_dist, dtype=joint_dist.dtype)
+
+    assert (
+        classical_mutual_information(joint_dist, prob_p, prob_q, base, backend) == 0.0
+    )
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -497,6 +518,18 @@ def test_relative_entropy(backend, base, check_hermitian):
         test = relative_von_neumann_entropy(
             state, target, base=base, check_hermitian=True, backend=backend
         )
+
+
+@pytest.mark.parametrize("check_hermitian", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_mutual_information(backend, base, check_hermitian):
+    state_a = random_density_matrix(4, backend=backend)
+    state_b = random_density_matrix(4, backend=backend)
+    state = backend.np.kron(state_a, state_b)
+
+    assert (
+        mutual_information(state, [0, 1], base, check_hermitian, backend) == 0.0
+    )
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
