@@ -1360,7 +1360,6 @@ class Circuit:
 
         return output.rstrip("\n")
 
-
     def draw(self, line_wrap: int = 70, legend: bool = False):
         """Draw text circuit using unicode symbols.
 
