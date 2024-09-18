@@ -1740,6 +1740,12 @@ Classical relative entropy
 .. autofunction:: qibo.quantum_info.classical_relative_entropy
 
 
+Classical mutual information
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_mutual_information
+
+
 Classical Rényi entropy
 """""""""""""""""""""""
 
