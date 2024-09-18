@@ -1,4 +1,5 @@
 import abc
+from typing import Union
 
 from qibo.config import raise_error
 
@@ -352,8 +353,9 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_matrix_power(self, matrix, alpha: float):  # pragma: no cover
-        """Calculates the (fractional) power :math:`\\alpha` of ``matrix``."""
+    def calculate_matrix_power(self, matrix, power: Union[float, int]):  # pragma: no cover
+        """Calculates the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`, 
+        i.e. :math:`A^{\\alpha}`."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
