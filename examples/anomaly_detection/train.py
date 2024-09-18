@@ -123,7 +123,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     # Create and print encoder circuit
     encoder = make_encoder(n_qubits, n_layers, params, q_compression)
     print("Circuit model summary")
-    encoder.draw()
+    print(encoder.draw())
 
     # Define optimizer parameters
     steps_for_epoch = math.ceil(train_size / batch_size)
