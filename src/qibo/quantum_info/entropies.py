@@ -646,7 +646,7 @@ def mutual_information(
     if not nqubits.is_integer():
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
 
-    partition_b = set(list(range(nqubits))) ^ set(partition)
+    partition_b = set(list(range(nqubits))) ^ set(list(partition))
 
     state_a = partial_trace(state, partition_b, backend)
     state_b = partial_trace(state, partition, backend)
