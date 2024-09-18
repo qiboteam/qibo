@@ -1151,7 +1151,7 @@ Additionally, one can also pass single-qubit readout error probabilities (`reado
     )
 
     print("raw circuit:")
-    circuit.draw()
+    print(circuit.draw())
 
     parameters = {
         "t1": {"0": 250*1e-06, "1": 240*1e-06},
@@ -1168,7 +1168,7 @@ Additionally, one can also pass single-qubit readout error probabilities (`reado
     noisy_circuit = noise_model.apply(circuit)
 
     print("noisy circuit:")
-    noisy_circuit.draw()
+    print(noisy_circuit.draw())
 
 .. testoutput::
    :hide:
