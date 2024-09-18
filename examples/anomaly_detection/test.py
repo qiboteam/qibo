@@ -99,7 +99,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
     encoder_test = make_encoder(n_qubits, n_layers, trained_params, q_compression)
     encoder_test.compile()
     print("Circuit model summary")
-    encoder_test.draw()
+    print(encoder_test.draw())
 
     print("Computing losses...")
     # Compute loss for standard data
