@@ -527,9 +527,7 @@ def test_mutual_information(backend, base, check_hermitian):
     state_b = random_density_matrix(4, backend=backend)
     state = backend.np.kron(state_a, state_b)
 
-    assert (
-        mutual_information(state, [0, 1], base, check_hermitian, backend) == 0.0
-    )
+    assert mutual_information(state, [0, 1], base, check_hermitian, backend) == 0.0
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
