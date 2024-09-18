@@ -6,7 +6,9 @@ from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     partial_trace,
+    matrix_power,
 )
+from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
 
@@ -109,3 +111,14 @@ def test_partial_trace(backend, density_matrix):
     Id = backend.identity_density_matrix(1, normalize=True)
 
     backend.assert_allclose(traced, Id)
+
+
+def test_matrix_power(backend):
+    nqubits, alpha = 2, 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, backend=backend)
+
+    power = matrix_power(state, alpha, backend)
+
+    assert backend.np.real(backend.np.trace(power)) == purity(state, backend=backend)
