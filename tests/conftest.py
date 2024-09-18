@@ -14,9 +14,9 @@ BACKENDS = [
     "numpy",
     "tensorflow",
     "pytorch",
-    # "qibojit-numba",
-    # "qibojit-cupy",
-    # "qibojit-cuquantum",
+    "qibojit-numba",
+    "qibojit-cupy",
+    "qibojit-cuquantum",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
