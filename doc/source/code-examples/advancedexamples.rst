@@ -1242,7 +1242,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    circ.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
-   circ.draw()
+   print(circ.draw())
 
    #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
    #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
