@@ -1380,7 +1380,7 @@ class Circuit:
             "Starting on qibo 0.2.13, ``Circuit.draw`` will work in-place. "
             + "The in-place method is currently implemented as ``Circuit.display``, but "
             + "will be renamed as ``Circuit.draw`` on release 0.2.13. "
-            + "In release 0.2.12, the in-place print of circuits is accessible as "
+            + "In release 0.2.12, the in-place display of circuits is accessible as "
             + "``Circuit._display``."
         )
         return self._diagram(line_wrap, legend)
