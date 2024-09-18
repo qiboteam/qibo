@@ -141,8 +141,10 @@ def test_classical_mutual_information(backend, base):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
     joint_dist = backend.cast(joint_dist, dtype=joint_dist.dtype)
 
-    assert (
-        classical_mutual_information(joint_dist, prob_p, prob_q, base, backend) == 0.0
+    backend.assert_allclose(
+        classical_mutual_information(joint_dist, prob_p, prob_q, base, backend),
+        0.0,
+        atol=1e-10,
     )
 
 
@@ -527,7 +529,11 @@ def test_mutual_information(backend, base, check_hermitian):
     state_b = random_density_matrix(4, backend=backend)
     state = backend.np.kron(state_a, state_b)
 
-    assert mutual_information(state, [0, 1], base, check_hermitian, backend) == 0.0
+    backend.assert_allclose(
+        mutual_information(state, [0, 1], base, check_hermitian, backend),
+        0.0,
+        atol=1e-10,
+    )
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
