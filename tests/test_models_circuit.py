@@ -885,7 +885,7 @@ def test_circuit_draw_names(capsys):
     assert circuit.draw(output_string=True) == ref
 
     # Testing circuit text draw when ``output_string == False``
-    circuit.draw()
+    circuit._display()
     out, _ = capsys.readouterr()
     assert out == ref
 
