@@ -1360,7 +1360,6 @@ class Circuit:
 
         return output.rstrip("\n")
 
-
     def draw(self, line_wrap: int = 70, legend: bool = False):
         qibo.config.log.warning(
             "Starting on qibo 0.2.13, ``Circuit.draw`` will work in-place. "
@@ -1370,7 +1369,6 @@ class Circuit:
             + "``Circuit.display``."
         )
         return self.__str__(line_wrap, legend)
-
 
     def display(self, line_wrap: int = 70, legend: bool = False):
         """Draw text circuit using unicode symbols.
