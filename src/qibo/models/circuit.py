@@ -1268,7 +1268,7 @@ class Circuit:
 
         return matrix, idx
 
-    def _diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
+    def diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
@@ -1361,7 +1361,7 @@ class Circuit:
         return output.rstrip("\n")
 
     def __str__(self):
-        return self._diagram()
+        return self.diagram()
 
     def draw(self, line_wrap: int = 70, legend: bool = False):
         """Draw text circuit using unicode symbols.
@@ -1381,11 +1381,11 @@ class Circuit:
             + "The in-place method is currently implemented as ``Circuit.display``, but "
             + "will be renamed as ``Circuit.draw`` on release 0.2.13. "
             + "In release 0.2.12, the in-place display of circuits is accessible as "
-            + "``Circuit._display``."
+            + "``Circuit.display``."
         )
-        return self._diagram(line_wrap, legend)
+        return self.diagram(line_wrap, legend)
 
-    def _display(self, line_wrap: int = 70, legend: bool = False):
+    def display(self, line_wrap: int = 70, legend: bool = False):
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -1398,4 +1398,4 @@ class Circuit:
         Returns:
             String containing text circuit diagram.
         """
-        sys.stdout.write(self._diagram(line_wrap, legend))
+        sys.stdout.write(self.diagram(line_wrap, legend))
