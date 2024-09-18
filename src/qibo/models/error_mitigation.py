@@ -307,9 +307,29 @@ def sample_training_circuit_cdr(
 
 
 def _curve_fit(
-    backend, model, params, xdata, ydata, lr=1, max_iter=int(1e2), tolerance_grad=1e-5
+    backend, model, params, xdata, ydata, lr=1.0, max_iter=int(1e2), tolerance_grad=1e-5
 ):
+    """
+    Fits a model with given parameters on the data points (x,y). This is generally based on the
+    `scipy.optimize.curve_fit` function, except for the `PyTorchBackend` which makes use of the
+    `torch.optim.LBFGS` optimizer.
+
+    Args:
+    backend (:class:`qibo.backends.Backend`): simulation engine, this is only useful for `pytorch`.
+    model (function): model to fit, it should be a callable ``model(x, *params)``.
+    params (ndarray): initial parameters of the model.
+    xdata (ndarray): x data, i.e. inputs to the model.
+    ydata (ndarray): y data, i.e. targets ``y = model(x, *params)``.
+    lr (float, optional): learning rate, defaults to ``1``. Used only in the `pytorch` case.
+    max_iter (int, optional): maximum number of iterations, defaults to ``100``. Used only in the `pytorch` case.
+    tolerance_grad (float, optional): gradient tolerance, optimization stops after reaching it, defaults to ``1e-5``. Used only in the `pytorch` case.
+
+    Returns:
+        ndarray: the optimal parameters.
+    """
     if backend.name == "pytorch":
+        # pytorch has some problems with the `scipy.optim.curve_fit` function
+        # thus we use a `torch.optim` optimizer
         loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
         optimizer = backend.np.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
