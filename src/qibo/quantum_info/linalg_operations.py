@@ -211,13 +211,6 @@ def matrix_power(matrix, power: Union[float, int], backend=None):
     Returns:
         ndarray: matrix power :math:`A^{\\alpha}`.
     """
-
-    if not isinstance(power, (float, int)):
-        raise_error(
-            TypeError,
-            f"``power`` must be either float or int, but it is type {type(power)}.",
-        )
-
     backend = _check_backend(backend)
 
     return backend.calculate_matrix_power(matrix, power)
