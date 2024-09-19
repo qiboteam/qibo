@@ -120,7 +120,11 @@ class PyTorchBackend(NumpyBackend):
 
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
-        elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
+        elif (
+            isinstance(x, list)
+            and len(x) > 0
+            and all(isinstance(row, self.np.Tensor) for row in x)
+        ):
             x = self.np.stack(x)
         else:
             x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
