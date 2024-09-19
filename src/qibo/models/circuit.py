@@ -1269,6 +1269,7 @@ class Circuit:
         return matrix, idx
 
     def diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
+        """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
