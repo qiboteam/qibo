@@ -388,10 +388,12 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
 def _determined_outcome(state, q, nqubits):
     state[-1, :] = 0
     idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
+    if len(idx) == 0:
+        return state, state[-1, -1]
     state = _pack_for_measurements(state, nqubits)
     state = _rowsum(
         state,
-        2 * nqubits * np.ones(idx.shape, dtype=np.uint),
+        _dim_xz(nqubits) * np.ones(idx.shape, dtype=np.uint),
         idx,
         _packed_size(nqubits),
         True,
@@ -427,7 +429,13 @@ def _random_outcome(state, p, q, nqubits):
 @cache
 def _dim(nqubits):
     """Returns the dimension of the symplectic matrix for a given number of qubits."""
-    return 2 * nqubits + 1
+    return _dim_xz(nqubits) + 1
+
+
+@cache
+def _dim_xz(nqubits):
+    """Returns the dimension of the symplectic matrix (only the de/stabilizers generators part, without the phases and scratch row) for a given number of qubits."""
+    return 2 * nqubits
 
 
 @cache
@@ -440,8 +448,8 @@ def _packbits(array, axis):
     return np.packbits(array, axis=axis)
 
 
-def _unpackbits(array, axis):
-    return np.unpackbits(array, axis=axis)
+def _unpackbits(array, axis, count):
+    return np.unpackbits(array, axis=axis, count=count)
 
 
 def _pack_for_measurements(state, nqubits):
@@ -452,23 +460,16 @@ def _pack_for_measurements(state, nqubits):
     return np.hstack((x, z, r[:, None]))
 
 
-@cache
-def _pad_size(n):
-    """Returns the size of the pad added to an array of original dimension `n` after unpacking."""
-    return 8 - (n % 8)
-
-
 def _unpack_for_measurements(state, nqubits):
     """Unpacks the symplectc matrix that was packed for measurements."""
-    xz = _unpackbits(state[:, :-1], axis=1)
-    padding_size = _pad_size(nqubits)
-    x, z = xz[:, :nqubits], xz[:, nqubits + padding_size : -padding_size]
+    xz = _unpackbits(state[:, :-1], axis=1, count=_dim_xz(nqubits))
+    x, z = xz[:, :nqubits], xz[:, nqubits:]
     return np.hstack((x, z, state[:, -1][:, None]))
 
 
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
-        return _unpackbits(state, axis=0)[: _dim(nqubits)]
+        return _unpackbits(state, axis=0, count=_dim_xz(nqubits))[: _dim(nqubits)]
     else:
         return state.copy()
 
@@ -523,7 +524,7 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     Returns:
         (np.array) The unpacked and reshaped state.
     """
-    state = _unpackbits(state, axis=0)[: _dim(nqubits)]
+    state = _unpackbits(state, axis=0, count=_dim(nqubits))[: _dim(nqubits)]
     return state
 
 
