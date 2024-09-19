@@ -358,12 +358,12 @@ class Backend(abc.ABC):
     ):  # pragma: no cover
         """Calculates the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
-        
+
         .. note::
             For the ``pytorch`` backend, this method relies on a copy of the original tensor.
-            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and 
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
             ``cuquantum``), this method falls back to CPU whenever ``power`` is not
-            an integer.        
+            an integer.
         """
         raise_error(NotImplementedError)
 
