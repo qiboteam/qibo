@@ -216,18 +216,6 @@ def test_hellinger_shot_error(backend, validate, kind):
 @pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("validate", [False, True])
 def test_total_variation_distance(backend, validate, kind):
-    with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)
-        prob_q = np.random.rand(1, 5)
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = total_variation_distance(prob, prob_q, backend=backend)
-    with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = total_variation_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]

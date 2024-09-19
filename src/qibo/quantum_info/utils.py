@@ -372,16 +372,6 @@ def total_variation_distance(
     if isinstance(prob_dist_q, list):
         prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
-    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
-        raise_error(
-            TypeError,
-            "Probability arrays must have dims (k,) but have "
-            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
-        )
-
-    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
-        raise_error(TypeError, "At least one of the arrays is empty.")
-
     if validate:
         if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
             any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
