@@ -525,6 +525,11 @@ def test_relative_entropy(backend, base, check_hermitian):
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_mutual_information(backend, base, check_hermitian):
+    with pytest.raises(ValueError):
+        state = np.ones((3, 3))
+        state = backend.cast(state, dtype=state.dtype)
+        test = mutual_information(state, [0], backend)
+
     state_a = random_density_matrix(4, backend=backend)
     state_b = random_density_matrix(4, backend=backend)
     state = backend.np.kron(state_a, state_b)
