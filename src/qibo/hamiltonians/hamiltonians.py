@@ -564,7 +564,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if len(term.factors) != len(set(term.factors)):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
-        counts = np.array(list(freq.values())) / sum(freq.values())
+        counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
+            freq.values()
+        )
         qubits = []
         for term in terms:
             qubits_term = []
