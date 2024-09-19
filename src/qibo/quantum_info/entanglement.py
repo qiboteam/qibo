@@ -123,10 +123,10 @@ def negativity(state, bipartition, backend=None):
     the negativity :math:`\\operatorname{Neg}(\\rho)` is given by
 
     .. math::
-        \\operatorname{Neg}(\\rho) = \\frac{1}{2} \\, 
+        \\operatorname{Neg}(\\rho) = \\frac{1}{2} \\,
             \\left( \\norm{\\rho_{B}}_{1} - 1 \\right) \\, ,
 
-    where :math:`\\rho_{B}` is the reduced density matrix after tracing out qubits in 
+    where :math:`\\rho_{B}` is the reduced density matrix after tracing out qubits in
     partition :math:`A`, and :math:`\\norm{\\cdot}_{1}` is the Schatten :math:`1`-norm
     (also known as nuclear norm or trace norm).
 
