@@ -177,12 +177,12 @@ class TensorflowBackend(NumpyBackend):
             return self.np.trace(state)
         return self.tf.norm(state, ord=order)
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.tf.linalg.eigvalsh(matrix)
         return self.tf.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.tf.linalg.eigh(matrix)
         return self.tf.linalg.eig(matrix)

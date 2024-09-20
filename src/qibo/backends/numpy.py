@@ -720,7 +720,7 @@ class NumpyBackend(Backend):
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
@@ -731,7 +731,7 @@ class NumpyBackend(Backend):
             return np.linalg.eigvalsh(matrix)
         return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh

@@ -180,12 +180,12 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eigvals(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: int = True):
         if hermitian:
             return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eig(matrix)  # pylint: disable=not-callable

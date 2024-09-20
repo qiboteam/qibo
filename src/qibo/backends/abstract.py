@@ -319,12 +319,16 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvalues(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvalues(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvalues of a matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvectors(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvectors(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvectors of a matrix."""
         raise_error(NotImplementedError)
 
