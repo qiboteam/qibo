@@ -3,12 +3,10 @@
 from typing import Union
 
 import numpy as np
-from scipy.linalg import fractional_matrix_power
 
 from qibo.backends import _check_backend
-from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info.linalg_operations import partial_trace
+from qibo.quantum_info.linalg_operations import matrix_power, partial_trace
 from qibo.quantum_info.metrics import _check_hermitian, purity
 
 
@@ -724,7 +722,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             / np.log2(base)
         )
 
-    log = backend.np.log2(backend.np.trace(_matrix_power(state, alpha, backend)))
+    log = backend.np.log2(backend.np.trace(matrix_power(state, alpha, backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -823,8 +821,8 @@ def relative_renyi_entropy(
         return relative_von_neumann_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
-        new_state = _matrix_power(state, 0.5, backend)
-        new_target = _matrix_power(target, 0.5, backend)
+        new_state = matrix_power(state, 0.5, backend)
+        new_target = matrix_power(target, 0.5, backend)
 
         log = backend.np.log2(
             backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
@@ -832,8 +830,8 @@ def relative_renyi_entropy(
 
         return -2 * log / np.log2(base)
 
-    log = _matrix_power(state, alpha, backend)
-    log = log @ _matrix_power(target, 1 - alpha, backend)
+    log = matrix_power(state, alpha, backend)
+    log = log @ matrix_power(target, 1 - alpha, backend)
     log = backend.np.log2(backend.np.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
@@ -891,7 +889,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (
-        backend.np.trace(_matrix_power(state, alpha, backend)) - 1
+        backend.np.trace(matrix_power(state, alpha, backend)) - 1
     )
 
 
@@ -953,19 +951,3 @@ def entanglement_entropy(
     )
 
     return entropy_entanglement
-
-
-def _matrix_power(matrix, alpha, backend):
-    """Calculates ``matrix ** alpha`` according to backend."""
-    if backend.__class__.__name__ in [
-        "CupyBackend",
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        new_matrix = backend.to_numpy(matrix)
-    else:
-        new_matrix = backend.np.copy(matrix)
-
-    if len(new_matrix.shape) == 1:
-        new_matrix = backend.np.outer(new_matrix, backend.np.conj(new_matrix))
-
-    return backend.cast(fractional_matrix_power(backend.to_numpy(new_matrix), alpha))
