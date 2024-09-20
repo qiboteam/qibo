@@ -360,7 +360,7 @@ class Backend(abc.ABC):
     def calculate_matrix_power(
         self, matrix, power: Union[float, int]
     ):  # pragma: no cover
-        """Calculates the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
+        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
 
         .. note::
