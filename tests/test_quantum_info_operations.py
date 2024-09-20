@@ -122,10 +122,11 @@ def test_matrix_power(backend, power):
 
     if isinstance(power, str):
         with pytest.raises(TypeError):
-            return matrix_power(state, power, backend)
+            test = matrix_power(state, power, backend)
+    else:
+        power = matrix_power(state, power, backend)
 
-    power = matrix_power(state, power, backend)
-
-    backend.assert_allclose(
-        float(backend.np.real(backend.np.trace(power))), purity(state, backend=backend)
-    )
+        backend.assert_allclose(
+            float(backend.np.real(backend.np.trace(power))),
+            purity(state, backend=backend),
+        )
