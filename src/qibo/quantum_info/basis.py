@@ -1,5 +1,5 @@
-from functools import reduce
 from itertools import product
+from string import ascii_letters
 from typing import Optional
 
 import numpy as np
@@ -92,15 +92,18 @@ def pauli_basis(
     backend = _check_backend(backend)
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
-    basis_single = [pauli_labels[label] for label in pauli_order]
+    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
 
     if nqubits > 1:
-        basis_full = list(product(basis_single, repeat=nqubits))
-        basis_full = [reduce(np.kron, row) for row in basis_full]
+        dim = 2**nqubits
+        letters = [ascii_letters[3 * i : 3 * (i + 1)] for i in range(nqubits)]
+        lhs = ",".join(letters)
+        rhs = "".join([letter for group in zip(*letters) for letter in group])
+        basis_full = backend.np.einsum(
+            f"{lhs}->{rhs}", *[basis_single for _ in range(nqubits)]
+        ).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
-
-    basis_full = backend.cast(basis_full, dtype=basis_full[0].dtype)
 
     if vectorize and sparse:
         basis, indexes = [], []
