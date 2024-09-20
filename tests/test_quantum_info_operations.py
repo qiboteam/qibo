@@ -112,12 +112,16 @@ def test_partial_trace(backend, density_matrix):
 
     backend.assert_allclose(traced, Id)
 
-
-def test_matrix_power(backend):
-    nqubits, power = 2, 2
+@pytest.mark.parametrize(power, [2, 2., "2"])
+def test_matrix_power(backend, power):
+    nqubits = 2
     dims = 2**nqubits
 
     state = random_density_matrix(dims, backend=backend)
+
+    if isinstance(power, str):
+        with pytest.raises(TypeError):
+            return matrix_power(state, power, backend)
 
     power = matrix_power(state, power, backend)
 
