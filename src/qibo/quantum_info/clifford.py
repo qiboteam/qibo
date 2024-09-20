@@ -61,7 +61,10 @@ class Clifford:
             self.symplectic_matrix = self.data
             if self.symplectic_matrix.shape[0] % 2 == 0:
                 self.symplectic_matrix = np.vstack(
-                    (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
+                    (
+                        self.symplectic_matrix,
+                        np.zeros(self.symplectic_matrix.shape[1], dtype=np.uint8),
+                    )
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
         if self._backend is None:
