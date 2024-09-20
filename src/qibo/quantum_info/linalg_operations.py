@@ -1,5 +1,6 @@
 """Module with common linear algebra operations for quantum information."""
 
+# %%
 import math
 from typing import List, Tuple, Union
 
@@ -196,3 +197,32 @@ def matrix_exponentiation(
     backend = _check_backend(backend)
 
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+
+
+def schmidt_decomposition(state, backend=None):
+    decomposition = state
+    return decomposition
+
+
+# %%
+import numpy as np
+
+from qibo import set_backend
+from qibo.backends import NumpyBackend
+from qibo.quantum_info import random_statevector
+
+set_backend("numpy")
+backend = NumpyBackend()
+
+#%%
+nqubits = 2
+dims = 2**nqubits
+
+new_dims = int(np.sqrt(dims))
+
+state = random_statevector(dims, backend=backend)
+
+#%%
+new_state = state.reshape(-1, new_dims)
+U, S, V = np.linalg.svd(new_state)
+
