@@ -9,7 +9,7 @@ from qibo.backends import _check_backend
 from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
+from qibo.quantum_info.metrics import _check_hermitian, purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
@@ -30,7 +30,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
             Defaults to ``None``.
 
     Returns:
-        (float): Shannon entropy :math:`H(\\mathcal{p})`.
+        float: Shannon entropy :math:`H(\\mathcal{p})`.
     """
     backend = _check_backend(backend)
 
@@ -141,6 +141,40 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
     relative = backend.np.sum(prob_dist_p * log_prob)
 
     return entropy_p - relative
+
+
+def classical_mutual_information(
+    prob_dist_joint, prob_dist_p, prob_dist_q, base: float = 2, backend=None
+):
+    """Calculates the classical mutual information of two random variables.
+
+    Given two random variables :math:`(X, \\, Y)`, their mutual information is given by
+
+    .. math::
+        I(X, \\, Y) \\equiv H(p(x)) + H(q(y)) - H(p(x, \\, y)) \\, ,
+
+    where :math:`p(x, \\, y)` is the joint probability distribution of :math:`(X, Y)`,
+    :math:`p(x)` is the marginal probability distribution of :math:`X`,
+    :math:`q(y)` is the marginal probability distribution of :math:`Y`,
+    and :math:`H(\\cdot)` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+
+    Args:
+        prob_dist_joint (ndarray): joint probability distribution :math:`p(x, \\, y)`.
+        prob_dist_p (ndarray): marginal probability distribution :math:`p(x)`.
+        prob_dist_q (ndarray): marginal probability distribution :math:`q(y)`.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Mutual information :math:`I(X, \\, Y)`.
+    """
+    return (
+        shannon_entropy(prob_dist_p, base, backend)
+        + shannon_entropy(prob_dist_q, base, backend)
+        - shannon_entropy(prob_dist_joint, base, backend)
+    )
 
 
 def classical_renyi_entropy(
@@ -458,9 +492,7 @@ def von_neumann_entropy(
 
     eigenvalues = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
 
     log_prob = backend.np.where(
@@ -549,15 +581,11 @@ def relative_von_neumann_entropy(
 
     eigenvalues_state = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
     eigenvalues_target = backend.calculate_eigenvalues(
         target,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
     )
 
     log_state = backend.np.where(
@@ -578,6 +606,50 @@ def relative_von_neumann_entropy(
     relative = backend.np.sum(eigenvalues_state * log_target)
 
     return float(backend.np.real(entropy_state - relative))
+
+
+def mutual_information(
+    state, partition, base: float = 2, check_hermitian: bool = False, backend=None
+):
+    """Calculates the mutual information of a bipartite state.
+
+    Given a qubit ``partition`` :math:`A`, the mutual information
+    of state :math:`\\rho` is given by
+
+    .. math::
+        I(\\rho}) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
+
+    where :math:`B` is the remaining qubits that are not in partition :math:`A`,
+    and :math:`S(\\cdot)` is the :func:`qibo.quantum_info.von_neumann_entropy`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Mutual information :math:`I(\\rho)` of ``state`` :math:`\\rho`.
+    """
+    nqubits = np.log2(len(state))
+
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+    partition_b = set(list(range(int(nqubits)))) ^ set(list(partition))
+
+    state_a = partial_trace(state, partition_b, backend)
+    state_b = partial_trace(state, partition, backend)
+
+    return (
+        von_neumann_entropy(state_a, base, check_hermitian, False, backend)
+        + von_neumann_entropy(state_b, base, check_hermitian, False, backend)
+        - von_neumann_entropy(state, base, check_hermitian, False, backend)
+    )
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
