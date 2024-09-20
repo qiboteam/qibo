@@ -5,8 +5,10 @@ from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    matrix_power,
     partial_trace,
 )
+from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
 
@@ -109,3 +111,22 @@ def test_partial_trace(backend, density_matrix):
     Id = backend.identity_density_matrix(1, normalize=True)
 
     backend.assert_allclose(traced, Id)
+
+
+@pytest.mark.parametrize("power", [2, 2.0, "2"])
+def test_matrix_power(backend, power):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, backend=backend)
+
+    if isinstance(power, str):
+        with pytest.raises(TypeError):
+            test = matrix_power(state, power, backend)
+    else:
+        power = matrix_power(state, power, backend)
+
+        backend.assert_allclose(
+            float(backend.np.real(backend.np.trace(power))),
+            purity(state, backend=backend),
+        )

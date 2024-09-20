@@ -199,6 +199,24 @@ def matrix_exponentiation(
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
 
 
+def matrix_power(matrix, power: Union[float, int], backend=None):
+    """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculate :math:`A^{\\alpha}`.
+
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        power (float or int): power to raise ``matrix`` to.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: matrix power :math:`A^{\\alpha}`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_matrix_power(matrix, power)
+
+
 def schmidt_decomposition(state, backend=None):
     decomposition = state
     return decomposition
@@ -225,4 +243,3 @@ state = random_statevector(dims, backend=backend)
 #%%
 new_state = state.reshape(-1, new_dims)
 U, S, V = np.linalg.svd(new_state)
-
