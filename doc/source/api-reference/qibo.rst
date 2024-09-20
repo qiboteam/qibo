@@ -1746,6 +1746,12 @@ Classical relative entropy
 .. autofunction:: qibo.quantum_info.classical_relative_entropy
 
 
+Classical mutual information
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_mutual_information
+
+
 Classical Rényi entropy
 """""""""""""""""""""""
 
@@ -1789,6 +1795,12 @@ Relative von Neumann entropy
     this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
     and either ``state`` or ``target`` is non-Hermitian,
     an error will be raised when using `cupy` backend.
+
+
+Mutual information
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.mutual_information
 
 
 Rényi entropy
