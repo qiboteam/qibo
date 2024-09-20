@@ -199,7 +199,7 @@ def matrix_exponentiation(
 
 
 def matrix_power(matrix, power: Union[float, int], backend=None):
-    """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculates :math:`A^{\\alpha}`.
+    """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculate :math:`A^{\\alpha}`.
 
     Args:
         matrix (ndarray): matrix whose power to calculate.
