@@ -1964,6 +1964,12 @@ Matrix exponentiation
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
 
 
+Matrix power
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_power
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 

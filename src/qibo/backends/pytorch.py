@@ -199,6 +199,11 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
+    def calculate_matrix_power(self, matrix, power):
+        copied = self.to_numpy(self.np.copy(matrix))
+        copied = super().calculate_matrix_power(copied, power)
+        return self.cast(copied, dtype=copied.dtype)
+
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [
