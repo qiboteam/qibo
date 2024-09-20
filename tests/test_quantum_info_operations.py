@@ -113,7 +113,7 @@ def test_partial_trace(backend, density_matrix):
     backend.assert_allclose(traced, Id)
 
 
-@pytest.mark.parametrize(power, [2, 2.0, "2"])
+@pytest.mark.parametrize("power", [2, 2.0, "2"])
 def test_matrix_power(backend, power):
     nqubits = 2
     dims = 2**nqubits
