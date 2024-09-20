@@ -434,7 +434,8 @@ def _dim(nqubits):
 
 @cache
 def _dim_xz(nqubits):
-    """Returns the dimension of the symplectic matrix (only the de/stabilizers generators part, without the phases and scratch row) for a given number of qubits."""
+    """Returns the dimension of the symplectic matrix (only the de/stabilizers generators part, 
+    without the phases and scratch row) for a given number of qubits."""
     return 2 * nqubits
 
 
