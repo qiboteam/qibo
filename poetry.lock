@@ -4463,8 +4463,8 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "matrix_power"
-resolved_reference = "bfe91d6a340285c7968776b029b16910b4a5a732"
+reference = "HEAD"
+resolved_reference = "5dd522f84bdd2a66d67b41df990beb3135b3a9f5"
 
 [[package]]
 name = "qibotn"
@@ -5948,4 +5948,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "b3a19b112a2635fcd3ce7803d531b58e9baca4197bc7644ce42eaad5838fc316"
+content-hash = "56a9714596912650409692687d8983633a31ad11ec488b33429d523088700d5b"
