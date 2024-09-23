@@ -97,7 +97,9 @@ def anticommutator(operator_1, operator_2):
     return operator_1 @ operator_2 + operator_2 @ operator_1
 
 
-def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=None):
+def partial_trace(
+    state, traced_qubits: Union[List[int], Tuple[int, ...]], backend=None
+):
     """Returns the density matrix resulting from tracing out ``traced_qubits`` from ``state``.
 
     Total number of qubits is inferred by the shape of ``state``.
@@ -159,7 +161,9 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
     return backend.np.einsum("abac->bc", state)
 
 
-def partial_transpose(state, partition, backend=None):
+def partial_transpose(
+    state, partition: Union[List[int], Tuple[int, ...]], backend=None
+):
     """Return matrix resulting from the partial transposition of ``partition`` qubits in ``state``.
 
     Given quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
@@ -167,7 +171,7 @@ def partial_transpose(state, partition, backend=None):
 
     .. math::
         \\begin{align}
-        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m}^{T} \\\\
+        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\left(\\ketbra{l}{m}\\right)^{T} \\\\
         &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
         &= \\sum_{jklm} \\, \\rho_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
         \\end{align}
