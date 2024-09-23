@@ -62,10 +62,10 @@ class NumpyMatrices:
         )
 
     def I(self, n=2):
-        return self._cast(self.np.eye(n), dtype=self.dtype)
+        return self.np.eye(n, dtype=self.dtype)
 
     def Align(self, delay, n=2):
-        return self._cast(self.I(n), dtype=self.dtype)
+        return self.I(n)
 
     def M(self):  # pragma: no cover
         raise_error(NotImplementedError)
@@ -160,28 +160,24 @@ class NumpyMatrices:
 
     @cached_property
     def CSX(self):
-        a = (1 + 1j) / 2
-        b = self.np.conj(a)
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, a, b],
-                [0, 0, b, a],
+                [1 + 0j, 0, 0, 0],
+                [0, 1 + 0j, 0, 0],
+                [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
+                [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
             ],
             dtype=self.dtype,
         )
 
     @cached_property
     def CSXDG(self):
-        a = (1 - 1j) / 2
-        b = self.np.conj(a)
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, a, b],
-                [0, 0, b, a],
+                [1 + 0j, 0, 0, 0],
+                [0, 1 + 0j, 0, 0],
+                [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
+                [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
             ],
             dtype=self.dtype,
         )
@@ -472,7 +468,6 @@ class NumpyMatrices:
         )
 
     def DEUTSCH(self, theta):
-        theta = self._cast_parameter(theta)
         sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
         cos = self.np.cos(theta) + 0j
         return self._cast(

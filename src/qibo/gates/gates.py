@@ -506,13 +506,16 @@ class I(Gate):
 class Align(ParametrizedGate):
     """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
 
+    .. note::
+        For this gate, the trainable parameter is by default set to ``False``.
+
     Args:
         q (int): The qubit ID.
         delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
             Defaults to ``0`` (zero).
     """
 
-    def __init__(self, q, delay=0, trainable=True):
+    def __init__(self, q, delay=0, trainable=False):
         if not isinstance(delay, int):
             raise_error(
                 TypeError, f"delay must be type int, but it is type {type(delay)}."
@@ -2600,7 +2603,7 @@ class Unitary(ParametrizedGate):
     @Gate.parameters.setter
     def parameters(self, x):
         shape = self.parameters[0].shape
-        engine = _check_engine(self.parameters[0])
+        engine = _check_engine(x)
         # Reshape doesn't accept a tuple if engine is pytorch.
         x = x[0] if type(x) is tuple else x
         self._parameters = (engine.reshape(x, shape),)
@@ -2633,7 +2636,9 @@ class Unitary(ParametrizedGate):
 
 def _check_engine(array):
     """Check if the array is a numpy or torch tensor and return the corresponding library."""
-    if array.__class__.__name__ == "Tensor":
+    if (array.__class__.__name__ == "Tensor") or (
+        type(array) is tuple and array[0].__class__.__name__ == "Tensor"
+    ):
         import torch  # pylint: disable=C0415
 
         return torch

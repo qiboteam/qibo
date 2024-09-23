@@ -39,12 +39,12 @@ def test_set_parameters_with_list(backend, trainable):
     params = [0.123, 0.456, (0.789, 0.321)]
     c = Circuit(3)
     if trainable:
-        c.add(gates.RX(0, theta=0, trainable=trainable))
+        c.add(gates.RX(0, theta=0.0, trainable=trainable))
     else:
         c.add(gates.RX(0, theta=params[0], trainable=trainable))
-    c.add(gates.RY(1, theta=0))
+    c.add(gates.RY(1, theta=0.0))
     c.add(gates.CZ(1, 2))
-    c.add(gates.fSim(0, 2, theta=0, phi=0))
+    c.add(gates.fSim(0, 2, theta=0.0, phi=0.0))
     c.add(gates.H(2))
     # execute once
     final_state = backend.execute_circuit(c)
@@ -78,16 +78,16 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
         trainable_params = [0.1, 0.3, (0.4, 0.5)]
 
     c = Circuit(3, accelerators)
-    c.add(gates.RX(0, theta=0))
+    c.add(gates.RX(0, theta=0.0))
     if trainable:
-        c.add(gates.CRY(0, 1, theta=0, trainable=trainable))
+        c.add(gates.CRY(0, 1, theta=0.0, trainable=trainable))
     else:
         c.add(gates.CRY(0, 1, theta=params[1], trainable=trainable))
     c.add(gates.CZ(1, 2))
-    c.add(gates.U1(2, theta=0))
-    c.add(gates.CU2(0, 2, phi=0, lam=0))
+    c.add(gates.U1(2, theta=0.0))
+    c.add(gates.CU2(0, 2, phi=0.0, lam=0.0))
     if trainable:
-        c.add(gates.U3(1, theta=0, phi=0, lam=0, trainable=trainable))
+        c.add(gates.U3(1, theta=0.0, phi=0.0, lam=0.0, trainable=trainable))
     else:
         c.add(gates.U3(1, *params[4], trainable=trainable))
     # execute once
@@ -127,7 +127,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     params = [0.1234, np.random.random((4, 4))]
     c = Circuit(4, accelerators)
-    c.add(gates.RX(0, theta=0))
+    c.add(gates.RX(0, theta=0.0))
     if trainable:
         c.add(gates.Unitary(np.zeros((4, 4)), 1, 2, trainable=trainable))
         trainable_params = list(params)

@@ -430,12 +430,18 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
 
+                else:
+                    state = self.cast(initial_state)
+
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
+
+                else:
+                    state = self.cast(initial_state)
 
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
