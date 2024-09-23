@@ -159,6 +159,29 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
     return backend.np.einsum("abac->bc", state)
 
 
+def partial_transpose(state, partition, backend=None):
+    """"""
+    backend = _check_backend(backend)
+
+    nqubits = math.log2(state.shape[0])
+
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+    nqubits = int(nqubits)
+
+    new_shape = list(range(2 * nqubits))
+    for ind in partition:
+        new_shape[ind] = ind + nqubits
+        new_shape[ind + nqubits] = ind
+    new_shape = tuple(new_shape)
+
+    reshaped = backend.np.reshape(state, [2] * (2 * nqubits))
+    reshaped = backend.np.transpose(reshaped, new_shape)
+
+    return backend.np.reshape(reshaped, state.shape)
+
+
 def matrix_exponentiation(
     phase: Union[float, complex],
     matrix,
