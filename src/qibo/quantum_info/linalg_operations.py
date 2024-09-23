@@ -97,7 +97,9 @@ def anticommutator(operator_1, operator_2):
     return operator_1 @ operator_2 + operator_2 @ operator_1
 
 
-def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=None):
+def partial_trace(
+    state, traced_qubits: Union[List[int], Tuple[int, ...]], backend=None
+):
     """Returns the density matrix resulting from tracing out ``traced_qubits`` from ``state``.
 
     Total number of qubits is inferred by the shape of ``state``.
@@ -157,6 +159,61 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
     state = backend.np.reshape(state, shape)
 
     return backend.np.einsum("abac->bc", state)
+
+
+def partial_transpose(
+    state, partition: Union[List[int], Tuple[int, ...]], backend=None
+):
+    """Return matrix resulting from the partial transposition of ``partition`` qubits in ``state``.
+
+    Given quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the partial transpose with respect to ``partition`` :math:`B` is given by
+
+    .. math::
+        \\begin{align}
+        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
+            \\left(\\ketbra{l}{m}\\right)^{T} \\\\
+        &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
+        &= \\sum_{jklm} \\, \\rho_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
+        \\end{align}
+
+    where the superscript :math:`T` indicates the transposition operation,
+    and :math:`T_{B}` indicates transposition on ``partition`` :math:`B`.
+    The total number of qubits is inferred by the shape of ``state``.
+
+    Args:
+        state (ndarray): density matrix or statevector.
+        traced_qubits (Union[List[int], Tuple[int]]): indices of qubits to be transposed.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: partially transposed operator :math:`\\rho^{T_{B}}`.
+    """
+    backend = _check_backend(backend)
+
+    nqubits = math.log2(state.shape[0])
+
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+    nqubits = int(nqubits)
+
+    statevector = bool(len(state.shape) == 1)
+    if statevector:
+        state = backend.np.outer(state, backend.np.conj(state.T))
+
+    new_shape = list(range(2 * nqubits))
+    for ind in partition:
+        new_shape[ind] = ind + nqubits
+        new_shape[ind + nqubits] = ind
+    new_shape = tuple(new_shape)
+
+    reshaped = backend.np.reshape(state, [2] * (2 * nqubits))
+    reshaped = backend.np.transpose(reshaped, new_shape)
+
+    return backend.np.reshape(reshaped, state.shape)
 
 
 def matrix_exponentiation(

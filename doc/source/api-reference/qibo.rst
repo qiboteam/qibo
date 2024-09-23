@@ -1964,6 +1964,12 @@ Partial trace
 .. autofunction:: qibo.quantum_info.partial_trace
 
 
+Partial transpose
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_transpose
+
+
 Matrix exponentiation
 """""""""""""""""""""
 
