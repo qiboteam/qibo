@@ -104,7 +104,7 @@ def pauli_basis(
             @njit(fastmath=True, parallel=True, cache=True)
             def _build_basis(basis_single):
                 rows = [basis_single[0][0] for i in range(len(basis_single))]
-                for i in prange(len(basis_single)):
+                for i in prange(len(basis_single)):  # pylint: disable=not-an-iterable
                     row = basis_single[i][0]
                     for j in range(len(basis_single[i][1:])):
                         row = np.kron(row, basis_single[i][j])
@@ -116,6 +116,7 @@ def pauli_basis(
             basis_single = backend.cast(basis_single)
             dim = 2**nqubits
             letters = [ascii_letters[3 * i : 3 * (i + 1)] for i in range(nqubits)]
+
             lhs = ",".join(letters)
             rhs = "".join([letter for group in zip(*letters) for letter in group])
             basis_full = backend.np.einsum(
@@ -123,6 +124,8 @@ def pauli_basis(
             ).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
+
+    basis_full = backend.cast(basis_full)
 
     if vectorize and sparse:
         basis, indexes = [], []
