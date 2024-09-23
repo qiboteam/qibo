@@ -9,6 +9,7 @@ from qibo.quantum_info.entanglement import (
     entanglement_of_formation,
     entangling_capability,
     meyer_wallach_entanglement,
+    negativity,
 )
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
@@ -64,6 +65,25 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
     )
     backend.assert_allclose(concur, 0.0, atol=10 * PRECISION_TOL)
     backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("p", [1 / 5, 1 / 3 + 0.01, 1])
+def test_negativity(backend, p):
+    # werner state
+    zero, one = np.array([1, 0]), np.array([0, 1])
+    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+    psi = np.outer(psi, psi.T)
+    psi = backend.cast(psi)
+    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+
+    neg = negativity(state, [0])
+
+    if p == 1 / 5:
+        target = 0.0
+    else:
+        target = 1.0
+
+    assert neg == target
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
