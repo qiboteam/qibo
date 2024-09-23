@@ -7,6 +7,7 @@ from qibo.quantum_info.linalg_operations import (
     commutator,
     matrix_power,
     partial_trace,
+    partial_transpose,
 )
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
@@ -111,6 +112,74 @@ def test_partial_trace(backend, density_matrix):
     Id = backend.identity_density_matrix(1, normalize=True)
 
     backend.assert_allclose(traced, Id)
+
+
+def _werner_state(p, backend):
+    zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
+    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+    psi = np.outer(psi, np.conj(psi.T))
+    psi = backend.cast(psi, dtype=psi.dtype)
+
+    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+
+    # partial transpose of two-qubit werner state is known analytically
+    transposed = (1 / 4) * np.array(
+        [
+            [1 - p, 0, 0, -2 * p],
+            [0, p + 1, 0, 0],
+            [0, 0, p + 1, 0],
+            [-2 * p, 0, 0, 1 - p],
+        ],
+        dtype=complex,
+    )
+    transposed = backend.cast(transposed, dtype=transposed.dtype)
+
+    return state, transposed
+
+
+@pytest.mark.parametrize("statevector", [False, True])
+@pytest.mark.parametrize("p", [1 / 5, 1 / 3, 1.0])
+def test_partial_transpose(backend, p, statevector):
+    with pytest.raises(ValueError):
+        state = random_density_matrix(3, backend=backend)
+        test = partial_transpose(state, [0], backend)
+
+    zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
+    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+
+    if statevector:
+        # testing statevector
+        target = np.zeros((4, 4), dtype=complex)
+        target[0, 3] = -1 / 2
+        target[1, 1] = 1 / 2
+        target[2, 2] = 1 / 2
+        target[3, 0] = -1 / 2
+        target = backend.cast(target, dtype=target.dtype)
+
+        psi = backend.cast(psi, dtype=psi.dtype)
+
+        transposed = partial_transpose(psi, [0], backend=backend)
+        backend.assert_allclose(transposed, target)
+    else:
+        psi = np.outer(psi, np.conj(psi.T))
+        psi = backend.cast(psi, dtype=psi.dtype)
+
+        state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+
+        # partial transpose of two-qubit werner state is known analytically
+        target = (1 / 4) * np.array(
+            [
+                [1 - p, 0, 0, -2 * p],
+                [0, p + 1, 0, 0],
+                [0, 0, p + 1, 0],
+                [-2 * p, 0, 0, 1 - p],
+            ],
+            dtype=complex,
+        )
+        target = backend.cast(target, dtype=target.dtype)
+
+        transposed = partial_transpose(state, [1], backend)
+        backend.assert_allclose(transposed, target)
 
 
 @pytest.mark.parametrize("power", [2, 2.0, "2"])
