@@ -160,7 +160,16 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 
 
 def partial_transpose(state, partition, backend=None):
-    """"""
+    """_summary_
+
+    Args:
+        state (ndarray): density matrix or statevector.
+        partition (_type_): _description_
+        backend (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     backend = _check_backend(backend)
 
     nqubits = math.log2(state.shape[0])
@@ -169,6 +178,10 @@ def partial_transpose(state, partition, backend=None):
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
+
+    statevector = bool(len(state.shape) == 1)
+    if statevector:
+        state = backend.np.outer(state, backend.np.conj(state.T))
 
     new_shape = list(range(2 * nqubits))
     for ind in partition:
