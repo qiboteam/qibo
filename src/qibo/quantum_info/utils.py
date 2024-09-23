@@ -347,13 +347,10 @@ def total_variation_distance(
     For probabilities :math:`p` and :math:`q`, the total variation distance is defined as
 
     .. math::
-        \\begin{align}
-            \\operatorname{TVD}(p, \\, q) &= \\frac{1}{2} \\, \\|p - q\\|_{1}
-            &= \\frac{1}{2} \\, \\sum_{x} \\, \\left|{p(x) - q(x)\\right| \\, ,
-        \\end{align}
+        \\operatorname{TVD}(p, \\, q) = \\frac{1}{2} \\, \\|p - q\\|_{1}
+            = \\frac{1}{2} \\, \\sum_{x} \\, \\left|p(x) - q(x)\\right| \\, ,
 
     where :math:`\\|\\cdot\\|_{1}` detones the :math:`\\ell_{1}`-norm.
-
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
