@@ -141,12 +141,14 @@ def negativity(state, bipartition, backend=None):
         float: Negativity :math:`\\operatorname{Neg}(\\rho)` of state :math:`\\rho`.
     """
     backend = _check_backend(backend)
-
+    print(state)
     reduced = partial_trace(state, bipartition, backend)
+    print()
+    print(reduced)
     reduced = backend.np.conj(reduced.T) @ reduced
     norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend))
 
-    return float((norm - 1) / 2)
+    return float(backend.np.real((norm - 1) / 2))
 
 
 def entanglement_fidelity(
