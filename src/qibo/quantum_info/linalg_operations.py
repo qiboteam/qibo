@@ -160,15 +160,30 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
 
 
 def partial_transpose(state, partition, backend=None):
-    """_summary_
+    """Return matrix resulting from the partial transposition of ``partition`` qubits in ``state``.
+
+    Given quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the partial transpose with respect to ``partition`` :math:`B` is given by
+
+    .. math::
+        \\begin{align}
+        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m}^{T} \\\\
+        &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
+        &= \\sum_{jklm} \\, \\rho_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
+        \\end{align}
+
+    where the superscript :math:`T` indicates the transposition operation,
+    and :math:`T_{B}` indicates transposition on ``partition`` :math:`B`.
 
     Args:
         state (ndarray): density matrix or statevector.
-        partition (_type_): _description_
-        backend (_type_, optional): _description_. Defaults to None.
+        traced_qubits (Union[List[int], Tuple[int]]): indices of qubits to be transposed.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        _type_: _description_
+        ndarray: partially transposed operator :math:`\\rho^{T_{B}}`.
     """
     backend = _check_backend(backend)
 
