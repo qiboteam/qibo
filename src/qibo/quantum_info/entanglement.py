@@ -4,7 +4,11 @@ import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info.linalg_operations import matrix_power, partial_trace
+from qibo.quantum_info.linalg_operations import (
+    matrix_power,
+    partial_trace,
+    partial_transpose,
+)
 from qibo.quantum_info.metrics import fidelity, purity
 
 
@@ -141,10 +145,8 @@ def negativity(state, bipartition, backend=None):
         float: Negativity :math:`\\operatorname{Neg}(\\rho)` of state :math:`\\rho`.
     """
     backend = _check_backend(backend)
-    print(state)
-    reduced = partial_trace(state, bipartition, backend)
-    print()
-    print(reduced)
+
+    reduced = partial_transpose(state, bipartition, backend)
     reduced = backend.np.conj(reduced.T) @ reduced
     norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend))
 
