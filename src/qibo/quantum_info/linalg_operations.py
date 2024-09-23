@@ -171,13 +171,15 @@ def partial_transpose(
 
     .. math::
         \\begin{align}
-        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\left(\\ketbra{l}{m}\\right)^{T} \\\\
+        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
+            \\left(\\ketbra{l}{m}\\right)^{T} \\\\
         &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
         &= \\sum_{jklm} \\, \\rho_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
         \\end{align}
 
     where the superscript :math:`T` indicates the transposition operation,
     and :math:`T_{B}` indicates transposition on ``partition`` :math:`B`.
+    The total number of qubits is inferred by the shape of ``state``.
 
     Args:
         state (ndarray): density matrix or statevector.
