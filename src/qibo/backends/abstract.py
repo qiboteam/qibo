@@ -1,4 +1,5 @@
 import abc
+from typing import Union
 
 from qibo.config import raise_error
 
@@ -318,12 +319,16 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvalues(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvalues(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvalues of a matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvectors(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvectors(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvectors of a matrix."""
         raise_error(NotImplementedError)
 
@@ -348,6 +353,21 @@ class Backend(abc.ABC):
         """Calculate matrix exponential of a matrix.
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_power(
+        self, matrix, power: Union[float, int]
+    ):  # pragma: no cover
+        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
+        i.e. :math:`A^{\\alpha}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
+            an integer.
         """
         raise_error(NotImplementedError)
 

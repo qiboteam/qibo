@@ -395,4 +395,4 @@ def test_symbolic_hamiltonian_with_constant(backend):
     h = hamiltonians.SymbolicHamiltonian(1e6 - Z(0), backend=backend)
 
     result = c.execute(nshots=10000)
-    assert result.expectation_from_samples(h) == approx(1e6, rel=1e-5, abs=0.0)
+    assert float(result.expectation_from_samples(h)) == approx(1e6, rel=1e-5, abs=0.0)

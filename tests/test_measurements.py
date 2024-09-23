@@ -6,8 +6,9 @@ import pickle
 import numpy as np
 import pytest
 
-from qibo import gates, models
+from qibo import Circuit, gates
 from qibo.measurements import MeasurementResult
+from qibo.models import QFT
 
 
 def assert_result(
@@ -62,7 +63,7 @@ def assert_register_result(
 @pytest.mark.parametrize("n", [0, 1])
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_gate(backend, n, nshots):
-    c = models.Circuit(2)
+    c = Circuit(2)
     if n:
         c.add(gates.X(1))
     c.add(gates.M(1))
@@ -78,7 +79,7 @@ def test_measurement_gate(backend, n, nshots):
 
 
 def test_multiple_qubit_measurement_gate(backend):
-    c = models.Circuit(2)
+    c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0, 1))
     result = backend.execute_circuit(c, nshots=100)
@@ -105,7 +106,7 @@ def test_measurement_gate_errors(backend):
 
 
 def test_measurement_circuit(backend, accelerators):
-    c = models.Circuit(4, accelerators)
+    c = Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
     result = backend.execute_circuit(c, nshots=100)
@@ -116,7 +117,7 @@ def test_measurement_circuit(backend, accelerators):
 
 @pytest.mark.parametrize("registers", [False, True])
 def test_measurement_qubit_order_simple(backend, registers):
-    c = models.Circuit(2)
+    c = Circuit(2)
     c.add(gates.X(0))
     if registers:
         c.add(gates.M(1, 0))
@@ -134,7 +135,7 @@ def test_measurement_qubit_order_simple(backend, registers):
 
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_qubit_order(backend, accelerators, nshots):
-    c = models.Circuit(6, accelerators)
+    c = Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.M(1, 5, 2, 0))
@@ -154,7 +155,7 @@ def test_measurement_qubit_order(backend, accelerators, nshots):
 
 
 def test_multiple_measurement_gates_circuit(backend):
-    c = models.Circuit(4)
+    c = Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 1))
@@ -170,7 +171,7 @@ def test_multiple_measurement_gates_circuit(backend):
 
 
 def test_circuit_with_unmeasured_qubits(backend, accelerators):
-    c = models.Circuit(5, accelerators)
+    c = Circuit(5, accelerators)
     c.add(gates.X(4))
     c.add(gates.X(2))
     c.add(gates.M(0, 2))
@@ -192,11 +193,11 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
 
 
 def test_circuit_addition_with_measurements(backend):
-    c = models.Circuit(2)
+    c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
 
-    meas_c = models.Circuit(2)
+    meas_c = Circuit(2)
     c.add(gates.M(0, 1))
 
     c += meas_c
@@ -213,12 +214,12 @@ def test_circuit_addition_with_measurements(backend):
 
 
 def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerators):
-    c1 = models.Circuit(4, accelerators)
+    c1 = Circuit(4, accelerators)
     c1.add(gates.X(0))
     c1.add(gates.X(1))
     c1.add(gates.M(1, register_name="a"))
 
-    c2 = models.Circuit(4, accelerators)
+    c2 = Circuit(4, accelerators)
     c2.add(gates.X(0))
     c2.add(gates.M(0, register_name="b"))
 
@@ -232,7 +233,7 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
-    c1 = models.Circuit(6, accelerators)
+    c1 = Circuit(6, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.X(3)])
     c1.add(gates.M(5, 1, 3, register_name="a"))
     c1.add(gates.M(2, 0, register_name="b"))
@@ -250,7 +251,7 @@ def test_circuit_copy_with_measurements(backend, accelerators):
 
 
 def test_measurement_compiled_circuit(backend):
-    c = models.Circuit(2)
+    c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
     c.add(gates.M(1))
@@ -274,14 +275,14 @@ def test_measurement_compiled_circuit(backend):
 
 def test_final_state(backend, accelerators):
     """Check that final state is logged correctly when using measurements."""
-    c = models.Circuit(4, accelerators)
+    c = Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 1))
     c.add(gates.M(2))
     c.add(gates.X(3))
     result = backend.execute_circuit(c, nshots=100)
-    c = models.Circuit(4, accelerators)
+    c = Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.X(3))
@@ -300,7 +301,7 @@ def test_measurement_gate_bitflip_errors():
 
 
 def test_register_measurements(backend):
-    c = models.Circuit(3)
+    c = Circuit(3)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.M(0, 2))
@@ -323,7 +324,7 @@ def test_register_measurements(backend):
 
 
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
-    c = models.Circuit(6, accelerators)
+    c = Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.X(3))
@@ -364,7 +365,7 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
 
 def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     """Check that register measurements are unaffected by unmeasured qubits."""
-    c = models.Circuit(5, accelerators)
+    c = Circuit(5, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 2, register_name="A"))
@@ -390,7 +391,7 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
 
 
 def test_measurement_density_matrix(backend):
-    c = models.Circuit(2, density_matrix=True)
+    c = Circuit(2, density_matrix=True)
     c.add(gates.X(0))
     c.add(gates.M(0, 1))
     result = backend.execute_circuit(c, nshots=100)
@@ -407,7 +408,7 @@ def test_measurement_density_matrix(backend):
 
 
 def test_measurement_result_vs_circuit_result(backend, accelerators):
-    c = models.Circuit(6, accelerators)
+    c = Circuit(6, accelerators)
     c.add([gates.X(0), gates.X(1), gates.X(3)])
     ma = c.add(gates.M(5, 1, 3, register_name="a"))
     mb = c.add(gates.M(2, 0, register_name="b"))
@@ -423,7 +424,7 @@ def test_measurement_result_vs_circuit_result(backend, accelerators):
 @pytest.mark.parametrize("nqubits", [1, 4])
 @pytest.mark.parametrize("outcome", [0, 1])
 def test_measurement_basis(backend, nqubits, outcome):
-    c = models.Circuit(nqubits)
+    c = Circuit(nqubits)
     if outcome:
         c.add(gates.X(q) for q in range(nqubits))
     c.add(gates.H(q) for q in range(nqubits))
@@ -433,7 +434,7 @@ def test_measurement_basis(backend, nqubits, outcome):
 
 
 def test_measurement_basis_list(backend):
-    c = models.Circuit(4)
+    c = Circuit(4)
     c.add(gates.H(0))
     c.add(gates.X(2))
     c.add(gates.H(2))
@@ -450,22 +451,20 @@ q3: ─X─────M─"""
     )
 
 
-def test_measurement_basis_list_error(backend):
-    c = models.Circuit(4)
+def test_measurement_basis_list_error():
+    c = Circuit(4)
     with pytest.raises(ValueError):
         c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
 
 
-def test_measurement_same_qubit_different_registers_error(backend):
-    c = models.Circuit(4)
+def test_measurement_same_qubit_different_registers_error():
+    c = Circuit(4)
     c.add(gates.M(0, 1, 3, register_name="a"))
     with pytest.raises(KeyError):
         c.add(gates.M(1, 2, 3, register_name="a"))
 
 
 def test_measurementsymbol_pickling(backend):
-    from qibo.models import QFT
-
     c = QFT(3)
     c.add(gates.M(0, 2, basis=[gates.X, gates.Z]))
     backend.execute_circuit(c).samples()
