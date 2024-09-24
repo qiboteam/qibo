@@ -634,7 +634,7 @@ def test_circuit_draw():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
 
 
 def test_circuit_wire_names_errors():
@@ -667,7 +667,7 @@ def test_circuit_draw_wire_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
 
 
 def test_circuit_draw_line_wrap():
@@ -891,7 +891,7 @@ def test_circuit_draw_labels():
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
 
 
 def test_circuit_draw_names(capsys):
