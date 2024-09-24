@@ -1,13 +1,10 @@
 import numpy as np
 
 from qibo import gates
-from qibo.backends import NumpyBackend
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
 )
-
-backend = NumpyBackend()
 
 
 class GateDecompositions:
@@ -20,27 +17,27 @@ class GateDecompositions:
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
 
-    def count_2q(self, gate):
+    def count_2q(self, gate, backend):
         """Count the number of two-qubit gates in the decomposition of the given gate."""
         if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
+            decomposition = self.decompositions[gate.__class__](gate, backend)
         else:
             decomposition = self.decompositions[gate.__class__]
         return len(tuple(g for g in decomposition if len(g.qubits) > 1))
 
-    def count_1q(self, gate):
+    def count_1q(self, gate, backend):
         """Count the number of single qubit gates in the decomposition of the given gate."""
         if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
+            decomposition = self.decompositions[gate.__class__](gate, backend)
         else:
             decomposition = self.decompositions[gate.__class__]
         return len(tuple(g for g in decomposition if len(g.qubits) == 1))
 
-    def __call__(self, gate):
+    def __call__(self, gate, backend=None):
         """Decompose a gate."""
         decomposition = self.decompositions[gate.__class__]
         if callable(decomposition):
-            decomposition = decomposition(gate)
+            decomposition = decomposition(gate, backend)
         return [
             g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
             for g in decomposition
@@ -83,7 +80,7 @@ gpi2_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
 gpi2_dec.add(gates.SX, [gates.GPI2(0, 0)])
 gpi2_dec.add(
     gates.RX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.Z(0),
         gates.GPI2(0, np.pi / 2),
         gates.RZ(0, gate.parameters[0] + np.pi),
@@ -92,26 +89,30 @@ gpi2_dec.add(
 )
 gpi2_dec.add(
     gates.RY,
-    lambda gate: [
+    lambda gate, backend: [
         gates.GPI2(0, 0),
         gates.RZ(0, gate.parameters[0] + np.pi),
         gates.GPI2(0, 0),
         gates.Z(0),
     ],
 )
-gpi2_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
-gpi2_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
-gpi2_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
+gpi2_dec.add(gates.RZ, lambda gate, backend: [gates.RZ(0, gate.parameters[0])])
+gpi2_dec.add(gates.GPI2, lambda gate, backend: [gates.GPI2(0, gate.parameters[0])])
+gpi2_dec.add(gates.U1, lambda gate, backend: [gates.RZ(0, gate.parameters[0])])
 gpi2_dec.add(
     gates.U2,
-    lambda gate: _u3_to_gpi2(np.pi / 2, gate.parameters[0], gate.parameters[1]),
+    lambda gate, backend: _u3_to_gpi2(
+        np.pi / 2, gate.parameters[0], gate.parameters[1]
+    ),
 )
-gpi2_dec.add(gates.U3, lambda gate: _u3_to_gpi2(*gate.parameters))
+gpi2_dec.add(gates.U3, lambda gate, backend: _u3_to_gpi2(*gate.parameters))
 gpi2_dec.add(
-    gates.Unitary, lambda gate: _u3_to_gpi2(*u3_decomposition(gate.parameters[0]))
+    gates.Unitary,
+    lambda gate, backend: _u3_to_gpi2(*u3_decomposition(gate.parameters[0], backend)),
 )
 gpi2_dec.add(
-    gates.FusedGate, lambda gate: _u3_to_gpi2(*u3_decomposition(gate.matrix(backend)))
+    gates.FusedGate,
+    lambda gate, backend: _u3_to_gpi2(*u3_decomposition(gate.matrix(backend), backend)),
 )
 
 # Decompose single qubit gates using U3
@@ -126,39 +127,47 @@ u3_dec.add(gates.T, [gates.RZ(0, np.pi / 4)])
 u3_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
 u3_dec.add(gates.SX, [gates.U3(0, np.pi / 2, -np.pi / 2, np.pi / 2)])
 u3_dec.add(
-    gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)]
+    gates.RX,
+    lambda gate, backend: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)],
 )
-u3_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
-u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
+u3_dec.add(gates.RY, lambda gate, backend: [gates.U3(0, gate.parameters[0], 0, 0)])
+u3_dec.add(gates.RZ, lambda gate, backend: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
     gates.PRX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(0, gate.parameters[1] - np.pi / 2),
         gates.RY(0, -gate.parameters[0]),
         gates.RZ(0, gate.parameters[1] + np.pi / 2),
     ],
 )
 u3_dec.add(
-    gates.GPI2, lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))]
+    gates.GPI2,
+    lambda gate, backend: [
+        gates.U3(0, *u3_decomposition(gate.matrix(backend), backend))
+    ],
 )
-u3_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
+u3_dec.add(gates.U1, lambda gate, backend: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
     gates.U2,
-    lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])],
+    lambda gate, backend: [
+        gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])
+    ],
 )
 u3_dec.add(
     gates.U3,
-    lambda gate: [
+    lambda gate, backend: [
         gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])
     ],
 )
 u3_dec.add(
     gates.Unitary,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
+    lambda gate, backend: [gates.U3(0, *u3_decomposition(gate.parameters[0], backend))],
 )
 u3_dec.add(
     gates.FusedGate,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))],
+    lambda gate, backend: [
+        gates.U3(0, *u3_decomposition(gate.matrix(backend), backend))
+    ],
 )
 
 # register the iSWAP decompositions
@@ -237,7 +246,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CRX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RX(1, gate.parameters[0] / 2.0),
         gates.CZ(0, 1),
         gates.RX(1, -gate.parameters[0] / 2.0),
@@ -246,7 +255,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CRY,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RY(1, gate.parameters[0] / 2.0),
         gates.CZ(0, 1),
         gates.RY(1, -gate.parameters[0] / 2.0),
@@ -255,7 +264,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CRZ,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(1, gate.parameters[0] / 2.0),
         gates.H(1),
         gates.CZ(0, 1),
@@ -266,7 +275,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CU1,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(0, gate.parameters[0] / 2.0),
         gates.H(1),
         gates.CZ(0, 1),
@@ -278,7 +287,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CU2,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(1, (gate.parameters[1] - gate.parameters[0]) / 2.0),
         gates.H(1),
         gates.CZ(0, 1),
@@ -292,7 +301,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.CU3,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(1, (gate.parameters[2] - gate.parameters[1]) / 2.0),
         gates.H(1),
         gates.CZ(0, 1),
@@ -324,7 +333,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.RXX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.H(0),
         gates.CZ(0, 1),
         gates.RX(1, gate.parameters[0]),
@@ -334,7 +343,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.RYY,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RX(0, np.pi / 2),
         gates.U3(1, np.pi / 2, np.pi / 2, np.pi),
         gates.CZ(0, 1),
@@ -346,7 +355,7 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.RZZ,
-    lambda gate: [
+    lambda gate, backend: [
         gates.H(1),
         gates.CZ(0, 1),
         gates.RX(1, gate.parameters[0]),
@@ -376,15 +385,21 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.Unitary,
-    lambda gate: two_qubit_decomposition(0, 1, gate.parameters[0], backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.parameters[0], backend=backend
+    ),
 )
 cz_dec.add(
     gates.fSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.matrix(backend), backend=backend
+    ),
 )
 cz_dec.add(
     gates.GeneralizedfSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.matrix(backend), backend=backend
+    ),
 )
 
 # temporary CNOT decompositions for CNOT, CZ, SWAP
@@ -446,7 +461,7 @@ standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
 standard_decompositions.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
 standard_decompositions.add(
     gates.PRX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(0, -gate.parameters[1] - np.pi / 2),
         gates.RY(0, -gate.parameters[0]),
         gates.RZ(0, gate.parameters[1] + np.pi / 2),
@@ -454,7 +469,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.U3,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(0, gate.parameters[2]),
         gates.SX(0),
         gates.RZ(0, gate.parameters[0] + np.pi),
@@ -472,7 +487,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.RZX,
-    lambda gate: [
+    lambda gate, backend: [
         gates.H(1),
         gates.CNOT(0, 1),
         gates.RZ(1, gate.parameters[0]),
@@ -482,7 +497,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.RXXYY,
-    lambda gate: [
+    lambda gate, backend: [
         gates.RZ(1, -np.pi / 2),
         gates.S(0),
         gates.SX(1),
@@ -499,7 +514,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.RBS,
-    lambda gate: [
+    lambda gate, backend: [
         gates.H(0),
         gates.CNOT(0, 1),
         gates.H(1),
@@ -511,7 +526,7 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
-    gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[0]).decompose()
+    gates.GIVENS, lambda gate, backend: gates.RBS(0, 1, -gate.parameters[0]).decompose()
 )
 standard_decompositions.add(
     gates.FSWAP, [gates.X(1)] + gates.GIVENS(0, 1, np.pi / 2).decompose() + [gates.X(0)]
@@ -542,7 +557,7 @@ standard_decompositions.add(
 )
 standard_decompositions.add(
     gates.GeneralizedRBS,
-    lambda gate: _decomposition_generalized_RBS(
+    lambda gate, backend: _decomposition_generalized_RBS(
         ins=list(range(len(gate.init_args[0]))),
         outs=list(
             range(

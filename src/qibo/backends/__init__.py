@@ -198,6 +198,20 @@ def _check_backend(backend):
     return backend
 
 
+def _find_backend(x):
+    """Finds the backend of a given object."""
+    if isinstance(x, tuple) or isinstance(x, list):
+        return _find_backend(x[0])
+    if x.__class__.__name__ == "tensor":
+        return PyTorchBackend()
+    elif x.__class__.__name__ == "TensorflowTensor":
+        return TensorflowBackend()
+    elif isinstance(x, np.ndarray):
+        return NumpyBackend()
+    else:
+        raise TypeError("Unsupported type for backend detection")
+
+
 def list_available_backends(*providers: str) -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()

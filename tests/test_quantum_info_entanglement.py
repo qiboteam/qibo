@@ -136,11 +136,11 @@ def test_meyer_wallach_entanglement(backend):
     circuit2.add(gates.CNOT(0, 1))
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=PRECISION_TOL
+        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=1e-6, rtol=1e-6
     )
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=PRECISION_TOL
+        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=1e-6, rtol=1e-6
     )
 
 

@@ -54,6 +54,7 @@ class PyTorchBackend(NumpyBackend):
         # These functions in Torch works in a different way than numpy or have different names
         self.np.transpose = self.np.permute
         self.np.copy = self.np.clone
+        self.np.power = self.np.pow
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift
@@ -115,7 +116,6 @@ class PyTorchBackend(NumpyBackend):
 
         if copy:
             return x.clone()
-
         return x
 
     def matrix_parametrized(self, gate):
@@ -138,21 +138,29 @@ class PyTorchBackend(NumpyBackend):
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
-        else:
-            if not isinstance(gate.parameters[0], self.np.Tensor):
-                parameters = tuple(
-                    self.cast_parameter(param, trainable=gate.trainable)
-                    for param in gate.parameters
-                )
-                gate.parameters = parameters
-            elif gate.parameters[0].requires_grad:
-                gate.trainable = True
-            else:
-                gate.trainable = False
-            _matrix = _matrix(*gate.parameters)
+            return _matrix
+        if not self.check_parameters(gate.parameters):
+            new_parameters = []
+            for parameter in gate.parameters:
+                if not isinstance(parameter, self.np.Tensor):
+                    parameter = self.cast_parameter(parameter, trainable=gate.trainable)
+                elif parameter.requires_grad:
+                    gate.trainable = True
+                new_parameters.append(parameter)
+            gate.parameters = tuple(new_parameters)
+        _matrix = _matrix(*gate.parameters)
         return _matrix
 
+    def check_parameters(self, parameters):
+        """Check if the parameters are torch tensors."""
+        for parameter in parameters:
+            if not isinstance(parameter, self.np.Tensor):
+                return False
+        return True
+
     def cast_parameter(self, x, trainable):
+        if isinstance(x, int) and trainable:
+            return self.np.tensor(x, dtype=self.np.float64, requires_grad=True)
         return self.np.tensor(x, requires_grad=trainable)
 
     def is_sparse(self, x):

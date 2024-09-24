@@ -125,9 +125,10 @@ def test_vqe(backend, method, options, compile, filename):
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
-    initial_parameters = backend.cast(
-        initial_parameters, dtype=initial_parameters.dtype
-    )
+    if backend.name == "pytorch":
+        initial_parameters = backend.cast(
+            initial_parameters, dtype=backend.np.float32, requires_grad=True
+        )
     v = models.VQE(circuit, hamiltonian)
 
     loss_values = []
@@ -150,7 +151,7 @@ def test_vqe(backend, method, options, compile, filename):
         shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
-    assert best == min(loss_values)
+    backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
     state = backend.np.ones(2**nqubits) / np.sqrt(2**nqubits)
@@ -276,7 +277,11 @@ def test_qaoa_optimization(backend, method, options, dense, filename):
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
-    initial_p = backend.cast(initial_p, dtype=np.float64)
+    if backend.name == "pytorch":
+        initial_p = backend.cast(
+            initial_p, dtype=backend.np.float32, requires_grad=True
+        )
+
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)

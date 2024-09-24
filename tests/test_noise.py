@@ -85,8 +85,8 @@ def test_kraus_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nshots", [10, 100])
 def test_unitary_error(backend, density_matrix, nshots):
-    u1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    u2 = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    u1 = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 0, 1.0], [0, 0, 1.0, 0]])
+    u2 = np.array([[0, 1.0, 0, 0], [1.0, 0, 0, 0], [0, 0, 0, 1.0], [0, 0, 1.0, 0]])
     qubits = (0, 1)
     p1, p2 = (0.3, 0.7)
 
