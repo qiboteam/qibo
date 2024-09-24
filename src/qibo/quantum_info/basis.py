@@ -114,10 +114,7 @@ def pauli_basis(
             del row
     elif vectorize and not sparse:
         basis = [
-            vectorization(
-                backend.cast(matrix, dtype=matrix.dtype), order=order, backend=backend
-            )
-            for matrix in basis_full
+            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
         ]
     else:
         basis = basis_full
