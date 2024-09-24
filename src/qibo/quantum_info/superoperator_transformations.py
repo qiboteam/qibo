@@ -13,6 +13,21 @@ from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 
 
+def _reshape(array, shape, backend):
+    """Generalized reshape for batches, only the last n dimensions of ``array`` are reshaped."""
+    tmp = list(array.shape)
+    tmp[-len(shape) :] = shape
+    return backend.np.reshape(array, tmp)
+
+
+def _transpose(array, backend, indices=None):
+    """Generalized transpose for batches, only the last two dimension of ``array`` are transposed by default, otherwise ``indices`` is used."""
+    if indices is None:
+        indices = list(range(len(array.shape)))
+        indices[-2:] = reversed(indices[-2:])
+    return backend.np.transpose(array, indices)
+
+
 def vectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` in its Liouville representation :math:`|\\rho)`.
 
@@ -26,8 +41,9 @@ def vectorization(state, order: str = "row", backend=None):
     .. math::
         |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
 
+    If ``state`` is a 3-dimensional tensor it is interpreted as a batch of states.
     Args:
-        state: state vector or density matrix.
+        state: state vector, density matrix or batch of those.
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
@@ -40,13 +56,13 @@ def vectorization(state, order: str = "row", backend=None):
         ndarray: Liouville representation of ``state``.
     """
     if (
-        (len(state.shape) >= 3)
+        (len(state.shape) > 3)
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"Object must have dims either (k,), (k, k), (n, 1, k) or (n, k, k), but have dims {state.shape}.",
         )
 
     if not isinstance(order, str):
@@ -64,23 +80,44 @@ def vectorization(state, order: str = "row", backend=None):
 
     if len(state.shape) == 1:
         state = backend.np.outer(state, backend.np.conj(state))
+    elif len(state.shape) == 3 and state.shape[1] == 1:
+        state = backend.np.einsum(
+            "aij,akl->aijkl", backend.np.conj(state), state
+        ).reshape(a.shape[0], a.shape[1], a.shape[1])
 
     if order == "row":
-        state = backend.np.reshape(state, (1, -1))[0]
+        # state = _reshape(state, [batchsize, -1], backend)
+        state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
     elif order == "column":
-        state = state.T
-        state = backend.np.reshape(state, (1, -1))[0]
+        # state = state.T
+        indices = list(range(len(state.shape)))
+        indices[-2:] = reversed(indices[-2:])
+        state = backend.np.transpose(state, indices)
+        state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
+        # state = backend.np.reshape(state, (-1, -1))[0]
+        # state = _reshape(_transpose(state, backend), [1, -1], backend)
     else:
-        dim = len(state)
-        nqubits = int(np.log2(dim))
+        # dim = len(state)
+        nqubits = int(np.log2(state.shape[-1]))
 
-        new_axis = []
+        new_axis = [0]
         for qubit in range(nqubits):
-            new_axis += [qubit + nqubits, qubit]
+            new_axis += [qubit + nqubits + 1, qubit + 1]
 
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        # state = backend.np.reshape(state, [2] * 2 * nqubits)
+        # state = backend.np.transpose(state, new_axis)
+        # state = backend.np.reshape(state, (-1,))
+        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
+        # state = _reshape(state, [2] * 2 * nqubits, backend)
         state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1,))
+        # state = _transpose(state, backend, new_axis)
+        state = backend.np.reshape(state, (-1, 2 ** (nqubits * 2)))
+        # state = backend.np.reshape(state, [batchsize, -1]) if batched else state.ravel()
+        # state = _reshape(state, [1, -1], backend)
+
+    state = backend.np.squeeze(
+        state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
+    )
 
     return state
 

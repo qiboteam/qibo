@@ -106,16 +106,27 @@ def pauli_basis(
 
     if vectorize and sparse:
         basis, indexes = [], []
+        basis = vectorization(basis_full, order=order, backend=backend)
+        indices = backend.np.nonzero(basis)
+        basis = basis[indices].reshape(-1, 2**nqubits)
+        indices = indices[1].reshape(-1, 2**nqubits)
+        indexes = indices
+        """
         for row in basis_full:
             row = vectorization(row, order=order, backend=backend)
             row_indexes = backend.np.flatnonzero(row)
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
+        """
+
     elif vectorize and not sparse:
-        basis = [
-            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
-        ]
+        # basis = [
+        #    vectorization(matrix, order=order, backend=backend) for matrix in basis_full
+        # ]
+        # if order == 'row':
+        #    breakpoint()
+        basis = vectorization(basis_full, order=order, backend=backend)
     else:
         basis = basis_full
 

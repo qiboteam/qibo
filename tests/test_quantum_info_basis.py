@@ -51,6 +51,8 @@ def test_pauli_basis(
         basis_test = list(product(basis_test, repeat=nqubits))
         basis_test = [reduce(np.kron, matrices) for matrices in basis_test]
 
+    # if order == "system" and nqubits ==2 and vectorize:
+    #    breakpoint()
     if vectorize:
         basis_test = [
             vectorization(backend.cast(matrix), order=order, backend=backend)
