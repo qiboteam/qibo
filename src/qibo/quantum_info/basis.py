@@ -92,10 +92,11 @@ def pauli_basis(
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    if backend.name == "tensorflow":
-        einsum = np.einsum
-    else:
-        einsum = backend.np.einsum
+    einsum = (
+        np.einsum 
+        if backend.name == "tensorflow" 
+        else backend.np.einsum
+    )
 
     if nqubits > 1:
         dim = 2**nqubits
