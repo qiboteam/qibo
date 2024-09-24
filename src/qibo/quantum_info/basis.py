@@ -92,40 +92,18 @@ def pauli_basis(
     backend = _check_backend(backend)
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
-    # basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    basis_single = [pauli_labels[label] for label in pauli_order]
+    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
 
     if nqubits > 1:
-        if backend.__class__.__name__ == "NumbaBackend":
-            from numba import njit, prange
-
-            basis_single = list(product(basis_single, repeat=nqubits))
-
-            @njit(fastmath=True, parallel=True, cache=True)
-            def _build_basis(basis_single):
-                rows = [basis_single[0][0] for i in range(len(basis_single))]
-                for i in prange(len(basis_single)):  # pylint: disable=not-an-iterable
-                    row = basis_single[i][0]
-                    for j in range(len(basis_single[i][1:])):
-                        row = np.kron(row, basis_single[i][j])
-                    rows[i] = row
-                return rows
-
-            basis_full = backend.cast(_build_basis(basis_single))
-        else:
-            basis_single = backend.cast(basis_single)
-            dim = 2**nqubits
-            letters = [ascii_letters[3 * i : 3 * (i + 1)] for i in range(nqubits)]
-
-            lhs = ",".join(letters)
-            rhs = "".join([letter for group in zip(*letters) for letter in group])
-            basis_full = backend.np.einsum(
-                f"{lhs}->{rhs}", *[basis_single for _ in range(nqubits)]
-            ).reshape(4**nqubits, dim, dim)
+        dim = 2**nqubits
+        letters = [ascii_letters[3 * i : 3 * (i + 1)] for i in range(nqubits)]
+        lhs = ",".join(letters)
+        rhs = "".join([letter for group in zip(*letters) for letter in group])
+        basis_full = backend.np.einsum(
+            f"{lhs}->{rhs}", *[basis_single for _ in range(nqubits)]
+        ).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
-
-    basis_full = backend.cast(basis_full)
 
     if vectorize and sparse:
         basis, indexes = [], []
