@@ -170,6 +170,31 @@ def test_vectorization(backend, nqubits, order, statevector):
 
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+@pytest.mark.parametrize("statevector", [True, False])
+def test_batched_vectorization(backend, nqubits, order, statevector):
+    if statevector:
+        state = backend.cast(
+            [random_statevector(2**nqubits, 42, backend=backend) for _ in range(3)]
+        ).reshape(3, 1, -1)
+    else:
+        state = backend.cast(
+            [
+                random_density_matrix(2**nqubits, seed=42, backend=backend)
+                for _ in range(3)
+            ]
+        )
+
+    batched_vec = vectorization(state, order=order, backend=backend)
+    for i, element in enumerate(state):
+        if statevector:
+            element = element.ravel()
+        backend.assert_allclose(
+            batched_vec[i], vectorization(element, order=order, backend=backend)
+        )
+
+
+@pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 def test_unvectorization(backend, nqubits, order):
     with pytest.raises(TypeError):

@@ -67,8 +67,8 @@ def vectorization(state, order: str = "row", backend=None):
         state = backend.np.outer(state, backend.np.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
         state = backend.np.einsum(
-            "aij,akl->aijkl", backend.np.conj(state), state
-        ).reshape(state.shape[0], state.shape[1], state.shape[1])
+            "aij,akl->aijkl", state, backend.np.conj(state)
+        ).reshape(state.shape[0], state.shape[-1], state.shape[-1])
 
     if order == "row":
         state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
@@ -82,7 +82,7 @@ def vectorization(state, order: str = "row", backend=None):
 
         new_axis = [0]
         for qubit in range(nqubits):
-            new_axis += [qubit + nqubits + 1, qubit + 1]
+            new_axis.extend([qubit + nqubits + 1, qubit + 1])
 
         state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
         state = backend.np.transpose(state, new_axis)
