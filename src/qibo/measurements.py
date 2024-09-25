@@ -97,7 +97,7 @@ class MeasurementResult:
         self._symbols = None
 
     def __repr__(self):
-        qubits = self.measurement_gate.qubits
+        qubits = self.target_qubits
         nshots = self.nshots
         return f"MeasurementResult(qubits={qubits}, nshots={nshots})"
 
