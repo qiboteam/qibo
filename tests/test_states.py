@@ -13,7 +13,7 @@ def test_measurement_result_repr():
 
 
 def test_measurement_result_error():
-    result = MeasurementResult(gates.M(0))
+    result = MeasurementResult(gates.M(0).qubits)
     with pytest.raises(RuntimeError):
         samples = result.samples()
 

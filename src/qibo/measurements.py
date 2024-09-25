@@ -86,8 +86,8 @@ class MeasurementResult:
             to use for calculations.
     """
 
-    def __init__(self, gate):
-        self.measurement_gate = gate
+    def __init__(self, qubits):
+        self.target_qubits = qubits
         self.circuit = None
 
         self._samples = None
@@ -115,7 +115,7 @@ class MeasurementResult:
 
     def add_shot(self, probs, backend=None):
         backend = _check_backend(backend)
-        qubits = sorted(self.measurement_gate.target_qubits)
+        qubits = sorted(self.target_qubits)
         shot = backend.sample_shots(probs, 1)
         bshot = backend.samples_to_binary(shot, len(qubits))
         if self._samples:
@@ -153,7 +153,7 @@ class MeasurementResult:
         These symbols are useful for conditioning parametrized gates on measurement outcomes.
         """
         if self._symbols is None:
-            qubits = self.measurement_gate.target_qubits
+            qubits = self.target_qubits
             self._symbols = [MeasurementSymbol(i, self) for i in range(len(qubits))]
 
         return self._symbols
@@ -186,7 +186,7 @@ class MeasurementResult:
         if binary:
             return self._samples
 
-        qubits = self.measurement_gate.target_qubits
+        qubits = self.target_qubits
         return backend.samples_to_decimal(self._samples, len(qubits))
 
     def frequencies(self, binary=True, registers=False, backend=None):
@@ -213,7 +213,7 @@ class MeasurementResult:
                 self.samples(binary=False)
             )
         if binary:
-            qubits = self.measurement_gate.target_qubits
+            qubits = self.target_qubits
             return frequencies_to_binary(self._frequencies, len(qubits))
 
         return self._frequencies

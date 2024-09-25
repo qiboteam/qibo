@@ -478,7 +478,7 @@ def test_measurementsymbol_pickling(backend):
 
 def test_measurementresult_nshots(backend):
     gate = gates.M(*range(3))
-    result = MeasurementResult(gate)
+    result = MeasurementResult(gate.qubits)
     # nshots starting from samples
     nshots = 10
     samples = backend.cast(
@@ -487,7 +487,7 @@ def test_measurementresult_nshots(backend):
     result.register_samples(samples)
     assert result.nshots == nshots
     # nshots starting from frequencies
-    result = MeasurementResult(gate)
+    result = MeasurementResult(gate.qubits)
     states, counts = np.unique(samples, axis=0, return_counts=True)
     to_str = lambda x: [str(item) for item in x]
     states = ["".join(to_str(s)) for s in states.tolist()]
