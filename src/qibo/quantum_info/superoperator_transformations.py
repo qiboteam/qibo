@@ -13,21 +13,6 @@ from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 
 
-def _reshape(array, shape, backend):
-    """Generalized reshape for batches, only the last n dimensions of ``array`` are reshaped."""
-    tmp = list(array.shape)
-    tmp[-len(shape) :] = shape
-    return backend.np.reshape(array, tmp)
-
-
-def _transpose(array, backend, indices=None):
-    """Generalized transpose for batches, only the last two dimension of ``array`` are transposed by default, otherwise ``indices`` is used."""
-    if indices is None:
-        indices = list(range(len(array.shape)))
-        indices[-2:] = reversed(indices[-2:])
-    return backend.np.transpose(array, indices)
-
-
 def vectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` in its Liouville representation :math:`|\\rho)`.
 
@@ -86,34 +71,22 @@ def vectorization(state, order: str = "row", backend=None):
         ).reshape(a.shape[0], a.shape[1], a.shape[1])
 
     if order == "row":
-        # state = _reshape(state, [batchsize, -1], backend)
         state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
     elif order == "column":
-        # state = state.T
         indices = list(range(len(state.shape)))
         indices[-2:] = reversed(indices[-2:])
         state = backend.np.transpose(state, indices)
         state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
-        # state = backend.np.reshape(state, (-1, -1))[0]
-        # state = _reshape(_transpose(state, backend), [1, -1], backend)
     else:
-        # dim = len(state)
         nqubits = int(np.log2(state.shape[-1]))
 
         new_axis = [0]
         for qubit in range(nqubits):
             new_axis += [qubit + nqubits + 1, qubit + 1]
 
-        # state = backend.np.reshape(state, [2] * 2 * nqubits)
-        # state = backend.np.transpose(state, new_axis)
-        # state = backend.np.reshape(state, (-1,))
         state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
-        # state = _reshape(state, [2] * 2 * nqubits, backend)
         state = backend.np.transpose(state, new_axis)
-        # state = _transpose(state, backend, new_axis)
         state = backend.np.reshape(state, (-1, 2 ** (nqubits * 2)))
-        # state = backend.np.reshape(state, [batchsize, -1]) if batched else state.ravel()
-        # state = _reshape(state, [1, -1], backend)
 
     state = backend.np.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)

@@ -102,43 +102,31 @@ def pauli_basis(
         inputs = [item for pair in zip(operands, input_indices) for item in pair]
         basis_full = einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
     else:
+        dim = 2
         basis_full = basis_single
 
     if vectorize and sparse:
-        basis, indexes = [], []
+        if backend.name == "tensorflow":
+            nonzero = np.nonzero
+        elif backend.name == "pytorch":
+            nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
+        else:
+            nonzero = backend.np.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
-        indices = backend.np.nonzero(basis)
-        basis = basis[indices].reshape(-1, 2**nqubits)
-        indices = indices[1].reshape(-1, 2**nqubits)
-        indexes = indices
-        """
-        for row in basis_full:
-            row = vectorization(row, order=order, backend=backend)
-            row_indexes = backend.np.flatnonzero(row)
-            indexes.append(row_indexes)
-            basis.append(row[row_indexes])
-            del row
-        """
+        indices = nonzero(basis)
+        basis = basis[indices].reshape(-1, dim)
+        indices = indices[1].reshape(-1, dim)
 
     elif vectorize and not sparse:
-        # basis = [
-        #    vectorization(matrix, order=order, backend=backend) for matrix in basis_full
-        # ]
-        # if order == 'row':
-        #    breakpoint()
         basis = vectorization(basis_full, order=order, backend=backend)
     else:
         basis = basis_full
-
-    basis = backend.cast(basis, dtype=basis[0].dtype)
 
     if normalize:
         basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = backend.cast(indexes, dtype=indexes[0][0].dtype)
-
-        return basis, indexes
+        return basis, indices
 
     return basis
 
