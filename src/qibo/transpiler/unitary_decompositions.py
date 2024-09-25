@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import _find_backend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 magic_basis = np.array(
@@ -286,7 +286,7 @@ def two_qubit_decomposition(q0, q1, unitary, backend=None):
         (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
     if backend is None:
-        backend = _find_backend(unitary)
+        backend = _check_backend(backend)
 
     ud_diag = to_bell_diagonal(unitary, backend=backend)
     ud = None

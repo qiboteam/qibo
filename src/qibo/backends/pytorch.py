@@ -128,10 +128,7 @@ class PyTorchBackend(NumpyBackend):
                     gate.init_kwargs[parameter] = self.cast_parameter(
                         gate.init_kwargs[parameter], trainable=gate.trainable
                     )
-                elif gate.init_kwargs[parameter].requires_grad:
-                    gate.trainable = True
-                else:
-                    gate.trainable = False
+
             _matrix = _matrix(
                 qubits_in=gate.init_args[0],
                 qubits_out=gate.init_args[1],

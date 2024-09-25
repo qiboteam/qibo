@@ -1,7 +1,7 @@
 from enum import Flag, auto
 
 from qibo import gates
-from qibo.backends import _find_backend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
@@ -170,7 +170,7 @@ def translate_gate(
         return gate
 
     if backend is None:
-        backend = _find_backend(gate.matrix())
+        backend = _check_backend(backend)
 
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)
