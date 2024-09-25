@@ -68,7 +68,7 @@ def vectorization(state, order: str = "row", backend=None):
     elif len(state.shape) == 3 and state.shape[1] == 1:
         state = backend.np.einsum(
             "aij,akl->aijkl", backend.np.conj(state), state
-        ).reshape(a.shape[0], a.shape[1], a.shape[1])
+        ).reshape(state.shape[0], state.shape[1], state.shape[1])
 
     if order == "row":
         state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
