@@ -1,7 +1,6 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 magic_basis = np.array(
@@ -274,19 +273,18 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend):
     ]
 
 
-def two_qubit_decomposition(q0, q1, unitary, backend=None):
+def two_qubit_decomposition(q0, q1, unitary, backend):
     """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
 
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
+        backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
 
     Returns:
         (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
-    if backend is None:
-        backend = _check_backend(backend)
 
     ud_diag = to_bell_diagonal(unitary, backend=backend)
     ud = None

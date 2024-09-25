@@ -160,6 +160,8 @@ def translate_gate(
     Returns:
         list: List of native gates that decompose the input gate.
     """
+    if backend is None:
+        backend = _check_backend(backend)
 
     if isinstance(gate, (gates.I, gates.Align)):
         return gate
@@ -168,9 +170,6 @@ def translate_gate(
         gate.basis_gates = len(gate.basis_gates) * [gates.Z]
         gate.basis = []
         return gate
-
-    if backend is None:
-        backend = _check_backend(backend)
 
     if len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates, backend)
