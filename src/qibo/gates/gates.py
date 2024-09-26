@@ -507,7 +507,7 @@ class Align(ParametrizedGate):
     """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
 
     .. note::
-        For this gate, the trainable parameter is by default set to ``False``.
+        For this gate, the ``trainable`` parameter is by default set to ``False``.
 
     Args:
         q (int): The qubit ID.
