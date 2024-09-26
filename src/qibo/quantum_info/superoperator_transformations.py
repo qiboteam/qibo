@@ -47,7 +47,7 @@ def vectorization(state, order: str = "row", backend=None):
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,), (k, k), (n, 1, k) or (n, k, k), but have dims {state.shape}.",
+            f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}.",
         )
 
     if not isinstance(order, str):
