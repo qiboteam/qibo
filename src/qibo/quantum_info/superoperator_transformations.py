@@ -86,7 +86,7 @@ def vectorization(state, order: str = "row", backend=None):
 
         state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
         state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1, 2 ** (nqubits * 2)))
+        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
 
     state = backend.np.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
