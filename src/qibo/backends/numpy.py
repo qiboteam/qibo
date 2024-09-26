@@ -438,7 +438,6 @@ class NumpyBackend(Backend):
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
-
                 else:
                     state = self.cast(initial_state)
 
