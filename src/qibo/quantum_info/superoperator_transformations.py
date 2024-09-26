@@ -28,7 +28,7 @@ def vectorization(state, order: str = "row", backend=None):
 
     If ``state`` is a 3-dimensional tensor it is interpreted as a batch of states.
     Args:
-        state: state vector, density matrix or batch of those.
+        state: statevector, density matrix, an array of statevectors, or an array of density matrices.
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
