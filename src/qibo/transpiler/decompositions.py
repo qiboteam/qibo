@@ -45,15 +45,17 @@ class GateDecompositions:
 
 
 def _u3_to_gpi2(t, p, l):
-    """Decompose a U3 gate into GPI2 gates, the decomposition is optimized to use the minimum number of gates..
+    """Decompose a :class:`qibo.gates.U3` gate into :class:`qibo.gates.GPI2` gates.
+
+    The decomposition is optimized to use the minimum number of gates.
 
     Args:
-        t (float): theta parameter of U3 gate.
-        p (float): phi parameter of U3 gate.
-        l (float): lambda parameter of U3 gate.
+        t (float): first parameter of :class:`qibo.gates.U3` gate.
+        p (float): second parameter of :class:`qibo.gates.U3` gate.
+        l (float): third parameter of :class:`qibo.gates.U3` gate.
 
     Returns:
-        decomposition (list): list of native gates that decompose the U3 gate.
+        list: Native gates that decompose the :class:`qibo.gates.U3` gate.
     """
     decomposition = []
     if l != 0.0:
