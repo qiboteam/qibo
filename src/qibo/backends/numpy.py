@@ -429,7 +429,6 @@ class NumpyBackend(Backend):
             if circuit.density_matrix:
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
-
                 else:
                     state = self.cast(initial_state)
 
