@@ -234,7 +234,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
-            hermitian = check_hermitian is False or _check_hermitian_or_not_gpu(
+            hermitian = check_hermitian is False or _check_hermitian(
                 state, backend=backend
             )
             # using eigh since rho is supposed to be Hermitian
@@ -812,10 +812,8 @@ def frame_potential(
     return potential / samples**2
 
 
-def _check_hermitian_or_not_gpu(matrix, backend=None):
-    """Checks if a given matrix is Hermitian and whether the backend is neither
-    :class:`qibojit.backends.CupyBackend` nor
-    :class:`qibojit.backends.CuQuantumBackend`.
+def _check_hermitian(matrix, backend=None):
+    """Checks if a given matrix is Hermitian.
 
     Args:
         matrix: input array.
@@ -825,10 +823,6 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
 
     Returns:
         bool: whether the matrix is Hermitian.
-
-    Raises:
-        NotImplementedError: If `matrix` is not Hermitian and
-        `backend` is not :class:`qibojit.backends.CupyBackend`
     """
     backend = _check_backend(backend)
 
@@ -837,15 +831,5 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     )
 
     hermitian = bool(float(norm) <= PRECISION_TOL)
-
-    if hermitian is False and backend.__class__.__name__ in [
-        "CupyBackend",
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            "GPU backends do not support `np.linalg.eig` "
-            + "or `np.linalg.eigvals` for non-Hermitian matrices.",
-        )
 
     return hermitian
