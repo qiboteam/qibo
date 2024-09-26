@@ -63,20 +63,22 @@ def vectorization(state, order: str = "row", backend=None):
 
     backend = _check_backend(backend)
 
+    dims = state.shape[-1]
+
     if len(state.shape) == 1:
         state = backend.np.outer(state, backend.np.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
         state = backend.np.einsum(
             "aij,akl->aijkl", state, backend.np.conj(state)
-        ).reshape(state.shape[0], state.shape[-1], state.shape[-1])
+        ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
+        state = backend.np.reshape(state, (-1, dims**2))
     elif order == "column":
         indices = list(range(len(state.shape)))
         indices[-2:] = reversed(indices[-2:])
         state = backend.np.transpose(state, indices)
-        state = backend.np.reshape(state, (-1, state.shape[-1] ** 2))
+        state = backend.np.reshape(state, (-1, dims**2))
     else:
         nqubits = int(np.log2(state.shape[-1]))
 
