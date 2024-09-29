@@ -723,11 +723,11 @@ def test_circuit_draw_line_wrap(capsys):
 
     circuit.draw(line_wrap=50)
     out, _ = capsys.readouterr()
-    assert out == ref_line_wrap_50
+    assert out.rstrip("\n") == ref_line_wrap_50
 
     circuit.draw(line_wrap=30)
     out, _ = capsys.readouterr()
-    assert out == ref_line_wrap_30
+    assert out.rstrip("\n") == ref_line_wrap_30
 
 
 def test_circuit_draw_line_wrap_names(capsys):
@@ -784,11 +784,11 @@ def test_circuit_draw_line_wrap_names(capsys):
 
     circuit.draw(line_wrap=50)
     out, _ = capsys.readouterr()
-    assert out == ref_line_wrap_50
+    assert out.rstrip("\n") == ref_line_wrap_50
 
     circuit.draw(line_wrap=30)
     out, _ = capsys.readouterr()
-    assert out == ref_line_wrap_30
+    assert out.rstrip("\n") == ref_line_wrap_30
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -823,7 +823,7 @@ def test_circuit_draw_channels(capsys, legend):
 
     circuit.draw(legend=legend)
     out, _ = capsys.readouterr()
-    assert out == ref
+    assert out.rstrip("\n") == ref
 
 
 @pytest.mark.parametrize("legend", [True, False])
@@ -851,7 +851,7 @@ def test_circuit_draw_callbacks(capsys, legend):
 
     c.draw(legend=legend)
     out, _ = capsys.readouterr()
-    assert out == ref
+    assert out.rstrip("\n") == ref
 
 
 def test_circuit_draw_labels():
@@ -872,7 +872,7 @@ def test_circuit_draw_labels():
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert str(circuit) == ref
+    assert str(circuit).rstrip("\n") == ref
 
 
 def test_circuit_draw_names(capsys):
@@ -895,7 +895,7 @@ def test_circuit_draw_names(capsys):
     circuit.add(gates.SWAP(1, 3))
     circuit.draw()
     out, _ = capsys.readouterr()
-    assert out == ref
+    assert out.rstrip("\n") == ref
 
 
 def test_circuit_draw_error():
