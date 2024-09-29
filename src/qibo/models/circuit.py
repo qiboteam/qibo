@@ -1377,5 +1377,4 @@ class Circuit:
         Returns:
             String containing text circuit diagram.
         """
-        sys.stdout.write(self.diagram(line_wrap, legend))
-        sys.stdout.flush()
+        sys.stdout.write(self.diagram(line_wrap, legend) + "\n")
