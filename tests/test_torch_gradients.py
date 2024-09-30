@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
-import tensorflow as tf
-import torch
 
 import qibo
 from qibo import gates, models
+from qibo.backends import PyTorchBackend, TensorflowBackend
 
 
 def test_torch_gradients():
     qibo.set_backend("pytorch")
+    torch = PyTorchBackend().np
     torch.manual_seed(42)
     nepochs = 1001
     optimizer = torch.optim.Adam
@@ -38,6 +38,7 @@ def test_torch_gradients():
 
 def test_torch_tensorflow_gradients():
     qibo.set_backend("pytorch")
+    torch = PyTorchBackend().np
     target_state = torch.tensor([0.0, 1.0], dtype=torch.complex128)
     param = torch.tensor([0.1], dtype=torch.float64, requires_grad=True)
     c = models.Circuit(1)
@@ -55,6 +56,7 @@ def test_torch_tensorflow_gradients():
     torch_param = param.clone().item()
 
     qibo.set_backend("tensorflow")
+    tf = TensorflowBackend().tf
 
     target_state = tf.constant([0.0, 1.0], dtype=tf.complex128)
     param = tf.Variable([0.1], dtype=tf.float64)
