@@ -1385,26 +1385,4 @@ class Circuit:
         Returns:
             String containing text circuit diagram.
         """
-        qibo.config.log.warning(
-            "Starting on qibo 0.2.13, ``Circuit.draw`` will work in-place. "
-            + "The in-place method is currently implemented as ``Circuit.display``, but "
-            + "will be renamed as ``Circuit.draw`` on release 0.2.13. "
-            + "In release 0.2.12, the in-place display of circuits is accessible as "
-            + "``Circuit.display``."
-        )
-        return self.diagram(line_wrap, legend)
-
-    def display(self, line_wrap: int = 70, legend: bool = False):
-        """Draw text circuit using unicode symbols.
-
-        Args:
-            line_wrap (int, optional): maximum number of characters per line. This option
-                split the circuit text diagram in chunks of line_wrap characters.
-                Defaults to :math:`70`.
-            legend (bool, optional): If ``True`` prints a legend below the circuit for
-                callbacks and channels. Defaults to ``False``.
-
-        Returns:
-            String containing text circuit diagram.
-        """
-        sys.stdout.write(self.diagram(line_wrap, legend))
+        sys.stdout.write(self.diagram(line_wrap, legend) + "\n")

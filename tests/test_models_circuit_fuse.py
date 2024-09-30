@@ -236,4 +236,4 @@ def test_fused_gate_draw():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     circuit = circuit.fuse()
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
