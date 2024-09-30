@@ -398,8 +398,7 @@ class NumpyBackend(Backend):
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
-            if initial_state.dtype != self.dtype:
-                initial_state = self.cast(initial_state)
+            initial_state = self.cast(initial_state)
             valid_shape = (
                 2 * (2**circuit.nqubits,)
                 if circuit.density_matrix

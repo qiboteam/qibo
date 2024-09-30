@@ -46,6 +46,8 @@ class PyTorchBackend(NumpyBackend):
 
         # Default data type used for the gate matrices is complex128
         self.dtype = self._torch_dtype(self.dtype)
+        # Default data type used for the real gate parameters is float64
+        self.parameter_dtype = self._torch_dtype("float64")
         self.matrices = TorchMatrices(self.dtype)
         self.device = self.np.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
@@ -156,8 +158,12 @@ class PyTorchBackend(NumpyBackend):
             trainable (bool): If ``True``, the tensor requires gradient.
         """
         if isinstance(x, int) and trainable:
-            return self.np.tensor(x, dtype=self.np.float64, requires_grad=True)
-        return self.np.tensor(x, requires_grad=trainable)
+            return self.np.tensor(x, dtype=self.parameter_dtype, requires_grad=True)
+        if isinstance(x, float):
+            return self.np.tensor(
+                x, dtype=self.parameter_dtype, requires_grad=trainable
+            )
+        return self.np.tensor(x, dtype=self.dtype, requires_grad=trainable)
 
     def is_sparse(self, x):
         if isinstance(x, self.np.Tensor):
