@@ -160,8 +160,7 @@ def translate_gate(
     Returns:
         list: List of native gates that decompose the input gate.
     """
-    if backend is None:
-        backend = _check_backend(backend)
+    backend = _check_backend(backend)
 
     if isinstance(gate, (gates.I, gates.Align)):
         return gate

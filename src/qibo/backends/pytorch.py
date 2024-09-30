@@ -136,7 +136,7 @@ class PyTorchBackend(NumpyBackend):
                 phi=gate.init_kwargs["phi"],
             )
             return _matrix
-        if not self.check_parameters(gate.parameters):
+        else:
             new_parameters = []
             for parameter in gate.parameters:
                 if not isinstance(parameter, self.np.Tensor):
@@ -148,14 +148,13 @@ class PyTorchBackend(NumpyBackend):
         _matrix = _matrix(*gate.parameters)
         return _matrix
 
-    def check_parameters(self, parameters):
-        """Check if the parameters are torch tensors."""
-        for parameter in parameters:
-            if not isinstance(parameter, self.np.Tensor):
-                return False
-        return True
-
     def cast_parameter(self, x, trainable):
+        """Cast a gate parameter to a torch tensor.
+
+        Args:
+            x (Union[int, float, complex]): Parameter to be casted.
+            trainable (bool): If ``True``, the tensor requires gradient.
+        """
         if isinstance(x, int) and trainable:
             return self.np.tensor(x, dtype=self.np.float64, requires_grad=True)
         return self.np.tensor(x, requires_grad=trainable)

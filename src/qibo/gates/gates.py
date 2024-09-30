@@ -2638,7 +2638,7 @@ class Unitary(ParametrizedGate):
 def _check_engine(array):
     """Check if the array is a numpy or torch tensor and return the corresponding library."""
     if (array.__class__.__name__ == "Tensor") or (
-        type(array) is tuple and array[0].__class__.__name__ == "Tensor"
+        isinstance(array, tuple) and array[0].__class__.__name__ == "Tensor"
     ):
         import torch  # pylint: disable=C0415
 

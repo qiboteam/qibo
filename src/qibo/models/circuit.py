@@ -1143,7 +1143,7 @@ class Circuit:
         """Convert circuit to QASM.
 
         .. note::
-            This method doesn't support multi-controlled gates and gates with torch Tensors parameters.
+            This method does not support multi-controlled gates and gates with ``torch.Tensor`` as parameters.
 
         Args:
             filename (str): The filename where the code is saved.
@@ -1177,12 +1177,11 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if isinstance(gate, gates.ParametrizedGate):
-                for x in gate.parameters:
-                    if x.__class__.__name__ == "Tensor":
-                        raise_error(
-                            ValueError,
-                            "OpenQASM does not support gates with torch Tensors parameters.",
-                        )
+                if any(x.__class__.__name__ == "Tensor" for x in gate.parameters):
+                    raise_error(
+                        ValueError,
+                        "OpenQASM does not support gates with torch Tensors parameters.",
+                    )
                 params = (str(x) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
