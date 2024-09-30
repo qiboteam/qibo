@@ -247,7 +247,7 @@ class M(Gate):
                 c = models.Circuit(3)
                 c.add(measurement.on_qubits({0: 0, 1: 2}))
                 assert c.queue[0].result is measurement.result
-                print(c.draw())
+                c.draw()
             .. testoutput::
 
                 q0: ─M─
