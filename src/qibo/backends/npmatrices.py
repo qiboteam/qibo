@@ -160,24 +160,28 @@ class NumpyMatrices:
 
     @cached_property
     def CSX(self):
+        a = (1 + 1j) / 2
+        b = (1 - 1j) / 2
         return self._cast(
             [
                 [1 + 0j, 0, 0, 0],
                 [0, 1 + 0j, 0, 0],
-                [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
-                [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
+                [0, 0, a, b],
+                [0, 0, b, a],
             ],
             dtype=self.dtype,
         )
 
     @cached_property
     def CSXDG(self):
+        a = (1 + 1j) / 2
+        b = (1 - 1j) / 2
         return self._cast(
             [
                 [1 + 0j, 0, 0, 0],
                 [0, 1 + 0j, 0, 0],
-                [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
-                [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
+                [0, 0, b, a],
+                [0, 0, a, b],
             ],
             dtype=self.dtype,
         )

@@ -133,21 +133,17 @@ def test_parametrized_gate_cirq(backend):
     c1.add(gates.RY(1, 0.1234))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    if backend.name == "pytorch":
-        with pytest.raises(ValueError):
-            c2 = circuit_from_qasm(c1.to_qasm())
-    else:
-        c2 = circuit_from_qasm(c1.to_qasm())
-        c2depth = len(cirq.Circuit(c2.all_operations()))
-        assert c1.depth == c2depth
-        final_state_c2 = (
-            cirq.Simulator().simulate(c2).final_state_vector
-        )  # pylint: disable=no-member
-        backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    c2 = circuit_from_qasm(c1.to_qasm())
+    c2depth = len(cirq.Circuit(c2.all_operations()))
+    assert c1.depth == c2depth
+    final_state_c2 = (
+        cirq.Simulator().simulate(c2).final_state_vector
+    )  # pylint: disable=no-member
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
-        c3 = Circuit.from_qasm(c2.to_qasm())
-        final_state_c3 = backend.execute_circuit(c3).state()
-        backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = backend.execute_circuit(c3).state()
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_cu1_cirq():
@@ -167,31 +163,27 @@ def test_ugates_cirq(backend):
     c1.add(gates.U2(2, 0.5, 0.6))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    if backend.name == "pytorch":
-        with pytest.raises(ValueError):
-            c2 = circuit_from_qasm(c1.to_qasm())
-    else:
+    c2 = circuit_from_qasm(c1.to_qasm())
+    c2depth = len(cirq.Circuit(c2.all_operations()))
+    assert c1.depth == c2depth
+    final_state_c2 = (
+        cirq.Simulator().simulate(c2).final_state_vector
+    )  # pylint: disable=no-member
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    assert c3.depth == c2depth
+    final_state_c3 = backend.execute_circuit(c3).state()
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+
+    c1 = Circuit(3)
+    c1.add(gates.RX(0, 0.1))
+    c1.add(gates.RZ(1, 0.4))
+    c1.add(gates.U2(2, 0.5, 0.6))
+    c1.add(gates.CU3(2, 1, 0.2, 0.3, 0.4))
+    # catches unknown gate "cu3"
+    with pytest.raises(exception.QasmException):
         c2 = circuit_from_qasm(c1.to_qasm())
-        c2depth = len(cirq.Circuit(c2.all_operations()))
-        assert c1.depth == c2depth
-        final_state_c2 = (
-            cirq.Simulator().simulate(c2).final_state_vector
-        )  # pylint: disable=no-member
-        backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
-
-        c3 = Circuit.from_qasm(c2.to_qasm())
-        assert c3.depth == c2depth
-        final_state_c3 = backend.execute_circuit(c3).state()
-        backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
-
-        c1 = Circuit(3)
-        c1.add(gates.RX(0, 0.1))
-        c1.add(gates.RZ(1, 0.4))
-        c1.add(gates.U2(2, 0.5, 0.6))
-        c1.add(gates.CU3(2, 1, 0.2, 0.3, 0.4))
-        # catches unknown gate "cu3"
-        with pytest.raises(exception.QasmException):
-            c2 = circuit_from_qasm(c1.to_qasm())
 
 
 def test_crotations_cirq():
