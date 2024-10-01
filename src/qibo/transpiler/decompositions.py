@@ -17,18 +17,25 @@ class GateDecompositions:
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
 
+    def _check_instance(self, gate, backend=None):
+        special_gates = (
+            gates.FusedGate,
+            gates.Unitary,
+            gates.GeneralizedfSim,
+            gates.fSim,
+        )
+        decomposition = self.decompositions[gate.__class__]
+        if gate.parameters:
+            decomposition = (
+                decomposition(gate, backend)
+                if isinstance(gate, special_gates)
+                else decomposition(gate)
+            )
+        return decomposition
+
     def count_2q(self, gate, backend):
         """Count the number of two-qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
-            if isinstance(
-                gate,
-                (gates.FusedGate, gates.Unitary, gates.GeneralizedfSim, gates.fSim),
-            ):
-                decomposition = self.decompositions[gate.__class__](gate, backend)
-            else:
-                decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
+        decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) > 1))
 
     def count_1q(self, gate, backend):
