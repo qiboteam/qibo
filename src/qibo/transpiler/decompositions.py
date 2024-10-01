@@ -40,29 +40,12 @@ class GateDecompositions:
 
     def count_1q(self, gate, backend):
         """Count the number of single qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
-            if isinstance(
-                gate,
-                (gates.FusedGate, gates.Unitary, gates.GeneralizedfSim, gates.fSim),
-            ):
-                decomposition = self.decompositions[gate.__class__](gate, backend)
-            else:
-                decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
+        decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) == 1))
 
     def __call__(self, gate, backend=None):
         """Decompose a gate."""
-        decomposition = self.decompositions[gate.__class__]
-        if callable(decomposition):
-            if isinstance(
-                gate,
-                (gates.FusedGate, gates.Unitary, gates.GeneralizedfSim, gates.fSim),
-            ):
-                decomposition = decomposition(gate, backend)
-            else:
-                decomposition = decomposition(gate)
+        decomposition = self._check_instance(gate, backend)
         return [
             g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
             for g in decomposition
