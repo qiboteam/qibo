@@ -7,10 +7,10 @@ import numpy as np
 
 import qibo
 from qibo import gates
+from qibo.backends import _Global
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
-from qibo.backends import _Global
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -1111,9 +1111,7 @@ class Circuit:
                 transpiled_circuit, initial_state, nshots
             )
         else:
-            return backend.execute_circuit(
-                transpiled_circuit, initial_state, nshots
-            )
+            return backend.execute_circuit(transpiled_circuit, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""

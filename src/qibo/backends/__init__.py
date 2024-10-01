@@ -84,7 +84,7 @@ class _Global:
             return cls._backend
         cls._backend = cls._create_backend()
         return cls._backend
-    
+
     @classmethod
     def _create_backend(cls):
         backend_env = os.environ.get("QIBO_BACKEND")
@@ -100,7 +100,7 @@ class _Global:
                     break
                 except (ModuleNotFoundError, ImportError):
                     pass
-        
+
         if backend is None:
             raise_error(RuntimeError, "No backends available.")
         return backend
@@ -121,7 +121,7 @@ class _Global:
         return cls._transpiler
 
     @classmethod
-    def set_transpiler(cls, transpiler): 
+    def set_transpiler(cls, transpiler):
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
 
@@ -177,6 +177,7 @@ def get_backend(as_string=False):
         return str(_Global.backend())
     return _Global.backend()
 
+
 def set_backend(backend, **kwargs):
     """Set the current backend.
 
@@ -185,6 +186,7 @@ def set_backend(backend, **kwargs):
         kwargs (dict): Additional arguments for the backend.
     """
     _Global.set_backend(backend, **kwargs)
+
 
 def get_transpiler(as_string=False):
     """Get the current transpiler.
@@ -195,6 +197,7 @@ def get_transpiler(as_string=False):
     if as_string:
         return str(_Global.get_transpiler())
     return _Global.get_transpiler()
+
 
 def set_transpiler(transpiler):
     """Set the current transpiler.
