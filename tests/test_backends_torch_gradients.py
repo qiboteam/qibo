@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-import qibo
 from qibo import gates, models
+from qibo.quantum_info import infidelity
 
 
 def test_torch_gradients(backend):
@@ -19,10 +19,8 @@ def test_torch_gradients(backend):
     c.add(gates.RY(0, params[1]))
 
     initial_params = params.clone()
-    initial_loss = 1 - backend.np.abs(
-        backend.np.sum(
-            backend.np.conj(target_state) * backend.execute_circuit(c).state()
-        )
+    initial_loss = infidelity(
+        target_state, backend.execute_circuit(c).state(), backend=backend
     )
 
     optimizer = optimizer([params])
@@ -30,10 +28,7 @@ def test_torch_gradients(backend):
         optimizer.zero_grad()
         c.set_parameters(params)
         final_state = backend.execute_circuit(c).state()
-        fidelity = backend.np.abs(
-            backend.np.sum(backend.np.conj(target_state) * final_state)
-        )
-        loss = 1 - fidelity
+        loss = infidelity(target_state, final_state, backend=backend)
         loss.backward()
         optimizer.step()
 
@@ -60,10 +55,7 @@ def test_torch_tensorflow_gradients(backend):
     optimizer = optimizer([param], lr=1)
     c.set_parameters(param)
     final_state = backend.execute_circuit(c).state()
-    fidelity = backend.np.abs(
-        backend.np.sum(backend.np.conj(target_state) * final_state)
-    )
-    loss = 1 - fidelity
+    loss = infidelity(target_state, final_state, backend=backend)
     loss.backward()
     torch_param_grad = param.grad.clone().item()
     optimizer.step()
@@ -81,8 +73,7 @@ def test_torch_tensorflow_gradients(backend):
     with tf.GradientTape() as tape:
         c.set_parameters(param)
         final_state = tf_backend.execute_circuit(c).state()
-        fidelity = tf.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
-        loss = 1 - fidelity
+        loss = infidelity(target_state, final_state, backend=tf_backend)
 
     grads = tape.gradient(loss, [param])
     tf_param_grad = grads[0].numpy()[0]
