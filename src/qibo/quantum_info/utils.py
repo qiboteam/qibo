@@ -280,7 +280,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        (float): Hellinger fidelity.
+        float: Hellinger fidelity.
 
     """
     backend = _check_backend(backend)
@@ -317,7 +317,7 @@ def hellinger_shot_error(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        (float): Hellinger fidelity error.
+        float: Hellinger fidelity error.
 
     """
     backend = _check_backend(backend)
@@ -337,6 +337,58 @@ def hellinger_shot_error(
     )
 
     return hellinger_error
+
+
+def total_variation_distance(
+    prob_dist_p, prob_dist_q, validate: bool = False, backend=None
+):
+    """Calculate the total variation distance between two discrete probability distributions.
+
+    For probabilities :math:`p` and :math:`q`, the total variation distance is defined as
+
+    .. math::
+        \\operatorname{TVD}(p, \\, q) = \\frac{1}{2} \\, \\|p - q\\|_{1}
+            = \\frac{1}{2} \\, \\sum_{x} \\, \\left|p(x) - q(x)\\right| \\, ,
+
+    where :math:`\\|\\cdot\\|_{1}` detones the :math:`\\ell_{1}`-norm.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): if ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Total variation distance measure.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    if validate:
+        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+            any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+        ):
+            raise_error(
+                ValueError,
+                "All elements of the probability array must be between 0. and 1..",
+            )
+        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "First probability array must sum to 1.")
+
+        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "Second probability array must sum to 1.")
+
+    tvd = backend.calculate_norm(prob_dist_p - prob_dist_q, order=1)
+
+    return tvd / 2
 
 
 def haar_integral(

@@ -1,15 +1,15 @@
 import numpy as np
 import pytest
-from scipy.linalg import sqrtm
 
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
-    _matrix_power,
+    classical_mutual_information,
     classical_relative_entropy,
     classical_relative_renyi_entropy,
     classical_renyi_entropy,
     classical_tsallis_entropy,
     entanglement_entropy,
+    mutual_information,
     relative_renyi_entropy,
     relative_von_neumann_entropy,
     renyi_entropy,
@@ -17,6 +17,7 @@ from qibo.quantum_info.entropies import (
     tsallis_entropy,
     von_neumann_entropy,
 )
+from qibo.quantum_info.linalg_operations import matrix_power
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
     random_statevector,
@@ -123,6 +124,27 @@ def test_classical_relative_entropy(backend, base, kind):
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
 
     backend.assert_allclose(divergence, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_classical_mutual_information(backend, base):
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    joint_dist = np.kron(prob_p, prob_q)
+    joint_dist /= np.sum(joint_dist)
+
+    prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
+    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    joint_dist = backend.cast(joint_dist, dtype=joint_dist.dtype)
+
+    backend.assert_allclose(
+        classical_mutual_information(joint_dist, prob_p, prob_q, base, backend),
+        0.0,
+        atol=1e-10,
+    )
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -499,6 +521,25 @@ def test_relative_entropy(backend, base, check_hermitian):
         )
 
 
+@pytest.mark.parametrize("check_hermitian", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_mutual_information(backend, base, check_hermitian):
+    with pytest.raises(ValueError):
+        state = np.ones((3, 3))
+        state = backend.cast(state, dtype=state.dtype)
+        test = mutual_information(state, [0], backend)
+
+    state_a = random_density_matrix(4, backend=backend)
+    state_b = random_density_matrix(4, backend=backend)
+    state = backend.np.kron(state_a, state_b)
+
+    backend.assert_allclose(
+        mutual_information(state, [0, 1], base, check_hermitian, backend),
+        0.0,
+        atol=1e-10,
+    )
+
+
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
 def test_renyi_entropy(backend, alpha, base):
@@ -604,8 +645,18 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
             if alpha == 1.0:
                 log = relative_von_neumann_entropy(state, target, base, backend=backend)
             elif alpha == np.inf:
-                new_state = _matrix_power(state, 0.5, backend)
-                new_target = _matrix_power(target, 0.5, backend)
+                state_outer = (
+                    backend.np.outer(state, backend.np.conj(state.T))
+                    if state_flag
+                    else state
+                )
+                target_outer = (
+                    backend.np.outer(target, backend.np.conj(target.T))
+                    if target_flag
+                    else target
+                )
+                new_state = matrix_power(state_outer, 0.5, backend)
+                new_target = matrix_power(target_outer, 0.5, backend)
 
                 log = backend.np.log2(
                     backend.calculate_norm_density_matrix(
@@ -621,8 +672,8 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 if len(target.shape) == 1:
                     target = backend.np.outer(target, backend.np.conj(target))
 
-                log = _matrix_power(state, alpha, backend)
-                log = log @ _matrix_power(target, 1 - alpha, backend)
+                log = matrix_power(state, alpha, backend)
+                log = log @ matrix_power(target, 1 - alpha, backend)
                 log = backend.np.log2(backend.np.trace(log))
 
                 log = (1 / (alpha - 1)) * log / np.log2(base)
@@ -668,7 +719,7 @@ def test_tsallis_entropy(backend, alpha, base):
         target = von_neumann_entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
-            backend.np.trace(_matrix_power(state, alpha, backend)) - 1
+            backend.np.trace(matrix_power(state, alpha, backend)) - 1
         )
 
     backend.assert_allclose(

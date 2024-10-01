@@ -1,5 +1,6 @@
 import collections
 import copy
+import sys
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -1273,18 +1274,8 @@ class Circuit:
 
         return matrix, idx
 
-    def draw(self, line_wrap=70, legend=False) -> str:
-        """Draw text circuit using unicode symbols.
-
-        Args:
-            line_wrap (int): maximum number of characters per line. This option
-                split the circuit text diagram in chunks of line_wrap characters.
-            legend (bool): If ``True`` prints a legend below the circuit for
-                callbacks and channels. Default is ``False``.
-
-        Return:
-            String containing text circuit diagram.
-        """
+    def diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
+        """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
@@ -1375,3 +1366,21 @@ class Circuit:
             output += table
 
         return output.rstrip("\n")
+
+    def __str__(self):
+        return self.diagram()
+
+    def draw(self, line_wrap: int = 70, legend: bool = False):
+        """Draw text circuit using unicode symbols.
+
+        Args:
+            line_wrap (int, optional): maximum number of characters per line. This option
+                split the circuit text diagram in chunks of line_wrap characters.
+                Defaults to :math:`70`.
+            legend (bool, optional): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Defaults to ``False``.
+
+        Returns:
+            String containing text circuit diagram.
+        """
+        sys.stdout.write(self.diagram(line_wrap, legend) + "\n")

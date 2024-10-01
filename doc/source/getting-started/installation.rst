@@ -47,18 +47,6 @@ Make sure you have Python 3.9 or greater, then use ``pip`` to install ``qibo`` w
 The ``pip`` program will download and install all the required
 dependencies for Qibo.
 
-Installing with conda
-"""""""""""""""""""""
-
-We provide conda packages for ``qibo`` through the `conda-forge
-<https://anaconda.org/conda-forge>`_ channel.
-
-To install the package with conda run:
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibo
-
 
 Installing from source
 """"""""""""""""""""""
@@ -124,35 +112,6 @@ In order to install the package use the following command:
 
 .. note::
       The ``pip`` program will download and install all the required
-      dependencies except `cupy <https://cupy.dev/>`_ and/or
-      `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
-      which are required for GPU acceleration.
-      The cuQuantum dependency is optional, as it is required only for
-      the ``cuquantum`` platform. Please install `cupy <https://cupy.dev/>`_ by following the
-      instructions from the `official website
-      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
-      The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
-      are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
-      ``qibojit`` is compatible with
-      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
-      and
-      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
-
-
-Installing with conda
-"""""""""""""""""""""
-
-We provide conda packages for ``qibo`` and ``qibojit`` through the `conda-forge
-<https://anaconda.org/conda-forge>`_ channel.
-
-To install both packages with conda run:
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibojit
-
-.. note::
-      The ``conda`` program will download and install all the required
       dependencies except `cupy <https://cupy.dev/>`_ and/or
       `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       which are required for GPU acceleration.

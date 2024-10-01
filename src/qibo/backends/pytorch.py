@@ -120,7 +120,11 @@ class PyTorchBackend(NumpyBackend):
 
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
-        elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
+        elif (
+            isinstance(x, list)
+            and len(x) > 0
+            and all(isinstance(row, self.np.Tensor) for row in x)
+        ):
             x = self.np.stack(x)
         else:
             x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
@@ -176,12 +180,12 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eigvals(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: int = True):
         if hermitian:
             return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eig(matrix)  # pylint: disable=not-callable
@@ -194,6 +198,11 @@ class PyTorchBackend(NumpyBackend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+    def calculate_matrix_power(self, matrix, power):
+        copied = self.to_numpy(self.np.copy(matrix))
+        copied = super().calculate_matrix_power(copied, power)
+        return self.cast(copied, dtype=copied.dtype)
 
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
