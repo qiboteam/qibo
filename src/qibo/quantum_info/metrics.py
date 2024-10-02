@@ -272,7 +272,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
                     fid = fid + matrix
                     del matrix
 
-            fid = backend.np.real(backend.np.trace(fid)) ** 2
+            fid = backend.np.real(backend.np.trace(fid))
 
             return fid
 
