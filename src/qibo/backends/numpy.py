@@ -1,9 +1,10 @@
 import collections
 import math
+from typing import Union
 
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag, fractional_matrix_power
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -719,7 +720,7 @@ class NumpyBackend(Backend):
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
@@ -730,7 +731,7 @@ class NumpyBackend(Backend):
             return np.linalg.eigvalsh(matrix)
         return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
@@ -767,6 +768,14 @@ class NumpyBackend(Backend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.transpose(np.conj(eigenvectors))
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+    def calculate_matrix_power(self, matrix, power: Union[float, int]):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+        return fractional_matrix_power(matrix, power)
 
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
