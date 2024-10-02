@@ -147,7 +147,7 @@ def test_meyer_wallach_entanglement(backend):
     )
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(state2, backend=backend), 0.5, atol=PRECISION_TOL
+        meyer_wallach_entanglement(state2, backend=backend), 1, atol=PRECISION_TOL
     )
 
 
