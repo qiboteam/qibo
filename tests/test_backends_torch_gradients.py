@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 
@@ -36,6 +38,9 @@ def test_torch_gradients(backend):
     assert initial_params[0] != params[0]
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="Tensorflow available only when testing on linux."
+)
 def test_torch_tensorflow_gradients(backend):
     if backend.name != "pytorch":
         pytest.skip("Test only valid for PyTorch backend.")
