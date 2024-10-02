@@ -197,11 +197,14 @@ def meyer_wallach_entanglement(state, backend=None):
     """Computes the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
-        Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\,
-            \\text{tr}\\left(\\rho_{k}^{2}\\right) \\, ,
+        Q(\\rho) = 2\\left(1 - \\frac{1}{N} \\, \\sum_{k} \\,
+            \\text{tr}\\left(\\rho_{k}^{2}\\right)\\right) \\, ,
 
-    where :math:`\\rho_{k}^{2}` is the reduced density matrix obtained by tracing out qubit :math:`k`,
+    where :math:`\\rho_{k}^{2}` is the reduced density matrix of qubit :math:`k`,
     and :math:`N` is the total number of qubits in ``state``.
+    We use the definition of the Meyer-Wallach entanglement as the average purity
+    proposed in `Brennen (2003) <https://arxiv.org/abs/quant-ph/0305094>`_, which
+    is equivalent to the definition introduced in `Meyer and Wallach (2001) <https://arxiv.org/abs/quant-ph/0108104>`_.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -238,7 +241,7 @@ def meyer_wallach_entanglement(state, backend=None):
 
         ent += trace
 
-    entanglement = 1 - ent / nqubits
+    entanglement = 2 * (1 - ent / nqubits)
 
     return entanglement
 
@@ -248,9 +251,10 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
     circuit, defined as the average Meyer-Wallach entanglement :math:`Q` of the ``circuit``, i.e.
 
     .. math::
-        \\text{Ent} = \\frac{2}{|S|}\\sum_{\\theta_i\\in S}Q_{\\theta_i} \\, ,
+        \\text{Ent} = \\frac{2}{|S|}\\sum_{\\theta_i\\in S}Q(\\rho_i) \\, ,
 
-    where :math:`S` is the set of sampled circuit parameters.
+    where :math:`S` is the set of sampled circuit parameters, and :math:`\\rho_i` is the
+    state prepared by the circuit with parameters :math:`\\theta_i`.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
