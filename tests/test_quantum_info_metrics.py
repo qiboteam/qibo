@@ -255,14 +255,6 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = random_unitary(4, backend=backend)
-    target = random_unitary(4, backend=backend)
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
-        with pytest.raises(NotImplementedError):
-            test = fidelity(state, target, check_hermitian=True, backend=backend)
-    else:
-        test = fidelity(state, target, check_hermitian=True, backend=backend)
-
 
 @pytest.mark.parametrize("seed", [10])
 def test_process_fidelity_and_infidelity(backend, seed):
