@@ -931,7 +931,11 @@ def relative_tsallis_entropy(
         float: Relative Tsallis entropy :math:`\\Delta_{\\alpha}^{\\text{ts}}`.
 
     References:
-        1. S. Furuichi, K. Yanagi, and K. Kuriyama,
+        1. S. Abe, *Nonadditive generalization of the quantum Kullback-Leibler
+        divergence for measuring the degree of purification*,
+        `Phys. Rev. A 68, 032302 <https://doi.org/10.1103/PhysRevA.68.032302>`_.
+
+        2. S. Furuichi, K. Yanagi, and K. Kuriyama,
         *Fundamental properties of Tsallis relative entropy*,
         `J. Math. Phys., Vol. 45, Issue 12, pp. 4868-4877 (2004)
         <https://doi.org/10.1063/1.1805729>`_ .
