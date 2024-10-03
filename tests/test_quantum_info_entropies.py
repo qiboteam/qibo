@@ -393,8 +393,8 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
     prob_dist_q = np.random.rand(10)
     prob_dist_q /= np.sum(prob_dist_q)
 
-    prob_dist_p = backend.np.real(backend.cast(prob_dist_p))
-    prob_dist_q = backend.np.real(backend.cast(prob_dist_q))
+    prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+    prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     if alpha == 1.0:
         target = classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
