@@ -1177,10 +1177,7 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if isinstance(gate, gates.ParametrizedGate):
-                if any(x.__class__.__name__ == "Tensor" for x in gate.parameters):
-                    params = (str(x.detach().item()) for x in gate.parameters)
-                else:
-                    params = (str(x) for x in gate.parameters)
+                params = (str(x) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
                 name = gate.qasm_label

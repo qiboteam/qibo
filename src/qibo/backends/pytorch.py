@@ -127,7 +127,7 @@ class PyTorchBackend(NumpyBackend):
         if name == "GeneralizedRBS":
             for parameter in ["theta", "phi"]:
                 if not isinstance(gate.init_kwargs[parameter], self.np.Tensor):
-                    gate.init_kwargs[parameter] = self.cast_parameter(
+                    gate.init_kwargs[parameter] = self._cast_parameter(
                         gate.init_kwargs[parameter], trainable=gate.trainable
                     )
 
@@ -142,7 +142,9 @@ class PyTorchBackend(NumpyBackend):
             new_parameters = []
             for parameter in gate.parameters:
                 if not isinstance(parameter, self.np.Tensor):
-                    parameter = self.cast_parameter(parameter, trainable=gate.trainable)
+                    parameter = self._cast_parameter(
+                        parameter, trainable=gate.trainable
+                    )
                 elif parameter.requires_grad:
                     gate.trainable = True
                 new_parameters.append(parameter)
@@ -150,7 +152,7 @@ class PyTorchBackend(NumpyBackend):
         _matrix = _matrix(*gate.parameters)
         return _matrix
 
-    def cast_parameter(self, x, trainable):
+    def _cast_parameter(self, x, trainable):
         """Cast a gate parameter to a torch tensor.
 
         Args:
