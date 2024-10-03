@@ -108,11 +108,6 @@ def test_qpdf(backend, ansatz, layers, nqubits, multi_output, output):
     np.random.seed(0)
     params = np.random.rand(model.nparams)
     result = model.predict(params, [0.1])
-    # Pytorch backend has a different tolerance as is by default working with float32
-    if backend.name == "pytorch":
-        atol = 1e-2
-        rtol = 1e-5
-    else:
-        atol = 1e-5
-        rtol = 1e-7
+    atol = 1e-5
+    rtol = 1e-7
     np.testing.assert_allclose(result, output, rtol=rtol, atol=atol)
