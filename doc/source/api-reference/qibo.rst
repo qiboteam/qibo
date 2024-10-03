@@ -1815,6 +1815,12 @@ Tsallis entropy
 .. autofunction:: qibo.quantum_info.tsallis_entropy
 
 
+Relative Tsallis entropy
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_tsallis_entropy
+
+
 Entanglement entropy
 """"""""""""""""""""
 
