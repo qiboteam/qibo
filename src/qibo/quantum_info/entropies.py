@@ -741,7 +741,7 @@ def relative_renyi_entropy(
             \\sigma^{1 - \\alpha} \\right) \\right) \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.relative_entropy`.
+    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
     :math:`-2 \\, \\log(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
@@ -901,7 +901,17 @@ def relative_tsallis_entropy(
     check_hermitian: bool = False,
     backend=None,
 ):
-    """Calculate
+    """Calculate the relative Tsallis entropy between two quantum states.
+
+    For :math:`\\alpha \\in [0, \\, 2]` and quantum states :math:`\\rho` and
+    :math:`\\sigma`, the relative Tsallis entropy is defined as
+
+    .. math::
+        \\Delta_{\\alpha}^{\\text{ts}}(\\rho, \\, \\sigma) = \\frac{1 -
+            \\text{tr}\\left(\\rho^{\\alpha} \\, \\sigma^{1 - \\alpha}\\right)}{1 - \\alpha} \\, .
+
+    A special case is the limit :math:`\\alpha \\to 1`, in which the Tsallis entropy
+    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
@@ -917,9 +927,14 @@ def relative_tsallis_entropy(
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
-
     Returns:
         float: Relative Tsallis entropy :math:`\\Delta_{\\alpha}^{\\text{ts}}`.
+
+    References:
+        1. S. Furuichi, K. Yanagi, and K. Kuriyama,
+        *Fundamental properties of Tsallis relative entropy*,
+        `J. Math. Phys., Vol. 45, Issue 12, pp. 4868-4877 (2004)
+        <https://doi.org/10.1063/1.1805729>`_ .
     """
     if alpha == 1.0:
         return relative_von_neumann_entropy(
