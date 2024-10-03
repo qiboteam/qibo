@@ -476,7 +476,7 @@ def classical_relative_tsallis_entropy(
         prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     element_wise = prob_dist_p**alpha
-    element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q)
+    element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q, alpha)
 
     return backend.np.sum(element_wise)
 
