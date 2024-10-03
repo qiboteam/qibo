@@ -162,58 +162,80 @@ def partial_trace(
 
 
 def partial_transpose(
-    state, partition: Union[List[int], Tuple[int, ...]], backend=None
+    operator, partition: Union[List[int], Tuple[int, ...]], backend=None
 ):
-    """Return matrix resulting from the partial transposition of ``partition`` qubits in ``state``.
+    """Return matrix after the partial transposition of ``partition`` qubits in ``operator``.
 
-    Given quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    Given a :math:`n`-qubit operator :math:`O \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
     the partial transpose with respect to ``partition`` :math:`B` is given by
 
     .. math::
         \\begin{align}
-        \\rho^{T_{B}} &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
+        O^{T_{B}} &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
             \\left(\\ketbra{l}{m}\\right)^{T} \\\\
-        &= \\sum_{jklm} \\, \\rho_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
-        &= \\sum_{jklm} \\, \\rho_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
+        &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
+        &= \\sum_{jklm} \\, O_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
         \\end{align}
 
     where the superscript :math:`T` indicates the transposition operation,
     and :math:`T_{B}` indicates transposition on ``partition`` :math:`B`.
-    The total number of qubits is inferred by the shape of ``state``.
+    The total number of qubits is inferred by the shape of ``operator``.
 
     Args:
-        state (ndarray): density matrix or statevector.
-        traced_qubits (Union[List[int], Tuple[int]]): indices of qubits to be transposed.
+        operator (ndarray): :math:`1`- or :math:`2`-dimensional operator, or an array of
+            :math:`1`- or :math:`2`-dimensional operators,
+        partition (Union[List[int], Tuple[int, ...]]): indices of qubits to be transposed.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: partially transposed operator :math:`\\rho^{T_{B}}`.
+        ndarray: Partially transposed operator(s) :math:`\\O^{T_{B}}`.
     """
     backend = _check_backend(backend)
 
-    nqubits = math.log2(state.shape[0])
+    shape = operator.shape
+    nstates = shape[0]
+    dims = shape[-1]
+    nqubits = math.log2(dims)
 
     if not nqubits.is_integer():
-        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+        raise_error(
+            ValueError,
+            f"dimensions of ``state`` (or states in a batch) must be a power of 2.",
+        )
+
+    if (len(shape) > 3) or (nstates == 0) or (len(shape) == 2 and nstates != dims):
+        raise_error(
+            TypeError,
+            "``operator`` must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), "
+            + f"but has dims {shape}.",
+        )
 
     nqubits = int(nqubits)
 
-    statevector = bool(len(state.shape) == 1)
-    if statevector:
-        state = backend.np.outer(state, backend.np.conj(state.T))
+    if len(shape) == 1:
+        operator = backend.np.outer(operator, backend.np.conj(operator.T))
+    elif len(shape) == 3 and shape[1] == 1:
+        operator = backend.np.einsum(
+            "aij,akl->aijkl", operator, backend.np.conj(operator)
+        ).reshape(nstates, dims, dims)
 
-    new_shape = list(range(2 * nqubits))
+    new_shape = list(range(2 * nqubits + 1))
     for ind in partition:
+        ind += 1
         new_shape[ind] = ind + nqubits
         new_shape[ind + nqubits] = ind
     new_shape = tuple(new_shape)
 
-    reshaped = backend.np.reshape(state, [2] * (2 * nqubits))
+    reshaped = backend.np.reshape(operator, [-1] + [2] * (2 * nqubits))
     reshaped = backend.np.transpose(reshaped, new_shape)
 
-    return backend.np.reshape(reshaped, state.shape)
+    final_shape = (dims, dims)
+    if len(operator.shape) == 3:
+        final_shape = (nstates,) + final_shape
+
+    return backend.np.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(

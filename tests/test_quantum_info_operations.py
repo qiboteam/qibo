@@ -137,12 +137,18 @@ def _werner_state(p, backend):
     return state, transposed
 
 
+@pytest.mark.parametrize("batch", [False, True])
 @pytest.mark.parametrize("statevector", [False, True])
 @pytest.mark.parametrize("p", [1 / 5, 1 / 3, 1.0])
-def test_partial_transpose(backend, p, statevector):
+def test_partial_transpose(backend, p, statevector, batch):
     with pytest.raises(ValueError):
         state = random_density_matrix(3, backend=backend)
         test = partial_transpose(state, [0], backend)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2, 2, 2).astype(complex)
+        state += 1j * np.random.rand(2, 2, 2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        test = partial_transpose(state, [1], backend=backend)
 
     zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
     psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
@@ -158,13 +164,25 @@ def test_partial_transpose(backend, p, statevector):
 
         psi = backend.cast(psi, dtype=psi.dtype)
 
+        if batch:
+            # the inner cast is required because of torch
+            psi = backend.cast([backend.cast([psi]) for _ in range(2)])
+
         transposed = partial_transpose(psi, [0], backend=backend)
-        backend.assert_allclose(transposed, target)
+
+        if batch:
+            for j in range(2):
+                backend.assert_allclose(transposed[j], target)
+        else:
+            backend.assert_allclose(transposed, target)
     else:
         psi = np.outer(psi, np.conj(psi.T))
         psi = backend.cast(psi, dtype=psi.dtype)
 
         state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+
+        if batch:
+            state = backend.cast([state for _ in range(2)])
 
         # partial transpose of two-qubit werner state is known analytically
         target = (1 / 4) * np.array(
@@ -179,7 +197,13 @@ def test_partial_transpose(backend, p, statevector):
         target = backend.cast(target, dtype=target.dtype)
 
         transposed = partial_transpose(state, [1], backend)
-        backend.assert_allclose(transposed, target)
+
+        if batch:
+            print(transposed.shape)
+            for j in range(2):
+                backend.assert_allclose(transposed[j], target)
+        else:
+            backend.assert_allclose(transposed, target)
 
 
 @pytest.mark.parametrize("power", [2, 2.0, "2"])
