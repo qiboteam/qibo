@@ -11,6 +11,7 @@ from qibo.quantum_info.entropies import (
     entanglement_entropy,
     mutual_information,
     relative_renyi_entropy,
+    relative_tsallis_entropy,
     relative_von_neumann_entropy,
     renyi_entropy,
     shannon_entropy,
@@ -733,6 +734,63 @@ def test_tsallis_entropy(backend, alpha, base):
     backend.assert_allclose(
         tsallis_entropy(state, alpha=alpha, base=base, backend=backend), 0.0, atol=1e-5
     )
+
+
+@pytest.mark.parametrize(
+    ["state_flag", "target_flag"], [[True, True], [False, True], [True, False]]
+)
+@pytest.mark.parametrize("check_hermitian", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 0.5, 1, 1.9])
+def test_relative_tsallis_entropy(
+    backend, alpha, base, check_hermitian, state_flag, target_flag
+):
+    state = random_statevector(4, backend=backend)
+    target = random_statevector(4, backend=backend)
+
+    with pytest.raises(TypeError):
+        test = relative_tsallis_entropy(state, target, alpha=1j, backend=backend)
+
+    with pytest.raises(ValueError):
+        test = relative_tsallis_entropy(state, target, alpha=3, backend=backend)
+
+    with pytest.raises(ValueError):
+        test = relative_tsallis_entropy(state, target, alpha=-1.0, backend=backend)
+
+    state = (
+        random_statevector(4, seed=10, backend=backend)
+        if state_flag
+        else random_density_matrix(4, seed=11, backend=backend)
+    )
+    target = (
+        random_statevector(4, seed=12, backend=backend)
+        if target_flag
+        else random_density_matrix(4, seed=13, backend=backend)
+    )
+
+    value = relative_tsallis_entropy(
+        state, target, alpha, base, check_hermitian, backend
+    )
+
+    if alpha == 1.0:
+        target_value = relative_von_neumann_entropy(
+            state, target, base, check_hermitian, backend
+        )
+    else:
+        if alpha < 1.0:
+            alpha = 2 - alpha
+
+        if state_flag:
+            state = backend.np.outer(state, backend.np.conj(state.T))
+
+        if target_flag:
+            target = backend.np.outer(target, backend.np.conj(target.T))
+
+        target_value = matrix_power(state, alpha, backend)
+        target_value = target_value @ matrix_power(target, 1 - alpha, backend)
+        target_value = (1 - backend.np.trace(target_value)) / (1 - alpha)
+
+    backend.assert_allclose(value, target_value)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
