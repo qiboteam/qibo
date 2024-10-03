@@ -453,7 +453,7 @@ def classical_relative_tsallis_entropy(
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
         prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
-        alpha (float): To be used when
+        alpha (float): entropic index.
         base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
