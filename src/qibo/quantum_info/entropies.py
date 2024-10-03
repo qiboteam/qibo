@@ -893,6 +893,62 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
     )
 
 
+def relative_tsallis_entropy(
+    state,
+    target,
+    alpha: Union[float, int],
+    base: float = 2,
+    check_hermitian: bool = False,
+    backend=None,
+):
+    """Calculate
+
+    Args:
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
+        alpha (float or int): entropic index :math:`\\alpha \\in [0, \\, 2]`.
+        base (float, optional): the base of the log used when :math:`\\alpha = 1`.
+            Defaults to :math:`2`.
+        check_hermitian (bool, optional): Used when :math:`\\alpha = 1`.
+            If ``True``, checks if ``state`` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian .
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+
+    Returns:
+        float: Relative Tsallis entropy :math:`\\Delta_{\\alpha}^{\\text{ts}}`.
+    """
+    if alpha == 1.0:
+        return relative_von_neumann_entropy(
+            state, target, base, check_hermitian, backend
+        )
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError,
+            f"``alpha`` must be type float or int, but it is type {type(alpha)}.",
+        )
+
+    if alpha < 0.0 or alpha > 2.0:
+        raise_error(
+            ValueError, f"``alpha`` must be in the interval [0, 2], but it is {alpha}."
+        )
+
+    if alpha < 1.0:
+        alpha = 2 - alpha
+
+    factor = 1 - alpha
+
+    trace = matrix_power(state, alpha)
+    trace = trace @ matrix_power(target, factor)
+    trace = backend.np.trace(trace)
+
+    return (1 - trace) / factor
+
+
 def entanglement_entropy(
     state,
     bipartition,
