@@ -961,8 +961,14 @@ def relative_tsallis_entropy(
 
     factor = 1 - alpha
 
-    trace = matrix_power(state, alpha)
-    trace = trace @ matrix_power(target, factor)
+    if len(state.shape) == 1:
+        state = backend.np.outer(state, backend.np.conj(state.T))
+
+    if len(target.shape) == 1:
+        target = backend.np.outer(target, backend.np.conj(target.T))
+
+    trace = matrix_power(state, alpha, backend)
+    trace = trace @ matrix_power(target, factor, backend)
     trace = backend.np.trace(trace)
 
     return (1 - trace) / factor
