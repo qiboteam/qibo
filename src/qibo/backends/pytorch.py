@@ -76,7 +76,6 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
-        requires_grad: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -91,8 +90,6 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
-            requires_grad (bool): If ``True``, the input tensor requires gradient.
-                If ``False``, the input tensor does not require gradient.
         """
 
         if dtype is None:
@@ -102,9 +99,6 @@ class PyTorchBackend(NumpyBackend):
         elif not isinstance(dtype, self.np.dtype):
             dtype = self._torch_dtype(str(dtype))
 
-        # check if dtype is an integer to remove gradients
-        if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
-            requires_grad = False
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
         elif (
@@ -114,7 +108,7 @@ class PyTorchBackend(NumpyBackend):
         ):
             x = self.np.stack(x)
         else:
-            x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
+            x = self.np.tensor(x, dtype=dtype)
 
         if copy:
             return x.clone()
