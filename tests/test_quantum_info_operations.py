@@ -199,7 +199,6 @@ def test_partial_transpose(backend, p, statevector, batch):
         transposed = partial_transpose(state, [1], backend)
 
         if batch:
-            print(transposed.shape)
             for j in range(2):
                 backend.assert_allclose(transposed[j], target)
         else:
