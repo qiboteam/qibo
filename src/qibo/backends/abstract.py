@@ -358,7 +358,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_matrix_power(
-        self, matrix, power: Union[float, int]
+        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
     ):  # pragma: no cover
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
