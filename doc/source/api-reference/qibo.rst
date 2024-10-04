@@ -1763,6 +1763,11 @@ Classical Tsallis entropy
 
 .. autofunction:: qibo.quantum_info.classical_tsallis_entropy
 
+Classical Tsallis relative entropy
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_tsallis_entropy
+
 
 von Neumann entropy
 """""""""""""""""""

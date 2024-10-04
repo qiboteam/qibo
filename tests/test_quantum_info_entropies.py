@@ -6,6 +6,7 @@ from qibo.quantum_info.entropies import (
     classical_mutual_information,
     classical_relative_entropy,
     classical_relative_renyi_entropy,
+    classical_relative_tsallis_entropy,
     classical_renyi_entropy,
     classical_tsallis_entropy,
     entanglement_entropy,
@@ -381,6 +382,36 @@ def test_classical_tsallis_entropy(backend, alpha, base, kind):
         target,
         atol=1e-5,
     )
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3])
+def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
+    prob_dist_p = np.random.rand(10)
+    prob_dist_p /= np.sum(prob_dist_p)
+
+    prob_dist_q = np.random.rand(10)
+    prob_dist_q /= np.sum(prob_dist_q)
+
+    prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+    prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    if alpha == 1.0:
+        target = classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
+    else:
+        target = ((prob_dist_p / prob_dist_q) ** (1 - alpha) - 1) / (1 - alpha)
+        target = backend.np.sum(prob_dist_p**alpha * target)
+
+    if kind is not None:
+        prob_dist_p = kind(prob_dist_p)
+        prob_dist_q = kind(prob_dist_q)
+
+    value = classical_relative_tsallis_entropy(
+        prob_dist_p, prob_dist_q, alpha, base, backend
+    )
+
+    backend.assert_allclose(value, target)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
