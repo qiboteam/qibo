@@ -232,7 +232,7 @@ from qibo.quantum_info import random_statevector
 set_backend("numpy")
 backend = NumpyBackend()
 
-#%%
+# %%
 nqubits = 2
 dims = 2**nqubits
 
@@ -240,6 +240,6 @@ new_dims = int(np.sqrt(dims))
 
 state = random_statevector(dims, backend=backend)
 
-#%%
+# %%
 new_state = state.reshape(-1, new_dims)
 U, S, V = np.linalg.svd(new_state)
