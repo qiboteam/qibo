@@ -195,7 +195,7 @@ class TensorflowBackend(NumpyBackend):
     def calculate_singular_value_decomposition(self, matrix):
         # needed to unify order of return
         S, U, V = self.tf.linalg.svd(matrix)
-        return U, S, self.tf.conj(self.tf.transpose(V))
+        return U, S, self.np.conj(self.np.transpose(V))
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):
