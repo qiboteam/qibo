@@ -1,5 +1,7 @@
 """PyTorch backend."""
 
+from typing import Union
+
 import numpy as np
 
 from qibo import __version__
@@ -199,9 +201,29 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_matrix_power(self, matrix, power):
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.np.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                U, S, Vh = self.np.linalg.svd(matrix)
+                # cast needed because of different dtypes
+                S = self.cast(S)
+                S_inv = self.np.where(
+                    self.np.abs(S) < precision_singularity, 0.0, S**power
+                )
+
+                return (
+                    self.np.linalg.inv(Vh) @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
+                )
+
         copied = self.to_numpy(self.np.copy(matrix))
-        copied = super().calculate_matrix_power(copied, power)
+        copied = super().calculate_matrix_power(copied, power, precision_singularity)
         return self.cast(copied, dtype=copied.dtype)
 
     def _test_regressions(self, name):
