@@ -484,10 +484,12 @@ def choi_to_kraus(
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = singular_value_decomposition(choi_super_op)
-        U = np.transpose(U)
-        coefficients = np.sqrt(coefficients)
-        V = np.conj(V)
+        U, coefficients, V = singular_value_decomposition(
+            choi_super_op, backend=backend
+        )
+        U = U.T
+        coefficients = backend.np.sqrt(coefficients)
+        V = backend.np.conj(V)
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
