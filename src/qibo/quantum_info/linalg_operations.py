@@ -174,7 +174,7 @@ def partial_transpose(
         O^{T_{B}} &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
             \\left(\\ketbra{l}{m}\\right)^{T} \\\\
         &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
-        &= \\sum_{jklm} \\, O_{lm}^{kl} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
+        &= \\sum_{jklm} \\, O_{ml}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
         \\end{align}
 
     where the superscript :math:`T` indicates the transposition operation,
