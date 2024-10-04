@@ -1,5 +1,6 @@
 import collections
 import os
+from typing import Union
 
 import numpy as np
 
@@ -191,6 +192,31 @@ class TensorflowBackend(NumpyBackend):
         if eigenvectors is None or self.is_sparse(matrix):
             return self.tf.linalg.expm(-1j * a * matrix)
         return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.tf.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                S, U, V = self.tf.linalg.svd(matrix)
+                S_inv = self.tf.where(
+                    self.tf.abs(S) < precision_singularity, 0.0, S**power
+                )
+
+                return V @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
+
+        return super().calculate_matrix_power(matrix, power, precision_singularity)
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):
