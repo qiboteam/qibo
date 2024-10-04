@@ -150,10 +150,10 @@ def test_partial_transpose(backend, p, statevector, batch):
         state = backend.cast(state, dtype=state.dtype)
         test = partial_transpose(state, [1], backend=backend)
 
-    zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
-    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
-
     if statevector:
+        zero, one = np.array([1, 0], dtype=complex), np.array([0, 1], dtype=complex)
+        psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+
         # testing statevector
         target = np.zeros((4, 4), dtype=complex)
         target[0, 3] = -1 / 2
@@ -176,11 +176,7 @@ def test_partial_transpose(backend, p, statevector, batch):
         else:
             backend.assert_allclose(transposed, target)
     else:
-        psi = np.outer(psi, np.conj(psi.T))
-        psi = backend.cast(psi, dtype=psi.dtype)
-
-        state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
-
+        state, target = _werner_state(p, backend)
         if batch:
             state = backend.cast([state for _ in range(2)])
 
