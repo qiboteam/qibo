@@ -1,6 +1,5 @@
 """Module with common linear algebra operations for quantum information."""
 
-# %%
 import math
 from typing import List, Tuple, Union
 
@@ -217,29 +216,22 @@ def matrix_power(matrix, power: Union[float, int], backend=None):
     return backend.calculate_matrix_power(matrix, power)
 
 
-def schmidt_decomposition(state, backend=None):
-    decomposition = state
-    return decomposition
+def schmidt_decomposition(
+    state, partition: Union[List[int], Tuple[int, ...]], backend=None
+):
+    backend = _check_backend(backend)
 
+    nqubits = backend.np.log2(state.shape[-1])
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
 
-# %%
-import numpy as np
+    nqubits = int(nqubits)
+    partition_2 = set(list(range(nqubits))) ^ set(partition)
 
-from qibo import set_backend
-from qibo.backends import NumpyBackend
-from qibo.quantum_info import random_statevector
+    tensor = backend.np.reshape(state, [2] * nqubits)
+    tensor = backend.np.transpose(tensor, partition + partition_2)
+    tensor = backend.np.reshape(tensor, 2 ** len(partition), -1)
 
-set_backend("numpy")
-backend = NumpyBackend()
+    U, S, Vh = np.linalg.svd(tensor)
 
-# %%
-nqubits = 2
-dims = 2**nqubits
-
-new_dims = int(np.sqrt(dims))
-
-state = random_statevector(dims, backend=backend)
-
-# %%
-new_state = state.reshape(-1, new_dims)
-U, S, V = np.linalg.svd(new_state)
+    return U, S, Vh

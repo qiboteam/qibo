@@ -7,6 +7,7 @@ from qibo.quantum_info.linalg_operations import (
     commutator,
     matrix_power,
     partial_trace,
+    schmidt_decomposition,
 )
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
@@ -130,3 +131,17 @@ def test_matrix_power(backend, power):
             float(backend.np.real(backend.np.trace(power))),
             purity(state, backend=backend),
         )
+
+
+def test_schmidt_decomposition(backend):
+    state_A = random_statevector(4, seed=10, backend=backend)
+    state_B = random_statevector(4, seed=11, backend=backend)
+    state = backend.np.kron(state_A, state_B)
+
+    U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
+
+    coeffs = backend.np.abs(S) ** 2
+    entropy = backend.np.where(np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
+    entropy = -backend.np.sum(coeffs * entropy)
+
+    backend.assert_allclose(entropy, 0.0)
