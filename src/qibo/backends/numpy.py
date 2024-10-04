@@ -769,12 +769,31 @@ class NumpyBackend(Backend):
         ud = self.np.transpose(np.conj(eigenvectors))
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_matrix_power(self, matrix, power: Union[float, int]):
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
         if not isinstance(power, (float, int)):
             raise_error(
                 TypeError,
                 f"``power`` must be either float or int, but it is type {type(power)}.",
             )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            # det with np instead of self.np because of torch
+            determinant = np.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                U, S, Vh = self.np.linalg.svd(matrix)
+                S_inv = self.np.where(
+                    self.np.abs(S) < precision_singularity, 0.0, S**power
+                )
+                return (
+                    self.np.linalg.inv(Vh) @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
+                )
+
         return fractional_matrix_power(matrix, power)
 
     # TODO: remove this method
