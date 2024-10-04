@@ -207,22 +207,8 @@ class PyTorchBackend(NumpyBackend):
         power: Union[float, int],
         precision_singularity: float = 1e-14,
     ):
-        if power < 0.0:
-            # negative powers of singular matrices via SVD
-            determinant = self.np.linalg.det(matrix)
-            if abs(determinant) < precision_singularity:
-                U, S, Vh = self.np.linalg.svd(matrix)
-                # cast needed because of different dtypes
-                S = self.cast(S)
-                S_inv = self.np.where(
-                    self.np.abs(S) < precision_singularity, 0.0, S**power
-                )
-
-                return (
-                    self.np.linalg.inv(Vh) @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
-                )
-
-        copied = self.to_numpy(self.np.copy(matrix))
+        copied = self.cast(matrix, copy=True)
+        copied = self.to_numpy(copied) if power >= 0.0 else copied.detach()
         copied = super().calculate_matrix_power(copied, power, precision_singularity)
         return self.cast(copied, dtype=copied.dtype)
 

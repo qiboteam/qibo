@@ -784,9 +784,11 @@ class NumpyBackend(Backend):
         if power < 0.0:
             # negative powers of singular matrices via SVD
             # det with np instead of self.np because of torch
-            determinant = np.linalg.det(matrix)
+            determinant = self.np.linalg.det(matrix)
             if abs(determinant) < precision_singularity:
                 U, S, Vh = self.np.linalg.svd(matrix)
+                # cast needed because of different dtypes in `torch`
+                S = self.cast(S)
                 S_inv = self.np.where(
                     self.np.abs(S) < precision_singularity, 0.0, S**power
                 )
