@@ -124,10 +124,10 @@ def test_matrix_power(backend, power, singular):
 
     if isinstance(power, str):
         with pytest.raises(TypeError):
-            test = matrix_power(state, power, backend)
+            test = matrix_power(state, power, backend=backend)
     elif power == -0.5 and singular:
         # When the singular matrix is a state, this power should be itself
-        backend.assert_allclose(matrix_power(state, power, backend), state)
+        backend.assert_allclose(matrix_power(state, power, backend=backend), state)
     elif abs(power) == 0.5 and not singular:
         # Should be equal to the (inverse) square root
         sqrt = sqrtm(backend.to_numpy(state)).astype(complex)
@@ -135,9 +135,9 @@ def test_matrix_power(backend, power, singular):
             sqrt = np.linalg.inv(sqrt)
         sqrt = backend.cast(sqrt)
 
-        backend.assert_allclose(matrix_power(state, power, backend), sqrt)
+        backend.assert_allclose(matrix_power(state, power, backend=backend), sqrt)
     else:
-        power = matrix_power(state, power, backend)
+        power = matrix_power(state, power, backend=backend)
 
         backend.assert_allclose(
             float(backend.np.real(backend.np.trace(power))),
