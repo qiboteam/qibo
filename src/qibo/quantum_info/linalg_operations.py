@@ -198,12 +198,17 @@ def matrix_exponentiation(
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
 
 
-def matrix_power(matrix, power: Union[float, int], backend=None):
+def matrix_power(
+    matrix, power: Union[float, int], precision_singularity: float = 1e-14, backend=None
+):
     """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculate :math:`A^{\\alpha}`.
 
     Args:
         matrix (ndarray): matrix whose power to calculate.
         power (float or int): power to raise ``matrix`` to.
+        precision_singularity (float, optional): If determinant of ``matrix`` is smaller than
+            ``precision_singularity``, then matrix is considered to be singular.
+            Used when ``power`` is negative.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -213,4 +218,4 @@ def matrix_power(matrix, power: Union[float, int], backend=None):
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_power(matrix, power)
+    return backend.calculate_matrix_power(matrix, power, precision_singularity)
