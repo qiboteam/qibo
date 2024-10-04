@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
@@ -113,16 +114,28 @@ def test_partial_trace(backend, density_matrix):
     backend.assert_allclose(traced, Id)
 
 
-@pytest.mark.parametrize("power", [2, 2.0, "2"])
-def test_matrix_power(backend, power):
+@pytest.mark.parametrize("singular", [False, True])
+@pytest.mark.parametrize("power", [-0.5, 0.5, 2, 2.0, "2"])
+def test_matrix_power(backend, power, singular):
     nqubits = 2
     dims = 2**nqubits
 
-    state = random_density_matrix(dims, backend=backend)
+    state = random_density_matrix(dims, pure=singular, backend=backend)
 
     if isinstance(power, str):
         with pytest.raises(TypeError):
             test = matrix_power(state, power, backend)
+    elif power == -0.5 and singular:
+        # When the singular matrix is a state, this power should be itself
+        backend.assert_allclose(matrix_power(state, power, backend), state)
+    elif abs(power) == 0.5 and not singular:
+        # Should be equal to the (inverse) square root
+        sqrt = sqrtm(backend.to_numpy(state)).astype(complex)
+        if power == -0.5:
+            sqrt = np.linalg.inv(sqrt)
+        sqrt = backend.cast(sqrt)
+
+        backend.assert_allclose(matrix_power(state, power, backend), sqrt)
     else:
         power = matrix_power(state, power, backend)
 
