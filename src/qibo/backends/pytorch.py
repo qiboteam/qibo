@@ -76,7 +76,6 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
-        requires_grad: bool = False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -91,8 +90,6 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
-            requires_grad (bool): If ``True``, the input tensor requires gradient.
-                If ``False``, the input tensor does not require gradient.
         """
 
         if dtype is None:
@@ -102,9 +99,6 @@ class PyTorchBackend(NumpyBackend):
         elif not isinstance(dtype, self.np.dtype):
             dtype = self._torch_dtype(str(dtype))
 
-        # check if dtype is an integer to remove gradients
-        if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
-            requires_grad = False
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
         elif (
@@ -114,7 +108,7 @@ class PyTorchBackend(NumpyBackend):
         ):
             x = self.np.stack(x)
         else:
-            x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
+            x = self.np.tensor(x, dtype=dtype)
 
         if copy:
             return x.clone()
@@ -127,7 +121,7 @@ class PyTorchBackend(NumpyBackend):
         if name == "GeneralizedRBS":
             for parameter in ["theta", "phi"]:
                 if not isinstance(gate.init_kwargs[parameter], self.np.Tensor):
-                    gate.init_kwargs[parameter] = self.cast_parameter(
+                    gate.init_kwargs[parameter] = self._cast_parameter(
                         gate.init_kwargs[parameter], trainable=gate.trainable
                     )
 
@@ -142,7 +136,9 @@ class PyTorchBackend(NumpyBackend):
             new_parameters = []
             for parameter in gate.parameters:
                 if not isinstance(parameter, self.np.Tensor):
-                    parameter = self.cast_parameter(parameter, trainable=gate.trainable)
+                    parameter = self._cast_parameter(
+                        parameter, trainable=gate.trainable
+                    )
                 elif parameter.requires_grad:
                     gate.trainable = True
                 new_parameters.append(parameter)
@@ -150,7 +146,7 @@ class PyTorchBackend(NumpyBackend):
         _matrix = _matrix(*gate.parameters)
         return _matrix
 
-    def cast_parameter(self, x, trainable):
+    def _cast_parameter(self, x, trainable):
         """Cast a gate parameter to a torch tensor.
 
         Args:

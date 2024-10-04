@@ -860,7 +860,6 @@ def test_generalized_fsim(backend):
     phi = np.random.random()
     rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
     gatelist = [gates.H(0), gates.H(1), gates.H(2)]
-    gate = gates.GeneralizedfSim(1, 2, rotation, phi)
     gatelist.append(gates.GeneralizedfSim(1, 2, rotation, phi))
     final_state = apply_gates(backend, gatelist, nqubits=3)
     target_state = np.ones(len(final_state), dtype=complex) / np.sqrt(8)
@@ -871,7 +870,6 @@ def test_generalized_fsim(backend):
     target_state[:4] = np.matmul(matrix, target_state[:4])
     target_state[4:] = np.matmul(matrix, target_state[4:])
     target_state = backend.cast(target_state, dtype=target_state.dtype)
-    print(final_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     with pytest.raises(NotImplementedError):
