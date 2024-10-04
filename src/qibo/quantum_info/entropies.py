@@ -428,7 +428,57 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     total_sum = prob_dist**alpha
     total_sum = backend.np.sum(total_sum)
 
-    return (1 / (1 - alpha)) * (total_sum - 1)
+    return (1 / (alpha - 1)) * (1 - total_sum)
+
+
+def classical_relative_tsallis_entropy(
+    prob_dist_p, prob_dist_q, alpha: float, base: float = 2, backend=None
+):
+    """Calculate the classical relative Tsallis entropy between two discrete probability distributions.
+
+    Given a discrete random variable :math:`\\chi` that has values :math:`x` in the set
+    :math:`\\mathcal{X}` with probability :math:`\\mathrm{p}(x)` and a discrete random variable
+    :math:`\\upsilon` that has the values :math:`x` in the same set :math:`\\mathcal{X}` with
+    probability :math:`\\mathrm{q}(x)`, their relative Tsallis entropy is given by
+
+    .. math::
+        D_{\\alpha}^{\\text{ts}}(\\chi \\, \\| \\, \\upsilon) = \\sum_{x \\in \\mathcal{X}} \\,
+            \\mathrm{p}^{\\alpha}(x) \\, \\ln_{\\alpha}
+            \\left( \\frac{\\mathrm{p}(x)}{\\mathrm{q}(x)} \\right) \\, ,
+
+    where :math:`\\ln_{\\alpha}(x) \\equiv \\frac{x^{1 - \\alpha} - 1}{1 - \\alpha}`
+    is the so-called :math:`\\alpha`-logarithm. When :math:`\\alpha = 1`, it reduces to
+    :class:`qibo.quantum_info.entropies.classical_relative_entropy`.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        alpha (float): entropic index.
+        base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Tsallis relative entropy :math:`D_{\\alpha}^{\\text{ts}}`.
+    """
+    if alpha == 1.0:
+        return classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
+
+    backend = _check_backend(backend)
+
+    if isinstance(prob_dist_p, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+
+    if isinstance(prob_dist_q, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    element_wise = prob_dist_p**alpha
+    element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q, alpha)
+
+    return backend.np.sum(element_wise)
 
 
 def von_neumann_entropy(
@@ -951,3 +1001,9 @@ def entanglement_entropy(
     )
 
     return entropy_entanglement
+
+
+def _q_logarithm(x, q: float):
+    """Generalization of logarithm function necessary for classical (relative) Tsallis entropy."""
+    factor = 1 - q
+    return (x**factor - 1) / factor
