@@ -1975,6 +1975,12 @@ Matrix power
 .. autofunction:: qibo.quantum_info.matrix_power
 
 
+Schmidt decomposition
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.schmidt_decomposition
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
