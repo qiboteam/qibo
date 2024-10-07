@@ -199,7 +199,7 @@ def hilbert_schmidt_distance(state, target, backend=None):
 
     distance = state - target
     distance = hilbert_schmidt_inner_product(distance, distance)
- 
+
     return float(backend.np.real(distance))
 
 
