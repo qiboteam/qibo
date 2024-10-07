@@ -203,8 +203,8 @@ def meyer_wallach_entanglement(state, backend=None):
     where :math:`\\rho_{k}^{2}` is the reduced density matrix of qubit :math:`k`,
     and :math:`N` is the total number of qubits in ``state``.
     We use the definition of the Meyer-Wallach entanglement as the average purity
-    proposed in `Brennen (2003) <https://dl.acm.org/doi/10.5555/2011556.2011561>`_, 
-    which is equivalent to the definition introduced in `Meyer and Wallach (2002) 
+    proposed in `Brennen (2003) <https://dl.acm.org/doi/10.5555/2011556.2011561>`_,
+    which is equivalent to the definition introduced in `Meyer and Wallach (2002)
     <https://doi.org/10.1063/1.1497700>`_.
 
     Args:
@@ -218,11 +218,11 @@ def meyer_wallach_entanglement(state, backend=None):
 
 
     References:
-        1. G. K. Brennen, *An observable measure of entanglement for pure states of 
+        1. G. K. Brennen, *An observable measure of entanglement for pure states of
         multi-qubit systems*, `Quantum Information and Computation, vol. 3 (6), 619-626
         <https://dl.acm.org/doi/10.5555/2011556.2011561>`_ (2003).
 
-        2. D. A. Meyer and N. R. Wallach, * Global entanglement in multiparticle systems* 
+        2. D. A. Meyer and N. R. Wallach, * Global entanglement in multiparticle systems*
         `J. Math. Phys. 43, 4273–4278 <https://doi.org/10.1063/1.1497700>`_ (2002).
     """
 
@@ -256,16 +256,16 @@ def meyer_wallach_entanglement(state, backend=None):
 
 def entangling_capability(circuit, samples: int, seed=None, backend=None):
     """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
-     
-    It is defined as the average Meyer-Wallach entanglement :math:`Q` 
+
+    It is defined as the average Meyer-Wallach entanglement :math:`Q`
     (:func:`qibo.quantum_info.meyer_wallach_entanglement`) of the ``circuit``, i.e.
 
     .. math::
-        \\text{Ent} = \\frac{2}{|\\mathcal{S}|}\\sum_{\\theta_{k} \\in \\mathcal{S}} 
+        \\text{Ent} = \\frac{2}{|\\mathcal{S}|}\\sum_{\\theta_{k} \\in \\mathcal{S}}
             \\, Q(\\rho_{k}) \\, ,
 
-    where :math:`\\mathcal{S}` is the set of sampled circuit parameters, 
-    and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled 
+    where :math:`\\mathcal{S}` is the set of sampled circuit parameters,
+    and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled
     parameters :math:`\\theta_{k}`.
 
     Args:
