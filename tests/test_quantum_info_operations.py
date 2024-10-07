@@ -166,6 +166,10 @@ def test_singular_value_decomposition(backend):
 
 
 def test_schmidt_decomposition(backend):
+    with pytest.raises(ValueError):
+        test = random_statevector(3, backend=backend)
+        test = schmidt_decomposition(test, backend=backend)
+
     state_A = random_statevector(4, seed=10, backend=backend)
     state_B = random_statevector(4, seed=11, backend=backend)
     state = backend.np.kron(state_A, state_B)
@@ -178,8 +182,6 @@ def test_schmidt_decomposition(backend):
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
             recovered = recovered + coeff * backend.np.kron(u, vh)
-
-    print(S)
 
     backend.assert_allclose(recovered, state)
 
