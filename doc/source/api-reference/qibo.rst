@@ -1975,6 +1975,12 @@ Matrix power
 .. autofunction:: qibo.quantum_info.matrix_power
 
 
+Singular value decomposition
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.singular_value_decomposition
+
+
 Schmidt decomposition
 """""""""""""""""""""
 
