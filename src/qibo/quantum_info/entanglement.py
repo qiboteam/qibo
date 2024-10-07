@@ -222,7 +222,7 @@ def meyer_wallach_entanglement(state, backend=None):
         multi-qubit systems*, `Quantum Information and Computation, vol. 3 (6), 619-626
         <https://dl.acm.org/doi/10.5555/2011556.2011561>`_ (2003).
 
-        2. D. A. Meyer and N. R. Wallach, * Global entanglement in multiparticle systems*
+        2. D. A. Meyer and N. R. Wallach, *Global entanglement in multiparticle systems*,
         `J. Math. Phys. 43, 4273–4278 <https://doi.org/10.1063/1.1497700>`_ (2002).
     """
 
