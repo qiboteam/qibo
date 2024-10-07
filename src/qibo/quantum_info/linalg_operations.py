@@ -216,14 +216,44 @@ def matrix_power(matrix, power: Union[float, int], backend=None):
     return backend.calculate_matrix_power(matrix, power)
 
 
-def schmidt_decomposition(
+def singular_value_decomposition(matrix, backend=None):
+    """Calculate the Singular Value Decomposition (SVD) of ``matrix``.
+
+    Given an :math:`M \\times N` complex matrix :math:`A`, its SVD is given by
+
+    .. math:
+        A = U \\, S \\, V^{\\dagger} \\, ,
+
+    where :math:`U` and :math:`V` are, respectively, an :math:`M \\times M`
+    and an :math:`N \\times N` complex unitary matrices, and :math:`S` is an
+    :math:`M \\times N` diagonal matrix with the singular values of :math:`A`.
+
+    Args:
+        matrix (ndarray): matrix whose SVD to calculate.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_singular_value_decomposition(matrix)
+
+  
+  def schmidt_decomposition(
+
     state, partition: Union[List[int], Tuple[int, ...]], backend=None
+
 ):
     backend = _check_backend(backend)
 
     nqubits = backend.np.log2(state.shape[-1])
     if not nqubits.is_integer():
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+
 
     nqubits = int(nqubits)
     partition_2 = set(list(range(nqubits))) ^ set(partition)
@@ -232,6 +262,6 @@ def schmidt_decomposition(
     tensor = backend.np.transpose(tensor, partition + partition_2)
     tensor = backend.np.reshape(tensor, 2 ** len(partition), -1)
 
-    U, S, Vh = singular_value_decomposition(tensor, backend=backend)
 
-    return U, S, Vh
+
+    return singular_value_decomposition(tensor, backend=backend)
