@@ -151,8 +151,8 @@ def partial_trace(
         return backend.np.reshape(rho, shape)
 
     order = tuple(sorted(traced_qubits))
-    order += tuple(i for i in range(nqubits) if i not in traced_qubits)
-    order += tuple(i + nqubits for i in order)
+    order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
+    order += tuple(k + nqubits for k in order)
     shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
 
     state = backend.np.transpose(state, order)
