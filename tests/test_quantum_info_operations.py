@@ -164,6 +164,7 @@ def test_singular_value_decomposition(backend):
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
 
+
 def test_schmidt_decomposition(backend):
     state_A = random_statevector(4, seed=10, backend=backend)
     state_B = random_statevector(4, seed=11, backend=backend)

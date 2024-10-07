@@ -241,7 +241,7 @@ def singular_value_decomposition(matrix, backend=None):
 
     return backend.calculate_singular_value_decomposition(matrix)
 
-  
+
   def schmidt_decomposition(
 
     state, partition: Union[List[int], Tuple[int, ...]], backend=None
