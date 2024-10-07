@@ -110,6 +110,7 @@ def test_check_backend(backend):
     assert test.name == target.name
     assert test.__class__ == target.__class__
 
+
 def _star_connectivity():
     Q = [i for i in range(5)]
     chip = nx.Graph()
