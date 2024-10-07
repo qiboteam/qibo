@@ -238,7 +238,7 @@ def meyer_wallach_entanglement(state, backend=None):
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    nqubits = int(np.log2(len(state))) if len(state.shape) == 1 else state.shape[0]
+    nqubits = int(np.log2(state.shape[-1]))
 
     entanglement = 0
     for j in range(nqubits):
@@ -268,6 +268,9 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
     and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled
     parameters :math:`\\theta_{k}`.
 
+    .. note::
+        Currently, function does not work with ``circuit`` that contains noisy channels.
+
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         samples (int): number of sampled circuit parameter vectors :math:`|S|`
@@ -279,7 +282,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Entangling capability.
+        float: Entangling capability :math:`\\text{Ent}`.
     """
 
     if not isinstance(samples, int):
