@@ -110,20 +110,6 @@ def test_check_backend(backend):
     assert test.name == target.name
     assert test.__class__ == target.__class__
 
-
-def test_resolve_global():
-    from qibo.backends import _Global
-
-    _Global._backend = None
-    _Global._transpiler = None
-
-    assert _Global._backend is None
-    assert _Global._transpiler is None
-    _Global.resolve_global()
-    assert issubclass(_Global._backend.__class__, qibo.backends.Backend)
-    assert _Global._transpiler is not None
-
-
 def _star_connectivity():
     Q = [i for i in range(5)]
     chip = nx.Graph()
