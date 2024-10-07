@@ -261,7 +261,15 @@ def schmidt_decomposition(
     :math:`\\{c_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}` are real, non-negative, and unique
     up to re-ordering.
 
+    The decomposition is calculated using :func:`qibo.quantum_info.singular_value_decomposition`,
+    resulting in
 
+    .. math::
+        \\ketbra{\\psi}{\\psi} = U \\, S \\, V^{\\dagger} \\, ,
+    
+    where :math:`U` is an :math:`a \\times a` unitary matrix, :math:`V` is an :math:`b \\times b`
+    unitary matrix, and :math:`S` is an :math:`a \\times b` positive semidefinite diagonal matrix
+    that contains the singular values of :math:`\\ketbra{\\psi}{\\psi}`.
 
     Args:
         state (ndarray): stevector or density matrix.
@@ -272,19 +280,23 @@ def schmidt_decomposition(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray, ndarray, ndarray:
+        ndarray, ndarray, ndarray: Respectively, the matrices :math:`U`, :math:`S`, 
+        and :math:`V^{\\dagger}`.
     """
     backend = _check_backend(backend)
 
-    nqubits = backend.np.log2(state.shape[-1])
+    nqubits = math.log2(state.shape[-1])
     if not nqubits.is_integer():
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
     partition_2 = set(list(range(nqubits))) ^ set(partition)
+    partition_2 = (
+        list(partition_2) if isinstance(partition, list) else tuple(partition_2)
+    )
 
     tensor = backend.np.reshape(state, [2] * nqubits)
     tensor = backend.np.transpose(tensor, partition + partition_2)
-    tensor = backend.np.reshape(tensor, 2 ** len(partition), -1)
+    tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
