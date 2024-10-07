@@ -166,9 +166,11 @@ class QiboMatrices:
 
 matrices = QiboMatrices()
 
+
 def get_backend():
     """Get the current backend."""
     return _Global.backend()
+
 
 def get_backend_name():
     """Get the name of the current backend"""
@@ -188,6 +190,7 @@ def set_backend(backend, **kwargs):
 def get_transpiler():
     """Get the current transpiler."""
     return _Global.transpiler()
+
 
 def get_transpiler_name():
     """Get the name of the current transpiler as a string."""
