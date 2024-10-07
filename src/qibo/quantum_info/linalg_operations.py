@@ -232,6 +232,6 @@ def schmidt_decomposition(
     tensor = backend.np.transpose(tensor, partition + partition_2)
     tensor = backend.np.reshape(tensor, 2 ** len(partition), -1)
 
-    U, S, Vh = np.linalg.svd(tensor)
+    U, S, Vh = singular_value_decomposition(tensor, backend=backend)
 
     return U, S, Vh
