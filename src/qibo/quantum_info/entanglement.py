@@ -194,7 +194,7 @@ def entanglement_fidelity(
 
 
 def meyer_wallach_entanglement(state, backend=None):
-    """Computes the Meyer-Wallach entanglement :math:`Q` of a ``state``,
+    """Compute the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
         Q(\\rho) = 2\\left(1 - \\frac{1}{N} \\, \\sum_{k} \\,
@@ -203,8 +203,9 @@ def meyer_wallach_entanglement(state, backend=None):
     where :math:`\\rho_{k}^{2}` is the reduced density matrix of qubit :math:`k`,
     and :math:`N` is the total number of qubits in ``state``.
     We use the definition of the Meyer-Wallach entanglement as the average purity
-    proposed in `Brennen (2003) <https://arxiv.org/abs/quant-ph/0305094>`_, which
-    is equivalent to the definition introduced in `Meyer and Wallach (2001) <https://arxiv.org/abs/quant-ph/0108104>`_.
+    proposed in `Brennen (2003) <https://dl.acm.org/doi/10.5555/2011556.2011561>`_, 
+    which is equivalent to the definition introduced in `Meyer and Wallach (2002) 
+    <https://doi.org/10.1063/1.1497700>`_.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -213,7 +214,16 @@ def meyer_wallach_entanglement(state, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Meyer-Wallach entanglement.
+        float: Meyer-Wallach entanglement :math:`Q`.
+
+
+    References:
+        1. G. K. Brennen, *An observable measure of entanglement for pure states of 
+        multi-qubit systems*, `Quantum Information and Computation, vol. 3 (6), 619-626
+        <https://dl.acm.org/doi/10.5555/2011556.2011561>`_ (2003).
+
+        2. D. A. Meyer and N. R. Wallach, * Global entanglement in multiparticle systems* 
+        `J. Math. Phys. 43, 4273–4278 <https://doi.org/10.1063/1.1497700>`_ (2002).
     """
 
     backend = _check_backend(backend)
@@ -230,7 +240,7 @@ def meyer_wallach_entanglement(state, backend=None):
 
     nqubits = int(np.log2(len(state))) if len(state.shape) == 1 else state.shape[0]
 
-    ent = 0
+    entanglement = 0
     for j in range(nqubits):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
@@ -239,22 +249,24 @@ def meyer_wallach_entanglement(state, backend=None):
 
         trace = purity(rho_r, backend=backend)
 
-        ent += trace
+        entanglement += trace
 
-    entanglement = 2 * (1 - ent / nqubits)
-
-    return entanglement
+    return 2 * (1 - entanglement / nqubits)
 
 
 def entangling_capability(circuit, samples: int, seed=None, backend=None):
-    """Returns the entangling capability :math:`\\text{Ent}` of a parametrized
-    circuit, defined as the average Meyer-Wallach entanglement :math:`Q` of the ``circuit``, i.e.
+    """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
+     
+    It is defined as the average Meyer-Wallach entanglement :math:`Q` 
+    (:func:`qibo.quantum_info.meyer_wallach_entanglement`) of the ``circuit``, i.e.
 
     .. math::
-        \\text{Ent} = \\frac{2}{|S|}\\sum_{\\theta_i\\in S}Q(\\rho_i) \\, ,
+        \\text{Ent} = \\frac{2}{|\\mathcal{S}|}\\sum_{\\theta_{k} \\in \\mathcal{S}} 
+            \\, Q(\\rho_{k}) \\, ,
 
-    where :math:`S` is the set of sampled circuit parameters, and :math:`\\rho_i` is the
-    state prepared by the circuit with parameters :math:`\\theta_i`.
+    where :math:`\\mathcal{S}` is the set of sampled circuit parameters, 
+    and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled 
+    parameters :math:`\\theta_{k}`.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
@@ -290,14 +302,12 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    res = []
+    capability = []
     for _ in range(samples):
         params = local_state.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
         state = backend.execute_circuit(circuit).state()
         entanglement = meyer_wallach_entanglement(state, backend=backend)
-        res.append(entanglement)
+        capability.append(entanglement)
 
-    capability = 2 * np.real(np.sum(res)) / samples
-
-    return capability
+    return 2 * np.real(np.sum(capability)) / samples
