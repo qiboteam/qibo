@@ -251,17 +251,17 @@ def schmidt_decomposition(
     its Schmidt decomposition is given by
 
     .. math::
-        \\ket{\\psi} = \\sum_{k = 1}^{\\min\\{a, \\, b\\}} \\, c_{k} \\, 
+        \\ket{\\psi} = \\sum_{k = 1}^{\\min\\{a, \\, b\\}} \\, c_{k} \\,
             \\ket{\\phi_{k}} \\otimes \\ket{\\nu_{k}} \\, ,
-    
+
     with :math:`a` and :math:`b` being the respective cardinalities of :math:`\\mathcal{H}_{A}`
-    and :math:`\\mathcal{H}_{B}`, and :math:`\\{\\phi_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]} 
-    \\subset \\mathcal{H}_{A}` and :math:`\\{\\nu_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]} 
-    \\subset \\mathcal{H}_{B}` being orthonormal sets. The coefficients 
+    and :math:`\\mathcal{H}_{B}`, and :math:`\\{\\phi_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}
+    \\subset \\mathcal{H}_{A}` and :math:`\\{\\nu_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}
+    \\subset \\mathcal{H}_{B}` being orthonormal sets. The coefficients
     :math:`\\{c_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}` are real, non-negative, and unique
     up to re-ordering.
 
-    
+
 
     Args:
         state (ndarray): stevector or density matrix.
@@ -272,7 +272,7 @@ def schmidt_decomposition(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray, ndarray, ndarray: 
+        ndarray, ndarray, ndarray:
     """
     backend = _check_backend(backend)
 
