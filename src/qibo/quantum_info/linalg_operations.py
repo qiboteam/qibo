@@ -242,18 +242,27 @@ def singular_value_decomposition(matrix, backend=None):
     return backend.calculate_singular_value_decomposition(matrix)
 
 
-  def schmidt_decomposition(
-
+def schmidt_decomposition(
     state, partition: Union[List[int], Tuple[int, ...]], backend=None
-
 ):
+    """Return the Schmidt decomposition of a :math:`n`-qubit bipartite pure quantum ``state``.
+
+    .. math::
+        \\ket{\\psi} = \\sum_{k} \\, c_{k} \\, \\ket{\\phi_{k}}\\!\\ket{\\psi_{k}}
+
+    Args:
+        state (_type_): _description_
+        partition (Union[List[int], Tuple[int, ...]]): _description_
+        backend (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     backend = _check_backend(backend)
 
     nqubits = backend.np.log2(state.shape[-1])
     if not nqubits.is_integer():
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
-
-
 
     nqubits = int(nqubits)
     partition_2 = set(list(range(nqubits))) ^ set(partition)
@@ -261,7 +270,5 @@ def singular_value_decomposition(matrix, backend=None):
     tensor = backend.np.reshape(state, [2] * nqubits)
     tensor = backend.np.transpose(tensor, partition + partition_2)
     tensor = backend.np.reshape(tensor, 2 ** len(partition), -1)
-
-
 
     return singular_value_decomposition(tensor, backend=backend)
