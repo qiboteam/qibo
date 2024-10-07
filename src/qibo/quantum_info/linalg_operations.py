@@ -266,7 +266,7 @@ def schmidt_decomposition(
 
     .. math::
         \\ketbra{\\psi}{\\psi} = U \\, S \\, V^{\\dagger} \\, ,
-    
+
     where :math:`U` is an :math:`a \\times a` unitary matrix, :math:`V` is an :math:`b \\times b`
     unitary matrix, and :math:`S` is an :math:`a \\times b` positive semidefinite diagonal matrix
     that contains the singular values of :math:`\\ketbra{\\psi}{\\psi}`.
@@ -280,7 +280,7 @@ def schmidt_decomposition(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray, ndarray, ndarray: Respectively, the matrices :math:`U`, :math:`S`, 
+        ndarray, ndarray, ndarray: Respectively, the matrices :math:`U`, :math:`S`,
         and :math:`V^{\\dagger}`.
     """
     backend = _check_backend(backend)
