@@ -16,6 +16,9 @@ from qibo import (
 from qibo.backends import (
     construct_backend,
     get_backend,
+    get_backend_name,
+    get_transpiler,
+    get_transpiler_name,
     get_device,
     get_precision,
     get_threads,
