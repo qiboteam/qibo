@@ -1867,6 +1867,12 @@ Trace distance
     raised when using `cupy` backend.
 
 
+Hilbert-Schmidt inner product
+"""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_inner_product
+
+
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
 
