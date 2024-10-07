@@ -130,6 +130,13 @@ class _Global:
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
 
+    @classmethod
+    def _reset_global(cls):
+        cls._backend = None
+        cls._transpiler = None
+        cls.backend()
+        cls.transpiler()
+
 
 class QiboMatrices:
     def __init__(self, dtype="complex128"):

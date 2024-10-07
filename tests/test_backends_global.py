@@ -141,4 +141,5 @@ def test_set_get_transpiler():
 
     _Global.set_transpiler(transpiler)
     assert _Global.transpiler() == transpiler
-    _Global.set_transpiler(Passes(passes=[]))  # reset the transpiler
+    
+    _Global._reset_global()

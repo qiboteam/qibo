@@ -49,7 +49,8 @@ def test_global_backend(backend):
         _Global._backend.name if backend.name == "numpy" else _Global._backend.platform
     )
     assert clifford_bkd.platform == target
-    set_backend("numpy")
+
+    _Global._reset_global()
 
 
 THETAS_1Q = [

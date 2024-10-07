@@ -4,6 +4,7 @@ import numpy as np
 
 import qibo
 from qibo import gates, set_backend
+from qibo.backends import _Global
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
@@ -320,7 +321,7 @@ def test_two_qubit_ansatz():
 
 def test_two_qubit_ansatz_training():
     # test qibojit case (copy initial state as quick-fix for in-place update)
-    qibo.set_backend("qibojit")
+    set_backend("qibojit")
 
     c = Circuit(2)
     c.add(gates.H(0))
@@ -352,3 +353,5 @@ def test_two_qubit_ansatz_training():
     predictions.append(1)
     labels = np.array([[1], [-1], [1]])
     test_qcnn.Accuracy(labels, predictions)
+
+    _Global._reset_global()
