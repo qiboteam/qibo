@@ -80,6 +80,7 @@ class _Global:
 
     @classmethod
     def backend(cls):
+        """Get the current backend. If no backend is set, it will create one."""
         if cls._backend is not None:
             return cls._backend
         cls._backend = cls._create_backend()
@@ -112,10 +113,14 @@ class _Global:
 
     @classmethod
     def transpiler(cls):
+        """Get the current transpiler. If no transpiler is set, it will create one."""
         from qibo.transpiler.pipeline import Passes
 
         if cls._transpiler is not None:
             return cls._transpiler
+        
+        # TODO: add default transpiler for hardware backends
+        # depends on cls._backend
 
         cls._transpiler = Passes(passes=[])
         return cls._transpiler
@@ -124,15 +129,6 @@ class _Global:
     def set_transpiler(cls, transpiler):
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
-
-    @classmethod
-    def resolve_global(cls):
-        if cls._backend is None:
-            cls._backend = cls.backend()
-        if cls._transpiler is None:
-            # TODO: add default transpiler for hardware backends
-            cls._transpiler = cls.transpiler()
-
 
 class QiboMatrices:
     def __init__(self, dtype="complex128"):

@@ -1101,11 +1101,10 @@ class Circuit:
             self._final_state = self.compiled.result(state, nshots)
             return self._final_state
 
-        _Global.resolve_global()
+        backend = _Global.backend()
         transpiler = _Global.transpiler()
         transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
 
-        backend = qibo.get_backend()
         if self.accelerators:  # pragma: no cover
             return backend.execute_distributed_circuit(
                 transpiled_circuit, initial_state, nshots
