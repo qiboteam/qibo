@@ -118,7 +118,7 @@ class _Global:
 
         if cls._transpiler is not None:
             return cls._transpiler
-        
+
         # TODO: add default transpiler for hardware backends
         # depends on cls._backend
 
@@ -129,6 +129,7 @@ class _Global:
     def set_transpiler(cls, transpiler):
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
+
 
 class QiboMatrices:
     def __init__(self, dtype="complex128"):

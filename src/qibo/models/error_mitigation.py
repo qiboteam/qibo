@@ -8,7 +8,13 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import _check_backend, _check_backend_and_local_state, _Global, get_backend, get_backend_name
+from qibo.backends import (
+    _check_backend,
+    _check_backend_and_local_state,
+    _Global,
+    get_backend,
+    get_backend_name,
+)
 from qibo.config import raise_error
 
 
@@ -1166,12 +1172,14 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
 
     # TODO: remove backend.platform.topology and pragma: no cover
     backend = get_backend()
-    if get_backend_name() == "qibolab":     # pragma: no cover
-        transpiler = Custom(initial_map=qubit_map, connectivity=backend.platform.topology)
+    if get_backend_name() == "qibolab":  # pragma: no cover
+        transpiler = Custom(
+            initial_map=qubit_map, connectivity=backend.platform.topology
+        )
         transpiled_circuit, _ = transpiler(circuit)
-    
-    if noise_model is not None:             # pragma: no cover
-       transpiled_circuit = noise_model.apply(transpiled_circuit)
+
+    if noise_model is not None:  # pragma: no cover
+        transpiled_circuit = noise_model.apply(transpiled_circuit)
 
     circuit_result = backend.execute_circuit(transpiled_circuit, nshots=nshots)
     return circuit_result
