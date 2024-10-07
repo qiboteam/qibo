@@ -126,21 +126,28 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
 
 
 def test_meyer_wallach_entanglement(backend):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3, 2).astype(complex)
+        state = backend.cast(state, dtype=state.dtype)
+        test = meyer_wallach_entanglement(state, backend=backend)
+
     nqubits = 2
 
     circuit1 = Circuit(nqubits)
     circuit1.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+    state1 = backend.execute_circuit(circuit1).state()
 
     circuit2 = Circuit(nqubits)
     circuit2.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
     circuit2.add(gates.CNOT(0, 1))
+    state2 = backend.execute_circuit(circuit2).state()
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=1e-6, rtol=1e-6
+        meyer_wallach_entanglement(state1, backend=backend), 0.0, atol=1e-6, rtol=1e-6
     )
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=1e-6, rtol=1e-6
+        meyer_wallach_entanglement(state2, backend=backend), 1.0, atol=1e-6, rtol=1e-6
     )
 
 
