@@ -230,58 +230,87 @@ def entanglement_fidelity(
     return entang_fidelity
 
 
-def meyer_wallach_entanglement(circuit, backend=None):
-    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+def meyer_wallach_entanglement(state, backend=None):
+    """Compute the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
-        Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\,
-            \\text{tr}\\left(\\rho_{k^{2}}(\\theta)\\right) \\, .
+        Q(\\rho) = 2\\left(1 - \\frac{1}{N} \\, \\sum_{k} \\,
+            \\text{tr}\\left(\\rho_{k}^{2}\\right)\\right) \\, ,
+
+    where :math:`\\rho_{k}^{2}` is the reduced density matrix of qubit :math:`k`,
+    and :math:`N` is the total number of qubits in ``state``.
+    We use the definition of the Meyer-Wallach entanglement as the average purity
+    proposed in `Brennen (2003) <https://dl.acm.org/doi/10.5555/2011556.2011561>`_,
+    which is equivalent to the definition introduced in `Meyer and Wallach (2002)
+    <https://doi.org/10.1063/1.1497700>`_.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        state (ndarray): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        float: Meyer-Wallach entanglement.
+        float: Meyer-Wallach entanglement :math:`Q`.
+
+
+    References:
+        1. G. K. Brennen, *An observable measure of entanglement for pure states of
+        multi-qubit systems*, `Quantum Information and Computation, vol. 3 (6), 619-626
+        <https://dl.acm.org/doi/10.5555/2011556.2011561>`_ (2003).
+
+        2. D. A. Meyer and N. R. Wallach, *Global entanglement in multiparticle systems*,
+        `J. Math. Phys. 43, 4273–4278 <https://doi.org/10.1063/1.1497700>`_ (2002).
     """
 
     backend = _check_backend(backend)
 
-    circuit.density_matrix = True
-    nqubits = circuit.nqubits
+    if (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
 
-    rho = backend.execute_circuit(circuit).state()
+    nqubits = int(np.log2(state.shape[-1]))
 
-    ent = 0
+    entanglement = 0
     for j in range(nqubits):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
 
-        rho_r = partial_trace(rho, trace_q, backend=backend)
+        rho_r = partial_trace(state, trace_q, backend=backend)
 
         trace = purity(rho_r, backend=backend)
 
-        ent += trace
+        entanglement += trace
 
-    entanglement = 1 - ent / nqubits
-
-    return entanglement
+    return 2 * (1 - entanglement / nqubits)
 
 
 def entangling_capability(circuit, samples: int, seed=None, backend=None):
-    """Returns the entangling capability :math:`\\text{Ent}` of a parametrized
-    circuit, which is average Meyer-Wallach entanglement Q of the circuit, i.e.
+    """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
+
+    It is defined as the average Meyer-Wallach entanglement :math:`Q`
+    (:func:`qibo.quantum_info.meyer_wallach_entanglement`) of the ``circuit``, i.e.
 
     .. math::
-        \\text{Ent} = \\frac{2}{S}\\sum_{k}Q_k \\, ,
+        \\text{Ent} = \\frac{2}{|\\mathcal{S}|}\\sum_{\\theta_{k} \\in \\mathcal{S}}
+            \\, Q(\\rho_{k}) \\, ,
 
-    where :math:`S` is the number of samples.
+    where :math:`\\mathcal{S}` is the set of sampled circuit parameters,
+    and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled
+    parameters :math:`\\theta_{k}`.
+
+    .. note::
+        Currently, function does not work with ``circuit`` that contains noisy channels.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        samples (int): number of samples to estimate the integral.
+        samples (int): number of sampled circuit parameter vectors :math:`|S|`
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
@@ -290,7 +319,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Entangling capability.
+        float: Entangling capability :math:`\\text{Ent}`.
     """
 
     if not isinstance(samples, int):
@@ -313,13 +342,12 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    res = []
+    capability = []
     for _ in range(samples):
         params = local_state.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
-        entanglement = meyer_wallach_entanglement(circuit, backend=backend)
-        res.append(entanglement)
+        state = backend.execute_circuit(circuit).state()
+        entanglement = meyer_wallach_entanglement(state, backend=backend)
+        capability.append(entanglement)
 
-    capability = 2 * np.real(np.sum(res)) / samples
-
-    return capability
+    return 2 * np.real(np.sum(capability)) / samples
