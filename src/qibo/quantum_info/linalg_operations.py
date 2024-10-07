@@ -247,16 +247,32 @@ def schmidt_decomposition(
 ):
     """Return the Schmidt decomposition of a :math:`n`-qubit bipartite pure quantum ``state``.
 
+    Given a bipartite pure state :math:`\\ket{\\psi}\\in\\mathcal{H}_{A}\\otimes\\mathcal{H}_{B}`,
+    its Schmidt decomposition is given by
+
     .. math::
-        \\ket{\\psi} = \\sum_{k} \\, c_{k} \\, \\ket{\\phi_{k}}\\!\\ket{\\psi_{k}}
+        \\ket{\\psi} = \\sum_{k = 1}^{\\min\\{a, \\, b\\}} \\, c_{k} \\, 
+            \\ket{\\phi_{k}} \\otimes \\ket{\\nu_{k}} \\, ,
+    
+    with :math:`a` and :math:`b` being the respective cardinalities of :math:`\\mathcal{H}_{A}`
+    and :math:`\\mathcal{H}_{B}`, and :math:`\\{\\phi_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]} 
+    \\subset \\mathcal{H}_{A}` and :math:`\\{\\nu_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]} 
+    \\subset \\mathcal{H}_{B}` being orthonormal sets. The coefficients 
+    :math:`\\{c_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}` are real, non-negative, and unique
+    up to re-ordering.
+
+    
 
     Args:
-        state (_type_): _description_
-        partition (Union[List[int], Tuple[int, ...]]): _description_
-        backend (_type_, optional): _description_. Defaults to None.
+        state (ndarray): stevector or density matrix.
+        partition (Union[List[int], Tuple[int, ...]]): indices of qubits in one of the two
+            partitions. The other partition is inferred as the remaining qubits.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        _type_: _description_
+        ndarray, ndarray, ndarray: 
     """
     backend = _check_backend(backend)
 
