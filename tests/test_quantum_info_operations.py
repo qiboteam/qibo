@@ -172,8 +172,20 @@ def test_schmidt_decomposition(backend):
 
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
+    # recovering original state
+    recovered = np.zeros_like(state.shape, dtype=complex)
+    recovered = backend.cast(recovered, dtype=recovered.dtype)
+    for coeff, u, vh in zip(S, U.T, Vh):
+        if abs(coeff) > 1e-10:
+            recovered = recovered + coeff * backend.np.kron(u, vh)
+
+    print(S)
+
+    backend.assert_allclose(recovered, state)
+
+    # entropy test
     coeffs = backend.np.abs(S) ** 2
-    entropy = backend.np.where(np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
+    entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
     entropy = -backend.np.sum(coeffs * entropy)
 
-    backend.assert_allclose(entropy, 0.0)
+    backend.assert_allclose(entropy, 0.0, atol=1e-14)
