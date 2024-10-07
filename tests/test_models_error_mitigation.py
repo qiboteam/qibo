@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import construct_backend
+from qibo.backends import _Global, construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.error_mitigation import (
     CDR,
@@ -51,7 +51,7 @@ def get_circuit(nqubits, nmeas=None):
 
     return c
 
-
+_Global._reset_global()
 backend = construct_backend("numpy")
 # # Generate random response matrices
 resp_matrix_1q = random_stochastic_matrix(
@@ -341,6 +341,8 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     ],
 )
 def test_ics(backend, nqubits, noise, full_output, readout):
+    print(backend)
+    print(backend.name)
     if backend.name == "tensorflow":
         import tensorflow as tf
 
