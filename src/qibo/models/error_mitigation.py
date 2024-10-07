@@ -1176,10 +1176,10 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         transpiler = Custom(
             initial_map=qubit_map, connectivity=backend.platform.topology
         )
-        transpiled_circuit, _ = transpiler(circuit)
+        circuit, _ = transpiler(circuit)
 
     if noise_model is not None:  # pragma: no cover
-        transpiled_circuit = noise_model.apply(transpiled_circuit)
+        circuit = noise_model.apply(circuit)
 
-    circuit_result = backend.execute_circuit(transpiled_circuit, nshots=nshots)
+    circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     return circuit_result
