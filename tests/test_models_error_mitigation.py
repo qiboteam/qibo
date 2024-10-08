@@ -51,6 +51,7 @@ def get_circuit(nqubits, nmeas=None):
 
     return c
 
+
 backend = construct_backend("numpy")
 # # Generate random response matrices
 resp_matrix_1q = random_stochastic_matrix(
