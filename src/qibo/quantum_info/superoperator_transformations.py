@@ -11,6 +11,7 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
+from qibo.quantum_info.linalg_operations import singular_value_decomposition
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -26,8 +27,9 @@ def vectorization(state, order: str = "row", backend=None):
     .. math::
         |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
 
+    If ``state`` is a 3-dimensional tensor it is interpreted as a batch of states.
     Args:
-        state: state vector or density matrix.
+        state: statevector, density matrix, an array of statevectors, or an array of density matrices.
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
@@ -40,13 +42,13 @@ def vectorization(state, order: str = "row", backend=None):
         ndarray: Liouville representation of ``state``.
     """
     if (
-        (len(state.shape) >= 3)
+        (len(state.shape) > 3)
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}.",
         )
 
     if not isinstance(order, str):
@@ -62,25 +64,36 @@ def vectorization(state, order: str = "row", backend=None):
 
     backend = _check_backend(backend)
 
+    dims = state.shape[-1]
+
     if len(state.shape) == 1:
         state = backend.np.outer(state, backend.np.conj(state))
+    elif len(state.shape) == 3 and state.shape[1] == 1:
+        state = backend.np.einsum(
+            "aij,akl->aijkl", state, backend.np.conj(state)
+        ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.np.reshape(state, (1, -1))[0]
+        state = backend.np.reshape(state, (-1, dims**2))
     elif order == "column":
-        state = state.T
-        state = backend.np.reshape(state, (1, -1))[0]
+        indices = list(range(len(state.shape)))
+        indices[-2:] = reversed(indices[-2:])
+        state = backend.np.transpose(state, indices)
+        state = backend.np.reshape(state, (-1, dims**2))
     else:
-        dim = len(state)
-        nqubits = int(np.log2(dim))
+        nqubits = int(np.log2(state.shape[-1]))
 
-        new_axis = []
+        new_axis = [0]
         for qubit in range(nqubits):
-            new_axis += [qubit + nqubits, qubit]
+            new_axis.extend([qubit + nqubits + 1, qubit + 1])
 
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
         state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1,))
+        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
+
+    state = backend.np.squeeze(
+        state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
+    )
 
     return state
 
@@ -483,10 +496,12 @@ def choi_to_kraus(
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = np.linalg.svd(backend.to_numpy(choi_super_op))
-        U = np.transpose(U)
-        coefficients = np.sqrt(coefficients)
-        V = np.conj(V)
+        U, coefficients, V = singular_value_decomposition(
+            choi_super_op, backend=backend
+        )
+        U = U.T
+        coefficients = backend.np.sqrt(coefficients)
+        V = backend.np.conj(V)
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
