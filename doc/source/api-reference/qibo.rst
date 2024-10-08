@@ -1704,6 +1704,12 @@ Entanglement of formation
 .. autofunction:: qibo.quantum_info.entanglement_of_formation
 
 
+Negativity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.negativity
+
+
 Entanglement fidelity
 """""""""""""""""""""
 
