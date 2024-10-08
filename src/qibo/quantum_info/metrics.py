@@ -197,10 +197,9 @@ def hilbert_schmidt_distance(state, target, backend=None):
         state = backend.np.outer(backend.np.conj(state), state)
         target = backend.np.outer(backend.np.conj(target), target)
 
-    distance = state - target
-    distance = hilbert_schmidt_inner_product(distance, distance)
+    difference = state - target
 
-    return float(backend.np.real(distance))
+    return hilbert_schmidt_inner_product(difference, difference, backend=backend)
 
 
 def fidelity(state, target, check_hermitian: bool = False, backend=None):
