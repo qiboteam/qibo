@@ -14,7 +14,7 @@ class TorchMatrices(NumpyMatrices):
         dtype (torch.dtype): Data type of the matrices.
     """
 
-    def __init__(self, dtype, requires_grad):
+    def __init__(self, dtype):
         import torch  # pylint: disable=import-outside-toplevel  # type: ignore
 
         super().__init__(dtype)
