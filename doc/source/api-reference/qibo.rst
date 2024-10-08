@@ -2631,7 +2631,7 @@ As for the other backends, the Clifford backend can be set with
     import qibo
     qibo.set_backend("clifford", platform="numpy")
 
-by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used
+by specifying the engine used for calculation, if not provided the current backend is used
 
 .. testcode::  python
 

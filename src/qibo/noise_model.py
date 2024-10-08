@@ -314,7 +314,7 @@ class CompositeNoiseModel:
             vol_tol (float): Stop the optimization process when the volume of the hyperrectangle that contains the lowest function value becomes smaller than vol_tol.
             len_tol (float): When "locally_biased" is set to True, stop the optimization process if the length of the longest side of the hyperrectangle containing the lowest function value, normalized by the maximal side length, is less than half of "len_tol". If "locally_biased" is False, terminate the optimization process when half of the normalized diagonal of the hyperrectangle containing the lowest function value is smaller than "len_tol".
             callback (callable): This function takes one parameter, `xk`, which represents the current best function value found by the algorithm.
-            backend: you can specify your backend. If None qibo.backends.GlobalBackend is used.
+            backend: you can specify your backend. If None, the current backend is used.
         """
 
         from scipy.optimize import Bounds, direct
