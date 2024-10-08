@@ -1,4 +1,3 @@
-from functools import reduce
 from itertools import product
 from typing import Optional
 
@@ -92,43 +91,41 @@ def pauli_basis(
     backend = _check_backend(backend)
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
-    basis_single = [pauli_labels[label] for label in pauli_order]
+    dim = 2**nqubits
+    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
+    einsum = np.einsum if backend.name == "tensorflow" else backend.np.einsum
 
     if nqubits > 1:
-        basis_full = list(product(basis_single, repeat=nqubits))
-        basis_full = [reduce(np.kron, row) for row in basis_full]
+        input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
+        output_indices = (i for indices in zip(*input_indices) for i in indices)
+        operands = [basis_single for _ in range(nqubits)]
+        inputs = [item for pair in zip(operands, input_indices) for item in pair]
+        basis_full = einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
 
-    basis_full = backend.cast(basis_full, dtype=basis_full[0].dtype)
-
     if vectorize and sparse:
-        basis, indexes = [], []
-        for row in basis_full:
-            row = vectorization(row, order=order, backend=backend)
-            row_indexes = backend.np.flatnonzero(row)
-            indexes.append(row_indexes)
-            basis.append(row[row_indexes])
-            del row
+        if backend.name == "tensorflow":
+            nonzero = np.nonzero
+        elif backend.name == "pytorch":
+            nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
+        else:
+            nonzero = backend.np.nonzero
+        basis = vectorization(basis_full, order=order, backend=backend)
+        indices = nonzero(basis)
+        basis = basis[indices].reshape(-1, dim)
+        indices = indices[1].reshape(-1, dim)
+
     elif vectorize and not sparse:
-        basis = [
-            vectorization(
-                backend.cast(matrix, dtype=matrix.dtype), order=order, backend=backend
-            )
-            for matrix in basis_full
-        ]
+        basis = vectorization(basis_full, order=order, backend=backend)
     else:
         basis = basis_full
-
-    basis = backend.cast(basis, dtype=basis[0].dtype)
 
     if normalize:
         basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = backend.cast(indexes, dtype=indexes[0][0].dtype)
-
-        return basis, indexes
+        return basis, indices
 
     return basis
 

@@ -57,7 +57,7 @@ class M(Gate):
         self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse
-        self.result = MeasurementResult(self)
+        self.result = MeasurementResult(self.target_qubits)
         # list of measurement pulses implementing the gate
         # relevant for experiments only
         self.pulses = None
@@ -247,7 +247,7 @@ class M(Gate):
                 c = models.Circuit(3)
                 c.add(measurement.on_qubits({0: 0, 1: 2}))
                 assert c.queue[0].result is measurement.result
-                print(c.draw())
+                c.draw()
             .. testoutput::
 
                 q0: ─M─

@@ -1704,6 +1704,12 @@ Entanglement of formation
 .. autofunction:: qibo.quantum_info.entanglement_of_formation
 
 
+Negativity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.negativity
+
+
 Entanglement fidelity
 """""""""""""""""""""
 
@@ -1762,6 +1768,11 @@ Classical Tsallis entropy
 """""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+Classical Tsallis relative entropy
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_tsallis_entropy
 
 
 von Neumann entropy
@@ -1958,10 +1969,28 @@ Partial trace
 .. autofunction:: qibo.quantum_info.partial_trace
 
 
+Partial transpose
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_transpose
+
+
 Matrix exponentiation
 """""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
+
+
+Matrix power
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_power
+
+
+Singular value decomposition
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.singular_value_decomposition
 
 
 Quantum Networks

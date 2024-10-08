@@ -2,6 +2,7 @@
 
 from collections import Counter
 
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
@@ -500,8 +501,6 @@ def test_circuit_with_pauli_noise(measurements, noise_map):
 @pytest.mark.parametrize("include_not_trainable", [True, False])
 @pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
 def test_get_parameters(trainable, include_not_trainable, format):
-    import numpy as np
-
     matrix = np.random.random((2, 2))
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
@@ -634,7 +633,7 @@ def test_circuit_draw():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
 
 
 def test_circuit_wire_names_errors():
@@ -654,10 +653,10 @@ def test_circuit_draw_wire_names():
     """Test circuit text draw."""
     ref = (
         "a    : ─H─U1─U1─U1─U1───────────────────────────x───\n"
-        "b    : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
-        "hello: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
-        "1    : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
-        "q4   : ────────────o──────────o───────o────o──H─x───"
+        + "b    : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
+        + "hello: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
+        + "1    : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
+        + "q4   : ────────────o──────────o───────o────o──H─x───"
     )
     circuit = Circuit(5, wire_names=["a", "b", "hello", "1", "q4"])
     for i1 in range(5):
@@ -667,46 +666,44 @@ def test_circuit_draw_wire_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
-    assert circuit.draw() == ref
+    assert str(circuit) == ref
 
 
-def test_circuit_draw_line_wrap():
+def test_circuit_draw_line_wrap(capsys):
     """Test circuit text draw with line wrap."""
     ref_line_wrap_50 = (
         "q0:     ─H─U1─U1─U1─U1───────────────────────────x───I───f ...\n"
-        "q1:     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n"
-        "q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n"
-        "q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n"
-        "q4:     ────────────o──────────o───────o────o──H─x───────f ...\n"
-        "\n"
-        "q0: ... ─o────gf───M─\n"
-        "q1: ... ─U3───|──o─M─\n"
-        "q2: ... ────X─gf─o─M─\n"
-        "q3: ... ────o────o───\n"
-        "q4: ... ────o────X───"
+        + "q1:     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n"
+        + "q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n"
+        + "q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n"
+        + "q4:     ────────────o──────────o───────o────o──H─x───────f ...\n"
+        + "\n"
+        + "q0: ... ─o────gf───M─\n"
+        + "q1: ... ─U3───|──o─M─\n"
+        + "q2: ... ────X─gf─o─M─\n"
+        + "q3: ... ────o────o───\n"
+        + "q4: ... ────o────X───"
     )
 
     ref_line_wrap_30 = (
         "q0:     ─H─U1─U1─U1─U1──────────────── ...\n"
-        "q1:     ───o──|──|──|──H─U1─U1─U1───── ...\n"
-        "q2:     ──────o──|──|────o──|──|──H─U1 ...\n"
-        "q3:     ─────────o──|───────o──|────o─ ...\n"
-        "q4:     ────────────o──────────o────── ...\n"
-        "\n"
-        "q0: ... ───────────x───I───f─o────gf── ...\n"
-        "q1: ... ───────────|─x─I───|─U3───|──o ...\n"
-        "q2: ... ─U1────────|─|─────|────X─gf─o ...\n"
-        "q3: ... ─|──H─U1───|─x───M─|────o────o ...\n"
-        "q4: ... ─o────o──H─x───────f────o────X ...\n"
-        "\n"
-        "q0: ... ─M─\n"
-        "q1: ... ─M─\n"
-        "q2: ... ─M─\n"
-        "q3: ... ───\n"
-        "q4: ... ───"
+        + "q1:     ───o──|──|──|──H─U1─U1─U1───── ...\n"
+        + "q2:     ──────o──|──|────o──|──|──H─U1 ...\n"
+        + "q3:     ─────────o──|───────o──|────o─ ...\n"
+        + "q4:     ────────────o──────────o────── ...\n"
+        + "\n"
+        + "q0: ... ───────────x───I───f─o────gf── ...\n"
+        + "q1: ... ───────────|─x─I───|─U3───|──o ...\n"
+        + "q2: ... ─U1────────|─|─────|────X─gf─o ...\n"
+        + "q3: ... ─|──H─U1───|─x───M─|────o────o ...\n"
+        + "q4: ... ─o────o──H─x───────f────o────X ...\n"
+        + "\n"
+        + "q0: ... ─M─\n"
+        + "q1: ... ─M─\n"
+        + "q2: ... ─M─\n"
+        + "q3: ... ───\n"
+        + "q4: ... ───"
     )
-
-    import numpy as np
 
     circuit = Circuit(5)
     for i1 in range(5):
@@ -723,57 +720,51 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert (
-        circuit.draw(
-            line_wrap=50,
-        )
-        == ref_line_wrap_50
-    )
-    assert (
-        circuit.draw(
-            line_wrap=30,
-        )
-        == ref_line_wrap_30
-    )
+
+    circuit.draw(line_wrap=50)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref_line_wrap_50
+
+    circuit.draw(line_wrap=30)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref_line_wrap_30
 
 
-def test_circuit_draw_line_wrap_names():
+def test_circuit_draw_line_wrap_names(capsys):
     """Test circuit text draw with line wrap."""
     ref_line_wrap_50 = (
         "q0:     ─H─U1─U1─U1─U1───────────────────────────x───I───f ...\n"
-        "a :     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n"
-        "q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n"
-        "q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n"
-        "q4:     ────────────o──────────o───────o────o──H─x───────f ...\n"
-        "\n"
-        "q0: ... ─o────gf───M─\n"
-        "a : ... ─U3───|──o─M─\n"
-        "q2: ... ────X─gf─o─M─\n"
-        "q3: ... ────o────o───\n"
-        "q4: ... ────o────X───"
+        + "a :     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n"
+        + "q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n"
+        + "q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n"
+        + "q4:     ────────────o──────────o───────o────o──H─x───────f ...\n"
+        + "\n"
+        + "q0: ... ─o────gf───M─\n"
+        + "a : ... ─U3───|──o─M─\n"
+        + "q2: ... ────X─gf─o─M─\n"
+        + "q3: ... ────o────o───\n"
+        + "q4: ... ────o────X───"
     )
 
     ref_line_wrap_30 = (
         "q0:     ─H─U1─U1─U1─U1──────────────── ...\n"
-        "a :     ───o──|──|──|──H─U1─U1─U1───── ...\n"
-        "q2:     ──────o──|──|────o──|──|──H─U1 ...\n"
-        "q3:     ─────────o──|───────o──|────o─ ...\n"
-        "q4:     ────────────o──────────o────── ...\n"
-        "\n"
-        "q0: ... ───────────x───I───f─o────gf── ...\n"
-        "a : ... ───────────|─x─I───|─U3───|──o ...\n"
-        "q2: ... ─U1────────|─|─────|────X─gf─o ...\n"
-        "q3: ... ─|──H─U1───|─x───M─|────o────o ...\n"
-        "q4: ... ─o────o──H─x───────f────o────X ...\n"
-        "\n"
-        "q0: ... ─M─\n"
-        "a : ... ─M─\n"
-        "q2: ... ─M─\n"
-        "q3: ... ───\n"
-        "q4: ... ───"
+        + "a :     ───o──|──|──|──H─U1─U1─U1───── ...\n"
+        + "q2:     ──────o──|──|────o──|──|──H─U1 ...\n"
+        + "q3:     ─────────o──|───────o──|────o─ ...\n"
+        + "q4:     ────────────o──────────o────── ...\n"
+        + "\n"
+        + "q0: ... ───────────x───I───f─o────gf── ...\n"
+        + "a : ... ───────────|─x─I───|─U3───|──o ...\n"
+        + "q2: ... ─U1────────|─|─────|────X─gf─o ...\n"
+        + "q3: ... ─|──H─U1───|─x───M─|────o────o ...\n"
+        + "q4: ... ─o────o──H─x───────f────o────X ...\n"
+        + "\n"
+        + "q0: ... ─M─\n"
+        + "a : ... ─M─\n"
+        + "q2: ... ─M─\n"
+        + "q3: ... ───\n"
+        + "q4: ... ───"
     )
-
-    import numpy as np
 
     circuit = Circuit(5, wire_names={"q1": "a"})
     for i1 in range(5):
@@ -790,22 +781,18 @@ def test_circuit_draw_line_wrap_names():
     circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
     circuit.add(gates.X(4).controlled_by(1, 2, 3))
     circuit.add(gates.M(*range(3)))
-    assert (
-        circuit.draw(
-            line_wrap=50,
-        )
-        == ref_line_wrap_50
-    )
-    assert (
-        circuit.draw(
-            line_wrap=30,
-        )
-        == ref_line_wrap_30
-    )
+
+    circuit.draw(line_wrap=50)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref_line_wrap_50
+
+    circuit.draw(line_wrap=30)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref_line_wrap_30
 
 
 @pytest.mark.parametrize("legend", [True, False])
-def test_circuit_draw_channels(legend):
+def test_circuit_draw_channels(capsys, legend):
     """Check that channels are drawn correctly."""
 
     circuit = Circuit(2, density_matrix=True)
@@ -823,27 +810,24 @@ def test_circuit_draw_channels(legend):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.DepolarizingChannel((1,), 0.1))
 
-    ref = "q0: ─H─PN─o─PN─o─D─o─D─o───\n" "q1: ─H─PN─X─PN─X─D─X───X─D─"
+    ref = "q0: ─H─PN─o─PN─o─D─o─D─o───\n" + "q1: ─H─PN─X─PN─X─D─X───X─D─"
 
     if legend:
         ref += (
             "\n\n Legend for callbacks and channels: \n"
-            "| Gate                | Symbol   |\n"
-            "|---------------------+----------|\n"
-            "| DepolarizingChannel | D        |\n"
-            "| PauliNoiseChannel   | PN       |"
+            + "| Gate                | Symbol   |\n"
+            + "|---------------------+----------|\n"
+            + "| DepolarizingChannel | D        |\n"
+            + "| PauliNoiseChannel   | PN       |"
         )
 
-    assert (
-        circuit.draw(
-            legend=legend,
-        )
-        == ref
-    )
+    circuit.draw(legend=legend)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref
 
 
 @pytest.mark.parametrize("legend", [True, False])
-def test_circuit_draw_callbacks(legend):
+def test_circuit_draw_callbacks(capsys, legend):
     """Check that callbacks are drawn correcly."""
     from qibo.callbacks import EntanglementEntropy
 
@@ -855,32 +839,29 @@ def test_circuit_draw_callbacks(legend):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
 
-    ref = "q0: ─EE─H─EE─o─EE─\n" "q1: ─EE───EE─X─EE─"
+    ref = "q0: ─EE─H─EE─o─EE─\n" + "q1: ─EE───EE─X─EE─"
 
     if legend:
         ref += (
             "\n\n Legend for callbacks and channels: \n"
-            "| Gate                | Symbol   |\n"
-            "|---------------------+----------|\n"
-            "| EntanglementEntropy | EE       |"
+            + "| Gate                | Symbol   |\n"
+            + "|---------------------+----------|\n"
+            + "| EntanglementEntropy | EE       |"
         )
 
-    assert (
-        c.draw(
-            legend=legend,
-        )
-        == ref
-    )
+    c.draw(legend=legend)
+    out, _ = capsys.readouterr()
+    assert out.rstrip("\n") == ref
 
 
 def test_circuit_draw_labels():
     """Test circuit text draw."""
     ref = (
         "q0: ─H─G1─G2─G3─G4───────────────────────────x───\n"
-        "q1: ───o──|──|──|──H─G2─G3─G4────────────────|─x─\n"
-        "q2: ──────o──|──|────o──|──|──H─G3─G4────────|─|─\n"
-        "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
-        "q4: ────────────o──────────o───────o────o──H─x───"
+        + "q1: ───o──|──|──|──H─G2─G3─G4────────────────|─x─\n"
+        + "q2: ──────o──|──|────o──|──|──H─G3─G4────────|─|─\n"
+        + "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
+        + "q4: ────────────o──────────o───────o────o──H─x───"
     )
     circuit = Circuit(5)
     for i1 in range(5):
@@ -891,17 +872,17 @@ def test_circuit_draw_labels():
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit.draw() == ref
+    assert str(circuit).rstrip("\n") == ref
 
 
 def test_circuit_draw_names(capsys):
     """Test circuit text draw."""
     ref = (
         "q0: ─H─cx─cx─cx─cx───────────────────────────x───\n"
-        "q1: ───o──|──|──|──H─cx─cx─cx────────────────|─x─\n"
-        "q2: ──────o──|──|────o──|──|──H─cx─cx────────|─|─\n"
-        "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
-        "q4: ────────────o──────────o───────o────o──H─x───"
+        + "q1: ───o──|──|──|──H─cx─cx─cx────────────────|─x─\n"
+        + "q2: ──────o──|──|────o──|──|──H─cx─cx────────|─|─\n"
+        + "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
+        + "q4: ────────────o──────────o───────o────o──H─x───"
     )
     circuit = Circuit(5)
     for i1 in range(5):
@@ -912,12 +893,9 @@ def test_circuit_draw_names(capsys):
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
-    assert circuit.draw() == ref
-
-    # Testing circuit text draw when ``output_string == False``
-    circuit.display()
+    circuit.draw()
     out, _ = capsys.readouterr()
-    assert out == ref
+    assert out.rstrip("\n") == ref
 
 
 def test_circuit_draw_error():

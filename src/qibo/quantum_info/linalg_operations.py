@@ -97,7 +97,9 @@ def anticommutator(operator_1, operator_2):
     return operator_1 @ operator_2 + operator_2 @ operator_1
 
 
-def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=None):
+def partial_trace(
+    state, traced_qubits: Union[List[int], Tuple[int, ...]], backend=None
+):
     """Returns the density matrix resulting from tracing out ``traced_qubits`` from ``state``.
 
     Total number of qubits is inferred by the shape of ``state``.
@@ -149,14 +151,91 @@ def partial_trace(state, traced_qubits: Union[List[int], Tuple[int]], backend=No
         return backend.np.reshape(rho, shape)
 
     order = tuple(sorted(traced_qubits))
-    order += tuple(i for i in range(nqubits) if i not in traced_qubits)
-    order += tuple(i + nqubits for i in order)
+    order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
+    order += tuple(k + nqubits for k in order)
     shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
 
     state = backend.np.transpose(state, order)
     state = backend.np.reshape(state, shape)
 
     return backend.np.einsum("abac->bc", state)
+
+
+def partial_transpose(
+    operator, partition: Union[List[int], Tuple[int, ...]], backend=None
+):
+    """Return matrix after the partial transposition of ``partition`` qubits in ``operator``.
+
+    Given a :math:`n`-qubit operator :math:`O \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the partial transpose with respect to ``partition`` :math:`B` is given by
+
+    .. math::
+        \\begin{align}
+        O^{T_{B}} &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes
+            \\left(\\ketbra{l}{m}\\right)^{T} \\\\
+        &= \\sum_{jklm} \\, O_{lm}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{m}{l} \\\\
+        &= \\sum_{jklm} \\, O_{ml}^{jk} \\, \\ketbra{j}{k} \\otimes \\ketbra{l}{m} \\, ,
+        \\end{align}
+
+    where the superscript :math:`T` indicates the transposition operation,
+    and :math:`T_{B}` indicates transposition on ``partition`` :math:`B`.
+    The total number of qubits is inferred by the shape of ``operator``.
+
+    Args:
+        operator (ndarray): :math:`1`- or :math:`2`-dimensional operator, or an array of
+            :math:`1`- or :math:`2`-dimensional operators,
+        partition (Union[List[int], Tuple[int, ...]]): indices of qubits to be transposed.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Partially transposed operator(s) :math:`\\O^{T_{B}}`.
+    """
+    backend = _check_backend(backend)
+
+    shape = operator.shape
+    nstates = shape[0]
+    dims = shape[-1]
+    nqubits = math.log2(dims)
+
+    if not nqubits.is_integer():
+        raise_error(
+            ValueError,
+            f"dimensions of ``state`` (or states in a batch) must be a power of 2.",
+        )
+
+    if (len(shape) > 3) or (nstates == 0) or (len(shape) == 2 and nstates != dims):
+        raise_error(
+            TypeError,
+            "``operator`` must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), "
+            + f"but has dims {shape}.",
+        )
+
+    nqubits = int(nqubits)
+
+    if len(shape) == 1:
+        operator = backend.np.outer(operator, backend.np.conj(operator.T))
+    elif len(shape) == 3 and shape[1] == 1:
+        operator = backend.np.einsum(
+            "aij,akl->aijkl", operator, backend.np.conj(operator)
+        ).reshape(nstates, dims, dims)
+
+    new_shape = list(range(2 * nqubits + 1))
+    for ind in partition:
+        ind += 1
+        new_shape[ind] = ind + nqubits
+        new_shape[ind + nqubits] = ind
+    new_shape = tuple(new_shape)
+
+    reshaped = backend.np.reshape(operator, [-1] + [2] * (2 * nqubits))
+    reshaped = backend.np.transpose(reshaped, new_shape)
+
+    final_shape = (dims, dims)
+    if len(operator.shape) == 3:
+        final_shape = (nstates,) + final_shape
+
+    return backend.np.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(
@@ -196,3 +275,47 @@ def matrix_exponentiation(
     backend = _check_backend(backend)
 
     return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+
+
+def matrix_power(matrix, power: Union[float, int], backend=None):
+    """Given a ``matrix`` :math:`A` and power :math:`\\alpha`, calculate :math:`A^{\\alpha}`.
+
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        power (float or int): power to raise ``matrix`` to.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: matrix power :math:`A^{\\alpha}`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_matrix_power(matrix, power)
+
+
+def singular_value_decomposition(matrix, backend=None):
+    """Calculate the Singular Value Decomposition (SVD) of ``matrix``.
+
+    Given an :math:`M \\times N` complex matrix :math:`A`, its SVD is given by
+
+    .. math:
+        A = U \\, S \\, V^{\\dagger} \\, ,
+
+    where :math:`U` and :math:`V` are, respectively, an :math:`M \\times M`
+    and an :math:`N \\times N` complex unitary matrices, and :math:`S` is an
+    :math:`M \\times N` diagonal matrix with the singular values of :math:`A`.
+
+    Args:
+        matrix (ndarray): matrix whose SVD to calculate.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_singular_value_decomposition(matrix)

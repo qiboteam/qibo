@@ -758,7 +758,7 @@ def test_ibmq_noise(
 
     noisy_circuit_target = noise_model_target.apply(circuit)
 
-    assert noisy_circuit.draw() == noisy_circuit_target.draw()
+    assert str(noisy_circuit) == str(noisy_circuit_target)
 
     backend.set_seed(2024)
     state = backend.execute_circuit(noisy_circuit, nshots=10)
