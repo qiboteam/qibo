@@ -8,6 +8,7 @@ from qibo.quantum_info.linalg_operations import (
     matrix_power,
     partial_trace,
     partial_transpose,
+    singular_value_decomposition,
 )
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
@@ -218,3 +219,34 @@ def test_matrix_power(backend, power):
             float(backend.np.real(backend.np.trace(power))),
             purity(state, backend=backend),
         )
+
+
+def test_singular_value_decomposition(backend):
+    zero = np.array([1, 0], dtype=complex)
+    one = np.array([0, 1], dtype=complex)
+    plus = (zero + one) / np.sqrt(2)
+    minus = (zero - one) / np.sqrt(2)
+    plus = backend.cast(plus, dtype=plus.dtype)
+    minus = backend.cast(minus, dtype=minus.dtype)
+    base = [plus, minus]
+
+    coeffs = np.random.rand(4)
+    coeffs /= np.sum(coeffs)
+    coeffs = backend.cast(coeffs, dtype=coeffs.dtype)
+
+    state = np.zeros((4, 4), dtype=complex)
+    state = backend.cast(state, dtype=state.dtype)
+    for k, coeff in enumerate(coeffs):
+        bitstring = f"{k:0{2}b}"
+        a, b = int(bitstring[0]), int(bitstring[1])
+        ket = backend.np.kron(base[a], base[b])
+        state = state + coeff * backend.np.outer(ket, ket.T)
+
+    _, S, _ = singular_value_decomposition(state, backend=backend)
+
+    S_sorted = backend.np.sort(S)
+    coeffs_sorted = backend.np.sort(coeffs)
+    if backend.name == "pytorch":
+        S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
+
+    backend.assert_allclose(S_sorted, coeffs_sorted)
