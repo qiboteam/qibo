@@ -1170,14 +1170,14 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     from qibo.transpiler.placer import Custom
 
     # TODO: remove backend.platform.topology and pragma: no cover
-    if backend is None:
+    if backend is None:     # pragma: no cover
         backend = get_backend()
-    elif get_backend_name() == "qibolab":  # pragma: no cover
+    elif get_backend_name() == "qibolab":       # pragma: no cover
         transpiler = Custom(
             initial_map=qubit_map, connectivity=backend.platform.topology
         )
         circuit, _ = transpiler(circuit)
-    elif noise_model is not None:  # pragma: no cover
+    elif noise_model is not None:       # pragma: no cover
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)

@@ -139,6 +139,7 @@ def test_set_get_transpiler():
         ],
     )
 
-    _Global.set_transpiler(transpiler)
-    assert _Global.transpiler() == transpiler
+    qibo.set_transpiler(transpiler)
+    assert qibo.get_transpiler == transpiler
+    assert qibo.get_transpiler_name() == str(transpiler)
     _Global._clear_global()

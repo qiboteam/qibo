@@ -91,7 +91,7 @@ class _Global:
     @classmethod
     def _create_backend(cls):
         backend_env = os.environ.get("QIBO_BACKEND")
-        if backend_env:
+        if backend_env:     # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
             backend = construct_backend(backend_env, platform=platform)
@@ -104,7 +104,7 @@ class _Global:
                 except (ModuleNotFoundError, ImportError):
                     pass
 
-        if backend is None:
+        if backend is None:     # pragma: no cover
             raise_error(RuntimeError, "No backends available.")
         return backend
 
