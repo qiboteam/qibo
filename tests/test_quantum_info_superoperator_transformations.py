@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+import pytest  # type: ignore
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
@@ -377,6 +377,7 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
     backend.assert_allclose(test_pauli, pauli_op, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("test_non_CP", [test_non_CP])
 @pytest.mark.parametrize("test_kraus_right", [test_kraus_right])
 @pytest.mark.parametrize("test_kraus_left", [test_kraus_left])
 @pytest.mark.parametrize("test_a1", [test_a1])
@@ -384,7 +385,14 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
 @pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_kraus(
-    backend, order, validate_cp, test_a0, test_a1, test_kraus_left, test_kraus_right
+    backend,
+    order,
+    validate_cp,
+    test_a0,
+    test_a1,
+    test_kraus_left,
+    test_kraus_right,
+    test_non_CP,
 ):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = backend.cast(
@@ -425,6 +433,7 @@ def test_choi_to_kraus(
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
 
     if validate_cp and order == "row":
+        test_non_CP = backend.cast(test_non_CP, dtype=test_non_CP.dtype)
         (kraus_left, kraus_right), _ = choi_to_kraus(
             test_non_CP, order=order, validate_cp=validate_cp, backend=backend
         )

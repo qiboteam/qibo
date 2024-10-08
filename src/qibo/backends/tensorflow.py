@@ -16,7 +16,7 @@ class TensorflowMatrices(NumpyMatrices):
     def __init__(self, dtype):
         super().__init__(dtype)
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error  # type: ignore
 
         self.tf = tf
         self.np = tnp
@@ -36,7 +36,7 @@ class TensorflowBackend(NumpyBackend):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
 
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error  # type: ignore
 
         if TF_LOG_LEVEL >= 2:
             tf.get_logger().setLevel("ERROR")
@@ -217,6 +217,11 @@ class TensorflowBackend(NumpyBackend):
                 return V @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
 
         return super().calculate_matrix_power(matrix, power, precision_singularity)
+
+    def calculate_singular_value_decomposition(self, matrix):
+        # needed to unify order of return
+        S, U, V = self.tf.linalg.svd(matrix)
+        return U, S, self.np.conj(self.np.transpose(V))
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):

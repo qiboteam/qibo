@@ -797,6 +797,9 @@ class NumpyBackend(Backend):
 
         return fractional_matrix_power(matrix, power)
 
+    def calculate_singular_value_decomposition(self, matrix):
+        return self.np.linalg.svd(matrix)
+
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         return matrix1 @ matrix2

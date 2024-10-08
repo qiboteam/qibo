@@ -372,6 +372,11 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
+        """Calculate the Singular Value Decomposition of ``matrix``."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_hamiltonian_matrix_product(
         self, matrix1, matrix2
     ):  # pragma: no cover
