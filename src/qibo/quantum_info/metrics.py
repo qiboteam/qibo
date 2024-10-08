@@ -155,7 +155,7 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
     """
     backend = _check_backend(backend)
 
-    inner_product = backend.np.trace(backend.conj(operator_A.T) @ operator_B)
+    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
 
     return float(backend.np.real(inner_product))
 
