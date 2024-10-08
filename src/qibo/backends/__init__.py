@@ -71,8 +71,8 @@ class GlobalBackend(NumpyBackend):
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "numpy"},
-        {"backend": "pytorch"},
         {"backend": "qiboml", "platform": "tensorflow"},
+        {"backend": "pytorch"},
     ]
 
     def __new__(cls):
