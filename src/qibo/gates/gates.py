@@ -529,6 +529,10 @@ class Align(ParametrizedGate):
         self._parameters = (delay,)
         self.nparams = 1
 
+    @property
+    def qasm_label(self):
+        return "align"
+
 
 def _is_clifford_given_angle(angle):
     """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
