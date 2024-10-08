@@ -109,6 +109,9 @@ def _qibo_gate_name(gate):
     if gate == "ccx":
         return "TOFFOLI"
 
+    if gate == "align":
+        return "Align"
+
     return gate.upper()
 
 
