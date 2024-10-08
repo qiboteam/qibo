@@ -11,7 +11,6 @@ from qibo import gates
 from qibo.backends import (
     _check_backend,
     _check_backend_and_local_state,
-    _Global,
     get_backend,
     get_backend_name,
 )
@@ -1171,14 +1170,14 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     from qibo.transpiler.placer import Custom
 
     # TODO: remove backend.platform.topology and pragma: no cover
-    backend = get_backend()
-    if get_backend_name() == "qibolab":  # pragma: no cover
+    if backend is None:
+        backend = get_backend()
+    elif get_backend_name() == "qibolab":  # pragma: no cover
         transpiler = Custom(
             initial_map=qubit_map, connectivity=backend.platform.topology
         )
         circuit, _ = transpiler(circuit)
-
-    if noise_model is not None:  # pragma: no cover
+    elif noise_model is not None:  # pragma: no cover
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)

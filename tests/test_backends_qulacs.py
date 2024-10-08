@@ -41,5 +41,4 @@ def test_initial_state_error():
 def test_set_backend():
     set_backend("qulacs")
     assert get_backend().name == "qulacs"
-
-    _Global._reset_global()
+    _Global._clear_global()

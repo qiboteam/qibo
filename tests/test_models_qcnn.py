@@ -353,5 +353,3 @@ def test_two_qubit_ansatz_training():
     predictions.append(1)
     labels = np.array([[1], [-1], [1]])
     test_qcnn.Accuracy(labels, predictions)
-
-    _Global._reset_global()

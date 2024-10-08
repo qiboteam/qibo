@@ -68,6 +68,7 @@ class MetaBackend:
 class _Global:
     _backend = None
     _transpiler = None
+    # TODO: resolve circular import with qibo.transpiler.pipeline.Passes
 
     _dtypes = {"double": "complex128", "single": "complex64"}
     _default_order = [
@@ -84,6 +85,7 @@ class _Global:
         if cls._backend is not None:
             return cls._backend
         cls._backend = cls._create_backend()
+        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
         return cls._backend
 
     @classmethod
@@ -131,11 +133,14 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def _reset_global(cls):
+    def _clear_global(cls):
+        """Clear the global state of the backend and transpiler. Used for test files."""
+        from qibo.transpiler.pipeline import Passes
+
         cls._backend = None
         cls._transpiler = None
         cls.backend()
-        cls.transpiler()
+        cls._transpiler = Passes(passes=[])
 
 
 class QiboMatrices:

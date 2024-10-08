@@ -50,8 +50,6 @@ def test_global_backend(backend):
     )
     assert clifford_bkd.platform == target
 
-    _Global._reset_global()
-
 
 THETAS_1Q = [
     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]

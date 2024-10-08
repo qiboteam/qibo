@@ -14,5 +14,4 @@ def test_backend_qibotn():
     assert isinstance(get_backend(), QuimbBackend)
     set_backend("numpy")
     assert get_backend().name == "numpy"
-
-    _Global._reset_global()
+    _Global._clear_global()

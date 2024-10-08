@@ -20,6 +20,7 @@ from qibo.backends import (
     get_device,
     get_precision,
     get_threads,
+    set_transpiler,
     get_transpiler,
     get_transpiler_name,
     list_available_backends,
