@@ -319,7 +319,8 @@ def singular_value_decomposition(matrix, backend=None):
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`.
+        ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`, i.e.
+        :math:`U`, :math:`S`, and :math:`V^{\\dagger}`, in that order.
     """
     backend = _check_backend(backend)
 
