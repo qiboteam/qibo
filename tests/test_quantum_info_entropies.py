@@ -817,8 +817,8 @@ def test_relative_tsallis_entropy(
         if target_flag:
             target = backend.np.outer(target, backend.np.conj(target.T))
 
-        target_value = matrix_power(state, alpha, backend)
-        target_value = target_value @ matrix_power(target, 1 - alpha, backend)
+        target_value = matrix_power(state, alpha, backend=backend)
+        target_value = target_value @ matrix_power(target, 1 - alpha, backend=backend)
         target_value = (1 - backend.np.trace(target_value)) / (1 - alpha)
 
     backend.assert_allclose(value, target_value)
