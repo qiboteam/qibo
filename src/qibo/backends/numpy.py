@@ -501,8 +501,11 @@ class NumpyBackend(Backend):
             and not circuit.measurements
             and not circuit.density_matrix
         ):
-            raise RuntimeError(
-                "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+            raise_error(
+                RuntimeError,
+                "The circuit contains only collapsing measurements (`collapse=True`) but "
+                + "`density_matrix=False`. Please set `density_matrix=True` to retrieve "
+                + "the final state after execution.",
             )
 
         results, final_states = [], []
