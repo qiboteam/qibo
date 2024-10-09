@@ -9,6 +9,7 @@ from qibo.quantum_info.linalg_operations import (
     matrix_power,
     partial_trace,
     partial_transpose,
+    schmidt_decomposition,
     singular_value_decomposition,
 )
 from qibo.quantum_info.metrics import purity
@@ -263,3 +264,31 @@ def test_singular_value_decomposition(backend):
         S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
+
+
+def test_schmidt_decomposition(backend):
+    with pytest.raises(ValueError):
+        test = random_statevector(3, backend=backend)
+        test = schmidt_decomposition(test, [0], backend=backend)
+
+    state_A = random_statevector(4, seed=10, backend=backend)
+    state_B = random_statevector(4, seed=11, backend=backend)
+    state = backend.np.kron(state_A, state_B)
+
+    U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
+
+    # recovering original state
+    recovered = np.zeros_like(state.shape, dtype=complex)
+    recovered = backend.cast(recovered, dtype=recovered.dtype)
+    for coeff, u, vh in zip(S, U.T, Vh):
+        if abs(coeff) > 1e-10:
+            recovered = recovered + coeff * backend.np.kron(u, vh)
+
+    backend.assert_allclose(recovered, state)
+
+    # entropy test
+    coeffs = backend.np.abs(S) ** 2
+    entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
+    entropy = -backend.np.sum(coeffs * entropy)
+
+    backend.assert_allclose(entropy, 0.0, atol=1e-14)
