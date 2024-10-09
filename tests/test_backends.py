@@ -128,7 +128,7 @@ def test_list_available_backends():
         "qiboml": {"tensorflow": tensorflow},
     }
     assert available_backends == list_available_backends(
-        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn"
+        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn", "qiboml"
     )
 
 
