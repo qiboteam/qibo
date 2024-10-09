@@ -330,6 +330,7 @@ def _curve_fit(
     if backend.name == "pytorch":
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
+        params.requires_grad = True
         loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
         optimizer = backend.np.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
@@ -431,8 +432,6 @@ def CDR(
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
     params = backend.cast(local_state.random(nparams), backend.precision)
-    if backend.name == "pytorch":
-        params.requires_grad = True
     optimal_params = _curve_fit(
         backend,
         model,
@@ -554,8 +553,6 @@ def vnCDR(
         -1, len(noise_levels)
     )
     params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
-    if backend.name == "pytorch":
-        params.requires_grad = True
     optimal_params = _curve_fit(
         backend,
         model,
