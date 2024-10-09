@@ -8,7 +8,7 @@ os.environ["NUMBA_NUM_THREADS"] = f"{get_threads()}"
 from qibotn.backends.quimb import QuimbBackend
 
 
-def test_backend_qibotn(clear):
+def test_backend_qibotn():
     set_backend(backend="qibotn", platform="qutensornet", runcard=None)
     assert isinstance(get_backend(), QuimbBackend)
     set_backend("numpy")

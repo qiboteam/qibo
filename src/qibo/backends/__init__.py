@@ -1,5 +1,6 @@
 import os
 from importlib import import_module
+from random import Random
 
 import numpy as np
 
@@ -116,15 +117,31 @@ class _Global:
     @classmethod
     def transpiler(cls):
         """Get the current transpiler. If no transpiler is set, it will create one."""
+        from qibo.transpiler.optimizer import Preprocessing
         from qibo.transpiler.pipeline import Passes
+        from qibo.transpiler.placer import Trivial
+        from qibo.transpiler.router import Sabre
+        from qibo.transpiler.unroller import Unroller
 
         if cls._transpiler is not None:
             return cls._transpiler
 
-        # TODO: add default transpiler for hardware backends
-        # depends on cls._backend
+        if cls._backend.name == "qibolab":  # pragma: no cover
+            platform = cls._backend.platform
+            natives = platform.natives  # qibolab 0.2.0
+            connectivity = platform.topology  # qibolab 0.1.9
 
-        cls._transpiler = Passes(passes=[])
+            cls._transpiler = Passes(
+                connectivity=connectivity,
+                passes=[
+                    Preprocessing(connectivity),
+                    Trivial(connectivity),
+                    Sabre(connectivity),
+                    Unroller(natives),
+                ],
+            )
+        else:
+            cls._transpiler = Passes(passes=[])
         return cls._transpiler
 
     @classmethod

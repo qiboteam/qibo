@@ -38,6 +38,6 @@ def test_initial_state_error():
         qulacs_bkd.execute_circuit(c, initial_state=initial_state)
 
 
-def test_set_backend(clear):
+def test_set_backend():
     set_backend("qulacs")
     assert get_backend().name == "qulacs"

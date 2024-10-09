@@ -74,7 +74,7 @@ def backend(backend_name):
     yield get_backend(backend_name)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def clear():
     yield
 
