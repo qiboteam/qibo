@@ -6,7 +6,7 @@ import numpy as np
 
 from qibo import __version__
 from qibo.backends.npmatrices import NumpyMatrices
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.numpy import NumpyBackend, _calculate_negative_power_singular_matrix
 from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
@@ -209,12 +209,9 @@ class TensorflowBackend(NumpyBackend):
             # negative powers of singular matrices via SVD
             determinant = self.tf.linalg.det(matrix)
             if abs(determinant) < precision_singularity:
-                S, U, V = self.tf.linalg.svd(matrix)
-                S_inv = self.tf.where(
-                    self.tf.abs(S) < precision_singularity, 0.0, S**power
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.tf, self
                 )
-
-                return V @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
 
         return super().calculate_matrix_power(matrix, power, precision_singularity)
 

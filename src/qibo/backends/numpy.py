@@ -792,14 +792,8 @@ class NumpyBackend(Backend):
             # negative powers of singular matrices via SVD
             determinant = self.np.linalg.det(matrix)
             if abs(determinant) < precision_singularity:
-                U, S, Vh = self.np.linalg.svd(matrix)
-                # cast needed because of different dtypes in `torch`
-                S = self.cast(S)
-                S_inv = self.np.where(
-                    self.np.abs(S) < precision_singularity, 0.0, S**power
-                )
-                return (
-                    self.np.linalg.inv(Vh) @ self.np.diag(S_inv) @ self.np.linalg.inv(U)
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.np, self
                 )
 
         return fractional_matrix_power(matrix, power)
@@ -847,3 +841,15 @@ class NumpyBackend(Backend):
                 {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
             ]
+
+
+def _calculate_negative_power_singular_matrix(
+    matrix, power: Union[float, int], precision_singularity: float, engine, backend
+):
+    """Calculate negative power of singular matrix."""
+    U, S, Vh = backend.calculate_singular_value_decomposition(matrix)
+    # cast needed because of different dtypes in `torch`
+    S = backend.cast(S)
+    S_inv = engine.where(engine.abs(S) < precision_singularity, 0.0, S**power)
+
+    return engine.linalg.inv(Vh) @ backend.np.diag(S_inv) @ engine.linalg.inv(U)
