@@ -164,8 +164,11 @@ def hilbert_schmidt_distance(state, target, backend=None):
     """Calculate the Hilbert-Schmidt distance between two quantum states:
 
     .. math::
-        \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
-            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right)
+        \\braket{\\rho - \\sigma, \\, \\rho - \\sigma}_{\\text{HS}} =
+            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right) \\, ,
+
+    where :math:`\\braket{\\cdot, \\, \\cdot}_{\\text{HS}}` is the
+    :func:`qibo.quantum_info.hilbert_schmidt_inner_product`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -177,6 +180,11 @@ def hilbert_schmidt_distance(state, target, backend=None):
     Returns:
         float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
         and ``target`` :math:`\\sigma`.
+
+    References:
+        1. P. J. Coles, M. Cerezo, and L. Cincio, *Strong bound between trace distance
+        and Hilbert-Schmidt distance for low-rank states*, `Phys. Rev. A 100, 022103
+        <https://doi.org/10.1103/PhysRevA.100.022103>`_ (2019).
     """
     backend = _check_backend(backend)
 
