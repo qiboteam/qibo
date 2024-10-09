@@ -1,5 +1,7 @@
 """PyTorch backend."""
 
+from typing import Union
+
 import numpy as np
 
 from qibo import __version__
@@ -226,9 +228,15 @@ class PyTorchBackend(NumpyBackend):
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_matrix_power(self, matrix, power):
-        copied = self.to_numpy(self.np.copy(matrix))
-        copied = super().calculate_matrix_power(copied, power)
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        copied = self.cast(matrix, copy=True)
+        copied = self.to_numpy(copied) if power >= 0.0 else copied.detach()
+        copied = super().calculate_matrix_power(copied, power, precision_singularity)
         return self.cast(copied, dtype=copied.dtype)
 
     def _test_regressions(self, name):

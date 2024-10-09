@@ -1,11 +1,12 @@
 import collections
 import os
+from typing import Union
 
 import numpy as np
 
 from qibo import __version__
 from qibo.backends.npmatrices import NumpyMatrices
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.numpy import NumpyBackend, _calculate_negative_power_singular_matrix
 from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
@@ -191,6 +192,28 @@ class TensorflowBackend(NumpyBackend):
         if eigenvectors is None or self.is_sparse(matrix):
             return self.tf.linalg.expm(-1j * a * matrix)
         return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.tf.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.tf, self
+                )
+
+        return super().calculate_matrix_power(matrix, power, precision_singularity)
 
     def calculate_singular_value_decomposition(self, matrix):
         # needed to unify order of return

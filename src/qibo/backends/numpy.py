@@ -415,8 +415,12 @@ class NumpyBackend(Backend):
             if circuit.measurements or circuit.has_collapse:
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
             else:
-                raise RuntimeError(
-                    "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+                raise_error(
+                    RuntimeError,
+                    "Attempting to perform noisy simulation with `density_matrix=False` "
+                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                    + "statistics of the outcomes please include measurements in the circuit, "
+                    + "otherwise set `density_matrix=True` to recover the final state.",
                 )
 
         if circuit.accelerators:  # pragma: no cover
@@ -495,8 +499,11 @@ class NumpyBackend(Backend):
             and not circuit.measurements
             and not circuit.density_matrix
         ):
-            raise RuntimeError(
-                "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+            raise_error(
+                RuntimeError,
+                "The circuit contains only collapsing measurements (`collapse=True`) but "
+                + "`density_matrix=False`. Please set `density_matrix=True` to retrieve "
+                + "the final state after execution.",
             )
 
         results, final_states = [], []
@@ -767,12 +774,26 @@ class NumpyBackend(Backend):
         ud = self.np.transpose(np.conj(eigenvectors))
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_matrix_power(self, matrix, power: Union[float, int]):
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
         if not isinstance(power, (float, int)):
             raise_error(
                 TypeError,
                 f"``power`` must be either float or int, but it is type {type(power)}.",
             )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.np.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.np, self
+                )
+
         return fractional_matrix_power(matrix, power)
 
     def calculate_singular_value_decomposition(self, matrix):
@@ -818,3 +839,15 @@ class NumpyBackend(Backend):
                 {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
             ]
+
+
+def _calculate_negative_power_singular_matrix(
+    matrix, power: Union[float, int], precision_singularity: float, engine, backend
+):
+    """Calculate negative power of singular matrix."""
+    U, S, Vh = backend.calculate_singular_value_decomposition(matrix)
+    # cast needed because of different dtypes in `torch`
+    S = backend.cast(S)
+    S_inv = engine.where(engine.abs(S) < precision_singularity, 0.0, S**power)
+
+    return engine.linalg.inv(Vh) @ backend.np.diag(S_inv) @ engine.linalg.inv(U)
