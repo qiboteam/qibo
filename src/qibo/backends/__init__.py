@@ -132,16 +132,6 @@ class _Global:
         cls._transpiler = transpiler
         # TODO: check if transpiler is valid on the backend
 
-    @classmethod
-    def _clear_global(cls):
-        """Clear the global state of the backend and transpiler. Used for test files."""
-        from qibo.transpiler.pipeline import Passes
-
-        cls._backend = None
-        cls._transpiler = None
-        cls.backend()
-        cls._transpiler = Passes(passes=[])
-
 
 class QiboMatrices:
     def __init__(self, dtype="complex128"):

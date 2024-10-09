@@ -120,8 +120,7 @@ def _star_connectivity():
     return chip
 
 
-def test_set_get_transpiler():
-    from qibo.backends import _Global
+def test_set_get_transpiler(clear):
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Random
@@ -142,4 +141,3 @@ def test_set_get_transpiler():
     qibo.set_transpiler(transpiler)
     assert qibo.get_transpiler() == transpiler
     assert qibo.get_transpiler_name() == str(transpiler)
-    _Global._clear_global()

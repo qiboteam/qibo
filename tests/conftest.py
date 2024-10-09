@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from qibo.backends import construct_backend
+from qibo.backends import _Global, construct_backend
 
 # backends to be tested
 BACKENDS = [
@@ -72,6 +72,18 @@ def pytest_configure(config):
 @pytest.fixture
 def backend(backend_name):
     yield get_backend(backend_name)
+
+
+@pytest.fixture
+def clear():
+    yield
+
+    from qibo.transpiler.pipeline import Passes
+
+    _Global._backend = None
+    _Global._transpiler = None
+    _Global.backend()
+    _Global._transpiler = Passes(passes=[])
 
 
 def pytest_generate_tests(metafunc):
