@@ -1,6 +1,6 @@
 import collections
 import math
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 from scipy import sparse
@@ -33,6 +33,18 @@ class NumpyBackend(Backend):
             np.complex64,
             np.complex128,
         )
+
+    @property
+    def qubits(self) -> Optional[list[str]]:  # pragma: no cover
+        return None
+
+    @property
+    def connectivity(self) -> Optional[list[tuple[str, str]]]:  # pragma: no cover
+        return None
+
+    @property
+    def natives(self) -> Optional[list[str]]:  # pragma: no cover
+        return None
 
     def set_precision(self, precision):
         if precision != self.precision:

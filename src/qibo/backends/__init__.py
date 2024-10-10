@@ -1,6 +1,5 @@
 import os
 from importlib import import_module
-from random import Random
 
 import numpy as np
 
@@ -117,19 +116,46 @@ class _Global:
     @classmethod
     def transpiler(cls):
         """Get the current transpiler. If no transpiler is set, it will create one."""
+        if cls._transpiler is not None:
+            return cls._transpiler
+
+        cls._transpiler = cls._default_transpiler()
+        return cls._transpiler
+
+    @classmethod
+    def set_transpiler(cls, transpiler):
+        cls._transpiler = transpiler
+        # TODO: check if transpiler is valid on the backend
+
+    @classmethod
+    def _default_transpiler(cls):
+        import networkx as nx
+
         from qibo.transpiler.optimizer import Preprocessing
         from qibo.transpiler.pipeline import Passes
         from qibo.transpiler.placer import Trivial
         from qibo.transpiler.router import Sabre
-        from qibo.transpiler.unroller import Unroller
+        from qibo.transpiler.unroller import NativeGates, Unroller
 
-        if cls._transpiler is not None:
-            return cls._transpiler
+        qubits: list[str] = cls._backend.qubits  # list of qubit names
+        natives: list[str] = cls._backend.natives
+        connectivity_edges: list[tuple[str, str]] = (
+            cls._backend.connectivity
+        )  # list of edges
+        if qubits and natives and connectivity:
 
-        if cls._backend.name == "qibolab":  # pragma: no cover
-            platform = cls._backend.platform
-            natives = platform.natives  # qibolab 0.2.0
-            connectivity = platform.topology  # qibolab 0.1.9
+            # code is needed in unroll.py to convert str -> enum
+            natives_enum = NativeGates.from_gatelist(natives)
+
+            connectivity = nx.Graph()
+
+            # q{i} naming
+            node_mapping = {qubits[i]: i for i in range(len(qubits))}
+            for e in connectivity_edges:
+                connectivity.add_edge(node_mapping[e[0]], node_mapping[e[1]])
+
+            # str naming
+            # connectivity.add_edges_from(connectivity_edges)
 
             cls._transpiler = Passes(
                 connectivity=connectivity,
@@ -137,17 +163,11 @@ class _Global:
                     Preprocessing(connectivity),
                     Trivial(connectivity),
                     Sabre(connectivity),
-                    Unroller(natives),
+                    Unroller(natives_enum),
                 ],
             )
         else:
             cls._transpiler = Passes(passes=[])
-        return cls._transpiler
-
-    @classmethod
-    def set_transpiler(cls, transpiler):
-        cls._transpiler = transpiler
-        # TODO: check if transpiler is valid on the backend
 
 
 class QiboMatrices:

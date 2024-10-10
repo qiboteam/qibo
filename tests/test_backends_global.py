@@ -141,3 +141,10 @@ def test_set_get_transpiler():
     qibo.set_transpiler(transpiler)
     assert qibo.get_transpiler() == transpiler
     assert qibo.get_transpiler_name() == str(transpiler)
+
+
+def test_backend_hw_properties():
+    from qibo.backends.numpy import NumpyBackend
+
+    backend = NumpyBackend()
+    assert backend.natives is None and backend.connectivity is None
