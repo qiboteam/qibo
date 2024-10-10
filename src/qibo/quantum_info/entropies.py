@@ -665,7 +665,7 @@ def mutual_information(
     of state :math:`\\rho` is given by
 
     .. math::
-        I(\\rho}) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
+        I(\\rho) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
 
     where :math:`B` is the remaining qubits that are not in partition :math:`A`,
     and :math:`S(\\cdot)` is the :func:`qibo.quantum_info.von_neumann_entropy`.
