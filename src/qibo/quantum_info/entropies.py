@@ -638,6 +638,7 @@ def relative_von_neumann_entropy(
 
     log_state = backend.np.where(
         backend.np.real(eigenvalues_state) > 0,
+        # backend.np.abs(eigenvalues_state) > 1e-14,
         backend.np.log2(eigenvalues_state) / np.log2(base),
         0.0,
     )
@@ -647,7 +648,7 @@ def relative_von_neumann_entropy(
         -np.inf,
     )
 
-    log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
+    # log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
 
     entropy_state = backend.np.sum(eigenvalues_state * log_state)
 
