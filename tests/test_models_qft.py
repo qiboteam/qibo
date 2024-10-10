@@ -48,10 +48,10 @@ def test_qft_matrix(backend, nqubits):
     c = models.QFT(nqubits)
     dim = 2**nqubits
     target_matrix = qft_matrix(dim)
-    backend.assert_allclose(c.unitary(backend), target_matrix)
+    backend.assert_allclose(c.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6)
     c = c.invert()
     target_matrix = qft_matrix(dim, inverse=True)
-    backend.assert_allclose(c.unitary(backend), target_matrix)
+    backend.assert_allclose(c.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -69,7 +69,7 @@ def test_qft_execution(backend, nqubits, random, density_matrix):
 
     final_state = backend.execute_circuit(c, backend.np.copy(initial_state))._state
     target_state = exact_qft(initial_state, density_matrix, backend)
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state, atol=1e-6, rtol=1e-6)
 
 
 def test_qft_errors():

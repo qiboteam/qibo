@@ -433,7 +433,6 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
                 else:
-                    # cast to proper complex type
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
@@ -443,7 +442,6 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_state(nqubits)
                 else:
-                    # cast to proper complex type
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
