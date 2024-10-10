@@ -137,7 +137,7 @@ class _Global:
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
-        qubits: list[str] = cls._backend.qubits  # list of qubit names
+        qubits: list[str] = list(cls._backend.qubits)  # list of qubit names
         natives: list[str] = cls._backend.natives
         connectivity_edges: list[tuple[str, str]] = (
             cls._backend.connectivity
