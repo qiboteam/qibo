@@ -8,7 +8,12 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import GlobalBackend, _check_backend, _check_backend_and_local_state
+from qibo.backends import (
+    _check_backend,
+    _check_backend_and_local_state,
+    get_backend,
+    get_backend_name,
+)
 from qibo.config import raise_error
 
 
@@ -173,7 +178,7 @@ def ZNE(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -237,7 +242,7 @@ def sample_training_circuit_cdr(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -388,7 +393,7 @@ def CDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -503,7 +508,7 @@ def vnCDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -631,7 +636,7 @@ def get_response_matrix(
             `qibo.noise.ReadoutError`.
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -735,7 +740,7 @@ def apply_randomized_readout_mitigation(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -877,7 +882,7 @@ def sample_clifford_training_circuit(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -941,7 +946,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. if ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -1165,15 +1170,16 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     """
     from qibo.transpiler.placer import Custom
 
+    # TODO: remove backend.platform.topology and pragma: no cover
     if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-    elif backend.name == "qibolab":  # pragma: no cover
-        backend.transpiler.passes[1] = Custom(
+        backend = get_backend()
+    elif get_backend_name() == "qibolab":  # pragma: no cover
+        transpiler = Custom(
             initial_map=qubit_map, connectivity=backend.platform.topology
         )
-    elif noise_model is not None:
+        circuit, _ = transpiler(circuit)
+    elif noise_model is not None:  # pragma: no cover
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-
     return circuit_result

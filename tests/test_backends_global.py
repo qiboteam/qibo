@@ -1,16 +1,17 @@
+import networkx as nx
 import pytest
 
 import qibo
 from qibo import matrices
 
 
-def test_set_backend():
-    from qibo.backends import GlobalBackend
+def test_set_get_backend():
+    from qibo.backends import _Global
 
-    backend = GlobalBackend()
+    backend = _Global.backend()
     qibo.set_backend("numpy")
-    assert qibo.get_backend() == "numpy"
-    assert GlobalBackend().name == "numpy"
+    assert qibo.get_backend_name() == "numpy"
+    assert qibo.get_backend().name == "numpy"
 
 
 def test_set_precision():
@@ -104,7 +105,46 @@ def test_check_backend(backend):
     test = None
     test = qibo.backends._check_backend(test)
 
-    target = qibo.backends.GlobalBackend()
+    target = qibo.backends._Global.backend()
 
     assert test.name == target.name
     assert test.__class__ == target.__class__
+
+
+def _star_connectivity():
+    Q = [i for i in range(5)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
+    chip.add_edges_from(graph_list)
+    return chip
+
+
+def test_set_get_transpiler():
+    from qibo.transpiler.optimizer import Preprocessing
+    from qibo.transpiler.pipeline import Passes
+    from qibo.transpiler.placer import Random
+    from qibo.transpiler.router import Sabre
+    from qibo.transpiler.unroller import NativeGates, Unroller
+
+    connectivity = _star_connectivity()
+    transpiler = Passes(
+        connectivity=connectivity,
+        passes=[
+            Preprocessing(connectivity),
+            Random(connectivity, seed=0),
+            Sabre(connectivity),
+            Unroller(NativeGates.default()),
+        ],
+    )
+
+    qibo.set_transpiler(transpiler)
+    assert qibo.get_transpiler() == transpiler
+    assert qibo.get_transpiler_name() == str(transpiler)
+
+
+def test_backend_hw_properties():
+    from qibo.backends.numpy import NumpyBackend
+
+    backend = NumpyBackend()
+    assert backend.natives is None and backend.connectivity is None

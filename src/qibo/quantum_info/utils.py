@@ -136,7 +136,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
             for matrices. If ``"fast"``, computational complexity is
             :math:`\\mathcal{O}(n \\, 2^{n})` in both cases.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -214,7 +214,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         (float): Hellinger distance :math:`H(p, q)`.
@@ -277,7 +277,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Hellinger fidelity.
@@ -314,7 +314,7 @@ def hellinger_shot_error(
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Hellinger fidelity error.
@@ -359,7 +359,7 @@ def total_variation_distance(
             probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Total variation distance measure.
@@ -411,7 +411,7 @@ def haar_integral(
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         array: Estimation of the Haar integral.
@@ -500,7 +500,7 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Estimation of the integral.
