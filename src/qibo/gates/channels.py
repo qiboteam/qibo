@@ -653,12 +653,14 @@ class ThermalRelaxationChannel(KrausChannel):
                 self.init_kwargs["p_1"],
                 self.init_kwargs["e_t2"],
             )
-            matrix = [
-                [1 - preset1, 0, 0, preset0],
-                [0, e_t2, 0, 0],
-                [0, 0, e_t2, 0],
-                [preset1, 0, 0, 1 - preset0],
-            ]
+            matrix = backend.cast(
+                [
+                    [1 - preset1, 0, 0, preset0],
+                    [0, e_t2, 0, 0],
+                    [0, 0, e_t2, 0],
+                    [preset1, 0, 0, 1 - preset0],
+                ]
+            )
 
             qubits = (qubit, qubit + nqubits)
             gate = Unitary(matrix, *qubits)

@@ -1,8 +1,7 @@
 import numpy as np
 
 from qibo import gates, matrices
-from qibo.backends import _check_backend
-from qibo.config import PRECISION_TOL, raise_error
+from qibo.config import raise_error
 from qibo.quantum_info.linalg_operations import schmidt_decomposition
 
 magic_basis = np.array(
@@ -16,7 +15,7 @@ bell_basis = np.array(
 H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
 
-def u3_decomposition(unitary):
+def u3_decomposition(unitary, backend):
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
@@ -25,18 +24,19 @@ def u3_decomposition(unitary):
     Returns:
         (float, float, float): parameters of U3 gate.
     """
+    unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
-    su2 = unitary / np.sqrt(np.linalg.det(unitary))
-    theta = 2 * np.arctan2(abs(su2[1, 0]), abs(su2[0, 0]))
-    plus = np.angle(su2[1, 1])
-    minus = np.angle(su2[1, 0])
+    su2 = unitary / backend.np.sqrt(backend.np.linalg.det(unitary))
+    theta = 2 * backend.np.arctan2(backend.np.abs(su2[1, 0]), backend.np.abs(su2[0, 0]))
+    plus = backend.np.angle(su2[1, 1])
+    minus = backend.np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
 
     return theta, phi, lam
 
 
-def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
+def calculate_psi(unitary, backend, magic_basis=magic_basis):
     """Solves the eigenvalue problem of :math:`U^{T} U`.
 
     See step (1) of Appendix A in arXiv:quant-ph/0011050.
@@ -51,7 +51,6 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     Returns:
         ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
-    backend = _check_backend(backend)
 
     if backend.__class__.__name__ in [
         "CupyBackend",
@@ -96,13 +95,12 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     Returns:
         (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
     """
-    backend = _check_backend(backend)
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
     if (
         backend.np.real(
             backend.calculate_norm_density_matrix(backend.np.imag(psi_magic))
         )
-        > PRECISION_TOL
+        > 1e-6
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
@@ -133,13 +131,12 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     return ua, ub
 
 
-def calculate_diagonal(unitary, ua, ub, va, vb, backend=None):
+def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     """Calculates Ud matrix that can be written as exp(-iH).
 
     See Eq. (A1) in arXiv:quant-ph/0011050.
     Ud is diagonal in the magic and Bell basis.
     """
-    backend = _check_backend(backend)
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
     # this is required so that sum(lambdas) = 0
     # and Ud can be written as exp(-iH)
@@ -167,7 +164,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend=None):
 
 def magic_decomposition(unitary, backend=None):
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
-    backend = _check_backend(backend)
+
     unitary = backend.cast(unitary)
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = backend.np.conj(backend.np.sqrt(eigvals)) * backend.np.matmul(
@@ -181,10 +178,8 @@ def magic_decomposition(unitary, backend=None):
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
 
 
-def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
+def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
-    backend = _check_backend(backend)
-
     ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis)
 
@@ -192,20 +187,21 @@ def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
         backend.np.transpose(backend.np.conj(bell_basis), (1, 0)) @ ud @ bell_basis
     )
     ud_diag = backend.np.diag(ud_bell)
-    if not backend.np.allclose(backend.np.diag(ud_diag), ud_bell):  # pragma: no cover
+    if not backend.np.allclose(
+        backend.np.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6
+    ):  # pragma: no cover
         return None
-    uprod = backend.np.prod(ud_diag)
-    if not np.allclose(backend.to_numpy(uprod), 1):  # pragma: no cover
+    uprod = backend.to_numpy(backend.np.prod(ud_diag))
+    if not np.allclose(uprod, 1.0, atol=1e-6, rtol=1e-6):  # pragma: no cover
         return None
     return ud_diag
 
 
-def calculate_h_vector(ud_diag, backend=None):
+def calculate_h_vector(ud_diag, backend):
     """Finds h parameters corresponding to exp(-iH).
 
     See Eq. (4)-(5) in arXiv:quant-ph/0307177.
     """
-    backend = _check_backend(backend)
     lambdas = -backend.np.angle(ud_diag)
     hx = (lambdas[0] + lambdas[2]) / 2.0
     hy = (lambdas[1] + lambdas[2]) / 2.0
@@ -213,9 +209,8 @@ def calculate_h_vector(ud_diag, backend=None):
     return hx, hy, hz
 
 
-def cnot_decomposition(q0, q1, hx, hy, hz, backend=None):
+def cnot_decomposition(q0, q1, hx, hy, hz, backend):
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
-    backend = _check_backend(backend)
     h = backend.cast(H)
     u3 = backend.cast(-1j * matrices.H)
     # use corrected version from PRA paper (not arXiv)
@@ -239,9 +234,8 @@ def cnot_decomposition(q0, q1, hx, hy, hz, backend=None):
     ]
 
 
-def cnot_decomposition_light(q0, q1, hx, hy, backend=None):
+def cnot_decomposition_light(q0, q1, hx, hy, backend):
     """Performs decomposition (24) from arXiv:quant-ph/0307177."""
-    backend = _check_backend(backend)
     h = backend.cast(H)
     w = backend.cast((matrices.I - 1j * matrices.X) / np.sqrt(2))
     u2 = gates.RX(0, 2 * hx).matrix(backend)
@@ -259,18 +253,18 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend=None):
     ]
 
 
-def two_qubit_decomposition(q0, q1, unitary, backend=None):
+def two_qubit_decomposition(q0, q1, unitary, backend):
     """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
 
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
+        backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
 
     Returns:
         (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
-    backend = _check_backend(backend)
 
     ud_diag = to_bell_diagonal(unitary, backend=backend)
     ud = None
