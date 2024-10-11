@@ -118,8 +118,10 @@ class Gate:
             raise ValueError(f"Unknown gate {raw['_class']}")
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
-        if raw["_class"] == "M" and raw["measurement_result"]["samples"] is not None:
-            gate.result.register_samples(raw["measurement_result"]["samples"])
+        if raw["_class"] == "M":
+            if raw["measurement_result"]["samples"] is not None:
+                gate.result.register_samples(raw["measurement_result"]["samples"])
+            return gate
         try:
             return gate.controlled_by(*raw["_control_qubits"])
         except RuntimeError as e:

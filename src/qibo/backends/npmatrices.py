@@ -17,10 +17,6 @@ class NumpyMatrices:
     def _cast(self, x, dtype):
         return self.np.array(x, dtype=dtype)
 
-    # This method is used to cast the parameters of the gates to the right type for other backends
-    def _cast_parameter(self, x):
-        return x
-
     @cached_property
     def H(self):
         return self._cast([[1, 1], [1, -1]], dtype=self.dtype) / math.sqrt(2)
@@ -66,34 +62,29 @@ class NumpyMatrices:
         )
 
     def I(self, n=2):
-        return self._cast(self.np.eye(n), dtype=self.dtype)
+        return self.np.eye(n, dtype=self.dtype)
 
     def Align(self, delay, n=2):
-        return self._cast(self.I(n), dtype=self.dtype)
+        return self.I(n)
 
     def M(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def RX(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self._cast([[cos, isin], [isin, cos]], dtype=self.dtype)
 
     def RY(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0) + 0j
         return self._cast([[cos, -sin], [sin, cos]], dtype=self.dtype)
 
     def RZ(self, theta):
-        theta = self._cast_parameter(theta)
         phase = self.np.exp(0.5j * theta)
         return self._cast([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
 
     def PRX(self, theta, phi):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
         cos = self.np.cos(theta / 2)
         sin = self.np.sin(theta / 2)
         exponent1 = -1.0j * self.np.exp(-1.0j * phi)
@@ -104,25 +95,20 @@ class NumpyMatrices:
         )
 
     def GPI(self, phi):
-        phi = self._cast_parameter(phi)
         phase = self.np.exp(1.0j * phi)
         return self._cast([[0, self.np.conj(phase)], [phase, 0]], dtype=self.dtype)
 
     def GPI2(self, phi):
-        phi = self._cast_parameter(phi)
         phase = self.np.exp(1.0j * phi)
         return self._cast(
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / math.sqrt(2)
 
     def U1(self, theta):
-        theta = self._cast_parameter(theta)
         phase = self.np.exp(1j * theta)
         return self._cast([[1, 0], [0, phase]], dtype=self.dtype)
 
     def U2(self, phi, lam):
-        phi = self._cast_parameter(phi)
-        lam = self._cast_parameter(lam)
         eplus = self.np.exp(1j * (phi + lam) / 2.0)
         eminus = self.np.exp(1j * (phi - lam) / 2.0)
         return self._cast(
@@ -131,9 +117,6 @@ class NumpyMatrices:
         ) / math.sqrt(2)
 
     def U3(self, theta, phi, lam):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
-        lam = self._cast_parameter(lam)
         cost = self.np.cos(theta / 2)
         sint = self.np.sin(theta / 2)
         eplus = self.np.exp(1j * (phi + lam) / 2.0)
@@ -147,8 +130,6 @@ class NumpyMatrices:
         )
 
     def U1q(self, theta, phi):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
         return self._cast(
             self.U3(theta, phi - math.pi / 2, math.pi / 2 - phi), dtype=self.dtype
         )
@@ -179,12 +160,12 @@ class NumpyMatrices:
 
     @cached_property
     def CSX(self):
-        a = self._cast_parameter((1 + 1j) / 2)
-        b = self.np.conj(a)
+        a = (1 + 1j) / 2
+        b = (1 - 1j) / 2
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
+                [1 + 0j, 0, 0, 0],
+                [0, 1 + 0j, 0, 0],
                 [0, 0, a, b],
                 [0, 0, b, a],
             ],
@@ -193,20 +174,19 @@ class NumpyMatrices:
 
     @cached_property
     def CSXDG(self):
-        a = self._cast_parameter((1 - 1j) / 2)
-        b = self.np.conj(a)
+        a = (1 + 1j) / 2
+        b = (1 - 1j) / 2
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, a, b],
+                [1 + 0j, 0, 0, 0],
+                [0, 1 + 0j, 0, 0],
                 [0, 0, b, a],
+                [0, 0, a, b],
             ],
             dtype=self.dtype,
         )
 
     def CRX(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         matrix = [
@@ -218,14 +198,12 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def CRY(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0) + 0j
         matrix = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, cos, -sin], [0, 0, sin, cos]]
         return self._cast(matrix, dtype=self.dtype)
 
     def CRZ(self, theta):
-        theta = self._cast_parameter(theta)
         phase = self.np.exp(0.5j * theta)
         matrix = [
             [1, 0, 0, 0],
@@ -236,7 +214,6 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def CU1(self, theta):
-        theta = self._cast_parameter(theta)
         phase = self.np.exp(1j * theta)
         matrix = [
             [1, 0, 0, 0],
@@ -247,8 +224,6 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def CU2(self, phi, lam):
-        phi = self._cast_parameter(phi)
-        lam = self._cast_parameter(lam)
         eplus = self.np.exp(1j * (phi + lam) / 2.0) / math.sqrt(2)
         eminus = self.np.exp(1j * (phi - lam) / 2.0) / math.sqrt(2)
         matrix = [
@@ -260,9 +235,6 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def CU3(self, theta, phi, lam):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
-        lam = self._cast_parameter(lam)
         cost = self.np.cos(theta / 2)
         sint = self.np.sin(theta / 2)
         eplus = self.np.exp(1j * (phi + lam) / 2.0)
@@ -324,8 +296,6 @@ class NumpyMatrices:
         )
 
     def fSim(self, theta, phi):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
         cost = self.np.cos(theta) + 0j
         isint = -1j * self.np.sin(theta)
         phase = self.np.exp(-1j * phi)
@@ -355,7 +325,6 @@ class NumpyMatrices:
         )
 
     def GeneralizedfSim(self, u, phi):
-        phi = self._cast_parameter(phi)
         phase = self.np.exp(-1j * phi)
         return self._cast(
             [
@@ -368,7 +337,6 @@ class NumpyMatrices:
         )
 
     def RXX(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self._cast(
@@ -382,7 +350,6 @@ class NumpyMatrices:
         )
 
     def RYY(self, theta):
-        theta = self._cast_parameter(theta)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self._cast(
@@ -396,7 +363,6 @@ class NumpyMatrices:
         )
 
     def RZZ(self, theta):
-        theta = self._cast_parameter(theta)
         phase = self.np.exp(0.5j * theta)
         return self._cast(
             [
@@ -409,7 +375,6 @@ class NumpyMatrices:
         )
 
     def RZX(self, theta):
-        theta = self._cast_parameter(theta)
         cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self._cast(
             [
@@ -422,7 +387,6 @@ class NumpyMatrices:
         )
 
     def RXXYY(self, theta):
-        theta = self._cast_parameter(theta)
         cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self._cast(
             [
@@ -435,11 +399,6 @@ class NumpyMatrices:
         )
 
     def MS(self, phi0, phi1, theta):
-        phi0, phi1, theta = (
-            self._cast_parameter(phi0),
-            self._cast_parameter(phi1),
-            self._cast_parameter(theta),
-        )
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
         cos = self.np.cos(theta / 2) + 0j
@@ -455,7 +414,6 @@ class NumpyMatrices:
         )
 
     def GIVENS(self, theta):
-        theta = self._cast_parameter(theta)
         return self._cast(
             [
                 [1, 0, 0, 0],
@@ -514,7 +472,6 @@ class NumpyMatrices:
         )
 
     def DEUTSCH(self, theta):
-        theta = self._cast_parameter(theta)
         sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
         cos = self.np.cos(theta) + 0j
         return self._cast(
@@ -532,8 +489,6 @@ class NumpyMatrices:
         )
 
     def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
-        theta = self._cast_parameter(theta)
-        phi = self._cast_parameter(phi)
         bitstring_length = len(qubits_in) + len(qubits_out)
         integer_in = "".join(
             ["1" if k in qubits_in else "0" for k in range(bitstring_length)]
