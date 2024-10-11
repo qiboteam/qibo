@@ -142,7 +142,7 @@ class _Global:
         connectivity_edges: list[tuple[str, str]] = (
             cls._backend.connectivity
         )  # list of edges
-        if qubits and natives and connectivity:
+        if qubits is not None and natives is not None and connectivity is not None:
 
             # code is needed in unroll.py to convert str -> enum
             natives_enum = NativeGates.from_gatelist(natives)
