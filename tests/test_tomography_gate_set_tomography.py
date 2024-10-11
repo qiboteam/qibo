@@ -285,7 +285,7 @@ def test_GST_with_transpiler(backend):
             Preprocessing(connectivity),
             Random(connectivity),
             Sabre(connectivity),
-            Unroller(NativeGates.default()),
+            Unroller(NativeGates.default(), backend=backend),
         ],
         int_qubit_names=True,
     )
