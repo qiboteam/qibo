@@ -1,13 +1,10 @@
 import numpy as np
 
 from qibo import gates
-from qibo.backends import NumpyBackend
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
 )
-
-backend = NumpyBackend()
 
 
 class GateDecompositions:
@@ -20,27 +17,35 @@ class GateDecompositions:
         """Register a decomposition for a gate."""
         self.decompositions[gate] = decomposition
 
-    def count_2q(self, gate):
-        """Count the number of two-qubit gates in the decomposition of the given gate."""
+    def _check_instance(self, gate, backend=None):
+        special_gates = (
+            gates.FusedGate,
+            gates.Unitary,
+            gates.GeneralizedfSim,
+            gates.fSim,
+        )
+        decomposition = self.decompositions[gate.__class__]
         if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
+            decomposition = (
+                decomposition(gate, backend)
+                if isinstance(gate, special_gates)
+                else decomposition(gate)
+            )
+        return decomposition
+
+    def count_2q(self, gate, backend):
+        """Count the number of two-qubit gates in the decomposition of the given gate."""
+        decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) > 1))
 
-    def count_1q(self, gate):
+    def count_1q(self, gate, backend):
         """Count the number of single qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
+        decomposition = self._check_instance(gate, backend)
         return len(tuple(g for g in decomposition if len(g.qubits) == 1))
 
-    def __call__(self, gate):
+    def __call__(self, gate, backend=None):
         """Decompose a gate."""
-        decomposition = self.decompositions[gate.__class__]
-        if callable(decomposition):
-            decomposition = decomposition(gate)
+        decomposition = self._check_instance(gate, backend)
         return [
             g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
             for g in decomposition
@@ -48,15 +53,17 @@ class GateDecompositions:
 
 
 def _u3_to_gpi2(t, p, l):
-    """Decompose a U3 gate into GPI2 gates, the decomposition is optimized to use the minimum number of gates..
+    """Decompose a :class:`qibo.gates.U3` gate into :class:`qibo.gates.GPI2` gates.
+
+    The decomposition is optimized to use the minimum number of gates.
 
     Args:
-        t (float): theta parameter of U3 gate.
-        p (float): phi parameter of U3 gate.
-        l (float): lambda parameter of U3 gate.
+        t (float): first parameter of :class:`qibo.gates.U3` gate.
+        p (float): second parameter of :class:`qibo.gates.U3` gate.
+        l (float): third parameter of :class:`qibo.gates.U3` gate.
 
     Returns:
-        decomposition (list): list of native gates that decompose the U3 gate.
+        list: Native gates that decompose the :class:`qibo.gates.U3` gate.
     """
     decomposition = []
     if l != 0.0:
@@ -108,10 +115,12 @@ gpi2_dec.add(
 )
 gpi2_dec.add(gates.U3, lambda gate: _u3_to_gpi2(*gate.parameters))
 gpi2_dec.add(
-    gates.Unitary, lambda gate: _u3_to_gpi2(*u3_decomposition(gate.parameters[0]))
+    gates.Unitary,
+    lambda gate, backend: _u3_to_gpi2(*u3_decomposition(gate.parameters[0], backend)),
 )
 gpi2_dec.add(
-    gates.FusedGate, lambda gate: _u3_to_gpi2(*u3_decomposition(gate.matrix(backend)))
+    gates.FusedGate,
+    lambda gate, backend: _u3_to_gpi2(*u3_decomposition(gate.matrix(backend), backend)),
 )
 
 # Decompose single qubit gates using U3
@@ -126,7 +135,8 @@ u3_dec.add(gates.T, [gates.RZ(0, np.pi / 4)])
 u3_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
 u3_dec.add(gates.SX, [gates.U3(0, np.pi / 2, -np.pi / 2, np.pi / 2)])
 u3_dec.add(
-    gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)]
+    gates.RX,
+    lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)],
 )
 u3_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
@@ -139,7 +149,12 @@ u3_dec.add(
     ],
 )
 u3_dec.add(
-    gates.GPI2, lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))]
+    gates.GPI2,
+    lambda gate: [
+        gates.U3(
+            0, np.pi / 2, gate.parameters[0] - np.pi / 2, np.pi / 2 - gate.parameters[0]
+        ),
+    ],
 )
 u3_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
@@ -154,11 +169,13 @@ u3_dec.add(
 )
 u3_dec.add(
     gates.Unitary,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
+    lambda gate, backend: [gates.U3(0, *u3_decomposition(gate.parameters[0], backend))],
 )
 u3_dec.add(
     gates.FusedGate,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))],
+    lambda gate, backend: [
+        gates.U3(0, *u3_decomposition(gate.matrix(backend), backend))
+    ],
 )
 
 # register the iSWAP decompositions
@@ -376,15 +393,21 @@ cz_dec.add(
 )
 cz_dec.add(
     gates.Unitary,
-    lambda gate: two_qubit_decomposition(0, 1, gate.parameters[0], backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.parameters[0], backend=backend
+    ),
 )
 cz_dec.add(
     gates.fSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.matrix(backend), backend=backend
+    ),
 )
 cz_dec.add(
     gates.GeneralizedfSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
+    lambda gate, backend: two_qubit_decomposition(
+        0, 1, gate.matrix(backend), backend=backend
+    ),
 )
 
 # temporary CNOT decompositions for CNOT, CZ, SWAP

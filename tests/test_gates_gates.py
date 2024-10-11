@@ -1382,8 +1382,8 @@ def test_unitary_initialization(backend):
 def test_unitary_common_gates(backend):
     target_state = apply_gates(backend, [gates.X(0), gates.H(1)], nqubits=2)
     gatelist = [
-        gates.Unitary(np.array([[0, 1], [1, 0]]), 0),
-        gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1),
+        gates.Unitary(backend.cast([[0.0, 1.0], [1.0, 0.0]]), 0),
+        gates.Unitary(backend.cast([[1.0, 1.0], [1.0, -1.0]]) / np.sqrt(2), 1),
     ]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
@@ -1405,7 +1405,7 @@ def test_unitary_common_gates(backend):
             [np.sin(thetay / 2), np.cos(thetay / 2)],
         ]
     )
-    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    cnot = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 0, 1.0], [0, 0, 1.0, 0]])
     gatelist = [gates.Unitary(rx, 0), gates.Unitary(ry, 1), gates.Unitary(cnot, 0, 1)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     backend.assert_allclose(final_state, target_state, atol=1e-6)

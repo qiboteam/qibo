@@ -1142,6 +1142,9 @@ class Circuit:
     def to_qasm(self):
         """Convert circuit to QASM.
 
+        .. note::
+            This method does not support multi-controlled gates and gates with ``torch.Tensor`` as parameters.
+
         Args:
             filename (str): The filename where the code is saved.
         """
@@ -1174,7 +1177,7 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if isinstance(gate, gates.ParametrizedGate):
-                params = (str(x) for x in gate.parameters)
+                params = (str(float(x)) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
                 name = gate.qasm_label
