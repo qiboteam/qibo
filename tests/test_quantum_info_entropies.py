@@ -791,12 +791,12 @@ def test_relative_tsallis_entropy(
     state = (
         random_statevector(4, seed=10, backend=backend)
         if state_flag
-        else random_density_matrix(4, seed=11, backend=backend)
+        else random_density_matrix(4, seed=10, backend=backend)
     )
     target = (
-        random_statevector(4, seed=12, backend=backend)
+        random_statevector(4, seed=11, backend=backend)
         if target_flag
-        else random_density_matrix(4, seed=13, backend=backend)
+        else random_density_matrix(4, seed=11, backend=backend)
     )
 
     value = relative_tsallis_entropy(
