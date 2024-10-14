@@ -137,25 +137,18 @@ class _Global:
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
-        qubits: list[str] = list(cls._backend.qubits)  # list of qubit names
-        natives: list[str] = cls._backend.natives
-        connectivity_edges: list[tuple[str, str]] = (
-            cls._backend.connectivity
-        )  # list of edges
+        qubits = cls._backend.qubits
+        natives = cls._backend.natives
+        connectivity_edges = cls._backend.connectivity
         if qubits is not None and natives is not None and connectivity is not None:
-
-            # code is needed in unroll.py to convert str -> enum
             natives_enum = NativeGates.from_gatelist(natives)
 
-            connectivity = nx.Graph()
-
-            # q{i} naming
-            node_mapping = {qubits[i]: i for i in range(len(qubits))}
-            for e in connectivity_edges:
-                connectivity.add_edge(node_mapping[e[0]], node_mapping[e[1]])
-
-            # str naming
-            # connectivity.add_edges_from(connectivity_edges)
+            # only for q{i} naming
+            node_mapping = {q: i for i, q in enumerate(qubits)}
+            edges = [
+                (node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges
+            ]
+            connectivity = nx.Graph(edges)
 
             cls._transpiler = Passes(
                 connectivity=connectivity,
