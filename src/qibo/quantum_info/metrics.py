@@ -845,6 +845,27 @@ def frame_potential(
     return potential / samples**2
 
 
+def quantum_fisher_information_matrix(
+    circuit, parameters=None, return_complex: bool = True, backend=None
+):
+    backend = _check_backend(backend)
+
+    if parameters is None:
+        parameters = circuit.get_parameters()
+        parameters = backend.cast(parameters, dtype=float)
+
+    jacobian = backend.calculate_jacobian_matrix(circuit, parameters, return_complex)
+
+    original_parameters = circuit.get_parameters()
+    circuit.set_parameters(parameters)
+    state = backend.execute_circuit(circuit).state()
+    circuit.set_parameters(original_parameters)
+
+    return jacobian.T @ jacobian - backend.np.outer(
+        jacobian.T @ state, state.T @ jacobian
+    )
+
+
 def _check_hermitian(matrix, backend=None):
     """Checks if a given matrix is Hermitian.
 
