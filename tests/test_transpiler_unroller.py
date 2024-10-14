@@ -21,6 +21,29 @@ def test_native_gates_from_gatelist_fail():
         NativeGates.from_gatelist([gates.RZ, gates.X(0)])
 
 
+def test_native_gates_str_from_gatelist():
+    natives = NativeGates.from_gatelist(
+        ["I", "Z", "RZ", "M", "GPI2", "U3", "CZ", "iSWAP", "CX"]
+    )
+    assert (
+        natives
+        == NativeGates.I
+        | NativeGates.Z
+        | NativeGates.RZ
+        | NativeGates.M
+        | NativeGates.GPI2
+        | NativeGates.U3
+        | NativeGates.CZ
+        | NativeGates.iSWAP
+        | NativeGates.CNOT
+    )
+
+
+def test_native_gate_str_from_gatelist_fail():
+    with pytest.raises(ValueError):
+        NativeGates.from_gatelist(["qibo"])
+
+
 def test_translate_gate_error_1q():
     natives = NativeGates(0)
     with pytest.raises(DecompositionError):

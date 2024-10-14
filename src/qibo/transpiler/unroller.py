@@ -56,16 +56,43 @@ class NativeGates(Flag):
         return natives
 
     @classmethod
-    def from_gate(cls, gate: gates.Gate):
+    def from_gate(cls, gate):
         """Create a :class:`qibo.transpiler.unroller.NativeGates`
-        object from a :class:`qibo.gates.gates.Gate`."""
+        object from a :class:`qibo.gates.gates.Gate`, a gate class, or a gate name as a string.
+        """
         if isinstance(gate, gates.Gate):
             return cls.from_gate(gate.__class__)
+        elif isinstance(gate, str):
+            return getattr(cls, cls.from_str(gate).__name__)
 
         try:
             return getattr(cls, gate.__name__)
         except AttributeError:
             raise_error(ValueError, f"Gate {gate} cannot be used as native.")
+
+    @classmethod
+    def from_str(cls, gate: str):
+        """Return the gate class corresponding to the input gate name."""
+        gate_format = gate.lower()
+        if gate_format == "i":
+            return gates.I
+        elif gate_format == "z":
+            return gates.Z
+        elif gate_format == "rz":
+            return gates.RZ
+        elif gate_format == "m":
+            return gates.M
+        elif gate_format == "gpi2":
+            return gates.GPI2
+        elif gate_format == "u3":
+            return gates.U3
+        elif gate_format == "cz":
+            return gates.CZ
+        elif gate_format == "iswap":
+            return gates.iSWAP
+        elif gate_format == "cnot" or gate_format == "cx":
+            return gates.CNOT
+        raise_error(ValueError, f"Gate name {gate} not found.")
 
 
 # TODO: Make setting single-qubit native gates more flexible

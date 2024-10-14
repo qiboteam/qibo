@@ -128,7 +128,7 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def _default_transpiler(cls):
+    def _default_transpiler(cls):  # pragma: no cover
         import networkx as nx
 
         from qibo.transpiler.optimizer import Preprocessing
