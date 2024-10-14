@@ -134,12 +134,41 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     return distance
 
 
-def hilbert_schmidt_distance(state, target, backend=None):
-    """Hilbert-Schmidt distance between two quantum states:
+def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
+    """Calculate the Hilbert-Schmidt inner product between two operators.
+
+    Given two operators :math:`A, \\, B \\in \\mathcal{H}`, the Hilbert-Schmidt
+    inner product between the two is given by
 
     .. math::
-        \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
-            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right)
+        \\braket{A, \\, B}_{\\text{HS}} = \\text{tr}\\left(A^{\\dagger} \\, B\\right) \\, .
+
+    Args:
+        operator_A (ndarray): operator :math:`A`.
+        operator_B (ndarray): operator :math:`B`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Hilbert-Schmidt inner product :math:`\\braket{A, \\, B}_{\\text{HS}}`.
+    """
+    backend = _check_backend(backend)
+
+    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
+
+    return backend.np.real(inner_product)
+
+
+def hilbert_schmidt_distance(state, target, backend=None):
+    """Calculate the Hilbert-Schmidt distance between two quantum states:
+
+    .. math::
+        \\braket{\\rho - \\sigma, \\, \\rho - \\sigma}_{\\text{HS}} =
+            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right) \\, ,
+
+    where :math:`\\braket{\\cdot, \\, \\cdot}_{\\text{HS}}` is the
+    :func:`qibo.quantum_info.hilbert_schmidt_inner_product`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -151,6 +180,11 @@ def hilbert_schmidt_distance(state, target, backend=None):
     Returns:
         float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
         and ``target`` :math:`\\sigma`.
+
+    References:
+        1. P. J. Coles, M. Cerezo, and L. Cincio, *Strong bound between trace distance
+        and Hilbert-Schmidt distance for low-rank states*, `Phys. Rev. A 100, 022103
+        <https://doi.org/10.1103/PhysRevA.100.022103>`_ (2019).
     """
     backend = _check_backend(backend)
 
@@ -171,10 +205,9 @@ def hilbert_schmidt_distance(state, target, backend=None):
         state = backend.np.outer(backend.np.conj(state), state)
         target = backend.np.outer(backend.np.conj(target), target)
 
-    distance = backend.np.real(backend.np.trace((state - target) ** 2))
-    distance = float(distance)
+    difference = state - target
 
-    return distance
+    return hilbert_schmidt_inner_product(difference, difference, backend=backend)
 
 
 def fidelity(state, target, check_hermitian: bool = False, backend=None):
