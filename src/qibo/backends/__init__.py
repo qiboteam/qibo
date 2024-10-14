@@ -150,7 +150,7 @@ class _Global:
             ]
             connectivity = nx.Graph(edges)
 
-            cls._transpiler = Passes(
+            return Passes(
                 connectivity=connectivity,
                 passes=[
                     Preprocessing(connectivity),
@@ -160,7 +160,7 @@ class _Global:
                 ],
             )
         else:
-            cls._transpiler = Passes(passes=[])
+            return Passes(passes=[])
 
 
 class QiboMatrices:
