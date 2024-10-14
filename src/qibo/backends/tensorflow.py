@@ -220,6 +220,23 @@ class TensorflowBackend(NumpyBackend):
         S, U, V = self.tf.linalg.svd(matrix)
         return U, S, self.np.conj(self.np.transpose(V))
 
+    def calculate_jacobian_matrix(
+        self, circuit, parameters, return_complex: bool = True
+    ):
+        parameters = self.tf.Variable(parameters)
+
+        with self.tf.GradientTape(persistent=return_complex) as tape:
+            circuit.set_parameters(parameters)
+            state = self.execute_circuit(circuit).state()
+            real = self.np.real(state)
+            if return_complex:
+                imag = self.np.imag(state)
+
+        if return_complex:
+            return tape.jacobian(real, parameters), tape.jacobian(imag, parameters)
+
+        return tape.jacobian(real, parameters)
+
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):
             raise_error(
