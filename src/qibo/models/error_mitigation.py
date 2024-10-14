@@ -335,6 +335,7 @@ def _curve_fit(
     if backend.name == "pytorch":
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
+        params.requires_grad = True
         loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
         optimizer = backend.np.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad

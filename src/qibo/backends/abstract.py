@@ -376,7 +376,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_matrix_power(
-        self, matrix, power: Union[float, int]
+        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
     ):  # pragma: no cover
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
@@ -387,6 +387,11 @@ class Backend(abc.ABC):
             ``cuquantum``), this method falls back to CPU whenever ``power`` is not
             an integer.
         """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
+        """Calculate the Singular Value Decomposition of ``matrix``."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

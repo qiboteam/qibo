@@ -772,7 +772,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             / np.log2(base)
         )
 
-    log = backend.np.log2(backend.np.trace(matrix_power(state, alpha, backend)))
+    log = backend.np.log2(backend.np.trace(matrix_power(state, alpha, backend=backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -871,8 +871,8 @@ def relative_renyi_entropy(
         return relative_von_neumann_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
-        new_state = matrix_power(state, 0.5, backend)
-        new_target = matrix_power(target, 0.5, backend)
+        new_state = matrix_power(state, 0.5, backend=backend)
+        new_target = matrix_power(target, 0.5, backend=backend)
 
         log = backend.np.log2(
             backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
@@ -880,8 +880,8 @@ def relative_renyi_entropy(
 
         return -2 * log / np.log2(base)
 
-    log = matrix_power(state, alpha, backend)
-    log = log @ matrix_power(target, 1 - alpha, backend)
+    log = matrix_power(state, alpha, backend=backend)
+    log = log @ matrix_power(target, 1 - alpha, backend=backend)
     log = backend.np.log2(backend.np.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
@@ -939,7 +939,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (
-        backend.np.trace(matrix_power(state, alpha, backend)) - 1
+        backend.np.trace(matrix_power(state, alpha, backend=backend)) - 1
     )
 
 

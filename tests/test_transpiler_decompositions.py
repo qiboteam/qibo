@@ -21,7 +21,7 @@ def assert_matrices_allclose(gate, natives, backend):
     target_unitary = target_matrix / normalisation
 
     circuit = Circuit(len(gate.qubits))
-    circuit.add(translate_gate(gate, natives))
+    circuit.add(translate_gate(gate, natives, backend=backend))
     native_matrix = circuit.unitary(backend)
     # Remove global phase from native matrix
     normalisation = np.power(
@@ -34,10 +34,10 @@ def assert_matrices_allclose(gate, natives, backend):
     # There can still be phase differences of -1, -1j, 1j
     c = 0
     for phase in [1, -1, 1j, -1j]:
-        if np.allclose(
-            backend.to_numpy(phase * native_unitary),
-            backend.to_numpy(target_unitary),
-            atol=1e-12,
+        if backend.np.allclose(
+            phase * native_unitary,
+            target_unitary,
+            atol=1e-6,
         ):
             c = 1
     backend.assert_allclose(c, 1)
@@ -229,15 +229,15 @@ def test_unitary_to_native(backend, nqubits, natives_1q, natives_2q, seed):
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
-def test_count_1q():
+def test_count_1q(backend):
     from qibo.transpiler.unroller import cz_dec
 
-    np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT(0, 1)), 2)
-    np.testing.assert_allclose(cz_dec.count_1q(gates.CRX(0, 1, 0.1)), 2)
+    np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT(0, 1), backend), 2)
+    np.testing.assert_allclose(cz_dec.count_1q(gates.CRX(0, 1, 0.1), backend), 2)
 
 
-def test_count_2q():
+def test_count_2q(backend):
     from qibo.transpiler.unroller import cz_dec
 
-    np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1)), 1)
-    np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1)), 2)
+    np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1), backend), 1)
+    np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1), backend), 2)

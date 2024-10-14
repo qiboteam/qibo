@@ -4,7 +4,11 @@ import numpy as np
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info.linalg_operations import partial_trace
+from qibo.quantum_info.linalg_operations import (
+    matrix_power,
+    partial_trace,
+    partial_transpose,
+)
 from qibo.quantum_info.metrics import fidelity, purity
 
 
@@ -114,6 +118,39 @@ def entanglement_of_formation(
     ent_of_form = shannon_entropy(probabilities, base=base, backend=backend)
 
     return ent_of_form
+
+
+def negativity(state, bipartition, backend=None):
+    """Calculates the negativity of a bipartite quantum state.
+
+    Given a bipartite state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the negativity :math:`\\operatorname{Neg}(\\rho)` is given by
+
+    .. math::
+        \\operatorname{Neg}(\\rho) = \\frac{1}{2} \\,
+            \\left( \\norm{\\rho_{B}}_{1} - 1 \\right) \\, ,
+
+    where :math:`\\rho_{B}` is the reduced density matrix after tracing out qubits in
+    partition :math:`A`, and :math:`\\norm{\\cdot}_{1}` is the Schatten :math:`1`-norm
+    (also known as nuclear norm or trace norm).
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Negativity :math:`\\operatorname{Neg}(\\rho)` of state :math:`\\rho`.
+    """
+    backend = _check_backend(backend)
+
+    reduced = partial_transpose(state, bipartition, backend)
+    reduced = backend.np.conj(reduced.T) @ reduced
+    norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend=backend))
+
+    return backend.np.real((norm - 1) / 2)
 
 
 def entanglement_fidelity(
