@@ -93,7 +93,7 @@ def pauli_basis(
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    einsum = np.einsum if backend.name == "tensorflow" else backend.np.einsum
+    einsum = np.einsum if backend.platform == "tensorflow" else backend.np.einsum
 
     if nqubits > 1:
         input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
@@ -105,7 +105,7 @@ def pauli_basis(
         basis_full = basis_single
 
     if vectorize and sparse:
-        if backend.name == "tensorflow":
+        if backend.platform == "tensorflow":
             nonzero = np.nonzero
         elif backend.name == "pytorch":
             nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
