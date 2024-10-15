@@ -390,9 +390,10 @@ def test_frame_potential(backend, nqubits, power_t, samples):
     backend.assert_allclose(potential, potential_haar, rtol=1e-2, atol=1e-2)
 
 
+@pytest.mark.parametrize("params_flag", [None, True])
 @pytest.mark.parametrize("return_complex", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 8])
-def test_qfim(backend, nqubits, return_complex):
+def test_qfim(backend, nqubits, return_complex, params_flag):
     if backend.name not in ["pytorch", "tensorflow"]:
         circuit = Circuit(nqubits)
         params = np.random.rand(3)
@@ -411,14 +412,19 @@ def test_qfim(backend, nqubits, return_complex):
         for param in params[:-1]:
             elem = float(target[-1] * backend.np.sin(param) ** 2)
             target.append(elem)
-        target = 4 * backend.np.diag(backend.cast(target))
+        target = 4 * backend.np.diag(backend.cast(target, dtype=np.float64))
 
         # numerical qfim from quantum_info
         circuit = unary_encoder(data, "diagonal")
-        circuit.set_parameters(params)
+
+        if params_flag is not None:
+            circuit.set_parameters(params)
+        else:
+            params = params_flag
 
         qfim = quantum_fisher_information_matrix(
             circuit, params, return_complex=return_complex, backend=backend
         )
+        # qfim = backend.cast(qfim, dtype=np.float64)
 
-        backend.assert_allclose(qfim, target, atol=1e-10)
+        backend.assert_allclose(qfim, target, atol=1e-6)

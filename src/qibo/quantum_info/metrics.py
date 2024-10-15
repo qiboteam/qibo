@@ -891,26 +891,26 @@ def quantum_fisher_information_matrix(
 
     if parameters is None:
         parameters = circuit.get_parameters()
-        parameters = backend.cast(parameters, dtype=float)
+        parameters = backend.cast(parameters, dtype=float).flatten()
 
     jacobian = backend.calculate_jacobian_matrix(
         circuit, parameters, initial_state, return_complex
     )
-    jacobian = (
-        jacobian[0] + 1j * jacobian[1]
-        if return_complex
-        else backend.cast(jacobian, dtype=np.complex128)
-    )
+
+    if return_complex:
+        jacobian = jacobian[0] + 1j * jacobian[1]
+
+    jacobian = backend.cast(jacobian, dtype=np.complex128)
 
     copied = circuit.copy(deep=True)
     copied.set_parameters(parameters)
 
     state = backend.execute_circuit(copied, initial_state=initial_state).state()
-
-    overlaps = backend.np.conj(state.T) @ jacobian
+    print(state.dtype, jacobian.dtype)
+    overlaps = jacobian.T @ state
 
     qfim = jacobian.T @ jacobian
-    qfim = qfim - backend.np.outer(backend.np.conj(overlaps.T), overlaps)
+    qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
 
     return 4 * backend.np.real(qfim)
 
