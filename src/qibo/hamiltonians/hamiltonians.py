@@ -596,7 +596,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if nshots is None:
                 nshots = 1000
             rotated_circuits = []
+            coefficients = []
             for term in terms:
+                coefficients.append(term.coefficient)
                 Z_observable = SymbolicHamiltonian(
                     prod([Z(q) for q in term.target_qubits]),
                     nqubits=freq.nqubits,
@@ -617,8 +619,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             ]
             return sum(
                 [
-                    Z_observable.expectation_from_samples(f, qubit_map)
-                    for f in frequencies
+                    c * Z_observable.expectation_from_samples(f, qubit_map)
+                    for c, f in zip(coefficients, frequencies)
                 ]
             )
 
