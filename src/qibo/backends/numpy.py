@@ -800,7 +800,7 @@ class NumpyBackend(Backend):
         return self.np.linalg.svd(matrix)
 
     def calculate_jacobian_matrix(
-        self, circuit, parameters=None, return_complex: bool = True
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
     ):
         raise_error(
             NotImplementedError,
