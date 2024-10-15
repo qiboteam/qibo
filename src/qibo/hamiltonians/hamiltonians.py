@@ -1,7 +1,8 @@
 """Module defining Hamiltonian classes."""
 
 from itertools import chain
-from typing import Optional
+from math import prod
+from typing import Optional, Union
 
 import numpy as np
 import sympy
@@ -552,17 +553,75 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def expectation_from_samples(self, freq, qubit_map=None):
+    def expectation_from_samples(
+        self, freq: Union[dict, "Circuit"], qubit_map: dict = None, nshots: int = None
+    ):
+        """
+        Calculate the expectation value starting from the samples. This even works
+        for observables not completely diagonal in the computational basis, but only
+        diagonal at a term level in a defined basis. Namely, for an observable of the
+        form :math:``H = \\sum_i H_i``, where each :math:``H_i`` consists in a `n`-qubits
+        pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`, the
+        expectation value is computed by rotating the input circuit in the suitable
+        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
+        that are then summed to build the global expectation value.
+
+        Args:
+            freq (dict | :class:`qibo.models.Circuit`): either the ``dict`` of the
+            frequencies of the samples or a :class:`qibo.models.Circuit` where to
+            extract the samples from. A :class:`qibo.models.Circuit` is needed in
+            case the observable is not diagonal in the computational basis.
+            qubit_map (dict): Qubit map.
+            nshots (int, optional): Number of shots for the expecation value
+            calculation. This is used only when a :class:`qibo.models.Circuit`
+            is passed as input.
+
+        Returns:
+            (float) the computed expectation value.
+        """
+        from qibo import Circuit, gates
+
         terms = self.terms
         for term in terms:
+            if len(term.factors) != len(set(term.factors)):
+                raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
             # pylint: disable=E1101
             for factor in term.factors:
-                if not isinstance(factor, Z):
+                if not isinstance(factor, Z) and not isinstance(freq, Circuit):
                     raise_error(
                         NotImplementedError, "Observable is not a Z Pauli string."
                     )
-            if len(term.factors) != len(set(term.factors)):
-                raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
+
+        if isinstance(freq, Circuit):
+            if nshots is None:
+                nshots = 1000
+            rotated_circuits = []
+            for term in terms:
+                Z_observable = SymbolicHamiltonian(
+                    prod([Z(q) for q in term.target_qubits]),
+                    nqubits=freq.nqubits,
+                    backend=self.backend,
+                )
+                measurements = [
+                    gates.M(factor.target_qubit, basis=factor.gate.__class__)
+                    for factor in term.factors
+                ]
+                circ_copy = freq.copy(True)
+                [circ_copy.add(m) for m in measurements]
+                rotated_circuits.append(circ_copy)
+            frequencies = [
+                result.frequencies()
+                for result in self.backend.execute_circuits(
+                    rotated_circuits, nshots=nshots
+                )
+            ]
+            return sum(
+                [
+                    Z_observable.expectation_from_samples(f, qubit_map)
+                    for f in frequencies
+                ]
+            )
+
         keys = list(freq.keys())
         counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
             freq.values()
