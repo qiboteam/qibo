@@ -4,6 +4,7 @@ import math
 from inspect import signature
 from itertools import product
 
+import networkx as nx
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -1163,17 +1164,23 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Returns:
         qibo.states.CircuitResult: The result of the circuit execution.
     """
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Custom
 
-    # TODO: remove backend.platform.topology and pragma: no cover
-    if backend is None:  # pragma: no cover
+    if backend is None:
         backend = get_backend()
-    elif str(get_backend()) == "qibolab":  # pragma: no cover
-        transpiler = Custom(
-            initial_map=qubit_map, connectivity=backend.platform.topology
+    elif backend.name == "qibolab":  # pragma: no cover
+        qubits = backend.qubits
+        connectivity_edges = backend.connectivity
+        node_mapping = {q: i for i, q in enumerate(qubits)}
+        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
+        connectivity = nx.Graph(edges)
+        transpiler = Passes(
+            connectivity=connectivity,
+            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
         )
         circuit, _ = transpiler(circuit)
-    elif noise_model is not None:  # pragma: no cover
+    elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
