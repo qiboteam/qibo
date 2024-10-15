@@ -20,16 +20,18 @@ def vectorization(state, order: str = "row", backend=None):
     If ``order="row"``, then:
 
     .. math::
-        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l} \\, .
 
     If ``order="column"``, then:
 
     .. math::
-        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k} \\, .
 
-    If ``state`` is a 3-dimensional tensor it is interpreted as a batch of states.
+    If ``state`` is a 3-dimensional tensor, it is interpreted as a batch of states.
+
     Args:
-        state: statevector, density matrix, an array of statevectors, or an array of density matrices.
+        state (ndarray): statevector, density matrix, an array of statevectors,
+            or an array of density matrices.
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
