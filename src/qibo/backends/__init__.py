@@ -128,7 +128,7 @@ class _Global:
         # TODO: check if transpiler is valid on the backend
 
     @classmethod
-    def _default_transpiler(cls):  # pragma: no cover
+    def _default_transpiler(cls):
         import networkx as nx
 
         from qibo.transpiler.optimizer import Preprocessing
@@ -140,7 +140,11 @@ class _Global:
         qubits = cls._backend.qubits
         natives = cls._backend.natives
         connectivity_edges = cls._backend.connectivity
-        if qubits is not None and natives is not None and connectivity is not None:
+        if (
+            qubits is not None
+            and natives is not None
+            and connectivity_edges is not None
+        ):
             natives_enum = NativeGates.from_gatelist(natives)
 
             # only for q{i} naming
@@ -159,8 +163,8 @@ class _Global:
                     Unroller(natives_enum),
                 ],
             )
-        else:
-            return Passes(passes=[])
+
+        return Passes(passes=[])
 
 
 class QiboMatrices:

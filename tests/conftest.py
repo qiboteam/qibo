@@ -82,8 +82,6 @@ def clear():
 
     _Global._backend = None
     _Global._transpiler = None
-    _Global.backend()
-    _Global._transpiler = Passes(passes=[])
 
 
 def pytest_generate_tests(metafunc):

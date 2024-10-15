@@ -2,7 +2,11 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import matrices
+from qibo import gates, matrices
+from qibo.backends import _Global
+from qibo.backends.numpy import NumpyBackend
+from qibo.models.circuit import Circuit
+from qibo.transpiler.unroller import NativeGates
 
 
 def test_set_get_backend():
@@ -143,8 +147,40 @@ def test_set_get_transpiler():
     assert qibo.get_transpiler_name() == str(transpiler)
 
 
-def test_backend_hw_properties():
-    from qibo.backends.numpy import NumpyBackend
-
+def test_default_transpiler_sim():
     backend = NumpyBackend()
-    assert backend.natives is None and backend.connectivity is None
+    assert (
+        backend.natives is None
+        and backend.connectivity is None
+        and backend.qubits is None
+    )
+
+
+def test_default_transpiler_hw():
+    class TempBackend(NumpyBackend):
+        def __init__(self):
+            super().__init__()
+            self.name = "tempbackend"
+
+        @property
+        def qubits(self):
+            return ["A1", "A2", "A3", "A4", "A5"]
+
+        @property
+        def connectivity(self):
+            return [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")]
+
+        @property
+        def natives(self):
+            return ["CZ", "GPI2"]
+
+    backend = TempBackend()
+    _Global._backend = backend
+    transpiler = _Global.transpiler()
+
+    assert list(transpiler.connectivity.nodes) == [0, 1, 2, 3, 4]
+    assert list(transpiler.connectivity.edges) == [(0, 1), (1, 2), (2, 3), (3, 4)]
+    assert (
+        NativeGates.CZ in transpiler.native_gates
+        and NativeGates.GPI2 in transpiler.native_gates
+    )
