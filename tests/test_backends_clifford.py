@@ -11,7 +11,6 @@ from qibo.backends import (
     NumpyBackend,
     PyTorchBackend,
     TensorflowBackend,
-    _Global,
 )
 from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
@@ -45,9 +44,7 @@ def test_global_backend(backend):
     construct_clifford_backend(backend)
     set_backend(backend.name, platform=backend.platform)
     clifford_bkd = CliffordBackend()
-    target = (
-        _Global._backend.name if backend.name == "numpy" else _Global._backend.platform
-    )
+    target = get_backend().name if backend.name == "numpy" else get_backend().platform
     assert clifford_bkd.platform == target
 
 

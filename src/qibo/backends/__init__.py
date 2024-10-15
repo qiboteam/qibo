@@ -207,11 +207,6 @@ def get_backend():
     return _Global.backend()
 
 
-def get_backend_name():
-    """Get the name of the current backend"""
-    return str(_Global.backend())
-
-
 def set_backend(backend, **kwargs):
     """Set the current backend.
 

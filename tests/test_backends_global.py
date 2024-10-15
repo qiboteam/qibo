@@ -3,17 +3,18 @@ import pytest
 
 import qibo
 from qibo import matrices
-from qibo.backends import _Global
+from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
-from qibo.transpiler.unroller import NativeGates
+from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.placer import Random
+from qibo.transpiler.router import Sabre
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def test_set_get_backend():
-    from qibo.backends import _Global
-
-    _Global.backend()
     qibo.set_backend("numpy")
-    assert qibo.get_backend_name() == "numpy"
+    assert str(qibo.get_backend()) == "numpy"
     assert qibo.get_backend().name == "numpy"
 
 
@@ -107,8 +108,7 @@ def test_check_backend(backend):
     # testing when backend is None
     test = None
     test = qibo.backends._check_backend(test)
-
-    target = qibo.backends._Global.backend()
+    target = get_backend()
 
     assert test.name == target.name
     assert test.__class__ == target.__class__
@@ -124,12 +124,6 @@ def _star_connectivity():
 
 
 def test_set_get_transpiler():
-    from qibo.transpiler.optimizer import Preprocessing
-    from qibo.transpiler.pipeline import Passes
-    from qibo.transpiler.placer import Random
-    from qibo.transpiler.router import Sabre
-    from qibo.transpiler.unroller import NativeGates, Unroller
-
     connectivity = _star_connectivity()
     transpiler = Passes(
         connectivity=connectivity,
