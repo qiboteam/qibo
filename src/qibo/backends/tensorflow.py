@@ -221,13 +221,16 @@ class TensorflowBackend(NumpyBackend):
         return U, S, self.np.conj(self.np.transpose(V))
 
     def calculate_jacobian_matrix(
-        self, circuit, parameters, return_complex: bool = True
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
     ):
+        copied = circuit.copy(deep=True)
+
+        # necessary for the tape to properly watch the variables
         parameters = self.tf.Variable(parameters)
 
         with self.tf.GradientTape(persistent=return_complex) as tape:
-            circuit.set_parameters(parameters)
-            state = self.execute_circuit(circuit).state()
+            copied.set_parameters(parameters)
+            state = self.execute_circuit(copied, initial_state=initial_state).state()
             real = self.np.real(state)
             if return_complex:
                 imag = self.np.imag(state)
