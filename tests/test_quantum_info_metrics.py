@@ -425,6 +425,5 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         qfim = quantum_fisher_information_matrix(
             circuit, params, return_complex=return_complex, backend=backend
         )
-        # qfim = backend.cast(qfim, dtype=np.float64)
 
         backend.assert_allclose(qfim, target, atol=1e-6)

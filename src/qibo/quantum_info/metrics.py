@@ -906,7 +906,7 @@ def quantum_fisher_information_matrix(
     copied.set_parameters(parameters)
 
     state = backend.execute_circuit(copied, initial_state=initial_state).state()
-    print(state.dtype, jacobian.dtype)
+
     overlaps = jacobian.T @ state
 
     qfim = jacobian.T @ jacobian
