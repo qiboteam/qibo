@@ -846,24 +846,73 @@ def frame_potential(
 
 
 def quantum_fisher_information_matrix(
-    circuit, parameters=None, return_complex: bool = True, backend=None
+    circuit,
+    parameters=None,
+    initial_state=None,
+    return_complex: bool = True,
+    backend=None,
 ):
+    """Calculate the Quantum Fisher Information Matrix (QFIM) of a parametrized ``circuit``.
+
+    Given a set of ``parameters`` :math:`\\theta = \\{\\theta_{k}\\}_{k\\in[M]}` and a
+    parameterized unitary ``circuit`` :math:`U(\\theta)` acting on an ``initial_state``
+    :math:`\\ket{\\phi}`, the QFIM is such that its elements can be calculated as
+
+    .. math::
+        \\mathbf{F}_{jk} = 4 \\, \\text{Re}\\left\\{ \\braket{\\partial_{j} \\psi | \\partial_{k}
+            \\psi} - \\braket{\\partial_{j} \\psi | \\psi}\\!\\braket{\\psi | \\partial_{k} \\psi}
+            \\right\\} \\, ,
+
+    where we have used the short notations :math:`\\ket{\\psi} \\equiv \\ket{\\psi(\\theta)}
+    = U(\\theta) \\ket{\\phi}`, and :math:`\\ket{\\partial_{k} \\psi} \\equiv \\frac{\\partial}
+    {\\partial\\theta_{k}} \\ket{\\psi(\\theta)}`.
+    If the ``initial_state`` :math:`\\ket{\\phi}` is not specified, it defaults to
+    :math:`\\ket{0}^{\\otimes n}`.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): parametrized circuit :math:`U(\\theta)`.
+        parameters (ndarray, optional): parameters whose QFIM to calculate.
+            If ``None``, QFIM is calculated with the paremeters from ``circuit``, i.e.
+            ``parameters = circuit.get_parameters()``. Defaults to ``None``.
+        initial_state (ndarray, optional): Initial configuration. It can be specified
+            by the setting the state vector using an array or a circuit. If ``None``,
+            the initial state is :math:`\\ket{0}^{\\otimes n}`. Defaults to ``None``.
+        return_complex (bool, optional): If ``True``, calculates the Jacobian matrix
+            of real and imaginary parts of :math:`\\ket{\\psi(\\theta)}`. If ``False``,
+            calculates only the Jacobian matrix of the real part. Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        ndarray: Quantum Fisher Information :math:`\\mathbf{F}`.
+    """
     backend = _check_backend(backend)
 
     if parameters is None:
         parameters = circuit.get_parameters()
         parameters = backend.cast(parameters, dtype=float)
 
-    jacobian = backend.calculate_jacobian_matrix(circuit, parameters, return_complex)
-
-    original_parameters = circuit.get_parameters()
-    circuit.set_parameters(parameters)
-    state = backend.execute_circuit(circuit).state()
-    circuit.set_parameters(original_parameters)
-
-    return jacobian.T @ jacobian - backend.np.outer(
-        jacobian.T @ state, state.T @ jacobian
+    jacobian = backend.calculate_jacobian_matrix(
+        circuit, parameters, initial_state, return_complex
     )
+    jacobian = (
+        jacobian[0] + 1j * jacobian[1]
+        if return_complex
+        else backend.cast(jacobian, dtype=np.complex128)
+    )
+
+    copied = circuit.copy(deep=True)
+    copied.set_parameters(parameters)
+
+    state = backend.execute_circuit(copied, initial_state=initial_state).state()
+
+    overlaps = backend.np.conj(state.T) @ jacobian
+
+    qfim = jacobian.T @ jacobian
+    qfim = qfim - backend.np.outer(backend.np.conj(overlaps.T), overlaps)
+
+    return 4 * backend.np.real(qfim)
 
 
 def _check_hermitian(matrix, backend=None):
