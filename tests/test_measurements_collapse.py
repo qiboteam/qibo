@@ -30,7 +30,7 @@ def test_measurement_collapse(backend, nqubits, targets):
 )
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     def assign_value(rho, index, value):
-        if backend.name == "tensorflow":
+        if backend.platform == "tensorflow":
             rho_numpy = rho.numpy()
             rho_numpy[index] = value
             return rho.__class__(rho_numpy, rho.device)
