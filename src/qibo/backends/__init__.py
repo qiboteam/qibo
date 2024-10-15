@@ -1,6 +1,7 @@
 import os
 from importlib import import_module
 
+import networkx as nx
 import numpy as np
 
 from qibo.backends.abstract import Backend
@@ -101,7 +102,7 @@ class _Global:
                 try:
                     backend = construct_backend(**kwargs)
                     break
-                except (ModuleNotFoundError, ImportError):
+                except (ImportError, MissingBackend):
                     pass
 
         if backend is None:  # pragma: no cover
@@ -129,8 +130,6 @@ class _Global:
 
     @classmethod
     def _default_transpiler(cls):
-        import networkx as nx
-
         from qibo.transpiler.optimizer import Preprocessing
         from qibo.transpiler.pipeline import Passes
         from qibo.transpiler.placer import Trivial

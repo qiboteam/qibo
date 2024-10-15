@@ -2,9 +2,7 @@ import math
 
 import numpy as np
 
-import qibo
 from qibo import gates, set_backend
-from qibo.backends import _Global
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 

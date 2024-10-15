@@ -77,9 +77,6 @@ def backend(backend_name):
 @pytest.fixture(autouse=True)
 def clear():
     yield
-
-    from qibo.transpiler.pipeline import Passes
-
     _Global._backend = None
     _Global._transpiler = None
 

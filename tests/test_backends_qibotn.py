@@ -1,6 +1,5 @@
 import os
 
-# import qibo
 from qibo import get_backend, get_threads, set_backend
 
 # Force quimb to use qibojit default number of threads.

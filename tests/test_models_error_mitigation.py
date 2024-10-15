@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import _Global, construct_backend
+from qibo.backends import construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.error_mitigation import (
     CDR,

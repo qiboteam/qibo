@@ -2,17 +2,16 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import gates, matrices
+from qibo import matrices
 from qibo.backends import _Global
 from qibo.backends.numpy import NumpyBackend
-from qibo.models.circuit import Circuit
 from qibo.transpiler.unroller import NativeGates
 
 
 def test_set_get_backend():
     from qibo.backends import _Global
 
-    backend = _Global.backend()
+    _Global.backend()
     qibo.set_backend("numpy")
     assert qibo.get_backend_name() == "numpy"
     assert qibo.get_backend().name == "numpy"
@@ -88,14 +87,14 @@ def test_circuit_execution():
     qibo.set_backend("numpy")
     c = qibo.models.Circuit(2)
     c.add(qibo.gates.H(0))
-    result = c()
-    unitary = c.unitary()
+    c()
+    c.unitary()
 
 
 def test_gate_matrix():
     qibo.set_backend("numpy")
     gate = qibo.gates.H(0)
-    matrix = gate.matrix
+    gate.matrix
 
 
 def test_check_backend(backend):
