@@ -1167,7 +1167,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Custom
 
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
         qubits = backend.qubits
