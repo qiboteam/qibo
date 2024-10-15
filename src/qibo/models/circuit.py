@@ -1109,8 +1109,7 @@ class Circuit:
             return backend.execute_distributed_circuit(
                 transpiled_circuit, initial_state, nshots
             )
-        else:
-            return backend.execute_circuit(transpiled_circuit, initial_state, nshots)
+        return backend.execute_circuit(transpiled_circuit, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
