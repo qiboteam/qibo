@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.symbols import I, X, Y, Z
 
@@ -284,8 +284,9 @@ def test_hamiltonian_expectation_from_samples(backend, observable):
         backend.np.count_nonzero(matrix - backend.np.diag(backend.np.diagonal(matrix)))
         == 0
     )
+    final_state = backend.execute_circuit(c.copy(True)).state()
     if not diagonal:
-        matrices = []
+        exp = 0.0
         for term in H.terms:
             non_Z = [
                 factor
@@ -295,29 +296,22 @@ def test_hamiltonian_expectation_from_samples(backend, observable):
             diagonalizator = SymbolicHamiltonian(
                 prod(non_Z), nqubits=nqubits, backend=backend
             ).matrix
-            matrices.append(
+            diag_matrix = (
                 backend.np.transpose(backend.np.conj(diagonalizator))
                 @ matrix
                 @ diagonalizator
             )
+            exp += Hamiltonian(nqubits, diag_matrix, backend=backend).expectation(
+                final_state
+            )
         exp_from_samples = H.expectation_from_samples(c)
-        state = backend.execute_circuit(c).state()
-        exp = H.expectation(state)
     else:
-        matrices = [matrix]
         c.add(gates.M(*range(nqubits)))
+        freq = backend.execute_circuit(c).frequencies()
+        exp_from_samples = H.expectation_from_samples(freq)
+        exp = H.expectation(final_state)
 
-    freq = result.frequencies(binary=True)
-
-    Obs0 = hamiltonians.Hamiltonian(
-        3, matrix, backend=backend
-    ).expectation_from_samples(freq, qubit_map=None)
-    Obs0 = backend.cast(Obs0, dtype=Obs0.dtype)
-
-    Obs1 = h1.expectation(result.state())
-    Obs1 = backend.cast(Obs1, dtype=Obs1.dtype)
-
-    backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
+    backend.assert_allclose(exp, exp_from_samples, atol=10 / np.sqrt(nshots))
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
