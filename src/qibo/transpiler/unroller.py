@@ -21,7 +21,7 @@ class FlagMeta(EnumMeta):
     def __getitem__(self, keys):
         if isinstance(keys, str):
             return super().__getitem__(keys)
-        return reduce(or_, [self[key] for key in keys])
+        return reduce(or_, [super().__getitem__(key) for key in keys])
 
 
 class NativeGates(Flag, metaclass=FlagMeta):
