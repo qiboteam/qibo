@@ -1,4 +1,6 @@
 from enum import EnumMeta, Flag, auto
+from functools import reduce
+from operator import or_
 
 from qibo import gates
 from qibo.backends import _check_backend
@@ -21,11 +23,7 @@ class FlagMeta(EnumMeta):
     def __getitem__(cls, keys):
         if isinstance(keys, str):
             return super().__getitem__(keys)
-
-        result = super().__getitem__(keys[0])
-        for key in keys[1:]:
-            result |= super().__getitem__(key)
-        return result
+        return reduce(or_, [self[key] for key in keys])  # pylint: disable=E1136
 
 
 class NativeGates(Flag, metaclass=FlagMeta):
