@@ -235,7 +235,7 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     except ImportError as e:
         # pylint: disable=unsupported-membership-test
         if provider not in e.msg:
-            raise_error(e)
+            raise e
         raise_error(
             MissingBackend,
             f"The '{backend}' backends' provider is not available. Check that a Python "
