@@ -375,10 +375,7 @@ def schmidt_decomposition(
         raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
-    partition_2 = set(list(range(nqubits))) ^ set(partition)
-    partition_2 = (
-        list(partition_2) if isinstance(partition, list) else tuple(partition_2)
-    )
+    partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
 
     tensor = backend.np.reshape(state, [2] * nqubits)
     tensor = backend.np.transpose(tensor, partition + partition_2)
