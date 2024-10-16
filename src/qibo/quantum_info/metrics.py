@@ -147,7 +147,7 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
         operator_A (ndarray): operator :math:`A`.
         operator_B (ndarray): operator :math:`B`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:

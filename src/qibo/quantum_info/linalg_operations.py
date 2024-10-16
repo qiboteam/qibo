@@ -187,7 +187,7 @@ def partial_transpose(
         partition (Union[List[int], Tuple[int, ...]]): indices of qubits to be transposed.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            it uses the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Partially transposed operator(s) :math:`\\O^{T_{B}}`.
@@ -316,7 +316,7 @@ def singular_value_decomposition(matrix, backend=None):
         matrix (ndarray): matrix whose SVD to calculate.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`, i.e.

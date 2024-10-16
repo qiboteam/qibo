@@ -138,7 +138,7 @@ def negativity(state, bipartition, backend=None):
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses it uses the current backend.
             Defaults to ``None``.
 
     Returns:
