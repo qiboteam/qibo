@@ -16,7 +16,9 @@ from qibo.transpiler.decompositions import (
 
 
 class FlagMeta(EnumMeta):
-    def __getitem__(self, keys):
+    """Metaclass for :class:`qibo.transpiler.unroller.NativeGates` that allows initialization with a list of gate name strings."""
+
+    def __getitem__(cls, keys):
         if isinstance(keys, str):
             return super().__getitem__(keys)
 
