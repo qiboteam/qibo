@@ -216,7 +216,7 @@ def list_available_backends(*providers: str) -> dict:
     return available_backends
 
 
-def construct_backend(backend, **kwargs) -> Backend:
+def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     """Construct a generic native or non-native qibo backend.
 
     Args:
@@ -235,11 +235,12 @@ def construct_backend(backend, **kwargs) -> Backend:
     except ImportError as e:
         # pylint: disable=unsupported-membership-test
         if provider not in e.msg:
-            raise e
-        raise MissingBackend(
+            raise_error(e)
+        raise_error(
+            MissingBackend,
             f"The '{backend}' backends' provider is not available. Check that a Python "
-            f"package named '{provider}' is installed, and it is exposing valid Qibo "
-            "backends.",
+            + f"package named '{provider}' is installed, and it is exposing valid Qibo "
+            + "backends.",
         )
 
 
