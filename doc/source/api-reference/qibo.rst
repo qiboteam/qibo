@@ -1951,6 +1951,12 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Fisher Information Matrix
+"""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.quantum_fisher_information_matrix
+
+
 Linear Algebra Operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
