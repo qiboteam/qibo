@@ -153,7 +153,10 @@ class Hamiltonian(AbstractHamiltonian):
             )
             != 0
         ):
-            raise_error(NotImplementedError, "Observable is not diagonal.")
+            raise_error(
+                NotImplementedError,
+                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+            )
         keys = list(freq.keys())
         if qubit_map is None:
             qubit_map = list(range(int(np.log2(len(obs)))))
@@ -565,7 +568,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             qubit_map (dict): qubit map.
 
         Returns:
-            (float): the calculated expectation value
+            (float): the calculated expectation value.
         """
         from qibo import Circuit, gates
 
@@ -608,7 +611,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             qubit_map (dict): qubit map.
 
         Returns:
-            (float): the calculated expectation value
+            (float): the calculated expectation value.
         """
         for term in self.terms:
             # pylint: disable=E1101
