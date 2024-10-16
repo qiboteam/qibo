@@ -2,6 +2,7 @@ import numpy as np
 
 from qibo import gates, matrices
 from qibo.config import raise_error
+from qibo.quantum_info.linalg_operations import schmidt_decomposition
 
 magic_basis = np.array(
     [[1, -1j, 0, 0], [0, 0, 1, -1j], [0, 0, -1, -1j], [1, 1j, 0, 0]]
@@ -83,30 +84,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     return psi, eigvals
 
 
-def schmidt_decompose(state, backend):
-    """Decomposes a two-qubit product state to its single-qubit parts.
-
-    Args:
-        state (ndarray): product state to be decomposed.
-
-    Returns:
-        (ndarray, ndarray): decomposition
-
-    """
-    # tf.linalg.svd has a different behaviour
-    if backend.__class__.__name__ == "TensorflowBackend":
-        u, d, v = np.linalg.svd(backend.np.reshape(state, (2, 2)))
-    else:
-        u, d, v = backend.np.linalg.svd(backend.np.reshape(state, (2, 2)))
-    if not np.allclose(backend.to_numpy(d), [1, 0]):  # pragma: no cover
-        raise_error(
-            ValueError,
-            f"Unexpected singular values: {d}\nCan only decompose product states.",
-        )
-    return u[:, 0], v[0]
-
-
-def calculate_single_qubit_unitaries(psi, backend):
+def calculate_single_qubit_unitaries(psi, backend=None):
     """Calculates local unitaries that maps a maximally entangled basis to the magic basis.
 
     See Lemma 1 of Appendix A in arXiv:quant-ph/0011050.
@@ -130,8 +108,10 @@ def calculate_single_qubit_unitaries(psi, backend):
     # find e and f by inverting (A3), (A4)
     ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)
     e_f_ = (psi_bar[0] - 1j * psi_bar[1]) / np.sqrt(2)
-    e, f = schmidt_decompose(ef, backend=backend)
-    e_, f_ = schmidt_decompose(e_f_, backend=backend)
+    e, _, f = schmidt_decomposition(ef, [0], backend=backend)
+    e, f = e[:, 0], f[0]
+    e_, _, f_ = schmidt_decomposition(e_f_, [0], backend=backend)
+    e_, f_ = e_[:, 0], f_[0]
     # find exp(1j * delta) using (A5a)
     ef_ = backend.np.kron(e, f_)
     phase = (
