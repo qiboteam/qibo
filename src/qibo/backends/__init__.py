@@ -1,7 +1,5 @@
 import os
-from functools import reduce
 from importlib import import_module
-from operator import or_
 
 import networkx as nx
 import numpy as np
@@ -146,9 +144,6 @@ class _Global:
             and natives is not None
             and connectivity_edges is not None
         ):
-            # natives_enum = NativeGates.from_gatelist(natives)
-            natives_enum = reduce(or_, [NativeGates[nat] for nat in natives])
-
             # only for q{i} naming
             node_mapping = {q: i for i, q in enumerate(qubits)}
             edges = [
@@ -162,7 +157,7 @@ class _Global:
                     Preprocessing(connectivity),
                     Trivial(connectivity),
                     Sabre(connectivity),
-                    Unroller(natives_enum),
+                    Unroller(NativeGates[natives]),
                 ],
             )
 

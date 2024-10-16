@@ -1,4 +1,6 @@
-from enum import Flag, auto
+from enum import EnumMeta, Flag, auto
+from functools import reduce
+from operator import or_
 
 from qibo import gates
 from qibo.backends import _check_backend
@@ -15,7 +17,14 @@ from qibo.transpiler.decompositions import (
 )
 
 
-class NativeGates(Flag):
+class FlagMeta(EnumMeta):
+    def __getitem__(self, keys):
+        if isinstance(keys, str):
+            return super().__getitem__(keys)
+        return reduce(or_, [self[key] for key in keys])
+
+
+class NativeGates(Flag, metaclass=FlagMeta):
     """Define native gates supported by the unroller. A native gate set should contain at least
     one two-qubit gate (:class:`qibo.gates.gates.CZ` or :class:`qibo.gates.gates.iSWAP`),
     and at least one single-qubit gate
