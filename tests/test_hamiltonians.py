@@ -264,7 +264,10 @@ def test_hamiltonian_expectation_errors(backend):
 
 @pytest.mark.parametrize(
     "observable",
-    [2 * Z(0) * Z(1) + Z(0) * Z(2), X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * Y(1)],
+    [
+        2 * Z(0) * Z(1) ** 2 + Z(0) * Z(2),
+        X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * Y(1) ** 3,
+    ],
 )
 def test_hamiltonian_expectation_from_samples(backend, observable):
     """Test Hamiltonian expectation value calculation."""

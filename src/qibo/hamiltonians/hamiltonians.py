@@ -585,7 +585,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             )
             measurements = [
                 gates.M(factor.target_qubit, basis=factor.gate.__class__)
-                for factor in term.factors
+                for factor in set(term.factors)
             ]
             circ_copy = circuit.copy(True)
             [circ_copy.add(m) for m in measurements]
@@ -672,9 +672,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             (float) the computed expectation value.
         """
-        for term in self.terms:
-            if len(term.factors) != len(set(term.factors)):
-                raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
 
         if isinstance(data, dict):
             return self._exp_from_freq(data, qubit_map)
