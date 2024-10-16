@@ -558,13 +558,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def _exp_from_circuit(self, circuit: dict, qubit_map: dict, nshots: int = None):
         """
-        Calculate the expecation value from a circuit.
+        Calculate the expectation value from a circuit.
         This allows for non diagonal observables. Each term of the observable is
         treated separately, by measuring in the correct basis and re-executing the
         circuit.
 
         Args:
-            freq (dict): input frequencies.
+            circuit (dict): input frequencies.
             qubit_map (dict): qubit map.
 
         Returns:
@@ -603,7 +603,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def _exp_from_freq(self, freq: dict, qubit_map: dict):
         """
-        Calculate the expecation value from some frequencies.
+        Calculate the expectation value from some frequencies.
         The observable has to be diagonal in the computational basis.
 
         Args:
@@ -660,7 +660,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         that are then summed to build the global expectation value.
 
         Args:
-            freq (dict | :class:`qibo.models.Circuit`): either the ``dict`` of the
+            data (dict | :class:`qibo.models.Circuit`): either the ``dict`` of the
             frequencies of the samples or a :class:`qibo.models.Circuit` where to
             extract the samples from. A :class:`qibo.models.Circuit` is needed in
             case the observable is not diagonal in the computational basis.
