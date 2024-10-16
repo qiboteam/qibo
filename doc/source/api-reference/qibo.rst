@@ -2005,6 +2005,12 @@ Singular value decomposition
 .. autofunction:: qibo.quantum_info.singular_value_decomposition
 
 
+Schmidt decomposition
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.schmidt_decomposition
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
