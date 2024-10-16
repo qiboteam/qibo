@@ -365,8 +365,9 @@ def test_to_chi(backend, normalize, order, pauli_order):
     backend.assert_allclose(chi, test_chi, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("partition", [None, (0,)])
 @pytest.mark.parametrize("test_a0", [test_a0])
-def test_to_stinespring(backend, test_a0):
+def test_to_stinespring(backend, test_a0, partition):
     test_a0_ = backend.cast(test_a0)
     state = random_density_matrix(2**1, seed=8, backend=backend)
 
@@ -377,7 +378,9 @@ def test_to_stinespring(backend, test_a0):
     global_state = backend.identity_density_matrix(len(environment), normalize=True)
     global_state = backend.np.kron(state, global_state)
 
-    stinespring = to_stinespring(test_a0_, (0,), len(environment) + 1, backend=backend)
+    stinespring = to_stinespring(
+        test_a0_, partition=partition, nqubits=len(environment) + 1, backend=backend
+    )
     stinespring = stinespring @ global_state @ backend.np.conj(stinespring.T)
     stinespring = partial_trace(stinespring, traced_qubits=environment, backend=backend)
 
