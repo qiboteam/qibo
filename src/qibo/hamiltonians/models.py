@@ -45,7 +45,7 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
             Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Example:
@@ -102,7 +102,7 @@ def X(nqubits, dense: bool = True, backend=None):
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
             Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.X, dense, backend=backend)
@@ -120,7 +120,7 @@ def Y(nqubits, dense: bool = True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.Y, dense, backend=backend)
@@ -138,7 +138,7 @@ def Z(nqubits, dense: bool = True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
     return _OneBodyPauli(nqubits, matrices.Z, dense, backend=backend)
@@ -190,7 +190,7 @@ def MaxCut(nqubits, dense: bool = True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
     import sympy as sp

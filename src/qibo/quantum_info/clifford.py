@@ -34,7 +34,7 @@ class Clifford:
             :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
             ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
             If ``None``, defaults to the corresponding engine
-            from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            from the current backend. Defaults to ``None``.
     """
 
     symplectic_matrix: np.ndarray = field(init=False)
@@ -92,7 +92,7 @@ class Clifford:
                 :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
                 ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
                 If ``None``, defaults to the corresponding engine
-                from :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+                from the current backend. Defaults to ``None``.
 
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.

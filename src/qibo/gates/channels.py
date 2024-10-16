@@ -65,7 +65,7 @@ class Channel(Gate):
                 vectorization is done block-wise. Defaut is ``"row"``.
             backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
-                it uses :class:`qibo.backends.GlobalBackend`.
+                it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -121,7 +121,7 @@ class Channel(Gate):
                 it raises ``NotImplementedError``. Defaut is ``"row"``.
             backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
-                it uses :class:`qibo.backends.GlobalBackend`.
+                it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -160,7 +160,7 @@ class Channel(Gate):
                 Pauli elements in the basis. Default is "IXYZ".
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses
-                :class:`qibo.backends.GlobalBackend`.
+                the current backend.
                 Defaults to ``None``.
 
         Returns:

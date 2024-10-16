@@ -109,7 +109,7 @@ def partial_trace(
         traced_qubits (Union[List[int], Tuple[int]]): indices of qubits to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Density matrix of the remaining qubit(s).
@@ -187,7 +187,7 @@ def partial_transpose(
         partition (Union[List[int], Tuple[int, ...]]): indices of qubits to be transposed.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            it uses the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Partially transposed operator(s) :math:`\\O^{T_{B}}`.
@@ -267,7 +267,7 @@ def matrix_exponentiation(
             Must be used together with ``eigenvectors``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: matrix exponential of :math:`-i \\, \\theta \\, H`.
@@ -290,7 +290,7 @@ def matrix_power(
             Used when ``power`` is negative.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: matrix power :math:`A^{\\alpha}`.
@@ -316,7 +316,7 @@ def singular_value_decomposition(matrix, backend=None):
         matrix (ndarray): matrix whose SVD to calculate.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray, ndarray, ndarray: Singular value decomposition of :math:`A`, i.e.

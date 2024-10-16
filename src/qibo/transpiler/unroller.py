@@ -1,4 +1,6 @@
-from enum import Flag, auto
+from enum import EnumMeta, Flag, auto
+from functools import reduce
+from operator import or_
 
 from qibo import gates
 from qibo.backends import _check_backend
@@ -15,7 +17,16 @@ from qibo.transpiler.decompositions import (
 )
 
 
-class NativeGates(Flag):
+class FlagMeta(EnumMeta):
+    """Metaclass for :class:`qibo.transpiler.unroller.NativeGates` that allows initialization with a list of gate name strings."""
+
+    def __getitem__(cls, keys):
+        if isinstance(keys, str):
+            return super().__getitem__(keys)
+        return reduce(or_, [cls[key] for key in keys])  # pylint: disable=E1136
+
+
+class NativeGates(Flag, metaclass=FlagMeta):
     """Define native gates supported by the unroller. A native gate set should contain at least
     one two-qubit gate (:class:`qibo.gates.gates.CZ` or :class:`qibo.gates.gates.iSWAP`),
     and at least one single-qubit gate
@@ -57,12 +68,11 @@ class NativeGates(Flag):
         return natives
 
     @classmethod
-    def from_gate(cls, gate: gates.Gate):
+    def from_gate(cls, gate):
         """Create a :class:`qibo.transpiler.unroller.NativeGates`
         object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, gates.Gate):
             return cls.from_gate(gate.__class__)
-
         try:
             return getattr(cls, gate.__name__)
         except AttributeError:
