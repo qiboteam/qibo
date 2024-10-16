@@ -1,11 +1,14 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 
+from math import prod
+
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
-from qibo.symbols import I, Z
+from qibo.symbols import I, X, Y, Z
 
 from .utils import random_sparse_matrix
 
@@ -261,23 +264,49 @@ def test_hamiltonian_expectation_errors(backend):
         h.expectation("test")
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize(
+    "observable",
+    [2 * Z(0) * Z(1) + Z(0) * Z(2), X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * Y(1)],
+)
+def test_hamiltonian_expectation_from_samples(backend, observable):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(12)
-    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
-    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
-    h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
-    h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
-    matrix = backend.to_numpy(h0.matrix)
-    c = Circuit(4)
-    c.add(gates.RX(0, np.random.rand()))
-    c.add(gates.RX(1, np.random.rand()))
-    c.add(gates.RX(2, np.random.rand()))
-    c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(0, 1, 2, 3))
+
+    nqubits = 3
     nshots = 10**5
-    # result = c(nshots=nshots)
-    result = backend.execute_circuit(c, nshots=nshots)
+    c = Circuit(nqubits)
+    for q in range(nqubits):
+        c.add(gates.RX(0, np.random.rand()))
+
+    H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
+    matrix = backend.to_numpy(H.matrix)
+    diagonal = (
+        backend.np.count_nonzero(matrix - backend.np.diag(backend.np.diagonal(matrix)))
+        == 0
+    )
+    if not diagonal:
+        matrices = []
+        for term in H.terms:
+            non_Z = [
+                factor
+                for factor in term.factors
+                if not isinstance(factor.gate.__class__, gates.Z)
+            ]
+            diagonalizator = SymbolicHamiltonian(
+                prod(non_Z), nqubits=nqubits, backend=backend
+            ).matrix
+            matrices.append(
+                backend.np.transpose(backend.np.conj(diagonalizator))
+                @ matrix
+                @ diagonalizator
+            )
+        exp_from_samples = H.expectation_from_samples(c)
+        state = backend.execute_circuit(c).state()
+        exp = H.expectation(state)
+    else:
+        matrices = [matrix]
+        c.add(gates.M(*range(nqubits)))
+
     freq = result.frequencies(binary=True)
 
     Obs0 = hamiltonians.Hamiltonian(
