@@ -1,7 +1,5 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 
-from math import prod
-
 import numpy as np
 import pytest
 
@@ -273,45 +271,27 @@ def test_hamiltonian_expectation_from_samples(backend, observable):
     backend.set_seed(12)
 
     nqubits = 3
-    nshots = 10**5
+    nshots = 4 * 10**6
     c = Circuit(nqubits)
     for q in range(nqubits):
         c.add(gates.RX(0, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
-    matrix = backend.to_numpy(H.matrix)
+    matrix = H.matrix
     diagonal = (
         backend.np.count_nonzero(matrix - backend.np.diag(backend.np.diagonal(matrix)))
         == 0
     )
     final_state = backend.execute_circuit(c.copy(True)).state()
+    exp = H.expectation(final_state)
     if not diagonal:
-        exp = 0.0
-        for term in H.terms:
-            non_Z = [
-                factor
-                for factor in term.factors
-                if not isinstance(factor.gate.__class__, gates.Z)
-            ]
-            diagonalizator = SymbolicHamiltonian(
-                prod(non_Z), nqubits=nqubits, backend=backend
-            ).matrix
-            diag_matrix = (
-                backend.np.transpose(backend.np.conj(diagonalizator))
-                @ matrix
-                @ diagonalizator
-            )
-            exp += Hamiltonian(nqubits, diag_matrix, backend=backend).expectation(
-                final_state
-            )
-        exp_from_samples = H.expectation_from_samples(c)
+        exp_from_samples = H.expectation_from_samples(c, nshots=nshots)
     else:
         c.add(gates.M(*range(nqubits)))
-        freq = backend.execute_circuit(c).frequencies()
+        freq = backend.execute_circuit(c, nshots=nshots).frequencies()
         exp_from_samples = H.expectation_from_samples(freq)
-        exp = H.expectation(final_state)
 
-    backend.assert_allclose(exp, exp_from_samples, atol=10 / np.sqrt(nshots))
+    backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
