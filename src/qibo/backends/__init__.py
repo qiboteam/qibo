@@ -26,28 +26,36 @@ class MetaBackend:
 
         Args:
             backend (str): Name of the backend to load.
-            kwargs (dict): Additional arguments for the qibo backend.
+            kwargs (dict): Additional arguments for the ``qibo`` backend.
+
         Returns:
-            qibo.backends.abstract.Backend: The loaded backend.
+            :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend == "numpy":
-            return NumpyBackend()
-        elif backend == "pytorch":
-            return PyTorchBackend()
-        elif backend == "clifford":
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
-            return CliffordBackend(**kwargs)
-        elif backend == "qulacs":
-            from qibo.backends.qulacs import QulacsBackend
+        possible_backends = ["numpy", "pytorch", "clifford", "qulacs"]
 
-            return QulacsBackend()
-        else:
+        if backend not in possible_backends:
             raise_error(
                 ValueError,
-                f"Backend {backend} is not available. The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
+                f"Backend {backend} is not available. "
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
             )
+
+        if backend == "pytorch":
+            return PyTorchBackend()
+
+        if backend == "clifford":
+            engine = kwargs.pop("platform", None)
+            kwargs["engine"] = engine
+
+            return CliffordBackend(**kwargs)
+
+        if backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
+
+            return QulacsBackend()
+
+        return NumpyBackend()
 
     def list_available(self) -> dict:
         """Lists all the available native qibo backends."""
