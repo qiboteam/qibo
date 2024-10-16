@@ -310,7 +310,9 @@ def to_stinespring(
     initial_state_env=None,
     backend=None,
 ):
-    """_summary_
+    """Converts quantum ``channel`` :math:`U` to its Stinespring representation :math:`U_{0}`.
+
+    It uses the Kraus representation as an intermediate step.
 
     Args:
         channel (ndarray): quantum channel.
@@ -327,7 +329,7 @@ def to_stinespring(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: _description_
+        ndarray: Quantum channel in its Stinespring representation :math:`U_{0}`.
     """
     backend = _check_backend(backend)
 
