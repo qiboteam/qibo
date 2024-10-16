@@ -23,7 +23,7 @@ class FlagMeta(EnumMeta):
     def __getitem__(cls, keys):
         if isinstance(keys, str):
             return super().__getitem__(keys)
-        return reduce(or_, [self[key] for key in keys])  # pylint: disable=E1136
+        return reduce(or_, [cls[key] for key in keys])  # pylint: disable=E1136
 
 
 class NativeGates(Flag, metaclass=FlagMeta):
