@@ -74,7 +74,8 @@ if __name__ == "__main__":
 
     elif circuit_Choice == 3:  # directly generate density matrix via qibo
         Nr = 3
-        target_density_matrix = quantum_info.random_density_matrix(2**n, Nr)
+        target_density_matrix = random_density_matrix(2**n, Nr)
+
 
     # ---------------------------------------------------------------- #
     #  construct Pauli matrix Projectors                               #
