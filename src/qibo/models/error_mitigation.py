@@ -345,7 +345,16 @@ def _curve_fit(
 
         optimizer.step(closure)
         return params
-    return curve_fit(model, xdata, ydata, p0=params)[0]
+
+    if backend.platform in ["cupy", "cuquantum"]:
+        # Currrently, ``cupy`` does not have compatibility with ``scipy.optimize``.
+        xdata = backend.to_numpy(xdata)
+        ydata = backend.to_numpy(ydata)
+        params = backend.to_numpy(params)
+
+    optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
+
+    return backend.cast(optimal_params, dtype=optimal_params.dtype)
 
 
 def CDR(

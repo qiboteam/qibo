@@ -245,7 +245,7 @@ def test_sample_training_circuit(nqubits):
 def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     """Test that vnCDR reduces the noise."""
     if backend.platform == "tensorflow":
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=C0415
 
         tf.config.threading.set_inter_op_parallelism_threads = 1
         tf.config.threading.set_intra_op_parallelism_threads = 1
