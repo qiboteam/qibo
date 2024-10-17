@@ -8,10 +8,9 @@ from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.pytorch import PyTorchBackend
-from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch", "qulacs")
+QIBO_NATIVE_BACKENDS = ("numpy", "pytorch", "qulacs")
 
 
 class MissingBackend(ValueError):
@@ -27,30 +26,36 @@ class MetaBackend:
 
         Args:
             backend (str): Name of the backend to load.
-            kwargs (dict): Additional arguments for the qibo backend.
+            kwargs (dict): Additional arguments for the ``qibo`` backend.
+
         Returns:
-            qibo.backends.abstract.Backend: The loaded backend.
+            :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend == "numpy":
-            return NumpyBackend()
-        elif backend == "tensorflow":
-            return TensorflowBackend()
-        elif backend == "pytorch":
-            return PyTorchBackend()
-        elif backend == "clifford":
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
-            return CliffordBackend(**kwargs)
-        elif backend == "qulacs":
-            from qibo.backends.qulacs import QulacsBackend
+        possible_backends = ["numpy", "pytorch", "clifford", "qulacs"]
 
-            return QulacsBackend()
-        else:
+        if backend not in possible_backends:
             raise_error(
                 ValueError,
-                f"Backend {backend} is not available. The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
+                f"Backend {backend} is not available. "
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
             )
+
+        if backend == "pytorch":
+            return PyTorchBackend()
+
+        if backend == "clifford":
+            engine = kwargs.pop("platform", None)
+            kwargs["engine"] = engine
+
+            return CliffordBackend(**kwargs)
+
+        if backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
+
+            return QulacsBackend()
+
+        return NumpyBackend()
 
     def list_available(self) -> dict:
         """Lists all the available native qibo backends."""
@@ -73,8 +78,8 @@ class GlobalBackend(NumpyBackend):
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
-        {"backend": "tensorflow"},
         {"backend": "numpy"},
+        {"backend": "qiboml", "platform": "tensorflow"},
         {"backend": "pytorch"},
     ]
 
@@ -211,7 +216,7 @@ def list_available_backends(*providers: str) -> dict:
     return available_backends
 
 
-def construct_backend(backend, **kwargs) -> Backend:
+def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     """Construct a generic native or non-native qibo backend.
 
     Args:
@@ -231,10 +236,11 @@ def construct_backend(backend, **kwargs) -> Backend:
         # pylint: disable=unsupported-membership-test
         if provider not in e.msg:
             raise e
-        raise MissingBackend(
+        raise_error(
+            MissingBackend,
             f"The '{backend}' backends' provider is not available. Check that a Python "
-            f"package named '{provider}' is installed, and it is exposing valid Qibo "
-            "backends.",
+            + f"package named '{provider}' is installed, and it is exposing valid Qibo "
+            + "backends.",
         )
 
 

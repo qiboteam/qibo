@@ -271,7 +271,7 @@ def sgd(
     if options is not None:
         sgd_options.update(options)
 
-    if backend.name == "tensorflow":
+    if backend.platform == "tensorflow":
         return _sgd_tf(
             loss,
             initial_parameters,

@@ -48,8 +48,7 @@ def test_torch_tensorflow_gradients():
     backend = PyTorchBackend()
 
     import tensorflow as tf  # pylint: disable=import-outside-toplevel
-
-    from qibo.backends.tensorflow import (  # pylint: disable=import-outside-toplevel
+    from qiboml.backends.tensorflow import (  # pylint: disable=import-outside-toplevel
         TensorflowBackend,
     )
 

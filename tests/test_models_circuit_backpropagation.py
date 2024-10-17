@@ -10,7 +10,7 @@ def construct_tensorflow_backend():
     try:
         from qibo.backends import construct_backend
 
-        backend = construct_backend("tensorflow")
+        backend = construct_backend(backend="qiboml", platform="tensorflow")
     except ModuleNotFoundError:  # pragma: no cover
         pytest.skip(
             "Skipping backpropagation test because tensorflow is not available."

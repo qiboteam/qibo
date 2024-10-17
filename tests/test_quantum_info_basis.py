@@ -82,21 +82,11 @@ def test_pauli_basis(
             for elem_test, ind_test, elem, ind in zip(
                 elements, indexes, basis[0], basis[1]
             ):
-                backend.assert_allclose(
-                    np.linalg.norm(backend.to_numpy(elem_test - elem)) < PRECISION_TOL,
-                    True,
-                )
-                backend.assert_allclose(
-                    np.linalg.norm(backend.to_numpy(ind_test - ind)) < PRECISION_TOL,
-                    True,
-                )
+                backend.assert_allclose(elem_test, elem, atol=PRECISION_TOL)
+                backend.assert_allclose(ind_test, ind, atol=PRECISION_TOL)
         else:
             for pauli, pauli_test in zip(basis, basis_test):
-                backend.assert_allclose(
-                    np.linalg.norm(backend.to_numpy(pauli - pauli_test))
-                    < PRECISION_TOL,
-                    True,
-                )
+                backend.assert_allclose(pauli, pauli_test, atol=PRECISION_TOL)
 
         comp_basis_to_pauli(nqubits, normalize, sparse, order, pauli_order, backend)
         pauli_to_comp_basis(nqubits, normalize, sparse, order, pauli_order, backend)
