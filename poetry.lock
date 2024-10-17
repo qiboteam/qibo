@@ -4569,7 +4569,7 @@ torch = "^2.2.0"
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "tf-back"
-resolved_reference = "7646863a8353744617e936052221aa382eb497c9"
+resolved_reference = "855d3cf4d4ded1c47cf6e7aaa7ccf4454df93cad"
 
 [[package]]
 name = "qibotn"
