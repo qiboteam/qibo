@@ -3,7 +3,8 @@ import random
 import numpy as np
 
 import qibo
-from qibo import gates, quantum_info
+from qibo import gates
+from qibo.quantum_info import random_density_matrix
 
 
 class State:
