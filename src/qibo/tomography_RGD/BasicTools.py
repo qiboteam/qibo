@@ -4,13 +4,12 @@
 #   2. plot the results
 #
 
-import matplotlib.pyplot as plt
-
-
 # --------------------------------- #
 #   to generate all symbols         #
 # --------------------------------- #
 from itertools import product
+
+import matplotlib.pyplot as plt
 
 all_labels = ["".join(elem) for elem in product(symbols, repeat=nqubits)]
 
