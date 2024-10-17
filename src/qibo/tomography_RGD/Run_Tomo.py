@@ -17,7 +17,6 @@ from qibo_states import GHZState, HadamardState, RandomState
 
 from qibo.quantum_info import random_density_matrix
 
-
 if __name__ == "__main__":
 
     ############################################################
