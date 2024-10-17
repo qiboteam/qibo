@@ -346,7 +346,7 @@ def _curve_fit(
         optimizer.step(closure)
         return params
 
-    if backend.platform in ["cupy", "cuquantum"]:
+    if backend.platform in ["cupy", "cuquantum"]:  # pragma: no cover
         # Currrently, ``cupy`` does not have compatibility with ``scipy.optimize``.
         xdata = backend.to_numpy(xdata)
         ydata = backend.to_numpy(ydata)
