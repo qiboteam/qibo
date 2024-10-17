@@ -254,4 +254,5 @@ if __name__ == "__main__":
     # print(state.get_state_vector())
 
     Nr = 3
-    random_DM = quantum_info.random_density_matrix(2**n, Nr)
+    random_DM = random_density_matrix(2**n, Nr)
+
