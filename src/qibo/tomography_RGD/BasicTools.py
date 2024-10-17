@@ -11,8 +11,9 @@ from itertools import product
 
 import matplotlib.pyplot as plt
 
-all_labels = ["".join(elem) for elem in product(symbols, repeat=nqubits)]
-
+def Generate_All_labels(nqubits, symbols=["I", "X", "Y", "Z"]):
+    all_labels = ["".join(elem) for elem in product(symbols, repeat=nqubits)]
+    return all_labels
 
 def Plt_Err_Time(worker):
     """plot the Error w.r.t. optimization run time
