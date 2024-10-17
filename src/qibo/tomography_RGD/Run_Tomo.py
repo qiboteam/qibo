@@ -76,7 +76,6 @@ if __name__ == "__main__":
         Nr = 3
         target_density_matrix = random_density_matrix(2**n, Nr)
 
-
     # ---------------------------------------------------------------- #
     #  construct Pauli matrix Projectors                               #
     # ---------------------------------------------------------------- #

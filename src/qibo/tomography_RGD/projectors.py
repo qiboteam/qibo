@@ -61,9 +61,7 @@ def generate_random_label_list(
     effective_size = int(size * factor)
 
     ## the essence of 'set' is that 'set does not contain repeated elements'
-    labels = list(
-        {generate_random_label(n, symbols) for i in range(effective_size)}
-    )
+    labels = list({generate_random_label(n, symbols) for i in range(effective_size)})
 
     while len(labels) < size:
         # print(' ***  increasing length  ***')
