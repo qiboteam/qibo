@@ -171,8 +171,13 @@ def test_default_transpiler_hw():
     _Global._backend = backend
     transpiler = _Global.transpiler()
 
-    assert list(transpiler.connectivity.nodes) == [0, 1, 2, 3, 4]
-    assert list(transpiler.connectivity.edges) == [(0, 1), (1, 2), (2, 3), (3, 4)]
+    assert list(transpiler.connectivity.nodes) == ["A1", "A2", "A3", "A4", "A5"]
+    assert list(transpiler.connectivity.edges) == [
+        ("A1", "A2"),
+        ("A2", "A3"),
+        ("A3", "A4"),
+        ("A4", "A5"),
+    ]
     assert (
         NativeGates.CZ in transpiler.native_gates
         and NativeGates.GPI2 in transpiler.native_gates
