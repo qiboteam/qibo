@@ -16,8 +16,6 @@ from scipy.sparse.linalg import svds
 # import measurements
 
 
-
-
 # --------------------------------- #
 # 	the origianl RGD package		#
 # --------------------------------- #
