@@ -255,4 +255,3 @@ if __name__ == "__main__":
 
     Nr = 3
     random_DM = random_density_matrix(2**n, Nr)
-
