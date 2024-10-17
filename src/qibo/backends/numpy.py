@@ -799,6 +799,15 @@ class NumpyBackend(Backend):
     def calculate_singular_value_decomposition(self, matrix):
         return self.np.linalg.svd(matrix)
 
+    def calculate_jacobian_matrix(
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
+    ):
+        raise_error(
+            NotImplementedError,
+            "This method is only implemented in backends that allow automatic differentiation, "
+            + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
+        )
+
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         return matrix1 @ matrix2

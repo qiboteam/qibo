@@ -325,3 +325,60 @@ def singular_value_decomposition(matrix, backend=None):
     backend = _check_backend(backend)
 
     return backend.calculate_singular_value_decomposition(matrix)
+
+
+def schmidt_decomposition(
+    state, partition: Union[List[int], Tuple[int, ...]], backend=None
+):
+    """Return the Schmidt decomposition of a :math:`n`-qubit bipartite pure quantum ``state``.
+
+    Given a bipartite pure state :math:`\\ket{\\psi}\\in\\mathcal{H}_{A}\\otimes\\mathcal{H}_{B}`,
+    its Schmidt decomposition is given by
+
+    .. math::
+        \\ket{\\psi} = \\sum_{k = 1}^{\\min\\{a, \\, b\\}} \\, c_{k} \\,
+            \\ket{\\phi_{k}} \\otimes \\ket{\\nu_{k}} \\, ,
+
+    with :math:`a` and :math:`b` being the respective cardinalities of :math:`\\mathcal{H}_{A}`
+    and :math:`\\mathcal{H}_{B}`, and :math:`\\{\\phi_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}
+    \\subset \\mathcal{H}_{A}` and :math:`\\{\\nu_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}
+    \\subset \\mathcal{H}_{B}` being orthonormal sets. The coefficients
+    :math:`\\{c_{k}\\}_{k\\in[\\min\\{a, \\, b\\}]}` are real, non-negative, and unique
+    up to re-ordering.
+
+    The decomposition is calculated using :func:`qibo.quantum_info.singular_value_decomposition`,
+    resulting in
+
+    .. math::
+        \\ketbra{\\psi}{\\psi} = U \\, S \\, V^{\\dagger} \\, ,
+
+    where :math:`U` is an :math:`a \\times a` unitary matrix, :math:`V` is an :math:`b \\times b`
+    unitary matrix, and :math:`S` is an :math:`a \\times b` positive semidefinite diagonal matrix
+    that contains the singular values of :math:`\\ketbra{\\psi}{\\psi}`.
+
+    Args:
+        state (ndarray): stevector or density matrix.
+        partition (Union[List[int], Tuple[int, ...]]): indices of qubits in one of the two
+            partitions. The other partition is inferred as the remaining qubits.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray, ndarray, ndarray: Respectively, the matrices :math:`U`, :math:`S`,
+        and :math:`V^{\\dagger}`.
+    """
+    backend = _check_backend(backend)
+
+    nqubits = math.log2(state.shape[-1])
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+    nqubits = int(nqubits)
+    partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
+
+    tensor = backend.np.reshape(state, [2] * nqubits)
+    tensor = backend.np.transpose(tensor, partition + partition_2)
+    tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
+
+    return singular_value_decomposition(tensor, backend=backend)

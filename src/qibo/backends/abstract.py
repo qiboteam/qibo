@@ -377,6 +377,13 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def calculate_jacobian_matrix(
+        self, circuit, parameters, initial_state=None, return_complex: bool = True
+    ):  # pragma: no cover
+        """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_hamiltonian_matrix_product(
         self, matrix1, matrix2
     ):  # pragma: no cover

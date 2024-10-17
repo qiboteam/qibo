@@ -3,6 +3,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
+from qibo.models.encodings import _generate_rbs_angles, unary_encoder
 from qibo.quantum_info.metrics import (
     average_gate_fidelity,
     bures_angle,
@@ -18,6 +19,7 @@ from qibo.quantum_info.metrics import (
     process_fidelity,
     process_infidelity,
     purity,
+    quantum_fisher_information_matrix,
     trace_distance,
 )
 from qibo.quantum_info.random_ensembles import (
@@ -386,3 +388,42 @@ def test_frame_potential(backend, nqubits, power_t, samples):
     )
 
     backend.assert_allclose(potential, potential_haar, rtol=1e-2, atol=1e-2)
+
+
+@pytest.mark.parametrize("params_flag", [None, True])
+@pytest.mark.parametrize("return_complex", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 8])
+def test_qfim(backend, nqubits, return_complex, params_flag):
+    if backend.name not in ["pytorch", "tensorflow"]:
+        circuit = Circuit(nqubits)
+        params = np.random.rand(3)
+        params = backend.cast(params, dtype=params.dtype)
+        with pytest.raises(NotImplementedError):
+            test = quantum_fisher_information_matrix(circuit, params, backend=backend)
+    else:
+        # QFIM from https://arxiv.org/abs/2405.20408 is known analytically
+        data = np.random.rand(nqubits)
+        data = backend.cast(data, dtype=data.dtype)
+
+        params = _generate_rbs_angles(data, nqubits, "diagonal")
+        params = backend.cast(params, dtype=np.float64)
+
+        target = [1]
+        for param in params[:-1]:
+            elem = float(target[-1] * backend.np.sin(param) ** 2)
+            target.append(elem)
+        target = 4 * backend.np.diag(backend.cast(target, dtype=np.float64))
+
+        # numerical qfim from quantum_info
+        circuit = unary_encoder(data, "diagonal")
+
+        if params_flag is not None:
+            circuit.set_parameters(params)
+        else:
+            params = params_flag
+
+        qfim = quantum_fisher_information_matrix(
+            circuit, params, return_complex=return_complex, backend=backend
+        )
+
+        backend.assert_allclose(qfim, target, atol=1e-6)
