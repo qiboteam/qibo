@@ -10,30 +10,9 @@ import matplotlib.pyplot as plt
 # --------------------------------- #
 #   to generate all symbols         #
 # --------------------------------- #
-def Generate_All_labels(Nk, symbols=["I", "X", "Y", "Z"]):
-    """generate all possible labels
+from itertools import product
 
-    Args:
-        Nk (int): number of qubits
-        symbols (list, optional): the possible choice of each qubit site. Defaults to ['I', 'X', 'Y', 'Z'].
-
-    Returns:
-        list: list of all possible labels
-    """
-
-    symList = symbols
-
-    for i in range(1, Nk):
-        print("   the {}-th qubit".format(i))
-
-        sym_Generated = []
-        for symNow in symList:
-            sym_Generated = sym_Generated + ["".join([symNow, s]) for s in symbols]
-            # print(sym_Generated)
-        symList = sym_Generated
-    print("  totol number of labels {}".format(len(symList)))
-
-    return symList
+all_labels = ["".join(elem) for elem in product(symbols, repeat=nqubits)]
 
 
 def Plt_Err_Time(worker):
