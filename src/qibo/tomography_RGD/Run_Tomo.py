@@ -15,7 +15,8 @@ from BasicTools import Generate_All_labels, Plt_Err_Time
 # from states import GHZState, HadamardState, RandomState
 from qibo_states import GHZState, HadamardState, RandomState
 
-from qibo import quantum_info
+from qibo.quantum_info import random_density_matrix
+
 
 if __name__ == "__main__":
 
