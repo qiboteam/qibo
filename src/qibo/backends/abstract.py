@@ -31,13 +31,15 @@ class Backend(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def qubits(self) -> Optional[list[str]]:  # pragma: no cover
+    def qubits(self) -> Optional[list[int | str]]:  # pragma: no cover
         """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
     @property
     @abc.abstractmethod
-    def connectivity(self) -> Optional[list[tuple[str, str]]]:  # pragma: no cover
+    def connectivity(
+        self,
+    ) -> Optional[list[tuple[int | str, int | str]]]:  # pragma: no cover
         """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
