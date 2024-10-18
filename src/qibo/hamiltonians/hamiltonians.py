@@ -556,7 +556,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def _exp_from_circuit(self, circuit: dict, qubit_map: dict, nshots: int = None):
+    def _exp_from_circuit(self, circuit: Circuit, qubit_map: dict, nshots: int = None):
         """
         Calculate the expectation value from a circuit.
         This allows for non diagonal observables. Each term of the observable is
@@ -564,7 +564,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         circuit.
 
         Args:
-            circuit (dict): input frequencies.
+            circuit (Circuit): input frequencies.
             qubit_map (dict): qubit map.
 
         Returns:
@@ -572,7 +572,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """
         from qibo import Circuit, gates
 
-        if nshots is None:
+        if nshots is None:  # pragma: no cover
             nshots = 1000
         rotated_circuits = []
         coefficients = []
