@@ -31,7 +31,7 @@ class Backend(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def qubits(self) -> Optional[list[int | str]]:  # pragma: no cover
+    def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
         """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
@@ -39,7 +39,7 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def connectivity(
         self,
-    ) -> Optional[list[tuple[int | str, int | str]]]:  # pragma: no cover
+    ) -> Optional[list[tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
         """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
