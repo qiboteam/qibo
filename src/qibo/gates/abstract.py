@@ -399,7 +399,7 @@ class Gate:
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses
-                :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+                the current backend. Defaults to ``None``.
 
         Returns:
             ndarray: Matrix representation of gate.

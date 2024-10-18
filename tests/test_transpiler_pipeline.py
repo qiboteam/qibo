@@ -54,10 +54,9 @@ def generate_random_circuit(nqubits, ngates, seed=None):
 
 
 def star_connectivity():
-    Q = [i for i in range(5)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
+    chip.add_nodes_from(list(range(5)))
+    graph_list = [(i, 2) for i in range(5) if i != 2]
     chip.add_edges_from(graph_list)
     return chip
 

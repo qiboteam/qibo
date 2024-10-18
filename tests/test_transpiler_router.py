@@ -33,28 +33,25 @@ from qibo.transpiler.router import (
 
 
 def star_connectivity(middle_qubit=2):
-    Q = [i for i in range(5)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[i], Q[middle_qubit]) for i in range(5) if i != middle_qubit]
+    chip.add_nodes_from(list(range(5)))
+    graph_list = [(i, middle_qubit) for i in range(5) if i != middle_qubit]
     chip.add_edges_from(graph_list)
     return chip
 
 
 def grid_connectivity():
-    Q = [i for i in range(5)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[0], Q[1]), (Q[1], Q[2]), (Q[2], Q[3]), (Q[3], Q[0]), (Q[0], Q[4])]
+    chip.add_nodes_from(list(range(5)))
+    graph_list = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 4)]
     chip.add_edges_from(graph_list)
     return chip
 
 
 def line_connectivity(n):
-    Q = [i for i in range(n)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[i], (Q[i] + 1) % n) for i in range(n - 1)]
+    chip.add_nodes_from(list(range(n)))
+    graph_list = [(i, i + 1) for i in range(n - 1)]
     chip.add_edges_from(graph_list)
     return chip
 

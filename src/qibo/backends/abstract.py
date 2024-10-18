@@ -1,5 +1,5 @@
 import abc
-from typing import Union
+from typing import Optional, Union
 
 from qibo.config import raise_error
 
@@ -28,6 +28,26 @@ class Backend(abc.ABC):
             return self.name
         else:
             return f"{self.name} ({self.platform})"
+
+    @property
+    @abc.abstractmethod
+    def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
+        """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
+
+    @property
+    @abc.abstractmethod
+    def connectivity(
+        self,
+    ) -> Optional[list[tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
+        """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
+
+    @property
+    @abc.abstractmethod
+    def natives(self) -> Optional[list[str]]:  # pragma: no cover
+        """Return the native gates of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def set_precision(self, precision):  # pragma: no cover
