@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
-from qibo.symbols import I, Z
+from qibo.symbols import I, X, Y, Z
 
 from .utils import random_sparse_matrix
 
@@ -261,34 +262,39 @@ def test_hamiltonian_expectation_errors(backend):
         h.expectation("test")
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize(
+    "observable",
+    [
+        2 * Z(0) * Z(1) ** 2 + Z(0) * Z(2),
+        X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * Y(1) ** 3,
+    ],
+)
+def test_hamiltonian_expectation_from_samples(backend, observable):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(12)
-    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
-    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
-    h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
-    h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
-    matrix = backend.to_numpy(h0.matrix)
-    c = Circuit(4)
-    c.add(gates.RX(0, np.random.rand()))
-    c.add(gates.RX(1, np.random.rand()))
-    c.add(gates.RX(2, np.random.rand()))
-    c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(0, 1, 2, 3))
-    nshots = 10**5
-    # result = c(nshots=nshots)
-    result = backend.execute_circuit(c, nshots=nshots)
-    freq = result.frequencies(binary=True)
 
-    Obs0 = hamiltonians.Hamiltonian(
-        3, matrix, backend=backend
-    ).expectation_from_samples(freq, qubit_map=None)
-    Obs0 = backend.cast(Obs0, dtype=Obs0.dtype)
+    nqubits = 3
+    nshots = 4 * 10**6
+    c = Circuit(nqubits)
+    for q in range(nqubits):
+        c.add(gates.RX(0, np.random.rand()))
 
-    Obs1 = h1.expectation(result.state())
-    Obs1 = backend.cast(Obs1, dtype=Obs1.dtype)
+    H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
+    matrix = H.matrix
+    diagonal = (
+        backend.np.count_nonzero(matrix - backend.np.diag(backend.np.diagonal(matrix)))
+        == 0
+    )
+    final_state = backend.execute_circuit(c.copy(True)).state()
+    exp = H.expectation(final_state)
+    if not diagonal:
+        exp_from_samples = H.expectation_from_samples(c, nshots=nshots)
+    else:
+        c.add(gates.M(*range(nqubits)))
+        freq = backend.execute_circuit(c, nshots=nshots).frequencies()
+        exp_from_samples = H.expectation_from_samples(freq)
 
-    backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
+    backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):

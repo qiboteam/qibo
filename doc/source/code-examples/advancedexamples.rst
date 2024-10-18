@@ -2015,7 +2015,7 @@ to allow calculation of expectation values directly from such samples:
 .. testcode::
 
     from qibo import Circuit, gates
-    from qibo.hamiltonians import Z
+    from qibo.hamiltonians import Z as HZ
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
@@ -2024,7 +2024,7 @@ to allow calculation of expectation values directly from such samples:
     circuit.add(gates.CNOT(2, 3))
     circuit.add(gates.M(*range(4)))
 
-    hamiltonian = Z(4)
+    hamiltonian = HZ(4)
 
     result = circuit(nshots=1024)
     expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
@@ -2039,8 +2039,23 @@ This can also be invoked directly from the ``result`` object:
     expectation_value = result.expectation_from_samples(hamiltonian)
 
 
-The expectation from samples currently works only for Hamiltonians that are diagonal in
-the computational basis.
+For Hamiltonians that are not diagonal in the computational basis, or that are sum of terms that cannot be
+diagonalised simultaneously, one has to calculate the expectation value starting from the circuit:
+
+.. testcode::
+
+   from qibo.symbols import X, Y, Z
+   from qibo.hamiltonians import SymbolicHamiltonian
+
+   hamiltonian = SymbolicHamiltonian(3 * Z(4) * X(1) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
+   expectation_value = hamiltonian.expectation_from_samples(circuit)
+
+What is happening under the hood in this case, is that the expectation value is calculated for each term
+individually by measuring the circuit in the correct (rotated) basis. All the contributions are then
+summed to recover the global expectation value. This means, in particular, that several copies of the
+circuit are parallely executed, one for each term of the Hamiltonian. Note that, at the moment, no
+check is performed to verify whether a subset of the terms could be diagonalised simultaneously, but
+rather each term is treated separately every time.
 
 
 .. _tutorials_transpiler:
