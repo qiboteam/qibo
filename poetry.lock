@@ -4569,7 +4569,7 @@ torch = "^2.2.0"
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "tf-back"
-resolved_reference = "7646863a8353744617e936052221aa382eb497c9"
+resolved_reference = "855d3cf4d4ded1c47cf6e7aaa7ccf4454df93cad"
 
 [[package]]
 name = "qibotn"
@@ -5498,27 +5498,27 @@ files = [
 
 [[package]]
 name = "tensorflow"
-version = "2.18.0rc1"
+version = "2.18.0rc2"
 description = "TensorFlow is an open source machine learning framework for everyone."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "tensorflow-2.18.0rc1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:a47a7dd8a70d426a189a1e7f44e7f66825f25a76eacb30915954ec138c9d7bfd"},
-    {file = "tensorflow-2.18.0rc1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:600c771ce0feec6cd8803510511862d6bef7e2705308695fb1ca6c8334013b8b"},
-    {file = "tensorflow-2.18.0rc1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:46b77d40f6ba22772608b38482929b800a7e11e92df675616fd38e9073d269b8"},
-    {file = "tensorflow-2.18.0rc1-cp310-cp310-win_amd64.whl", hash = "sha256:319a215c99a7c1a3b5a73533e58c13e8051a3c1d41e23bcd0b85520ef00cd0e5"},
-    {file = "tensorflow-2.18.0rc1-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:c97fbcb1a499ea3daa10d129e7886797ba7be5033535b6c98773237acf6f97ef"},
-    {file = "tensorflow-2.18.0rc1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:73f8b1dec4bb44ed4ed7b3e6a48e78075920b90fb35de224b2fa60c5271df9d9"},
-    {file = "tensorflow-2.18.0rc1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3505f168a1de0ba79d48fa0af77c831936a84c689e2cb9514cc2b5f8f4ca5b14"},
-    {file = "tensorflow-2.18.0rc1-cp311-cp311-win_amd64.whl", hash = "sha256:1a9da66c9a73949a8cd13fc5a5125bf51d61e994e44f9d6ae3e00926a103a193"},
-    {file = "tensorflow-2.18.0rc1-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:fd5d3e7d19cdd2742e7c3903044c1de5cf3d1e9771fb37d03e23603d7538f49d"},
-    {file = "tensorflow-2.18.0rc1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8173c26665f3ebc74f7f17746960a877cafb636e81582a1b944a768010d0b14a"},
-    {file = "tensorflow-2.18.0rc1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e3060f2b783295296f8b5d30ce0151d4b3c5430c4a6e28b4d54e04daec2d8ac"},
-    {file = "tensorflow-2.18.0rc1-cp312-cp312-win_amd64.whl", hash = "sha256:f8b5d6dec03a66be2fb79c6ab3e0e356e12f0f802d45a6ed1a6df72ee23498c2"},
-    {file = "tensorflow-2.18.0rc1-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:063509dd1fa920038e5626ed6724ea89494e9dd240e29f85aaaa725cd8496fd1"},
-    {file = "tensorflow-2.18.0rc1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d668a7a8dd5eb7141092a2e615e5153f2a50df6ce7f4ed55da48c64c071cc8f1"},
-    {file = "tensorflow-2.18.0rc1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:129a180e897dd4892911f834fd3248a92822cf349b1b031176c8665127fe9956"},
-    {file = "tensorflow-2.18.0rc1-cp39-cp39-win_amd64.whl", hash = "sha256:e447449e4ae1585ffaa3619b6be2fa1e279d9cf9c20e1445457b65d6ed374b6d"},
+    {file = "tensorflow-2.18.0rc2-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:fc8c2bcb348daef6afd68bdcd47aef270e0613ec643b1ff7622c2637d153dede"},
+    {file = "tensorflow-2.18.0rc2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0a6d660f8658f8b9338ff6ba0ad843ff674cdc7c7e1d9d7f30f6d1aee2a1f5a7"},
+    {file = "tensorflow-2.18.0rc2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d6ffd1aa736e0df634b8583edacd2f594cd60d35d6ad633878f504c840d4c167"},
+    {file = "tensorflow-2.18.0rc2-cp310-cp310-win_amd64.whl", hash = "sha256:d4d699bff41c67fbf9f2dbed6979c2b5ee0915444baa3ca0da388985322583ea"},
+    {file = "tensorflow-2.18.0rc2-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:1393b983ac7ab3cbc4da11b4e190515f7521caa9e1d9a90d2fb1076b9e40cc1b"},
+    {file = "tensorflow-2.18.0rc2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f9c77561fc4afbe32e785eabab63b2322299b7fbc2bbcbbd52cae3a8c2353b41"},
+    {file = "tensorflow-2.18.0rc2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9cc6f13499d701049bfb08667189aefdc4d9bc613b44b10de4bc8adb0f4800a6"},
+    {file = "tensorflow-2.18.0rc2-cp311-cp311-win_amd64.whl", hash = "sha256:36fe8d2980dcf16096fafc5740fe7101b84794b21b392931854bd4e544657917"},
+    {file = "tensorflow-2.18.0rc2-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:adb9c4215490aaa5bf73dd22a25b7a3fa49197e1ae322e7211fd76ea8cae73b7"},
+    {file = "tensorflow-2.18.0rc2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2a0e1016fd026090e12c7eec2b6b307bd08d741eb9ccb3924afc276780aacd4f"},
+    {file = "tensorflow-2.18.0rc2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:98d76251ed5ef8f0ac5ee5ae4c4a1bde2ecf0954f510ee38fe24c8de09ba694a"},
+    {file = "tensorflow-2.18.0rc2-cp312-cp312-win_amd64.whl", hash = "sha256:6993955a07ec943c3120edb648032747230df839a262164f406a305af28b9d33"},
+    {file = "tensorflow-2.18.0rc2-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:fd2d55da8508fc8e1bc6b127e3279df3ad00d01aa93acac92949fb5a89799df9"},
+    {file = "tensorflow-2.18.0rc2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b34e5f9ff909027157401d4187f65bf5d252db32fde5eaed4e1567e0ad66973e"},
+    {file = "tensorflow-2.18.0rc2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:89e8905828d697c797e18fdd3bcdc2e594b2f95b730bf501618d28f9c1400fa1"},
+    {file = "tensorflow-2.18.0rc2-cp39-cp39-win_amd64.whl", hash = "sha256:85bd9b78515132b84c9abb0e4a161eb09682367f4458144e205766472718499d"},
 ]
 
 [package.dependencies]

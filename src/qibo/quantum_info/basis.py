@@ -93,15 +93,14 @@ def pauli_basis(
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
+    einsum = np.einsum if backend.platform == "tensorflow" else backend.np.einsum
 
     if nqubits > 1:
         input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
         output_indices = (i for indices in zip(*input_indices) for i in indices)
         operands = [basis_single for _ in range(nqubits)]
         inputs = [item for pair in zip(operands, input_indices) for item in pair]
-        basis_full = backend.np.einsum(*inputs, output_indices).reshape(
-            4**nqubits, dim, dim
-        )
+        basis_full = einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
 
@@ -111,7 +110,7 @@ def pauli_basis(
         else:
             nonzero = backend.np.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
-        indices = nonzero(basis)
+        indices = nonzero(backend.np.abs(basis))  # abs needed because of ``tensorflow``
         basis = basis[indices].reshape(-1, dim)
         indices = indices[1].reshape(-1, dim)
 
