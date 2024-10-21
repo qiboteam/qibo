@@ -32,11 +32,11 @@ class MetaBackend:
             :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend not in QIBO_NATIVE_BACKENDS + ["clifford"]:
+        if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
             raise_error(
                 ValueError,
                 f"Backend {backend} is not available. "
-                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ['clifford']}",
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford',)}",
             )
 
         if backend == "pytorch":
