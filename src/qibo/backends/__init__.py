@@ -32,13 +32,11 @@ class MetaBackend:
             :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        possible_backends = ["numpy", "pytorch", "clifford", "qulacs"]
-
-        if backend not in possible_backends:
+        if backend not in QIBO_NATIVE_BACKENDS + ["clifford"]:
             raise_error(
                 ValueError,
                 f"Backend {backend} is not available. "
-                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ['clifford']}",
             )
 
         if backend == "pytorch":
