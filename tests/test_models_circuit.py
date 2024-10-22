@@ -640,13 +640,11 @@ def test_circuit_wire_names_errors():
     with pytest.raises(TypeError):
         circuit = Circuit(5, wire_names=1)
     with pytest.raises(ValueError):
-        circuit = Circuit(5, wire_names=["a", "b", "c"])
-    with pytest.raises(ValueError):
         circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
     with pytest.raises(ValueError):
         circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
     with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names=["1", 2])
+        circuit = Circuit(2, wire_names={"q0": 4, "q1": 5, "q2": 6})
 
 
 def test_circuit_draw_wire_names():
@@ -766,7 +764,7 @@ def test_circuit_draw_line_wrap_names(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5, wire_names={"q1": "a"})
+    circuit = Circuit(5, wire_names=["q0", "a", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):

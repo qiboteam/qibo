@@ -142,9 +142,9 @@ class Circuit:
         accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
         wire_names (list or dict, optional): Names for qubit wires.
-            If ``None``, defaults to (``q0``, ``q1``... ``qn``).
+            If ``None``, defaults to [``q0``, ``q1``... ``q(n-1)``].
             If ``list`` is passed, length of ``list`` must match ``nqubits``.
-            If ``dict`` is passed, the keys should match the default pattern.
+            If ``dict`` is passed, keys should be wire names and values should be qubit indices. Values should be unique and range from 0 to ``nqubits - 1``.
             Defaults to ``None``.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
@@ -171,13 +171,13 @@ class Circuit:
                 f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
-        self.wire_names = wire_names
         self.init_kwargs = {
             "nqubits": nqubits,
             "accelerators": accelerators,
             "density_matrix": density_matrix,
             "wire_names": wire_names,
         }
+        self.wire_names = wire_names
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -300,10 +300,8 @@ class Circuit:
                     f"but is {len(wire_names)}.",
                 )
 
-            if any([not isinstance(name, str) for name in wire_names]):
-                raise_error(ValueError, "all wire names must be type ``str``.")
-
-            self._wire_names = wire_names
+            self._wire_names = wire_names.copy()
+            # self._wire_names = wire_names
         elif isinstance(wire_names, dict):
             if len(wire_names.keys()) > self.nqubits:
                 raise_error(
@@ -311,20 +309,24 @@ class Circuit:
                     "number of elements in the ``wire_names`` dictionary "
                     + "cannot be bigger than ``nqubits``.",
                 )
-
-            if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
-                [not isinstance(name, str) for name in wire_names.values()]
-            ):
+            if not all(isinstance(k, int) for k in wire_names.values()):
                 raise_error(
                     ValueError,
-                    "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
+                    "all values of the ``wire_names`` dictionary must be integers.",
+                )
+            if sorted(wire_names.values()) != list(range(self.nqubits)):
+                raise_error(
+                    ValueError,
+                    "all values of the ``wire_names`` dictionary must be unique integers from 0 to ``nqubits``.",
                 )
 
             self._wire_names = [
-                wire_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
+                k for k, _ in sorted(wire_names.items(), key=lambda x: x[1])
             ]
         else:
             self._wire_names = [f"q{i}" for i in range(self.nqubits)]
+
+        self.init_kwargs["wire_names"] = self._wire_names
 
     @property
     def repeated_execution(self):
@@ -406,8 +408,9 @@ class Circuit:
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
+        new_wire_names = [self.wire_names[q] for q in list(sorted(qubits))]
+        kwargs["wire_names"] = new_wire_names
         circuit = self.__class__(**kwargs)
-        circuit.wire_names = [self.wire_names[q] for q in list(sorted(qubits))]
         circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
 

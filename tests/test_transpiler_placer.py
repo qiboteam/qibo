@@ -19,80 +19,65 @@ from qibo.transpiler.placer import (
 from qibo.transpiler.router import ShortestPaths
 
 
-def star_connectivity():
+def star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
     chip = nx.Graph()
-    chip.add_nodes_from(list(range(5)))
-    graph_list = [(i, 2) for i in range(5) if i != 2]
+    chip.add_nodes_from(names)
+    graph_list = [
+        (names[i], names[middle_qubit_idx])
+        for i in range(len(names))
+        if i != middle_qubit_idx
+    ]
     chip.add_edges_from(graph_list)
     return chip
 
 
-def star_circuit():
-    circuit = Circuit(5)
+def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
+    circuit = Circuit(5, wire_names=names)
     for i in range(1, 5):
         circuit.add(gates.CNOT(i, 0))
     return circuit
 
 
-@pytest.mark.parametrize("connectivity", [star_connectivity(), None])
-@pytest.mark.parametrize(
-    "layout",
-    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
-)
-def test_assert_placement_true(layout, connectivity):
+def test_assert_placement_true():
     circuit = Circuit(5)
-    assert_placement(circuit, layout, connectivity=connectivity)
-
-
-@pytest.mark.parametrize("qubits", [5, 3])
-@pytest.mark.parametrize(
-    "layout", [{"q0": 0, "q1": 1, "q2": 2, "q3": 3}, {"q0": 0, "q0": 1, "q2": 2}]
-)
-def test_assert_placement_false(qubits, layout):
-    circuit = Circuit(qubits)
-    with pytest.raises(PlacementError):
-        assert_placement(circuit, layout)
+    assert_placement(circuit, connectivity=star_connectivity())
 
 
 @pytest.mark.parametrize(
-    "layout",
-    [{"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}, {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}],
+    "qubits, names", [(5, ["A", "B", "C", "D", "F"]), (3, ["A", "B", "C"])]
 )
-def test_mapping_consistency(layout):
-    assert_mapping_consistency(layout)
-
-
-@pytest.mark.parametrize(
-    "layout",
-    [
-        {"q0": 0, "q1": 0, "q2": 1, "q3": 4, "q4": 3},
-        {"q0": 0, "q1": 2, "q0": 1, "q3": 4, "q4": 3},
-    ],
-)
-def test_mapping_consistency_error(layout):
-    with pytest.raises(PlacementError):
-        assert_mapping_consistency(layout)
-
-
-def test_mapping_consistency_restricted():
-    layout = {"q0": 0, "q2": 1}
+def test_assert_placement_false(qubits, names):
     connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
-    assert_mapping_consistency(layout, restricted_connectivity)
-
-
-@pytest.mark.parametrize(
-    "layout",
-    [
-        {"q0": 0, "q2": 2},
-        {"q0": 0, "q1": 1},
-    ],
-)
-def test_mapping_consistency_restricted_error(layout):
-    connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
+    circuit = Circuit(qubits, wire_names=names)
     with pytest.raises(PlacementError):
-        assert_mapping_consistency(layout, restricted_connectivity)
+        assert_placement(circuit, connectivity)
+
+
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_mapping_consistency(names):
+    assert_mapping_consistency(names, star_connectivity(names))
+
+
+def test_mapping_consistency_error():
+    with pytest.raises(PlacementError):
+        assert_mapping_consistency(["A", "B", "C", "D", "F"], star_connectivity())
+
+
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_mapping_consistency_restricted(names):
+    connectivity = star_connectivity(names)
+    on_qubit = [names[0], names[2]]
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
+    assert_mapping_consistency(on_qubit, restricted_connectivity)
+
+
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_mapping_consistency_restricted_error(names):
+    connectivity = star_connectivity(names)
+    on_qubit = [names[0], names[2]]
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
+    with pytest.raises(PlacementError):
+        assert_mapping_consistency([names[3], names[4]], restricted_connectivity)
 
 
 def test_gates_qubits_pairs():
@@ -112,98 +97,85 @@ def test_gates_qubits_pairs_error():
 
 
 def test_trivial():
-    circuit = Circuit(5)
-    connectivity = star_connectivity()
+    names = ["q4", "q3", "q2", "q1", "q0"]
+    circuit = Circuit(5, wire_names=names)
+    connectivity = star_connectivity(names)
     placer = Trivial(connectivity=connectivity)
-    layout = placer(circuit)
-    assert layout == {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
-    assert_placement(circuit, layout)
+    placer(circuit)
+    assert circuit.wire_names == names
+    assert_placement(circuit, connectivity)
 
 
 def test_trivial_restricted():
-    circuit = Circuit(2)
+    names = ["q0", "q2"]
+    circuit = Circuit(2, wire_names=names)
     connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, names)
     placer = Trivial(connectivity=restricted_connectivity)
-    layout = placer(circuit)
-    assert layout == {"q0": 0, "q2": 1}
-    assert_placement(
-        circuit=circuit, layout=layout, connectivity=restricted_connectivity
-    )
-
-
-def test_trivial_error():
-    circuit = Circuit(4)
-    connectivity = star_connectivity()
-    placer = Trivial(connectivity=connectivity)
-    with pytest.raises(PlacementError):
-        layout = placer(circuit)
+    placer(circuit)
+    assert circuit.wire_names == names
+    assert_placement(circuit, restricted_connectivity)
 
 
 @pytest.mark.parametrize(
-    "custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}]
+    "custom_layout",
+    [["E", "D", "C", "B", "A"], {"E": 0, "D": 1, "C": 2, "B": 3, "A": 4}],
 )
-@pytest.mark.parametrize("give_circuit", [True, False])
-@pytest.mark.parametrize("give_connectivity", [True, False])
-def test_custom(custom_layout, give_circuit, give_connectivity):
-    if give_circuit:
-        circuit = Circuit(5)
-    else:
-        circuit = None
-    if give_connectivity:
-        connectivity = star_connectivity()
-    else:
-        connectivity = None
+def test_custom(custom_layout):
+    circuit = Circuit(5)
+    connectivity = star_connectivity(["A", "B", "C", "D", "E"])
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    layout = placer(circuit)
-    assert layout == {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}
+    placer(circuit)
+    assert circuit.wire_names == ["E", "D", "C", "B", "A"]
 
 
-@pytest.mark.parametrize("custom_layout", [[1, 0], {"q0": 1, "q2": 0}])
+@pytest.mark.parametrize(
+    "custom_layout", [[4, 3, 2, 1, 0], {4: 0, 3: 1, 2: 2, 1: 3, 0: 4}]
+)
+def test_custom_int(custom_layout):
+    names = [0, 1, 2, 3, 4]
+    circuit = Circuit(5, wire_names=names)
+    connectivity = star_connectivity(names)
+    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
+    placer(circuit)
+    assert circuit.wire_names == [4, 3, 2, 1, 0]
+
+
+@pytest.mark.parametrize("custom_layout", [["D", "C"], {"C": 1, "D": 0}])
 def test_custom_restricted(custom_layout):
-    circuit = Circuit(2)
-    connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
+    circuit = Circuit(2, wire_names=["C", "D"])
+    connectivity = star_connectivity(["A", "B", "C", "D", "E"])
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, ["C", "D"])
     placer = Custom(connectivity=restricted_connectivity, initial_map=custom_layout)
-    layout = placer(circuit)
-    assert layout == {"q0": 1, "q2": 0}
-    assert_placement(
-        circuit=circuit, layout=layout, connectivity=restricted_connectivity
-    )
+    placer(circuit)
+    assert circuit.wire_names == ["D", "C"]
+    assert_placement(circuit, restricted_connectivity)
 
 
 def test_custom_error_circuit():
     circuit = Circuit(3)
     custom_layout = [4, 3, 2, 1, 0]
-    connectivity = star_connectivity()
+    connectivity = star_connectivity(names=custom_layout)
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    with pytest.raises(PlacementError):
-        layout = placer(circuit)
-
-
-def test_custom_error_no_circuit():
-    connectivity = star_connectivity()
-    custom_layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
-    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    with pytest.raises(PlacementError):
-        layout = placer()
+    with pytest.raises(ValueError):
+        placer(circuit)
 
 
 def test_custom_error_type():
     circuit = Circuit(5)
     connectivity = star_connectivity()
-    layout = 1
-    placer = Custom(connectivity=connectivity, initial_map=layout)
+    placer = Custom(connectivity=connectivity, initial_map=1)
     with pytest.raises(TypeError):
-        layout = placer(circuit)
+        placer(circuit)
 
 
 def test_subgraph_perfect():
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
-    layout = placer(star_circuit())
-    assert layout["q2"] == 0
-    assert_placement(star_circuit(), layout)
+    circuit = star_circuit()
+    placer(circuit)
+    assert circuit.wire_names[0] == "q2"
+    assert_placement(circuit, connectivity)
 
 
 def imperfect_circuit():
@@ -223,8 +195,9 @@ def imperfect_circuit():
 def test_subgraph_non_perfect():
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
-    layout = placer(imperfect_circuit())
-    assert_placement(imperfect_circuit(), layout)
+    circuit = imperfect_circuit()
+    placer(circuit)
+    assert_placement(circuit, connectivity)
 
 
 def test_subgraph_error():
@@ -232,7 +205,7 @@ def test_subgraph_error():
     placer = Subgraph(connectivity=connectivity)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
-        layout = placer(circuit)
+        placer(circuit)
 
 
 def test_subgraph_restricted():
@@ -244,56 +217,49 @@ def test_subgraph_restricted():
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3, 4])
-    placer = Subgraph(connectivity=restricted_connectivity)
-    layout = placer(circuit)
-    assert_placement(
-        circuit=circuit, layout=layout, connectivity=restricted_connectivity
+    restricted_connectivity = restrict_connectivity_qubits(
+        connectivity, ["q0", "q2", "q3", "q4"]
     )
+    placer = Subgraph(connectivity=restricted_connectivity)
+    placer(circuit)
+    assert_placement(circuit, restricted_connectivity)
 
 
 @pytest.mark.parametrize("reps", [1, 10, 100])
-def test_random(reps):
-    connectivity = star_connectivity()
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_random(reps, names):
+    connectivity = star_connectivity(names)
     placer = Random(connectivity=connectivity, samples=reps)
-    layout = placer(star_circuit())
-    assert_placement(star_circuit(), layout)
-
-
-def test_random_perfect():
-    circ = Circuit(5)
-    circ.add(gates.CZ(0, 1))
-    connectivity = star_connectivity()
-    placer = Random(connectivity=connectivity, samples=1000)
-    layout = placer(circ)
-    assert_placement(star_circuit(), layout)
+    circuit = star_circuit(names=names)
+    placer(circuit)
+    assert_placement(circuit, connectivity)
 
 
 def test_random_restricted():
-    circuit = Circuit(4)
+    names = [0, 1, 2, 3, 4]
+    circuit = Circuit(4, wire_names=names[:4])
     circuit.add(gates.CNOT(1, 3))
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(3, 2))
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
-    connectivity = star_connectivity()
+    connectivity = star_connectivity(names)
     restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3, 4])
     placer = Random(connectivity=restricted_connectivity, samples=100)
-    layout = placer(circuit)
-    assert_placement(
-        circuit=circuit, layout=layout, connectivity=restricted_connectivity
-    )
+    placer(circuit)
+    assert_placement(circuit, restricted_connectivity)
 
 
-@pytest.mark.parametrize("gates", [None, 5, 13])
-def test_reverse_traversal(gates):
-    circuit = star_circuit()
-    connectivity = star_connectivity()
+@pytest.mark.parametrize("ngates", [None, 5, 13])
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_reverse_traversal(ngates, names):
+    circuit = star_circuit(names=names)
+    connectivity = star_connectivity(names=names)
     routing = ShortestPaths(connectivity=connectivity)
-    placer = ReverseTraversal(connectivity, routing, depth=gates)
-    layout = placer(circuit)
-    assert_placement(circuit, layout)
+    placer = ReverseTraversal(connectivity, routing, depth=ngates)
+    placer(circuit)
+    assert_placement(circuit, connectivity)
 
 
 def test_reverse_traversal_no_gates():
@@ -302,7 +268,7 @@ def test_reverse_traversal_no_gates():
     placer = ReverseTraversal(connectivity, routing, depth=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
-        layout = placer(circuit)
+        placer(circuit)
 
 
 def test_reverse_traversal_restricted():
@@ -314,34 +280,36 @@ def test_reverse_traversal_restricted():
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3, 4])
+    restrict_names = ["q0", "q2", "q3", "q4"]
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, restrict_names)
+    circuit.wire_names = restrict_names
     routing = ShortestPaths(connectivity=restricted_connectivity)
     placer = ReverseTraversal(
         connectivity=restricted_connectivity, routing_algorithm=routing, depth=5
     )
-    layout = placer(circuit)
-    assert_placement(
-        circuit=circuit, layout=layout, connectivity=restricted_connectivity
-    )
+    placer(circuit)
+    assert_placement(circuit, restricted_connectivity)
 
 
 def test_star_connectivity_placer():
-    circ = Circuit(3)
+    circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(1, 2))
     circ.add(gates.CZ(0, 2))
-    placer = StarConnectivityPlacer(middle_qubit=2)
-    layout = placer(circ)
-    assert_placement(circ, layout)
-    assert layout == {"q0": 0, "q1": 2, "q2": 1}
+    connectivity = star_connectivity()
+    placer = StarConnectivityPlacer(connectivity)
+    placer(circ)
+    assert_placement(circ, connectivity)
+    assert circ.wire_names == ["q0", "q2", "q1", "q3", "q4"]
 
 
 @pytest.mark.parametrize("first", [True, False])
 def test_star_connectivity_placer_error(first):
-    circ = Circuit(3)
+    circ = Circuit(5)
     if first:
         circ.add(gates.CZ(0, 1))
     circ.add(gates.TOFFOLI(0, 1, 2))
-    placer = StarConnectivityPlacer(middle_qubit=2)
+    connectivity = star_connectivity()
+    placer = StarConnectivityPlacer(connectivity)
     with pytest.raises(PlacementError):
-        layout = placer(circ)
+        placer(circ)

@@ -10,7 +10,7 @@ from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler._exceptions import TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer, Placer, Router
 from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.placer import StarConnectivityPlacer, Trivial, assert_placement
+from qibo.transpiler.placer import StarConnectivityPlacer, assert_placement
 from qibo.transpiler.router import (
     ConnectivityError,
     StarConnectivityRouter,
@@ -28,7 +28,6 @@ def assert_circuit_equivalence(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
     final_map: dict,
-    initial_map: Optional[dict] = None,
     test_states: Optional[list] = None,
     ntests: int = 3,
 ):
@@ -38,14 +37,11 @@ def assert_circuit_equivalence(
         original_circuit (:class:`qibo.models.circuit.Circuit`): Original circuit.
         transpiled_circuit (:class:`qibo.models.circuit.Circuit`): Transpiled circuit.
         final_map (dict): logical-physical qubit mapping after routing.
-        initial_map (dict, optional): logical_physical qubit mapping before routing.
-            If ``None``, trivial initial map is used. Defauts to ``None``.
         test_states (list, optional): states on which the test is performed.
             If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
         ntests (int, optional): number of random states tested. Defauts to :math:`3`.
     """
     backend = NumpyBackend()
-    ordering = np.argsort(np.array(list(final_map.values())))
     if transpiled_circuit.nqubits != original_circuit.nqubits:
         raise_error(
             ValueError,
@@ -57,22 +53,26 @@ def assert_circuit_equivalence(
             random_statevector(dims=2**original_circuit.nqubits, backend=backend)
             for _ in range(ntests)
         ]
-    if initial_map is not None:
-        reordered_test_states = []
-        initial_map = np.array(list(initial_map.values()))
-        reordered_test_states = [
-            _transpose_qubits(initial_state, initial_map)
-            for initial_state in test_states
-        ]
-    else:
-        reordered_test_states = test_states
 
-    for i in range(len(test_states)):
+    # original: list = original_circuit.wire_names
+    # transpiled: list = transpiled_circuit.wire_names
+    # initial_map = [0, 1, 2, 3, 4]
+    # initial_map = [original.index(qubit) for qubit in transpiled]
+    # reordered_test_states = []
+    # reordered_test_states = [
+    #     _transpose_qubits(initial_state, initial_map) for initial_state in test_states
+    # ]
+
+    ordering = list(final_map.values())
+
+    for i, state in enumerate(test_states):
         target_state = backend.execute_circuit(
-            original_circuit, initial_state=test_states[i]
+            original_circuit, initial_state=state
         ).state()
         final_state = backend.execute_circuit(
-            transpiled_circuit, initial_state=reordered_test_states[i]
+            # transpiled_circuit, initial_state=reordered_test_states[i]
+            transpiled_circuit,
+            initial_state=state,
         ).state()
         final_state = _transpose_qubits(final_state, ordering)
         fidelity = np.abs(np.dot(np.conj(target_state), final_state))
@@ -99,7 +99,6 @@ def assert_transpiling(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
     connectivity: nx.Graph,
-    initial_layout: dict,
     final_layout: dict,
     native_gates: NativeGates = NativeGates.default(),
     check_circuit_equivalence=True,
@@ -110,7 +109,6 @@ def assert_transpiling(
         original_circuit (qibo.models.Circuit): circuit before transpiling.
         transpiled_circuit (qibo.models.Circuit): circuit after transpiling.
         connectivity (networkx.Graph): chip qubits connectivity.
-        initial_layout (dict): initial physical-logical qubit mapping.
         final_layout (dict): final physical-logical qubit mapping.
         native_gates (NativeGates): native gates supported by the hardware.
         check_circuit_equivalence (Bool): use simulations to check if the transpiled circuit is the same as the original.
@@ -123,22 +121,17 @@ def assert_transpiling(
     if original_circuit.nqubits != transpiled_circuit.nqubits:
         qubit_matcher = Preprocessing(connectivity=connectivity)
         original_circuit = qubit_matcher(circuit=original_circuit)
-    assert_placement(
-        circuit=original_circuit, layout=initial_layout, connectivity=connectivity
-    )
-    assert_placement(
-        circuit=transpiled_circuit, layout=final_layout, connectivity=connectivity
-    )
+    assert_placement(circuit=original_circuit, connectivity=connectivity)
+    assert_placement(circuit=transpiled_circuit, connectivity=connectivity)
     if check_circuit_equivalence:
         assert_circuit_equivalence(
             original_circuit=original_circuit,
             transpiled_circuit=transpiled_circuit,
-            initial_map=initial_layout,
             final_map=final_layout,
         )
 
 
-def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
+def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):
     """Restrict the connectivity to selected qubits.
 
     Args:
@@ -174,14 +167,12 @@ class Passes:
             If ``None``, default transpiler will be used.
             Defaults to ``None``.
         connectivity (:class:`networkx.Graph`, optional): physical qubits connectivity.
-            If ``None``, :class:`` is used.
+            If ``None``, full connectivity is assumed.
             Defaults to ``None``.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): native gates.
             Defaults to :math:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): list of physical qubits to be used.
             If "None" all qubits are used. Defaults to ``None``.
-        int_qubit_name (bool, optional): if `True` the `final_layout` keys are
-            cast to integers.
     """
 
     def __init__(
@@ -190,18 +181,15 @@ class Passes:
         connectivity: nx.Graph = None,
         native_gates: NativeGates = NativeGates.default(),
         on_qubits: list = None,
-        int_qubit_names: bool = False,
     ):
         if on_qubits is not None:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
         self.connectivity = connectivity
         self.native_gates = native_gates
         self.passes = self.default() if passes is None else passes
-        self.initial_layout = None
-        self.int_qubit_names = int_qubit_names
 
     def default(self):
-        """Return the default transpiler pipeline for the required hardware connectivity."""
+        """Return the default star connectivity transpiler pipeline."""
         if not isinstance(self.connectivity, nx.Graph):
             raise_error(
                 TranspilerPipelineError,
@@ -211,9 +199,9 @@ class Passes:
         # preprocessing
         default_passes.append(Preprocessing(connectivity=self.connectivity))
         # default placer pass
-        default_passes.append(StarConnectivityPlacer())
+        default_passes.append(StarConnectivityPlacer(connectivity=self.connectivity))
         # default router pass
-        default_passes.append(StarConnectivityRouter())
+        default_passes.append(StarConnectivityRouter(connectivity=self.connectivity))
         # default unroller pass
         default_passes.append(Unroller(native_gates=self.native_gates))
 
@@ -222,36 +210,20 @@ class Passes:
     def __call__(self, circuit):
         """
         This function returns the compiled circuits and the dictionary mapping
-        physical (keys) to logical (values) qubit. If `int_qubit_name` is `True`
-        each key `i` correspond to the `i-th` qubit in the graph.
+        physical (keys) to logical (values) qubit.
         """
-        final_layout = self.initial_layout = None
+
+        final_layout = None
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 transpiler_pass.connectivity = self.connectivity
                 circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
-                if self.initial_layout is None:
-                    self.initial_layout = transpiler_pass(circuit)
-                    final_layout = (
-                        self.initial_layout
-                    )  # This way the final layout will be the same as the initial layout if no router is used
-                else:
-                    raise_error(
-                        TranspilerPipelineError,
-                        "You are defining more than one placer pass.",
-                    )
+                final_layout = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
-                if self.initial_layout is not None:
-                    circuit, final_layout = transpiler_pass(
-                        circuit, self.initial_layout
-                    )
-                else:
-                    raise_error(
-                        TranspilerPipelineError, "Use a placement pass before routing."
-                    )
+                circuit, final_layout = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit)
             else:
@@ -259,8 +231,6 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
-        if self.int_qubit_names and final_layout is not None:
-            final_layout = {int(key[1:]): value for key, value in final_layout.items()}
         return circuit, final_layout
 
     def is_satisfied(self, circuit: Circuit):
@@ -280,7 +250,3 @@ class Passes:
             return False
         except DecompositionError:
             return False
-
-    def get_initial_layout(self):
-        """Return initial qubit layout"""
-        return self.initial_layout

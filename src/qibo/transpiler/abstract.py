@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
 
 import networkx as nx
 
@@ -12,14 +11,11 @@ class Placer(ABC):
         """A placer implements the initial logical-physical qubit mapping"""
 
     @abstractmethod
-    def __call__(self, circuit: Circuit, *args) -> dict:
-        """Find initial qubit mapping
+    def __call__(self, circuit: Circuit, *args):
+        """Find initial qubit mapping. Mapping is saved in the circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be mapped.
-
-        Returns:
-            (dict): dictionary containing the initial logical to physical qubit mapping.
         """
 
 
@@ -29,17 +25,14 @@ class Router(ABC):
         """A router implements the mapping of a circuit on a specific hardware."""
 
     @abstractmethod
-    def __call__(
-        self, circuit: Circuit, initial_layout: dict, *args
-    ) -> Tuple[Circuit, dict]:
+    def __call__(self, circuit: Circuit, *args) -> Circuit:
         """Match circuit to hardware connectivity.
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be routed.
-            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and dictionary containing the final logical to physical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`): routed circuit.
         """
 
 

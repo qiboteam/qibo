@@ -6,10 +6,14 @@ from qibo.models import Circuit
 from qibo.transpiler.optimizer import Preprocessing, Rearrange
 
 
-def star_connectivity():
+def star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
     chip = nx.Graph()
-    chip.add_nodes_from(list(range(5)))
-    graph_list = [(i, 2) for i in range(5) if i != 2]
+    chip.add_nodes_from(names)
+    graph_list = [
+        (names[i], names[middle_qubit_idx])
+        for i in range(len(names))
+        if i != middle_qubit_idx
+    ]
     chip.add_edges_from(graph_list)
     return chip
 
