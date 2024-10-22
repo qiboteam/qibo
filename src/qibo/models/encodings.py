@@ -476,13 +476,19 @@ def GHZ_circuit(nqubits):
     """Create a GHZ circuit with `nqubits`.
 
     Args:
-        nqubits (int): number of qubits.
+        nqubits (int): number of qubits, nqubits >= 2.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: GHZ circuit
     """
-    c = Circuit(nqubits)
-    c.add(gates.H(0))
-    for _i in range(nqubits - 1):
-        c.add(gates.CNOT(_i, _i + 1))
+    if nqubits < 2:
+        raise_error(
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be >= 2.",
+        )
+    else:
+        c = Circuit(nqubits)
+        c.add(gates.H(0))
+        for _i in range(nqubits - 1):
+            c.add(gates.CNOT(_i, _i + 1))
     return c
