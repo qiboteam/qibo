@@ -470,3 +470,19 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
         return gate(q0, q1, *params)
 
     return gate(q0, q1)
+
+
+def GHZ_circuit(nqubits):
+    """Create a GHZ circuit with `nqubits`.
+
+    Args:
+        nqubits (int): number of qubits.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: GHZ circuit
+    """
+    c = Circuit(nqubits)
+    c.add(gates.H(0))
+    for _i in range(nqubits - 1):
+        c.add(gates.CNOT(_i, _i + 1))
+    return c
