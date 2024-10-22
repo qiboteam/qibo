@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    GHZ_circuit,
     comp_basis_encoder,
     entangling_layer,
     phase_encoder,
@@ -279,3 +280,16 @@ def test_circuit_kwargs(density_matrix):
 
     test = unary_encoder_random_gaussian(4, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
+
+
+@pytest.mark.parametrize("nqubits", [3, 5])
+def test_ghz_circuit(backend, nqubits):
+    target = np.zeros(2**nqubits, dtype=complex)
+    target[0] = 1 / np.sqrt(2)
+    target[2**nqubits - 1] = 1 / np.sqrt(2)
+    target = backend.cast(target, dtype=target.dtype)
+
+    GHZ_circ = GHZ_circuit(nqubits)
+    state = backend.execute_circuit(GHZ_circ).state()
+
+    backend.assert_allclose(state, target)
