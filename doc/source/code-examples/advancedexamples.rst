@@ -2047,7 +2047,17 @@ diagonalised simultaneously, one has to calculate the expectation value starting
    from qibo.symbols import X, Y, Z
    from qibo.hamiltonians import SymbolicHamiltonian
 
-   hamiltonian = SymbolicHamiltonian(3 * Z(4) * X(1) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
+   # build the circuit as before
+   circuit = Circuit(4)
+   circuit.add(gates.H(i) for i in range(4))
+   circuit.add(gates.CNOT(0, 1))
+   circuit.add(gates.CNOT(1, 2))
+   circuit.add(gates.CNOT(2, 3))
+   # but don't add any measurement at the end!
+   # they will be automatically added with the proper basis
+   # while calculating the expectation value
+
+   hamiltonian = SymbolicHamiltonian(3 * Z(2) * X(1) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
    expectation_value = hamiltonian.expectation_from_samples(circuit)
 
 What is happening under the hood in this case, is that the expectation value is calculated for each term
