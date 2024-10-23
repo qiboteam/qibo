@@ -539,6 +539,11 @@ def test_star_error_multi_qubit():
     with pytest.raises(ConnectivityError):
         transpiled, hardware_qubits = transpiler(circuit=circuit)
 
+    chip = nx.Graph()
+    chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4)])
+    with pytest.raises(ValueError):
+        StarConnectivityRouter(chip)
+
 
 # @pytest.mark.parametrize("nqubits", [1, 3, 5])
 @pytest.mark.parametrize("nqubits", [5])
