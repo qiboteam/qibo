@@ -129,11 +129,6 @@ and the second will act to ``(1, 2)`` corresponding to
 
     [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
 
-Greenberger-Horne-Zeilinger (GHZ) state
-"""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.ghz_state
-
 .. _applicationspecific:
 
 Quantum Fourier Transform (QFT)
@@ -405,6 +400,11 @@ with the last qubit as the control qubit and the first qubit as a target qubit.
 
 .. autofunction:: qibo.models.encodings.entangling_layer
 
+
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
 
 .. _error-mitigation:
 
