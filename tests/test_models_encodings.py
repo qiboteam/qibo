@@ -299,6 +299,5 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
         if density_matrix:
             target = backend.np.outer(target, backend.np.conj(target.T))
-            state = backend.np.outer(state, backend.np.conj(state.T))
 
         backend.assert_allclose(state, target)
