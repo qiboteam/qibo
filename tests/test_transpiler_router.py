@@ -155,13 +155,10 @@ def test_bell_state_3q():
 
     backend = NumpyBackend()
     state = np.array([1, 0, 0, 0, 0, 0, 0, 0])
+    original_state = backend.execute_circuit(circuit, state).state()
     target_state = backend.execute_circuit(routed_circuit, state).state()
     target_state = _transpose_qubits(target_state, list(final_map.values()))
-    assert np.all(
-        np.isclose(
-            np.real(target_state).round(1), np.array([0, 0.7, 0, 0, 0.7, 0, 0, 0])
-        )
-    )
+    assert np.all(np.isclose(np.real(original_state), np.real(target_state)))
 
 
 @pytest.mark.parametrize("ngates", [5, 25])
