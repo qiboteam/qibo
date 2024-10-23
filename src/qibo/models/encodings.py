@@ -494,7 +494,7 @@ def ghz_state(nqubits: int, **kwargs):
             f"nqubits given as {nqubits}. nqubits needs to be >= 2.",
         )
     else:
-        circuit = Circuit(nqubits)
+        circuit = Circuit(nqubits, **kwargs)
         circuit.add(gates.H(0))
         circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
     return circuit
