@@ -636,7 +636,12 @@ def test_circuit_draw():
     assert str(circuit) == ref
 
 
-def test_circuit_wire_names_errors():
+def test_circuit_wire_names():
+    circuit = Circuit(5)
+    assert circuit.wire_names == ["q0", "q1", "q2", "q3", "q4"]
+    circuit = Circuit(5, wire_names={"q1": 3, "q3": 1, "q2": 4, "q4": 0, "q0": 2})
+    assert circuit.wire_names == ["q4", "q3", "q0", "q1", "q2"]
+
     with pytest.raises(TypeError):
         circuit = Circuit(5, wire_names=1)
     with pytest.raises(ValueError):
@@ -644,7 +649,7 @@ def test_circuit_wire_names_errors():
     with pytest.raises(ValueError):
         circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
     with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": 4, "q1": 5, "q2": 6})
+        circuit = Circuit(3, wire_names={"q0": 4, "q1": 5, "q2": 6})
 
 
 def test_circuit_draw_wire_names():
