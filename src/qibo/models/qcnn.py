@@ -5,7 +5,8 @@ The QuantumCNN class in this module provides methods to construct the QCNN.
 
 import numpy as np
 
-from qibo import gates, get_backend
+from qibo import gates
+from qibo.backends import get_backend
 from qibo.models import Circuit
 
 
@@ -80,7 +81,7 @@ class QuantumCNN:
         self.twoqubitansatz = twoqubitansatz
 
         if copy_init_state is None:
-            if "qibojit" in get_backend():
+            if "qibojit" in str(get_backend()):
                 self.copy_init_state = True
             else:
                 self.copy_init_state = False

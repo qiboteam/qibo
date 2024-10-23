@@ -1297,9 +1297,8 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 
    from qibo.symbols import Z
    from qibo.hamiltonians import SymbolicHamiltonian
-   from qibo.backends import GlobalBackend
 
-   backend = GlobalBackend()
+   backend = qibo.get_backend()
 
    # Define the observable
    obs = np.prod([Z(i) for i in range(nqubits)])
@@ -2103,10 +2102,9 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     # Define connectivity as nx.Graph
     def star_connectivity():
-        Q = [i for i in range(5)]
         chip = nx.Graph()
-        chip.add_nodes_from(Q)
-        graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
+        chip.add_nodes_from(list(range(5)))
+        graph_list = [(i, 2) for i in range(5) if i != 2]
         chip.add_edges_from(graph_list)
         return chip
 
