@@ -486,7 +486,7 @@ def ghz_state(nqubits: int, **kwargs):
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: GHZ circuit
+        :class:`qibo.models.circuit.Circuit`: GHZ state
     """
     if nqubits < 2:
         raise_error(
