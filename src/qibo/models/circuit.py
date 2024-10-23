@@ -1280,6 +1280,7 @@ class Circuit:
         """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
+        wire_names = [str(name) for name in self.wire_names]
         idx = [0] * self.nqubits
 
         for gate in self.queue:
@@ -1301,12 +1302,12 @@ class Circuit:
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
         # Print to terminal
-        max_name_len = max(len(name) for name in self.wire_names)
+        max_name_len = max(len(name) for name in wire_names)
         output = ""
         for q in range(self.nqubits):
             output += (
-                self.wire_names[q]
-                + " " * (max_name_len - len(self.wire_names[q]))
+                wire_names[q]
+                + " " * (max_name_len - len(wire_names[q]))
                 + ": ─"
                 + "".join(matrix[q])
                 + "\n"

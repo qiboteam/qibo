@@ -667,6 +667,24 @@ def test_circuit_draw_wire_names():
     assert str(circuit) == ref
 
 
+def test_circuit_draw_wire_names_int():
+    ref = (
+        "2133: ─H─U1─U1─U1─U1───────────────────────────x───\n"
+        + "8   : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
+        + "2319: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
+        + "0   : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
+        + "1908: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5, wire_names=[2133, 8, 2319, 0, 1908])
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert str(circuit) == ref
+
+
 def test_circuit_draw_line_wrap(capsys):
     """Test circuit text draw with line wrap."""
     ref_line_wrap_50 = (
