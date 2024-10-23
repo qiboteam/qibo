@@ -99,10 +99,8 @@ resp_matrix_2q = random_stochastic_matrix(
 def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     """Test that ZNE reduces the noise."""
     if backend.platform == "tensorflow":
-        import tensorflow as tf
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
+        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
 
@@ -161,10 +159,8 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
 def test_cdr(backend, nqubits, noise, full_output, readout):
     """Test that CDR reduces the noise."""
     if backend.platform == "tensorflow":
-        import tensorflow as tf
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
+        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
 
@@ -245,10 +241,8 @@ def test_sample_training_circuit(nqubits):
 def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     """Test that vnCDR reduces the noise."""
     if backend.platform == "tensorflow":
-        import tensorflow as tf  # pylint: disable=C0415
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
+        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
     # Define the circuit
@@ -285,10 +279,8 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
 @pytest.mark.parametrize("ibu_iters", [None, 10])
 def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     if backend.platform == "tensorflow":
-        import tensorflow as tf
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
+        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
     nshots = 10000
@@ -342,10 +334,8 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
 )
 def test_ics(backend, nqubits, noise, full_output, readout):
     if backend.platform == "tensorflow":
-        import tensorflow as tf
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
+        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
     """Test that ICS reduces the noise."""
