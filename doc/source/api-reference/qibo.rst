@@ -129,6 +129,13 @@ and the second will act to ``(1, 2)`` corresponding to
 
     [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
 
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.encodings.ghz_state
+    :members:
+    :member-order: bysource
+
 .. _applicationspecific:
 
 Quantum Fourier Transform (QFT)
