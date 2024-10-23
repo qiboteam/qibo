@@ -164,10 +164,6 @@ class Custom(Placer):
     def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph):
         self.initial_map = initial_map
         self.connectivity = connectivity
-        if self.initial_map is None:
-            raise_error(ValueError, "Initial mapping must be provided.")
-        if self.connectivity is None:
-            raise_error(ValueError, "Connectivity graph must be provided.")
 
     def __call__(self, circuit: Circuit):
         """Apply the custom placement to the given circuit.
@@ -198,8 +194,6 @@ class Subgraph(Placer):
 
     def __init__(self, connectivity: nx.Graph):
         self.connectivity = connectivity
-        if self.connectivity is None:
-            raise_error(ValueError, "Connectivity graph must be provided.")
 
     def __call__(self, circuit: Circuit):
         """Find the initial layout of the given circuit using subgraph isomorphism.

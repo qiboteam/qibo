@@ -53,6 +53,14 @@ def test_assert_placement_false(qubits, names):
         assert_placement(circuit, connectivity)
 
 
+@pytest.mark.parametrize("qubits", [10, 1])
+def test_assert_placement_error(qubits):
+    connectivity = star_connectivity()
+    circuit = Circuit(qubits)
+    with pytest.raises(PlacementError):
+        assert_placement(circuit, connectivity)
+
+
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
 def test_mapping_consistency(names):
     assert_mapping_consistency(names, star_connectivity(names))
@@ -104,6 +112,13 @@ def test_trivial():
     placer(circuit)
     assert circuit.wire_names == names
     assert_placement(circuit, connectivity)
+
+
+def test_trivial_error():
+    connectivity = star_connectivity()
+    placer = Trivial(connectivity=connectivity)
+    with pytest.raises(ValueError):
+        placer()
 
 
 def test_trivial_restricted():
@@ -313,3 +328,8 @@ def test_star_connectivity_placer_error(first):
     placer = StarConnectivityPlacer(connectivity)
     with pytest.raises(PlacementError):
         placer(circ)
+
+    chip = nx.Graph()
+    chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4)])
+    with pytest.raises(ValueError):
+        StarConnectivityPlacer(chip)
