@@ -132,9 +132,7 @@ and the second will act to ``(1, 2)`` corresponding to
 Greenberger-Horne-Zeilinger (GHZ) state
 """""""""""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.models.encodings.ghz_state
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.models.encodings.ghz_state
 
 .. _applicationspecific:
 
