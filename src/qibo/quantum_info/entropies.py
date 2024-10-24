@@ -24,7 +24,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
         prob_dist (ndarray or list): a probability array :math:`\\mathbf{p}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -89,7 +89,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
@@ -162,7 +162,7 @@ def classical_mutual_information(
         prob_dist_q (ndarray): marginal probability distribution :math:`q(y)`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -206,7 +206,7 @@ def classical_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical Rényi entropy :math:`H_{\\alpha}`.
@@ -295,7 +295,7 @@ def classical_relative_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
@@ -380,7 +380,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
@@ -457,7 +457,7 @@ def classical_relative_tsallis_entropy(
         base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Tsallis relative entropy :math:`D_{\\alpha}^{\\text{ts}}`.
@@ -506,7 +506,7 @@ def von_neumann_entropy(
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
@@ -580,7 +580,7 @@ def relative_von_neumann_entropy(
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
@@ -679,7 +679,7 @@ def mutual_information(
             If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Mutual information :math:`I(\\rho)` of ``state`` :math:`\\rho`.
@@ -729,7 +729,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Rényi entropy :math:`H_{\\alpha}`.
@@ -813,7 +813,7 @@ def relative_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
@@ -905,7 +905,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
@@ -1052,7 +1052,7 @@ def entanglement_entropy(
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
