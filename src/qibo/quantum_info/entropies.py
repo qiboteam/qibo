@@ -561,15 +561,22 @@ def von_neumann_entropy(
 
 
 def relative_von_neumann_entropy(
-    state, target, base: float = 2, check_hermitian: bool = False, backend=None
+    state,
+    target,
+    base: float = 2,
+    check_hermitian: bool = False,
+    precision_tol: float = 1e-14,
+    backend=None,
 ):
-    """Calculates the relative entropy :math:`S(\\rho \\, \\| \\, \\sigma)` between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+    """Calculates the relative von Neumann entropy  between two quantum states.
 
-    It is given by
+    Also known as *quantum relative entropy*, :math:`S(\\rho \\, \\| \\, \\sigma)` is given by
 
     .. math::
         S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
             - \\text{tr}\\left[\\rho \\, \\log(\\sigma)\\right]
+
+    where ``state`` :math:`\\rho` and ``target`` :math:`\\sigma` are two quantum states.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
@@ -578,6 +585,9 @@ def relative_von_neumann_entropy(
         check_hermitian (bool, optional): If ``True``, checks if ``state`` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian .
             Defaults to ``False``.
+        precision_tol (float, optional): Used when entropy is calculated via engenvalue
+            decomposition. Eigenvalues that are smaller than ``precision_tol`` in absolute value
+            are set to :math:`0`. Defaults to :math:`10^{-14}`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -627,28 +637,32 @@ def relative_von_neumann_entropy(
     if len(target.shape) == 1:
         target = backend.np.outer(target, backend.np.conj(target))
 
-    eigenvalues_state = backend.calculate_eigenvalues(
+    eigenvalues_state, eigenvectors_state = backend.calculate_eigenvectors(
         state,
         hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
-    eigenvalues_target = backend.calculate_eigenvalues(
+    eigenvalues_target, eigenvectors_target = backend.calculate_eigenvectors(
         target,
         hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
     )
 
+    overlaps = backend.np.conj(eigenvectors_state.T) @ eigenvectors_target
+    overlaps = backend.np.abs(overlaps) ** 2
+    print(precision_tol, type(precision_tol))
     log_state = backend.np.where(
-        backend.np.real(eigenvalues_state) > 0,
-        # backend.np.abs(eigenvalues_state) > 1e-14,
+        backend.np.real(eigenvalues_state) > precision_tol,
         backend.np.log2(eigenvalues_state) / np.log2(base),
         0.0,
     )
     log_target = backend.np.where(
-        backend.np.real(eigenvalues_target) > 0,
+        backend.np.real(eigenvalues_target) > precision_tol,
         backend.np.log2(eigenvalues_target) / np.log2(base),
-        -np.inf,
+        0.0,
     )
 
-    # log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
+    log_target = overlaps @ log_target
+
+    log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
 
     entropy_state = backend.np.sum(eigenvalues_state * log_state)
 
@@ -993,7 +1007,7 @@ def relative_tsallis_entropy(
     """
     if alpha == 1.0:
         return relative_von_neumann_entropy(
-            state, target, base, check_hermitian, backend
+            state, target, base=base, check_hermitian=check_hermitian, backend=backend
         )
 
     if not isinstance(alpha, (float, int)):

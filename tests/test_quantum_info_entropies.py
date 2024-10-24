@@ -477,9 +477,10 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
     )
 
 
+@pytest.mark.parametrize("statevector", [False, True])
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_relative_entropy(backend, base, check_hermitian):
+def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevector):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -514,43 +515,36 @@ def test_relative_entropy(backend, base, check_hermitian):
     nqubits = 2
     dims = 2**nqubits
 
-    state = random_density_matrix(dims, backend=backend)
+    state = (
+        random_statevector(dims, backend=backend)
+        if statevector
+        else random_density_matrix(dims, backend=backend)
+    )
     target = backend.identity_density_matrix(nqubits, normalize=True)
 
-    backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, base, check_hermitian, backend),
-        np.log(dims) / np.log(base)
-        - von_neumann_entropy(
-            state, base=base, check_hermitian=check_hermitian, backend=backend
-        ),
-        atol=1e-5,
+    entropy = relative_von_neumann_entropy(
+        state, target, base=base, check_hermitian=check_hermitian, backend=backend
     )
 
-    state = backend.cast([1.0, 0.0], dtype=np.float64)
+    if statevector:
+        state = backend.np.outer(state, backend.np.conj(state.T))
+
+    entropy_target = von_neumann_entropy(
+        state, base=base, check_hermitian=check_hermitian, backend=backend
+    )
+
+    backend.assert_allclose(
+        entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
+    )
+
+    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
     target = backend.cast([0.0, 1.0], dtype=np.float64)
 
-    assert relative_von_neumann_entropy(state, target, backend=backend) == 0.0
-
-    # for coverage when GPUs are present
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
-        with pytest.raises(NotImplementedError):
-            state = random_unitary(4, backend=backend)
-            target = random_density_matrix(4, backend=backend)
-            test = relative_von_neumann_entropy(
-                state, target, base=base, check_hermitian=True, backend=backend
-            )
-        with pytest.raises(NotImplementedError):
-            target = random_unitary(4, backend=backend)
-            state = random_density_matrix(4, backend=backend)
-            test = relative_von_neumann_entropy(
-                state, target, base=base, check_hermitian=True, backend=backend
-            )
-    else:
-        state = random_unitary(4, backend=backend)
-        target = random_unitary(4, backend=backend)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=True, backend=backend
-        )
+    backend.assert_allclose(
+        relative_von_neumann_entropy(state, target, backend=backend),
+        -0.21227801,
+        atol=1e-8,
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
@@ -675,7 +669,9 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 relative_renyi_entropy(state, target, alpha, base, backend)
         else:
             if alpha == 1.0:
-                log = relative_von_neumann_entropy(state, target, base, backend=backend)
+                log = relative_von_neumann_entropy(
+                    state, target, base=base, backend=backend
+                )
             elif alpha == np.inf:
                 state_outer = (
                     backend.np.outer(state, backend.np.conj(state.T))
@@ -805,7 +801,7 @@ def test_relative_tsallis_entropy(
 
     if alpha == 1.0:
         target_value = relative_von_neumann_entropy(
-            state, target, base, check_hermitian, backend
+            state, target, base=base, check_hermitian=check_hermitian, backend=backend
         )
     else:
         if alpha < 1.0:
