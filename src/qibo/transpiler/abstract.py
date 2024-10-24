@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 import networkx as nx
 
@@ -25,7 +26,7 @@ class Router(ABC):
         """A router implements the mapping of a circuit on a specific hardware."""
 
     @abstractmethod
-    def __call__(self, circuit: Circuit, *args) -> Circuit:
+    def __call__(self, circuit: Circuit, *args) -> Tuple[Circuit, dict]:
         """Match circuit to hardware connectivity.
 
         Args:
