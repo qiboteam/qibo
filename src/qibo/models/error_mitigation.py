@@ -1172,9 +1172,8 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     elif backend.name == "qibolab":  # pragma: no cover
         qubits = backend.qubits
         connectivity_edges = backend.connectivity
-        node_mapping = {q: i for i, q in enumerate(qubits)}
-        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
-        connectivity = nx.Graph(edges)
+        connectivity = nx.Graph(connectivity_edges)
+        connectivity.add_nodes_from(qubits)
         transpiler = Passes(
             connectivity=connectivity,
             passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],

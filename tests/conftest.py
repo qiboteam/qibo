@@ -5,6 +5,7 @@ Pytest fixtures.
 
 import sys
 
+import networkx as nx
 import pytest
 
 from qibo.backends import _Global, construct_backend
@@ -79,6 +80,54 @@ def clear():
     yield
     _Global._backend = None
     _Global._transpiler = None
+
+
+@pytest.fixture
+def star_connectivity():
+    def _star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
+        chip = nx.Graph()
+        chip.add_nodes_from(names)
+        graph_list = [
+            (names[i], names[middle_qubit_idx])
+            for i in range(len(names))
+            if i != middle_qubit_idx
+        ]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    return _star_connectivity
+
+
+@pytest.fixture
+def grid_connectivity():
+    def _grid_connectivity(names=["q0", "q1", "q2", "q3", "q4"]):
+        chip = nx.Graph()
+        chip.add_nodes_from(names)
+        graph_list = [
+            (names[0], names[1]),
+            (names[1], names[2]),
+            (names[2], names[3]),
+            (names[3], names[0]),
+            (names[0], names[4]),
+        ]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    return _grid_connectivity
+
+
+@pytest.fixture
+def line_connectivity():
+    def _line_connectivity(n, names=None):
+        if names is None:
+            names = [f"q{i}" for i in range(n)]
+        chip = nx.Graph()
+        chip.add_nodes_from(names)
+        graph_list = [(names[i], names[i + 1]) for i in range(n - 1)]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    return _line_connectivity
 
 
 def pytest_generate_tests(metafunc):

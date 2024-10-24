@@ -144,12 +144,8 @@ class _Global:
             and natives is not None
             and connectivity_edges is not None
         ):
-            # only for q{i} naming
-            node_mapping = {q: i for i, q in enumerate(qubits)}
-            edges = [
-                (node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges
-            ]
-            connectivity = nx.Graph(edges)
+            connectivity = nx.Graph(connectivity_edges)
+            connectivity.add_nodes_from(qubits)
 
             return Passes(
                 connectivity=connectivity,

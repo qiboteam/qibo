@@ -2103,13 +2103,14 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     # Define connectivity as nx.Graph
     def star_connectivity():
         chip = nx.Graph()
-        chip.add_nodes_from(list(range(5)))
-        graph_list = [(i, 2) for i in range(5) if i != 2]
-        chip.add_edges_from(graph_list)
+        chip.add_nodes_from(["q0", "q1", "q2", "q3", "q4"])
+        chip.add_edges_from([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
         return chip
 
     # Define the circuit
-    circuit = Circuit(2)
+    # wire_names must match nodes in the connectivity graph.
+    # The index in wire_names represents the logical qubit number in the circuit.
+    circuit = Circuit(2, wire_names=["q0", "q1"])
     circuit.add(gates.H(0))
     circuit.add(gates.CZ(0, 1))
 
@@ -2131,13 +2132,10 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     transpiled_circ, final_layout = custom_pipeline(circuit)
 
     # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
-    # For this test it is necessary to get the initial layout
-    initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
-        initial_layout=initial_layout,
         final_layout=final_layout,
         native_gates=NativeGates.default()
     )
