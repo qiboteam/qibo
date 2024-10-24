@@ -19,12 +19,15 @@ from qibo.backends import (
     get_device,
     get_precision,
     get_threads,
+    get_transpiler,
+    get_transpiler_name,
     list_available_backends,
     matrices,
     set_backend,
     set_device,
     set_precision,
     set_threads,
+    set_transpiler,
 )
 from qibo.config import (
     get_batch_size,

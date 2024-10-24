@@ -34,6 +34,18 @@ class NumpyBackend(Backend):
             np.complex128,
         )
 
+    @property
+    def qubits(self):
+        return None
+
+    @property
+    def connectivity(self):
+        return None
+
+    @property
+    def natives(self):
+        return None
+
     def set_precision(self, precision):
         if precision != self.precision:
             if precision == "single":
