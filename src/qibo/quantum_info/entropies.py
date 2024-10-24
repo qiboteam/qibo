@@ -648,7 +648,7 @@ def relative_von_neumann_entropy(
 
     overlaps = backend.np.conj(eigenvectors_state.T) @ eigenvectors_target
     overlaps = backend.np.abs(overlaps) ** 2
-    print(precision_tol, type(precision_tol))
+
     log_state = backend.np.where(
         backend.np.real(eigenvalues_state) > precision_tol,
         backend.np.log2(eigenvalues_state) / np.log2(base),
