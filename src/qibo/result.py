@@ -27,7 +27,7 @@ class QuantumState:
 
     Args:
         state (np.ndarray): Input quantum state as np.ndarray.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
+        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, the current backend is going to be used.
     """
 
     def __init__(self, state, backend=None):
@@ -158,7 +158,7 @@ class MeasurementOutcomes:
     Args:
         measurements (:class:`qibo.gates.M`): Measurement gates.
         backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations.
-            If ``None``, then :class:`qibo.backends.GlobalBackend` is used. Defaults to ``None``.
+            If ``None``, then the current backend is used. Defaults to ``None``.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
@@ -479,7 +479,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
     Args:
         final_state (np.ndarray): Input quantum state as np.ndarray.
         measurements (qibo.gates.M): The measurement gates containing the measurements.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
+        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, then the current backend is going to be used.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
