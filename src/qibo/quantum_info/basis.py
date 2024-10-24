@@ -38,7 +38,7 @@ def pauli_basis(
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
@@ -175,7 +175,7 @@ def comp_basis_to_pauli(
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
@@ -250,7 +250,7 @@ def pauli_to_comp_basis(
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,

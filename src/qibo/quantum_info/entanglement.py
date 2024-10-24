@@ -28,7 +28,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -98,7 +98,7 @@ def entanglement_of_formation(
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Default: ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
 
@@ -138,7 +138,7 @@ def negativity(state, bipartition, backend=None):
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -179,7 +179,7 @@ def entanglement_fidelity(
             :math:`\\rho_{f}` is Hermitian. If ``False``, it assumes it is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -247,7 +247,7 @@ def meyer_wallach_entanglement(state, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -315,7 +315,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
