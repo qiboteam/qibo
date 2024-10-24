@@ -301,7 +301,6 @@ class Circuit:
                 )
 
             self._wire_names = wire_names.copy()
-            # self._wire_names = wire_names
         elif isinstance(wire_names, dict):
             if len(wire_names.keys()) > self.nqubits:
                 raise_error(

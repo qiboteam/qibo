@@ -54,15 +54,6 @@ def assert_circuit_equivalence(
             for _ in range(ntests)
         ]
 
-    # original: list = original_circuit.wire_names
-    # transpiled: list = transpiled_circuit.wire_names
-    # initial_map = [0, 1, 2, 3, 4]
-    # initial_map = [original.index(qubit) for qubit in transpiled]
-    # reordered_test_states = []
-    # reordered_test_states = [
-    #     _transpose_qubits(initial_state, initial_map) for initial_state in test_states
-    # ]
-
     ordering = list(final_map.values())
 
     for i, state in enumerate(test_states):
@@ -70,7 +61,6 @@ def assert_circuit_equivalence(
             original_circuit, initial_state=state
         ).state()
         final_state = backend.execute_circuit(
-            # transpiled_circuit, initial_state=reordered_test_states[i]
             transpiled_circuit,
             initial_state=state,
         ).state()

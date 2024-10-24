@@ -201,9 +201,6 @@ class Subgraph(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-
-        Returns:
-            (dict): physical to logical qubit mapping.
         """
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         if len(gates_qubits_pairs) < 3:
@@ -236,8 +233,6 @@ class Subgraph(Placer):
                 break
 
         circuit.wire_names = sorted(result.mapping, key=lambda k: result.mapping[k])
-        # sorted_result = dict(sorted(result.mapping.items()))
-        # circuit.wire_names = sorted(sorted_result, key=sorted_result.get)
 
 
 class Random(Placer):
@@ -264,9 +259,6 @@ class Random(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
-
-        Returns:
-            (dict): physical-to-logical qubit mapping.
         """
         _, local_state = _check_backend_and_local_state(self.seed, backend=None)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
@@ -352,15 +344,10 @@ class ReverseTraversal(Placer):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-
-        Returns:
-            (dict): physical to logical qubit mapping.
         """
         self.routing_algorithm.connectivity = self.connectivity
         new_circuit = self._assemble_circuit(circuit)
-        final_placement = self._routing_step(new_circuit)
-
-        # return final_placement
+        self._routing_step(new_circuit)
 
     def _assemble_circuit(self, circuit: Circuit):
         """Assemble a single circuit to apply Reverse Traversal placement based on depth.
