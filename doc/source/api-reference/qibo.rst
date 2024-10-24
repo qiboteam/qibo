@@ -2164,6 +2164,12 @@ To Chi
 .. autofunction:: qibo.quantum_info.to_chi
 
 
+To Stinespring
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_stinespring
+
+
 Choi to Liouville
 """""""""""""""""
 
