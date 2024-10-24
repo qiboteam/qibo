@@ -51,31 +51,19 @@ def generate_random_circuit(nqubits, ngates, names=None, seed=42):
     return circuit
 
 
-def star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
-    chip = nx.Graph()
-    chip.add_nodes_from(names)
-    graph_list = [
-        (names[i], names[middle_qubit_idx])
-        for i in range(len(names))
-        if i != middle_qubit_idx
-    ]
-    chip.add_edges_from(graph_list)
-    return chip
-
-
-def test_restrict_qubits_error_no_subset():
+def test_restrict_qubits_error_no_subset(star_connectivity):
     with pytest.raises(ConnectivityError) as excinfo:
         restrict_connectivity_qubits(star_connectivity(), ["q0", "q1", "q5"])
     assert "Some qubits are not in the original connectivity." in str(excinfo.value)
 
 
-def test_restrict_qubits_error_not_connected():
+def test_restrict_qubits_error_not_connected(star_connectivity):
     with pytest.raises(ConnectivityError) as excinfo:
         restrict_connectivity_qubits(star_connectivity(), ["q0", "q1"])
     assert "New connectivity graph is not connected." in str(excinfo.value)
 
 
-def test_restrict_qubits():
+def test_restrict_qubits(star_connectivity):
     new_connectivity = restrict_connectivity_qubits(
         star_connectivity(["A", "B", "C", "D", "E"]), ["A", "B", "C"]
     )
@@ -85,7 +73,7 @@ def test_restrict_qubits():
 
 @pytest.mark.parametrize("ngates", [5, 10, 50])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_pipeline_default(ngates, names):
+def test_pipeline_default(ngates, names, star_connectivity):
     circ = generate_random_circuit(nqubits=5, ngates=ngates, names=names)
     connectivity = star_connectivity(names)
 
@@ -133,7 +121,7 @@ def test_assert_circuit_equivalence_false():
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
-def test_int_qubit_names_default():
+def test_int_qubit_names_default(star_connectivity):
     names = [1244, 1532, 2315, 6563, 8901]
     circ = Circuit(5, wire_names=names)
     connectivity = star_connectivity(names)
@@ -156,7 +144,7 @@ def test_error_connectivity():
 
 
 @pytest.mark.parametrize("qubits", [3, 5])
-def test_is_satisfied(qubits):
+def test_is_satisfied(qubits, star_connectivity):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(qubits)
     circuit.wire_names = ["q0", "q1", "q2", "q3", "q4"][:qubits]
@@ -165,7 +153,7 @@ def test_is_satisfied(qubits):
     assert default_transpiler.is_satisfied(circuit)
 
 
-def test_is_satisfied_false_decomposition():
+def test_is_satisfied_false_decomposition(star_connectivity):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
@@ -173,7 +161,7 @@ def test_is_satisfied_false_decomposition():
     assert not default_transpiler.is_satisfied(circuit)
 
 
-def test_is_satisfied_false_connectivity():
+def test_is_satisfied_false_connectivity(star_connectivity):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
@@ -185,7 +173,7 @@ def test_is_satisfied_false_connectivity():
 @pytest.mark.parametrize("ngates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
 @pytest.mark.parametrize("router", [ShortestPaths, Sabre])
-def test_custom_passes(placer, router, ngates, nqubits):
+def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
     custom_passes = []
@@ -222,7 +210,9 @@ def test_custom_passes(placer, router, ngates, nqubits):
 @pytest.mark.parametrize(
     "restrict_names", [["q1", "q2", "q3"], ["q0", "q2", "q4"], ["q4", "q2", "q3"]]
 )
-def test_custom_passes_restrict(ngates, placer, routing, restrict_names):
+def test_custom_passes_restrict(
+    ngates, placer, routing, restrict_names, star_connectivity
+):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=3, ngates=ngates, names=restrict_names)
     custom_passes = []
@@ -263,7 +253,7 @@ def test_custom_passes_wrong_pass():
         custom_pipeline(circ)
 
 
-def test_int_qubit_names():
+def test_int_qubit_names(star_connectivity):
     names = [980, 123, 45, 9, 210464]
     connectivity = star_connectivity(names)
     transpiler = Passes(

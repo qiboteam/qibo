@@ -19,18 +19,6 @@ from qibo.transpiler.placer import (
 from qibo.transpiler.router import ShortestPaths
 
 
-def star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
-    chip = nx.Graph()
-    chip.add_nodes_from(names)
-    graph_list = [
-        (names[i], names[middle_qubit_idx])
-        for i in range(len(names))
-        if i != middle_qubit_idx
-    ]
-    chip.add_edges_from(graph_list)
-    return chip
-
-
 def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
     circuit = Circuit(5, wire_names=names)
     for i in range(1, 5):
@@ -38,7 +26,7 @@ def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
     return circuit
 
 
-def test_assert_placement_true():
+def test_assert_placement_true(star_connectivity):
     circuit = Circuit(5)
     assert_placement(circuit, connectivity=star_connectivity())
 
@@ -46,7 +34,7 @@ def test_assert_placement_true():
 @pytest.mark.parametrize(
     "qubits, names", [(5, ["A", "B", "C", "D", "F"]), (3, ["A", "B", "C"])]
 )
-def test_assert_placement_false(qubits, names):
+def test_assert_placement_false(qubits, names, star_connectivity):
     connectivity = star_connectivity()
     circuit = Circuit(qubits, wire_names=names)
     with pytest.raises(PlacementError):
@@ -54,7 +42,7 @@ def test_assert_placement_false(qubits, names):
 
 
 @pytest.mark.parametrize("qubits", [10, 1])
-def test_assert_placement_error(qubits):
+def test_assert_placement_error(qubits, star_connectivity):
     connectivity = star_connectivity()
     circuit = Circuit(qubits)
     with pytest.raises(PlacementError):
@@ -62,17 +50,17 @@ def test_assert_placement_error(qubits):
 
 
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency(names):
+def test_mapping_consistency(names, star_connectivity):
     assert_mapping_consistency(names, star_connectivity(names))
 
 
-def test_mapping_consistency_error():
+def test_mapping_consistency_error(star_connectivity):
     with pytest.raises(PlacementError):
         assert_mapping_consistency(["A", "B", "C", "D", "F"], star_connectivity())
 
 
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted(names):
+def test_mapping_consistency_restricted(names, star_connectivity):
     connectivity = star_connectivity(names)
     on_qubit = [names[0], names[2]]
     restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
@@ -80,7 +68,7 @@ def test_mapping_consistency_restricted(names):
 
 
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted_error(names):
+def test_mapping_consistency_restricted_error(names, star_connectivity):
     connectivity = star_connectivity(names)
     on_qubit = [names[0], names[2]]
     restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
@@ -104,7 +92,7 @@ def test_gates_qubits_pairs_error():
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
 
 
-def test_trivial():
+def test_trivial(star_connectivity):
     names = ["q4", "q3", "q2", "q1", "q0"]
     circuit = Circuit(5, wire_names=names)
     connectivity = star_connectivity(names)
@@ -114,14 +102,14 @@ def test_trivial():
     assert_placement(circuit, connectivity)
 
 
-def test_trivial_error():
+def test_trivial_error(star_connectivity):
     connectivity = star_connectivity()
     placer = Trivial(connectivity=connectivity)
     with pytest.raises(ValueError):
         placer()
 
 
-def test_trivial_restricted():
+def test_trivial_restricted(star_connectivity):
     names = ["q0", "q2"]
     circuit = Circuit(2, wire_names=names)
     connectivity = star_connectivity()
@@ -136,7 +124,7 @@ def test_trivial_restricted():
     "custom_layout",
     [["E", "D", "C", "B", "A"], {"E": 0, "D": 1, "C": 2, "B": 3, "A": 4}],
 )
-def test_custom(custom_layout):
+def test_custom(custom_layout, star_connectivity):
     circuit = Circuit(5)
     connectivity = star_connectivity(["A", "B", "C", "D", "E"])
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
@@ -147,7 +135,7 @@ def test_custom(custom_layout):
 @pytest.mark.parametrize(
     "custom_layout", [[4, 3, 2, 1, 0], {4: 0, 3: 1, 2: 2, 1: 3, 0: 4}]
 )
-def test_custom_int(custom_layout):
+def test_custom_int(custom_layout, star_connectivity):
     names = [0, 1, 2, 3, 4]
     circuit = Circuit(5, wire_names=names)
     connectivity = star_connectivity(names)
@@ -157,7 +145,7 @@ def test_custom_int(custom_layout):
 
 
 @pytest.mark.parametrize("custom_layout", [["D", "C"], {"C": 1, "D": 0}])
-def test_custom_restricted(custom_layout):
+def test_custom_restricted(custom_layout, star_connectivity):
     circuit = Circuit(2, wire_names=["C", "D"])
     connectivity = star_connectivity(["A", "B", "C", "D", "E"])
     restricted_connectivity = restrict_connectivity_qubits(connectivity, ["C", "D"])
@@ -167,7 +155,7 @@ def test_custom_restricted(custom_layout):
     assert_placement(circuit, restricted_connectivity)
 
 
-def test_custom_error_circuit():
+def test_custom_error_circuit(star_connectivity):
     circuit = Circuit(3)
     custom_layout = [4, 3, 2, 1, 0]
     connectivity = star_connectivity(names=custom_layout)
@@ -176,7 +164,7 @@ def test_custom_error_circuit():
         placer(circuit)
 
 
-def test_custom_error_type():
+def test_custom_error_type(star_connectivity):
     circuit = Circuit(5)
     connectivity = star_connectivity()
     placer = Custom(connectivity=connectivity, initial_map=1)
@@ -184,7 +172,7 @@ def test_custom_error_type():
         placer(circuit)
 
 
-def test_subgraph_perfect():
+def test_subgraph_perfect(star_connectivity):
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
     circuit = star_circuit()
@@ -207,7 +195,7 @@ def imperfect_circuit():
     return circuit
 
 
-def test_subgraph_non_perfect():
+def test_subgraph_non_perfect(star_connectivity):
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
     circuit = imperfect_circuit()
@@ -215,7 +203,7 @@ def test_subgraph_non_perfect():
     assert_placement(circuit, connectivity)
 
 
-def test_subgraph_error():
+def test_subgraph_error(star_connectivity):
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
     circuit = Circuit(5)
@@ -223,7 +211,7 @@ def test_subgraph_error():
         placer(circuit)
 
 
-def test_subgraph_restricted():
+def test_subgraph_restricted(star_connectivity):
     circuit = Circuit(4)
     circuit.add(gates.CNOT(0, 3))
     circuit.add(gates.CNOT(0, 1))
@@ -242,7 +230,7 @@ def test_subgraph_restricted():
 
 @pytest.mark.parametrize("reps", [1, 10, 100])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_random(reps, names):
+def test_random(reps, names, star_connectivity):
     connectivity = star_connectivity(names)
     placer = Random(connectivity=connectivity, samples=reps)
     circuit = star_circuit(names=names)
@@ -250,7 +238,7 @@ def test_random(reps, names):
     assert_placement(circuit, connectivity)
 
 
-def test_random_restricted():
+def test_random_restricted(star_connectivity):
     names = [0, 1, 2, 3, 4]
     circuit = Circuit(4, wire_names=names[:4])
     circuit.add(gates.CNOT(1, 3))
@@ -268,7 +256,7 @@ def test_random_restricted():
 
 @pytest.mark.parametrize("ngates", [None, 5, 13])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_reverse_traversal(ngates, names):
+def test_reverse_traversal(ngates, names, star_connectivity):
     circuit = star_circuit(names=names)
     connectivity = star_connectivity(names=names)
     routing = ShortestPaths(connectivity=connectivity)
@@ -277,7 +265,7 @@ def test_reverse_traversal(ngates, names):
     assert_placement(circuit, connectivity)
 
 
-def test_reverse_traversal_no_gates():
+def test_reverse_traversal_no_gates(star_connectivity):
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
     placer = ReverseTraversal(connectivity, routing, depth=10)
@@ -286,7 +274,7 @@ def test_reverse_traversal_no_gates():
         placer(circuit)
 
 
-def test_reverse_traversal_restricted():
+def test_reverse_traversal_restricted(star_connectivity):
     circuit = Circuit(4)
     circuit.add(gates.CNOT(1, 3))
     circuit.add(gates.CNOT(2, 1))
@@ -306,7 +294,7 @@ def test_reverse_traversal_restricted():
     assert_placement(circuit, restricted_connectivity)
 
 
-def test_star_connectivity_placer():
+def test_star_connectivity_placer(star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(1, 2))
@@ -319,7 +307,7 @@ def test_star_connectivity_placer():
 
 
 @pytest.mark.parametrize("first", [True, False])
-def test_star_connectivity_placer_error(first):
+def test_star_connectivity_placer_error(first, star_connectivity):
     circ = Circuit(5)
     if first:
         circ.add(gates.CZ(0, 1))
