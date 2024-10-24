@@ -376,6 +376,35 @@ def entangling_layer(
     return circuit
 
 
+def ghz_state(nqubits: int, **kwargs):
+    """Generates an :math:`n`-qubits Greenberger-Horne-Zeilinger (GHZ) state that takes the form
+
+    .. math::
+        |GHZ\\rangle_n = \\frac{|0\\rangle ^{\\otimes n} + |1\\rangle ^{\\otimes n}}{\\sqrt{2}}
+
+    where :math:`n` is the number of qubits.
+
+    Args:
+        nqubits (int): number of qubits, nqubits >= 2.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the GHZ state.
+    """
+    if nqubits < 2:
+        raise_error(
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be >= 2.",
+        )
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
+
+    return circuit
+
+
 def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     """Generating list of indexes representing the RBS connections
 
@@ -470,32 +499,3 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
         return gate(q0, q1, *params)
 
     return gate(q0, q1)
-
-
-def ghz_state(nqubits: int, **kwargs):
-    """Generates an :math:`n`-qubits Greenberger-Horne-Zeilinger (GHZ) state that takes the form
-
-    .. math::
-        |GHZ\\rangle_n = \\frac{|0\\rangle ^{\\otimes n} + |1\\rangle ^{\\otimes n}}{\\sqrt{2}}
-
-    where :math:`n` is the number of qubits.
-
-    Args:
-        nqubits (int): number of qubits, nqubits >= 2.
-        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
-            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the GHZ state.
-    """
-    if nqubits < 2:
-        raise_error(
-            ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be >= 2.",
-        )
-
-    circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.H(0))
-    circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
-
-    return circuit
