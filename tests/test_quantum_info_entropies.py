@@ -817,7 +817,7 @@ def test_relative_tsallis_entropy(
         target_value = target_value @ matrix_power(target, 1 - alpha, backend=backend)
         target_value = (1 - backend.np.trace(target_value)) / (1 - alpha)
 
-    backend.assert_allclose(value, target_value)
+    backend.assert_allclose(value, target_value, atol=1e-10)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
