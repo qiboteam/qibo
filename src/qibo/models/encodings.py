@@ -377,15 +377,15 @@ def entangling_layer(
 
 
 def ghz_state(nqubits: int, **kwargs):
-    """Generates an :math:`n`-qubits Greenberger-Horne-Zeilinger (GHZ) state that takes the form
+    """Generates an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
     .. math::
-        |GHZ\\rangle_n = \\frac{|0\\rangle ^{\\otimes n} + |1\\rangle ^{\\otimes n}}{\\sqrt{2}}
+        \\ket{\\text{GHZ}} = \\frac{\\ket{0}^{\\otimes n} + \\ket{1}^{\\otimes n}}{\\sqrt{2}}
 
     where :math:`n` is the number of qubits.
 
     Args:
-        nqubits (int): number of qubits, nqubits >= 2.
+        nqubits (int): number of qubits :math:`n >= 2`.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
