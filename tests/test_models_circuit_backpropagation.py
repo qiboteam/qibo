@@ -10,7 +10,7 @@ def construct_tensorflow_backend():
     try:
         from qibo.backends import construct_backend
 
-        backend = construct_backend("tensorflow")
+        backend = construct_backend(backend="qiboml", platform="tensorflow")
     except ModuleNotFoundError:  # pragma: no cover
         pytest.skip(
             "Skipping backpropagation test because tensorflow is not available."
@@ -20,19 +20,18 @@ def construct_tensorflow_backend():
 
 def test_variable_backpropagation():
     backend = construct_tensorflow_backend()
-    import tensorflow as tf
 
-    theta = tf.Variable(0.1234, dtype=tf.float64)
+    theta = backend.tf.Variable(0.1234, dtype=backend.tf.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
-    with tf.GradientTape() as tape:
+    with backend.tf.GradientTape() as tape:
         c = Circuit(1)
         c.add(gates.X(0))
         c.add(gates.RZ(0, theta))
         result = backend.execute_circuit(c)
-        loss = tf.math.real(result.state()[-1])
+        loss = backend.tf.math.real(result.state()[-1])
     grad = tape.gradient(loss, theta)
-    grad = tf.math.real(grad)
+    grad = backend.tf.math.real(grad)
 
     target_loss = np.cos(theta / 2.0)
     backend.assert_allclose(loss, target_loss)
@@ -43,17 +42,16 @@ def test_variable_backpropagation():
 
 def test_two_variables_backpropagation():
     backend = construct_tensorflow_backend()
-    import tensorflow as tf
 
-    theta = tf.Variable([0.1234, 0.4321], dtype=tf.float64)
+    theta = backend.tf.Variable([0.1234, 0.4321], dtype=backend.tf.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
-    with tf.GradientTape() as tape:
+    with backend.tf.GradientTape() as tape:
         c = Circuit(2)
         c.add(gates.RX(0, theta[0]))
         c.add(gates.RY(1, theta[1]))
         result = backend.execute_circuit(c)
-        loss = tf.math.real(result.state()[0])
+        loss = backend.tf.math.real(result.state()[0])
     grad = tape.gradient(loss, theta)
 
     t = np.array([0.1234, 0.4321]) / 2.0

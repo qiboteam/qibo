@@ -394,13 +394,7 @@ def test_frame_potential(backend, nqubits, power_t, samples):
 @pytest.mark.parametrize("return_complex", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 8])
 def test_qfim(backend, nqubits, return_complex, params_flag):
-    if backend.name not in ["pytorch", "tensorflow"]:
-        circuit = Circuit(nqubits)
-        params = np.random.rand(3)
-        params = backend.cast(params, dtype=params.dtype)
-        with pytest.raises(NotImplementedError):
-            test = quantum_fisher_information_matrix(circuit, params, backend=backend)
-    else:
+    if backend.name == "pytorch" or backend.platform == "tensorflow":
         # QFIM from https://arxiv.org/abs/2405.20408 is known analytically
         data = np.random.rand(nqubits)
         data = backend.cast(data, dtype=data.dtype)
@@ -427,3 +421,9 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         )
 
         backend.assert_allclose(qfim, target, atol=1e-6)
+    else:
+        circuit = Circuit(nqubits)
+        params = np.random.rand(3)
+        params = backend.cast(params, dtype=params.dtype)
+        with pytest.raises(NotImplementedError):
+            test = quantum_fisher_information_matrix(circuit, params, backend=backend)
