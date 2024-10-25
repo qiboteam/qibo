@@ -99,6 +99,15 @@ Peer-Reviewed Articles
 
 .. _`arXiv:2310.05851`: https://arxiv.org/abs/2310.05851
 
+* A. Pasquale, E. Pedicillo, J. Cereijo, S. Ramos-Calderer, A. Candido, G. Palazzo,
+  R. Carobene, M. Gobbo, S. Efthymiou, Y. Paul Tan, I. Roth, M. Robbiati, J. Wilkens,
+  A. Orgaz-Fuertes, D. Fuentes-Ruiz, A. Giachero, F. Brito, J. I. Latorre,
+  *Qibocal: an open-source framework for calibration of self-hosted quantum devices*
+  (2024), (`arXiv:2410.00101`_)
+
+.. _`arXiv:2410.00101`: https://arxiv.org/abs/2410.00101
+
+
 Software References in Zenodo
 -----------------------------
 
@@ -132,7 +141,6 @@ Software References in Zenodo
   qiboteam/qibosoq: Qibosoq. Zenodo. `https://doi.org/10.5281/zenodo.8083285`_.
 
 .. _`https://doi.org/10.5281/zenodo.8083285`: https://doi.org/10.5281/zenodo.8083285
-
 
 
 Conference Proceedings
