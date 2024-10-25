@@ -1,4 +1,5 @@
 import abc
+from typing import Optional, Union
 
 from qibo.config import raise_error
 
@@ -27,6 +28,26 @@ class Backend(abc.ABC):
             return self.name
         else:
             return f"{self.name} ({self.platform})"
+
+    @property
+    @abc.abstractmethod
+    def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
+        """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
+
+    @property
+    @abc.abstractmethod
+    def connectivity(
+        self,
+    ) -> Optional[list[tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
+        """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
+
+    @property
+    @abc.abstractmethod
+    def natives(self) -> Optional[list[str]]:  # pragma: no cover
+        """Return the native gates of the backend. If :class:`SimulationBackend`, return None."""
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def set_precision(self, precision):  # pragma: no cover
@@ -193,7 +214,7 @@ class Backend(abc.ABC):
     def execute_circuits(
         self, circuits, initial_states=None, nshots=None
     ):  # pragma: no cover
-        """Execute multiple :class:`qibo.models.circuit.Circuit`s in parallel."""
+        """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -318,12 +339,16 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvalues(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvalues(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvalues of a matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvectors(self, matrix, k=6):  # pragma: no cover
+    def calculate_eigenvectors(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
         """Calculate eigenvectors of a matrix."""
         raise_error(NotImplementedError)
 
@@ -349,6 +374,33 @@ class Backend(abc.ABC):
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_power(
+        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
+    ):  # pragma: no cover
+        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
+        i.e. :math:`A^{\\alpha}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
+            an integer.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
+        """Calculate the Singular Value Decomposition of ``matrix``."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_jacobian_matrix(
+        self, circuit, parameters, initial_state=None, return_complex: bool = True
+    ):  # pragma: no cover
+        """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

@@ -310,7 +310,7 @@ For example
     from qibo.models import QFT
 
     c = QFT(5)
-    print(c.draw())
+    c.draw()
     # Prints
     '''
     q0: ─H─U1─U1─U1─U1───────────────────────────x───
@@ -346,8 +346,6 @@ For example, we can draw the QFT circuit for 5-qubits:
 
         # new plot function based on matplotlib
         from qibo.ui import plot_circuit
-
-        %matplotlib inline
 
         # create a 5-qubits QFT circuit
         c = QFT(5)

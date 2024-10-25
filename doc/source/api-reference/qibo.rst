@@ -473,7 +473,8 @@ factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_
 .. math::
    \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
 
-.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+This process can be implemented with the aforementioned
+:func:`qibo.models.error_mitigation.apply_randomized_readout_mitigation`.
 
 
 Zero Noise Extrapolation (ZNE)
@@ -1703,6 +1704,12 @@ Entanglement of formation
 .. autofunction:: qibo.quantum_info.entanglement_of_formation
 
 
+Negativity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.negativity
+
+
 Entanglement fidelity
 """""""""""""""""""""
 
@@ -1739,6 +1746,12 @@ Classical relative entropy
 .. autofunction:: qibo.quantum_info.classical_relative_entropy
 
 
+Classical mutual information
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_mutual_information
+
+
 Classical Rényi entropy
 """""""""""""""""""""""
 
@@ -1755,6 +1768,11 @@ Classical Tsallis entropy
 """""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+Classical Tsallis relative entropy
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_tsallis_entropy
 
 
 von Neumann entropy
@@ -1782,6 +1800,12 @@ Relative von Neumann entropy
     this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
     and either ``state`` or ``target`` is non-Hermitian,
     an error will be raised when using `cupy` backend.
+
+
+Mutual information
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.mutual_information
 
 
 Rényi entropy
@@ -1847,6 +1871,12 @@ Trace distance
     more importantly, the functions are intended to be used on Hermitian inputs.
     When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
     raised when using `cupy` backend.
+
+
+Hilbert-Schmidt inner product
+"""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_inner_product
 
 
 Hilbert-Schmidt distance
@@ -1921,6 +1951,12 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Fisher Information Matrix
+"""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.quantum_fisher_information_matrix
+
+
 Linear Algebra Operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1945,10 +1981,34 @@ Partial trace
 .. autofunction:: qibo.quantum_info.partial_trace
 
 
+Partial transpose
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.partial_transpose
+
+
 Matrix exponentiation
 """""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
+
+
+Matrix power
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_power
+
+
+Singular value decomposition
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.singular_value_decomposition
+
+
+Schmidt decomposition
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.schmidt_decomposition
 
 
 Quantum Networks
@@ -2382,7 +2442,13 @@ Hellinger fidelity
 Hellinger shot error
 """"""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.hellinger_fidelity
+.. autofunction:: qibo.quantum_info.hellinger_shot_error
+
+
+Total variation distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.total_variation_distance
 
 
 Haar integral
@@ -2601,7 +2667,7 @@ As for the other backends, the Clifford backend can be set with
     import qibo
     qibo.set_backend("clifford", platform="numpy")
 
-by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used
+by specifying the engine used for calculation, if not provided the current backend is used
 
 .. testcode::  python
 

@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import Optional
 
 import numpy as np
+import optuna
 
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
@@ -55,7 +56,7 @@ class DoubleBracketScheduling(Enum):
     """Define the DBI scheduling strategies."""
 
     hyperopt = hyperopt_step
-    """Use hyperopt package."""
+    """Use optuna package to hyperoptimize the DBI step."""
     grid_search = grid_search_step
     """Use greedy grid search."""
     polynomial_approximation = polynomial_step

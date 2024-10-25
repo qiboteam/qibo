@@ -1,5 +1,7 @@
 """PyTorch backend."""
 
+from typing import Union
+
 import numpy as np
 
 from qibo import __version__
@@ -12,24 +14,19 @@ class TorchMatrices(NumpyMatrices):
 
     Args:
         dtype (torch.dtype): Data type of the matrices.
-        requires_grad (bool): If ``True`` the matrices require gradient.
     """
 
-    def __init__(self, dtype, requires_grad):
-        import torch  # pylint: disable=import-outside-toplevel
+    def __init__(self, dtype):
+        import torch  # pylint: disable=import-outside-toplevel  # type: ignore
 
         super().__init__(dtype)
         self.np = torch
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     def _cast(self, x, dtype):
         flattened = [item for sublist in x for item in sublist]
         tensor_list = [self.np.as_tensor(i, dtype=dtype) for i in flattened]
         return self.np.stack(tensor_list).reshape(len(x), len(x))
-
-    def _cast_parameter(self, x):
-        return self.np.tensor(x, dtype=self.dtype, requires_grad=self.requires_grad)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.dtype)
@@ -38,10 +35,7 @@ class TorchMatrices(NumpyMatrices):
 class PyTorchBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
-        import torch  # pylint: disable=import-outside-toplevel
-
-        # Global variable to enable or disable gradient calculation
-        self.gradients = True
+        import torch  # pylint: disable=import-outside-toplevel  # type: ignore
 
         self.np = torch
 
@@ -52,8 +46,11 @@ class PyTorchBackend(NumpyBackend):
             "torch": self.np.__version__,
         }
 
+        # Default data type used for the gate matrices is complex128
         self.dtype = self._torch_dtype(self.dtype)
-        self.matrices = TorchMatrices(self.dtype, requires_grad=self.gradients)
+        # Default data type used for the real gate parameters is float64
+        self.parameter_dtype = self._torch_dtype("float64")
+        self.matrices = TorchMatrices(self.dtype)
         self.device = self.np.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.tensor_types = (self.np.Tensor, np.ndarray)
@@ -61,16 +58,12 @@ class PyTorchBackend(NumpyBackend):
         # These functions in Torch works in a different way than numpy or have different names
         self.np.transpose = self.np.permute
         self.np.copy = self.np.clone
+        self.np.power = self.np.pow
         self.np.expand_dims = self.np.unsqueeze
         self.np.mod = self.np.remainder
         self.np.right_shift = self.np.bitwise_right_shift
         self.np.sign = self.np.sgn
         self.np.flatnonzero = lambda x: self.np.nonzero(x).flatten()
-
-    def requires_grad(self, requires_grad):
-        """Enable or disable gradient calculation."""
-        self.gradients = requires_grad
-        self.matrices.requires_grad = requires_grad
 
     def _torch_dtype(self, dtype):
         if dtype == "float":
@@ -85,7 +78,6 @@ class PyTorchBackend(NumpyBackend):
         x,
         dtype=None,
         copy: bool = False,
-        requires_grad: bool = None,
     ):
         """Casts input as a Torch tensor of the specified dtype.
 
@@ -100,12 +92,7 @@ class PyTorchBackend(NumpyBackend):
                 Defaults to ``None``.
             copy (bool, optional): If ``True``, the input tensor is copied before casting.
                 Defaults to ``False``.
-            requires_grad (bool, optional): If ``True``, the input tensor requires gradient.
-                If ``False``, the input tensor does not require gradient.
-                If ``None``, the default gradient setting of the backend is used.
         """
-        if requires_grad is None:
-            requires_grad = self.gradients
 
         if dtype is None:
             dtype = self.dtype
@@ -114,21 +101,67 @@ class PyTorchBackend(NumpyBackend):
         elif not isinstance(dtype, self.np.dtype):
             dtype = self._torch_dtype(str(dtype))
 
-        # check if dtype is an integer to remove gradients
-        if dtype in [self.np.int32, self.np.int64, self.np.int8, self.np.int16]:
-            requires_grad = False
-
         if isinstance(x, self.np.Tensor):
             x = x.to(dtype)
-        elif isinstance(x, list) and all(isinstance(row, self.np.Tensor) for row in x):
+        elif (
+            isinstance(x, list)
+            and len(x) > 0
+            and all(isinstance(row, self.np.Tensor) for row in x)
+        ):
             x = self.np.stack(x)
         else:
-            x = self.np.tensor(x, dtype=dtype, requires_grad=requires_grad)
+            x = self.np.tensor(x, dtype=dtype)
 
         if copy:
             return x.clone()
-
         return x
+
+    def matrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            for parameter in ["theta", "phi"]:
+                if not isinstance(gate.init_kwargs[parameter], self.np.Tensor):
+                    gate.init_kwargs[parameter] = self._cast_parameter(
+                        gate.init_kwargs[parameter], trainable=gate.trainable
+                    )
+
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+            return _matrix
+        else:
+            new_parameters = []
+            for parameter in gate.parameters:
+                if not isinstance(parameter, self.np.Tensor):
+                    parameter = self._cast_parameter(
+                        parameter, trainable=gate.trainable
+                    )
+                elif parameter.requires_grad:
+                    gate.trainable = True
+                new_parameters.append(parameter)
+            gate.parameters = tuple(new_parameters)
+        _matrix = _matrix(*gate.parameters)
+        return _matrix
+
+    def _cast_parameter(self, x, trainable):
+        """Cast a gate parameter to a torch tensor.
+
+        Args:
+            x (Union[int, float, complex]): Parameter to be casted.
+            trainable (bool): If ``True``, the tensor requires gradient.
+        """
+        if isinstance(x, int) and trainable:
+            return self.np.tensor(x, dtype=self.parameter_dtype, requires_grad=True)
+        if isinstance(x, float):
+            return self.np.tensor(
+                x, dtype=self.parameter_dtype, requires_grad=trainable
+            )
+        return self.np.tensor(x, dtype=self.dtype, requires_grad=trainable)
 
     def is_sparse(self, x):
         if isinstance(x, self.np.Tensor):
@@ -176,12 +209,12 @@ class PyTorchBackend(NumpyBackend):
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.np.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eigvals(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: int = True):
         if hermitian:
             return self.np.linalg.eigh(matrix)  # pylint: disable=not-callable
         return self.np.linalg.eig(matrix)  # pylint: disable=not-callable
@@ -194,6 +227,32 @@ class PyTorchBackend(NumpyBackend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.conj(eigenvectors).T
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        copied = self.cast(matrix, copy=True)
+        copied = self.to_numpy(copied) if power >= 0.0 else copied.detach()
+        copied = super().calculate_matrix_power(copied, power, precision_singularity)
+        return self.cast(copied, dtype=copied.dtype)
+
+    def calculate_jacobian_matrix(
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
+    ):
+        copied = circuit.copy(deep=True)
+
+        def func(parameters):
+            """torch requires object(s) to be wrapped in a function."""
+            copied.set_parameters(parameters)
+            state = self.execute_circuit(copied, initial_state=initial_state).state()
+            if return_complex:
+                return self.np.real(state), self.np.imag(state)
+            return self.np.real(state)
+
+        return self.np.autograd.functional.jacobian(func, parameters)
 
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":

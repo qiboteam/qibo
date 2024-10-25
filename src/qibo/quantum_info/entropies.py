@@ -3,13 +3,11 @@
 from typing import Union
 
 import numpy as np
-from scipy.linalg import fractional_matrix_power
 
 from qibo.backends import _check_backend
-from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info.linalg_operations import partial_trace
-from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
+from qibo.quantum_info.linalg_operations import matrix_power, partial_trace
+from qibo.quantum_info.metrics import _check_hermitian, purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
@@ -26,11 +24,11 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
         prob_dist (ndarray or list): a probability array :math:`\\mathbf{p}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        (float): Shannon entropy :math:`H(\\mathcal{p})`.
+        float: Shannon entropy :math:`H(\\mathcal{p})`.
     """
     backend = _check_backend(backend)
 
@@ -78,7 +76,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
-    ..math::
+    .. math::
         D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
             \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
 
@@ -91,7 +89,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
@@ -143,6 +141,40 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
     return entropy_p - relative
 
 
+def classical_mutual_information(
+    prob_dist_joint, prob_dist_p, prob_dist_q, base: float = 2, backend=None
+):
+    """Calculates the classical mutual information of two random variables.
+
+    Given two random variables :math:`(X, \\, Y)`, their mutual information is given by
+
+    .. math::
+        I(X, \\, Y) \\equiv H(p(x)) + H(q(y)) - H(p(x, \\, y)) \\, ,
+
+    where :math:`p(x, \\, y)` is the joint probability distribution of :math:`(X, Y)`,
+    :math:`p(x)` is the marginal probability distribution of :math:`X`,
+    :math:`q(y)` is the marginal probability distribution of :math:`Y`,
+    and :math:`H(\\cdot)` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+
+    Args:
+        prob_dist_joint (ndarray): joint probability distribution :math:`p(x, \\, y)`.
+        prob_dist_p (ndarray): marginal probability distribution :math:`p(x)`.
+        prob_dist_q (ndarray): marginal probability distribution :math:`q(y)`.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Mutual information :math:`I(X, \\, Y)`.
+    """
+    return (
+        shannon_entropy(prob_dist_p, base, backend)
+        + shannon_entropy(prob_dist_q, base, backend)
+        - shannon_entropy(prob_dist_joint, base, backend)
+    )
+
+
 def classical_renyi_entropy(
     prob_dist, alpha: Union[float, int], base: float = 2, backend=None
 ):
@@ -174,7 +206,7 @@ def classical_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical Rényi entropy :math:`H_{\\alpha}`.
@@ -263,7 +295,7 @@ def classical_relative_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
@@ -348,7 +380,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
@@ -396,7 +428,57 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     total_sum = prob_dist**alpha
     total_sum = backend.np.sum(total_sum)
 
-    return (1 / (1 - alpha)) * (total_sum - 1)
+    return (1 / (alpha - 1)) * (1 - total_sum)
+
+
+def classical_relative_tsallis_entropy(
+    prob_dist_p, prob_dist_q, alpha: float, base: float = 2, backend=None
+):
+    """Calculate the classical relative Tsallis entropy between two discrete probability distributions.
+
+    Given a discrete random variable :math:`\\chi` that has values :math:`x` in the set
+    :math:`\\mathcal{X}` with probability :math:`\\mathrm{p}(x)` and a discrete random variable
+    :math:`\\upsilon` that has the values :math:`x` in the same set :math:`\\mathcal{X}` with
+    probability :math:`\\mathrm{q}(x)`, their relative Tsallis entropy is given by
+
+    .. math::
+        D_{\\alpha}^{\\text{ts}}(\\chi \\, \\| \\, \\upsilon) = \\sum_{x \\in \\mathcal{X}} \\,
+            \\mathrm{p}^{\\alpha}(x) \\, \\ln_{\\alpha}
+            \\left( \\frac{\\mathrm{p}(x)}{\\mathrm{q}(x)} \\right) \\, ,
+
+    where :math:`\\ln_{\\alpha}(x) \\equiv \\frac{x^{1 - \\alpha} - 1}{1 - \\alpha}`
+    is the so-called :math:`\\alpha`-logarithm. When :math:`\\alpha = 1`, it reduces to
+    :class:`qibo.quantum_info.entropies.classical_relative_entropy`.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        alpha (float): entropic index.
+        base (float): the base of the log used when :math:`\\alpha = 1`. Defaults to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        float: Tsallis relative entropy :math:`D_{\\alpha}^{\\text{ts}}`.
+    """
+    if alpha == 1.0:
+        return classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
+
+    backend = _check_backend(backend)
+
+    if isinstance(prob_dist_p, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+
+    if isinstance(prob_dist_q, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    element_wise = prob_dist_p**alpha
+    element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q, alpha)
+
+    return backend.np.sum(element_wise)
 
 
 def von_neumann_entropy(
@@ -424,7 +506,7 @@ def von_neumann_entropy(
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
@@ -458,9 +540,7 @@ def von_neumann_entropy(
 
     eigenvalues = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
 
     log_prob = backend.np.where(
@@ -500,7 +580,7 @@ def relative_von_neumann_entropy(
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
@@ -549,15 +629,11 @@ def relative_von_neumann_entropy(
 
     eigenvalues_state = backend.calculate_eigenvalues(
         state,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
     eigenvalues_target = backend.calculate_eigenvalues(
         target,
-        hermitian=(
-            not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend)
-        ),
+        hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
     )
 
     log_state = backend.np.where(
@@ -578,6 +654,50 @@ def relative_von_neumann_entropy(
     relative = backend.np.sum(eigenvalues_state * log_target)
 
     return float(backend.np.real(entropy_state - relative))
+
+
+def mutual_information(
+    state, partition, base: float = 2, check_hermitian: bool = False, backend=None
+):
+    """Calculates the mutual information of a bipartite state.
+
+    Given a qubit ``partition`` :math:`A`, the mutual information
+    of state :math:`\\rho` is given by
+
+    .. math::
+        I(\\rho) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
+
+    where :math:`B` is the remaining qubits that are not in partition :math:`A`,
+    and :math:`S(\\cdot)` is the :func:`qibo.quantum_info.von_neumann_entropy`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        float: Mutual information :math:`I(\\rho)` of ``state`` :math:`\\rho`.
+    """
+    nqubits = np.log2(len(state))
+
+    if not nqubits.is_integer():
+        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+
+    partition_b = set(list(range(int(nqubits)))) ^ set(list(partition))
+
+    state_a = partial_trace(state, partition_b, backend)
+    state_b = partial_trace(state, partition, backend)
+
+    return (
+        von_neumann_entropy(state_a, base, check_hermitian, False, backend)
+        + von_neumann_entropy(state_b, base, check_hermitian, False, backend)
+        - von_neumann_entropy(state, base, check_hermitian, False, backend)
+    )
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
@@ -608,7 +728,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Rényi entropy :math:`H_{\\alpha}`.
@@ -652,7 +772,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             / np.log2(base)
         )
 
-    log = backend.np.log2(backend.np.trace(_matrix_power(state, alpha, backend)))
+    log = backend.np.log2(backend.np.trace(matrix_power(state, alpha, backend=backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -680,7 +800,7 @@ def relative_renyi_entropy(
     This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
 
     .. note::
-        Function raises ``NotImplementedError`` when ``target`` :math:`sigma`
+        Function raises ``NotImplementedError`` when ``target`` :math:`\\sigma`
         is a pure state and :math:`\\alpha > 1`. This is due to the fact that
         it is not possible to calculate :math:`\\sigma^{1 - \\alpha}` when
         :math:`\\alpha > 1` and :math:`\\sigma` is a projector, i.e. a singular matrix.
@@ -692,7 +812,7 @@ def relative_renyi_entropy(
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
@@ -751,8 +871,8 @@ def relative_renyi_entropy(
         return relative_von_neumann_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
-        new_state = _matrix_power(state, 0.5, backend)
-        new_target = _matrix_power(target, 0.5, backend)
+        new_state = matrix_power(state, 0.5, backend=backend)
+        new_target = matrix_power(target, 0.5, backend=backend)
 
         log = backend.np.log2(
             backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
@@ -760,8 +880,8 @@ def relative_renyi_entropy(
 
         return -2 * log / np.log2(base)
 
-    log = _matrix_power(state, alpha, backend)
-    log = log @ _matrix_power(target, 1 - alpha, backend)
+    log = matrix_power(state, alpha, backend=backend)
+    log = log @ matrix_power(target, 1 - alpha, backend=backend)
     log = backend.np.log2(backend.np.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
@@ -784,7 +904,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
@@ -819,7 +939,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (
-        backend.np.trace(_matrix_power(state, alpha, backend)) - 1
+        backend.np.trace(matrix_power(state, alpha, backend=backend)) - 1
     )
 
 
@@ -850,7 +970,7 @@ def entanglement_entropy(
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
@@ -883,17 +1003,7 @@ def entanglement_entropy(
     return entropy_entanglement
 
 
-def _matrix_power(matrix, alpha, backend):
-    """Calculates ``matrix ** alpha`` according to backend."""
-    if backend.__class__.__name__ in [
-        "CupyBackend",
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        new_matrix = backend.to_numpy(matrix)
-    else:
-        new_matrix = backend.np.copy(matrix)
-
-    if len(new_matrix.shape) == 1:
-        new_matrix = backend.np.outer(new_matrix, backend.np.conj(new_matrix))
-
-    return backend.cast(fractional_matrix_power(backend.to_numpy(new_matrix), alpha))
+def _q_logarithm(x, q: float):
+    """Generalization of logarithm function necessary for classical (relative) Tsallis entropy."""
+    factor = 1 - q
+    return (x**factor - 1) / factor

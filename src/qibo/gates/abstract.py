@@ -118,8 +118,10 @@ class Gate:
             raise ValueError(f"Unknown gate {raw['_class']}")
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
-        if raw["_class"] == "M" and raw["measurement_result"]["samples"] is not None:
-            gate.result.register_samples(raw["measurement_result"]["samples"])
+        if raw["_class"] == "M":
+            if raw["measurement_result"]["samples"] is not None:
+                gate.result.register_samples(raw["measurement_result"]["samples"])
+            return gate
         try:
             return gate.controlled_by(*raw["_control_qubits"])
         except RuntimeError as e:
@@ -268,7 +270,7 @@ class Gate:
                 c.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
                 c.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
                 c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
-                print(c.draw())
+                c.draw()
             .. testoutput::
 
                 q0: ───X─────
@@ -397,7 +399,7 @@ class Gate:
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses
-                :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+                the current backend. Defaults to ``None``.
 
         Returns:
             ndarray: Matrix representation of gate.

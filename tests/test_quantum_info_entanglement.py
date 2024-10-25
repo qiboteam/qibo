@@ -9,6 +9,7 @@ from qibo.quantum_info.entanglement import (
     entanglement_of_formation,
     entangling_capability,
     meyer_wallach_entanglement,
+    negativity,
 )
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
@@ -64,6 +65,27 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
     )
     backend.assert_allclose(concur, 0.0, atol=10 * PRECISION_TOL)
     backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("p", [1 / 5, 1 / 3 + 0.01, 1.0])
+def test_negativity(backend, p):
+    # werner state
+    zero, one = np.array([1, 0]), np.array([0, 1])
+    psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
+    psi = np.outer(psi, psi.T)
+    psi = backend.cast(psi)
+    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+
+    neg = negativity(state, [0], backend=backend)
+
+    if p == 1 / 5:
+        target = 0.0
+    elif p == 1.0:
+        target = 1 / 2
+    else:
+        target = 3 / 400
+
+    backend.assert_allclose(neg, target, atol=1e-10)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
@@ -126,21 +148,28 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
 
 
 def test_meyer_wallach_entanglement(backend):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3, 2).astype(complex)
+        state = backend.cast(state, dtype=state.dtype)
+        test = meyer_wallach_entanglement(state, backend=backend)
+
     nqubits = 2
 
     circuit1 = Circuit(nqubits)
     circuit1.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+    state1 = backend.execute_circuit(circuit1).state()
 
     circuit2 = Circuit(nqubits)
     circuit2.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
     circuit2.add(gates.CNOT(0, 1))
+    state2 = backend.execute_circuit(circuit2).state()
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=PRECISION_TOL
+        meyer_wallach_entanglement(state1, backend=backend), 0.0, atol=1e-6, rtol=1e-6
     )
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=PRECISION_TOL
+        meyer_wallach_entanglement(state2, backend=backend), 1.0, atol=1e-6, rtol=1e-6
     )
 
 

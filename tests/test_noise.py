@@ -85,8 +85,8 @@ def test_kraus_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nshots", [10, 100])
 def test_unitary_error(backend, density_matrix, nshots):
-    u1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    u2 = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    u1 = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 0, 1.0], [0, 0, 1.0, 0]])
+    u2 = np.array([[0, 1.0, 0, 0], [1.0, 0, 0, 0], [0, 0, 0, 1.0], [0, 0, 1.0, 0]])
     qubits = (0, 1)
     p1, p2 = (0.3, 0.7)
 
@@ -758,7 +758,7 @@ def test_ibmq_noise(
 
     noisy_circuit_target = noise_model_target.apply(circuit)
 
-    assert noisy_circuit.draw() == noisy_circuit_target.draw()
+    assert str(noisy_circuit) == str(noisy_circuit_target)
 
     backend.set_seed(2024)
     state = backend.execute_circuit(noisy_circuit, nshots=10)

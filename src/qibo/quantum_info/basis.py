@@ -1,4 +1,3 @@
-from functools import reduce
 from itertools import product
 from typing import Optional
 
@@ -28,18 +27,18 @@ def pauli_basis(
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
-        sparse (bool, optional) If ``True``, retuns Pauli basis in a sparse
-            representation. Default is ``False``.
+        sparse (bool, optional): If ``True``, retuns Pauli basis in a sparse
+            representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
-            forced. Default is ``None``.
+            forced. Defaults to ``None``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
@@ -92,43 +91,41 @@ def pauli_basis(
     backend = _check_backend(backend)
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
-    basis_single = [pauli_labels[label] for label in pauli_order]
+    dim = 2**nqubits
+    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
+    einsum = np.einsum if backend.name == "tensorflow" else backend.np.einsum
 
     if nqubits > 1:
-        basis_full = list(product(basis_single, repeat=nqubits))
-        basis_full = [reduce(np.kron, row) for row in basis_full]
+        input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
+        output_indices = (i for indices in zip(*input_indices) for i in indices)
+        operands = [basis_single for _ in range(nqubits)]
+        inputs = [item for pair in zip(operands, input_indices) for item in pair]
+        basis_full = einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
     else:
         basis_full = basis_single
 
-    basis_full = backend.cast(basis_full, dtype=basis_full[0].dtype)
-
     if vectorize and sparse:
-        basis, indexes = [], []
-        for row in basis_full:
-            row = vectorization(row, order=order, backend=backend)
-            row_indexes = backend.np.flatnonzero(row)
-            indexes.append(row_indexes)
-            basis.append(row[row_indexes])
-            del row
+        if backend.name == "tensorflow":
+            nonzero = np.nonzero
+        elif backend.name == "pytorch":
+            nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
+        else:
+            nonzero = backend.np.nonzero
+        basis = vectorization(basis_full, order=order, backend=backend)
+        indices = nonzero(basis)
+        basis = basis[indices].reshape(-1, dim)
+        indices = indices[1].reshape(-1, dim)
+
     elif vectorize and not sparse:
-        basis = [
-            vectorization(
-                backend.cast(matrix, dtype=matrix.dtype), order=order, backend=backend
-            )
-            for matrix in basis_full
-        ]
+        basis = vectorization(basis_full, order=order, backend=backend)
     else:
         basis = basis_full
-
-    basis = backend.cast(basis, dtype=basis[0].dtype)
 
     if normalize:
         basis = basis / np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = backend.cast(indexes, dtype=indexes[0][0].dtype)
-
-        return basis, indexes
+        return basis, indices
 
     return basis
 
@@ -148,15 +145,12 @@ def comp_basis_to_pauli(
     The unitary :math:`U` is given by
 
     .. math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{k}{P_{k}} \\,\\, ,
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, |k)(P_{k}| \\,\\, ,
 
-    where :math:`\\ket{P_{k}}` is the system-vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}`, and :math:`\\ket{k}` is the computational
-    basis element.
-
-    When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
-    representation :math:`\\ket{\\rho'}`, one should use ``order="system"``
-    in :func:`vectorization`.
+    where :math:`|P_{k})` is the vectorization of the :math:`k`-th
+    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    of the :math:`k`-th computational basis element.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Example:
         .. code-block:: python
@@ -174,16 +168,16 @@ def comp_basis_to_pauli(
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
-            sparse representation. Default is ``False``.
+            sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
@@ -237,23 +231,28 @@ def pauli_to_comp_basis(
     The unitary :math:`U` is given by
 
     .. math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{P_{k}}{b_{k}} \\, .
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, |P_{k})(b_{k}| \\, ,
+
+    where :math:`|P_{k})` is the vectorization of the :math:`k`-th
+    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
+    of the :math:`k`-th computational basis element.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
-            sparse representation. Default is ``False``.
+            sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,

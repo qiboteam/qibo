@@ -1,11 +1,12 @@
 import collections
 import os
+from typing import Union
 
 import numpy as np
 
 from qibo import __version__
 from qibo.backends.npmatrices import NumpyMatrices
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.numpy import NumpyBackend, _calculate_negative_power_singular_matrix
 from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
@@ -15,7 +16,7 @@ class TensorflowMatrices(NumpyMatrices):
     def __init__(self, dtype):
         super().__init__(dtype)
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error  # type: ignore
 
         self.tf = tf
         self.np = tnp
@@ -35,7 +36,7 @@ class TensorflowBackend(NumpyBackend):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
 
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error  # type: ignore
 
         if TF_LOG_LEVEL >= 2:
             tf.get_logger().setLevel("ERROR")
@@ -177,12 +178,12 @@ class TensorflowBackend(NumpyBackend):
             return self.np.trace(state)
         return self.tf.norm(state, ord=order)
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.tf.linalg.eigvalsh(matrix)
         return self.tf.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if hermitian:
             return self.tf.linalg.eigh(matrix)
         return self.tf.linalg.eig(matrix)
@@ -191,6 +192,53 @@ class TensorflowBackend(NumpyBackend):
         if eigenvectors is None or self.is_sparse(matrix):
             return self.tf.linalg.expm(-1j * a * matrix)
         return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.tf.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.tf, self
+                )
+
+        return super().calculate_matrix_power(matrix, power, precision_singularity)
+
+    def calculate_singular_value_decomposition(self, matrix):
+        # needed to unify order of return
+        S, U, V = self.tf.linalg.svd(matrix)
+        return U, S, self.np.conj(self.np.transpose(V))
+
+    def calculate_jacobian_matrix(
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
+    ):
+        copied = circuit.copy(deep=True)
+
+        # necessary for the tape to properly watch the variables
+        parameters = self.tf.Variable(parameters)
+
+        with self.tf.GradientTape(persistent=return_complex) as tape:
+            copied.set_parameters(parameters)
+            state = self.execute_circuit(copied, initial_state=initial_state).state()
+            real = self.np.real(state)
+            if return_complex:
+                imag = self.np.imag(state)
+
+        if return_complex:
+            return tape.jacobian(real, parameters), tape.jacobian(imag, parameters)
+
+        return tape.jacobian(real, parameters)
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.is_sparse(matrix1) or self.is_sparse(matrix2):

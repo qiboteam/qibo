@@ -22,7 +22,7 @@ class Hamiltonian(AbstractHamiltonian):
             Sparse matrices based on ``scipy.sparse`` for ``numpy`` / ``qibojit`` backends
             (or on ``tf.sparse`` for the ``tensorflow`` backend) are also supported.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
 
@@ -80,7 +80,7 @@ class Hamiltonian(AbstractHamiltonian):
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair ``(target, matrix)``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-                in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+                in the execution. If ``None``, it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -315,7 +315,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             to the symbolic Hamiltonian, such as the parameters in the
             :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
 
@@ -564,7 +564,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if len(term.factors) != len(set(term.factors)):
                 raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
-        counts = np.array(list(freq.values())) / sum(freq.values())
+        counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
+            freq.values()
+        )
         qubits = []
         for term in terms:
             qubits_term = []

@@ -11,43 +11,46 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
+from qibo.quantum_info.linalg_operations import singular_value_decomposition
 
 
 def vectorization(state, order: str = "row", backend=None):
-    """Returns state :math:`\\rho` in its Liouville
-    representation :math:`|\\rho\\rangle\\rangle`.
+    """Returns state :math:`\\rho` in its Liouville representation :math:`|\\rho)`.
 
     If ``order="row"``, then:
 
     .. math::
-        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l} \\, .
 
     If ``order="column"``, then:
 
     .. math::
-        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
+        |\\rho) = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k} \\, .
+
+    If ``state`` is a 3-dimensional tensor, it is interpreted as a batch of states.
 
     Args:
-        state: state vector or density matrix.
+        state (ndarray): statevector, density matrix, an array of statevectors,
+            or an array of density matrices.
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
             performed. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of ``state``.
     """
     if (
-        (len(state.shape) >= 3)
+        (len(state.shape) > 3)
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}.",
         )
 
     if not isinstance(order, str):
@@ -63,37 +66,48 @@ def vectorization(state, order: str = "row", backend=None):
 
     backend = _check_backend(backend)
 
+    dims = state.shape[-1]
+
     if len(state.shape) == 1:
         state = backend.np.outer(state, backend.np.conj(state))
+    elif len(state.shape) == 3 and state.shape[1] == 1:
+        state = backend.np.einsum(
+            "aij,akl->aijkl", state, backend.np.conj(state)
+        ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.np.reshape(state, (1, -1))[0]
+        state = backend.np.reshape(state, (-1, dims**2))
     elif order == "column":
-        state = state.T
-        state = backend.np.reshape(state, (1, -1))[0]
+        indices = list(range(len(state.shape)))
+        indices[-2:] = reversed(indices[-2:])
+        state = backend.np.transpose(state, indices)
+        state = backend.np.reshape(state, (-1, dims**2))
     else:
-        dim = len(state)
-        nqubits = int(np.log2(dim))
+        nqubits = int(np.log2(state.shape[-1]))
 
-        new_axis = []
+        new_axis = [0]
         for qubit in range(nqubits):
-            new_axis += [qubit + nqubits, qubit]
+            new_axis.extend([qubit + nqubits + 1, qubit + 1])
 
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
+        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
         state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1,))
+        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
+
+    state = backend.np.squeeze(
+        state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
+    )
 
     return state
 
 
 def unvectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` from its Liouville
-    representation :math:`|\\rho\\rangle\\rangle`. This operation is
+    representation :math:`|\\rho)`. This operation is
     the inverse function of :func:`vectorization`, i.e.
 
     .. math::
         \\begin{align}
-            \\rho &= \\text{unvectorization}(|\\rho\\rangle\\rangle) \\nonumber \\\\
+            \\rho &= \\text{unvectorization}(|\\rho)) \\nonumber \\\\
             &= \\text{unvectorization}(\\text{vectorization}(\\rho)) \\nonumber
         \\end{align}
 
@@ -105,7 +119,7 @@ def unvectorization(state, order: str = "row", backend=None):
             performed. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Density matrix of ``state``.
@@ -152,9 +166,9 @@ def to_choi(channel, order: str = "row", backend=None):
     """Converts quantum ``channel`` :math:`U` to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = | U \\rangle\\rangle \\langle\\langle U | \\, ,
+        \\Lambda = | U ) ( U | \\, ,
 
-    where :math:`| \\cdot \\rangle\\rangle` is the :func:`qibo.quantum_info.vectorization`
+    where :math:`| \\cdot )` is the :func:`qibo.quantum_info.vectorization`
     operation.
 
     Args:
@@ -165,7 +179,7 @@ def to_choi(channel, order: str = "row", backend=None):
             performed. Default is ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its Choi representation.
@@ -191,7 +205,7 @@ def to_liouville(channel, order: str = "row", backend=None):
             performed. Default is ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its Liouville representation.
@@ -228,7 +242,7 @@ def to_pauli_liouville(
             Pauli elements. Default is "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
@@ -272,7 +286,7 @@ def to_chi(
             Pauli elements. Default is "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: quantum channel in its :math:`\\chi`-representation.
@@ -318,7 +332,7 @@ def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
@@ -349,7 +363,7 @@ def choi_to_pauli(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -376,7 +390,9 @@ def choi_to_kraus(
 
     .. math::
         \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\,
-            |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
+            |\\tilde{K}_{\\alpha})(\\tilde{K}_{\\alpha}| \\, .
+
+    where :math:`|\\cdot)` is the :func:`qibo.quantum_info.vectorization` operation.
 
     This is the spectral decomposition of :math:`\\Lambda`, Hence, the set
     :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
@@ -385,7 +401,7 @@ def choi_to_kraus(
 
     .. math::
         K_{\\alpha} = \\lambda_{\\alpha} \\,
-            \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
+            \\text{unvectorization}(|\\tilde{K}_{\\alpha})) \\, .
 
     If :math:`\\mathcal{E}` is not CP, then spectral composition is replaced by
     a singular value decomposition (SVD), i.e.
@@ -420,7 +436,7 @@ def choi_to_kraus(
             Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         tuple(ndarray, ndarray): The set
@@ -482,10 +498,12 @@ def choi_to_kraus(
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = np.linalg.svd(backend.to_numpy(choi_super_op))
-        U = np.transpose(U)
-        coefficients = np.sqrt(coefficients)
-        V = np.conj(V)
+        U, coefficients, V = singular_value_decomposition(
+            choi_super_op, backend=backend
+        )
+        U = U.T
+        coefficients = backend.np.sqrt(coefficients)
+        V = backend.np.conj(V)
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
@@ -544,7 +562,7 @@ def choi_to_chi(
             single-qubit Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
     Returns:
         ndarray: Chi-matrix representation of the quantum channel.
     """
@@ -600,7 +618,7 @@ def choi_to_stinespring(
             environment in its ground state. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of quantum channel.
@@ -638,7 +656,11 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
+        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha})( K_{\\alpha}|
+
+    where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
+    :math:`K_{\\alpha}`.
+    For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -653,7 +675,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of the Kraus channel.
@@ -699,7 +721,7 @@ def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
@@ -735,7 +757,7 @@ def kraus_to_pauli(
             single-qubit Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -757,10 +779,11 @@ def kraus_to_chi(
     of quantum channel to  its :math:`\\chi`-matrix representation.
 
     .. math::
-        \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
+        \\chi = \\sum_{\\alpha} \\, |c_{\\alpha})( c_{\\alpha}|,
 
-    where :math:`|c_{\\alpha}\\rangle\\rangle \\cong |K_{\\alpha}\\rangle\\rangle`
-    in Pauli-Liouville basis.
+    where :math:`|c_{\\alpha}) \\cong |K_{\\alpha})` in Pauli-Liouville basis,
+    and :math:`| \\cdot )` is the :func:`qibo.quantum_info.vectorization`
+    operation.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -780,7 +803,7 @@ def kraus_to_chi(
             Pauli elements in the Pauli basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Chi-matrix representation of the Kraus channel.
@@ -844,7 +867,7 @@ def kraus_to_stinespring(
             environment in its ground state. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Stinespring representation (restricted unitary) of the Kraus channel.
@@ -928,7 +951,7 @@ def liouville_to_choi(super_op, order: str = "row", backend=None):
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of quantum channel.
@@ -959,7 +982,7 @@ def liouville_to_pauli(
             Pauli elements in the basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -1016,7 +1039,7 @@ def liouville_to_kraus(
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Kraus operators of quantum channel and their respective coefficients.
@@ -1059,7 +1082,7 @@ def liouville_to_chi(
             Pauli elements in the basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Chi-matrix representation of quantum channel.
@@ -1118,7 +1141,7 @@ def liouville_to_stinespring(
             environment in its ground state. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Stinespring representation of quantum channel.
@@ -1160,7 +1183,7 @@ def pauli_to_liouville(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Liouville representation.
@@ -1212,7 +1235,7 @@ def pauli_to_choi(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of the superoperator.
@@ -1254,7 +1277,7 @@ def pauli_to_kraus(
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Kraus operators and their coefficients.
@@ -1289,7 +1312,7 @@ def pauli_to_chi(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Chi-matrix representation of the quantum channel.
@@ -1349,7 +1372,7 @@ def pauli_to_stinespring(
             environment in its ground state. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Stinestring representation of quantum channel.
@@ -1404,7 +1427,7 @@ def chi_to_choi(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of quantum channel.
@@ -1449,7 +1472,7 @@ def chi_to_liouville(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
@@ -1495,7 +1518,7 @@ def chi_to_pauli(
             Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -1558,7 +1581,7 @@ def chi_to_kraus(
             Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Kraus operators and their coefficients.
@@ -1636,7 +1659,7 @@ def chi_to_stinespring(
             environment in its ground state. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Stinespring representation of quantum channel.
@@ -1692,7 +1715,7 @@ def stinespring_to_choi(
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of quantum channel.
@@ -1748,7 +1771,7 @@ def stinespring_to_liouville(
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
@@ -1808,7 +1831,7 @@ def stinespring_to_pauli(
             single-qubit Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Pauli-Liouville representation of quantum channel.
@@ -1869,7 +1892,7 @@ def stinespring_to_kraus(
         nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Kraus operators.
@@ -1966,7 +1989,7 @@ def stinespring_to_chi(
             Pauli elements in the Pauli basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: :math:`\\chi`-representation of quantum channel.
@@ -2021,7 +2044,7 @@ def kraus_to_unitaries(
             defaults to ``1e-7``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Unitary operators and their associated probabilities.
@@ -2125,13 +2148,11 @@ def _reshuffling(super_op, order: str = "row", backend=None):
             respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
-    super_op = backend.cast(super_op)
-
     if not isinstance(order, str):
         raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
 
@@ -2149,6 +2170,8 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         )
 
     backend = _check_backend(backend)
+
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
 
     dim = np.sqrt(super_op.shape[0])
 

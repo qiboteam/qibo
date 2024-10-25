@@ -33,19 +33,25 @@ from qibo.transpiler.router import (
 
 
 def star_connectivity(middle_qubit=2):
-    Q = [i for i in range(5)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[i], Q[middle_qubit]) for i in range(5) if i != middle_qubit]
+    chip.add_nodes_from(list(range(5)))
+    graph_list = [(i, middle_qubit) for i in range(5) if i != middle_qubit]
     chip.add_edges_from(graph_list)
     return chip
 
 
 def grid_connectivity():
-    Q = [i for i in range(5)]
     chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [(Q[0], Q[1]), (Q[1], Q[2]), (Q[2], Q[3]), (Q[3], Q[0]), (Q[0], Q[4])]
+    chip.add_nodes_from(list(range(5)))
+    graph_list = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 4)]
+    chip.add_edges_from(graph_list)
+    return chip
+
+
+def line_connectivity(n):
+    chip = nx.Graph()
+    chip.add_nodes_from(list(range(n)))
+    graph_list = [(i, i + 1) for i in range(n - 1)]
     chip.add_edges_from(graph_list)
     return chip
 
@@ -126,6 +132,29 @@ def test_random_circuits_5q(gates, placer, connectivity):
     assert_connectivity(connectivity, transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert gates + transpiler.added_swaps == transpiled_circuit.ngates
+    qubit_matcher = Preprocessing(connectivity=connectivity)
+    new_circuit = qubit_matcher(circuit=circuit)
+    assert_circuit_equivalence(
+        original_circuit=new_circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
+
+
+def test_random_circuits_15q_50g():
+    nqubits, ngates = 15, 50
+    connectivity = line_connectivity(nqubits)
+    placer = Random(connectivity=connectivity)
+    layout_circ = Circuit(nqubits)
+    initial_layout = placer(layout_circ)
+    transpiler = Sabre(connectivity=connectivity)
+    circuit = generate_random_circuit(nqubits=nqubits, ngates=ngates)
+    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
+    assert transpiler.added_swaps >= 0
+    assert_connectivity(connectivity, transpiled_circuit)
+    assert_placement(transpiled_circuit, final_qubit_map)
+    assert ngates + transpiler.added_swaps == transpiled_circuit.ngates
     qubit_matcher = Preprocessing(connectivity=connectivity)
     new_circuit = qubit_matcher(circuit=circuit)
     assert_circuit_equivalence(
@@ -254,8 +283,8 @@ def test_sabre_shortest_path_routing():
     router._preprocessing(circuit=loop_circ, initial_layout=initial_layout)
     router._shortest_path_routing()  # q2 should be moved adjacent to q8
 
-    gate_28 = router.circuit.circuit_blocks.block_list[2]
-    gate_28_qubits = router.circuit.get_physical_qubits(gate_28)
+    gate_28 = router.circuit_map.circuit_blocks.block_list[2]
+    gate_28_qubits = router.circuit_map.get_physical_qubits(gate_28)
 
     # Check if the physical qubits of the gate (2, 8) are adjacent
     assert gate_28_qubits[1] in list(router.connectivity.neighbors(gate_28_qubits[0]))
@@ -275,37 +304,69 @@ def test_circuit_map():
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
     block_list = circuit_map.circuit_blocks
     # test blocks_qubits_pairs
-    assert circuit_map.blocks_qubits_pairs() == [(0, 1), (1, 2), (0, 1), (2, 3)]
+    assert circuit_map.blocks_logical_qubits_pairs() == [(0, 1), (1, 2), (0, 1), (2, 3)]
     # test execute_block and routed_circuit
     circuit_map.execute_block(block_list.search_by_index(0))
     routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[0], gates.H)
     assert len(routed_circuit.queue) == 4
-    assert routed_circuit.queue[2].qubits == (1, 2)
-    # test update
+    qubits = routed_circuit.queue[2].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q2"
+    )
+
+    # test update 1
     circuit_map.update((0, 2))
     routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[4], gates.SWAP)
-    assert routed_circuit.queue[4].qubits == (1, 0)
+    qubits = routed_circuit.queue[4].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q0"
+    )
     assert circuit_map._swaps == 1
-    assert circuit_map._circuit_logical == [2, 1, 0, 3]
+    assert circuit_map.physical_to_logical == [0, 2, 1, 3]
+    assert circuit_map.logical_to_physical == [0, 2, 1, 3]
+
+    # test update 2
     circuit_map.update((1, 2))
     routed_circuit = circuit_map.routed_circuit()
-    assert routed_circuit.queue[5].qubits == (2, 0)
-    assert circuit_map._circuit_logical == [1, 2, 0, 3]
-    # test execute_block after multiple swaps
+    assert isinstance(routed_circuit.queue[5], gates.SWAP)
+    qubits = routed_circuit.queue[5].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q2"
+        and routed_circuit.wire_names[qubits[1]] == "q1"
+    )
+    assert circuit_map._swaps == 2
+    assert circuit_map.physical_to_logical == [0, 1, 2, 3]
+    assert circuit_map.logical_to_physical == [0, 1, 2, 3]
+
+    # # test execute_block after multiple swaps
     circuit_map.execute_block(block_list.search_by_index(1))
     circuit_map.execute_block(block_list.search_by_index(2))
     circuit_map.execute_block(block_list.search_by_index(3))
     routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[6], gates.CZ)
-    # circuit to logical map: [1,2,0,3]. initial map: {"q0": 2, "q1": 0, "q2": 1, "q3": 3}.
-    assert routed_circuit.queue[6].qubits == (0, 1)  # initial circuit qubits (1,2)
-    assert routed_circuit.queue[7].qubits == (2, 0)  # (0,1)
-    assert routed_circuit.queue[8].qubits == (1, 3)  # (2,3)
+
+    qubits = routed_circuit.queue[6].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q1"
+        and routed_circuit.wire_names[qubits[1]] == "q2"
+    )
+    qubits = routed_circuit.queue[7].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q0"
+        and routed_circuit.wire_names[qubits[1]] == "q1"
+    )
+    qubits = routed_circuit.queue[8].qubits
+    assert (
+        routed_circuit.wire_names[qubits[0]] == "q2"
+        and routed_circuit.wire_names[qubits[1]] == "q3"
+    )
     assert len(circuit_map.circuit_blocks()) == 0
     # test final layout
-    assert circuit_map.final_layout() == {"q0": 1, "q1": 2, "q2": 0, "q3": 3}
+    assert circuit_map.final_layout() == {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
 
 
 def test_sabre_matched():
@@ -483,17 +544,36 @@ def test_undo():
     # Two SWAP gates are added
     circuit_map.update((1, 2))
     circuit_map.update((2, 3))
-    assert circuit_map._circuit_logical == [0, 3, 1, 2]
+    assert circuit_map.physical_to_logical == [0, 3, 1, 2]
+    assert circuit_map.logical_to_physical == [0, 2, 3, 1]
     assert len(circuit_map._routed_blocks.block_list) == 2
+    assert circuit_map._swaps == 2
 
     # Undo the last SWAP gate
     circuit_map.undo()
-    assert circuit_map._circuit_logical == [0, 2, 1, 3]
+    assert circuit_map.physical_to_logical == [0, 2, 1, 3]
+    assert circuit_map.logical_to_physical == [0, 2, 1, 3]
     assert circuit_map._swaps == 1
     assert len(circuit_map._routed_blocks.block_list) == 1
 
     # Undo the first SWAP gate
     circuit_map.undo()
-    assert circuit_map._circuit_logical == [0, 1, 2, 3]
+    assert circuit_map.physical_to_logical == [0, 1, 2, 3]
+    assert circuit_map.logical_to_physical == [0, 1, 2, 3]
     assert circuit_map._swaps == 0
     assert len(circuit_map._routed_blocks.block_list) == 0
+
+
+def test_circuitmap_no_circuit():
+    # If a `CircuitMap` is not a temporary instance and is created without a circuit, it should raise an error.
+    with pytest.raises(ValueError):
+        circuit_map = CircuitMap()
+
+
+def test_logical_to_physical_setter():
+    circ = Circuit(4)
+    initial_layout = {"q0": 0, "q1": 3, "q2": 2, "q3": 1}
+    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
+    circuit_map.logical_to_physical = [2, 0, 1, 3]
+    assert circuit_map.logical_to_physical == [2, 0, 1, 3]
+    assert circuit_map.physical_to_logical == [1, 2, 0, 3]

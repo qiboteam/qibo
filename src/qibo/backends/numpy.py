@@ -1,9 +1,10 @@
 import collections
 import math
+from typing import Union
 
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag, fractional_matrix_power
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -32,6 +33,18 @@ class NumpyBackend(Backend):
             np.complex64,
             np.complex128,
         )
+
+    @property
+    def qubits(self):
+        return None
+
+    @property
+    def connectivity(self):
+        return None
+
+    @property
+    def natives(self):
+        return None
 
     def set_precision(self, precision):
         if precision != self.precision:
@@ -414,8 +427,12 @@ class NumpyBackend(Backend):
             if circuit.measurements or circuit.has_collapse:
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
             else:
-                raise RuntimeError(
-                    "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+                raise_error(
+                    RuntimeError,
+                    "Attempting to perform noisy simulation with `density_matrix=False` "
+                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                    + "statistics of the outcomes please include measurements in the circuit, "
+                    + "otherwise set `density_matrix=True` to recover the final state.",
                 )
 
         if circuit.accelerators:  # pragma: no cover
@@ -428,7 +445,6 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
                 else:
-                    # cast to proper complex type
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
@@ -438,7 +454,6 @@ class NumpyBackend(Backend):
                 if initial_state is None:
                     state = self.zero_state(nqubits)
                 else:
-                    # cast to proper complex type
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
@@ -496,8 +511,11 @@ class NumpyBackend(Backend):
             and not circuit.measurements
             and not circuit.density_matrix
         ):
-            raise RuntimeError(
-                "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+            raise_error(
+                RuntimeError,
+                "The circuit contains only collapsing measurements (`collapse=True`) but "
+                + "`density_matrix=False`. Please set `density_matrix=True` to retrieve "
+                + "the final state after execution.",
             )
 
         results, final_states = [], []
@@ -719,7 +737,7 @@ class NumpyBackend(Backend):
             self.np.matmul(self.np.conj(self.cast(state1)).T, self.cast(state2))
         )
 
-    def calculate_eigenvalues(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             log.warning(
                 "Calculating sparse matrix eigenvectors because "
@@ -730,7 +748,7 @@ class NumpyBackend(Backend):
             return np.linalg.eigvalsh(matrix)
         return np.linalg.eigvals(matrix)
 
-    def calculate_eigenvectors(self, matrix, k=6, hermitian=True):
+    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
@@ -767,6 +785,40 @@ class NumpyBackend(Backend):
         expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
         ud = self.np.transpose(np.conj(eigenvectors))
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.np.linalg.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return _calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity, self.np, self
+                )
+
+        return fractional_matrix_power(matrix, power)
+
+    def calculate_singular_value_decomposition(self, matrix):
+        return self.np.linalg.svd(matrix)
+
+    def calculate_jacobian_matrix(
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
+    ):
+        raise_error(
+            NotImplementedError,
+            "This method is only implemented in backends that allow automatic differentiation, "
+            + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
+        )
 
     # TODO: remove this method
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
@@ -808,3 +860,15 @@ class NumpyBackend(Backend):
                 {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
             ]
+
+
+def _calculate_negative_power_singular_matrix(
+    matrix, power: Union[float, int], precision_singularity: float, engine, backend
+):
+    """Calculate negative power of singular matrix."""
+    U, S, Vh = backend.calculate_singular_value_decomposition(matrix)
+    # cast needed because of different dtypes in `torch`
+    S = backend.cast(S)
+    S_inv = engine.where(engine.abs(S) < precision_singularity, 0.0, S**power)
+
+    return engine.linalg.inv(Vh) @ backend.np.diag(S_inv) @ engine.linalg.inv(U)

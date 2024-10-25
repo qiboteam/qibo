@@ -1,13 +1,15 @@
 """Error Mitigation Methods."""
 
 import math
+from inspect import signature
 from itertools import product
 
+import networkx as nx
 import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import GlobalBackend, _check_backend, _check_backend_and_local_state
+from qibo.backends import _check_backend, _check_backend_and_local_state, get_backend
 from qibo.config import raise_error
 
 
@@ -172,7 +174,7 @@ def ZNE(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -207,9 +209,12 @@ def ZNE(
         )
         expected_values.append(val)
 
-    gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
+    gamma = backend.cast(
+        get_gammas(noise_levels, analytical=solve_for_gammas), backend.precision
+    )
+    expected_values = backend.cast(expected_values, backend.precision)
 
-    return np.sum(gamma * expected_values)
+    return backend.np.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
@@ -233,7 +238,7 @@ def sample_training_circuit_cdr(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -302,6 +307,48 @@ def sample_training_circuit_cdr(
     return sampled_circuit
 
 
+def _curve_fit(
+    backend, model, params, xdata, ydata, lr=1.0, max_iter=int(1e2), tolerance_grad=1e-5
+):
+    """
+    Fits a model with given parameters on the data points (x,y). This is generally based on the
+    `scipy.optimize.curve_fit` function, except for the `PyTorchBackend` which makes use of the
+    `torch.optim.LBFGS` optimizer.
+
+    Args:
+    backend (:class:`qibo.backends.Backend`): simulation engine, this is only useful for `pytorch`.
+    model (function): model to fit, it should be a callable ``model(x, *params)``.
+    params (ndarray): initial parameters of the model.
+    xdata (ndarray): x data, i.e. inputs to the model.
+    ydata (ndarray): y data, i.e. targets ``y = model(x, *params)``.
+    lr (float, optional): learning rate, defaults to ``1``. Used only in the `pytorch` case.
+    max_iter (int, optional): maximum number of iterations, defaults to ``100``. Used only in the `pytorch` case.
+    tolerance_grad (float, optional): gradient tolerance, optimization stops after reaching it, defaults to ``1e-5``. Used only in the `pytorch` case.
+
+    Returns:
+        ndarray: the optimal parameters.
+    """
+    if backend.name == "pytorch":
+        # pytorch has some problems with the `scipy.optim.curve_fit` function
+        # thus we use a `torch.optim` optimizer
+        params.requires_grad = True
+        loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
+        optimizer = backend.np.optim.LBFGS(
+            [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
+        )
+
+        def closure():
+            optimizer.zero_grad()
+            output = model(xdata, *params)
+            loss_val = loss(output, ydata)
+            loss_val.backward(retain_graph=True)
+            return loss_val
+
+        optimizer.step(closure)
+        return params
+    return curve_fit(model, xdata, ydata, p0=params)[0]
+
+
 def CDR(
     circuit,
     observable,
@@ -342,7 +389,7 @@ def CDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -382,7 +429,17 @@ def CDR(
         )
         train_val["noisy"].append(val)
 
-    optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
+    nparams = (
+        len(signature(model).parameters) - 1
+    )  # first arg is the input and the *params afterwards
+    params = backend.cast(local_state.random(nparams), backend.precision)
+    optimal_params = _curve_fit(
+        backend,
+        model,
+        params,
+        backend.cast(train_val["noisy"], backend.precision),
+        backend.cast(train_val["noise-free"], backend.precision),
+    )
 
     val = get_expectation_val_with_readout_mitigation(
         circuit,
@@ -408,7 +465,7 @@ def vnCDR(
     noise_levels,
     noise_model,
     nshots: int = 10000,
-    model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
+    model=None,
     n_training_samples: int = 100,
     insertion_gate: str = "CNOT",
     full_output: bool = False,
@@ -447,7 +504,7 @@ def vnCDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -463,6 +520,9 @@ def vnCDR(
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
+    if model is None:
+        model = lambda x, *params: backend.np.sum(x * backend.np.vstack(params), axis=0)
+
     if readout is None:
         readout = {}
 
@@ -475,7 +535,7 @@ def vnCDR(
     for circ in training_circuits:
         result = backend.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(val)
+        train_val["noise-free"].append(float(val))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
             val = get_expectation_val_with_readout_mitigation(
@@ -488,12 +548,21 @@ def vnCDR(
                 seed=local_state,
                 backend=backend,
             )
-            train_val["noisy"].append(val)
+            train_val["noisy"].append(float(val))
 
-    noisy_array = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
-
-    params = local_state.random(len(noise_levels))
-    optimal_params = curve_fit(model, noisy_array.T, train_val["noise-free"], p0=params)
+    noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
+        -1, len(noise_levels)
+    )
+    params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
+    optimal_params = _curve_fit(
+        backend,
+        model,
+        params,
+        noisy_array.T,
+        backend.cast(train_val["noise-free"], backend.precision),
+        lr=1,
+        tolerance_grad=1e-7,
+    )
 
     val = []
     for level in noise_levels:
@@ -510,7 +579,10 @@ def vnCDR(
         )
         val.append(expval)
 
-    mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
+    mit_val = model(
+        backend.cast(val, backend.precision).reshape(-1, 1),
+        *optimal_params,
+    )[0]
 
     if full_output:
         return mit_val, val, optimal_params, train_val
@@ -560,7 +632,7 @@ def get_response_matrix(
             `qibo.noise.ReadoutError`.
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -658,24 +730,24 @@ def apply_randomized_readout_mitigation(
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
             ``int(nshots / ncircuits)`` shots. Defaults to 10.
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used.
-            Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's
+            qubits is used. Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
-    Return:
+    Returns:
         :class:`qibo.measurements.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
 
-    Reference:
+    References:
         1. Ewout van den Berg, Zlatko K. Minev et al,
         *Model-free readout-error mitigation for quantum expectation values*.
-           `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
+        `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
@@ -789,8 +861,7 @@ def get_expectation_val_with_readout_mitigation(
     exp_val = circuit_result.expectation_from_samples(observable)
 
     if "ncircuits" in readout:
-        exp_val /= circuit_result_cal.expectation_from_samples(observable)
-
+        return exp_val / circuit_result_cal.expectation_from_samples(observable)
     return exp_val
 
 
@@ -807,7 +878,7 @@ def sample_clifford_training_circuit(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -871,7 +942,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. if ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -1038,8 +1109,9 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    dep_param = np.mean(lambda_list)
-    dep_param_std = np.std(lambda_list)
+    lambda_list = backend.cast(lambda_list, backend.precision)
+    dep_param = backend.np.mean(lambda_list)
+    dep_param_std = backend.np.std(lambda_list)
 
     noisy_expectation = get_expectation_val_with_readout_mitigation(
         circuit,
@@ -1092,17 +1164,24 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Returns:
         qibo.states.CircuitResult: The result of the circuit execution.
     """
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+        backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
-        backend.transpiler.passes[1] = Custom(
-            initial_map=qubit_map, connectivity=backend.platform.topology
+        qubits = backend.qubits
+        connectivity_edges = backend.connectivity
+        node_mapping = {q: i for i, q in enumerate(qubits)}
+        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
+        connectivity = nx.Graph(edges)
+        transpiler = Passes(
+            connectivity=connectivity,
+            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
         )
+        circuit, _ = transpiler(circuit)
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-
     return circuit_result

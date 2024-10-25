@@ -1,11 +1,13 @@
 import collections
 import copy
+import sys
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
 import qibo
 from qibo import gates
+from qibo.backends import _Global
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
@@ -1098,15 +1100,16 @@ class Circuit:
             state = self.compiled.executor(initial_state, nshots)
             self._final_state = self.compiled.result(state, nshots)
             return self._final_state
-        else:
-            from qibo.backends import GlobalBackend
 
-            if self.accelerators:  # pragma: no cover
-                return GlobalBackend().execute_distributed_circuit(
-                    self, initial_state, nshots
-                )
-            else:
-                return GlobalBackend().execute_circuit(self, initial_state, nshots)
+        backend = _Global.backend()
+        transpiler = _Global.transpiler()
+        transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
+
+        if self.accelerators:  # pragma: no cover
+            return backend.execute_distributed_circuit(
+                transpiled_circuit, initial_state, nshots
+            )
+        return backend.execute_circuit(transpiled_circuit, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
@@ -1141,6 +1144,9 @@ class Circuit:
     def to_qasm(self):
         """Convert circuit to QASM.
 
+        .. note::
+            This method does not support multi-controlled gates and gates with ``torch.Tensor`` as parameters.
+
         Args:
             filename (str): The filename where the code is saved.
         """
@@ -1173,7 +1179,7 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if isinstance(gate, gates.ParametrizedGate):
-                params = (str(x) for x in gate.parameters)
+                params = (str(float(x)) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
                 name = gate.qasm_label
@@ -1267,18 +1273,8 @@ class Circuit:
 
         return matrix, idx
 
-    def draw(self, line_wrap=70, legend=False) -> str:
-        """Draw text circuit using unicode symbols.
-
-        Args:
-            line_wrap (int): maximum number of characters per line. This option
-                split the circuit text diagram in chunks of line_wrap characters.
-            legend (bool): If ``True`` prints a legend below the circuit for
-                callbacks and channels. Default is ``False``.
-
-        Return:
-            String containing text circuit diagram.
-        """
+    def diagram(self, line_wrap: int = 70, legend: bool = False) -> str:
+        """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
@@ -1369,3 +1365,21 @@ class Circuit:
             output += table
 
         return output.rstrip("\n")
+
+    def __str__(self):
+        return self.diagram()
+
+    def draw(self, line_wrap: int = 70, legend: bool = False):
+        """Draw text circuit using unicode symbols.
+
+        Args:
+            line_wrap (int, optional): maximum number of characters per line. This option
+                split the circuit text diagram in chunks of line_wrap characters.
+                Defaults to :math:`70`.
+            legend (bool, optional): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Defaults to ``False``.
+
+        Returns:
+            String containing text circuit diagram.
+        """
+        sys.stdout.write(self.diagram(line_wrap, legend) + "\n")

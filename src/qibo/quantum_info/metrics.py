@@ -74,7 +74,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             it assumes the difference is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -134,23 +134,57 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     return distance
 
 
-def hilbert_schmidt_distance(state, target, backend=None):
-    """Hilbert-Schmidt distance between two quantum states:
+def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
+    """Calculate the Hilbert-Schmidt inner product between two operators.
+
+    Given two operators :math:`A, \\, B \\in \\mathcal{H}`, the Hilbert-Schmidt
+    inner product between the two is given by
 
     .. math::
-        \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
-            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right)
+        \\braket{A, \\, B}_{\\text{HS}} = \\text{tr}\\left(A^{\\dagger} \\, B\\right) \\, .
+
+    Args:
+        operator_A (ndarray): operator :math:`A`.
+        operator_B (ndarray): operator :math:`B`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Hilbert-Schmidt inner product :math:`\\braket{A, \\, B}_{\\text{HS}}`.
+    """
+    backend = _check_backend(backend)
+
+    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
+
+    return backend.np.real(inner_product)
+
+
+def hilbert_schmidt_distance(state, target, backend=None):
+    """Calculate the Hilbert-Schmidt distance between two quantum states:
+
+    .. math::
+        \\braket{\\rho - \\sigma, \\, \\rho - \\sigma}_{\\text{HS}} =
+            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right) \\, ,
+
+    where :math:`\\braket{\\cdot, \\, \\cdot}_{\\text{HS}}` is the
+    :func:`qibo.quantum_info.hilbert_schmidt_inner_product`.
 
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
         float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
         and ``target`` :math:`\\sigma`.
+
+    References:
+        1. P. J. Coles, M. Cerezo, and L. Cincio, *Strong bound between trace distance
+        and Hilbert-Schmidt distance for low-rank states*, `Phys. Rev. A 100, 022103
+        <https://doi.org/10.1103/PhysRevA.100.022103>`_ (2019).
     """
     backend = _check_backend(backend)
 
@@ -171,10 +205,9 @@ def hilbert_schmidt_distance(state, target, backend=None):
         state = backend.np.outer(backend.np.conj(state), state)
         target = backend.np.outer(backend.np.conj(target), target)
 
-    distance = backend.np.real(backend.np.trace((state - target) ** 2))
-    distance = float(distance)
+    difference = state - target
 
-    return distance
+    return hilbert_schmidt_inner_product(difference, difference, backend=backend)
 
 
 def fidelity(state, target, check_hermitian: bool = False, backend=None):
@@ -196,7 +229,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -234,7 +267,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
-            hermitian = check_hermitian is False or _check_hermitian_or_not_gpu(
+            hermitian = check_hermitian is False or _check_hermitian(
                 state, backend=backend
             )
             # using eigh since rho is supposed to be Hermitian
@@ -272,7 +305,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
                     fid = fid + matrix
                     del matrix
 
-            fid = backend.np.real(backend.np.trace(fid)) ** 2
+            fid = backend.np.real(backend.np.trace(fid))
 
             return fid
 
@@ -302,7 +335,7 @@ def infidelity(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -327,7 +360,7 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -358,7 +391,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -388,7 +421,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -459,7 +492,7 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
 
@@ -496,7 +529,7 @@ def average_gate_fidelity(
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -531,7 +564,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -579,7 +612,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
         target (ndarray, optional): row-vectorized Choi representation of a target
             quantum channel. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
         kwargs: optional arguments to pass to CVXPY solver. For more information,
             please visit `CVXPY's API documentation
@@ -701,7 +734,7 @@ def expressibility(
             For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -765,7 +798,7 @@ def frame_potential(
         power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -812,23 +845,87 @@ def frame_potential(
     return potential / samples**2
 
 
-def _check_hermitian_or_not_gpu(matrix, backend=None):
-    """Checks if a given matrix is Hermitian and whether the backend is neither
-    :class:`qibojit.backends.CupyBackend` nor
-    :class:`qibojit.backends.CuQuantumBackend`.
+def quantum_fisher_information_matrix(
+    circuit,
+    parameters=None,
+    initial_state=None,
+    return_complex: bool = True,
+    backend=None,
+):
+    """Calculate the Quantum Fisher Information Matrix (QFIM) of a parametrized ``circuit``.
+
+    Given a set of ``parameters`` :math:`\\theta = \\{\\theta_{k}\\}_{k\\in[M]}` and a
+    parameterized unitary ``circuit`` :math:`U(\\theta)` acting on an ``initial_state``
+    :math:`\\ket{\\phi}`, the QFIM is such that its elements can be calculated as
+
+    .. math::
+        \\mathbf{F}_{jk} = 4 \\, \\text{Re}\\left\\{ \\braket{\\partial_{j} \\psi | \\partial_{k}
+            \\psi} - \\braket{\\partial_{j} \\psi | \\psi}\\!\\braket{\\psi | \\partial_{k} \\psi}
+            \\right\\} \\, ,
+
+    where we have used the short notations :math:`\\ket{\\psi} \\equiv \\ket{\\psi(\\theta)}
+    = U(\\theta) \\ket{\\phi}`, and :math:`\\ket{\\partial_{k} \\psi} \\equiv \\frac{\\partial}
+    {\\partial\\theta_{k}} \\ket{\\psi(\\theta)}`.
+    If the ``initial_state`` :math:`\\ket{\\phi}` is not specified, it defaults to
+    :math:`\\ket{0}^{\\otimes n}`.
 
     Args:
-        matrix: input array.
+        circuit (:class:`qibo.models.circuit.Circuit`): parametrized circuit :math:`U(\\theta)`.
+        parameters (ndarray, optional): parameters whose QFIM to calculate.
+            If ``None``, QFIM is calculated with the paremeters from ``circuit``, i.e.
+            ``parameters = circuit.get_parameters()``. Defaults to ``None``.
+        initial_state (ndarray, optional): Initial configuration. It can be specified
+            by the setting the state vector using an array or a circuit. If ``None``,
+            the initial state is :math:`\\ket{0}^{\\otimes n}`. Defaults to ``None``.
+        return_complex (bool, optional): If ``True``, calculates the Jacobian matrix
+            of real and imaginary parts of :math:`\\ket{\\psi(\\theta)}`. If ``False``,
+            calculates only the Jacobian matrix of the real part. Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        bool: whether the matrix is Hermitian.
+        ndarray: Quantum Fisher Information :math:`\\mathbf{F}`.
+    """
+    backend = _check_backend(backend)
 
-    Raises:
-        NotImplementedError: If `matrix` is not Hermitian and
-        `backend` is not :class:`qibojit.backends.CupyBackend`
+    if parameters is None:
+        parameters = circuit.get_parameters()
+        parameters = backend.cast(parameters, dtype=float).flatten()
+
+    jacobian = backend.calculate_jacobian_matrix(
+        circuit, parameters, initial_state, return_complex
+    )
+
+    if return_complex:
+        jacobian = jacobian[0] + 1j * jacobian[1]
+
+    jacobian = backend.cast(jacobian, dtype=np.complex128)
+
+    copied = circuit.copy(deep=True)
+    copied.set_parameters(parameters)
+
+    state = backend.execute_circuit(copied, initial_state=initial_state).state()
+
+    overlaps = jacobian.T @ state
+
+    qfim = jacobian.T @ jacobian
+    qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
+
+    return 4 * backend.np.real(qfim)
+
+
+def _check_hermitian(matrix, backend=None):
+    """Checks if a given matrix is Hermitian.
+
+    Args:
+        matrix: input array.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        bool: whether the matrix is Hermitian.
     """
     backend = _check_backend(backend)
 
@@ -837,15 +934,5 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     )
 
     hermitian = bool(float(norm) <= PRECISION_TOL)
-
-    if hermitian is False and backend.__class__.__name__ in [
-        "CupyBackend",
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            "GPU backends do not support `np.linalg.eig` "
-            + "or `np.linalg.eigvals` for non-Hermitian matrices.",
-        )
 
     return hermitian

@@ -48,8 +48,11 @@ class Channel(Gate):
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
         .. math::
-            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle
-                \\langle\\langle K_{\\alpha}|
+            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha})(K_{\\alpha}| \\, ,
+
+        where :math:`|K_{\\alpha})` is the vectorization of the Kraus operator
+        :math:`K_{\\alpha}`.
+        For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
         Args:
             nqubits (int, optional): total number of qubits to be considered
@@ -62,7 +65,7 @@ class Channel(Gate):
                 vectorization is done block-wise. Defaut is ``"row"``.
             backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
-                it uses :class:`qibo.backends.GlobalBackend`.
+                it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -118,7 +121,7 @@ class Channel(Gate):
                 it raises ``NotImplementedError``. Defaut is ``"row"``.
             backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
-                it uses :class:`qibo.backends.GlobalBackend`.
+                it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -157,7 +160,7 @@ class Channel(Gate):
                 Pauli elements in the basis. Default is "IXYZ".
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses
-                :class:`qibo.backends.GlobalBackend`.
+                the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -650,12 +653,14 @@ class ThermalRelaxationChannel(KrausChannel):
                 self.init_kwargs["p_1"],
                 self.init_kwargs["e_t2"],
             )
-            matrix = [
-                [1 - preset1, 0, 0, preset0],
-                [0, e_t2, 0, 0],
-                [0, 0, e_t2, 0],
-                [preset1, 0, 0, 1 - preset0],
-            ]
+            matrix = backend.cast(
+                [
+                    [1 - preset1, 0, 0, preset0],
+                    [0, e_t2, 0, 0],
+                    [0, 0, e_t2, 0],
+                    [preset1, 0, 0, 1 - preset0],
+                ]
+            )
 
             qubits = (qubit, qubit + nqubits)
             gate = Unitary(matrix, *qubits)

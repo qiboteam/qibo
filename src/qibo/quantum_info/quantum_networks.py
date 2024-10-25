@@ -38,7 +38,7 @@ class QuantumNetwork:
         pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
             state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
     """
 
@@ -144,7 +144,7 @@ class QuantumNetwork:
             pure (bool, optional): ``True`` when ``arr`` is a "pure" representation (e.g. a pure
                 state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-                calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+                calculations. If ``None``, defaults to the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -662,7 +662,7 @@ class QuantumNetwork:
             update (bool, optional): If ``True``, updates the internal representation of the
                 network to the full tensor. Defaults to ``False``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-                calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+                calculations. If ``None``, defaults to the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -713,7 +713,7 @@ class QuantumComb(QuantumNetwork):
         pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
             state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
     """
 
@@ -835,7 +835,7 @@ class QuantumChannel(QuantumComb):
         pure (bool, optional): ``True`` when ``tensor`` is a "pure" representation (e.g. a pure
             state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
     """
 
@@ -1006,7 +1006,7 @@ def link_product(
         operands (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
             networks to be contracted.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
         surpress_warning (bool, optional): If ``True``, surpresses the warning
             regarding if the same index connects two input or two output
@@ -1090,7 +1090,7 @@ class IdentityChannel(QuantumChannel):
     Args:
         dim (int): Dimension of the Identity operator.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
     """
 
@@ -1107,7 +1107,7 @@ class TraceOperation(QuantumNetwork):
     Args:
         dim (int): Dimension of the Trace operator.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
-            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            calculations. If ``None``, defaults to the current backend.
             Defaults to ``None``.
     """
 

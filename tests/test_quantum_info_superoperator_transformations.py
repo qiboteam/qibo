@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+import pytest  # type: ignore
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
@@ -167,6 +167,31 @@ def test_vectorization(backend, nqubits, order, statevector):
         matrix = np.arange(dim**2).reshape((dim, dim))
     matrix = vectorization(backend.cast(matrix), order, backend=backend)
     backend.assert_allclose(matrix, matrix_test, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+@pytest.mark.parametrize("statevector", [True, False])
+def test_batched_vectorization(backend, nqubits, order, statevector):
+    if statevector:
+        state = backend.cast(
+            [random_statevector(2**nqubits, 42, backend=backend) for _ in range(3)]
+        ).reshape(3, 1, -1)
+    else:
+        state = backend.cast(
+            [
+                random_density_matrix(2**nqubits, seed=42, backend=backend)
+                for _ in range(3)
+            ]
+        )
+
+    batched_vec = vectorization(state, order=order, backend=backend)
+    for i, element in enumerate(state):
+        if statevector:
+            element = element.ravel()
+        backend.assert_allclose(
+            batched_vec[i], vectorization(element, order=order, backend=backend)
+        )
 
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
@@ -377,6 +402,7 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
     backend.assert_allclose(test_pauli, pauli_op, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("test_non_CP", [test_non_CP])
 @pytest.mark.parametrize("test_kraus_right", [test_kraus_right])
 @pytest.mark.parametrize("test_kraus_left", [test_kraus_left])
 @pytest.mark.parametrize("test_a1", [test_a1])
@@ -384,7 +410,14 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
 @pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_kraus(
-    backend, order, validate_cp, test_a0, test_a1, test_kraus_left, test_kraus_right
+    backend,
+    order,
+    validate_cp,
+    test_a0,
+    test_a1,
+    test_kraus_left,
+    test_kraus_right,
+    test_non_CP,
 ):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = backend.cast(
@@ -425,6 +458,7 @@ def test_choi_to_kraus(
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
 
     if validate_cp and order == "row":
+        test_non_CP = backend.cast(test_non_CP, dtype=test_non_CP.dtype)
         (kraus_left, kraus_right), _ = choi_to_kraus(
             test_non_CP, order=order, validate_cp=validate_cp, backend=backend
         )
