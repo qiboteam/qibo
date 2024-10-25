@@ -407,8 +407,7 @@ class Circuit:
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
-        new_wire_names = [self.wire_names[q] for q in list(sorted(qubits))]
-        kwargs["wire_names"] = new_wire_names
+        kwargs["wire_names"] = [self.wire_names[q] for q in list(sorted(qubits))]
         circuit = self.__class__(**kwargs)
         circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map

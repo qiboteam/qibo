@@ -102,13 +102,6 @@ def test_trivial(star_connectivity):
     assert_placement(circuit, connectivity)
 
 
-def test_trivial_error(star_connectivity):
-    connectivity = star_connectivity()
-    placer = Trivial(connectivity=connectivity)
-    with pytest.raises(ValueError):
-        placer()
-
-
 def test_trivial_restricted(star_connectivity):
     names = ["q0", "q2"]
     circuit = Circuit(2, wire_names=names)

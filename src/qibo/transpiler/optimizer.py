@@ -27,9 +27,9 @@ class Preprocessing(Optimizer):
             )
         if logical_qubits == physical_qubits:
             return circuit
-        new_wire_names = circuit.wire_names.copy() + [
-            name for name in self.connectivity.nodes if name not in circuit.wire_names
-        ]
+        new_wire_names = circuit.wire_names + list(
+            self.connectivity.nodes - circuit.wire_names
+        )
         new_circuit = Circuit(nqubits=physical_qubits, wire_names=new_wire_names)
         for gate in circuit.queue:
             new_circuit.add(gate)

@@ -147,8 +147,6 @@ class Trivial(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
         """
-        if circuit is None:
-            raise_error(ValueError, "Circuit must be provided.")
         return
 
 
