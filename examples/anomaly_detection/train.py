@@ -3,7 +3,6 @@ import math
 from pathlib import Path
 
 import numpy as np
-import tensorflow as tf
 
 import qibo
 from qibo import Circuit, gates
@@ -23,7 +22,8 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         lr_boundaries (list): epochs when learning rate is reduced, 6 monotone growing values from 0 to nepochs (default [3,6,9,12,15,18]).
     """
 
-    qibo.set_backend("tensorflow")
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
+    tf = qibo.get_backend().tf
 
     # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):

@@ -3,7 +3,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 
 import qibo
 from qibo import Circuit, gates
@@ -22,7 +21,8 @@ def main(n_layers, train_size, filename, plot, save_loss):
         save_loss (bool): save losses for standard and anomalous data (default False).
     """
 
-    qibo.set_backend("tensorflow")
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
+    tf = qibo.get_backend().tf
 
     # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):

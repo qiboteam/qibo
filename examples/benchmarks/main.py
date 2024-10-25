@@ -47,7 +47,10 @@ def limit_gpu_memory(memory_limit=None):
     Args:
         memory_limit: Memory limit in MBs.
     """
-    import tensorflow as tf
+    import qibo
+
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
+    tf = qibo.get_backend().tf
 
     if memory_limit is None:
         print("\nNo GPU memory limiter used.\n")
