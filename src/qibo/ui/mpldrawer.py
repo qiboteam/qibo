@@ -25,7 +25,7 @@ PLOT_PARAMS = {
     "not_radius": 0.15,
     "swap_delta": 0.08,
     "label_buffer": 0.0,
-    "dpi": 200,
+    "dpi": 100,
     "facecolor": "w",
     "edgecolor": "#000000",
     "fillcolor": "#000000",
@@ -632,7 +632,7 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
     return style
 
 
-def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=200):
+def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=100):
     """Main matplotlib plot function for Qibo circuit
 
     Args:
