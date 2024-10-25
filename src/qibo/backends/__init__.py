@@ -145,8 +145,6 @@ class _Global:
             and connectivity_edges is not None
         ):
             connectivity = nx.Graph(connectivity_edges)
-            connectivity.add_nodes_from(qubits)
-
             return Passes(
                 connectivity=connectivity,
                 passes=[
