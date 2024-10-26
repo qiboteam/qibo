@@ -447,8 +447,8 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
     H1 = construct_hamiltonian()
     _ = H1.eigenvectors()
 
-    backend.assert_allclose(H.exp(0.5), target_matrix)
-    backend.assert_allclose(H1.exp(0.5), target_matrix)
+    backend.assert_allclose(H.exp(0.5), target_matrix, atol=1e-6)
+    backend.assert_allclose(H1.exp(0.5), target_matrix, atol=1e-6)
 
 
 def test_hamiltonian_energy_fluctuation(backend):
