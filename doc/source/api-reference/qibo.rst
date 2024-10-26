@@ -401,6 +401,11 @@ with the last qubit as the control qubit and the first qubit as a target qubit.
 .. autofunction:: qibo.models.encodings.entangling_layer
 
 
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
+
 .. _error-mitigation:
 
 Error Mitigation
