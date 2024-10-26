@@ -265,8 +265,8 @@ def test_hamiltonian_expectation_errors(backend):
 @pytest.mark.parametrize(
     "observable",
     [
-        2 * Z(0) * Z(1) ** 2 + Z(0) * Z(2),
-        X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * Y(1) ** 3,
+        2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2),
+        X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3,
     ],
 )
 def test_hamiltonian_expectation_from_samples(backend, observable):
@@ -277,7 +277,7 @@ def test_hamiltonian_expectation_from_samples(backend, observable):
     nshots = 4 * 10**6
     c = Circuit(nqubits)
     for q in range(nqubits):
-        c.add(gates.RX(0, np.random.rand()))
+        c.add(gates.RX(q, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
     matrix = H.matrix

@@ -578,13 +578,20 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             nshots = 1000
         rotated_circuits = []
         coefficients = []
+        Z_observables = []
+        q_maps = []
         for term in self.terms:
+            # store coefficient
             coefficients.append(term.coefficient)
-            Z_observable = SymbolicHamiltonian(
-                prod([Z(q) for q in term.target_qubits]),
-                nqubits=circuit.nqubits,
-                backend=self.backend,
+            # build diagonal observable
+            Z_observables.append(
+                SymbolicHamiltonian(
+                    prod([Z(q) for q in term.target_qubits]),
+                    nqubits=circuit.nqubits,
+                    backend=self.backend,
+                )
             )
+            # prepare the measurement basis and append it to the circuit
             measurements = [
                 gates.M(factor.target_qubit, basis=factor.gate.__class__)
                 for factor in set(term.factors)
@@ -592,18 +599,29 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             circ_copy = circuit.copy(True)
             [circ_copy.add(m) for m in measurements]
             rotated_circuits.append(circ_copy)
+            # map the original qubits into 0, 1, 2, ...
+            q_maps.append(
+                dict(
+                    zip(
+                        [qubit_map[q] for q in term.target_qubits],
+                        range(len(term.target_qubits)),
+                    )
+                )
+            )
         frequencies = [
             result.frequencies()
             for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
         ]
         return sum(
             [
-                c * Z_observable._exp_from_freq(f, qubit_map)
-                for c, f in zip(coefficients, frequencies)
+                coeff * obs._exp_from_freq(freq, qmap)
+                for coeff, freq, obs, qmap in zip(
+                    coefficients, frequencies, Z_observables, q_maps
+                )
             ]
         )
 
-    def _exp_from_freq(self, freq: dict, qubit_map: dict):
+    def _exp_from_freq(self, freq: dict, qubit_map: dict) -> float:
         """
         Calculate the expectation value from some frequencies.
         The observable has to be diagonal in the computational basis.
@@ -627,26 +645,20 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
             freq.values()
         )
-        qubits = []
+        expvals = []
         for term in self.terms:
-            qubits_term = []
-            for k in term.target_qubits:
-                qubits_term.append(k)
-            qubits.append(qubits_term)
-        if qubit_map is None:
-            qubit_map = list(range(len(keys[0])))
-        expval = 0
-        for j, q in enumerate(qubits):
-            subk = []
-            expval_q = 0
-            for i, k in enumerate(keys):
-                subk = [int(k[qubit_map.index(s)]) for s in q]
-                expval_k = 1
-                if subk.count(1) % 2 == 1:
-                    expval_k = -1
-                expval_q += expval_k * counts[i]
-            expval += expval_q * self.terms[j].coefficient.real
-        return expval + self.constant.real
+            qubits = term.target_qubits
+            expvals.extend(
+                [
+                    term.coefficient.real
+                    * (-1) ** [state[qubit_map[q]] for q in qubits].count("1")
+                    for state in keys
+                ]
+            )
+        expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
+            len(self.terms), len(freq)
+        )
+        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
 
     def expectation_from_samples(
         self, data: Union[dict, "Circuit"], qubit_map: dict = None, nshots: int = None
@@ -674,7 +686,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             (float) the computed expectation value.
         """
-
+        if qubit_map is None:
+            qubit_map = list(range(self.nqubits))
         if isinstance(data, dict):
             return self._exp_from_freq(data, qubit_map)
         return self._exp_from_circuit(data, qubit_map, nshots)
