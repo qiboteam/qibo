@@ -386,7 +386,7 @@ def ghz_state(nqubits: int, **kwargs):
 
     Args:
         nqubits (int): number of qubits :math:`n >= 2`.
-        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+        kwargs (dict, optional): additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
