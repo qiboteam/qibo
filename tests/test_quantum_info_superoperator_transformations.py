@@ -369,7 +369,7 @@ def test_to_chi(backend, normalize, order, pauli_order):
 @pytest.mark.parametrize("test_a0", [test_a0])
 def test_to_stinespring(backend, test_a0, partition):
     test_a0_ = backend.cast(test_a0)
-    state = random_density_matrix(2**1, seed=8, backend=backend)
+    state = random_density_matrix(2, seed=8, backend=backend)
 
     target = test_a0_ @ state @ backend.np.conj(test_a0_.T)
 
