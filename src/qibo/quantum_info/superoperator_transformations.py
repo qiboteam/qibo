@@ -310,7 +310,7 @@ def to_stinespring(
     initial_state_env=None,
     backend=None,
 ):
-    """Converts quantum ``channel`` :math:`U` to its Stinespring representation :math:`U_{0}`.
+    """Convert quantum ``channel`` :math:`U` to its Stinespring representation :math:`U_{0}`.
 
     It uses the Kraus representation as an intermediate step.
 
