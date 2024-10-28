@@ -1398,12 +1398,12 @@ number of CNOT or RX pairs (depending on the value of ``insertion_gate``) insert
 circuit in correspondence to the original ones. Since we decided to simulate noisy CNOTs::
 
    Level 1
-   q0: ─X─  -->  q0: ─X───X──X─
-   q1: ─o─  -->  q1: ─o───o──o─
+   0: ─X─  -->  0: ─X───X──X─
+   1: ─o─  -->  1: ─o───o──o─
 
    Level 2
-   q0: ─X─  -->  q0: ─X───X──X───X──X─
-   q1: ─o─  -->  q1: ─o───o──o───o──o─
+   0: ─X─  -->  0: ─X───X──X───X──X─
+   1: ─o─  -->  1: ─o───o──o───o──o─
 
    .
    .
@@ -2094,11 +2094,12 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     from qibo import gates
     from qibo.models import Circuit
-    from qibo.transpiler.pipeline import Passes, assert_transpiling
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.router import ShortestPaths
     from qibo.transpiler.unroller import Unroller, NativeGates
     from qibo.transpiler.placer import Random
+    from qibo.transpiler.utils import assert_transpiling
 
     # Define connectivity as nx.Graph
     def star_connectivity():
