@@ -1280,9 +1280,9 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    # visualize the circuit
    circ.draw()
 
-   #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
-   #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
-   #  q2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
+   #  0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
+   #  1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
+   #  2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
 
 .. testoutput::
    :hide:

@@ -250,9 +250,9 @@ class M(Gate):
                 c.draw()
             .. testoutput::
 
-                q0: ─M─
-                q1: ─|─
-                q2: ─M─
+                0: ─M─
+                1: ─|─
+                2: ─M─
         """
 
         qubits = (qubit_map.get(q) for q in self.qubits)
