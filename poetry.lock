@@ -4568,7 +4568,7 @@ torch = "^2.2.0"
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "tf-back"
-resolved_reference = "855d3cf4d4ded1c47cf6e7aaa7ccf4454df93cad"
+resolved_reference = "a1a0f4c1c67a4468a9e52e62f3d45661aa8a9a64"
 
 [[package]]
 name = "qibotn"
@@ -5880,13 +5880,13 @@ files = [
 
 [[package]]
 name = "werkzeug"
-version = "3.0.5"
+version = "3.0.6"
 description = "The comprehensive WSGI web application library."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "werkzeug-3.0.5-py3-none-any.whl", hash = "sha256:6e589e0b303561b8b1a61d363ee05b1d7de6ca12f27a3a25269ae6ee93e363fd"},
-    {file = "werkzeug-3.0.5.tar.gz", hash = "sha256:033bc3783777078517f32ae3ba9e86e9bc38bdbf139b1a5a3af9679a64ed1293"},
+    {file = "werkzeug-3.0.6-py3-none-any.whl", hash = "sha256:1bc0c2310d2fbb07b1dd1105eba2f7af72f322e1e455f2f93c993bee8c8a5f17"},
+    {file = "werkzeug-3.0.6.tar.gz", hash = "sha256:a8dd59d4de28ca70471a34cba79bed5f7ef2e036a76b3ab0835474246eb41f8d"},
 ]
 
 [package.dependencies]
@@ -6038,10 +6038,9 @@ type = ["pytest-mypy"]
 [extras]
 qinfo = []
 qulacs = ["qulacs"]
-tensorflow = []
 torch = ["torch"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "d560d71858f6198dc4268a42141494343ba6cc316a6e14ef65aa083d4a383bfc"
+content-hash = "ad59845297cdb3e4f51ad3c2d0324277bb16bbda684696ffd68940047e18e1ff"
