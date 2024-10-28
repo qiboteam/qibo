@@ -120,7 +120,7 @@ class Circuit:
     A specific backend has to be used for performing calculations.
 
     Args:
-        nqubits (int): Total number of qubits in the circuit.
+        nqubits (int, list): Number of qubits in the circuit or a list of wire names.
         init_kwargs (dict): a dictionary with the following keys
 
             - *nqubits*
@@ -141,7 +141,7 @@ class Circuit:
             Defaults to ``False``.
         accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
-        wire_names (list, optional): Names for qubit wires.
+        wire_names (list, optional): Names for qubit wire names.
             If ``None``, defaults to [``0``, ``1``, ..., ``nqubits - 1``].
             If ``list`` is passed, length of ``list`` must match ``nqubits``.
         ndevices (int): Total number of devices. Defaults to ``None``.
@@ -153,11 +153,12 @@ class Circuit:
 
     def __init__(
         self,
-        nqubits: int,
+        nqubits: Optional[Union[str, list]] = None,
         accelerators=None,
         density_matrix: bool = False,
         wire_names: Optional[list] = None,
     ):
+        nqubits, wire_names = self._parse(nqubits, wire_names)
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
@@ -202,6 +203,30 @@ class Circuit:
                     "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
+
+    def _parse(self, qubit_spec, wire_names):
+        """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
+
+        .. code-block:: python
+            c = Circuit(3)
+            c = Circuit(3, wire_names=["q0", "q1", "q2"])
+            c = Circuit(["q0", "q1", "q2"])
+        """
+        if qubit_spec is None and wire_names is not None:
+            return len(wire_names), wire_names
+        if qubit_spec is not None and wire_names is None:
+            if isinstance(qubit_spec, int):
+                return qubit_spec, None
+            if isinstance(qubit_spec, list):
+                return len(qubit_spec), qubit_spec
+        if qubit_spec is not None and wire_names is not None:
+            if qubit_spec == len(wire_names):
+                return qubit_spec, wire_names
+
+        raise_error(
+            ValueError,
+            "Number of qubits and wire names are not consistent.",
+        )
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.

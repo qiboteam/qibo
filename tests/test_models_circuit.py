@@ -48,6 +48,26 @@ def test_circuit_init():
     assert c.nqubits == 2
 
 
+def test_circuit_init_parse():
+    a = Circuit(3)
+    assert a.nqubits == 3 and a.wire_names == [0, 1, 2]
+    b = Circuit(3, wire_names=["a", "b", "c"])
+    assert b.nqubits == 3 and b.wire_names == ["a", "b", "c"]
+    c = Circuit(["a", "b", "c"])
+    assert c.nqubits == 3 and c.wire_names == ["a", "b", "c"]
+    d = Circuit(wire_names=["x", "y", "z"])
+    assert d.nqubits == 3 and d.wire_names == ["x", "y", "z"]
+
+
+def test_circuit_init_errors():
+    with pytest.raises(ValueError):
+        a = Circuit()
+    with pytest.raises(ValueError):
+        b = Circuit(3, wire_names=["a", "b"])
+    with pytest.raises(ValueError):
+        c = Circuit(["a", "b", "c"], wire_names=["x", "y"])
+
+
 def test_eigenstate(backend):
     nqubits = 3
     c = Circuit(nqubits)
