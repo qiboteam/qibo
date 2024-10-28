@@ -11,6 +11,7 @@ from qibo import Circuit, gates
 from qibo.models.encodings import (
     comp_basis_encoder,
     entangling_layer,
+    ghz_state,
     phase_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
@@ -279,3 +280,24 @@ def test_circuit_kwargs(density_matrix):
 
     test = unary_encoder_random_gaussian(4, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4])
+def test_ghz_circuit(backend, nqubits, density_matrix):
+    if nqubits < 2:
+        with pytest.raises(ValueError):
+            GHZ_circ = ghz_state(nqubits, density_matrix=density_matrix)
+    else:
+        target = np.zeros(2**nqubits, dtype=complex)
+        target[0] = 1 / np.sqrt(2)
+        target[2**nqubits - 1] = 1 / np.sqrt(2)
+        target = backend.cast(target, dtype=target.dtype)
+
+        GHZ_circ = ghz_state(nqubits, density_matrix=density_matrix)
+        state = backend.execute_circuit(GHZ_circ).state()
+
+        if density_matrix:
+            target = backend.np.outer(target, backend.np.conj(target.T))
+
+        backend.assert_allclose(state, target)
