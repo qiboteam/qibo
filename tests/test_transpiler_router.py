@@ -32,6 +32,16 @@ from qibo.transpiler.router import (
 )
 
 
+def line_connectivity(n, names=None):
+    if names is None:
+        names = list(range(n))
+    chip = nx.Graph()
+    chip.add_nodes_from(names)
+    graph_list = [(names[i], names[i + 1]) for i in range(n - 1)]
+    chip.add_edges_from(graph_list)
+    return chip
+
+
 def generate_random_circuit(nqubits, ngates, names=None, seed=42):
     """Generate a random circuit with RX and CZ gates."""
     np.random.seed(seed)
@@ -103,7 +113,7 @@ def test_assert_connectivity_3q(star_connectivity):
         assert_connectivity(star_connectivity(), circuit)
 
 
-def test_bell_state_3q(line_connectivity):
+def test_bell_state_3q():
     from qibo.transpiler.pipeline import _transpose_qubits
 
     circuit = Circuit(3)
@@ -173,7 +183,7 @@ def test_random_circuits_5q_grid(ngates, placer, grid_connectivity):
 
 @pytest.mark.parametrize("nqubits", [11, 12, 13, 14, 15])
 @pytest.mark.parametrize("ngates", [30, 50])
-def test_random_circuits_15q_50g(nqubits, ngates, line_connectivity):
+def test_random_circuits_15q_50g(nqubits, ngates):
     connectivity = line_connectivity(nqubits, None)
     placer = Random(connectivity=connectivity)
     transpiler = Sabre(connectivity=connectivity)
@@ -253,7 +263,7 @@ def test_routing_with_measurements(star_connectivity):
     )
 
 
-def test_sabre_looping(line_connectivity):
+def test_sabre_looping():
     # Setup where the looping occurs
     # Line connectivity, gates with gate_array, Trivial placer
 
@@ -289,7 +299,7 @@ def test_sabre_looping(line_connectivity):
     )
 
 
-def test_sabre_shortest_path_routing(line_connectivity):
+def test_sabre_shortest_path_routing():
     gate_array = [(0, 9), (5, 9), (2, 8)]  # The gate (2, 8) should be routed next
 
     loop_circ = Circuit(10)

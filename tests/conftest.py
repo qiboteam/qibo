@@ -116,20 +116,6 @@ def grid_connectivity():
     return _grid_connectivity
 
 
-@pytest.fixture
-def line_connectivity():
-    def _line_connectivity(n, names=None):
-        if names is None:
-            names = list(range(n))
-        chip = nx.Graph()
-        chip.add_nodes_from(names)
-        graph_list = [(names[i], names[i + 1]) for i in range(n - 1)]
-        chip.add_edges_from(graph_list)
-        return chip
-
-    return _line_connectivity
-
-
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
 
