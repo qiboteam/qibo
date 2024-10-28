@@ -318,8 +318,8 @@ def to_stinespring(
         channel (ndarray): quantum channel.
         nqubits (int, optional): total number of qubits in the system that is
             interacting with the environment. Must be equal or greater than
-            the number of qubits ``kraus_ops`` acts on. If ``None``,
-            defaults to the number of qubits in ``kraus_ops``.
+            the number of qubits ``channel`` acts on. If ``None``,
+            defaults to the number of qubits in ``channel``.
             Defauts to ``None``.
         initial_state_env (ndarray, optional): statevector representing the
             initial state of the enviroment. If ``None``, it assumes the
@@ -329,7 +329,7 @@ def to_stinespring(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: quantum channel in its Stinespring representation :math:`U_{0}`.
+        ndarray: Quantum channel in its Stinespring representation :math:`U_{0}`.
     """
     backend = _check_backend(backend)
 
