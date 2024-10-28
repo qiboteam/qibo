@@ -13,10 +13,9 @@ from qibo.transpiler.placer import (
     Subgraph,
     Trivial,
     _find_gates_qubits_pairs,
-    assert_mapping_consistency,
-    assert_placement,
 )
 from qibo.transpiler.router import ShortestPaths
+from qibo.transpiler.utils import assert_mapping_consistency, assert_placement
 
 
 def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):

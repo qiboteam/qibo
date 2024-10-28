@@ -3,12 +3,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
-from qibo.transpiler.unroller import (
-    NativeGates,
-    Unroller,
-    assert_decomposition,
-    translate_gate,
-)
+from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
+from qibo.transpiler.utils import assert_decomposition
 
 
 def test_native_gates_from_gatelist():

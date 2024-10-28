@@ -9,48 +9,7 @@ from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.router import _find_connected_qubit
-
-
-def assert_placement(circuit: Circuit, connectivity: nx.Graph):
-    """Check if layout is in the correct form and matches the number of qubits of the circuit.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
-        layout (dict): qubit names.
-        connectivity (:class:`networkx.Graph`, optional): Chip connectivity.
-            This argument is necessary if the layout is applied to a subset of
-            qubits of the original connectivity graph. Defaults to ``None``.
-    """
-    layout = circuit.wire_names
-    assert_mapping_consistency(layout=layout, connectivity=connectivity)
-    if circuit.nqubits > len(layout):
-        raise_error(
-            PlacementError,
-            "Layout can't be used on circuit. The circuit requires more qubits.",
-        )
-    if circuit.nqubits < len(layout):
-        raise_error(
-            PlacementError,
-            "Layout can't be used on circuit. "
-            + "Ancillary extra qubits need to be added to the circuit.",
-        )
-
-
-def assert_mapping_consistency(layout: list, connectivity: nx.Graph):
-    """Check if layout is in the correct form.
-
-    Args:
-        layout (dict): qubit names.
-        connectivity (:class:`networkx.Graph`, optional):  Chip connectivity.
-            This argument is necessary if the layout is applied to a subset of
-            qubits of the original connectivity graph.
-    """
-    nodes = list(connectivity.nodes)
-    if sorted(nodes) != sorted(layout):
-        raise_error(
-            PlacementError,
-            "Some physical qubits in the layout may be missing or duplicated.",
-        )
+from qibo.transpiler.utils import assert_placement
 
 
 def _find_gates_qubits_pairs(circuit: Circuit):
@@ -159,7 +118,7 @@ class Custom(Placer):
     Args:
         map (list or dict): A mapping between physical and logical qubits.
             - If **dict**, the keys should be physical qubit names, and the values should be the corresponding logical qubit numbers.
-            - If **list**, it should contain logical qubit numbers, arranged in the order of the physical qubits.
+            - If **list**, it should contain physical qubit names, arranged in the order of the logical qubits.
     """
 
     def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph):

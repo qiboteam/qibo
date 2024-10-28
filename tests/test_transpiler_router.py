@@ -9,26 +9,25 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
-from qibo.transpiler.blocks import Block
-from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.pipeline import (
-    assert_circuit_equivalence,
-    restrict_connectivity_qubits,
-)
+from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
     Custom,
     Random,
     StarConnectivityPlacer,
     Subgraph,
     Trivial,
-    assert_placement,
 )
 from qibo.transpiler.router import (
     CircuitMap,
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
+)
+from qibo.transpiler.utils import (
+    _transpose_qubits,
+    assert_circuit_equivalence,
     assert_connectivity,
+    assert_placement,
 )
 
 
@@ -114,8 +113,6 @@ def test_assert_connectivity_3q(star_connectivity):
 
 
 def test_bell_state_3q():
-    from qibo.transpiler.pipeline import _transpose_qubits
-
     circuit = Circuit(3)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 2))

@@ -6,15 +6,11 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.pipeline import (
-    Passes,
-    assert_circuit_equivalence,
-    assert_transpiling,
-    restrict_connectivity_qubits,
-)
+from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
+from qibo.transpiler.utils import assert_circuit_equivalence, assert_transpiling
 
 
 def generate_random_circuit(nqubits, ngates, names=None, seed=42):

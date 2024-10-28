@@ -13,29 +13,6 @@ from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
 
 
-def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
-    """Assert if a circuit can be executed on Hardware.
-
-    No gates acting on more than two qubits.
-    All two-qubit operations can be performed on hardware.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-    """
-    layout = circuit.wire_names
-    for gate in circuit.queue:
-        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-            raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
-        if len(gate.qubits) == 2:
-            physical_qubits = (layout[gate.qubits[0]], layout[gate.qubits[1]])
-            if physical_qubits not in connectivity.edges:
-                raise_error(
-                    ConnectivityError,
-                    f"The circuit does not respect the connectivity. {gate.name} acts on {physical_qubits} but only the following qubits are directly connected: {connectivity.edges}.",
-                )
-
-
 class StarConnectivityRouter(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
