@@ -141,11 +141,9 @@ class Circuit:
             Defaults to ``False``.
         accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
-        wire_names (list or dict, optional): Names for qubit wires.
-            If ``None``, defaults to [``q0``, ``q1``... ``q(n-1)``].
+        wire_names (list, optional): Names for qubit wires.
+            If ``None``, defaults to [``0``, ``1``, ..., ``nqubits - 1``].
             If ``list`` is passed, length of ``list`` must match ``nqubits``.
-            If ``dict`` is passed, keys should be wire names and values should be qubit indices. Values should be unique and range from 0 to ``nqubits - 1``.
-            Defaults to ``None``.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
         nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
