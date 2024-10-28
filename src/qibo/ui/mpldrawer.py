@@ -377,12 +377,11 @@ def _swapx(ax, x, y, plot_params):
 
 def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
-    matplotlib.pyplot.rcParams["figure.dpi"] = plot_params["dpi"]
-    matplotlib.pyplot.rcParams["savefig.dpi"] = plot_params["dpi"]
     fig = matplotlib.pyplot.figure(
         figsize=(ng * scale, nq * scale),
         facecolor=plot_params["facecolor"],
         edgecolor=plot_params["edgecolor"],
+        dpi=plot_params["dpi"],
     )
     ax = fig.add_subplot(1, 1, 1, frameon=True)
     ax.set_axis_off()
@@ -632,7 +631,7 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
     return style
 
 
-def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=100):
+def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
 
     Args:
@@ -641,7 +640,6 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=100):
         cluster_gates (boolean): Group (or not) circuit gates on drawing.
         style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
         (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
-        dpi: plot resolution, expressed in terms of dots per inches (DPI).
 
     Returns:
         matplotlib.axes.Axes: Axes object that encapsulates all the elements of an individual plot in a figure.
@@ -689,7 +687,6 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None, dpi=100):
 
     params = PLOT_PARAMS.copy()
     params.update(_plot_params(style))
-    params["dpi"] = dpi
 
     inits = list(range(circuit.nqubits))
 
