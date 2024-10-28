@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.backends import PyTorchBackend
+from qibo.backends import PyTorchBackend, construct_backend
 from qibo.quantum_info import infidelity
 
 
@@ -45,13 +45,9 @@ def test_torch_gradients():
     sys.platform != "linux", reason="Tensorflow available only when testing on linux."
 )
 def test_torch_tensorflow_gradients():
+
     backend = PyTorchBackend()
-
-    import tensorflow as tf  # pylint: disable=import-outside-toplevel
-
-    from qibo.backends.tensorflow import (  # pylint: disable=import-outside-toplevel
-        TensorflowBackend,
-    )
+    tf_backend = construct_backend(backend="qiboml", platform="tensorflow")
 
     target_state = backend.np.tensor([0.0, 1.0], dtype=backend.np.complex128)
     param = backend.np.tensor([0.1], dtype=backend.np.float64, requires_grad=True)
@@ -68,16 +64,14 @@ def test_torch_tensorflow_gradients():
     optimizer.step()
     torch_param = param.clone().item()
 
-    tf_backend = TensorflowBackend()
-
-    target_state = tf.constant([0.0, 1.0], dtype=tf.complex128)
-    param = tf.Variable([0.1], dtype=tf.float64)
+    target_state = tf_backend.tf.constant([0.0, 1.0], dtype=tf_backend.tf.complex128)
+    param = tf_backend.tf.Variable([0.1], dtype=tf_backend.tf.float64)
     c = models.Circuit(1)
     c.add(gates.RX(0, param[0]))
 
-    optimizer = tf.optimizers.SGD(learning_rate=1.0)
+    optimizer = tf_backend.tf.optimizers.SGD(learning_rate=1.0)
 
-    with tf.GradientTape() as tape:
+    with tf_backend.tf.GradientTape() as tape:
         c.set_parameters(param)
         final_state = tf_backend.execute_circuit(c).state()
         loss = infidelity(target_state, final_state, backend=tf_backend)

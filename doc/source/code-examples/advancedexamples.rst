@@ -78,19 +78,8 @@ or programmatically, during runtime, as follows:
     # retrieve the current number of threads
     current_threads = qibo.get_threads()
 
-On the other hand, when using the ``tensorflow`` backend Qibo inherits
-Tensorflow's defaults for CPU thread configuration.
-Tensorflow allows restricting the number of threads as follows:
-
-.. code-block:: python
-
-    import tensorflow as tf
-    tf.config.threading.set_inter_op_parallelism_threads(1)
-    tf.config.threading.set_intra_op_parallelism_threads(1)
-    import qibo
-
-Note that this should be run during Tensorflow initialization in the beginning
-of the script and before creating the qibo backend.
+For similar wariness when using a machine learning backend (such as TensorFlow or Pytorch)
+please refer to the Qiboml documentation.
 
 Using multiple GPUs
 ^^^^^^^^^^^^^^^^^^^
@@ -707,12 +696,17 @@ circuit output matches a target state using the fidelity as the corresponding lo
 Note that, as in the following example, the rotation angles have to assume real values
 to ensure the rotational gates are representing unitary operators.
 
+Qibo doesn't provide Tensorflow and Pytorch as native backends; Qiboml has to be
+installed and used as provider of these quantum machine learning backends.
+
 .. code-block:: python
 
     import qibo
-    qibo.set_backend("tensorflow")
-    import tensorflow as tf
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
     from qibo import gates, models
+
+    backend = qibo.get_backend()
+    tf = backend.tf
 
     # Optimization parameters
     nepochs = 1000
@@ -737,8 +731,9 @@ to ensure the rotational gates are representing unitary operators.
         optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that the ``"tensorflow"`` backend has to be used here because other custom
-backends do not support automatic differentiation.
+Note that the ``"tensorflow"`` backend has to be used here since it provides
+automatic differentiation tools. To be constructed, the Qiboml package has to be
+installed and used.
 
 The optimization procedure may also be compiled, however in this case it is not
 possible to use :meth:`qibo.circuit.Circuit.set_parameters` as the
@@ -748,9 +743,11 @@ For example:
 .. code-block:: python
 
     import qibo
-    qibo.set_backend("tensorflow")
-    import tensorflow as tf
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
     from qibo import gates, models
+
+    backend = qibo.get_backend()
+    tf = backend.tf
 
     nepochs = 1000
     optimizer = tf.keras.optimizers.Adam()
