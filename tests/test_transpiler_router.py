@@ -93,25 +93,6 @@ def matched_circuit(names):
     return circuit
 
 
-def test_assert_connectivity(star_connectivity):
-    names = ["A", "B", "C", "D", "E"]
-    assert_connectivity(star_connectivity(names), matched_circuit(names))
-
-
-def test_assert_connectivity_false(star_connectivity):
-    circuit = Circuit(5)
-    circuit.add(gates.CZ(0, 1))
-    with pytest.raises(ConnectivityError):
-        assert_connectivity(star_connectivity(), circuit)
-
-
-def test_assert_connectivity_3q(star_connectivity):
-    circuit = Circuit(5)
-    circuit.add(gates.TOFFOLI(0, 1, 2))
-    with pytest.raises(ConnectivityError):
-        assert_connectivity(star_connectivity(), circuit)
-
-
 def test_bell_state_3q():
     circuit = Circuit(3)
     circuit.add(gates.H(0))
@@ -407,7 +388,7 @@ def test_sabre_matched(names, star_connectivity):
     connectivity = star_connectivity(names=names)
     circuit = matched_circuit(names)
     original_circuit = circuit.copy()
-    placer = Trivial()
+    placer = Trivial(connectivity=connectivity)
     router = Sabre(connectivity=connectivity)
 
     placer(circuit)
@@ -428,7 +409,7 @@ def test_sabre_simple(seed, star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     original_circuit = circ.copy()
-    placer = Trivial()
+    placer = Trivial(connectivity=connectivity)
     router = Sabre(connectivity=connectivity, seed=seed)
 
     placer(circ)
@@ -506,10 +487,11 @@ def test_sabre_random_circuits_grid(
 
 
 def test_sabre_memory_map(star_connectivity):
-    placer = Trivial()
+    connectivity = star_connectivity()
+    placer = Trivial(connectivity=connectivity)
     layout_circ = Circuit(5)
     placer(layout_circ)
-    router = Sabre(connectivity=star_connectivity())
+    router = Sabre(connectivity=connectivity)
     router._preprocessing(circuit=star_circuit())
     router._memory_map = [[1, 0, 2, 3, 4]]
     value = router._compute_cost((0, 1))
@@ -554,7 +536,7 @@ def test_restrict_qubits(router_algorithm, star_connectivity):
 
 
 def test_star_error_multi_qubit(star_connectivity):
-    circuit = Circuit(3)
+    circuit = Circuit(5)
     circuit.add(gates.TOFFOLI(0, 1, 2))
     connectivity = star_connectivity(middle_qubit_idx=2)
     transpiler = StarConnectivityRouter(connectivity)

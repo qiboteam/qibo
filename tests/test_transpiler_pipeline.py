@@ -85,38 +85,6 @@ def test_pipeline_default(ngates, names, star_connectivity):
     )
 
 
-def test_assert_circuit_equivalence_equal():
-    circ1 = Circuit(2)
-    circ2 = Circuit(2)
-    circ1.add(gates.X(0))
-    circ1.add(gates.CZ(0, 1))
-    circ2.add(gates.X(0))
-    circ2.add(gates.CZ(0, 1))
-    final_map = {0: 0, 1: 1}
-    assert_circuit_equivalence(circ1, circ2, final_map=final_map)
-
-
-def test_assert_circuit_equivalence_swap():
-    circ1 = Circuit(2)
-    circ2 = Circuit(2)
-    circ1.add(gates.X(0))
-    circ2.add(gates.SWAP(0, 1))
-    circ2.add(gates.X(1))
-    final_map = {0: 1, 1: 0}
-    assert_circuit_equivalence(circ1, circ2, final_map=final_map)
-
-
-def test_assert_circuit_equivalence_false():
-    circ1 = Circuit(2)
-    circ2 = Circuit(2)
-    circ1.add(gates.X(0))
-    circ2.add(gates.SWAP(0, 1))
-    circ2.add(gates.X(1))
-    final_map = {0: 0, 1: 1}
-    with pytest.raises(TranspilerPipelineError):
-        assert_circuit_equivalence(circ1, circ2, final_map=final_map)
-
-
 def test_int_qubit_names_default(star_connectivity):
     names = [1244, 1532, 2315, 6563, 8901]
     circ = Circuit(5, wire_names=names)

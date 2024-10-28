@@ -11,6 +11,7 @@ from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
+from qibo.transpiler.utils import assert_qubit_match
 
 
 class StarConnectivityRouter(Router):
@@ -48,7 +49,7 @@ class StarConnectivityRouter(Router):
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 Only single qubit gates and two qubits gates are supported by the router.
         """
-
+        assert_qubit_match(circuit, self.connectivity)
         middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
         nqubits = circuit.nqubits
         new = Circuit(nqubits=nqubits, wire_names=circuit.wire_names)
@@ -334,6 +335,7 @@ class ShortestPaths(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): circut mapped to hardware topology,
                 and final physical-to-logical qubit mapping.
         """
+        assert_qubit_match(circuit, self.connectivity)
         self._preprocessing(circuit=circuit)
         while self._dag.number_of_nodes() != 0:
             execute_block_list = self._check_execution()
@@ -624,6 +626,7 @@ class Sabre(Router):
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
         """
+        assert_qubit_match(circuit, self.connectivity)
         self._preprocessing(circuit=circuit)
         longest_path = np.max(self._dist_matrix)
 

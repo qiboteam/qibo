@@ -3,7 +3,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import PlacementError
+from qibo.transpiler._exceptions import PlacementError, TranspilerPipelineError
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
     Custom,
@@ -15,7 +15,7 @@ from qibo.transpiler.placer import (
     _find_gates_qubits_pairs,
 )
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.utils import assert_mapping_consistency, assert_placement
+from qibo.transpiler.utils import assert_placement
 
 
 def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
@@ -23,56 +23,6 @@ def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
     for i in range(1, 5):
         circuit.add(gates.CNOT(i, 0))
     return circuit
-
-
-def test_assert_placement_true(star_connectivity):
-    circuit = Circuit(5)
-    assert_placement(circuit, connectivity=star_connectivity())
-
-
-@pytest.mark.parametrize(
-    "qubits, names", [(5, ["A", "B", "C", "D", "F"]), (3, ["A", "B", "C"])]
-)
-def test_assert_placement_false(qubits, names, star_connectivity):
-    connectivity = star_connectivity()
-    circuit = Circuit(qubits, wire_names=names)
-    with pytest.raises(PlacementError):
-        assert_placement(circuit, connectivity)
-
-
-@pytest.mark.parametrize("qubits", [10, 1])
-def test_assert_placement_error(qubits, star_connectivity):
-    connectivity = star_connectivity()
-    circuit = Circuit(qubits)
-    with pytest.raises(PlacementError):
-        assert_placement(circuit, connectivity)
-
-
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency(names, star_connectivity):
-    assert_mapping_consistency(names, star_connectivity(names))
-
-
-def test_mapping_consistency_error(star_connectivity):
-    with pytest.raises(PlacementError):
-        assert_mapping_consistency(["A", "B", "C", "D", "F"], star_connectivity())
-
-
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted(names, star_connectivity):
-    connectivity = star_connectivity(names)
-    on_qubit = [names[0], names[2]]
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
-    assert_mapping_consistency(on_qubit, restricted_connectivity)
-
-
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted_error(names, star_connectivity):
-    connectivity = star_connectivity(names)
-    on_qubit = [names[0], names[2]]
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
-    with pytest.raises(PlacementError):
-        assert_mapping_consistency([names[3], names[4]], restricted_connectivity)
 
 
 def test_gates_qubits_pairs():
@@ -152,7 +102,7 @@ def test_custom_error_circuit(star_connectivity):
     custom_layout = [4, 3, 2, 1, 0]
     connectivity = star_connectivity(names=custom_layout)
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    with pytest.raises(ValueError):
+    with pytest.raises(TranspilerPipelineError):
         placer(circuit)
 
 

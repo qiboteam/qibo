@@ -18,6 +18,20 @@ from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.unroller import NativeGates
 
 
+def assert_qubit_match(circuit: Circuit, connectivity: nx.Graph):
+    """Check if the number of qubits in the circuit matches the connectivity graph.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
+        connectivity (:class:`networkx.Graph`): Chip connectivity.
+    """
+    if circuit.nqubits != len(connectivity.nodes):
+        raise_error(
+            TranspilerPipelineError,
+            "Number of qubits in the circuit does not match the connectivity graph.",
+        )
+
+
 def assert_transpiling(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
