@@ -105,7 +105,7 @@ def test_trivial(star_connectivity):
 def test_trivial_restricted(star_connectivity):
     names = ["q0", "q2"]
     circuit = Circuit(2, wire_names=names)
-    connectivity = star_connectivity()
+    connectivity = star_connectivity(["q0", "q1", "q2", "q3", "q4"])
     restricted_connectivity = restrict_connectivity_qubits(connectivity, names)
     placer = Trivial(connectivity=restricted_connectivity)
     placer(circuit)
@@ -170,7 +170,7 @@ def test_subgraph_perfect(star_connectivity):
     placer = Subgraph(connectivity=connectivity)
     circuit = star_circuit()
     placer(circuit)
-    assert circuit.wire_names[0] == "q2"
+    assert circuit.wire_names[0] == 2
     assert_placement(circuit, connectivity)
 
 
@@ -213,9 +213,7 @@ def test_subgraph_restricted(star_connectivity):
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(
-        connectivity, ["q0", "q2", "q3", "q4"]
-    )
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3, 4])
     placer = Subgraph(connectivity=restricted_connectivity)
     placer(circuit)
     assert_placement(circuit, restricted_connectivity)
@@ -276,7 +274,7 @@ def test_reverse_traversal_restricted(star_connectivity):
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     connectivity = star_connectivity()
-    restrict_names = ["q0", "q2", "q3", "q4"]
+    restrict_names = [0, 2, 3, 4]
     restricted_connectivity = restrict_connectivity_qubits(connectivity, restrict_names)
     circuit.wire_names = restrict_names
     routing = ShortestPaths(connectivity=restricted_connectivity)
@@ -296,7 +294,7 @@ def test_star_connectivity_placer(star_connectivity):
     placer = StarConnectivityPlacer(connectivity)
     placer(circ)
     assert_placement(circ, connectivity)
-    assert circ.wire_names == ["q0", "q2", "q1", "q3", "q4"]
+    assert circ.wire_names == [0, 2, 1, 3, 4]
 
 
 @pytest.mark.parametrize("first", [True, False])

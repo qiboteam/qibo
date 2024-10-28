@@ -625,7 +625,7 @@ def test_circuit_draw():
         "q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
         "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -638,18 +638,17 @@ def test_circuit_draw():
 
 def test_circuit_wire_names():
     circuit = Circuit(5)
-    assert circuit.wire_names == ["q0", "q1", "q2", "q3", "q4"]
-    circuit = Circuit(5, wire_names={"q1": 3, "q3": 1, "q2": 4, "q4": 0, "q0": 2})
-    assert circuit.wire_names == ["q4", "q3", "q0", "q1", "q2"]
+    assert circuit.wire_names == [0, 1, 2, 3, 4]
+    assert circuit._wire_names == None
+
+    circuit.wire_names = ["a", "b", "c", "d", "e"]
+    assert circuit.wire_names == ["a", "b", "c", "d", "e"]
+    assert circuit._wire_names == ["a", "b", "c", "d", "e"]
 
     with pytest.raises(TypeError):
         circuit = Circuit(5, wire_names=1)
     with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
-    with pytest.raises(ValueError):
-        circuit = Circuit(3, wire_names={"q0": 4, "q1": 5, "q2": 6})
+        circuit = Circuit(5, wire_names=["a", "b", "c"])
 
 
 def test_circuit_draw_wire_names():
@@ -726,7 +725,7 @@ def test_circuit_draw_line_wrap(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -816,7 +815,7 @@ def test_circuit_draw_line_wrap_names(capsys):
 def test_circuit_draw_channels(capsys, legend):
     """Check that channels are drawn correctly."""
 
-    circuit = Circuit(2, density_matrix=True)
+    circuit = Circuit(2, density_matrix=True, wire_names=["q0", "q1"])
     circuit.add(gates.H(0))
     circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
     circuit.add(gates.H(1))
@@ -853,7 +852,7 @@ def test_circuit_draw_callbacks(capsys, legend):
     from qibo.callbacks import EntanglementEntropy
 
     entropy = EntanglementEntropy([0])
-    c = Circuit(2)
+    c = Circuit(2, wire_names=["q0", "q1"])
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))
@@ -884,7 +883,7 @@ def test_circuit_draw_labels():
         + "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -905,7 +904,7 @@ def test_circuit_draw_names(capsys):
         + "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):

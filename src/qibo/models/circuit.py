@@ -158,7 +158,7 @@ class Circuit:
         nqubits: int,
         accelerators=None,
         density_matrix: bool = False,
-        wire_names: Optional[Union[list, dict]] = None,
+        wire_names: Optional[list] = None,
     ):
         if not isinstance(nqubits, int):
             raise_error(
@@ -282,49 +282,28 @@ class Circuit:
 
     @property
     def wire_names(self):
+        if self._wire_names is None:
+            return list(range(self.nqubits))
         return self._wire_names
 
     @wire_names.setter
-    def wire_names(self, wire_names: Union[list, dict]):
-        if not isinstance(wire_names, (list, dict, type(None))):
+    def wire_names(self, wire_names: Optional[list]):
+        if not isinstance(wire_names, (list, type(None))):
             raise_error(
                 TypeError,
-                f"``wire_names`` must be type ``list`` or ``dict``, but is {type(wire_names)}.",
+                f"``wire_names`` must be type ``list``, but is {type(wire_names)}.",
             )
 
-        if isinstance(wire_names, list):
+        if wire_names is not None:
             if len(wire_names) != self.nqubits:
                 raise_error(
                     ValueError,
                     "Number of wire names must be equal to the number of qubits, "
                     f"but is {len(wire_names)}.",
                 )
-
             self._wire_names = wire_names.copy()
-        elif isinstance(wire_names, dict):
-            if len(wire_names.keys()) > self.nqubits:
-                raise_error(
-                    ValueError,
-                    "number of elements in the ``wire_names`` dictionary "
-                    + "cannot be bigger than ``nqubits``.",
-                )
-            if not all(isinstance(k, int) for k in wire_names.values()):
-                raise_error(
-                    ValueError,
-                    "all values of the ``wire_names`` dictionary must be integers.",
-                )
-            if sorted(wire_names.values()) != list(range(self.nqubits)):
-                raise_error(
-                    ValueError,
-                    "all values of the ``wire_names`` dictionary must be unique integers from 0 to ``nqubits``.",
-                )
-
-            self._wire_names = [
-                k for k, _ in sorted(wire_names.items(), key=lambda x: x[1])
-            ]
         else:
-            self._wire_names = [f"q{i}" for i in range(self.nqubits)]
-
+            self._wire_names = None
         self.init_kwargs["wire_names"] = self._wire_names
 
     @property
@@ -1347,8 +1326,8 @@ class Circuit:
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
-                        self.wire_names[row]
-                        + " " * (max_name_len - len(self.wire_names[row]))
+                        wire_names[row]
+                        + " " * (max_name_len - len(wire_names[row]))
                         + ": "
                     )
                     if i == 0:

@@ -84,7 +84,7 @@ def clear():
 
 @pytest.fixture
 def star_connectivity():
-    def _star_connectivity(names=["q0", "q1", "q2", "q3", "q4"], middle_qubit_idx=2):
+    def _star_connectivity(names=list(range(5)), middle_qubit_idx=2):
         chip = nx.Graph()
         chip.add_nodes_from(names)
         graph_list = [
@@ -100,7 +100,7 @@ def star_connectivity():
 
 @pytest.fixture
 def grid_connectivity():
-    def _grid_connectivity(names=["q0", "q1", "q2", "q3", "q4"]):
+    def _grid_connectivity(names=list(range(5))):
         chip = nx.Graph()
         chip.add_nodes_from(names)
         graph_list = [
@@ -120,7 +120,7 @@ def grid_connectivity():
 def line_connectivity():
     def _line_connectivity(n, names=None):
         if names is None:
-            names = [f"q{i}" for i in range(n)]
+            names = list(range(n))
         chip = nx.Graph()
         chip.add_nodes_from(names)
         graph_list = [(names[i], names[i + 1]) for i in range(n - 1)]

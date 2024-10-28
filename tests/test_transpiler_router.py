@@ -216,9 +216,7 @@ def test_star_circuit(star_connectivity):
 def test_star_circuit_custom_map(star_connectivity):
     connectivity = star_connectivity()
     circuit = star_circuit()
-    placer = Custom(
-        initial_map=["q1", "q0", "q2", "q3", "q4"], connectivity=connectivity
-    )
+    placer = Custom(initial_map=[1, 0, 2, 3, 4], connectivity=connectivity)
     transpiler = ShortestPaths(connectivity=connectivity)
 
     placer(circuit)
@@ -430,7 +428,7 @@ def test_sabre_simple(seed, star_connectivity):
     routed_circuit, final_map = router(circ)
 
     assert router.added_swaps == 1
-    assert final_map == {"q0": 2, "q1": 1, "q2": 0, "q3": 3, "q4": 4}
+    assert final_map == {0: 2, 1: 1, 2: 0, 3: 3, 4: 4}
     assert routed_circuit.queue[0].qubits == (0, 2)
     assert isinstance(routed_circuit.queue[0], gates.SWAP)
     assert isinstance(routed_circuit.queue[1], gates.CZ)
@@ -532,7 +530,7 @@ def test_restrict_qubits(router_algorithm, star_connectivity):
     circ.add(gates.CZ(0, 2))
     circ.add(gates.CZ(2, 1))
     circ.wire_names = ["q0", "q3", "q2"]
-    connectivity = star_connectivity()
+    connectivity = star_connectivity(["q0", "q1", "q2", "q3", "q4"])
     restricted_connectivity = restrict_connectivity_qubits(
         connectivity, ["q0", "q2", "q3"]
     )

@@ -109,6 +109,7 @@ class StarConnectivityPlacer(Placer):
         """
 
         middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
+        wire_names = circuit.wire_names.copy()
 
         for i, gate in enumerate(circuit.queue):
             if len(gate.qubits) > 2:
@@ -126,13 +127,15 @@ class StarConnectivityPlacer(Placer):
                     )
 
                     (
-                        circuit.wire_names[middle_qubit_idx],
-                        circuit.wire_names[new_middle],
+                        wire_names[middle_qubit_idx],
+                        wire_names[new_middle],
                     ) = (
-                        circuit.wire_names[new_middle],
-                        circuit.wire_names[middle_qubit_idx],
+                        wire_names[new_middle],
+                        wire_names[middle_qubit_idx],
                     )
                     break
+
+        circuit.wire_names = wire_names
 
 
 class Trivial(Placer):

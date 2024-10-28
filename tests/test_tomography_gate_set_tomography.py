@@ -261,7 +261,7 @@ def test_GST_non_invertible_matrix():
         matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
 
 
-def test_GST_with_transpiler(backend):
+def test_GST_with_transpiler(backend, star_connectivity):
     import networkx as nx
 
     target_gates = [gates.SX(0), gates.Z(0), gates.CNOT(0, 1)]
@@ -276,11 +276,7 @@ def test_GST_with_transpiler(backend):
         transpiler=None,
     )
     # define transpiler
-    connectivity = nx.Graph()
-    # star connectivity
-    connectivity.add_edges_from(
-        [("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")]
-    )
+    connectivity = star_connectivity()
     transpiler = Passes(
         connectivity=connectivity,
         passes=[

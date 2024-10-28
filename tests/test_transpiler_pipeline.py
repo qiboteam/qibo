@@ -53,13 +53,13 @@ def generate_random_circuit(nqubits, ngates, names=None, seed=42):
 
 def test_restrict_qubits_error_no_subset(star_connectivity):
     with pytest.raises(ConnectivityError) as excinfo:
-        restrict_connectivity_qubits(star_connectivity(), ["q0", "q1", "q5"])
+        restrict_connectivity_qubits(star_connectivity(), [0, 1, 5])
     assert "Some qubits are not in the original connectivity." in str(excinfo.value)
 
 
 def test_restrict_qubits_error_not_connected(star_connectivity):
     with pytest.raises(ConnectivityError) as excinfo:
-        restrict_connectivity_qubits(star_connectivity(), ["q0", "q1"])
+        restrict_connectivity_qubits(star_connectivity(), [0, 1])
     assert "New connectivity graph is not connected." in str(excinfo.value)
 
 
@@ -96,7 +96,7 @@ def test_assert_circuit_equivalence_equal():
     circ1.add(gates.CZ(0, 1))
     circ2.add(gates.X(0))
     circ2.add(gates.CZ(0, 1))
-    final_map = {"q0": 0, "q1": 1}
+    final_map = {0: 0, 1: 1}
     assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
@@ -106,7 +106,7 @@ def test_assert_circuit_equivalence_swap():
     circ1.add(gates.X(0))
     circ2.add(gates.SWAP(0, 1))
     circ2.add(gates.X(1))
-    final_map = {"q0": 1, "q1": 0}
+    final_map = {0: 1, 1: 0}
     assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
@@ -116,7 +116,7 @@ def test_assert_circuit_equivalence_false():
     circ1.add(gates.X(0))
     circ2.add(gates.SWAP(0, 1))
     circ2.add(gates.X(1))
-    final_map = {"q0": 0, "q1": 1}
+    final_map = {0: 0, 1: 1}
     with pytest.raises(TranspilerPipelineError):
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
@@ -133,7 +133,7 @@ def test_int_qubit_names_default(star_connectivity):
 def test_assert_circuit_equivalence_wrong_nqubits():
     circ1 = Circuit(1)
     circ2 = Circuit(2)
-    final_map = {"q0": 0, "q1": 1}
+    final_map = {0: 0, 1: 1}
     with pytest.raises(ValueError):
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
@@ -147,7 +147,6 @@ def test_error_connectivity():
 def test_is_satisfied(qubits, star_connectivity):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(qubits)
-    circuit.wire_names = ["q0", "q1", "q2", "q3", "q4"][:qubits]
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.Z(0))
     assert default_transpiler.is_satisfied(circuit)
@@ -207,9 +206,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
 @pytest.mark.parametrize("ngates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
-@pytest.mark.parametrize(
-    "restrict_names", [["q1", "q2", "q3"], ["q0", "q2", "q4"], ["q4", "q2", "q3"]]
-)
+@pytest.mark.parametrize("restrict_names", [[1, 2, 3], [0, 2, 4], [4, 2, 3]])
 def test_custom_passes_restrict(
     ngates, placer, routing, restrict_names, star_connectivity
 ):
