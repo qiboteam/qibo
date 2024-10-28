@@ -4567,8 +4567,8 @@ torch = "^2.2.0"
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
-reference = "tf-back"
-resolved_reference = "a1a0f4c1c67a4468a9e52e62f3d45661aa8a9a64"
+reference = "HEAD"
+resolved_reference = "d1df69bb493522c634a49c364421bc4c821d827f"
 
 [[package]]
 name = "qibotn"
@@ -5728,13 +5728,13 @@ files = [
 
 [[package]]
 name = "tqdm"
-version = "4.66.5"
+version = "4.66.6"
 description = "Fast, Extensible Progress Meter"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "tqdm-4.66.5-py3-none-any.whl", hash = "sha256:90279a3770753eafc9194a0364852159802111925aa30eb3f9d85b0e805ac7cd"},
-    {file = "tqdm-4.66.5.tar.gz", hash = "sha256:e1020aef2e5096702d8a025ac7d16b1577279c9d63f8375b63083e9a5f0fcbad"},
+    {file = "tqdm-4.66.6-py3-none-any.whl", hash = "sha256:223e8b5359c2efc4b30555531f09e9f2f3589bcd7fdd389271191031b49b7a63"},
+    {file = "tqdm-4.66.6.tar.gz", hash = "sha256:4bdd694238bef1485ce839d67967ab50af8f9272aab687c0d7702a01da0be090"},
 ]
 
 [package.dependencies]
@@ -6043,4 +6043,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "ad59845297cdb3e4f51ad3c2d0324277bb16bbda684696ffd68940047e18e1ff"
+content-hash = "731880ba3f30c5c16b15692d782ced337173dac75fc8990bea1cd7baaef7f01b"
