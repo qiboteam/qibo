@@ -329,7 +329,7 @@ def to_stinespring(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: Quantum channel in its Stinespring representation :math:`U_{0}`.
+        ndarray: quantum channel in its Stinespring representation :math:`U_{0}`.
     """
     backend = _check_backend(backend)
 
