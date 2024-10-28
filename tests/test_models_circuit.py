@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.models.circuit import _resolve_qubits
 from qibo.models.utils import initialize
 
 
@@ -48,7 +49,23 @@ def test_circuit_init():
     assert c.nqubits == 2
 
 
-def test_circuit_init_parse():
+def test_resolve_qubits():
+    nqubits, wire_names = _resolve_qubits(3, None)
+    assert nqubits == 3 and wire_names is None
+    nqubits, wire_names = _resolve_qubits(3, ["a", "b", "c"])
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(["a", "b", "c"], None)
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+
+    with pytest.raises(ValueError):
+        _resolve_qubits(None, None)
+    with pytest.raises(ValueError):
+        _resolve_qubits(3, ["a", "b"])
+    with pytest.raises(ValueError):
+        _resolve_qubits(["a", "b", "c"], ["x", "y"])
+
+
+def test_circuit_init_resolve_qubits():
     a = Circuit(3)
     assert a.nqubits == 3 and a.wire_names == [0, 1, 2]
     b = Circuit(3, wire_names=["a", "b", "c"])
@@ -59,7 +76,7 @@ def test_circuit_init_parse():
     assert d.nqubits == 3 and d.wire_names == ["x", "y", "z"]
 
 
-def test_circuit_init_errors():
+def test_circuit_init_resolve_qubits_err():
     with pytest.raises(ValueError):
         a = Circuit()
     with pytest.raises(ValueError):

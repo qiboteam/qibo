@@ -158,7 +158,7 @@ class Circuit:
         density_matrix: bool = False,
         wire_names: Optional[list] = None,
     ):
-        nqubits, wire_names = self._parse(nqubits, wire_names)
+        nqubits, wire_names = _resolve_qubits(nqubits, wire_names)
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
@@ -203,30 +203,6 @@ class Circuit:
                     "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
-
-    def _parse(self, qubit_spec, wire_names):
-        """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
-
-        .. code-block:: python
-            c = Circuit(3)
-            c = Circuit(3, wire_names=["q0", "q1", "q2"])
-            c = Circuit(["q0", "q1", "q2"])
-        """
-        if qubit_spec is None and wire_names is not None:
-            return len(wire_names), wire_names
-        if qubit_spec is not None and wire_names is None:
-            if isinstance(qubit_spec, int):
-                return qubit_spec, None
-            if isinstance(qubit_spec, list):
-                return len(qubit_spec), qubit_spec
-        if qubit_spec is not None and wire_names is not None:
-            if qubit_spec == len(wire_names):
-                return qubit_spec, wire_names
-
-        raise_error(
-            ValueError,
-            "Number of qubits and wire names are not consistent.",
-        )
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
@@ -1387,3 +1363,28 @@ class Circuit:
             String containing text circuit diagram.
         """
         sys.stdout.write(self.diagram(line_wrap, legend) + "\n")
+
+
+def _resolve_qubits(qubits, wire_names):
+    """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
+
+    .. code-block:: python
+        c = Circuit(3)
+        c = Circuit(3, wire_names=["q0", "q1", "q2"])
+        c = Circuit(["q0", "q1", "q2"])
+    """
+    if qubits is None and wire_names is not None:
+        return len(wire_names), wire_names
+    if qubits is not None and wire_names is None:
+        if isinstance(qubits, int):
+            return qubits, None
+        if isinstance(qubits, list):
+            return len(qubits), qubits
+    if qubits is not None and wire_names is not None:
+        if qubits == len(wire_names):
+            return qubits, wire_names
+
+    raise_error(
+        ValueError,
+        "Number of qubits and wire names are not consistent.",
+    )
