@@ -262,38 +262,40 @@ def test_hamiltonian_expectation_errors(backend):
         h.expectation("test")
 
 
-@pytest.mark.parametrize(
-    "observable",
-    [
-        2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2),
-        X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3,
-    ],
-)
-def test_hamiltonian_expectation_from_samples(backend, observable):
-    """Test Hamiltonian expectation value calculation."""
-    backend.set_seed(12)
+def non_exact_expectation_test_setup(backend, observable):
 
     nqubits = 3
-    nshots = 4 * 10**6
     c = Circuit(nqubits)
     for q in range(nqubits):
         c.add(gates.RX(q, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
-    matrix = H.matrix
-    diagonal = (
-        backend.np.count_nonzero(matrix - backend.np.diag(backend.np.diagonal(matrix)))
-        == 0
-    )
     final_state = backend.execute_circuit(c.copy(True)).state()
     exp = H.expectation(final_state)
-    if not diagonal:
-        exp_from_samples = H.expectation_from_samples(c, nshots=nshots)
-    else:
-        c.add(gates.M(*range(nqubits)))
-        freq = backend.execute_circuit(c, nshots=nshots).frequencies()
-        exp_from_samples = H.expectation_from_samples(freq)
+    return exp, H, c
 
+
+def test_hamiltonian_expectation_from_samples(backend):
+    """Test Hamiltonian expectation value calculation."""
+    backend.set_seed(12)
+
+    nshots = 4 * 10**6
+    observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
+    exp, H, c = non_exact_expectation_test_setup(backend, observable)
+    c.add(gates.M(*range(c.nqubits)))
+    freq = backend.execute_circuit(c, nshots=nshots).frequencies()
+    exp_from_samples = H.expectation_from_samples(freq)
+    backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
+
+
+def test_hamiltonian_expectation_from_circuit(backend):
+    """Test Hamiltonian expectation value calculation."""
+    backend.set_seed(12)
+
+    nshots = 4 * 10**6
+    observable = X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
+    exp, H, c = non_exact_expectation_test_setup(backend, observable)
+    exp_from_samples = H.expectation_from_circuit(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 

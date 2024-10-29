@@ -2058,7 +2058,7 @@ diagonalised simultaneously, one has to calculate the expectation value starting
    # while calculating the expectation value
 
    hamiltonian = SymbolicHamiltonian(3 * Z(2) * (1 - X(1)) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
-   expectation_value = hamiltonian.expectation_from_samples(circuit)
+   expectation_value = hamiltonian.expectation_from_circuit(circuit)
 
 What is happening under the hood in this case, is that the expectation value is calculated for each term
 individually by measuring the circuit in the correct (rotated) basis. All the contributions are then

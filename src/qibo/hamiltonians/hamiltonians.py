@@ -2,7 +2,7 @@
 
 from itertools import chain
 from math import prod
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import sympy
@@ -556,26 +556,34 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def _exp_from_circuit(
-        self, circuit: "Circuit", qubit_map: dict, nshots: int = None
-    ):
+    def expectation_from_circuit(
+        self, circuit: "Circuit", qubit_map: dict = None, nshots: int = 1000
+    ) -> float:
         """
         Calculate the expectation value from a circuit.
-        This allows for non diagonal observables. Each term of the observable is
-        treated separately, by measuring in the correct basis and re-executing the
-        circuit.
+        This even works for observables not completely diagonal in the computational
+        basis, but only diagonal at a term level in a defined basis. Namely, for
+        an observable of the form :math:``H = \\sum_i H_i``, where each :math:``H_i``
+        consists in a `n`-qubits pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`,
+        the expectation value is computed by rotating the input circuit in the suitable
+        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
+        that are then summed to build the global expectation value.
+        Each term of the observable is treated separately, by measuring in the correct
+        basis and re-executing the circuit.
 
         Args:
-            circuit (Circuit): input frequencies.
-            qubit_map (dict): qubit map.
+            circuit (Circuit): input circuit.
+            qubit_map (dict): qubit map, defaults to ``{0: 0, 1: 1, ..., n: n}``
+            nshots (int): number of shots, defaults to 1000.
 
         Returns:
             (float): the calculated expectation value.
         """
         from qibo import Circuit, gates
 
-        if nshots is None:  # pragma: no cover
-            nshots = 1000
+        if qubit_map is None:
+            qubit_map = list(range(self.nqubits))
+
         rotated_circuits = []
         coefficients = []
         Z_observables = []
@@ -614,20 +622,20 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         ]
         return sum(
             [
-                coeff * obs._exp_from_freq(freq, qmap)
+                coeff * obs.expectation_from_samples(freq, qmap)
                 for coeff, freq, obs, qmap in zip(
                     coefficients, frequencies, Z_observables, q_maps
                 )
             ]
         )
 
-    def _exp_from_freq(self, freq: dict, qubit_map: dict) -> float:
+    def expectation_from_samples(self, freq: dict, qubit_map: dict = None) -> float:
         """
-        Calculate the expectation value from some frequencies.
+        Calculate the expectation value from the samples.
         The observable has to be diagonal in the computational basis.
 
         Args:
-            freq (dict): input frequencies.
+            freq (dict): input frequencies of the samples.
             qubit_map (dict): qubit map.
 
         Returns:
@@ -640,6 +648,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     raise_error(
                         NotImplementedError, "Observable is not a Z Pauli string."
                     )
+
+        if qubit_map is None:
+            qubit_map = list(range(self.nqubits))
 
         keys = list(freq.keys())
         counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
@@ -659,38 +670,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             len(self.terms), len(freq)
         )
         return self.backend.np.sum(expvals @ counts.T) + self.constant.real
-
-    def expectation_from_samples(
-        self, data: Union[dict, "Circuit"], qubit_map: dict = None, nshots: int = None
-    ):
-        """
-        Calculate the expectation value starting from the samples. This even works
-        for observables not completely diagonal in the computational basis, but only
-        diagonal at a term level in a defined basis. Namely, for an observable of the
-        form :math:``H = \\sum_i H_i``, where each :math:``H_i`` consists in a `n`-qubits
-        pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`, the
-        expectation value is computed by rotating the input circuit in the suitable
-        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
-        that are then summed to build the global expectation value.
-
-        Args:
-            data (dict | :class:`qibo.models.Circuit`): either the ``dict`` of the
-            frequencies of the samples or a :class:`qibo.models.Circuit` where to
-            extract the samples from. A :class:`qibo.models.Circuit` is needed in
-            case the observable is not diagonal in the computational basis.
-            qubit_map (dict): qubit map.
-            nshots (int, optional): number of shots for the expecation value
-            calculation. This is used only when a :class:`qibo.models.Circuit`
-            is passed as input.
-
-        Returns:
-            (float) the computed expectation value.
-        """
-        if qubit_map is None:
-            qubit_map = list(range(self.nqubits))
-        if isinstance(data, dict):
-            return self._exp_from_freq(data, qubit_map)
-        return self._exp_from_circuit(data, qubit_map, nshots)
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
