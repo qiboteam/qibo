@@ -4,7 +4,7 @@ from operator import or_
 
 from qibo import gates
 from qibo.backends import _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions import (
@@ -22,7 +22,11 @@ class FlagMeta(EnumMeta):
 
     def __getitem__(cls, keys):
         if isinstance(keys, str):
-            return super().__getitem__(keys)
+            try:
+                return super().__getitem__(keys)
+            except KeyError:
+                log.info(f"Native gate {keys} is not supported by qibo.")
+                return super().__getitem__("NONE")
         return reduce(or_, [cls[key] for key in keys])  # pylint: disable=E1136
 
 
@@ -44,6 +48,7 @@ class NativeGates(Flag, metaclass=FlagMeta):
         - :class:`qibo.gates.gates.CNOT`
     """
 
+    NONE = 0
     I = auto()
     Z = auto()
     RZ = auto()
