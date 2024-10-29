@@ -25,7 +25,6 @@ class FlagMeta(EnumMeta):
             try:
                 return super().__getitem__(keys)
             except KeyError:
-                log.info(f"Native gate {keys} is not supported by qibo.")
                 return super().__getitem__("NONE")
         return reduce(or_, [cls[key] for key in keys])  # pylint: disable=E1136
 
