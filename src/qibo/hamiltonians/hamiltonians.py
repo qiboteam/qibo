@@ -597,7 +597,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 for factor in set(term.factors)
             ]
             circ_copy = circuit.copy(True)
-            [circ_copy.add(m) for m in measurements]
+            circ_copy.add(measurements)
             rotated_circuits.append(circ_copy)
             # map the original qubits into 0, 1, 2, ...
             q_maps.append(
