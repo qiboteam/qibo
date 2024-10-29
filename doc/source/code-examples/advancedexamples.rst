@@ -2015,7 +2015,7 @@ to allow calculation of expectation values directly from such samples:
 .. testcode::
 
     from qibo import Circuit, gates
-    from qibo.hamiltonians import Z as HZ
+    from qibo import hamiltonians
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
@@ -2024,7 +2024,7 @@ to allow calculation of expectation values directly from such samples:
     circuit.add(gates.CNOT(2, 3))
     circuit.add(gates.M(*range(4)))
 
-    hamiltonian = HZ(4)
+    hamiltonian = hamiltonians.Z(4)
 
     result = circuit(nshots=1024)
     expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
