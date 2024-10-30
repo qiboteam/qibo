@@ -1,6 +1,12 @@
 from qibo.models import hep, tsp
 from qibo.models.circuit import Circuit
 from qibo.models.encodings import (
+    CompBasisEncoder,
+    EntanglingLayer,
+    GHZState,
+    PhaseEncoder,
+    UnaryEncoder,
+    UnaryEncoderRandomGaussian,
     comp_basis_encoder,
     entangling_layer,
     phase_encoder,
