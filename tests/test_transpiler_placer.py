@@ -18,7 +18,7 @@ from qibo.transpiler.router import ShortestPaths
 from qibo.transpiler.utils import assert_placement
 
 
-def star_circuit(names=["q0", "q1", "q2", "q3", "q4"]):
+def star_circuit(names=[0, 1, 2, 3, 4]):
     circuit = Circuit(5, wire_names=names)
     for i in range(1, 5):
         circuit.add(gates.CNOT(i, 0))
@@ -67,8 +67,9 @@ def test_trivial_restricted(star_connectivity):
     [["E", "D", "C", "B", "A"], {"E": 0, "D": 1, "C": 2, "B": 3, "A": 4}],
 )
 def test_custom(custom_layout, star_connectivity):
-    circuit = Circuit(5)
-    connectivity = star_connectivity(["A", "B", "C", "D", "E"])
+    names = ["A", "B", "C", "D", "E"]
+    circuit = Circuit(5, wire_names=names)
+    connectivity = star_connectivity(names)
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
     placer(circuit)
     assert circuit.wire_names == ["E", "D", "C", "B", "A"]
@@ -102,7 +103,7 @@ def test_custom_error_circuit(star_connectivity):
     custom_layout = [4, 3, 2, 1, 0]
     connectivity = star_connectivity(names=custom_layout)
     placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    with pytest.raises(TranspilerPipelineError):
+    with pytest.raises(PlacementError):
         placer(circuit)
 
 
@@ -154,7 +155,7 @@ def test_subgraph_error(star_connectivity):
 
 
 def test_subgraph_restricted(star_connectivity):
-    circuit = Circuit(4)
+    circuit = Circuit(4, wire_names=[0, 2, 3, 4])
     circuit.add(gates.CNOT(0, 3))
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(3, 2))
@@ -180,7 +181,7 @@ def test_random(reps, names, star_connectivity):
 
 def test_random_restricted(star_connectivity):
     names = [0, 1, 2, 3, 4]
-    circuit = Circuit(4, wire_names=names[:4])
+    circuit = Circuit(4, wire_names=[0, 2, 3, 4])
     circuit.add(gates.CNOT(1, 3))
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(3, 2))
