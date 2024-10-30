@@ -105,7 +105,7 @@ def test_vqe(backend, method, options, compile, filename):
         backend.platform not in ["tensorflow", "pytorch"]
     ):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and (backend.platform not in ["tensorflow", "pytorch"]):
+    if method != "sgd" and (backend.platform in ["tensorflow", "pytorch"]):
         pytest.skip("Skipping scipy optimizers for pytorch and tensorflow.")
     n_threads = backend.nthreads
     backend.set_threads(1)
@@ -279,7 +279,7 @@ def test_qaoa_optimization(backend, method, options, dense, filename):
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = backend.cast([0.05, 0.06, 0.07, 0.08], dtype="float64")
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         initial_p.requires_grad = True
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
