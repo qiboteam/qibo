@@ -2103,9 +2103,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     # Define connectivity as nx.Graph
     def star_connectivity():
-        chip = nx.Graph()
-        chip.add_nodes_from(["q0", "q1", "q2", "q3", "q4"])
-        chip.add_edges_from([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
+        chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
         return chip
 
     # Define the circuit

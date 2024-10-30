@@ -119,8 +119,23 @@ class Circuit:
     This circuit is symbolic and cannot perform calculations.
     A specific backend has to be used for performing calculations.
 
+    Circuits can be created with a specific number of qubits and wire names.
+    Example:
+        .. testcode::
+            from qibo import Circuit
+            c = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
+            c = Circuit(["A", "B", "C", "D", "E"])
+            c = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
+            c = Circuit(wire_names=["A", "B", "C", "D", "E"])
+
     Args:
-        nqubits (int, list): Number of qubits in the circuit or a list of wire names.
+        nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
+        wire_names (list, optional): List of wire names.
+            - Either ``nqubits`` or ``wire_names`` must be provided.
+            - If only ``nqubits`` is provided, wire names will default to [``0``, ``1``, ..., ``nqubits - 1``].
+            - If only ``wire_names`` is provided, ``nqubits`` will be set to the length of ``wire_names``.
+            - ``nqubits`` and ``wire_names`` must be consistent with each other.
+
         init_kwargs (dict): a dictionary with the following keys
 
             - *nqubits*
@@ -141,9 +156,6 @@ class Circuit:
             Defaults to ``False``.
         accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
-        wire_names (list, optional): Names for qubit wire names.
-            If ``None``, defaults to [``0``, ``1``, ..., ``nqubits - 1``].
-            If ``list`` is passed, length of ``list`` must match ``nqubits``.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
         nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
@@ -385,7 +397,7 @@ class Circuit:
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
-        kwargs["wire_names"] = [self.wire_names[q] for q in list(sorted(qubits))]
+        kwargs["wire_names"] = [self.wire_names[q] for q in sorted(qubits)]
         circuit = self.__class__(**kwargs)
         circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
@@ -1368,10 +1380,13 @@ class Circuit:
 def _resolve_qubits(qubits, wire_names):
     """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
 
-    .. code-block:: python
-        c = Circuit(3)
-        c = Circuit(3, wire_names=["q0", "q1", "q2"])
-        c = Circuit(["q0", "q1", "q2"])
+    Example:
+        .. code-block:: python
+            from qibo import Circuit
+            c = Circuit(3)
+            c = Circuit(3, wire_names=["q0", "q1", "q2"])
+            c = Circuit(["q0", "q1", "q2"])
+            c = Circuit(wire_names=["q0", "q1", "q2"])
     """
     if qubits is None and wire_names is not None:
         return len(wire_names), wire_names
