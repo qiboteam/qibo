@@ -119,13 +119,12 @@ def test_list_available_backends():
     )
     available_backends = {
         "numpy": True,
-        "pytorch": True,
         "qulacs": qulacs,
         "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
         "qibolab": False,
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
-        "qiboml": {"tensorflow": tensorflow},
+        "qiboml": {"tensorflow": tensorflow, "pytorch": True},
     }
     assert available_backends == list_available_backends(
         "qibojit", "qibolab", "qibo-cloud-backends", "qibotn", "qiboml"

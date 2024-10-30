@@ -174,7 +174,7 @@ def test_random_unitary(backend, measure):
     matrix_dagger = backend.np.conj(matrix).T
     matrix_inv = (
         backend.np.inverse(matrix)
-        if backend.name == "pytorch"
+        if backend.platform == "pytorch"
         else np.linalg.inv(matrix)
     )
     norm = float(
