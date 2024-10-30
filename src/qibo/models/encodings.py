@@ -424,7 +424,7 @@ class EntanglingLayer(Circuit):
 
 
 class GHZState(Circuit):
-    def __init__(nqubits: int, **kwargs):
+    def __init__(self, nqubits: int, **kwargs):
         """Generates an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
         .. math::
