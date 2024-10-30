@@ -56,6 +56,8 @@ def test_resolve_qubits():
     assert nqubits == 3 and wire_names == ["a", "b", "c"]
     nqubits, wire_names = _resolve_qubits(["a", "b", "c"], None)
     assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(None, ["x", "y", "z"])
+    assert nqubits == 3 and wire_names == ["x", "y", "z"]
 
     with pytest.raises(ValueError):
         _resolve_qubits(None, None)
@@ -683,9 +685,9 @@ def test_circuit_wire_names():
     assert circuit._wire_names == ["a", "b", "c", "d", "e"]
 
     with pytest.raises(TypeError):
-        circuit = Circuit(5, wire_names=1)
+        circuit.wire_names = 5
     with pytest.raises(ValueError):
-        circuit = Circuit(5, wire_names=["a", "b", "c"])
+        circuit.wire_names = ["a", "b", "c", "d"]
 
 
 def test_circuit_draw_wire_names():

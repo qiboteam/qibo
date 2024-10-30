@@ -171,16 +171,6 @@ class Circuit:
         wire_names: Optional[list] = None,
     ):
         nqubits, wire_names = _resolve_qubits(nqubits, wire_names)
-        if not isinstance(nqubits, int):
-            raise_error(
-                TypeError,
-                f"Number of qubits must be an integer but is {nqubits}.",
-            )
-        if nqubits < 1:
-            raise_error(
-                ValueError,
-                f"Number of qubits must be positive but is {nqubits}.",
-            )
         self.nqubits = nqubits
         self.init_kwargs = {
             "nqubits": nqubits,
@@ -1391,15 +1381,16 @@ def _resolve_qubits(qubits, wire_names):
     if qubits is None and wire_names is not None:
         return len(wire_names), wire_names
     if qubits is not None and wire_names is None:
-        if isinstance(qubits, int):
+        if isinstance(qubits, int) and qubits > 0:
             return qubits, None
         if isinstance(qubits, list):
             return len(qubits), qubits
     if qubits is not None and wire_names is not None:
-        if qubits == len(wire_names):
-            return qubits, wire_names
+        if isinstance(qubits, int) and isinstance(wire_names, list):
+            if qubits == len(wire_names):
+                return qubits, wire_names
 
     raise_error(
         ValueError,
-        "Number of qubits and wire names are not consistent.",
+        "Invalid input arguments for defining a circuit.",
     )
