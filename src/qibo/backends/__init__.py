@@ -8,10 +8,9 @@ from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.backends.pytorch import PyTorchBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "pytorch", "qulacs")
+QIBO_NATIVE_BACKENDS = ("numpy", "qulacs")
 
 
 class MissingBackend(ValueError):
@@ -39,9 +38,6 @@ class MetaBackend:
                 f"Backend {backend} is not available. "
                 + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford',)}",
             )
-
-        if backend == "pytorch":
-            return PyTorchBackend()
 
         if backend == "clifford":
             engine = kwargs.pop("platform", None)
@@ -80,7 +76,7 @@ class _Global:
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "numpy"},
         {"backend": "qiboml", "platform": "tensorflow"},
-        {"backend": "pytorch"},
+        {"backend": "qiboml", "platform": "pytorch"},
     ]
 
     @classmethod
