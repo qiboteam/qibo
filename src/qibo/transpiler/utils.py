@@ -18,20 +18,6 @@ from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.unroller import NativeGates
 
 
-def assert_qubit_match(circuit: Circuit, connectivity: nx.Graph):
-    """Check if the number of qubits in the circuit matches the connectivity graph.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
-        connectivity (:class:`networkx.Graph`): Chip connectivity.
-    """
-    if circuit.nqubits != len(connectivity.nodes):
-        raise_error(
-            TranspilerPipelineError,
-            "Number of qubits in the circuit does not match the connectivity graph.",
-        )
-
-
 def assert_transpiling(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
@@ -130,41 +116,22 @@ def _transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
 
 
 def assert_placement(circuit: Circuit, connectivity: nx.Graph):
-    """Check if layout is in the correct form and matches the number of qubits of the circuit.
+    """Check if the layout of the circuit is consistent with the circuit and connectivity graph.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
-        layout (dict): qubit names.
         connectivity (:class:`networkx.Graph`, optional): Chip connectivity.
-            This argument is necessary if the layout is applied to a subset of
-            qubits of the original connectivity graph. Defaults to ``None``.
     """
-    layout = circuit.wire_names
-    assert_mapping_consistency(layout=layout, connectivity=connectivity)
-    if circuit.nqubits > len(layout):
+    if circuit.nqubits != len(circuit.wire_names) or circuit.nqubits != len(
+        connectivity.nodes
+    ):
         raise_error(
             PlacementError,
-            "Layout can't be used on circuit. The circuit requires more qubits.",
+            f"Number of qubits in the circuit ({circuit.nqubits}) "
+            + f"does not match the number of qubits in the layout ({len(circuit.wire_names)}) "
+            + f"or the connectivity graph ({len(connectivity.nodes)}).",
         )
-    if circuit.nqubits < len(layout):
-        raise_error(
-            PlacementError,
-            "Layout can't be used on circuit. "
-            + "Ancillary extra qubits need to be added to the circuit.",
-        )
-
-
-def assert_mapping_consistency(layout: list, connectivity: nx.Graph):
-    """Check if layout is in the correct form.
-
-    Args:
-        layout (dict): qubit names.
-        connectivity (:class:`networkx.Graph`, optional):  Chip connectivity.
-            This argument is necessary if the layout is applied to a subset of
-            qubits of the original connectivity graph.
-    """
-    nodes = list(connectivity.nodes)
-    if sorted(nodes) != sorted(layout):
+    if set(circuit.wire_names) != set(connectivity.nodes):
         raise_error(
             PlacementError,
             "Some physical qubits in the layout may be missing or duplicated.",

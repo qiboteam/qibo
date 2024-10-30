@@ -9,7 +9,7 @@ from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.router import _find_connected_qubit
-from qibo.transpiler.utils import assert_placement, assert_qubit_match
+from qibo.transpiler.utils import assert_placement
 
 
 def _find_gates_qubits_pairs(circuit: Circuit):
@@ -66,7 +66,7 @@ class StarConnectivityPlacer(Placer):
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 Only single qubit gates and two qubits gates are supported by the router.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
         middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
         wire_names = circuit.wire_names.copy()
 
@@ -109,7 +109,7 @@ class Trivial(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
         return
 
 
@@ -132,7 +132,8 @@ class Custom(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
+
         if isinstance(self.initial_map, dict):
             circuit.wire_names = sorted(self.initial_map, key=self.initial_map.get)
         elif isinstance(self.initial_map, list):
@@ -164,7 +165,7 @@ class Subgraph(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         if len(gates_qubits_pairs) < 3:
             raise_error(
@@ -223,7 +224,7 @@ class Random(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
         _, local_state = _check_backend_and_local_state(self.seed, backend=None)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
@@ -309,7 +310,7 @@ class ReverseTraversal(Placer):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
         """
-        assert_qubit_match(circuit, self.connectivity)
+        assert_placement(circuit, self.connectivity)
         self.routing_algorithm.connectivity = self.connectivity
         new_circuit = self._assemble_circuit(circuit)
         self._routing_step(new_circuit)

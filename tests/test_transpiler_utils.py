@@ -14,19 +14,8 @@ from qibo.transpiler.utils import (
     assert_circuit_equivalence,
     assert_connectivity,
     assert_decomposition,
-    assert_mapping_consistency,
     assert_placement,
-    assert_qubit_match,
 )
-
-
-def test_assert_qubit_match(star_connectivity):
-    circuit = Circuit(3)
-    with pytest.raises(TranspilerPipelineError):
-        assert_qubit_match(circuit, star_connectivity())
-
-    circuit = Circuit(5)
-    assert_qubit_match(circuit, star_connectivity())
 
 
 def test_assert_circuit_equivalence_equal():
@@ -61,44 +50,19 @@ def test_assert_circuit_equivalence_false():
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency(names, star_connectivity):
-    assert_mapping_consistency(names, star_connectivity(names))
-
-
-def test_mapping_consistency_error(star_connectivity):
-    with pytest.raises(PlacementError):
-        assert_mapping_consistency(["A", "B", "C", "D", "F"], star_connectivity())
-
-
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted(names, star_connectivity):
-    connectivity = star_connectivity(names)
-    on_qubit = [names[0], names[2]]
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
-    assert_mapping_consistency(on_qubit, restricted_connectivity)
-
-
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_mapping_consistency_restricted_error(names, star_connectivity):
-    connectivity = star_connectivity(names)
-    on_qubit = [names[0], names[2]]
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
-    with pytest.raises(PlacementError):
-        assert_mapping_consistency([names[3], names[4]], restricted_connectivity)
-
-
 def test_assert_placement_true(star_connectivity):
     circuit = Circuit(5)
     assert_placement(circuit, connectivity=star_connectivity())
 
 
 @pytest.mark.parametrize(
-    "qubits, names", [(5, ["A", "B", "C", "D", "F"]), (3, ["A", "B", "C"])]
+    "qubits, names", [(1, ["A", "B", "C", "D", "E"]), (10, ["A", "B", "C", "D", "E"])]
 )
 def test_assert_placement_false(qubits, names, star_connectivity):
     connectivity = star_connectivity()
-    circuit = Circuit(qubits, wire_names=names)
+    circuit = Circuit(5)
+    circuit.nqubits = qubits
+    circuit._wire_names = names
     with pytest.raises(PlacementError):
         assert_placement(circuit, connectivity)
 
@@ -109,6 +73,25 @@ def test_assert_placement_error(qubits, star_connectivity):
     circuit = Circuit(qubits)
     with pytest.raises(PlacementError):
         assert_placement(circuit, connectivity)
+
+
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_assert_placement_restricted(names, star_connectivity):
+    connectivity = star_connectivity(names)
+    on_qubit = [names[0], names[2]]
+    circuit = Circuit(2, wire_names=on_qubit)
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
+    assert_placement(circuit, restricted_connectivity)
+
+
+@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
+def test_assert_placement_restricted_error(names, star_connectivity):
+    connectivity = star_connectivity(names)
+    on_qubit = [names[0], names[2]]
+    circuit = Circuit(2, wire_names=[names[3], names[4]])
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, on_qubit)
+    with pytest.raises(PlacementError):
+        assert_placement(circuit, restricted_connectivity)
 
 
 def test_assert_decomposition():
