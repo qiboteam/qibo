@@ -1,6 +1,6 @@
 import numpy as np
 
-from qibo import gates, models
+from qibo import Circuit, gates
 from qibo.quantum_info.utils import hellinger_fidelity, hellinger_shot_error
 
 
@@ -13,8 +13,8 @@ def noisy_circuit(circuit, params):
 
 
     Args:
-        circuit (qibo.models.Circuit): Circuit on which noise will be applied. Since in the end are
-        applied bitflips, measurement gates are required.
+        circuit (:class:`qibo.models.Circuit`): Circuit on which noise will be applied. Since in the end are
+            applied bitflips, measurement gates are required.
         params (dict): contains the parameters of the channels organized as follow \n
                 {'t1' : (``t1``, ``t2``,..., ``tn``),
                 't2' : (``t1``, ``t2``,..., ``tn``),
@@ -30,10 +30,9 @@ def noisy_circuit(circuit, params):
             The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
             The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
             The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
+
     Returns:
-        The new noisy circuit (qibo.models.Circuit).
-
-
+        :class:`qibo.models.Circuit`: New noisy circuit.
     """
     # parameters of the model
     t1 = params["t1"]
@@ -48,7 +47,7 @@ def noisy_circuit(circuit, params):
     idle_qubits = params["idle_qubits"]
 
     # new circuit
-    noisy_circ = models.Circuit(circuit.nqubits, density_matrix=True)
+    noisy_circ = Circuit(circuit.nqubits, density_matrix=True)
 
     # time steps of the circuit
     time_steps = max(circuit.queue.moment_index)
@@ -278,7 +277,7 @@ class CompositeNoiseModel:
     def apply(self, circuit):
         """Creates the noisy circuit from the circuit given as argument by using the :func:`qibo.noise_model.noisy_circuit`.
         Args:
-            circuit (qibo.models.Circuit): the circuit you want to simulate.
+            circuit (:class:`qibo.models.Circuit`): Circuit to simulate.
         """
         self.noisy_circuit = noisy_circuit(circuit, self.params)
 
