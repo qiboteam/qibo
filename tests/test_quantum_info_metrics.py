@@ -3,7 +3,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.models.encodings import _generate_rbs_angles, unary_encoder
+from qibo.models.encodings import UnaryEncoder, unary_encoder
 from qibo.quantum_info.metrics import (
     average_gate_fidelity,
     bures_angle,
@@ -399,7 +399,7 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         data = np.random.rand(nqubits)
         data = backend.cast(data, dtype=data.dtype)
 
-        params = _generate_rbs_angles(data, nqubits, "diagonal")
+        params = UnaryEncoder._generate_rbs_angles(data, nqubits, "diagonal")
         params = backend.cast(params, dtype=np.float64)
 
         target = [1]
