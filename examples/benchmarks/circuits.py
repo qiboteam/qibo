@@ -1,6 +1,7 @@
 import numpy as np
 
-from qibo import gates, models
+from qibo import Circuit, gates
+from qibo.models import QFT
 
 
 def VariationalCircuit(nqubits, nlayers=1, theta_values=None):
@@ -64,10 +65,10 @@ _CIRCUITS = {
 
 def CircuitFactory(nqubits, circuit_name, accelerators=None, **kwargs):
     if circuit_name == "qft":
-        circuit = models.QFT(nqubits, accelerators=accelerators)
+        circuit = QFT(nqubits, accelerators=accelerators)
     else:
         if circuit_name not in _CIRCUITS:
             raise KeyError(f"Unknown benchmark circuit type {circuit_name}.")
-        circuit = models.Circuit(nqubits, accelerators=accelerators)
+        circuit = Circuit(nqubits, accelerators=accelerators)
         circuit.add(_CIRCUITS.get(circuit_name)(nqubits, **kwargs))
     return circuit

@@ -8,8 +8,17 @@ import time
 import numpy as np
 from utils import BenchmarkLogger
 
-import qibo
-from qibo import gates, hamiltonians, models
+from qibo import (
+    Circuit,
+    gates,
+    get_backend,
+    get_device,
+    get_precision,
+    get_threads,
+    set_backend,
+)
+from qibo.hamiltonians import XXZ
+from qibo.models import VQE
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
@@ -29,7 +38,7 @@ parser.add_argument(
 
 def create_circuit(nqubits, nlayers):
     """Creates variational circuit."""
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(nlayers):
         circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
         circuit.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
@@ -44,17 +53,17 @@ def main(
     nqubits, nlayers, backend, fuse=False, method="Powell", maxiter=None, filename=None
 ):
     """Performs a VQE circuit minimization test."""
-    qibo.set_backend(backend)
+    set_backend(backend)
     logs = BenchmarkLogger(filename)
     logs.append(
         {
             "nqubits": nqubits,
             "nlayers": nlayers,
             "fuse": fuse,
-            "backend": qibo.get_backend(),
-            "precision": qibo.get_precision(),
-            "device": qibo.get_device(),
-            "threads": qibo.get_threads(),
+            "backend": get_backend(),
+            "precision": get_precision(),
+            "device": get_device(),
+            "threads": get_threads(),
             "method": method,
             "maxiter": maxiter,
         }
@@ -67,8 +76,8 @@ def main(
     circuit = create_circuit(nqubits, nlayers)
     if fuse:
         circuit = circuit.fuse()
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
-    vqe = models.VQE(circuit, hamiltonian)
+    hamiltonian = XXZ(nqubits=nqubits)
+    vqe = VQE(circuit, hamiltonian)
     logs[-1]["creation_time"] = time.time() - start_time
 
     target = np.real(np.min(hamiltonian.eigenvalues()))
