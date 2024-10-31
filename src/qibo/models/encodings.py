@@ -160,8 +160,10 @@ class UnaryEncoder(Circuit):
         """
 
         if architecture == "diagonal":
-            pairs_rbs = np.arange(nqubits)
-            pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
+            self._pairs_rbs = np.arange(nqubits)
+            self._pairs_rbs = [
+                [pair] for pair in zip(self._pairs_rbs[:-1], self._pairs_rbs[1:])
+            ]
 
         if architecture == "tree":
             self._pairs_rbs = [[(0, int(nqubits / 2))]]
@@ -184,7 +186,8 @@ class UnaryEncoder(Circuit):
             for pair in row
         )
 
-    def _generate_rbs_angles(self, data, nqubits: int, architecture: str):
+    @staticmethod
+    def _generate_rbs_angles(data, nqubits: int, architecture: str):
         """Generating list of angles for RBS gates based on ``architecture``.
 
         Args:
