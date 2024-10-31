@@ -787,7 +787,7 @@ that is supported by Tensorflow, such as defining
 and using the `Sequential model API
 <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_ to train them.
 
-Similarly, ``pytorch`` supports `automatic differentiation
+Similarly, ``pytorch`` `supports automatic differentiation
 <https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorFor%20example%20tial.html>`_.
 The following script optimizes the parameters of the variational circuit of the first example
 using the ``pytorch`` framework.

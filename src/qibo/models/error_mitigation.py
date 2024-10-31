@@ -821,7 +821,7 @@ def get_expectation_val_with_readout_mitigation(
     Applies readout error mitigation to the given circuit and observable.
 
     Args:
-        circuit (qibo.models.Circuit): input circuit.
+        circuit (:class:`qibo.models.Circuit`): input circuit.
         observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): The observable to be measured.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
         nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
@@ -1163,7 +1163,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Helper function to execute the given circuit with the specified parameters.
 
     Args:
-        circuit (qibo.models.Circuit): input circuit.
+        circuit (:class:`qibo.models.Circuit`): input circuit.
         qubit_map (list): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): The noise model to be applied. Defaults to ``None``.
         nshots (int): the number of shots for the circuit execution. Defaults to :math:`10000`..

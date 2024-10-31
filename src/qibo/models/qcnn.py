@@ -1,4 +1,6 @@
-""" This module implements a Quantum Convolutional Neural Network (QCNN) for classification tasks. The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_ for the identification of quantum phases.
+""" This module implements a Quantum Convolutional Neural Network (QCNN) for classification tasks.
+The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_
+for the identification of quantum phases.
 
 The QuantumCNN class in this module provides methods to construct the QCNN.
 """
@@ -14,8 +16,8 @@ class QuantumCNN:
     """
     Model that implements and trains a variational quantum convolutional network (QCNN) for
     classification tasks.
-    The QCNN model was originally proposed in: `arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>`_
-    for the identification of quantum phases.
+    The QCNN model was originally proposed in: `arXiv:1810.03787
+    <https://arxiv.org/abs/1810.03787>`_ for the identification of quantum phases.
 
     Args:
         nqubits (int): number of qubits of the input states. Currently supports powers of 2.
@@ -23,18 +25,22 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
-        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
+        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by
+            the user to form the two qubit ansatz used in the convolutional circuit.
+
     Example:
         .. testcode::
 
             import math
-            import numpy as np
             import random
-            import qibo
+
+            import numpy as np
+
+            from qibo import set_backend
             from qibo.models.qcnn import QuantumCNN
 
+            set_backend("numpy")
 
-            qibo.set_backend("numpy")
             data = np.random.rand(16)
             data = data / np.linalg.norm(data)
             data = [data]

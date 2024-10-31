@@ -131,7 +131,7 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
             t (float): Time that the Hamiltonian should be calculated.
 
         Returns:
-            A :class:`qibo.models.Circuit` implementing the Trotterized evolution.
+            :class:`qibo.models.Circuit`: Circuit implementing the Trotterized evolution.
         """
         from qibo import Circuit  # pylint: disable=import-outside-toplevel
         from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
