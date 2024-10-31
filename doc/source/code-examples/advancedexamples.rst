@@ -156,21 +156,21 @@ and the :class:`qibo.gates.CallbackGate` gate. For example:
 
 .. testcode::
 
-    from qibo import models, gates, callbacks
+    from qibo import gates, callbacks
 
     # create entropy callback where qubit 0 is the first subsystem
     entropy = callbacks.EntanglementEntropy([0])
 
     # initialize circuit with 2 qubits and add gates
-    c = models.Circuit(2) # state is |00> (entropy = 0)
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
-    c.add(gates.H(0)) # state is |+0> (entropy = 0)
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
-    c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
+    circuit = Circuit(2) # state is |00> (entropy = 0)
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
+    circuit.add(gates.H(0)) # state is |+0> (entropy = 0)
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
+    circuit.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
     # execute the circuit using the callback
-    final_state = c()
+    final_state = circuit()
 
 The results can be accessed using indexing on the callback objects. In this
 example ``entropy[:]`` will return ``[0, 0, 1]`` which are the
@@ -181,29 +181,29 @@ circuit. For example
 
 .. testsetup::
 
-    from qibo import models, gates, callbacks
+    from qibo import Circuit, gates
+    from qibo.callbacks import EntanglementEntropy
 
     # create entropy callback where qubit 0 is the first subsystem
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
 
     # initialize circuit with 2 qubits and add gates
-    c = models.Circuit(2) # state is |00> (entropy = 0)
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
-    c.add(gates.H(0)) # state is |+0> (entropy = 0)
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
-    c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
-    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
+    circuit = Circuit(2) # state is |00> (entropy = 0)
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
+    circuit.add(gates.H(0)) # state is |+0> (entropy = 0)
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
+    circuit.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
+    circuit.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
     # execute the circuit using the callback
-    final_state = c()
+    final_state = circuit()
 
 .. testcode::
 
-    # c is the same circuit as above
     # execute the circuit
-    final_state = c()
+    final_state = circuit()
     # execute the circuit a second time
-    final_state = c()
+    final_state = circuit()
 
     # print result
     print(entropy[:]) # [0, 0, 1, 0, 0, 1]
@@ -228,17 +228,18 @@ such gates are added in a circuit their parameters can be updated using the
 .. testcode::
 
     from qibo import Circuit, gates
+
     # create a circuit with all parameters set to 0.
-    c = Circuit(3)
-    c.add(gates.RX(0, theta=0))
-    c.add(gates.RY(1, theta=0))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.fSim(0, 2, theta=0, phi=0))
-    c.add(gates.H(2))
+    circuit = Circuit(3)
+    circuit.add(gates.RX(0, theta=0))
+    circuit.add(gates.RY(1, theta=0))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.fSim(0, 2, theta=0, phi=0))
+    circuit.add(gates.H(2))
 
     # set new values to the circuit's parameters
     params = [0.123, 0.456, (0.789, 0.321)]
-    c.set_parameters(params)
+    circuit.set_parameters(params)
 
 initializes a circuit with all gate parameters set to 0 and then updates the
 values of these parameters according to the ``params`` list. Alternatively the
@@ -252,21 +253,21 @@ the circuit. For example:
 
 .. testcode::
 
-    c = Circuit(3)
+    circuit = Circuit(3)
     g0 = gates.RX(0, theta=0)
     g1 = gates.RY(1, theta=0)
     g2 = gates.fSim(0, 2, theta=0, phi=0)
-    c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
+    circuit.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
 
     # set new values to the circuit's parameters using a dictionary
     params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)}
-    c.set_parameters(params)
+    circuit.set_parameters(params)
     # equivalently the parameter's can be update with a list as
     params = [0.123, 0.456, (0.789, 0.321)]
-    c.set_parameters(params)
+    circuit.set_parameters(params)
     # or with a flat list as
     params = [0.123, 0.456, 0.789, 0.321]
-    c.set_parameters(params)
+    circuit.set_parameters(params)
 
 If a list is given then its length and elements should be compatible with the
 parametrized gates contained in the circuit. If a dictionary is given then its
@@ -283,7 +284,7 @@ The following gates support parameter setting:
   should be an array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required when using the pytorch backend.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
-a flat list (``torch.Tensor`` is required when using the pytorch backend).
+a flat list (``torch.Tensor`` is required when using the ``pytorch`` backend).
 Using :meth:`qibo.models.circuit.Circuit.set_parameters` is more
 efficient than recreating a new circuit with new parameter values. The inverse
 method :meth:`qibo.models.circuit.Circuit.get_parameters` is also available
