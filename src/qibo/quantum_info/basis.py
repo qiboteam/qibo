@@ -48,7 +48,7 @@ def pauli_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Defaults to ``None``.
-        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+        pauli_order (str, optional): corresponds to the order of :math:`4` single-qubit
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
@@ -150,42 +150,48 @@ def comp_basis_to_pauli(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
-    """Unitary matrix :math:`U` that converts operators from the Liouville
-    representation in the computational basis to the Pauli-Liouville
-    representation.
+    """Unitary matrix :math:`U` that converts operators to the Pauli-Liouville representation.
 
-    The unitary :math:`U` is given by
+    For :math:`d = 2^{n}`, the unitary matrix :math:`U` is given by
 
     .. math::
         U = \\sum_{k = 0}^{d^{2} - 1} \\, |k)(P_{k}| \\,\\, ,
 
     where :math:`|P_{k})` is the vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}`, and :math:`|k)` is the vectorization
-    of the :math:`k`-th computational basis element.
+    Pauli operator :math:`P_{k}`, and :math:`|k)` is the :math:`k`-th
+    computational basis element in :math:`\\mathbb{C}^{d^{2}}`.
     For a definition of vectorization, see :func:`qibo.quantum_info.vectorization`.
 
     Example:
         .. code-block:: python
 
-            from qibo.quantum_info import random_density_matrix, vectorization, comp_basis_to_pauli
+            # Imports below are equivalent to the following:
+            # from qibo.quantum_info.basis import comp_basis_to_pauli
+            # from qibo.quantum_info.random_ensembles import random_density_matrix
+            # from qibo.quantum_info.superoperator_transformations import vectorization
+            from qibo.quantum_info import comp_basis_to_pauli, random_density_matrix, vectorization
+
             nqubits = 2
-            d = 2**nqubits
-            rho = random_density_matrix(d)
-            U_c2p = comp_basis_to_pauli(nqubits)
+            dims = 2**nqubits
+
+            U_c2p = comp_basis_to_pauli(nqubits, order="system")
+
+            rho = random_density_matrix(dims, pure=False)
+
             rho_liouville = vectorization(rho, order="system")
             rho_pauli_liouville = U_c2p @ rho_liouville
 
     Args:
-        nqubits (int): number of qubits.
-        normalize (bool, optional): If ``True``, converts to the
-            Pauli basis. Defaults to ``False``.
+        nqubits (int): number of qubits :math:`n`.
+        normalize (bool, optional): If ``True``, returns unitary matrix that converts
+            to the normalized Pauli basis. Defaults to ``False``.
         sparse (bool, optional): If ``True``, returns unitary matrix in
             sparse representation. Defaults to ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Defaults to ``"row"``.
-        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+        pauli_order (str, optional): corresponds to the order of :math:`4` single-qubit
             Pauli elements. Defaults to ``"IXYZ"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
@@ -193,8 +199,8 @@ def comp_basis_to_pauli(
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
-            tuple is composed of array of non-zero elements and an
-            array with their row-wise indexes.
+        tuple is composed of array of non-zero elements and an
+        array with their row-wise indexes.
 
     """
     backend = _check_backend(backend)
