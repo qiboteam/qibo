@@ -528,8 +528,8 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     for l in range(nlayers):
         circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
         circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
-        circuit.add(gates.RY(qubit, theta=0.0) for q in range(nqubits))
-        circuit.add(gates.CZ(qubit, q + 1) for qubit in range(1, nqubits - 2, 2))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
 
@@ -574,7 +574,7 @@ general two-qubit gates (as 4x4 matrices).
         circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
         circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits-1))
-    circuit.add(gates.RY(q, theta=0) for qubit in range(nqubits))
+    circuit.add(gates.RY(qubit, theta=0) for qubit in range(nqubits))
     circuit = circuit.fuse()
 
 .. _vqc-example:
@@ -617,7 +617,7 @@ Here is a simple example using a custom loss function:
     circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
 
     # Optimize starting from a random guess for the variational parameters
-    x0 = np.random.uniform(0, 2 * np.pi, 2 * nqubits * (nlayers + 1))
+    x0 = np.random.uniform(0, 2 * np.pi, nqubits * (2 * nlayers + 1))
     data = np.random.normal(0, 1, size=dims)
 
     # perform optimization
@@ -1110,7 +1110,7 @@ re-execute the simulation. For example:
     thetas = np.random.random(4)
     circuit = Circuit(4)
     circuit.add(gates.RX(i, theta=t) for i, t in enumerate(thetas))
-    circuit.add(gates.M(0, 1), gates.M(2, 3))
+    circuit.add((gates.M(0, 1), gates.M(2, 3)))
     result = circuit(nshots=100)
     # add bit-flip errors with probability 0.2 for all qubits
     result.apply_bitflips(0.2)
