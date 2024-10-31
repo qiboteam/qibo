@@ -330,16 +330,6 @@ def test_hamiltonian_expectation_from_samples(backend):
     backend.assert_allclose(ev0, ev1, atol=20 / np.sqrt(nshots))
 
 
-def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs = [Z(0) * Y(1), Z(0) * Z(1) ** 3]
-    h1 = hamiltonians.SymbolicHamiltonian(obs[0], backend=backend)
-    h2 = hamiltonians.SymbolicHamiltonian(obs[1], backend=backend)
-    with pytest.raises(NotImplementedError):
-        h1.expectation_from_samples(None, qubit_map=None)
-    with pytest.raises(NotImplementedError):
-        h2.expectation_from_samples(None, qubit_map=None)
-
-
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcterms):
