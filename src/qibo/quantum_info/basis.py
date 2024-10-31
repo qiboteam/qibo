@@ -18,18 +18,32 @@ def pauli_basis(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
-    """Creates the ``nqubits``-qubit Pauli basis.
+    """Create the :math:`n`-qubit Pauli basis.
+
+    For :math:`d = 2^{n}`, the returned Pauli basis is represented by the following array:
+
+    .. math::
+        \\mathcal{P} = \\mathcal{N} \\, \\left[ P_{0}, \\, P_{1}, \\,
+            \\cdots, P_{d^{2} - 1} \\right] \\, ,
+
+    where :math:`P_{k}` is the representation of the :math:`k`-th element of the Pauli basis,
+    and :math:`\\mathcal{N}` is a normalization factor that equals to :math:`1/\\sqrt{d}` if
+    ``normalize=True``, and :math:`1` otherwise.
+    If ``vectorize=False``, each :math:`P_{k}` is the :math:`d \\times d` matrix representing
+    the :math:`k`-th Pauli element. If ``vectorize=True``, then the Paulis are vectorized
+    according to ``order`` (see :func:`qibo.quantum_info.vectorization`).
 
     Args:
-        nqubits (int): number of qubits.
-        normalize (bool, optional): If ``True``, normalized basis is returned.
-            Defaults to False.
-        vectorize (bool, optional): If ``False``, returns a nested array with
+        nqubits (int): number of qubits :math:`n`.
+        normalize (bool, optional): if ``True``, :math:`\\mathcal{N} = 1/\\sqrt{d}`,
+            and the normalized Pauli basis is returned. Defaults to ``False``.
+        vectorize (bool, optional): if ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
-            row is a vectorized Pauli matrix. Defaults to ``False``.
-        sparse (bool, optional): If ``True``, retuns Pauli basis in a sparse
+            row is a vectorized Pauli matrix according to vectorization ``order``.
+            Defaults to ``False``.
+        sparse (bool, optional): if ``True``, retuns Pauli basis in a sparse
             representation. Defaults to ``False``.
-        order (str, optional): If ``"row"``, vectorization of Pauli basis is
+        order (str, optional): if ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
@@ -41,9 +55,9 @@ def pauli_basis(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
-            and ``vectorize=True``, tuple is composed of an array of non-zero
-            elements and an array with their row-wise indexes.
+        ndarray or tuple: All Pauli matrices forming the basis. If ``sparse=True``
+        and ``vectorize=True``, tuple is composed of an array of non-zero
+        elements and an array with their row-wise indexes.
     """
 
     if nqubits <= 0:
