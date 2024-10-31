@@ -1,8 +1,9 @@
 import numpy as np
 import sympy
 
-from qibo import gates
+from qibo import gates, symbols
 from qibo.config import raise_error
+from qibo.symbols import I, X, Y, Z
 
 
 class HamiltonianTerm:
@@ -152,7 +153,16 @@ class SymbolicTerm(HamiltonianTerm):
                     factor, pow = factor.args
                     assert isinstance(pow, sympy.Integer)
                     assert isinstance(factor, sympy.Symbol)
-                    pow = int(pow)
+                    # if the symbol is a Pauli (i.e. a qibo symbol) and `pow` is even
+                    # the power is the identity, thus the factor vanishes. Otherwise,
+                    # for an odd exponent, it remains unchanged (i.e. `pow`=1)
+                    if factor.__class__ in (I, X, Y, Z):
+                        if not int(pow) % 2:
+                            factor = sympy.N(1)
+                        else:
+                            pow = 1
+                    else:
+                        pow = int(pow)
                 else:
                     pow = 1
 

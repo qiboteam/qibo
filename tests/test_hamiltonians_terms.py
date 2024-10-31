@@ -125,11 +125,9 @@ def test_symbolic_term_with_power_creation(backend):
 
     expression = X(0) ** 4 * Z(1) ** 2 * X(2)
     term = terms.SymbolicTerm(2, expression)
-    assert term.target_qubits == (0, 1, 2)
-    assert len(term.matrix_map) == 3
+    assert term.target_qubits == (2,)
+    assert len(term.matrix_map) == 1
     assert term.coefficient == 2
-    backend.assert_allclose(term.matrix_map.get(0), 4 * [matrices.X])
-    backend.assert_allclose(term.matrix_map.get(1), 2 * [matrices.Z])
     backend.assert_allclose(term.matrix_map.get(2), [matrices.X])
 
 
