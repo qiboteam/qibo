@@ -480,21 +480,24 @@ method. For example:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
+    from qibo.models import QFT
 
     # Create a small circuit of 4 qubits
-    smallc = models.Circuit(4)
-    smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
-    smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+    nqubits = 4
+    small_circuit = Circuit(nqubits)
+    small_circuit.add((gates.RX(i, theta=0.1) for i in range(4)))
+    small_circuit.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
 
     # Create a large circuit on 8 qubits
-    largec = models.Circuit(8)
+    nqubits = 8
+    large_circuit = Circuit(nqubits)
     # Add the small circuit on even qubits
-    largec.add(smallc.on_qubits(*range(0, 8, 2)))
+    large_circuit.add(small_circuit.on_qubits(*range(0, nqubits, 2)))
     # Add a QFT on odd qubits
-    largec.add(models.QFT(4).on_qubits(*range(1, 8, 2)))
+    large_circuit.add(QFT(4).on_qubits(*range(1, nqubits, 2)))
     # Add an inverse QFT on first 6 qubits
-    largec.add(models.QFT(6).invert().on_qubits(*range(6)))
+    large_circuit.add(QFT(6).invert().on_qubits(*range(6)))
 
 
 .. _vqe-example:
@@ -512,29 +515,33 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 .. testcode::
 
     import numpy as np
-    from qibo import models, gates, hamiltonians
+
+    from qibo import Circuit, gates, hamiltonians
+    from qibo.hamiltonians import XXZ
+    from qibo.models import VQE
 
     nqubits = 6
     nlayers  = 4
 
     # Create variational circuit
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(nlayers):
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
-        circuit.add(gates.CZ(0, nqubits-1))
-    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(qubit, theta=0.0) for q in range(nqubits))
+        circuit.add(gates.CZ(qubit, q + 1) for qubit in range(1, nqubits - 2, 2))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
 
     # Create XXZ Hamiltonian
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
+    hamiltonian = XXZ(nqubits=nqubits)
+
     # Create VQE model
-    vqe = models.VQE(circuit, hamiltonian)
+    vqe = VQE(circuit, hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = np.random.uniform(0, 2*np.pi,
-                                            2*nqubits*nlayers + nqubits)
+    initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * (nlayers + 1))
+
     best, params, extra = vqe.minimize(initial_parameters, method='BFGS', compile=False)
 
 
@@ -556,19 +563,18 @@ general two-qubit gates (as 4x4 matrices).
 
 .. testsetup::
 
-    import numpy as np
-    from qibo import models, gates, hamiltonians
+    from qibo import Circuit, gates
 
 .. testcode::
 
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(nlayers):
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits-1))
-    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    circuit.add(gates.RY(q, theta=0) for qubit in range(nqubits))
     circuit = circuit.fuse()
 
 .. _vqc-example:
@@ -585,37 +591,40 @@ Here is a simple example using a custom loss function:
 .. testcode::
 
     import numpy as np
-    from qibo import models, gates
+
+    from qibo import Circuit, gates
     from qibo.optimizers import optimize
+    from qibo.quantum_info import infidelity
 
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
         final_state = circuit().state()
-        return 1 - np.abs(np.conj(target).dot(final_state))
+        return infidelity(final_state, target)
 
     nqubits = 6
+    dims = 2**nqubits
     nlayers  = 2
 
     # Create variational circuit
-    c = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(nlayers):
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
-        c.add(gates.CZ(0, nqubits-1))
-    c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, nqubits - 2, 2))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
 
     # Optimize starting from a random guess for the variational parameters
-    x0 = np.random.uniform(0, 2*np.pi, 2*nqubits*nlayers + nqubits)
-    data = np.random.normal(0, 1, size=2**nqubits)
+    x0 = np.random.uniform(0, 2 * np.pi, 2 * nqubits * (nlayers + 1))
+    data = np.random.normal(0, 1, size=dims)
 
     # perform optimization
-    best, params, extra = optimize(myloss, x0, args=(c, data), method='BFGS')
+    best, params, extra = optimize(myloss, x0, args=(circuit, data), method='BFGS')
 
     # set final solution to circuit instance
-    c.set_parameters(params)
+    circuit.set_parameters(params)
 
 
 .. _qaoa-example:
@@ -702,9 +711,10 @@ installed and used as provider of these quantum machine learning backends.
 
 .. code-block:: python
 
-    import qibo
-    qibo.set_backend(backend="qiboml", platform="tensorflow")
-    from qibo import gates, models
+    from qibo import Circuit, gates, set_backend
+    from qibo.quantum_info import infidelity
+
+    set_backend(backend="qiboml", platform="tensorflow")
 
     backend = qibo.get_backend()
     tf = backend.tf
@@ -718,16 +728,16 @@ installed and used as provider of these quantum machine learning backends.
     params = tf.Variable(
         tf.random.uniform((2,), dtype=tf.float64)
     )
-    c = models.Circuit(2)
-    c.add(gates.RX(0, params[0]))
-    c.add(gates.RY(1, params[1]))
+
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, params[0]))
+    circuit.add(gates.RY(1, params[1]))
 
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
-            c.set_parameters(params)
-            final_state = c().state()
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
-            loss = 1 - fidelity
+            circuit.set_parameters(params)
+            final_state = circuit().state()
+            loss = infidelity(final_state, target_state, backend=backend)
         grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
@@ -737,15 +747,16 @@ automatic differentiation tools. To be constructed, the Qiboml package has to be
 installed and used.
 
 The optimization procedure may also be compiled, however in this case it is not
-possible to use :meth:`qibo.circuit.Circuit.set_parameters` as the
+possible to use :meth:`qibo.models.Circuit.set_parameters` as the
 circuit needs to be defined inside the compiled ``tf.GradientTape()``.
 For example:
 
 .. code-block:: python
 
-    import qibo
-    qibo.set_backend(backend="qiboml", platform="tensorflow")
-    from qibo import gates, models
+    from qibo import Circuit, gates, set_backend
+    from qibo.quantum_info import infidelity
+
+    set_backend(backend="qiboml", platform="tensorflow")
 
     backend = qibo.get_backend()
     tf = backend.tf
@@ -758,12 +769,11 @@ For example:
     @tf.function
     def optimize(params):
         with tf.GradientTape() as tape:
-            c = models.Circuit(2)
-            c.add(gates.RX(0, theta=params[0]))
-            c.add(gates.RY(1, theta=params[1]))
-            final_state = c().state()
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
-            loss = 1 - fidelity
+            circuit = Circuit(2)
+            circuit.add(gates.RX(0, theta=params[0]))
+            circuit.add(gates.RY(1, theta=params[1]))
+            final_state = circuit().state()
+            loss = infidelity(final_state, target_state, backend=backend)
         grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
@@ -774,18 +784,20 @@ For example:
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
 `custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
-and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
-to train them.
+and using the `Sequential model API
+<https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_ to train them.
 
-Similarly, Pytorch supports `automatic differentiation <https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorFor%20example%20tial.html>`_.
-The following script optimizes the parameters of the variational circuit of the first example using the Pytorch framework.
+Similarly, ``pytorch`` supports `automatic differentiation
+<https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorFor%20example%20tial.html>`_.
+The following script optimizes the parameters of the variational circuit of the first example
+using the ``pytorch`` framework.
 
 .. code-block:: python
 
-    import qibo
-    qibo.set_backend("pytorch")
     import torch
-    from qibo import gates, models
+
+    from qibo import Circuit, gates, set_backend
+    set_backend("pytorch")
 
     # Optimization parameters
     nepochs = 1000
@@ -796,18 +808,17 @@ The following script optimizes the parameters of the variational circuit of the 
     params = torch.tensor(
         torch.rand(2, dtype=torch.float64), requires_grad=True
     )
-    c = models.Circuit(2)
-    c.add(gates.RX(0, params[0]))
-    c.add(gates.RY(1, params[1]))
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, params[0]))
+    circuit.add(gates.RY(1, params[1]))
 
     optimizer = optimizer([params])
 
     for _ in range(nepochs):
         optimizer.zero_grad()
-        c.set_parameters(params)
-        final_state = c().state()
-        fidelity = torch.abs(torch.sum(torch.conj(target_state) * final_state))
-        loss = 1 - fidelity
+        circuit.set_parameters(params)
+        final_state = circuit().state()
+        loss = infidelity(final_state, target_state)
         loss.backward()
         optimizer.step()
 
@@ -841,19 +852,20 @@ Qibo circuits can evolve density matrices if they are initialized using the
     import qibo
     qibo.set_backend("qibojit")
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
     # Define circuit
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
     # execute using the default initial state |00><00|
-    result = c() # will be |++><++|
+    result = circuit() # will be |++><++|
 
 will perform the transformation
 
 .. math::
-    |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
+    |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|
+        (H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
 
 Similarly to state vector circuit simulation, the user may specify a custom
 initial density matrix by passing the corresponding array when executing the
@@ -868,23 +880,24 @@ for example:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
-    c = models.Circuit(2, density_matrix=True) # starts with state |00><00|
-    c.add(gates.X(1))
+    circuit = Circuit(2, density_matrix=True) # starts with state |00><00|
+    circuit.add(gates.X(1))
     # transforms |00><00| -> |01><01|
-    c.add(gates.PauliNoiseChannel(0, [("X", 0.3)]))
+    circuit.add(gates.PauliNoiseChannel(0, [("X", 0.3)]))
     # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
-    result = c()
+    result = circuit()
     # result.state() will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
 
 will perform the transformation
 
 .. math::
     |00\rangle \langle 00|& \rightarrow (I \otimes X)|00\rangle \langle 00|(I \otimes X)
-    = |01\rangle \langle 01|
-    \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
-    \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
+        = |01\rangle \langle 01|
+        \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)
+        |01\rangle \langle 01|(X\otimes I)^\dagger
+        \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
 Measurements and callbacks can be used with density matrices exactly as in the
 case of state vector simulation.
@@ -905,20 +918,25 @@ as follows:
 .. testcode::
 
     import numpy as np
-    from qibo import models, gates
+    from qibo import Circuit, gates
+
+    nqubits = 5
+    nshots = 1000
 
     # Define circuit
-    c = models.Circuit(5)
-    thetas = np.random.random(5)
-    c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
+    circuit = Circuit(nqubits)
+    thetas = np.random.random(nqubits)
+    circuit.add(gates.RX(qubit, theta=phase) for qubit, phase in enumerate(thetas))
     # Add noise channels to all qubits
-    c.add((gates.PauliNoiseChannel(i, [("X", 0.2), ("Y", 0.0), ("Z", 0.3)])
-           for i in range(5)))
+    circuit.add(
+        gates.PauliNoiseChannel(qubit, [("X", 0.2), ("Y", 0.0), ("Z", 0.3)])
+        for qubit in range(nqubits)
+    )
     # Add measurement of all qubits
-    c.add(gates.M(*range(5)))
+    circuit.add(gates.M(*range(5)))
 
     # Repeat execution 1000 times
-    result = c(nshots=1000)
+    result = circuit(nshots=nshots)
 
 In this example the simulation is repeated 1000 times and the action of the
 :class:`qibo.gates.PauliNoiseChannel` gate differs each time, because
@@ -963,30 +981,30 @@ triplets. For example, the following script
 
 .. testcode::
 
-      from qibo import models, gates
+    from qibo import Circuit, gates
 
-      c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
-      # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
-      noisy_c = c.with_pauli_noise(noise_map)
+    # Define a noise map that maps qubit IDs to noise probabilities
+    noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
+    noisy_circuit = circuit.with_pauli_noise(noise_map)
 
-will create a new circuit ``noisy_c`` that is equivalent to:
+will create a new circuit ``noisy_circuit`` that is equivalent to:
 
 .. testcode::
 
-      noisy_c2 = models.Circuit(2)
-      noisy_c2.add(gates.H(0))
-      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
-      noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
-      noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
-      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
+    noisy_circuit_2 = Circuit(2)
+    noisy_circuit_2.add(gates.H(0))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
+    noisy_circuit_2.add(gates.H(1))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
+    noisy_circuit_2.add(gates.CNOT(0, 1))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
 
-Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
-(it is not a deep copy), while in ``noisy_c2`` each gate was created as
+Note that ``noisy_circuit`` uses the gate objects of the original circuit ``circuit``
+(it is not a deep copy), while in ``noisy_circuit_2`` each gate was created as
 a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
@@ -1022,42 +1040,52 @@ Here is an example on how to use a noise model:
 
 .. testcode::
 
-      import numpy as np
-      from qibo import models, gates
-      from qibo.noise import NoiseModel, PauliError
+    import numpy as np
 
-      # Build specific noise model with 3 quantum errors:
-      # - Pauli error on H only for qubit 1.
-      # - Pauli error on CNOT for all the qubits.
-      # - Pauli error on RX(pi/2) for qubit 0.
-      noise = NoiseModel()
-      noise.add(PauliError([("X", 0.5)]), gates.H, 1)
-      noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
-      is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
-      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, conditions=is_sqrt_x)
+    from qibo import Circuit, gates
+    from qibo.noise import NoiseModel, PauliError
 
-      # Generate noiseless circuit.
-      c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.RX(0, np.pi/2),  gates.RX(0, 3*np.pi/2), gates.RX(1, np.pi/2)])
+    # Build specific noise model with 3 quantum errors:
+    # - Pauli error on H only for qubit 1.
+    # - Pauli error on CNOT for all the qubits.
+    # - Pauli error on RX(pi/2) for qubit 0.
+    noise = NoiseModel()
+    noise.add(PauliError([("X", 0.5)]), gates.H, 1)
+    noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
+    is_sqrt_x = (lambda g: np.pi / 2 in g.parameters)
+    noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, conditions=is_sqrt_x)
 
-      # Apply noise to the circuit according to the noise model.
-      noisy_c = noise.apply(c)
+    # Generate noiseless circuit.
+    circuit = Circuit(2)
+    circuit.add(
+        [
+            gates.H(0),
+            gates.H(1),
+            gates.CNOT(0, 1),
+            gates.RX(0, np.pi / 2),
+            gates.RX(0, 3 * np.pi / 2),
+            gates.RX(1, np.pi / 2),
+        ]
+    )
+
+    # Apply noise to the circuit according to the noise model.
+    noisy_circuit = noise.apply(circuit)
 
 The noisy circuit defined above will be equivalent to the following circuit:
 
 .. testcode::
 
-      noisy_c2 = models.Circuit(2)
-      noisy_c2.add(gates.H(0))
-      noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.5)]))
-      noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, [("Y", 0.5)]))
-      noisy_c2.add(gates.PauliNoiseChannel(1, [("Y", 0.5)]))
-      noisy_c2.add(gates.RX(0, np.pi/2))
-      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
-      noisy_c2.add(gates.RX(0, 3*np.pi/2))
-      noisy_c2.add(gates.RX(1, np.pi/2))
+    noisy_circuit_2 = Circuit(2)
+    noisy_circuit_2.add(gates.H(0))
+    noisy_circuit_2.add(gates.H(1))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(1, [("X", 0.5)]))
+    noisy_circuit_2.add(gates.CNOT(0, 1))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(0, [("Y", 0.5)]))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(1, [("Y", 0.5)]))
+    noisy_circuit_2.add(gates.RX(0, np.pi / 2))
+    noisy_circuit_2.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
+    noisy_circuit_2.add(gates.RX(0, 3 * np.pi / 2))
+    noisy_circuit_2.add(gates.RX(1, np.pi / 2))
 
 
 The :class:`qibo.noise.NoiseModel` class supports also density matrices,
@@ -1075,19 +1103,20 @@ re-execute the simulation. For example:
 
 .. testcode::
 
-      import numpy as np
-      from qibo import models, gates
+    import numpy as np
 
-      thetas = np.random.random(4)
-      c = models.Circuit(4)
-      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-      c.add([gates.M(0, 1), gates.M(2, 3)])
-      result = c(nshots=100)
-      # add bit-flip errors with probability 0.2 for all qubits
-      result.apply_bitflips(0.2)
-      # add bit-flip errors with different probabilities for each qubit
-      error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
-      result.apply_bitflips(error_map)
+    from qibo import Circuit, gates
+
+    thetas = np.random.random(4)
+    circuit = Circuit(4)
+    circuit.add(gates.RX(i, theta=t) for i, t in enumerate(thetas))
+    circuit.add(gates.M(0, 1), gates.M(2, 3))
+    result = circuit(nshots=100)
+    # add bit-flip errors with probability 0.2 for all qubits
+    result.apply_bitflips(0.2)
+    # add bit-flip errors with different probabilities for each qubit
+    error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
+    result.apply_bitflips(error_map)
 
 The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
@@ -1100,19 +1129,22 @@ the bitflips:
 
 .. testcode::
 
-      import numpy as np
-      from qibo import models, gates
+    import numpy as np
 
-      thetas = np.random.random(4)
-      c = models.Circuit(4)
-      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-      c.add([gates.M(0, 1), gates.M(2, 3)])
-      result = c(nshots=100)
-      # add bit-flip errors with probability 0.2 for all qubits
-      result.apply_bitflips(0.2)
-      # add bit-flip errors with different probabilities for each qubit
-      error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
-      result.apply_bitflips(error_map)
+    from qibo import Circuit, gates
+
+    nqubits = 4
+
+    thetas = np.random.random(nqubits)
+    c = Circuit(nqubits)
+    c.add(gates.RX(qubit, theta=phase) for qubit, phase in enumerate(thetas))
+    c.add([gates.M(0, 1), gates.M(2, 3)])
+    result = c(nshots=100)
+    # add bit-flip errors with probability 0.2 for all qubits
+    result.apply_bitflips(0.2)
+    # add bit-flip errors with different probabilities for each qubit
+    error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
+    result.apply_bitflips(error_map)
 
 
 Alternatively, the user may specify a bit-flip error map when defining
@@ -1120,16 +1152,17 @@ measurement gates:
 
 .. testcode::
 
-      import numpy as np
-      from qibo import models, gates
+    import numpy as np
 
-      thetas = np.random.random(6)
-      c = models.Circuit(6)
-      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-      c.add(gates.M(0, 1, p0=0.2))
-      c.add(gates.M(2, 3, p0={2: 0.1, 3: 0.0}))
-      c.add(gates.M(4, 5, p0=[0.4, 0.3]))
-      result = c(nshots=100)
+    from qibo import Circuit, gates
+
+    thetas = np.random.random(6)
+    circuit = Circuit(6)
+    circuit.add(gates.RX(qubit, theta=phase) for qubit, phase in enumerate(thetas))
+    circuit.add(gates.M(0, 1, p0=0.2))
+    circuit.add(gates.M(2, 3, p0={2: 0.1, 3: 0.0}))
+    circuit.add(gates.M(4, 5, p0=[0.4, 0.3]))
+    result = circuit(nshots=100)
 
 In this case ``result`` will contain noisy samples according to the given
 bit-flip probabilities. The probabilities can be given as a
