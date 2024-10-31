@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-import util as u
 
 from qibo import gates
 from qibo.models import Circuit
@@ -10,15 +9,11 @@ from qibo.models import Circuit
 def pad_input(X):
     """Adds 0s if X log2(X.dim) != round int.
 
-    Parameters
-    ----------
-    X : :class:`numpy.ndarray`
-        Input data
+    Args:
+        X (:class:`numpy.ndarray`): Input data.
 
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        Padded X
+    Returns:
+        :class:`numpy.ndarray`: Padded X.
     """
     num_features = len(X)
     if not float(np.log2(num_features)).is_integer():
@@ -30,24 +25,16 @@ def pad_input(X):
 def DistCalc(a, b, nshots=10000):
     """Distance calculation using destructive interference.
 
-    Parameters
-    ----------
-    a : :class:`numpy.ndarray`
-        First point - shape = (latent space dimension,)
-    b : :class:`numpy.ndarray`
-        Second point - shape = (latent space dimension,)
-    device_name : str
-        Name of device for executing a simulation of quantum circuit.
-    nshots : int
-        Number of shots for executing a quantum circuit - to get frequencies.
+    Args:
+        a (:class:`numpy.ndarray`): First point - shape = (latent space dimension,)
+        b (:class:`numpy.ndarray`): Second point - shape = (latent space dimension,)
+        nshots (int, optional): Number of shots for executing a quantum circuit to
+            get frequencies. Defaults to :math:`10^{4}`.
 
-    Returns
-    -------
-    (float, :class:`qibo.models.Circuit`)
-        (distance, quantum circuit)
+    Returns:
+        Tuple(float, :class:`qibo.models.Circuit`): (distance, quantum circuit).
 
     """
-    num_features = len(a)
     norm = np.linalg.norm(a - b)
     a_norm = a / norm
     b_norm = b / norm
