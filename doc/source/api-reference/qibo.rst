@@ -40,15 +40,14 @@ Circuit addition
 
 .. testsetup::
 
-    import qibo
-    from qibo import models
-    from qibo import gates
+    from qibo import Circuit, gates
+    from qibo.models import QFT
 
 .. testcode::
 
-    c1 = models.QFT(4)
+    c1 = QFT(4)
 
-    c2 = models.Circuit(4)
+    c2 = Circuit(4)
     c2.add(gates.RZ(0, 0.1234))
     c2.add(gates.RZ(1, 0.1234))
     c2.add(gates.RZ(2, 0.1234))
@@ -93,9 +92,9 @@ For example the following:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
-    c = models.Circuit(2)
+    c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.CZ(0, 1))
     c.add([gates.X(0), gates.Y(1)])
@@ -106,9 +105,9 @@ acting on ``(0, 1)``, while the following:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
-    c = models.Circuit(3)
+    c = Circuit(3)
     c.add([gates.H(0), gates.H(1), gates.H(2)])
     c.add(gates.CZ(0, 1))
     c.add([gates.X(0), gates.Y(1), gates.Z(2)])
