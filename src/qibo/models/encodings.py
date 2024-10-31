@@ -45,6 +45,9 @@ class CompBasisEncoder(Circuit):
 
         basis_element = list(map(int, basis_element))
 
+        if nqubits is None:
+            nqubits = len(basis_element)
+
         super().__init__(nqubits, **kwargs)
         for qubit, elem in enumerate(basis_element):
             if elem == 1:
