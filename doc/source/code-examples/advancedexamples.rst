@@ -1876,18 +1876,20 @@ done as follows:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models
+
+    from qibo.models import AdiabaticEvolution
+    from qibo.hamiltonians import TFIM, X
 
     # Define Hamiltonians
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+    h0 = X(3)
+    h1 = TFIM(3)
     # Define scheduling function with a free variational parameter ``p``
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     # Define an evolution model with dt=1e-2
-    evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
+    evolution = AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    # best, params, extra = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
+    best, params, extra = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
 .. testoutput::
