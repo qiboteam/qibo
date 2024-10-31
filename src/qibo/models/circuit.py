@@ -432,7 +432,7 @@ class Circuit:
             The copied circuit object.
         """
         if deep:
-            new_circuit = self.__class__(**self.init_kwargs)
+            new_circuit = Circuit(**self.init_kwargs)
             for gate in self.queue:
                 if isinstance(gate, gates.FusedGate):  # pragma: no cover
                     # impractical case
@@ -454,6 +454,7 @@ class Circuit:
             new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
                 new_circuit.add(gate)
+
         return new_circuit
 
     def invert(self):
