@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates, models
+from qibo import Circuit, gates
 from qibo.quantum_info import random_density_matrix, random_statevector
 
 
@@ -13,7 +13,7 @@ from qibo.quantum_info import random_density_matrix, random_statevector
 )
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_statevector(2**nqubits, backend=backend)
-    c = models.Circuit(nqubits)
+    c = Circuit(nqubits)
     for q in np.random.randint(nqubits, size=np.random.randint(nqubits, size=1)):
         c.add(gates.H(q))
     r = c.add(gates.M(*targets, collapse=True))
@@ -39,7 +39,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         return rho
 
     initial_rho = random_density_matrix(2**nqubits, backend=backend)
-    c = models.Circuit(nqubits, density_matrix=True)
+    c = Circuit(nqubits, density_matrix=True)
     r = c.add(gates.M(*targets, collapse=True))
     final_rho = backend.execute_circuit(c, backend.np.copy(initial_rho), nshots=1)
 
@@ -60,7 +60,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
 
 
 def test_measurement_collapse_bitflip_noise(backend):
-    c = models.Circuit(4)
+    c = Circuit(4)
     with pytest.raises(NotImplementedError):
         output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
 
@@ -68,7 +68,7 @@ def test_measurement_collapse_bitflip_noise(backend):
 @pytest.mark.parametrize("density_matrix", [True, False])
 @pytest.mark.parametrize("effect", [False, True])
 def test_measurement_result_parameters(backend, effect, density_matrix):
-    c = models.Circuit(4, density_matrix=density_matrix)
+    c = Circuit(4, density_matrix=density_matrix)
     if effect:
         c.add(gates.X(0))
     r = c.add(gates.M(0, collapse=True))
@@ -76,7 +76,7 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
     if not density_matrix:
         c.add(gates.M(0))
 
-    target_c = models.Circuit(4, density_matrix=density_matrix)
+    target_c = Circuit(4, density_matrix=density_matrix)
     if effect:
         target_c.add(gates.X(0))
         target_c.add(gates.RX(1, theta=np.pi / 4))
@@ -94,7 +94,7 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
 def test_measurement_result_parameters_random(backend):
     initial_state = random_density_matrix(2**4, backend=backend)
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     r = c.add(gates.M(1, collapse=True))
     c.add(gates.RY(0, theta=np.pi * r.symbols[0] / 5))
     c.add(gates.RX(2, theta=np.pi * r.symbols[0] / 4))
@@ -103,13 +103,13 @@ def test_measurement_result_parameters_random(backend):
     )
 
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     m = c.add(gates.M(1, collapse=True))
     target_state = backend.execute_circuit(
         c, initial_state=backend.np.copy(initial_state), nshots=1
     ).state()
     if int(m.symbols[0].outcome()):
-        c = models.Circuit(4, density_matrix=True)
+        c = Circuit(4, density_matrix=True)
         c.add(gates.RY(0, theta=np.pi / 5))
         c.add(gates.RX(2, theta=np.pi / 4))
         target_state = backend.execute_circuit(c, initial_state=target_state)
@@ -120,7 +120,7 @@ def test_measurement_result_parameters_random(backend):
 def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     initial_state = random_density_matrix(2**4, backend=backend)
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     r = c.add(gates.M(1, collapse=True))
     c.add(gates.RX(2, theta=np.pi * r.symbols[0] / 4))
     if use_loop:
@@ -139,7 +139,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     backend.set_seed(123)
     target_states = []
     for _ in range(20):
-        c = models.Circuit(4, density_matrix=True)
+        c = Circuit(4, density_matrix=True)
         m = c.add(gates.M(1, collapse=True))
         target_state = backend.execute_circuit(
             c, backend.np.copy(initial_state), nshots=1
@@ -157,7 +157,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend):
     initial_state = random_density_matrix(2**4, backend=backend)
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     r = c.add(gates.M(1, collapse=True))
     c.add(gates.RY(0, theta=np.pi * r.symbols[0] / 3))
     c.add(gates.RY(2, theta=np.pi * r.symbols[0] / 4))
@@ -170,12 +170,12 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     backend.set_seed(123)
     target_samples = []
     for _ in range(30):
-        c = models.Circuit(4, density_matrix=True)
+        c = Circuit(4, density_matrix=True)
         m = c.add(gates.M(1, collapse=True))
         target_state = backend.execute_circuit(
             c, backend.np.copy(initial_state), nshots=1
         ).state()
-        c = models.Circuit(4, density_matrix=True)
+        c = Circuit(4, density_matrix=True)
         if int(m.symbols[0].outcome()):
             c.add(gates.RY(0, theta=np.pi / 3))
             c.add(gates.RY(2, theta=np.pi / 4))
@@ -188,14 +188,14 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
 def test_measurement_result_parameters_multiple_qubits(backend):
     initial_state = random_density_matrix(2**4, backend=backend)
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     r = c.add(gates.M(0, 1, 2, collapse=True))
     c.add(gates.RY(1, theta=np.pi * r.symbols[0] / 5))
     c.add(gates.RX(3, theta=np.pi * r.symbols[2] / 3))
     final_state = backend.execute_circuit(c, backend.np.copy(initial_state), nshots=1)
 
     backend.set_seed(123)
-    c = models.Circuit(4, density_matrix=True)
+    c = Circuit(4, density_matrix=True)
     m = c.add(gates.M(0, 1, 2, collapse=True))
     target_state = backend.execute_circuit(
         c, backend.np.copy(initial_state), nshots=1
@@ -217,7 +217,7 @@ def test_measurement_result_parameters_multiple_qubits(backend):
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
 def test_measurement_collapse_distributed(backend, accelerators, nqubits, targets):
     initial_state = random_density_matrix(2**nqubits, backend=backend)
-    c = models.Circuit(nqubits, accelerators, density_matrix=True)
+    c = Circuit(nqubits, accelerators, density_matrix=True)
     m = c.add(gates.M(*targets, collapse=True))
     result = backend.execute_circuit(c, np.copy(initial_state), nshots=1).state()
     slicer = 2 * nqubits * [slice(None)]
@@ -235,13 +235,13 @@ def test_measurement_collapse_distributed(backend, accelerators, nqubits, target
 
 def test_collapse_after_measurement(backend):
     qubits = [0, 2, 3]
-    c = models.Circuit(5, density_matrix=True)
+    c = Circuit(5, density_matrix=True)
     c.add(gates.H(i) for i in range(5))
     m = c.add(gates.M(*qubits, collapse=True))
     c.add(gates.H(i) for i in range(5))
     final_state = backend.execute_circuit(c, nshots=1)
 
-    ct = models.Circuit(5, density_matrix=True)
+    ct = Circuit(5, density_matrix=True)
     bitstring = [r.outcome() for r in m.symbols]
     for i, r in zip(qubits, bitstring):
         if r:
@@ -252,7 +252,7 @@ def test_collapse_after_measurement(backend):
 
 
 def test_collapse_error(backend):
-    c = models.Circuit(1)
+    c = Circuit(1)
     m = c.add(gates.M(0, collapse=True))
     with pytest.raises(Exception) as exc_info:
         backend.execute_circuit(c)
