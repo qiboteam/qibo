@@ -309,7 +309,7 @@ the ``trainable=False`` during gate creation. For example:
     circuit.add(gates.RY(1, theta=0.456, trainable=False))
     circuit.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
 
-    print(c.get_parameters())
+    print(circuit.get_parameters())
     # prints [(0.123,), (0.789, 0.567)] ignoring the parameters of the RY gate
 
 .. testoutput::

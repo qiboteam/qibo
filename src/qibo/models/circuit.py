@@ -355,7 +355,7 @@ class Circuit:
                 large_circuit = Circuit(8)
                 large_circuit.add(gates.RY(i, theta=0.1) for i in range(8))
                 # add the small circuit to the even qubits of the large one
-                large_circuit.add(smallc.on_qubits(*range(0, 8, 2)))
+                large_circuit.add(small_circuit.on_qubits(*range(0, 8, 2)))
         """
         if len(qubits) != self.nqubits:
             raise_error(
