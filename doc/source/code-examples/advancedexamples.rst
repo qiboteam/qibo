@@ -543,7 +543,9 @@ refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
 Note that if the Stochastic Gradient Descent optimizer is used then the user
 has to use a backend based on tensorflow or pytorch primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
-To switch the backend one can do ``qibo.set_backend("tensorflow")`` or ``qibo.set_backend("pytorch")``.
+To switch the backend one can do ``qibo.set_backend(backend="qiboml", platform="tensorflow")``
+or ``qibo.set_backend(backend="qiboml", platform="pytorch")``, after ensuring the
+Qiboml package has been installed.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
@@ -782,7 +784,7 @@ The following script optimizes the parameters of the variational circuit of the 
 .. code-block:: python
 
     import qibo
-    qibo.set_backend("pytorch")
+    qibo.set_backend(backend="qiboml", platform="pytorch")
     import torch
     from qibo import gates, models
 
