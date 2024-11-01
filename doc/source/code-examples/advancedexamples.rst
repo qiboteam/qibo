@@ -96,10 +96,10 @@ be used as follows:
     # this will use the first GPU three times and the second one time
     # leading to four total logical devices
     # construct the distributed circuit for 32 qubits
-    c = Circuit(32, accelerators)
+    circuit = Circuit(32, accelerators)
 
-Gates can then be added normally using ``c.add`` and the circuit can be executed
-using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
+Gates can then be added normally using ``circuit.add`` and the circuit can be executed
+using ``circuit()``. Note that a ``memory_device`` is passed in the distributed circuit
 (if this is not passed the CPU will be used by default). This device does not perform
 any gate calculations but is used to store the full state. Therefore the
 distributed simulation is limited by the amount of CPU memory.
@@ -128,11 +128,11 @@ however the user may create the full state as follows:
 .. code-block::  python
 
     # Create distributed circuits for two GPUs
-    c = Circuit(32, {"/GPU:0": 1, "/GPU:1": 1})
+    circuit = Circuit(32, {"/GPU:0": 1, "/GPU:1": 1})
     # Add gates
-    c.add(...)
+    circuit.add(...)
     # Execute (``result`` will be a ``DistributedState``)
-    result = c()
+    result = circuit()
 
     # ``DistributedState`` supports indexing and slicing
     print(result[40])
@@ -279,9 +279,11 @@ The following gates support parameter setting:
 * :class:`qibo.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
 * :class:`qibo.gates.GeneralizedfSim`: Accepts a tuple of two parameters
   ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
-  array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required when using the pytorch backend.
+  array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required
+  when using the pytorch backend.
 * :class:`qibo.gates.Unitary`: Accepts a single ``unitary`` parameter. This
-  should be an array or ``tf.Tensor`` of shape ``(2, 2)``. A ``torch.Tensor`` is required when using the pytorch backend.
+  should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
+  A ``torch.Tensor`` is required when using the pytorch backend.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
 a flat list (``torch.Tensor`` is required when using the ``pytorch`` backend).
@@ -302,7 +304,7 @@ the ``trainable=False`` during gate creation. For example:
 
 .. testcode::
 
-    c = Circuit(3)
+    circuit = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(1, theta=0.456, trainable=False))
     c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
@@ -339,11 +341,11 @@ of the :class:`qibo.gates.M` gate. For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(1, density_matrix=True)
-    c.add(gates.H(0))
-    output = c.add(gates.M(0, collapse=True))
-    c.add(gates.H(0))
-    result = c(nshots=1)
+    circuit = Circuit(1, density_matrix=True)
+    circuit.add(gates.H(0))
+    output = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.H(0))
+    result = circuit(nshots=1)
     print(result)
     # prints |+><+| if 0 is measured
     # or |-><-| if 1 is measured
@@ -370,10 +372,10 @@ a loop:
 
     from qibo import Circuit, gates
 
-    c = Circuit(1, density_matrix=True)
-    c.add(gates.H(0))
-    output = c.add(gates.M(0, collapse=True))
-    c.add(gates.H(0))
+    circuit = Circuit(1, density_matrix=True)
+    circuit.add(gates.H(0))
+    output = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.H(0))
     nshots = 100
 
 .. testcode::
@@ -394,13 +396,13 @@ also possible:
 
     from qibo import Circuit, gates
 
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    output = c.add(gates.M(0, collapse=True))
-    c.add(gates.H(0))
-    c.add(gates.M(0, 1))
-    result = c(nshots=100)
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    output = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0, 1))
+    result = circuit(nshots=100)
 
 In this case ``output`` will contain the results of the first ``collapse=True``
 measurement while ``result`` will contain the results of the standard measurement.
@@ -416,11 +418,11 @@ any parametrized gate as follows:
     import numpy as np
     from qibo import Circuit, gates
 
-    c = Circuit(2, density_matrix=True)
-    c.add(gates.H(0))
-    output = c.add(gates.M(0, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
-    result = c()
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    output = circuit.add(gates.M(0, collapse=True))
+    circuit.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
+    result = circuit()
 
 In this case the first qubit will be measured and if 1 is found a pi/4 X-rotation
 will be applied to the second qubit, otherwise no rotation. Qibo allows to
@@ -436,14 +438,15 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
 .. testcode::
 
     import numpy as np
+
     from qibo import Circuit, gates
 
-    c = Circuit(3, density_matrix=True)
-    c.add(gates.H(0))
-    output = c.add(gates.M(0, 1, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
-    c.add(gates.RY(2, theta=np.pi * (output.symbols[0] + output.symbols[1]) / 5))
-    result = c()
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(gates.H(0))
+    output = circuit.add(gates.M(0, 1, collapse=True))
+    circuit.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
+    circuit.add(gates.RY(2, theta=np.pi * (output.symbols[0] + output.symbols[1]) / 5))
+    result = circuit()
 
 
 How to invert a circuit?
@@ -1136,10 +1139,10 @@ the bitflips:
     nqubits = 4
 
     thetas = np.random.random(nqubits)
-    c = Circuit(nqubits)
-    c.add(gates.RX(qubit, theta=phase) for qubit, phase in enumerate(thetas))
-    c.add([gates.M(0, 1), gates.M(2, 3)])
-    result = c(nshots=100)
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RX(qubit, theta=phase) for qubit, phase in enumerate(thetas))
+    circuit.add([gates.M(0, 1), gates.M(2, 3)])
+    result = circuit(nshots=100)
     # add bit-flip errors with probability 0.2 for all qubits
     result.apply_bitflips(0.2)
     # add bit-flip errors with different probabilities for each qubit
@@ -1293,23 +1296,23 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    hz = 0.5
    hx = 0.5
    dt = 0.25
-   circ = Circuit(nqubits, density_matrix=True)
-   circ.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
-   circ.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-   circ.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
-   circ.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-   circ.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
-   circ.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-   circ.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
-   circ.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-   circ.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-   circ.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
-   circ.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   circuit = Circuit(nqubits, density_matrix=True)
+   circuit.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+   circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   circuit.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+   circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   circuit.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+   circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+   circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+   circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    # Include the measurements
-   circ.add(gates.M(*range(nqubits)))
+   circuit.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
-   circ.draw()
+   circuit.draw()
 
    #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
    #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─

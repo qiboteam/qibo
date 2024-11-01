@@ -45,15 +45,15 @@ Circuit addition
 
 .. testcode::
 
-    c1 = QFT(4)
+    circuit_1 = QFT(4)
 
-    c2 = Circuit(4)
-    c2.add(gates.RZ(0, 0.1234))
-    c2.add(gates.RZ(1, 0.1234))
-    c2.add(gates.RZ(2, 0.1234))
-    c2.add(gates.RZ(3, 0.1234))
+    circuit_2 = Circuit(4)
+    circuit_2.add(gates.RZ(0, 0.1234))
+    circuit_2.add(gates.RZ(1, 0.1234))
+    circuit_2.add(gates.RZ(2, 0.1234))
+    circuit_2.add(gates.RZ(3, 0.1234))
 
-    c = c1 + c2
+    circuit = circuit_1 + circuit_2
 
 will create a circuit that performs the Quantum Fourier Transform on four qubits
 followed by Rotation-Z gates.
@@ -94,11 +94,11 @@ For example the following:
 
     from qibo import Circuit, gates
 
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.CZ(0, 1))
-    c.add([gates.X(0), gates.Y(1)])
-    fused_c = c.fuse()
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.H(1)])
+    circuit.add(gates.CZ(0, 1))
+    circuit.add([gates.X(0), gates.Y(1)])
+    fused_circuit = circuit.fuse()
 
 will create a new circuit with a single :class:`qibo.gates.special.FusedGate`
 acting on ``(0, 1)``, while the following:
@@ -107,13 +107,13 @@ acting on ``(0, 1)``, while the following:
 
     from qibo import Circuit, gates
 
-    c = Circuit(3)
-    c.add([gates.H(0), gates.H(1), gates.H(2)])
-    c.add(gates.CZ(0, 1))
-    c.add([gates.X(0), gates.Y(1), gates.Z(2)])
-    c.add(gates.CNOT(1, 2))
-    c.add([gates.H(0), gates.H(1), gates.H(2)])
-    fused_c = c.fuse()
+    circuit = Circuit(3)
+    circuit.add([gates.H(0), gates.H(1), gates.H(2)])
+    circuit.add(gates.CZ(0, 1))
+    circuit.add([gates.X(0), gates.Y(1), gates.Z(2)])
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add([gates.H(0), gates.H(1), gates.H(2)])
+    fused_circuit = circuit.fuse()
 
 will give a circuit with two fused gates, the first of which will act on
 ``(0, 1)`` corresponding to
@@ -1421,10 +1421,10 @@ The final result of the circuit execution can also be saved to disk and loaded b
 
 .. testcode::
 
-   c = Circuit(2)
-   c.add(gates.M(0,1))
+   circuit = Circuit(2)
+   circuit.add(gates.M(0,1))
    # this will be a CircuitResult object
-   result = c()
+   result = circuit()
    # save it to final_result.npy
    result.dump('final_result.npy')
    # can be loaded back

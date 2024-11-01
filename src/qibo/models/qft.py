@@ -29,12 +29,12 @@ def QFT(nqubits: int, with_swaps: bool = True, accelerators=None, **kwargs) -> C
             import numpy as np
             from qibo.models import QFT
             nqubits = 6
-            c = QFT(nqubits)
+            circuit = QFT(nqubits)
             # Random normalized initial state vector
             init_state = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
             init_state = init_state / np.sqrt((np.abs(init_state)**2).sum())
             # Execute the circuit
-            final_state = c(init_state)
+            final_state = circuit(init_state)
     """
     if accelerators is not None:
         if not with_swaps:
