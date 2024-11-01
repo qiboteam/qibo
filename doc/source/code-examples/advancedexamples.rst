@@ -543,7 +543,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     vqe = VQE(circuit, hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * (nlayers + 1))
+    initial_parameters = np.random.uniform(0, 2 * np.pi, nqubits * (2 * nlayers + 1))
 
     best, params, extra = vqe.minimize(initial_parameters, method='BFGS', compile=False)
 
