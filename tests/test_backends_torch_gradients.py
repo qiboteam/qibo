@@ -56,7 +56,7 @@ def test_torch_tensorflow_gradients():
 
     optimizer = backend.np.optim.SGD
     optimizer = optimizer([param], lr=1)
-    c.set_parameters(param)
+    circuit.set_parameters(param)
     final_state = backend.execute_circuit(circuit).state()
     loss = infidelity(target_state, final_state, backend=backend)
     loss.backward()
@@ -66,13 +66,13 @@ def test_torch_tensorflow_gradients():
 
     target_state = tf_backend.tf.constant([0.0, 1.0], dtype=tf_backend.tf.complex128)
     param = tf_backend.tf.Variable([0.1], dtype=tf_backend.tf.float64)
-    c = Circuit(1)
+    circuit = Circuit(1)
     circuit.add(gates.RX(0, param[0]))
 
     optimizer = tf_backend.tf.optimizers.SGD(learning_rate=1.0)
 
     with tf_backend.tf.GradientTape() as tape:
-        c.set_parameters(param)
+        circuit.set_parameters(param)
         final_state = tf_backend.execute_circuit(circuit).state()
         loss = infidelity(target_state, final_state, backend=tf_backend)
 
