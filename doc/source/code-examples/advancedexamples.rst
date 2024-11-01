@@ -24,7 +24,7 @@ specifies otherwise. One can change the default simulation device using ``qibo.s
 
     import qibo
     qibo.set_device("/CPU:0")
-    final_state = c() # circuit will now be executed on CPU
+    final_state = circuit() # circuit will now be executed on CPU
 
 The syntax of device names follows the pattern ``'/{device type}:{device number}'``
 where device type can be CPU or GPU and the device number is an integer that
@@ -305,9 +305,9 @@ the ``trainable=False`` during gate creation. For example:
 .. testcode::
 
     circuit = Circuit(3)
-    c.add(gates.RX(0, theta=0.123))
-    c.add(gates.RY(1, theta=0.456, trainable=False))
-    c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
+    circuit.add(gates.RX(0, theta=0.123))
+    circuit.add(gates.RY(1, theta=0.456, trainable=False))
+    circuit.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
 
     print(c.get_parameters())
     # prints [(0.123,), (0.789, 0.567)] ignoring the parameters of the RY gate
@@ -381,7 +381,7 @@ a loop:
 .. testcode::
 
     for _ in range(nshots):
-        result = c()
+        result = circuit()
 
 Note that this will be more time-consuming compared to multi-shot simulation
 of standard (non-collapse) measurements where the circuit is simulated once and
@@ -1344,7 +1344,7 @@ the real quantum hardware, instead, we can use a noise model:
 .. testcode::
 
    # Noise-free expected value
-   exact = obs.expectation(backend.execute_circuit(circ).state())
+   exact = obs.expectation(backend.execute_circuit(circuit).state())
    print(exact)
    # 0.9096065335014379
 
@@ -1362,7 +1362,7 @@ the real quantum hardware, instead, we can use a noise model:
    )
    noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
-   noisy = obs.expectation(backend.execute_circuit(noise.apply(circ)).state())
+   noisy = obs.expectation(backend.execute_circuit(noise.apply(circuit)).state())
    print(noisy)
    # 0.5647937721701448
 
@@ -1393,7 +1393,7 @@ response matrix and use it modify the final state after the circuit execution:
    # define mitigation options
    readout = {"response_matrix": response_matrix}
    # mitigate the readout errors
-   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
+   mit_val = get_expectation_val_with_readout_mitigation(circuit, obs, noise, readout=readout)
    print(mit_val)
    # 0.5945794816381054
 
@@ -1411,7 +1411,7 @@ Or use the randomized readout mitigation:
    # define mitigation options
    readout = {"ncircuits": 10}
    # mitigate the readout errors
-   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
+   mit_val = get_expectation_val_with_readout_mitigation(circuit, obs, noise, readout=readout)
    print(mit_val)
    # 0.5860884499785314
 
@@ -1451,7 +1451,7 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
 
    # Mitigated expected value
    estimate = ZNE(
-       circuit=circ,
+       circuit=circuit,
        observable=obs,
        noise_levels=np.arange(5),
        noise_model=noise,
@@ -1480,7 +1480,7 @@ combined with the readout mitigation:
 
    # Mitigated expected value
    estimate = ZNE(
-       circuit=circ,
+       circuit=circuit,
        observable=obs,
        backend=backend,
        noise_levels=np.arange(5),
@@ -1510,7 +1510,7 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
    # Mitigated expected value
    estimate = CDR(
-       circuit=circ,
+       circuit=circuit,
        observable=obs,
        n_training_samples=10,
        backend=backend,
@@ -1541,7 +1541,7 @@ caveat about the input circuit for CDR is valid here as well.
 
    # Mitigated expected value
    estimate = vnCDR(
-       circuit=circ,
+       circuit=circuit,
        observable=obs,
        n_training_samples=10,
        backend=backend,
@@ -1575,7 +1575,7 @@ The use of iCS is straightforward, analogous to CDR and vnCDR.
 
    # Mitigated expected value
    estimate = ICS(
-       circuit=circ,
+       circuit=circuit,
        observable=obs,
        n_training_samples=10,
        backend=backend,
@@ -1774,17 +1774,19 @@ Here is an example of adiabatic evolution simulation:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models
+
+    from qibo.hamiltonians import TFIM, X
+    from qibo.models import AdiabaticEvolution
 
     nqubits = 4
     T = 1 # total evolution time
     # Define the easy and hard Hamiltonians
-    h0 = hamiltonians.X(nqubits)
-    h1 = hamiltonians.TFIM(nqubits, h=0)
+    h0 = X(nqubits)
+    h1 = TFIM(nqubits, h=0)
     # Define the interpolation scheduling
     s = lambda t: t
     # Define evolution model
-    evolve = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    evolve = AdiabaticEvolution(h0, h1, s, dt=1e-2)
     # Get the final state of the evolution
     final_state = evolve(final_time=T)
 
@@ -1807,18 +1809,26 @@ similar to other callbacks:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models, callbacks
+
+    from qibo.callbacks import Gap
+    from qibo.hamiltonians import TFIM, X
+    from qibo.models import AdiabaticEvolution
 
     nqubits = 4
-    h0 = hamiltonians.X(nqubits)
-    h1 = hamiltonians.TFIM(nqubits, h=0)
+    h0 = X(nqubits)
+    h1 = TFIM(nqubits, h=0)
 
-    ground = callbacks.Gap(mode=0)
+    ground = Gap(mode=0)
     # define a callback for calculating the gap
-    gap = callbacks.Gap()
+    gap = Gap()
     # define and execute the ``AdiabaticEvolution`` model
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
-                                          callbacks=[gap, ground])
+    evolution = AdiabaticEvolution(
+        h0,
+        h1,
+        lambda t: t,
+        dt=1e-1,
+        callbacks=[gap, ground]
+    )
 
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
@@ -1846,14 +1856,15 @@ pre-coded Hamiltonians this can be done simply as:
 
 .. testcode::
 
-    from qibo import hamiltonians, models
+    from qibo.hamiltonians import TFIM, X
+    from qibo.models import AdiabaticEvolution
 
     nqubits = 4
     # Define ``SymolicHamiltonian``s
-    h0 = hamiltonians.X(nqubits, dense=False)
-    h1 = hamiltonians.TFIM(nqubits, h=0, dense=False)
+    h0 = X(nqubits, dense=False)
+    h1 = TFIM(nqubits, h=0, dense=False)
     # Perform adiabatic evolution using the Trotter decomposition
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
+    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
     final_state = evolution(final_time=1.0)
 
 
@@ -1930,7 +1941,9 @@ corresponding 16x16 matrix:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, matrices
+
+    from qibo import matrices
+    from qibo.hamiltonians import Hamiltonian
 
     # ZZ terms
     matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
@@ -1943,7 +1956,7 @@ corresponding 16x16 matrix:
     matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
     # Create Hamiltonian object
-    ham = hamiltonians.Hamiltonian(4, matrix)
+    ham = Hamiltonian(4, matrix)
 
 
 Although it is possible to generalize the above construction to arbitrary number
@@ -1963,7 +1976,7 @@ For example, the TFIM on four qubits could be constructed as:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians
+    from qibo.hamiltonians import SymbolicHamiltonian
     from qibo.symbols import X, Z
 
     # Define Hamiltonian using Qibo symbols
@@ -1975,7 +1988,7 @@ For example, the TFIM on four qubits could be constructed as:
     symbolic_ham += sum(X(i) for i in range(4))
 
     # Define a Hamiltonian using the above form
-    ham = hamiltonians.SymbolicHamiltonian(symbolic_ham)
+    ham = SymbolicHamiltonian(symbolic_ham)
     # This Hamiltonian is memory efficient as it does not construct the full matrix
 
     # The corresponding dense Hamiltonian which contains the full matrix can
@@ -2001,11 +2014,11 @@ constructing each symbol:
 
 .. testcode::
 
-    from qibo import hamiltonians
+    from qibo.hamiltonians import SymbolicHamiltonian
     from qibo.symbols import Z
 
     form = Z(0, commutative=True) * Z(1, commutative=True) + Z(1, commutative=True) * Z(2, commutative=True)
-    ham = hamiltonians.SymbolicHamiltonian(form)
+    ham = SymbolicHamiltonian(form)
 
 
 .. _hamexpectation-example:
