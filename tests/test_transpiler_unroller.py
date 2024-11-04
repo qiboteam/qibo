@@ -23,8 +23,8 @@ def test_native_gate_str_list():
     for gate in testlist:
         assert NativeGates[gate] in natives
 
-    with pytest.raises(KeyError):
-        NativeGates[["qi", "bo"]]  # Invalid gate names
+    natives = NativeGates[["qi", "bo"]]  # Invalid gate names
+    assert natives == NativeGates(0)
 
 
 def test_translate_gate_error_1q():

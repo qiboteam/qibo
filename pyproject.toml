@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.13"
+version = "0.2.14"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -31,7 +31,6 @@ tabulate = "^0.9.0"
 openqasm3 = { version = ">=0.5.0", extras = ["parser"] }
 numpy = "^1.26.4"
 networkx = "^3.2.1"
-tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux' or sys_platform == 'darwin'", optional = true }
 torch = { version = "^2.1.1,<2.4", optional = true }
 qulacs = { version = "^0.6.4", optional = true, markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
 
@@ -70,10 +69,10 @@ scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
 pylint = "3.1.0"
 matplotlib = "^3.7.0"
-tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1,<2.4"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
+qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 stim = "^1.12.0"
 qulacs = { version = "^0.6.4", markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
 
@@ -106,7 +105,6 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]
-tensorflow = ["tensorflow"]
 torch = ["torch"]
 qinfo = ["stim"]
 qulacs = ["qulacs"]

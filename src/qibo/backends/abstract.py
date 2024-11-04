@@ -31,13 +31,15 @@ class Backend(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def qubits(self) -> Optional[list[str]]:  # pragma: no cover
+    def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
         """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
     @property
     @abc.abstractmethod
-    def connectivity(self) -> Optional[list[tuple[str, str]]]:  # pragma: no cover
+    def connectivity(
+        self,
+    ) -> Optional[list[tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
         """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
         raise_error(NotImplementedError)
 
@@ -392,6 +394,13 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
         """Calculate the Singular Value Decomposition of ``matrix``."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_jacobian_matrix(
+        self, circuit, parameters, initial_state=None, return_complex: bool = True
+    ):  # pragma: no cover
+        """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

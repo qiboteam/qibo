@@ -239,6 +239,21 @@ class PyTorchBackend(NumpyBackend):
         copied = super().calculate_matrix_power(copied, power, precision_singularity)
         return self.cast(copied, dtype=copied.dtype)
 
+    def calculate_jacobian_matrix(
+        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
+    ):
+        copied = circuit.copy(deep=True)
+
+        def func(parameters):
+            """torch requires object(s) to be wrapped in a function."""
+            copied.set_parameters(parameters)
+            state = self.execute_circuit(copied, initial_state=initial_state).state()
+            if return_complex:
+                return self.np.real(state), self.np.imag(state)
+            return self.np.real(state)
+
+        return self.np.autograd.functional.jacobian(func, parameters)
+
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
             return [

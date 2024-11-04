@@ -401,6 +401,11 @@ with the last qubit as the control qubit and the first qubit as a target qubit.
 .. autofunction:: qibo.models.encodings.entangling_layer
 
 
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -1826,6 +1831,12 @@ Tsallis entropy
 .. autofunction:: qibo.quantum_info.tsallis_entropy
 
 
+Relative Tsallis entropy
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_tsallis_entropy
+
+
 Entanglement entropy
 """"""""""""""""""""
 
@@ -1951,6 +1962,12 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Fisher Information Matrix
+"""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.quantum_fisher_information_matrix
+
+
 Linear Algebra Operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1997,6 +2014,12 @@ Singular value decomposition
 """"""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.singular_value_decomposition
+
+
+Schmidt decomposition
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.schmidt_decomposition
 
 
 Quantum Networks
@@ -2150,6 +2173,12 @@ To Chi
 """""""
 
 .. autofunction:: qibo.quantum_info.to_chi
+
+
+To Stinespring
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_stinespring
 
 
 Choi to Liouville

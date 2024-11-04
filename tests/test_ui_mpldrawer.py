@@ -290,6 +290,7 @@ def test_plot_circuit_internal():
         "not_radius": 0.15,
         "swap_delta": 0.08,
         "label_buffer": 0.0,
+        "dpi": 100,
         "facecolor": "#d55e00",
         "edgecolor": "#f0e442",
         "fillcolor": "#cc79a7",

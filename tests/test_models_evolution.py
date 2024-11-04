@@ -326,7 +326,7 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 
     if method == "sgd":
-        if backend.name != "tensorflow":
+        if backend.platform != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize(
                     [0.5, 1], method=method, options=options, messages=messages

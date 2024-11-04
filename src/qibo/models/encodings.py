@@ -376,6 +376,35 @@ def entangling_layer(
     return circuit
 
 
+def ghz_state(nqubits: int, **kwargs):
+    """Generates an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
+
+    .. math::
+        \\ket{\\text{GHZ}} = \\frac{\\ket{0}^{\\otimes n} + \\ket{1}^{\\otimes n}}{\\sqrt{2}}
+
+    where :math:`n` is the number of qubits.
+
+    Args:
+        nqubits (int): number of qubits :math:`n >= 2`.
+        kwargs (dict, optional): additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the GHZ state.
+    """
+    if nqubits < 2:
+        raise_error(
+            ValueError,
+            f"nqubits given as {nqubits}. nqubits needs to be >= 2.",
+        )
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(qubit, qubit + 1) for qubit in range(nqubits - 1))
+
+    return circuit
+
+
 def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     """Generating list of indexes representing the RBS connections
 
