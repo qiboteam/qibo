@@ -13,14 +13,18 @@ from qibo.quantum_info.metrics import fidelity, purity
 
 
 def concurrence(state, bipartition, check_purity: bool = True, backend=None):
-    """Calculates concurrence of a pure bipartite quantum state
-    :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
+    """Calculate concurrence of a pure bipartite quantum state.
+
+    For a pure bipartite quantum state
+    :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the concurrence :math:`C(\\rho)` can be calculate as
 
     .. math::
-        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{A}^{2}))} \\, ,
+        \\operatorname{C}(\\rho) = \\sqrt{2 \\, (\\operatorname{Tr}^{2}(\\rho) -
+            \\operatorname{Tr}(\\rho_{B}^{2}))} \\, ,
 
-    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density operator
-    obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
+    where :math:`\\rho_{B} = \\operatorname{Tr}_{A}(\\rho)` is the reduced density operator
+    obtained by tracing out the qubits in the ``bipartition`` :math:`A`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -76,19 +80,29 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
 def entanglement_of_formation(
     state, bipartition, base: float = 2, check_purity: bool = True, backend=None
 ):
-    """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
-    quantum state :math:`\\rho`, which is given by
+    """Calculate the entanglement of formation of a pure bipartite quantum state.
 
-    .. math::
-        E_{f} = H([1 - x, x]) \\, ,
 
+    For a pure bipartite quantumm state
+    :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    the entanglement of formation :math:`E_{f}` can be calculated as
+    function of its :func:`qibo.quantum_info.concurrence`.
+    Given a random variable :math:`\\chi \\in \\{0, \\, 1\\}` with
+    a Bernoulli probability distribution :math:`[1 - x(\\rho), \\, x(\\rho)]`,
     where
 
     .. math::
-        x = \\frac{1 + \\sqrt{1 - C^{2}(\\rho)}}{2} \\, ,
+        x(\\rho) = \\frac{1 + \\sqrt{1 - \\operatorname{C}^{2}(\\rho)}}{2} \\, ,
 
-    :math:`C(\\rho)` is the :func:`qibo.quantum_info.concurrence` of :math:`\\rho`,
-    and :math:`H` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+    then the entanglement of formation :math:`\\operatorname{E}_{f}` of state :math:`\\rho`
+    is given by
+
+    .. math::
+        \\operatorname{E}_{f} = \\operatorname{H}_{2}(\\chi) \\, .
+
+    :math:`\\operatorname{C}(\\rho)` is the :func:`qibo.quantum_info.concurrence` of :math:`\\rho`,
+    and :math:`\\operatorname{H}_{2}` is the base-:math:`2`
+    :func:`qibo.quantum_info.shannon_entropy`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -103,7 +117,7 @@ def entanglement_of_formation(
 
 
     Returns:
-        float: entanglement of formation of state :math:`\\rho`.
+        float: Entanglement of formation of state :math:`\\rho`.
     """
     from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
 
@@ -121,17 +135,16 @@ def entanglement_of_formation(
 
 
 def negativity(state, bipartition, backend=None):
-    """Calculates the negativity of a bipartite quantum state.
+    """Calculate the negativity of a bipartite quantum state.
 
     Given a bipartite state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
     the negativity :math:`\\operatorname{Neg}(\\rho)` is given by
 
     .. math::
-        \\operatorname{Neg}(\\rho) = \\frac{1}{2} \\,
-            \\left( \\norm{\\rho_{B}}_{1} - 1 \\right) \\, ,
+        \\operatorname{Neg}(\\rho) = \\frac{\\|\\rho_{B}\\|_{1} - 1}{2} \\, ,
 
     where :math:`\\rho_{B}` is the reduced density matrix after tracing out qubits in
-    partition :math:`A`, and :math:`\\norm{\\cdot}_{1}` is the Schatten :math:`1`-norm
+    partition :math:`A`, and :math:`\\|\\cdot\\|_{1}` is the Schatten :math:`1`-norm
     (also known as nuclear norm or trace norm).
 
     Args:
@@ -142,7 +155,7 @@ def negativity(state, bipartition, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Negativity :math:`\\operatorname{Neg}(\\rho)` of state :math:`\\rho`.
+        float: Negativity :math:`\\operatorname{Neg}` of state :math:`\\rho`.
     """
     backend = _check_backend(backend)
 
@@ -156,16 +169,18 @@ def negativity(state, bipartition, backend=None):
 def entanglement_fidelity(
     channel, nqubits: int, state=None, check_hermitian: bool = False, backend=None
 ):
-    """Entanglement fidelity :math:`F_{\\mathcal{E}}` of a ``channel`` :math:`\\mathcal{E}`
-    on ``state`` :math:`\\rho` is given by
+    """Calculate entanglement fidelity of a quantum channel w.r.t. a quantum state.
+
+    Given a quantum ``channel`` :math:`\\mathcal{E}` and a quantum ``state``
+    :math:`\\rho`, the entanglement fidelity :math:`F_{\\mathcal{E}}` is given by
 
     .. math::
-        F_{\\mathcal{E}}(\\rho) = F(\\rho_{f}, \\rho)
+        \\operatorname{F}_{\\mathcal{E}}(\\rho) =
+            \\operatorname{F}(\\mathcal{E}(\\rho), \\rho) \\, ,
 
-    where :math:`F` is the :func:`qibo.quantum_info.fidelity` function for states,
-    and :math:`\\rho_{f} = \\mathcal{E}_{A} \\otimes I_{B}(\\rho)`
-    is the state after the channel :math:`\\mathcal{E}` was applied to
-    partition :math:`A`.
+    where :math:`\\operatorname{F}` is the state :func:`qibo.quantum_info.fidelity`,
+    and :math:`\\mathcal{E}(\\rho) \\equiv (\\mathcal{E}_{A} \\otimes I_{B})(\\rho)`
+    is the state after the channel :math:`\\mathcal{E}` was applied to partition :math:`A`.
 
     Args:
         channel (:class:`qibo.gates.channels.Channel`): quantum channel
@@ -234,11 +249,12 @@ def meyer_wallach_entanglement(state, backend=None):
     """Compute the Meyer-Wallach entanglement :math:`Q` of a ``state``,
 
     .. math::
-        Q(\\rho) = 2\\left(1 - \\frac{1}{N} \\, \\sum_{k} \\,
-            \\text{tr}\\left(\\rho_{k}^{2}\\right)\\right) \\, ,
+        \\operatorname{Q}(\\rho) = 2\\left(1 - \\frac{1}{n} \\, \\sum_{k=0}^{n-1} \\,
+            \\text{Tr}\\left(\\rho_{k}^{2}\\right)\\right) \\, ,
 
-    where :math:`\\rho_{k}^{2}` is the reduced density matrix of qubit :math:`k`,
-    and :math:`N` is the total number of qubits in ``state``.
+    where :math:`\\rho_{k}` is the reduced density matrix of the :math:`k`-th qubit,
+    and :math:`n` is the total number of qubits in ``state``.
+
     We use the definition of the Meyer-Wallach entanglement as the average purity
     proposed in `Brennen (2003) <https://dl.acm.org/doi/10.5555/2011556.2011561>`_,
     which is equivalent to the definition introduced in `Meyer and Wallach (2002)
@@ -292,18 +308,19 @@ def meyer_wallach_entanglement(state, backend=None):
 
 
 def entangling_capability(circuit, samples: int, seed=None, backend=None):
-    """Return the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
+    """Calculate the entangling capability :math:`\\text{Ent}` of a parametrized circuit.
 
-    It is defined as the average Meyer-Wallach entanglement :math:`Q`
-    (:func:`qibo.quantum_info.meyer_wallach_entanglement`) of the ``circuit``, i.e.
+    It is defined as the average Meyer-Wallach entanglement :math:`\\operatorname{Q}`
+    (:func:`qibo.quantum_info.meyer_wallach_entanglement`) of the ``circuit``, *i.e.*
 
     .. math::
-        \\text{Ent} = \\frac{2}{|\\mathcal{S}|}\\sum_{\\theta_{k} \\in \\mathcal{S}}
-            \\, Q(\\rho_{k}) \\, ,
+        \\operatorname{Ent}(\\rho) = \\frac{2}{|\\mathcal{S}|} \\,
+            \\sum_{\\theta_{k} \\in \\mathcal{S}} \\,
+            \\operatorname{Q}(\\rho(\\theta_{k})) \\, ,
 
     where :math:`\\mathcal{S}` is the set of sampled circuit parameters,
-    and :math:`\\rho_{k}` is the state prepared by the circuit with uniformily-sampled
-    parameters :math:`\\theta_{k}`.
+    :math:`|\\mathcal{S}|` its cardinality, and :math:`\\rho_{k}` is the
+    state prepared by the circuit with uniformily-sampled parameters :math:`\\theta_{k}`.
 
     .. note::
         Currently, function does not work with ``circuit`` that contains noisy channels.
