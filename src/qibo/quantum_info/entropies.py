@@ -11,24 +11,31 @@ from qibo.quantum_info.metrics import _check_hermitian, purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
-    """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
+    """Calculate the Shannon entropy of a discrete random variable.
+
+
+    For a discrete random variable :math:`\\chi` that has values :math:`x` in the set
+    :math:`\\mathcal{X}` with probability distribution :math:`\\operatorname{p}(x)`,
+    the base-:math:`b` Shannon entropy is defined as
 
     .. math::
-        H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
+        \\operatorname{H}_{b}(\\chi) = - \\sum_{x \\in \\mathcal{X}}
+            \\, \\operatorname{p}(x) \\, \\log_{b}(\\operatorname{p}(x)) \\, ,
 
     where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the
-    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base (default 2),
-    and :math:`0 \\log_{b}(0) \\equiv 0`.
+    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base,
+    and :math:`0 \\log_{b}(0) \\equiv 0, \\,\\, \\forall \\, b`.
 
     Args:
-        prob_dist (ndarray or list): a probability array :math:`\\mathbf{p}`.
+        prob_dist (ndarray or list): probability array
+            :math:`\\{\\operatorname{p(x)}\\}_{x \\in \\mathcal{X}}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Shannon entropy :math:`H(\\mathcal{p})`.
+        float: Shannon entropy :math:`\\operatorname{H}_{b}(\\chi)`.
     """
     backend = _check_backend(backend)
 
@@ -72,27 +79,34 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
 
 
 def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
-    """Calculates the relative entropy between two discrete probability distributions.
+    """Calculate the relative entropy between two discrete random variables.
 
-    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
+    Given two random variables, :math:`\\chi` and :math:`\\upsilon`,
+    that admit values :math:`x` in the set :math:`\\mathcal{X}` with respective probabilities
+    :math:`\\operatorname{p}(x)` and :math:`\\operatorname{q}(x)`, then their base-:math:`b`
+    relative entropy is given by
 
     .. math::
-        D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
-            \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
+        \\operatorname{D}_{b}(\\chi \\, \\| \\, \\upsilon) =
+            \\sum_{x \\in \\mathcal{X}} \\, \\operatorname{p}(x) \\,
+            \\log_{b}\\left( \\frac{\\operatorname{p}(x)}{\\operatorname{q}(x)} \\right) \\, .
 
     The classical relative entropy is also known as the
-    `Kullback-Leibler (KL) divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
+    `Kullback-Leibler (KL) divergence
+    <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{q}(x)\\}_{x\\in\\mathcal{X}}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+        float: Classical relative entropy between :math:`\\chi` and :math:`\\upsilon`.
     """
     backend = _check_backend(backend)
     prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
@@ -144,29 +158,35 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 def classical_mutual_information(
     prob_dist_joint, prob_dist_p, prob_dist_q, base: float = 2, backend=None
 ):
-    """Calculates the classical mutual information of two random variables.
+    """Calculate the classical mutual information of two random variables.
 
-    Given two random variables :math:`(X, \\, Y)`, their mutual information is given by
+    Let :math:`\\chi` and :math:`\\upsilon` be two discrete random variables that
+    have values :math:`x \\in \\mathcal{X}` and :math:`y \\in \\mathcal{Y}`, respectively.
+    Then, their mutual information is given by
 
     .. math::
-        I(X, \\, Y) \\equiv H(p(x)) + H(q(y)) - H(p(x, \\, y)) \\, ,
+        \\operatorname{I}_{b}(\\chi, \\, \\upsilon) = \\operatorname{H}_{b}(\\chi)
+            + \\operatorname{H}_{b}(\\upsilon)
+            - \\operatorname{H}_{b}(\\chi, \\, \\upsilon) \\, ,
 
-    where :math:`p(x, \\, y)` is the joint probability distribution of :math:`(X, Y)`,
-    :math:`p(x)` is the marginal probability distribution of :math:`X`,
-    :math:`q(y)` is the marginal probability distribution of :math:`Y`,
-    and :math:`H(\\cdot)` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+    where :math:`\\operatorname{H}_{b}(\\cdot)` is the :func:`qibo.quantum_info.shannon_entropy`,
+    and :math:`\\operatorname{H}_{b}(\\chi, \\, \\upsilon)` represents the joint Shannon entropy
+    of the two random variables.
 
     Args:
-        prob_dist_joint (ndarray): joint probability distribution :math:`p(x, \\, y)`.
-        prob_dist_p (ndarray): marginal probability distribution :math:`p(x)`.
-        prob_dist_q (ndarray): marginal probability distribution :math:`q(y)`.
+        prob_dist_joint (ndarray): joint probability
+            :math:`\\{\\operatorname{p}(x, \\, y)\\}_{x\\in\\mathcal{X},y\\in\\mathcal{Y}}`.
+        prob_dist_p (ndarray): marginal probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray): marginal probability distribution
+            :math:`\\{\\operatorname{q}(y)\\}_{y\\in\\mathcal{Y}}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Mutual information :math:`I(X, \\, Y)`.
+        float: Mutual information :math:`\\operatorname{I}(X, \\, Y)`.
     """
     return (
         shannon_entropy(prob_dist_p, base, backend)
@@ -178,30 +198,35 @@ def classical_mutual_information(
 def classical_renyi_entropy(
     prob_dist, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
+    """Calculate the Rényi entropy of a discrete random variable.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
-    :math:`\\mathbf{p}`, the classical Rényi entropy is defined as
+    Let :math:`\\chi` be a discrete random variable that has values :math:`x`
+    in the set :math:`\\mathcal{X}` with probability :math:`\\operatorname{p}(x)`.
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`,
+    the (classical) base-:math:`b` Rényi entropy of :math:`\\chi` is defined as
 
     .. math::
-        H_{\\alpha}(\\mathbf{p}) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\sum_{x}
-            \\, \\mathbf{p}^{\\alpha}(x) \\right) \\, .
+        \\operatorname{H}_{\\alpha}^{\\text{re}}(\\chi) = \\frac{1}{1 - \\alpha} \\,
+            \\log_{b}\\left( \\sum_{x} \\, \\operatorname{p}^{\\alpha}(x) \\right) \\, ,
+
+    where :math:`\\|\\cdot\\|_{\\alpha}` is the vector :math:`\\alpha`-norm.
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+    coincides with the :func:`qibo.quantum_info.shannon_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
-    reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
-    being the support of :math:`\\mathbf{p}`.
+    reduced to :math:`\\log_{b}\\left(|\\operatorname{p}|\\right)`, with :math:`|\\operatorname{p}|`
+    being the support of :math:`\\operatorname{p}`.
     This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-\\log(\\max_{x}(\\mathbf{p}(x)))`, which is called the
+    :math:`-\\log_{b}(\\max_{x}(\\operatorname{p}(x)))`, which is called the
     `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        prob_dist (ndarray): discrete probability distribution.
+        prob_dist (ndarray): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
         alpha (float or int): order of the Rényi entropy.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -209,7 +234,7 @@ def classical_renyi_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical Rényi entropy :math:`H_{\\alpha}`.
+        float: Classical Rényi entropy :math:`\\operatorname{H}_{\\alpha}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     prob_dist = backend.cast(prob_dist, dtype=np.float64)
