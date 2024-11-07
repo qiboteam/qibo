@@ -79,7 +79,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
 
 
 def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
-    """Calculate the relative entropy between two discrete random variables.
+    """Calculate the (classical) relative entropy between two discrete random variables.
 
     Given two random variables, :math:`\\chi` and :math:`\\upsilon`,
     that admit values :math:`x` in the set :math:`\\mathcal{X}` with respective probabilities
@@ -158,11 +158,11 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 def classical_mutual_information(
     prob_dist_joint, prob_dist_p, prob_dist_q, base: float = 2, backend=None
 ):
-    """Calculate the classical mutual information of two random variables.
+    """Calculate the (classical) mutual information between two random variables.
 
     Let :math:`\\chi` and :math:`\\upsilon` be two discrete random variables that
     have values :math:`x \\in \\mathcal{X}` and :math:`y \\in \\mathcal{Y}`, respectively.
-    Then, their mutual information is given by
+    Then, their base-:math:`b` mutual information is given by
 
     .. math::
         \\operatorname{I}_{b}(\\chi, \\, \\upsilon) = \\operatorname{H}_{b}(\\chi)
@@ -174,11 +174,11 @@ def classical_mutual_information(
     of the two random variables.
 
     Args:
-        prob_dist_joint (ndarray): joint probability
+        prob_dist_joint (ndarray): joint discrete probability
             :math:`\\{\\operatorname{p}(x, \\, y)\\}_{x\\in\\mathcal{X},y\\in\\mathcal{Y}}`.
-        prob_dist_p (ndarray): marginal probability
+        prob_dist_p (ndarray): marginal discrete probability
             :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
-        prob_dist_q (ndarray): marginal probability distribution
+        prob_dist_q (ndarray): marginal discrete probability
             :math:`\\{\\operatorname{q}(y)\\}_{y\\in\\mathcal{Y}}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -198,7 +198,7 @@ def classical_mutual_information(
 def classical_renyi_entropy(
     prob_dist, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculate the Rényi entropy of a discrete random variable.
+    """Calculate the (classical) Rényi entropy of a discrete random variable.
 
     Let :math:`\\chi` be a discrete random variable that has values :math:`x`
     in the set :math:`\\mathcal{X}` with probability :math:`\\operatorname{p}(x)`.
@@ -289,33 +289,40 @@ def classical_renyi_entropy(
 def classical_relative_renyi_entropy(
     prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the classical relative Rényi entropy between two discrete probability distributions.
+    """Calculate the (classical) relative Rényi entropy between two discrete random variables.
 
     This function is also known as
     `Rényi divergence <https://en.wikipedia.org/wiki/R%C3%A9nyi_entropy#R%C3%A9nyi_divergence>`_.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distributions
-    :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, the classical relative Rényi entropy is defined as
+    Let :math:`\\chi` and :math:`\\upsilon` be two discrete random variables
+    that admit values :math:`x` in the set :math:`\\mathcal{X}` with respective probabilities
+    :math:`\\operatorname{p}(x)` and :math:`\\operatorname{q}(x)`.
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the (classical) relative
+    Rényi entropy is defined as
 
     .. math::
-        H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\frac{1}{\\alpha - 1} \\,
-            \\log\\left( \\sum_{x} \\, \\frac{\\mathbf{p}^{\\alpha}(x)}
-            {\\mathbf{q}^{\\alpha - 1}(x)} \\right) \\, .
+        \\operatorname{D}_{\\alpha,b}^{\\text{re}}(\\chi \\, \\| \\, \\upsilon) =
+            \\frac{1}{\\alpha - 1} \\, \\log_{b}\\left( \\sum_{x} \\,
+            \\frac{\\operatorname{p}^{\\alpha}(x)}{\\operatorname{q}^{\\alpha - 1}(x)} \\right)
+            \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi divergence
-    coincides with the :func:`qibo.quantum_info.entropies.classical_relative_entropy`.
+    coincides with the :func:`qibo.quantum_info.classical_relative_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 1/2`, where the function is
-    reduced to :math:`-2 \\log\\left(\\sum_{x} \\, \\sqrt{\\mathbf{p}(x) \\, \\mathbf{q}(x)} \\right)`.
-    The sum inside the :math:`\\log` is known as the
+    reduced to :math:`-2 \\log_{b}\\left(\\sum_{x\\in\\mathcal{X}} \\,
+    \\sqrt{\\operatorname{p}(x) \\, \\operatorname{q}(x)} \\right)`.
+    The sum inside the :math:`\\log_{b}` is known as the
     `Bhattacharyya coefficient <https://en.wikipedia.org/wiki/Bhattacharyya_distance>`_.
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`\\log(\\max_{x}(\\mathbf{p}(x) \\, \\mathbf{q}(x))`.
+    :math:`\\log_{b}\\,\\max_{x\\in\\mathcal{X}}\\,(\\operatorname{p}(x) \\, \\operatorname{q}(x))`.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist_p (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{p}(x)\\}_{x\\in\\mathcal{X}}`.
+        prob_dist_q (ndarray or list): discrete probability
+            :math:`\\{\\operatorname{q}(x)\\}_{x\\in\\mathcal{X}}`.
         alpha (float or int): order of the Rényi entropy.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -323,7 +330,7 @@ def classical_relative_renyi_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
+        float: Classical relative Rényi entropy :math:`D_{\\alpha,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
@@ -395,8 +402,8 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     This is defined as
 
     .. math::
-        S_{\\alpha}(\\mathbf{p}) = \\frac{1}{\\alpha - 1} \\,
-            \\left(1 - \\sum_{x} \\, \\mathbf{p}^{\\alpha}(x) \\right)
+        S_{\\alpha}(\\operatorname{p}) = \\frac{1}{\\alpha - 1} \\,
+            \\left(1 - \\sum_{x} \\, \\operatorname{p}^{\\alpha}(x) \\right)
 
     Args:
         prob_dist (ndarray): discrete probability distribution.
@@ -408,7 +415,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
+        float: Classical Tsallis entropy :math:`S_{\\alpha}(\\operatorname{p})`.
     """
     backend = _check_backend(backend)
 
