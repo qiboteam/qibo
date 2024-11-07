@@ -1,6 +1,6 @@
 """Submodule with entropy measures."""
 
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -35,7 +35,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Shannon entropy :math:`\\operatorname{H}_{b}(\\chi)`.
+        float: Shannon entropy :math:`\\operatorname{H}_{b}`.
     """
     backend = _check_backend(backend)
 
@@ -106,7 +106,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Classical relative entropy between :math:`\\chi` and :math:`\\upsilon`.
+        float: Classical relative entropy :math:`\\operatorname{D}_{b}`.
     """
     backend = _check_backend(backend)
     prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
@@ -186,7 +186,7 @@ def classical_mutual_information(
             Defaults to ``None``.
 
     Returns:
-        float: Mutual information :math:`\\operatorname{I}(X, \\, Y)`.
+        float: Mutual information :math:`\\operatorname{I}_{b}`.
     """
     return (
         shannon_entropy(prob_dist_p, base, backend)
@@ -534,28 +534,29 @@ def von_neumann_entropy(
     return_spectrum: bool = False,
     backend=None,
 ):
-    """Calculates the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
+    """Calculate the von Neumann entropy of a quantum state.
 
-    It is given by
+    Given a quantum ``state`` :math:`\\rho`, the base-:math:`b` von Neumann entropy is
 
     .. math::
-        S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S_{b}(\\rho) = -\\text{Tr}\\left(\\rho \\, \\log_{b}(\\rho)\\right) \\, .
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian .
             Defaults to ``False``.
-        return_spectrum: if ``True``, returns ``entropy`` and
-            :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
-            If ``False``, returns only ``entropy``. Default is ``False``.
+        return_spectrum: if ``True``, returns :math:`S_{b}(\\rho)` and
+            :math:`-\\log_{b}(\\text{eigenvalues}(\\rho))`.
+            If ``False``, returns only :math:`S_{b}(\\rho)`.
+            Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
+        float: von Neumann entropy :math:`\\operatorname{S}_{b}`.
     """
     backend = _check_backend(backend)
 
@@ -614,15 +615,16 @@ def relative_von_neumann_entropy(
     precision_tol: float = 1e-14,
     backend=None,
 ):
-    """Calculates the relative von Neumann entropy  between two quantum states.
+    """Calculate the relative von Neumann entropy  between two quantum states.
 
-    Also known as *quantum relative entropy*, :math:`S(\\rho \\, \\| \\, \\sigma)` is given by
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`, it is defined as
 
     .. math::
-        S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
-            - \\text{tr}\\left[\\rho \\, \\log(\\sigma)\\right]
+        \\Delta_{b}(\\rho \\, \\| \\, \\sigma) = \\text{Tr}\\left(\\rho \\,
+            \\log_{b}(\\rho)\\right) - \\text{Tr}\\left(\\rho \\,
+            \\log_{b}(\\sigma)\\right)
 
-    where ``state`` :math:`\\rho` and ``target`` :math:`\\sigma` are two quantum states.
+    It is also known as the *quantum relative entropy*.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
@@ -639,7 +641,7 @@ def relative_von_neumann_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
+        float: Relative von Neumann entropy :math:`\\Delta_{b}`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state)
@@ -718,22 +720,30 @@ def relative_von_neumann_entropy(
 
 
 def mutual_information(
-    state, partition, base: float = 2, check_hermitian: bool = False, backend=None
+    state,
+    partition: Union[List[int], Tuple[int, ...]],
+    base: float = 2,
+    check_hermitian: bool = False,
+    backend=None,
 ):
-    """Calculates the mutual information of a bipartite state.
+    """Calculate the mutual information over two partitions of a quantum state.
 
-    Given a qubit ``partition`` :math:`A`, the mutual information
-    of state :math:`\\rho` is given by
+    Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    its base-:math:`b` mutual information over those two partitions is given by
 
     .. math::
-        I(\\rho) \\equiv S(\\rho_{A}) + S(\\rho_{B}) - S(\\rho) \\, ,
+        \\mathcal{I}_{b}(\\rho) = \\operatorname{S}_{b}(\\rho_{A})
+            + \\operatorname{S}_{b}(\\rho_{B}) - \\operatorname{S}_{b}(\\rho) \\, ,
 
-    where :math:`B` is the remaining qubits that are not in partition :math:`A`,
-    and :math:`S(\\cdot)` is the :func:`qibo.quantum_info.von_neumann_entropy`.
+    where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix of qubits
+    in partition :math:`A`, :math:`\\rho_{B} = \\text{Tr}_{A}(\\rho)` is the reduced density
+    matrix of qubits in partition :math:`B`, and :math:`\\operatorname{S}_{b}(\\cdot)`
+    is the base-:math:`b` :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        partition (list or tuple): indices of qubits in partition :math:`A`.
+            Partition :math:`B` is assumed to contain the remaining qubits.
         base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
@@ -742,7 +752,7 @@ def mutual_information(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Mutual information :math:`I(\\rho)` of ``state`` :math:`\\rho`.
+        float: Mutual information :math:`\\mathcal{I}_{b}`.
     """
     nqubits = np.log2(len(state))
 
@@ -762,7 +772,7 @@ def mutual_information(
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
-    """Calculates the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
+    """Calculate the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
 
