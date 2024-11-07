@@ -1,5 +1,7 @@
 """Submodules with entanglement measures."""
 
+from typing import List, Tuple, Union
+
 import numpy as np
 
 from qibo.backends import _check_backend
@@ -12,7 +14,12 @@ from qibo.quantum_info.linalg_operations import (
 from qibo.quantum_info.metrics import fidelity, purity
 
 
-def concurrence(state, bipartition, check_purity: bool = True, backend=None):
+def concurrence(
+    state,
+    partition: Union[List[int], Tuple[int, ...]],
+    check_purity: bool = True,
+    backend=None,
+):
     """Calculate concurrence of a pure bipartite quantum state.
 
     For a pure bipartite quantum state
@@ -24,11 +31,11 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
             \\operatorname{Tr}(\\rho_{B}^{2}))} \\, ,
 
     where :math:`\\rho_{B} = \\operatorname{Tr}_{A}(\\rho)` is the reduced density operator
-    obtained by tracing out the qubits in the ``bipartition`` :math:`A`.
+    obtained by tracing out the qubits in the ``partition`` :math:`A`.
 
     Args:
         state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        partition (list or tuple): qubits in the partition :math:`A` to be traced out.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -36,7 +43,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Concurrence of :math:`\\rho`.
+        float: Concurrence :math:`\\operatorname{C}`.
     """
     backend = _check_backend(backend)
 
@@ -66,7 +73,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
                 "concurrence only implemented for pure quantum states.",
             )
 
-    reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
+    reduced_density_matrix = partial_trace(state, partition, backend=backend)
 
     purity_reduced = purity(reduced_density_matrix, backend=backend)
     if purity_reduced - 1.0 > 0.0:
@@ -78,7 +85,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
 
 
 def entanglement_of_formation(
-    state, bipartition, base: float = 2, check_purity: bool = True, backend=None
+    state, partition, base: float = 2, check_purity: bool = True, backend=None
 ):
     """Calculate the entanglement of formation of a pure bipartite quantum state.
 
@@ -105,9 +112,9 @@ def entanglement_of_formation(
     :func:`qibo.quantum_info.shannon_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float): the base of the log in :func:`qibo.quantum_info.entropies.shannon_entropy`.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        partition (list or tuple or ndarray): qubits in the partition :math:`B` to be traced out.
+        base (float): the base of the :math:`\\log` in :func:`qibo.quantum_info.shannon_entropy`.
             Defaults to  :math:`2`.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Default: ``True``.
@@ -117,14 +124,14 @@ def entanglement_of_formation(
 
 
     Returns:
-        float: Entanglement of formation of state :math:`\\rho`.
+        float: Entanglement of formation :math:`\\operatorname{E}_{f}`.
     """
     from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
     concur = concurrence(
-        state, bipartition=bipartition, check_purity=check_purity, backend=backend
+        state, partition=partition, check_purity=check_purity, backend=backend
     )
     concur = (1 + np.sqrt(1 - concur**2)) / 2
     probabilities = [1 - concur, concur]
@@ -148,14 +155,14 @@ def negativity(state, bipartition, backend=None):
     (also known as nuclear norm or trace norm).
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Negativity :math:`\\operatorname{Neg}` of state :math:`\\rho`.
+        float: Negativity :math:`\\operatorname{Neg}`.
     """
     backend = _check_backend(backend)
 
