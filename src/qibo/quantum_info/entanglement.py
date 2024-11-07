@@ -159,7 +159,7 @@ def negativity(state, partition: Union[List[int], Tuple[int, ...]], backend=None
     (also known as nuclear norm or trace norm).
 
     Args:
-        state (ndarray): statevector or density matrix :math:``.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         partition (list or tuple): qubits in the partition :math:`A` to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses it uses the current backend.

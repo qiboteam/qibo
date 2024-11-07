@@ -154,7 +154,7 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
     inner product between the two is given by
 
     .. math::
-        \\braket{A, \\, B}_{\\text{HS}} = \\text{tr}\\left(A^{\\dagger} \\, B\\right) \\, .
+        \\braket{A, \\, B}_{\\text{HS}} = \\text{Tr}\\left(A^{\\dagger} \\, B\\right) \\, .
 
     Args:
         operator_A (ndarray): operator :math:`A`.
@@ -174,25 +174,30 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
 
 
 def hilbert_schmidt_distance(state, target, backend=None):
-    """Calculate the Hilbert-Schmidt distance between two quantum states:
+    """Calculate the Hilbert-Schmidt distance between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`, their
+    Hilbert-Schmidt distance is given by
 
     .. math::
-        \\braket{\\rho - \\sigma, \\, \\rho - \\sigma}_{\\text{HS}} =
-            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right) \\, ,
+        \\begin{align}
+        \\operatorname{HSD}(\\rho, \\, \\sigma) &\\equiv
+            \\braket{\\rho - \\sigma, \\, \\rho - \\sigma}_{\\text{HS}} \\\\
+            &= \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right) \\, ,
+        \\end{align}
 
     where :math:`\\braket{\\cdot, \\, \\cdot}_{\\text{HS}}` is the
     :func:`qibo.quantum_info.hilbert_schmidt_inner_product`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`..
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
-        float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
-        and ``target`` :math:`\\sigma`.
+        float: Hilbert-Schmidt distance :math:`\\operatorname{HSD}`.
 
     References:
         1. P. J. Coles, M. Cerezo, and L. Cincio, *Strong bound between trace distance
@@ -224,21 +229,23 @@ def hilbert_schmidt_distance(state, target, backend=None):
 
 
 def fidelity(state, target, check_hermitian: bool = False, backend=None):
-    """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho` and
-    ``target`` state :math:`\\sigma`. In general,
+    """Calcualte the fidelity between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`, In general,
 
     .. math::
-        F(\\rho, \\sigma) = \\text{tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
-        \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
+        \\operatorname{F}(\\rho, \\sigma) = \\text{Tr}\\left( \\sqrt{\\sqrt{\\sigma} \\,
+            \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
 
-    However, when at least one of the states is pure, then
+    When at least one of the quantum states is pure, then :math:`\\operatorname{F}`
+    reduces to
 
     .. math::
-        F(\\rho, \\sigma) = \\text{tr}(\\rho \\, \\sigma)
+        \\operatorname{F}(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\operatorname{\\rho}`.
+        target (ndarray): statevector or density matrix :math:`\\operatorname{\\sigma}`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -246,7 +253,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+        float: Fidelity :math:`\\operatorname{F}`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state, dtype=state.dtype)
@@ -333,18 +340,20 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
 
 
 def infidelity(state, target, check_hermitian: bool = False, backend=None):
-    """Infidelity between ``state`` :math:`\\rho` and ``target`` state
-    :math:`\\sigma`, which is given by
+    """Calculate the infidelity between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`,
+    their infidelity is given by
 
     .. math::
-        1 - F(\\rho, \\, \\sigma) \\, ,
+        1 - \\operatorname{F}(\\rho, \\, \\sigma) \\, ,
 
-    where :math:`F(\\rho, \\, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
-    between ``state`` and ``target``.
+    where :math:`\\operatorname{F}(\\rho, \\, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
+    between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -352,24 +361,28 @@ def infidelity(state, target, check_hermitian: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Infidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+        float: Infidelity :math:`1 - \\operatorname{F}`.
     """
     return 1 - fidelity(state, target, check_hermitian=check_hermitian, backend=backend)
 
 
 def bures_angle(state, target, check_hermitian: bool = False, backend=None):
-    """Calculates the Bures angle :math:`D_{A}` between a ``state``
-    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
+    """Calculate the Bures angle between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`,
+    the Bures angle between them is given by
 
     .. math::
-        D_{A}(\\rho, \\, \\sigma) = \\text{arccos}\\left(\\sqrt{F(\\rho, \\, \\sigma)}\\right) \\, ,
+        \\operatorname{B}_{\\text{ang}}(\\rho, \\, \\sigma) =
+            \\operatorname{arccos}\\left(
+            \\sqrt{\\operatorname{F}(\\rho, \\, \\sigma)}\\right) \\, ,
 
-    where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
+    where :math:`\\operatorname{F}(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
     between `state` and `target`.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -377,7 +390,7 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Bures angle between ``state`` and ``target``.
+        float: Bures angle :math:`\\operatorname{B}_{\\text{ang}}`.
     """
     backend = _check_backend(backend)
 
@@ -389,18 +402,21 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
 
 
 def bures_distance(state, target, check_hermitian: bool = False, backend=None):
-    """Calculates the Bures distance :math:`D_{B}` between a ``state``
-    :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
+    """Calculate the Bures distance between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`,
+    their Bures distance is given by
 
     .. math::
-        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)}
+        \\operatorname{B}_{\\text{dist}}(\\rho, \\, \\sigma) =
+            \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)} \\, ,
 
-    where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
-    between `state` and `target`.
+    where :math:`\\operatorname{F}(\\rho, \\sigma)` is the
+    :func:`qibo.quantum_info.fidelity` between ``state`` and ``target``.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -408,7 +424,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Bures distance between ``state`` and ``target``.
+        float: Bures distance :math:`\\operatorname{B}_{\\text{dist}}`.
     """
     backend = _check_backend(backend)
     sqrt_fid = backend.np.sqrt(
@@ -420,17 +436,24 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
 
 
 def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
-    """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and
-    a ``target`` unitary channel :math:`U`. The process fidelity is defined as
+    """Calculate the process fidelity between a quantum channel and target unitary.
+
+    Given a generic :math:`n`-qubit quantum channel :math:`\\mathcal{E}`
+    and a target :math:`n`-qubit unitary :math:`\\mathcal{U}`,
+    both in their Choi representation, their process fidelity is defined as
 
     .. math::
-        F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
-            \\text{tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
+        \\operatorname{F}_{\\text{pro}}(\\mathcal{E}, \\, \\mathcal{U}) =
+            \\frac{1}{d^{2}} \\, \\text{Tr}(\\mathcal{E}^{\\dagger} \\,
+            \\mathcal{U}) \\, ,
+
+    where :math:`d = 2^{n}`. For more about the Choi representation of quantum channels,
+    please see :func:`qibo.quantum_info.to_choi`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`U`. If ``None``, target is the
-            Identity channel. Defaults to ``None``.
+        channel: quantum channel :math:`\\mathcal{E}` in the Choi representation.
+        target (optional): quantum channel :math:`\\mathcal{U}` in the Choi representation.
+            If ``None``, target is the Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -438,7 +461,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             Defaults to ``None``.
 
     Returns:
-        float: Process fidelity between ``channel`` and ``target``.
+        float: Process fidelity :math:`\\operatorname{F}_{\\text{pro}}`.
     """
     backend = _check_backend(backend)
 
@@ -794,7 +817,7 @@ def frame_potential(
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
-            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{tr}(U^{\\dagger} \\, V)
+            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{Tr}(U^{\\dagger} \\, V)
             \\, \\bigr|^{2t} \\, ,
 
     where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
@@ -802,7 +825,7 @@ def frame_potential(
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
-            \\sum_{k=1}^{N} \\, \\bigl| \\, \\text{tr}(U_{k}^{\\dagger} \\, V_{k}) \\, \\bigr|^{2t} \\, ,
+            \\sum_{k=1}^{N} \\, \\bigl| \\, \\text{Tr}(U_{k}^{\\dagger} \\, V_{k}) \\, \\bigr|^{2t} \\, ,
 
     where :math:`N` is the number of ``samples``.
 
