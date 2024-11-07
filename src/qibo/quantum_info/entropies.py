@@ -772,29 +772,33 @@ def mutual_information(
 
 
 def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
-    """Calculate the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
+    """Calculate the Rényi entropy of a quantum state.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy
+    :math:`\\operatorname{H}_{\\alpha,b}`
+    is defined as
 
     .. math::
-        H_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\rho^{\\alpha} \\right) \\, .
+        \\operatorname{S}_{\\alpha,b}^{\\text{re}}(\\rho) = \\frac{1}{1 - \\alpha} \\,
+            \\log_{b}\\left(\\rho^{\\alpha} \\right) \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.entropy`.
+    coincides with the :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
-    reduced to :math:`\\log\\left(d\\right)`, with :math:`d = 2^{n}`
+    reduced to :math:`\\log_{b}\\left(d\\right)`, with :math:`d = 2^{n}`
     being the dimension of the Hilbert space in which ``state`` :math:`\\rho` lives in.
     This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-\\log(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
-    being the `spectral norm <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
+    :math:`-\\log_{b}(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
+    being the `spectral norm
+    <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
     This is known as the `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         alpha (float or int): order of the Rényi entropy.
         base (float): the base of the :math:`\\log`. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -802,7 +806,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Rényi entropy :math:`H_{\\alpha}`.
+        float: Rényi entropy :math:`\\operatorname{S}_{\\alpha,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
 
@@ -851,21 +855,22 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
 def relative_renyi_entropy(
     state, target, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the relative Rényi entropy between two quantum states.
+    """Calculate the relative Rényi entropy between two quantum states.
 
-    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and quantum states
-    :math:`\\rho` and :math:`\\sigma`, the relative Rényi entropy is defined as
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and two quantum states
+    :math:`\\rho` and :math:`\\sigma`, the base-:math:`b` relative Rényi entropy
+    is defined as
 
     .. math::
-        H_{\\alpha}(\\rho \\, \\| \\, \\sigma) = \\frac{1}{\\alpha - 1} \\,
-            \\log\\left( \\textup{tr}\\left( \\rho^{\\alpha} \\,
+        \\Delta_{\\alpha,b}^{\\text{re}}(\\rho \\, \\| \\, \\sigma) = \\frac{1}{\\alpha - 1}
+            \\, \\log_{b}\\left( \\text{Tr}\\left( \\rho^{\\alpha} \\,
             \\sigma^{1 - \\alpha} \\right) \\right) \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
-    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
+    coincides with the :func:`qibo.quantum_info.relative_von_neumann_entropy`.
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
-    :math:`-2 \\, \\log(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
+    :math:`-2 \\, \\log_{b}(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
     with :math:`\\|\\cdot\\|_{1}` being the
     `Schatten 1-norm <https://en.wikipedia.org/wiki/Matrix_norm#Schatten_norms>`_.
     This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
@@ -886,7 +891,7 @@ def relative_renyi_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
+        float: Relative Rényi entropy :math:`\\Delta_{\\alpha,,b}^{\\text{re}}`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state)
@@ -959,26 +964,26 @@ def relative_renyi_entropy(
 
 
 def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
-    """Calculates the Tsallis entropy of a quantum state.
+    """Calculate the Tsallis entropy of a quantum state.
 
     .. math::
-        S_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\,
-            \\left( \\text{tr}(\\rho^{\\alpha}) - 1 \\right)
+        \\operatorname{S}_{\\alpha}^{\\text{ts}}(\\rho) =
+            \\frac{\\text{Tr}(\\rho^{\\alpha}) - 1}{1 - \\alpha}
 
     When :math:`\\alpha = 1`, the functions defaults to
-    :func:`qibo.quantum_info.entropies.entropy`.
+    :func:`qibo.quantum_info.von_neumann_entropy`.
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
         alpha (float or int): entropic index.
-        base (float, optional): the base of the :math:`\\log`. Used when ``alpha=1.0``.
+        base (float, optional): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
+        float: Tsallis entropy :math:`\\operatorname{S}_{\\alpha}^{\\text{ts}}`.
     """
     backend = _check_backend(backend)
 
@@ -1029,16 +1034,17 @@ def relative_tsallis_entropy(
 
     .. math::
         \\Delta_{\\alpha}^{\\text{ts}}(\\rho, \\, \\sigma) = \\frac{1 -
-            \\text{tr}\\left(\\rho^{\\alpha} \\, \\sigma^{1 - \\alpha}\\right)}{1 - \\alpha} \\, .
+            \\text{Tr}\\left(\\rho^{\\alpha} \\, \\sigma^{1 - \\alpha}\\right)}{1 - \\alpha}
+            \\, .
 
     A special case is the limit :math:`\\alpha \\to 1`, in which the Tsallis entropy
-    coincides with the :func:`qibo.quantum_info.entropies.relative_von_neumann_entropy`.
+    coincides with the :func:`qibo.quantum_info.relative_von_neumann_entropy`.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
         target (ndarray): statevector or density matrix :math:`\\sigma`.
         alpha (float or int): entropic index :math:`\\alpha \\in [0, \\, 2]`.
-        base (float, optional): the base of the :math:`\\log` used when :math:`\\alpha = 1`.
+        base (float, optional): the base of the :math:`\\log`. Used when :math:`\\alpha = 1`.
             Defaults to :math:`2`.
         check_hermitian (bool, optional): Used when :math:`\\alpha = 1`.
             If ``True``, checks if ``state`` is Hermitian.
@@ -1097,25 +1103,29 @@ def relative_tsallis_entropy(
 
 def entanglement_entropy(
     state,
-    bipartition,
+    partition: Union[List[int], Tuple[int, ...]],
     base: float = 2,
     check_hermitian: bool = False,
     return_spectrum: bool = False,
     backend=None,
 ):
-    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
-    of ``state`` :math:`\\rho`. This is given by
+    """Calculate the entanglement entropy of a bipartite quantum state.
+
+
+    Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    its base-:math:`b` entanglement entropy is given by
 
     .. math::
-        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+        \\operatorname{S}_{b}^{\\text{ent}}(\\rho) \\equiv \\operatorname{S}_{b}(\\rho_{A}) =
+            -\\text{Tr}\\left(\\rho_{A} \\, \\log_{b}(\\rho_{A})\\right) \\, ,
 
-    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
-    by tracing out the ``bipartition`` :math:`B`.
+    where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix calculated
+    by tracing out the ``partition`` :math:`B`.
 
     Args:
         state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float, optional): the base of the :math:`\\log`. Defaults to :math: `2`.
+        partition (list or tuple): qubits in the partition :math:`B` to be traced out.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
         check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
         return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
@@ -1125,7 +1135,7 @@ def entanglement_entropy(
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
+        float: Entanglement entropy :math:`\\operatorname{S}_{b}^{\\text{ent}}`.
     """
     backend = _check_backend(backend)
 
@@ -1142,7 +1152,7 @@ def entanglement_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    reduced_density_matrix = partial_trace(state, bipartition, backend=backend)
+    reduced_density_matrix = partial_trace(state, partition, backend=backend)
 
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
