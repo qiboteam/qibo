@@ -1844,7 +1844,7 @@ Entanglement entropy
 
 .. note::
     ``check_hermitian`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    the reduced density matrix resulting from tracing out ``partition`` from input
     ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
     assumption of Hermiticity. This is faster and, more importantly,
     this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``

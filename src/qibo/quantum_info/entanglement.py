@@ -85,7 +85,11 @@ def concurrence(
 
 
 def entanglement_of_formation(
-    state, partition, base: float = 2, check_purity: bool = True, backend=None
+    state,
+    partition: Union[List[int], Tuple[int, ...]],
+    base: float = 2,
+    check_purity: bool = True,
+    backend=None,
 ):
     """Calculate the entanglement of formation of a pure bipartite quantum state.
 
@@ -113,7 +117,7 @@ def entanglement_of_formation(
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
-        partition (list or tuple or ndarray): qubits in the partition :math:`B` to be traced out.
+        partition (list or tuple): qubits in the partition :math:`B` to be traced out.
         base (float): the base of the :math:`\\log` in :func:`qibo.quantum_info.shannon_entropy`.
             Defaults to  :math:`2`.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
@@ -141,7 +145,7 @@ def entanglement_of_formation(
     return ent_of_form
 
 
-def negativity(state, bipartition, backend=None):
+def negativity(state, partition: Union[List[int], Tuple[int, ...]], backend=None):
     """Calculate the negativity of a bipartite quantum state.
 
     Given a bipartite state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
@@ -155,8 +159,8 @@ def negativity(state, bipartition, backend=None):
     (also known as nuclear norm or trace norm).
 
     Args:
-        state (ndarray): statevector or density matrix :math:`\\rho`.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        state (ndarray): statevector or density matrix :math:``.
+        partition (list or tuple): qubits in the partition :math:`A` to be traced out.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses it uses the current backend.
             Defaults to ``None``.
@@ -166,7 +170,7 @@ def negativity(state, bipartition, backend=None):
     """
     backend = _check_backend(backend)
 
-    reduced = partial_transpose(state, bipartition, backend)
+    reduced = partial_transpose(state, partition, backend)
     reduced = backend.np.conj(reduced.T) @ reduced
     norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend=backend))
 

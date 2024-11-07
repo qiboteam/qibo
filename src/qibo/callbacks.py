@@ -128,7 +128,7 @@ class EntanglementEntropy(Callback):
 
         entropy, spectrum = entanglement_entropy(
             state,
-            bipartition=self.partition,
+            partition=self.partition,
             base=self.base,
             check_hermitian=self.check_hermitian,
             return_spectrum=True,
