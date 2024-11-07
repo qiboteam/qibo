@@ -10,15 +10,19 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state, backend=None):
-    """Purity of a quantum state :math:`\\rho`.
+    """Calculate the purity of a quantum state.
 
     This is given by
 
     .. math::
-        \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
+        \\text{Tr}(\\rho^{2}) \\, .
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            it uses the current backend. Defaults to ``None``.
+
     Returns:
         float: Purity of quantum ``state`` :math:`\\rho`.
     """
@@ -41,34 +45,43 @@ def purity(state, backend=None):
 
 
 def impurity(state, backend=None):
-    """Impurity of quantum state :math:`\\rho`.
+    """Calculate the impurity of a quantum state.
 
-    This is given by :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
-    is defined in :func:`qibo.quantum_info.purity`.
+    This is given by
+
+    .. math::
+        1 - \\text{Tr}(\\rho^{2}) \\, .
 
     Args:
-        state (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            it uses the current backend. Defaults to ``None``.
 
     Returns:
-        float: impurity of ``state`` :math:`\\rho`.
+        float: Impurity of quantum ``state`` :math:`\\rho`.
     """
     return 1 - purity(state, backend=backend)
 
 
 def trace_distance(state, target, check_hermitian: bool = False, backend=None):
-    """Trace distance between two quantum states, :math:`\\rho` and
-    :math:`\\sigma`:
+    """Calculate the trace distance between two quantum states.
+
+    Given two quantum states :math:`\\rho` and :math:`\\sigma`,
+    their trace distance is defined as
 
     .. math::
-        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
-            \\text{tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
-            \\right] \\, ,
+        \\begin{align}
+        \\operatorname{T}(\\rho, \\, \\sigma) &= \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} \\\\
+            &= \\frac{1}{2} \\, \\text{Tr}\\left( \\sqrt{(\\rho - \\sigma)^{\\dagger}
+                (\\rho - \\sigma)} \\right) \\, ,
+        \\end{align}
 
-    where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
+    where :math:`\\|\\cdot\\|_{1}` is the Schatten :math:`1`-norm.
 
     Args:
-        state (ndarray): statevector or density matrix.
-        target (ndarray): statevector or density matrix.
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
         check_hermitian (bool, optional): if ``True``, checks if
             :math:`\\rho - \\sigma` is Hermitian. If ``False``,
             it assumes the difference is Hermitian.
@@ -78,7 +91,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+        float: Trace distance :math:`\\operatorname{T}`.
     """
     backend = _check_backend(backend)
 
