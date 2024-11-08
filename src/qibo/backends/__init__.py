@@ -152,7 +152,9 @@ class _Global:
             edges = [
                 (node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges
             ]
-            connectivity = nx.Graph(edges)
+            connectivity = nx.Graph()
+            connectivity.add_nodes_from(list(node_mapping.values()))
+            connectivity.add_edges_from(edges)
 
             return Passes(
                 connectivity=connectivity,
