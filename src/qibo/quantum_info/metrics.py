@@ -450,9 +450,27 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     where :math:`d = 2^{n}`. For more about the Choi representation of quantum channels,
     please see :func:`qibo.quantum_info.to_choi`.
 
+    Example::
+
+        from qibo.quantum_info.metrics import process_fidelity
+        from qibo.quantum_info.random_ensembles import random_unitary, random_quantum_channel
+        from qibo.quantum_info.superoperator_transformations import to_choi
+
+        nqubits = 2
+        dims = 2**nqubits
+
+        channel = random_quantum_channel(dims)
+        channel = to_choi(channel)
+
+        unitary = random_unitary(dims)
+        unitary = to_choi(unitary)
+
+        pro_fid = process_fidelity(channel, unitary)
+
+
     Args:
-        channel: quantum channel :math:`\\mathcal{E}` in the Choi representation.
-        target (optional): quantum channel :math:`\\mathcal{U}` in the Choi representation.
+        channel (ndarray): quantum channel :math:`\\mathcal{E}` in the Choi representation.
+        target (ndarray, optional): quantum channel :math:`\\mathcal{U}` in the Choi representation.
             If ``None``, target is the Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
@@ -513,28 +531,30 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
 
 def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
-    """Process infidelity between quantum channel :math:`\\mathcal{E}` and a
-    ``target`` unitary channel :math:`U`. The process infidelity is defined as
+    """Calculate the process infidelity between a quantum channel and a target unitary.
+
+    Given a generic :math:`n`-qubit quantum channel :math:`\\mathcal{E}`
+    and a target :math:`n`-qubit unitary :math:`\\mathcal{U}`,
+    both in their Choi representation, their process infidelity is defined as
 
     .. math::
-        1 - F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+        1 - \\operatorname{F}_{\\text{pro}}(\\mathcal{E}, \\, \\mathcal{U}) \\, ,
 
-    where :math:`F_{\\text{pro}}` is the :func:`qibo.quantum_info.process_fidelity`.
+    where :math:`\\operatorname{F}_{\\text{pro}}` is their
+    :func:`qibo.quantum_info.process_fidelity`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`U`. If ``None``, target is the
-            Identity channel. Defaults to ``None``.
+        channel (ndarray): quantum channel :math:`\\mathcal{E}` in the Choi representation.
+        target (ndarray, optional): quantum channel :math:`\\mathcal{U}` in the Choi representation.
+            If ``None``, target is the Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
-
     Returns:
-        float: Process infidelity between ``channel`` :math:`\\mathcal{E}`
-        and ``target`` :math:`U`.
+        float: Process infidelity :math:`1 - \\operatorname{F}_{\\text{pro}}`.
     """
     return 1 - process_fidelity(
         channel, target=target, check_unitary=check_unitary, backend=backend
@@ -544,24 +564,35 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
 def average_gate_fidelity(
     channel, target=None, check_unitary: bool = False, backend=None
 ):
-    """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
-    and a ``target`` unitary channel :math:`U`. The average gate fidelity is
-    defined as
+    """Calculate the average gate fidelity between a quantum channel and a target unitary.
+
+    Given a generic :math:`n`-qubit quantum channel :math:`\\mathcal{E}`
+    and a target :math:`n`-qubit unitary :math:`\\mathcal{U}`, both in their Choi representation,
+    their average gate fidelity is defined as
 
     .. math::
-        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
-            F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
+        \\operatorname{F}_{\\text{avg}}(\\mathcal{E}, \\, \\mathcal{U}) =
+            \\frac{d^{2} \\, \\operatorname{F}_{\\text{pro}}(\\mathcal{E},
+            \\mathcal{U}) + 1}{d^{2} + 1} \\, ,
 
-    where :math:`d` is the dimension of the channels and
-    :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
-    :meth:`~qibo.metrics.process_fidelily` of channel
-    :math:`\\mathcal{E}` with respect to the unitary
-    channel :math:`\\mathcal{U}`.
+    where :math:`d = 2^{n}`, and :math:`\\operatorname{F}_{pro}(\\mathcal{E}, \\mathcal{U})`
+    is the :func:`qibo.quantum_info.process_fidelily` between :math:`\\mathcal{E}`
+    and :math:`\\mathcal{U}`.
+
+    Example::
+        from qibo import matrices
+        from qibo.quantum_info import average_gate_fidelity
+
+        X = matrices.X
+        H = matrices.H
+
+        avf -
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`\\mathcal{U}`.
-            If ``None``, target is the Identity channel. Defaults to ``None``.
+        channel (ndarray): quantum channel :math:`\\mathcal{E}` in the Choi representation.
+        target (ndarray, optional): quantum channel :math:`\\mathcal{U}`
+            in the Choi representation. If ``None``, target is the Identity channel.
+            Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -584,19 +615,23 @@ def average_gate_fidelity(
 
 
 def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
-    """Gate error between a quantum ``channel`` :math:`\\mathcal{E}` and a
-    ``target`` unitary channel :math:`U`, which is defined as
+    """Calculate the gate error between a quantum channel and a target unitary.
+
+    Given a generic :math:`n`-qubit quantum channel :math:`\\mathcal{E}`
+    and a :math:`n`-qubit target unitary :math:`\\mathcal{U}`, both in the Choi representation,
+    the gate error between them is defined as
 
     .. math::
-        E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+        1 - \\operatorname{F}_{\\text{avg}}(\\mathcal{E}, \\, \\mathcal{U}) \\, ,
 
-    where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the
+    where :math:`F_{\\text{avg}}(\\mathcal{E}, \\, \\mathcal{U})` is the
     :func:`qibo.quantum_info.average_gate_fidelity`.
 
     Args:
-        channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
-            target is the Identity channel. Defaults to ``None``.
+        channel (ndarray): quantum channel :math:`\\mathcal{E}` in the Choi representation.
+        target (ndarray, optional): quantum channel :math:`\\mathcal{U}`
+            in the Choi representation. If ``None``, target is the Identity channel.
+            Defaults to ``None``.
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -604,8 +639,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Gate error between ``channel`` :math:`\\mathcal{E}`
-        and ``target`` :math:`\\mathcal{U}`.
+        float: Gate error :math:`1 - \\operatorname{F}_{\\text{avg}}`.
     """
     error = 1 - average_gate_fidelity(
         channel, target, check_unitary=check_unitary, backend=backend
@@ -615,18 +649,23 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
 
 
 def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no cover
-    """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
-    ``channel`` :math:`\\mathcal{E}`, which is given by
+    """Calculate the diamond of a quantum channel or the diamind distance between two channels.
+
+    Given a :math:`n`-qubit quantum channel :math:`\\mathcal{E} \\in \\mathbb{C}^{d}`,
+    its diamond norm is defined as
 
     .. math::
-        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\otimes I_{d^{2}}\\right)(\\rho) \\|_{1} \\, ,
+        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho\\in\\mathbb{C}^{d^{2}}} \\,
+            \\| \\left(\\mathcal{E} \\otimes I_{d}\\right)(\\rho) \\|_{1} \\, ,
 
-    where :math:`I_{d^{2}}` is the :math:`d^{2} \\times d^{2}` Identity operator,
-    :math:`d = 2^{n}`, :math:`n` is the number of qubits,
-    and :math:`\\|\\cdot\\|_{1}` denotes the trace norm.
+    where :math:`d = 2^{n}`, :math:`I_{d}` is the :math:`d \\times d` Identity operator,
+    and :math:`\\|\\cdot\\|_{1}` denotes the Schatten :math:`1`-norm.
 
-    If a ``target`` channel :math:`\\Lambda` is specified,
-    then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
+    If a ``target`` channel :math:`\\Lambda` is specified, then the function calculates
+    the diamond distance between the them, *i.e.*
+
+    .. math::
+        \\| \\mathcal{E} - \\Lambda\\|_{\\diamond} \\, .
 
     Example::
 
