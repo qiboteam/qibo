@@ -581,12 +581,15 @@ def average_gate_fidelity(
 
     Example::
         from qibo import matrices
-        from qibo.quantum_info import average_gate_fidelity
+        from qibo.quantum_info import average_gate_fidelity, to_choi
+        # The import above is equivalent to
+        # from qibo.quantum_info.metrics import average_gate_fidelity
+        # from qibo.quantum_info.superoperator_transformations import to_choi
 
-        X = matrices.X
-        H = matrices.H
+        X_choi = to_choi(matrices.X)
+        H_choi = to_choi(matrices.H)
 
-        avf -
+        agf = average_gate_fidelity(X_choi, H_choi)
 
     Args:
         channel (ndarray): quantum channel :math:`\\mathcal{E}` in the Choi representation.
@@ -792,8 +795,10 @@ def expressibility(
     order: Optional[Union[int, float, str]] = 2,
     backend=None,
 ):
-    """Returns the expressibility :math:`\\|A\\|` of a parametrized circuit,
-    where
+    """Returns the expressibility of a parametrized circuit.
+
+
+    The expressibility of a parametrized circuits is defined as :math:`\\|A\\|`, where
 
     .. math::
         A = \\int_{\\text{Haar}} d\\psi \\, \\left(|\\psi\\rangle\\right.\\left.
@@ -806,7 +811,8 @@ def expressibility(
         power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
         order (int or float or str, optional): order of the norm :math:`\\|A\\|`.
-            For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
+            For specifications, see
+            :meth:`qibo.backends.abstract.Backend.calculate_norm_density_matrix`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
