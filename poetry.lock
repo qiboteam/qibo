@@ -4272,8 +4272,8 @@ qibo = {git = "https://github.com/qiboteam/qibo"}
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
-reference = "rename_methods"
-resolved_reference = "bdd18cc684269a864bbc4b0f004090f34bc4a043"
+reference = "HEAD"
+resolved_reference = "50a13e2db8e32d7ececc04c7562497c567b357c6"
 
 [[package]]
 name = "qibotn"
@@ -5552,4 +5552,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "0926a75fcae07227a189eb2af467e96c36a4e9295bb8bc6b4dcca54f548801eb"
+content-hash = "809f415dadb5513714fbd1dd150f6bad7efd990196f28ccf45a99bd846d33d83"
