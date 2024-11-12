@@ -545,7 +545,7 @@ has to use a backend based on tensorflow or pytorch primitives and not the defau
 backend, as custom operators currently do not support automatic differentiation.
 To switch the backend one can do ``qibo.set_backend(backend="qiboml", platform="tensorflow")``
 or ``qibo.set_backend(backend="qiboml", platform="pytorch")``, after ensuring the
-Qiboml package has been installed.
+``qiboml`` package has been installed.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
