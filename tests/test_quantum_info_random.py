@@ -273,7 +273,9 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             test = random_density_matrix(dims=dims, normalize=True)
     else:
         norm_function = (
-            backend.calculate_matrix_norm if basis is None else backend.calculate_norm
+            backend.calculate_matrix_norm
+            if basis is None
+            else backend.calculate_vector_norm
         )
         state = random_density_matrix(
             dims,
