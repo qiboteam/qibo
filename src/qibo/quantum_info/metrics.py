@@ -929,9 +929,7 @@ def _check_hermitian(matrix, backend=None):
     """
     backend = _check_backend(backend)
 
-    norm = backend.calculate_matrix_norm(
-        backend.np.conj(matrix).T - matrix, order=2
-    )
+    norm = backend.calculate_matrix_norm(backend.np.conj(matrix).T - matrix, order=2)
 
     hermitian = bool(float(norm) <= PRECISION_TOL)
 

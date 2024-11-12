@@ -2132,9 +2132,7 @@ def kraus_to_unitaries(
         for prob, oper in zip(x0, operators):
             operator = operator + prob * oper
 
-        return float(
-            backend.calculate_matrix_norm(target - operator, order=2)
-        )
+        return float(backend.calculate_matrix_norm(target - operator, order=2))
 
     # initial parameters as flat distribution
     x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)

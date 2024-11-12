@@ -687,9 +687,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 new_target = matrix_power(target_outer, 0.5, backend=backend)
 
                 log = backend.np.log2(
-                    backend.calculate_matrix_norm(
-                        new_state @ new_target, order=1
-                    )
+                    backend.calculate_matrix_norm(new_state @ new_target, order=1)
                 )
 
                 log = -2 * log / np.log2(base)

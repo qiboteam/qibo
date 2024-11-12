@@ -97,9 +97,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     """
     psi_magic = backend.np.matmul(backend.np.conj(backend.cast(magic_basis)).T, psi)
     if (
-        backend.np.real(
-            backend.calculate_matrix_norm(backend.np.imag(psi_magic))
-        )
+        backend.np.real(backend.calculate_matrix_norm(backend.np.imag(psi_magic)))
         > 1e-6
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
