@@ -298,7 +298,7 @@ class QuantumNetwork:
             adjoint = self._backend.np.transpose(reshaped)
 
         mat_diff = self._backend.np.conj(adjoint) - reshaped
-        norm = self._backend.calculate_matrix_norm_density_matrix(mat_diff, order=order)
+        norm = self._backend.calculate_matrix_norm(mat_diff, order=order)
 
         return float(norm) <= precision_tol
 

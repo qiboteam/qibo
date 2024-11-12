@@ -109,7 +109,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     if check_hermitian is True:
         hermitian = bool(
             float(
-                backend.calculate_matrix_norm_density_matrix(
+                backend.calculate_matrix_norm(
                     backend.np.transpose(backend.np.conj(difference), (1, 0))
                     - difference,
                     order=2,
@@ -440,7 +440,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if check_unitary is True:
         norm_channel = float(
-            backend.calculate_matrix_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 backend.np.matmul(
                     backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
                 )
@@ -929,7 +929,7 @@ def _check_hermitian(matrix, backend=None):
     """
     backend = _check_backend(backend)
 
-    norm = backend.calculate_matrix_norm_density_matrix(
+    norm = backend.calculate_matrix_norm(
         backend.np.conj(matrix).T - matrix, order=2
     )
 

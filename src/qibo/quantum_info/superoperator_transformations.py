@@ -517,7 +517,7 @@ def choi_to_kraus(
 
     if validate_cp:
         norm = float(
-            backend.calculate_matrix_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 choi_super_op - backend.np.conj(choi_super_op).T, order=2
             )
         )
@@ -2133,7 +2133,7 @@ def kraus_to_unitaries(
             operator = operator + prob * oper
 
         return float(
-            backend.calculate_matrix_norm_density_matrix(target - operator, order=2)
+            backend.calculate_matrix_norm(target - operator, order=2)
         )
 
     # initial parameters as flat distribution

@@ -108,7 +108,7 @@ def test_kraus_channel(backend, pauli_order):
 
     backend.assert_allclose(
         float(
-            backend.calculate_matrix_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 channel.to_liouville(backend=backend) - test_superop, order=2
             )
         )
@@ -117,7 +117,7 @@ def test_kraus_channel(backend, pauli_order):
     )
     backend.assert_allclose(
         float(
-            backend.calculate_matrix_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 channel.to_choi(backend=backend) - test_choi, order=2
             )
         )
@@ -240,7 +240,7 @@ def test_pauli_noise_channel(backend, pauli_order):
         normalize=True, pauli_order=pauli_order, backend=backend
     )
     norm = float(
-        backend.calculate_matrix_norm_density_matrix(
+        backend.calculate_matrix_norm(
             backend.to_numpy(liouville) - test_representation, order=2
         )
     )
@@ -384,7 +384,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
 
     backend.assert_allclose(
         float(
-            backend.calculate_matrix_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 final_state - target_state, order=2
             )
         )
