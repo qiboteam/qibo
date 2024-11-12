@@ -781,6 +781,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             new_ham.constant = self.constant * o
         if self._dense is not None:
             new_ham.dense = o * self._dense
+
+        new_ham.nqubits = self.nqubits
+
         return new_ham
 
     def apply_gates(self, state, density_matrix=False):
