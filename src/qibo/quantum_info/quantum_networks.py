@@ -298,7 +298,7 @@ class QuantumNetwork:
             adjoint = self._backend.np.transpose(reshaped)
 
         mat_diff = self._backend.np.conj(adjoint) - reshaped
-        norm = self._backend.calculate_norm_density_matrix(mat_diff, order=order)
+        norm = self._backend.calculate_matrix_norm_density_matrix(mat_diff, order=order)
 
         return float(norm) <= precision_tol
 
@@ -787,7 +787,7 @@ class QuantumComb(QuantumNetwork):
             sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
             expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
 
-        norm = self._backend.calculate_norm(reduced - expected, order=order)
+        norm = self._backend.calculate_vector_norm(reduced - expected, order=order)
 
         if float(norm) > precision_tol:
             return False
@@ -926,7 +926,7 @@ class QuantumChannel(QuantumComb):
             sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
             expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
 
-        norm = self._backend.calculate_norm((reduced - expected), order=order)
+        norm = self._backend.calculate_vector_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:
             return False
 
