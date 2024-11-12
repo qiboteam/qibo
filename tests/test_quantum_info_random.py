@@ -112,14 +112,18 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
     matrix_dagger = backend.np.conj(matrix).T
-    norm = float(backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2))
+    norm = float(
+        backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
     matrix_dagger = backend.np.conj(matrix).T
-    norm = float(backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2))
+    norm = float(
+        backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
@@ -130,7 +134,9 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
     matrix_dagger = backend.np.conj(matrix).T
-    norm = float(backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2))
+    norm = float(
+        backend.calculate_matrix_norm_density_matrix(matrix - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(backend.to_numpy(matrix))
@@ -178,7 +184,9 @@ def test_random_unitary(backend, measure):
         else np.linalg.inv(matrix)
     )
     norm = float(
-        backend.calculate_matrix_norm_density_matrix(matrix_inv - matrix_dagger, order=2)
+        backend.calculate_matrix_norm_density_matrix(
+            matrix_inv - matrix_dagger, order=2
+        )
     )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 

@@ -384,7 +384,9 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
 
     backend.assert_allclose(
         float(
-            backend.calculate_matrix_norm_density_matrix(final_state - target_state, order=2)
+            backend.calculate_matrix_norm_density_matrix(
+                final_state - target_state, order=2
+            )
         )
         < PRECISION_TOL,
         True,
