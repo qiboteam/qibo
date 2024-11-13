@@ -26,9 +26,9 @@ def DistCalc(a, b, nshots=10000):
     """Distance calculation using destructive interference.
 
     Args:
-        a (:class:`numpy.ndarray`): First point - shape = (latent space dimension,)
-        b (:class:`numpy.ndarray`): Second point - shape = (latent space dimension,)
-        nshots (int, optional): Number of shots for executing a quantum circuit to
+        a (:class:`numpy.ndarray`): first point - shape = (latent space dimension,)
+        b (:class:`numpy.ndarray`): second point - shape = (latent space dimension,)
+        nshots (int, optional): number of shots for executing a quantum circuit to
             get frequencies. Defaults to :math:`10^{4}`.
 
     Returns:
