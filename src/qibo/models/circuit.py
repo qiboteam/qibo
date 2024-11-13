@@ -228,7 +228,7 @@ class Circuit:
                 accelerators = {'/GPU:0': 2, '/GPU:1': 2}
                 # Define a circuit on 32 qubits to be run in the above GPUs keeping
                 # the full state vector in the CPU memory.
-                c = Circuit(32, accelerators)
+                circuit = Circuit(32, accelerators)
 
         Args:
             nqubits (int): Total number of qubits in the circuit.
@@ -345,16 +345,17 @@ class Circuit:
 
             .. testcode::
 
-                from qibo import gates, models
+                from qibo import Circuit, gates
+
                 # create small circuit on 4 qubits
-                smallc = models.Circuit(4)
-                smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
-                smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+                small_circuit = Circuit(4)
+                small_circuit.add(gates.RX(i, theta=0.1) for i in range(4))
+                small_circuit.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
                 # create large circuit on 8 qubits
-                largec = models.Circuit(8)
-                largec.add((gates.RY(i, theta=0.1) for i in range(8)))
+                large_circuit = Circuit(8)
+                large_circuit.add(gates.RY(i, theta=0.1) for i in range(8))
                 # add the small circuit to the even qubits of the large one
-                largec.add(smallc.on_qubits(*range(0, 8, 2)))
+                large_circuit.add(small_circuit.on_qubits(*range(0, 8, 2)))
         """
         if len(qubits) != self.nqubits:
             raise_error(
@@ -384,7 +385,7 @@ class Circuit:
             qubits (int): Qubit ids that the observable has support on.
 
         Returns:
-            circuit (qibo.models.Circuit): Circuit that contains only
+            circuit (:class:`qibo.models.Circuit`): Circuit that contains only
                 the qubits that are required for calculating expectation
                 involving the given observable qubits.
             qubit_map (dict): Dictionary mapping the qubit ids of the original
@@ -554,22 +555,22 @@ class Circuit:
 
                 from qibo import Circuit, gates
                 # use density matrices for noise simulation
-                c = Circuit(2, density_matrix=True)
-                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+                circuit = Circuit(2, density_matrix=True)
+                circuit.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
                 noise_map = {
                     0: list(zip(["X", "Z"], [0.1, 0.2])),
                     1: list(zip(["Y", "Z"], [0.2, 0.1]))
                 }
-                noisy_c = c.with_pauli_noise(noise_map)
-                # ``noisy_c`` will be equivalent to the following circuit
-                c2 = Circuit(2, density_matrix=True)
-                c2.add(gates.H(0))
-                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
-                c2.add(gates.H(1))
-                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
-                c2.add(gates.CNOT(0, 1))
-                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
-                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
+                noisy_circuit = circuit.with_pauli_noise(noise_map)
+                # ``noisy_circuit`` will be equivalent to the following circuit
+                circuit_2 = Circuit(2, density_matrix=True)
+                circuit_2.add(gates.H(0))
+                circuit_2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
+                circuit_2.add(gates.H(1))
+                circuit_2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
+                circuit_2.add(gates.CNOT(0, 1))
+                circuit_2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
+                circuit_2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
         """
         if self.accelerators:  # pragma: no cover
             raise_error(
@@ -800,23 +801,26 @@ class Circuit:
 
                 from qibo import Circuit, gates
                 # create a circuit with all parameters set to 0.
-                c = Circuit(3)
-                c.add(gates.RX(0, theta=0))
-                c.add(gates.RY(1, theta=0))
-                c.add(gates.CZ(1, 2))
-                c.add(gates.fSim(0, 2, theta=0, phi=0))
-                c.add(gates.H(2))
+                circuit = Circuit(3)
+                circuit.add(gates.RX(0, theta=0))
+                circuit.add(gates.RY(1, theta=0))
+                circuit.add(gates.CZ(1, 2))
+                circuit.add(gates.fSim(0, 2, theta=0, phi=0))
+                circuit.add(gates.H(2))
 
                 # set new values to the circuit's parameters using list
                 params = [0.123, 0.456, (0.789, 0.321)]
-                c.set_parameters(params)
+                circuit.set_parameters(params)
                 # or using dictionary
-                params = {c.queue[0]: 0.123, c.queue[1]: 0.456,
-                          c.queue[3]: (0.789, 0.321)}
-                c.set_parameters(params)
-                # or using flat list (or an equivalent `np.array`/`tf.Tensor`)
+                params = {
+                    circuit.queue[0]: 0.123,
+                    circuit.queue[1]: 0.456,
+                    circuit.queue[3]: (0.789, 0.321)
+                }
+                circuit.set_parameters(params)
+                # or using flat list (or an equivalent `np.array`/`tf.Tensor`/`torch.Tensor`)
                 params = [0.123, 0.456, 0.789, 0.321]
-                c.set_parameters(params)
+                circuit.set_parameters(params)
         """
         from collections.abc import Iterable
 
@@ -919,15 +923,15 @@ class Circuit:
 
                 from qibo import Circuit, gates
 
-                c = Circuit(3)
-                c.add(gates.H(0))
-                c.add(gates.H(1))
-                c.add(gates.CNOT(0, 2))
-                c.add(gates.CNOT(1, 2))
-                c.add(gates.H(2))
-                c.add(gates.TOFFOLI(0, 1, 2))
+                circuit = Circuit(3)
+                circuit.add(gates.H(0))
+                circuit.add(gates.H(1))
+                circuit.add(gates.CNOT(0, 2))
+                circuit.add(gates.CNOT(1, 2))
+                circuit.add(gates.H(2))
+                circuit.add(gates.TOFFOLI(0, 1, 2))
 
-                print(c.summary())
+                print(circuit.summary())
                 # Prints
                 '''
                 Circuit depth = 5
@@ -977,14 +981,15 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates, models
-                c = models.Circuit(2)
-                c.add([gates.H(0), gates.H(1)])
-                c.add(gates.CNOT(0, 1))
-                c.add([gates.Y(0), gates.Y(1)])
+                from qibo import Circuit, gates
+
+                circuit = Circuit(2)
+                circuit.add([gates.H(0), gates.H(1)])
+                circuit.add(gates.CNOT(0, 1))
+                circuit.add([gates.Y(0), gates.Y(1)])
                 # create circuit with fused gates
-                fused_c = c.fuse()
-                # now ``fused_c`` contains a single ``FusedGate`` that is
+                fused_circuit = circuit.fuse()
+                # now ``fused_circuit`` contains a single ``FusedGate`` that is
                 # equivalent to applying the five original gates
         """
         if self.accelerators:  # pragma: no cover
@@ -1207,19 +1212,19 @@ class Circuit:
 
             .. testcode::
 
-                from qibo import gates, models
+                from qibo import Circuit, gates
                 qasm_code = '''OPENQASM 2.0;
                 include "qelib1.inc";
                 qreg q[2];
                 h q[0];
                 h q[1];
                 cx q[0],q[1];'''
-                c = models.Circuit.from_qasm(qasm_code)
+                circuit = Circuit.from_qasm(qasm_code)
                 # is equivalent to creating the following circuit
-                c2 = models.Circuit(2)
-                c2.add(gates.H(0))
-                c2.add(gates.H(1))
-                c2.add(gates.CNOT(0, 1))
+                circuit_2 = Circuit(2)
+                circuit_2.add(gates.H(0))
+                circuit_2.add(gates.H(1))
+                circuit_2.add(gates.CNOT(0, 1))
         """
         parser = QASMParser()
         return parser.to_circuit(qasm_code, accelerators, density_matrix)

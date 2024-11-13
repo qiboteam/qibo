@@ -29,27 +29,31 @@ def ansatz(p=0):
     return C
 
 
-def cost_function(theta, state, circuit, shots=1000):
-    """Cost function encoding the difference between a state and its up-to-phases canonical form
+def cost_function(theta, state, circuit, shots: int = 1000):
+    """Cost function encoding the difference between a state and its up-to-phases canonical form.
+
     Args:
-        theta (array): parameters of the unitary rotations.
-        state (cplx array): three-qubit random state.
-        circuit (models.Circuit): Qibo variational circuit.
-        shots (int): Shots used for measuring every circuit.
+        theta (ndarray): parameters of the unitary rotations.
+        state (ndarray): three-qubit random state.
+        circuit (:class:`qibo.models.Circuit`): variational circuit.
+        shots (int, optional): shots used for measuring every circuit. Defaults to :math:`1000`.
+
     Returns:
-        float, cost function
+        float: Cost function
     """
     circuit.set_parameters(theta)
     measurements = circuit(state, nshots=shots).frequencies(binary=False)
     return (measurements[1] + measurements[2] + measurements[3]) / shots
 
 
-def canonize(state, circuit, shots=1000):
-    """Function to transform a given state into its up-to-phases canonical form
+def canonize(state, circuit, shots: int = 1000):
+    """Function to transform a given state into its up-to-phases canonical form.
+
     Args:
-        state (cplx array): three-qubit random state.
-        circuit (models.Circuit): Qibo variational circuit.
-        shots (int): Shots used for measuring every circuit.
+        state (ndarray): three-qubit random state.
+        circuit (:class:`qibo.models.Circuit`): variational circuit.
+        shots (int): shots used for measuring every circuit. Defaults to :math:`1000`.
+
     Returns:
         Value cost function, parameters to canonize the given state
     """
@@ -60,16 +64,20 @@ def canonize(state, circuit, shots=1000):
     return result.fun, result.x
 
 
-def canonical_tangle(state, theta, circuit, shots=1000, post_selection=True):
-    """Tangle of a canonized quantum state
+def canonical_tangle(
+    state, theta, circuit, shots: int = 1000, post_selection: bool = True
+):
+    """Tangle of a canonized quantum state.
+
     Args:
-        state (cplx array): three-qubit random state.
+        state (ndarray): three-qubit random state.
         theta (array): parameters of the unitary rotations.
-        circuit (models.Circuit): Qibo variational circuit.
-        shots (int): Shots used for measuring every circuit.
-        post_selection (bool): whether post selection is applied or not
+        circuit (:class:`qibo.models.Circuit`): variational circuit.
+        shots (int, optional): shots used for measuring every circuit. Defaults to :math:`1000`.
+        post_selection (bool, optional): whether post selection is applied or not
+
     Returns:
-        tangle
+        float: tangle
     """
     circuit.set_parameters(theta)
     result = circuit(state, nshots=shots).frequencies(binary=False)

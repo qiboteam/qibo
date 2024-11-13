@@ -4,8 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-import qibo
-from qibo import Circuit, gates
+from qibo import Circuit, gates, get_backend, set_backend
 
 LOCAL_FOLDER = Path(__file__).parent
 
@@ -21,8 +20,8 @@ def main(n_layers, train_size, filename, plot, save_loss):
         save_loss (bool): save losses for standard and anomalous data (default False).
     """
 
-    qibo.set_backend(backend="qiboml", platform="tensorflow")
-    tf = qibo.get_backend().tf
+    set_backend(backend="qiboml", platform="tensorflow")
+    tf = get_backend().tf
 
     # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):
@@ -35,7 +34,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (qibo.models.Circuit): variational quantum circuit.
+            :class:`qibo.models.Circuit`: Variational quantum circuit.
         """
 
         index = 0
@@ -62,11 +61,11 @@ def main(n_layers, train_size, filename, plot, save_loss):
         """Evaluate loss function for one test sample.
 
         Args:
-            encoder (qibo.models.Circuit): variational quantum circuit (trained).
-            vector (tf.Tensor): test sample, in the form of 1d vector.
+            encoder (:class:`qibo.models.Circuit`): variational quantum circuit (trained).
+            vector (:class:`tf.Tensor`): test sample, in the form of 1d vector.
 
         Returns:
-            loss (tf.Variable): loss of the test sample.
+            :class:`tf.Variable`: Loss of the test sample.
         """
         reconstructed = encoder(vector)
         # 3 qubits compression

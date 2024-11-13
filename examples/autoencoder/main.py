@@ -4,7 +4,8 @@ import argparse
 import numpy as np
 from scipy.optimize import minimize
 
-from qibo import gates, hamiltonians, models
+from qibo import Circuit, gates
+from qibo.hamiltonians import TFIM, Hamiltonian, Z
 
 
 def main(nqubits, layers, compress, lambdas, maxiter):
@@ -17,9 +18,9 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         Returns:
             Encoding Hamiltonian.
         """
-        m0 = hamiltonians.Z(ncompress).matrix
+        m0 = Z(ncompress).matrix
         m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
-        ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
+        ham = Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
 
     def cost_function(params, count):
@@ -31,7 +32,7 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         Returns:
             Value of the cost function.
         """
-        circuit = models.Circuit(nqubits)
+        circuit = Circuit(nqubits)
         for l in range(layers):
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta=0))
@@ -65,7 +66,7 @@ def main(nqubits, layers, compress, lambdas, maxiter):
 
     ising_groundstates = []
     for lamb in lambdas:
-        ising_ham = -1 * hamiltonians.TFIM(nqubits, h=lamb)
+        ising_ham = -1 * TFIM(nqubits, h=lamb)
         ising_groundstates.append(ising_ham.eigenvectors()[0])
 
     count = [0]
