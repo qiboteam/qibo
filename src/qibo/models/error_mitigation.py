@@ -4,11 +4,12 @@ import math
 from inspect import signature
 from itertools import product
 
+import networkx as nx
 import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import GlobalBackend, _check_backend, _check_backend_and_local_state
+from qibo.backends import _check_backend, _check_backend_and_local_state, get_backend
 from qibo.config import raise_error
 
 
@@ -173,7 +174,7 @@ def ZNE(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -237,7 +238,7 @@ def sample_training_circuit_cdr(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -345,7 +346,16 @@ def _curve_fit(
 
         optimizer.step(closure)
         return params
-    return curve_fit(model, xdata, ydata, p0=params)[0]
+
+    if backend.platform in ["cupy", "cuquantum"]:  # pragma: no cover
+        # Currrently, ``cupy`` does not have compatibility with ``scipy.optimize``.
+        xdata = backend.to_numpy(xdata)
+        ydata = backend.to_numpy(ydata)
+        params = backend.to_numpy(params)
+
+    optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
+
+    return backend.cast(optimal_params, dtype=optimal_params.dtype)
 
 
 def CDR(
@@ -388,7 +398,7 @@ def CDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -503,7 +513,7 @@ def vnCDR(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -631,7 +641,7 @@ def get_response_matrix(
             `qibo.noise.ReadoutError`.
         nshots (int, optional): number of shots. Defaults to :math:`10000`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -735,7 +745,7 @@ def apply_randomized_readout_mitigation(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -877,7 +887,7 @@ def sample_clifford_training_circuit(
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -941,7 +951,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. if ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -1163,17 +1173,24 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Returns:
         qibo.states.CircuitResult: The result of the circuit execution.
     """
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+        backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
-        backend.transpiler.passes[1] = Custom(
-            initial_map=qubit_map, connectivity=backend.platform.topology
+        qubits = backend.qubits
+        connectivity_edges = backend.connectivity
+        node_mapping = {q: i for i, q in enumerate(qubits)}
+        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
+        connectivity = nx.Graph(edges)
+        transpiler = Passes(
+            connectivity=connectivity,
+            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
         )
+        circuit, _ = transpiler(circuit)
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-
     return circuit_result

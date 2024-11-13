@@ -25,6 +25,7 @@ PLOT_PARAMS = {
     "not_radius": 0.15,
     "swap_delta": 0.08,
     "label_buffer": 0.0,
+    "dpi": 100,
     "facecolor": "w",
     "edgecolor": "#000000",
     "fillcolor": "#000000",
@@ -380,6 +381,7 @@ def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
         figsize=(ng * scale, nq * scale),
         facecolor=plot_params["facecolor"],
         edgecolor=plot_params["edgecolor"],
+        dpi=plot_params["dpi"],
     )
     ax = fig.add_subplot(1, 1, 1, frameon=True)
     ax.set_axis_off()
@@ -634,11 +636,8 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     Args:
         circuit (qibo.models.circuit.Circuit): A Qibo circuit to plot.
-
         scale (float): Scaling factor for matplotlib output drawing.
-
         cluster_gates (boolean): Group (or not) circuit gates on drawing.
-
         style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
         (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
 
@@ -688,6 +687,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     params = PLOT_PARAMS.copy()
     params.update(_plot_params(style))
+
     inits = list(range(circuit.nqubits))
 
     labels = []

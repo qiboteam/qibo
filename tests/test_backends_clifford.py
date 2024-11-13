@@ -4,15 +4,10 @@ from itertools import product
 
 import numpy as np
 import pytest
+from qiboml.backends import TensorflowBackend
 
-from qibo import Circuit, gates, set_backend
-from qibo.backends import (
-    CliffordBackend,
-    GlobalBackend,
-    NumpyBackend,
-    PyTorchBackend,
-    TensorflowBackend,
-)
+from qibo import Circuit, gates, get_backend, set_backend
+from qibo.backends import CliffordBackend, NumpyBackend, PyTorchBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -36,8 +31,8 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), CliffordBackend)
-    global_platform = GlobalBackend().platform
+    assert isinstance(get_backend(), CliffordBackend)
+    global_platform = get_backend().platform
     assert global_platform == platform
 
 
@@ -45,11 +40,8 @@ def test_global_backend(backend):
     construct_clifford_backend(backend)
     set_backend(backend.name, platform=backend.platform)
     clifford_bkd = CliffordBackend()
-    target = (
-        GlobalBackend().name if backend.name == "numpy" else GlobalBackend().platform
-    )
+    target = get_backend().name if backend.name == "numpy" else get_backend().platform
     assert clifford_bkd.platform == target
-    set_backend("numpy")
 
 
 THETAS_1Q = [

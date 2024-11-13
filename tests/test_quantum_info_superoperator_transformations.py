@@ -3,6 +3,7 @@ import pytest  # type: ignore
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
+from qibo.quantum_info.linalg_operations import partial_trace
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.quantum_info.superoperator_transformations import (
     chi_to_choi,
@@ -40,6 +41,7 @@ from qibo.quantum_info.superoperator_transformations import (
     to_choi,
     to_liouville,
     to_pauli_liouville,
+    to_stinespring,
     unvectorization,
     vectorization,
 )
@@ -361,6 +363,28 @@ def test_to_chi(backend, normalize, order, pauli_order):
     test_chi = backend.cast(test_chi / aux, dtype=test_chi.dtype)
 
     backend.assert_allclose(chi, test_chi, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("partition", [None, (0,)])
+@pytest.mark.parametrize("test_a0", [test_a0])
+def test_to_stinespring(backend, test_a0, partition):
+    test_a0_ = backend.cast(test_a0)
+    state = random_density_matrix(2, seed=8, backend=backend)
+
+    target = test_a0_ @ state @ backend.np.conj(test_a0_.T)
+
+    environment = (1, 2)
+
+    global_state = backend.identity_density_matrix(len(environment), normalize=True)
+    global_state = backend.np.kron(state, global_state)
+
+    stinespring = to_stinespring(
+        test_a0_, partition=partition, nqubits=len(environment) + 1, backend=backend
+    )
+    stinespring = stinespring @ global_state @ backend.np.conj(stinespring.T)
+    stinespring = partial_trace(stinespring, traced_qubits=environment, backend=backend)
+
+    backend.assert_allclose(stinespring, target, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])

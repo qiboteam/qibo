@@ -1,6 +1,7 @@
 import os
 from importlib import import_module
 
+import networkx as nx
 import numpy as np
 
 from qibo.backends.abstract import Backend
@@ -8,10 +9,9 @@ from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.pytorch import PyTorchBackend
-from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "tensorflow", "pytorch", "qulacs")
+QIBO_NATIVE_BACKENDS = ("numpy", "pytorch", "qulacs")
 
 
 class MissingBackend(ValueError):
@@ -27,30 +27,34 @@ class MetaBackend:
 
         Args:
             backend (str): Name of the backend to load.
-            kwargs (dict): Additional arguments for the qibo backend.
+            kwargs (dict): Additional arguments for the ``qibo`` backend.
+
         Returns:
-            qibo.backends.abstract.Backend: The loaded backend.
+            :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend == "numpy":
-            return NumpyBackend()
-        elif backend == "tensorflow":
-            return TensorflowBackend()
-        elif backend == "pytorch":
-            return PyTorchBackend()
-        elif backend == "clifford":
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
-            return CliffordBackend(**kwargs)
-        elif backend == "qulacs":
-            from qibo.backends.qulacs import QulacsBackend
-
-            return QulacsBackend()
-        else:
+        if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
             raise_error(
                 ValueError,
-                f"Backend {backend} is not available. The native qibo backends are {QIBO_NATIVE_BACKENDS}.",
+                f"Backend {backend} is not available. "
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford',)}",
             )
+
+        if backend == "pytorch":
+            return PyTorchBackend()
+
+        if backend == "clifford":
+            engine = kwargs.pop("platform", None)
+            kwargs["engine"] = engine
+
+            return CliffordBackend(**kwargs)
+
+        if backend == "qulacs":
+            from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
+
+            return QulacsBackend()
+
+        return NumpyBackend()
 
     def list_available(self) -> dict:
         """Lists all the available native qibo backends."""
@@ -65,52 +69,104 @@ class MetaBackend:
         return available_backends
 
 
-class GlobalBackend(NumpyBackend):
-    """The global backend will be used as default by ``circuit.execute()``."""
+class _Global:
+    _backend = None
+    _transpiler = None
+    # TODO: resolve circular import with qibo.transpiler.pipeline.Passes
 
-    _instance = None
     _dtypes = {"double": "complex128", "single": "complex64"}
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
-        {"backend": "tensorflow"},
         {"backend": "numpy"},
+        {"backend": "qiboml", "platform": "tensorflow"},
         {"backend": "pytorch"},
     ]
 
-    def __new__(cls):
-        if cls._instance is not None:
-            return cls._instance
+    @classmethod
+    def backend(cls):
+        """Get the current backend. If no backend is set, it will create one."""
+        if cls._backend is not None:
+            return cls._backend
+        cls._backend = cls._create_backend()
+        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+        return cls._backend
 
-        backend = os.environ.get("QIBO_BACKEND")
-        if backend:  # pragma: no cover
+    @classmethod
+    def _create_backend(cls):
+        backend_env = os.environ.get("QIBO_BACKEND")
+        if backend_env:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = construct_backend(backend, platform=platform)
+            backend = construct_backend(backend_env, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
                 try:
-                    cls._instance = construct_backend(**kwargs)
+                    backend = construct_backend(**kwargs)
                     break
                 except (ImportError, MissingBackend):
                     pass
 
-        if cls._instance is None:  # pragma: no cover
+        if backend is None:  # pragma: no cover
             raise_error(RuntimeError, "No backends available.")
-
-        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
-        return cls._instance
+        return backend
 
     @classmethod
-    def set_backend(cls, backend, **kwargs):  # pragma: no cover
+    def set_backend(cls, backend, **kwargs):
+        cls._backend = construct_backend(backend, **kwargs)
+        log.info(f"Using {cls._backend} backend on {cls._backend.device}")
+
+    @classmethod
+    def transpiler(cls):
+        """Get the current transpiler. If no transpiler is set, it will create one."""
+        if cls._transpiler is not None:
+            return cls._transpiler
+
+        cls._transpiler = cls._default_transpiler()
+        return cls._transpiler
+
+    @classmethod
+    def set_transpiler(cls, transpiler):
+        cls._transpiler = transpiler
+        # TODO: check if transpiler is valid on the backend
+
+    @classmethod
+    def _default_transpiler(cls):
+        from qibo.transpiler.optimizer import Preprocessing
+        from qibo.transpiler.pipeline import Passes
+        from qibo.transpiler.placer import Trivial
+        from qibo.transpiler.router import Sabre
+        from qibo.transpiler.unroller import NativeGates, Unroller
+
+        qubits = cls._backend.qubits
+        natives = cls._backend.natives
+        connectivity_edges = cls._backend.connectivity
         if (
-            cls._instance is None
-            or cls._instance.name != backend
-            or cls._instance.platform != kwargs.get("platform")
+            qubits is not None
+            and natives is not None
+            and connectivity_edges is not None
         ):
-            cls._instance = construct_backend(backend, **kwargs)
-        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
+            # only for q{i} naming
+            node_mapping = {q: i for i, q in enumerate(qubits)}
+            edges = [
+                (node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges
+            ]
+            connectivity = nx.Graph()
+            connectivity.add_nodes_from(list(node_mapping.values()))
+            connectivity.add_edges_from(edges)
+
+            return Passes(
+                connectivity=connectivity,
+                passes=[
+                    Preprocessing(connectivity),
+                    Trivial(connectivity),
+                    Sabre(connectivity),
+                    Unroller(NativeGates[natives]),
+                ],
+            )
+
+        return Passes(passes=[])
 
 
 class QiboMatrices:
@@ -147,53 +203,97 @@ matrices = QiboMatrices()
 
 
 def get_backend():
-    return str(GlobalBackend())
+    """Get the current backend."""
+    return _Global.backend()
 
 
 def set_backend(backend, **kwargs):
-    GlobalBackend.set_backend(backend, **kwargs)
+    """Set the current backend.
+
+    Args:
+        backend (str): Name of the backend to use.
+        kwargs (dict): Additional arguments for the backend.
+    """
+    _Global.set_backend(backend, **kwargs)
+
+
+def get_transpiler():
+    """Get the current transpiler."""
+    return _Global.transpiler()
+
+
+def get_transpiler_name():
+    """Get the name of the current transpiler as a string."""
+    return str(_Global.transpiler())
+
+
+def set_transpiler(transpiler):
+    """Set the current transpiler.
+
+    Args:
+        transpiler (Passes): The transpiler to use.
+    """
+    _Global.set_transpiler(transpiler)
 
 
 def get_precision():
-    return GlobalBackend().precision
+    """Get the precision of the backend."""
+    return get_backend().precision
 
 
 def set_precision(precision):
-    GlobalBackend().set_precision(precision)
-    matrices.create(GlobalBackend().dtype)
+    """Set the precision of the backend.
+
+    Args:
+        precision (str): Precision to use.
+    """
+    get_backend().set_precision(precision)
+    matrices.create(get_backend().dtype)
 
 
 def get_device():
-    return GlobalBackend().device
+    """Get the device of the backend."""
+    return get_backend().device
 
 
 def set_device(device):
+    """Set the device of the backend.
+
+    Args:
+        device (str): Device to use.
+    """
     parts = device[1:].split(":")
     if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
         raise_error(
             ValueError,
             "Device name should follow the pattern: /{device type}:{device number}.",
         )
-    backend = GlobalBackend()
+    backend = get_backend()
     backend.set_device(device)
     log.info(f"Using {backend} backend on {backend.device}")
 
 
 def get_threads():
-    return GlobalBackend().nthreads
+    """Get the number of threads used by the backend."""
+    return get_backend().nthreads
 
 
 def set_threads(nthreads):
+    """Set the number of threads used by the backend.
+
+    Args:
+        nthreads (int): Number of threads to use.
+    """
     if not isinstance(nthreads, int):
         raise_error(TypeError, "Number of threads must be integer.")
     if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
-    GlobalBackend().set_threads(nthreads)
+    get_backend().set_threads(nthreads)
 
 
 def _check_backend(backend):
     if backend is None:
-        return GlobalBackend()
+        return get_backend()
 
     return backend
 
@@ -211,7 +311,7 @@ def list_available_backends(*providers: str) -> dict:
     return available_backends
 
 
-def construct_backend(backend, **kwargs) -> Backend:
+def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     """Construct a generic native or non-native qibo backend.
 
     Args:
@@ -231,10 +331,11 @@ def construct_backend(backend, **kwargs) -> Backend:
         # pylint: disable=unsupported-membership-test
         if provider not in e.msg:
             raise e
-        raise MissingBackend(
+        raise_error(
+            MissingBackend,
             f"The '{backend}' backends' provider is not available. Check that a Python "
-            f"package named '{provider}' is installed, and it is exposing valid Qibo "
-            "backends.",
+            + f"package named '{provider}' is installed, and it is exposing valid Qibo "
+            + "backends.",
         )
 
 

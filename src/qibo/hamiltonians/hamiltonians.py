@@ -1,6 +1,7 @@
 """Module defining Hamiltonian classes."""
 
 from itertools import chain
+from math import prod
 from typing import Optional
 
 import numpy as np
@@ -22,7 +23,7 @@ class Hamiltonian(AbstractHamiltonian):
             Sparse matrices based on ``scipy.sparse`` for ``numpy`` / ``qibojit`` backends
             (or on ``tf.sparse`` for the ``tensorflow`` backend) are also supported.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
 
@@ -80,7 +81,7 @@ class Hamiltonian(AbstractHamiltonian):
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair ``(target, matrix)``.
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-                in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+                in the execution. If ``None``, it uses the current backend.
                 Defaults to ``None``.
 
         Returns:
@@ -152,7 +153,10 @@ class Hamiltonian(AbstractHamiltonian):
             )
             != 0
         ):
-            raise_error(NotImplementedError, "Observable is not diagonal.")
+            raise_error(
+                NotImplementedError,
+                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+            )
         keys = list(freq.keys())
         if qubit_map is None:
             qubit_map = list(range(int(np.log2(len(obs)))))
@@ -315,7 +319,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             to the symbolic Hamiltonian, such as the parameters in the
             :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
 
@@ -552,41 +556,120 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def expectation_from_samples(self, freq, qubit_map=None):
-        terms = self.terms
-        for term in terms:
+    def expectation_from_circuit(
+        self, circuit: "Circuit", qubit_map: dict = None, nshots: int = 1000
+    ) -> float:
+        """
+        Calculate the expectation value from a circuit.
+        This even works for observables not completely diagonal in the computational
+        basis, but only diagonal at a term level in a defined basis. Namely, for
+        an observable of the form :math:``H = \\sum_i H_i``, where each :math:``H_i``
+        consists in a `n`-qubits pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`,
+        the expectation value is computed by rotating the input circuit in the suitable
+        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
+        that are then summed to build the global expectation value.
+        Each term of the observable is treated separately, by measuring in the correct
+        basis and re-executing the circuit.
+
+        Args:
+            circuit (Circuit): input circuit.
+            qubit_map (dict): qubit map, defaults to ``{0: 0, 1: 1, ..., n: n}``
+            nshots (int): number of shots, defaults to 1000.
+
+        Returns:
+            (float): the calculated expectation value.
+        """
+        from qibo import Circuit, gates
+
+        if qubit_map is None:
+            qubit_map = list(range(self.nqubits))
+
+        rotated_circuits = []
+        coefficients = []
+        Z_observables = []
+        q_maps = []
+        for term in self.terms:
+            # store coefficient
+            coefficients.append(term.coefficient)
+            # build diagonal observable
+            Z_observables.append(
+                SymbolicHamiltonian(
+                    prod([Z(q) for q in term.target_qubits]),
+                    nqubits=circuit.nqubits,
+                    backend=self.backend,
+                )
+            )
+            # prepare the measurement basis and append it to the circuit
+            measurements = [
+                gates.M(factor.target_qubit, basis=factor.gate.__class__)
+                for factor in set(term.factors)
+            ]
+            circ_copy = circuit.copy(True)
+            circ_copy.add(measurements)
+            rotated_circuits.append(circ_copy)
+            # map the original qubits into 0, 1, 2, ...
+            q_maps.append(
+                dict(
+                    zip(
+                        [qubit_map[q] for q in term.target_qubits],
+                        range(len(term.target_qubits)),
+                    )
+                )
+            )
+        frequencies = [
+            result.frequencies()
+            for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
+        ]
+        return sum(
+            [
+                coeff * obs.expectation_from_samples(freq, qmap)
+                for coeff, freq, obs, qmap in zip(
+                    coefficients, frequencies, Z_observables, q_maps
+                )
+            ]
+        )
+
+    def expectation_from_samples(self, freq: dict, qubit_map: dict = None) -> float:
+        """
+        Calculate the expectation value from the samples.
+        The observable has to be diagonal in the computational basis.
+
+        Args:
+            freq (dict): input frequencies of the samples.
+            qubit_map (dict): qubit map.
+
+        Returns:
+            (float): the calculated expectation value.
+        """
+        for term in self.terms:
             # pylint: disable=E1101
             for factor in term.factors:
                 if not isinstance(factor, Z):
                     raise_error(
                         NotImplementedError, "Observable is not a Z Pauli string."
                     )
-            if len(term.factors) != len(set(term.factors)):
-                raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
+
+        if qubit_map is None:
+            qubit_map = list(range(self.nqubits))
+
         keys = list(freq.keys())
         counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
             freq.values()
         )
-        qubits = []
-        for term in terms:
-            qubits_term = []
-            for k in term.target_qubits:
-                qubits_term.append(k)
-            qubits.append(qubits_term)
-        if qubit_map is None:
-            qubit_map = list(range(len(keys[0])))
-        expval = 0
-        for j, q in enumerate(qubits):
-            subk = []
-            expval_q = 0
-            for i, k in enumerate(keys):
-                subk = [int(k[qubit_map.index(s)]) for s in q]
-                expval_k = 1
-                if subk.count(1) % 2 == 1:
-                    expval_k = -1
-                expval_q += expval_k * counts[i]
-            expval += expval_q * self.terms[j].coefficient.real
-        return expval + self.constant.real
+        expvals = []
+        for term in self.terms:
+            qubits = term.target_qubits
+            expvals.extend(
+                [
+                    term.coefficient.real
+                    * (-1) ** [state[qubit_map[q]] for q in qubits].count("1")
+                    for state in keys
+                ]
+            )
+        expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
+            len(self.terms), len(freq)
+        )
+        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -698,6 +781,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             new_ham.constant = self.constant * o
         if self._dense is not None:
             new_ham.dense = o * self._dense
+
+        new_ham.nqubits = self.nqubits
+
         return new_ham
 
     def apply_gates(self, state, density_matrix=False):

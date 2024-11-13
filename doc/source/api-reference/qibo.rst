@@ -401,6 +401,11 @@ with the last qubit as the control qubit and the first qubit as a target qubit.
 .. autofunction:: qibo.models.encodings.entangling_layer
 
 
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -1826,6 +1831,12 @@ Tsallis entropy
 .. autofunction:: qibo.quantum_info.tsallis_entropy
 
 
+Relative Tsallis entropy
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_tsallis_entropy
+
+
 Entanglement entropy
 """"""""""""""""""""
 
@@ -2162,6 +2173,12 @@ To Chi
 """""""
 
 .. autofunction:: qibo.quantum_info.to_chi
+
+
+To Stinespring
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_stinespring
 
 
 Choi to Liouville
@@ -2667,7 +2684,7 @@ As for the other backends, the Clifford backend can be set with
     import qibo
     qibo.set_backend("clifford", platform="numpy")
 
-by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used
+by specifying the engine used for calculation, if not provided the current backend is used
 
 .. testcode::  python
 

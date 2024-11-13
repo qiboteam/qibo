@@ -74,7 +74,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             it assumes the difference is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -147,7 +147,7 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
         operator_A (ndarray): operator :math:`A`.
         operator_B (ndarray): operator :math:`B`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -174,7 +174,7 @@ def hilbert_schmidt_distance(state, target, backend=None):
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -229,7 +229,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -335,7 +335,7 @@ def infidelity(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -360,7 +360,7 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -391,7 +391,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -421,7 +421,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -492,7 +492,7 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
 
@@ -529,7 +529,7 @@ def average_gate_fidelity(
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -564,7 +564,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
         check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -612,7 +612,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
         target (ndarray, optional): row-vectorized Choi representation of a target
             quantum channel. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
         kwargs: optional arguments to pass to CVXPY solver. For more information,
             please visit `CVXPY's API documentation
@@ -734,7 +734,7 @@ def expressibility(
             For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
             Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -798,7 +798,7 @@ def frame_potential(
         power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:
@@ -921,7 +921,7 @@ def _check_hermitian(matrix, backend=None):
     Args:
         matrix: input array.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
 
     Returns:

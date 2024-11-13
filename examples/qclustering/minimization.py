@@ -1,10 +1,10 @@
 import math
 
 import numpy as np
-import tensorflow as tf
 from grover import grover_qc
 from oracle import create_oracle_circ
 
+import qibo
 from qibo import gates
 from qibo.models import Circuit
 
@@ -23,6 +23,8 @@ def duerr_hoyer_algo(distances):
     int
         New cluster assigned for that point.
     """
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
+    tf = qibo.get_backend().tf
 
     k = len(distances)
     n = int(math.floor(math.log2(k)) + 1)

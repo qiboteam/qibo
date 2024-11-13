@@ -21,6 +21,16 @@ def test_native_gates_from_gatelist_fail():
         NativeGates.from_gatelist([gates.RZ, gates.X(0)])
 
 
+def test_native_gate_str_list():
+    testlist = ["I", "Z", "RZ", "M", "GPI2", "U3", "CZ", "iSWAP", "CNOT"]
+    natives = NativeGates[testlist]
+    for gate in testlist:
+        assert NativeGates[gate] in natives
+
+    natives = NativeGates[["qi", "bo"]]  # Invalid gate names
+    assert natives == NativeGates(0)
+
+
 def test_translate_gate_error_1q():
     natives = NativeGates(0)
     with pytest.raises(DecompositionError):

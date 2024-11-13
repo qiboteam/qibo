@@ -5,6 +5,7 @@ from datasets import create_dataset, create_target, fig_template, world_map_temp
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 
+import qibo
 from qibo import Circuit, gates
 
 
@@ -117,7 +118,8 @@ class single_qubit_classifier:
             parameters = r[1].result.xbest
 
         elif method == "sgd":
-            import tensorflow as tf
+            qibo.set_backend(backend="qiboml", platform="tensorflow")
+            tf = qibo.get_backend().tf
 
             circuit = self.circuit(self.training_set[0])
 

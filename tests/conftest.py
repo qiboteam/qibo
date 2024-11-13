@@ -7,16 +7,16 @@ import sys
 
 import pytest
 
-from qibo.backends import construct_backend
+from qibo.backends import _Global, construct_backend
 
 # backends to be tested
 BACKENDS = [
     "numpy",
-    "tensorflow",
     "pytorch",
     "qibojit-numba",
     "qibojit-cupy",
     "qibojit-cuquantum",
+    "qiboml-tensorflow",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
@@ -72,6 +72,13 @@ def pytest_configure(config):
 @pytest.fixture
 def backend(backend_name):
     yield get_backend(backend_name)
+
+
+@pytest.fixture(autouse=True)
+def clear():
+    yield
+    _Global._backend = None
+    _Global._transpiler = None
 
 
 def pytest_generate_tests(metafunc):
