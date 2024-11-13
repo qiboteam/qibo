@@ -13,7 +13,7 @@ def noisy_circuit(circuit, params):
 
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): Circuit on which noise will be applied. Since in the end are
+        circuit (:class:`qibo.models.Circuit`): circuit on which noise will be applied. Since in the end are
             applied bitflips, measurement gates are required.
         params (dict): contains the parameters of the channels organized as follow \n
                 {'t1' : (``t1``, ``t2``,..., ``tn``),
