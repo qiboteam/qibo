@@ -5,6 +5,8 @@
 #
 
 import measurements
+from measurements import Measurement
+
 import methodsMiFGD_core
 import methodsRGD_core
 import numpy as np
@@ -16,6 +18,95 @@ from BasicTools import Generate_All_labels, Plt_Err_Time
 from qibo_states import GHZState, HadamardState, RandomState
 
 from qibo.quantum_info import random_density_matrix
+
+
+def effective_parity(key, label):
+    """Calculates the effective number of '1' in the given key
+
+    Args:
+        key (str): the measurement outcome in the form of 0 or 1
+                (eg)  '101' or '110' for the 3 qubit measurement
+        label (str): the label for Pauli measurement
+                (eg)  'XIZ', 'YYI', 'XZY' for the 3 qubit measurement
+    Returns:
+        int: the number of effective '1' in the key
+    """
+    indices = [i for i, symbol in enumerate(label) if symbol == "I"]
+    digit_list = list(key)
+    for i in indices:
+        digit_list[i] = "0"
+    effective_key = "".join(digit_list)
+
+    return effective_key.count("1")
+
+def count_dict_2_PaulCoef(label, count_dict):
+    """ to convert the shot measurement result for the given Pauli label
+        into the coefficient of the label in the Pauli operator basis
+
+    Args:
+        label (str): the label for Pauli measurement
+            (eg)  'XIYZ', 'XYYI', 'ZXZY' for the 4 qubit measurement
+        count_dict (dict): the shot measurement result for the label
+            (eg) {'0011': 9, '0100': 7, '1001': 8, '0101': 11, '1101': 3, 
+                  '0001': 9, '1000': 9, '0000': 12, '1110': 19, '1111': 4, 
+                  '0111': 1, '1100': 2, '1010': 5, '0110': 1}
+
+    Returns:
+        (float): the coefficient in the Pauli operator basis corresponding to the label
+    """
+    num_shots = sum(count_dict.values())
+
+    freq = {k: (v) / (num_shots) for k, v in count_dict.items()}
+    parity_freq = {
+        k: (-1) ** effective_parity(k, label) * v for k, v in freq.items()
+    }
+    coef = sum(parity_freq.values())
+    #data2 = {label: coef}
+
+    return coef
+
+def Test_measurement(labels, data_dict_list):
+
+    num_labels = len(labels)
+
+    #
+    # shot measurement results -->  coefficient for each Pauli operator
+    #
+
+    data_dict = {}
+    for ii in range(num_labels):
+        label = data_dict_list[ii]["label"]
+        data_dict[label] = data_dict_list[ii]["count_dict"]
+
+    measurement_list = measurements.MeasurementStore.calc_measurement_list(
+        labels, data_dict
+    )
+
+    #
+    # = measurements.MeasurementStore.calc_measurement_list
+    #
+    count_dict_list = [data_dict[label] for label in labels]            # in the order of labels
+    measurement_list2 = measurements.measurement_list_calc(labels, count_dict_list)
+    print(np.array(measurement_list2) - np.array(measurement_list))
+
+    #
+    #  how measurements.measurement_list_calc works 
+    #
+    measurement_object_list = [
+        Measurement(label, count_dict)
+        for (label, count_dict) in zip(*[labels, count_dict_list])
+    ]
+
+    parity_flavor = "effective"
+    beta = None
+    measurement_list3 = [
+        measurement_object.get_pauli_correlation_measurement(beta, parity_flavor)[label]
+        for (label, measurement_object) in zip(*[labels, measurement_object_list])
+    ]
+    print(np.array(measurement_list3) - np.array(measurement_list))
+
+    return count_dict_list, measurement_list
+
 
 if __name__ == "__main__":
 
@@ -54,18 +145,22 @@ if __name__ == "__main__":
         data_dict_list = state.execute_measurement_circuits(labels)
         # print(data_dict_list)
 
+        count_dict_list, measurement_list = Test_measurement(labels, data_dict_list)
+
         #
-        # shot measurement results -->  coefficient for each Pauli operator
+        # count_dict_list --> measurement_list directly
         #
 
-        data_dict = {}
-        for ii in range(num_labels):
-            label = data_dict_list[ii]["label"]
-            data_dict[label] = data_dict_list[ii]["count_dict"]
+        measurement_list4 = []
 
-        measurement_list = measurements.MeasurementStore.calc_measurement_list(
-            labels, data_dict
-        )
+        for (label, count_dict) in zip(*[labels, count_dict_list]):    # count_dict_list in the order of labels
+
+            coef = count_dict_2_PaulCoef(label, count_dict)
+      
+            measurement_list4.append(coef)
+
+        print(np.allclose(np.array(measurement_list4), np.array(measurement_list)))
+        raise
 
     elif circuit_Choice == 2:  # directly generate density matrix via qutip
         Nr = 1
