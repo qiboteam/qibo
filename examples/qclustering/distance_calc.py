@@ -7,7 +7,7 @@ from qibo.models import Circuit
 
 
 def pad_input(X):
-    """Adds 0s if X log2(X.dim) != round int.
+    """Add 0s if X log2(X.dim) != round int.
 
     Args:
         X (:class:`numpy.ndarray`): Input data.
