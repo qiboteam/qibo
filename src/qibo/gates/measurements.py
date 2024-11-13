@@ -232,7 +232,7 @@ class M(Gate):
         and preserving the measurement result register.
 
         Args:
-            qubit_map (dict): Dictionary mapping original qubit indices to new ones.
+            qubit_map (dict): dictionary mapping original qubit indices to new ones.
 
         Returns:
             :class:`qibo.gates.Gate.M`: object of the original gate type targeting
