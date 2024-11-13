@@ -17,7 +17,7 @@ from measurements import Measurement
 from qibo_states import GHZState, HadamardState, RandomState
 
 from qibo.quantum_info import random_density_matrix
-
+from qibo.models.encodings import ghz_state
 
 def effective_parity(key, label):
     """Calculates the effective number of '1' in the given key
@@ -128,9 +128,12 @@ if __name__ == "__main__":
     if circuit_Choice == 1:  #  generate from circuit
         Nr = 1
 
-        # state   = GHZState(n)
+        state   = GHZState(n)
         # state   = HadamardState(n)
-        state = RandomState(n)
+        #state = RandomState(n)
+
+        stateGHZ = ghz_state(n)
+        target_state_GHZ = stateGHZ.execute().state()
 
         target_density_matrix = state.get_state_matrix()
         target_state = state.get_state_vector()
