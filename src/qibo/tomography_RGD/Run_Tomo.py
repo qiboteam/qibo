@@ -5,14 +5,13 @@
 #
 
 import measurements
-from measurements import Measurement
-
 import methodsMiFGD_core
 import methodsRGD_core
 import numpy as np
 import projectors
 import qutip as qu
 from BasicTools import Generate_All_labels, Plt_Err_Time
+from measurements import Measurement
 
 # from states import GHZState, HadamardState, RandomState
 from qibo_states import GHZState, HadamardState, RandomState
@@ -39,16 +38,17 @@ def effective_parity(key, label):
 
     return effective_key.count("1")
 
+
 def count_dict_2_PaulCoef(label, count_dict):
-    """ to convert the shot measurement result for the given Pauli label
+    """to convert the shot measurement result for the given Pauli label
         into the coefficient of the label in the Pauli operator basis
 
     Args:
         label (str): the label for Pauli measurement
             (eg)  'XIYZ', 'XYYI', 'ZXZY' for the 4 qubit measurement
         count_dict (dict): the shot measurement result for the label
-            (eg) {'0011': 9, '0100': 7, '1001': 8, '0101': 11, '1101': 3, 
-                  '0001': 9, '1000': 9, '0000': 12, '1110': 19, '1111': 4, 
+            (eg) {'0011': 9, '0100': 7, '1001': 8, '0101': 11, '1101': 3,
+                  '0001': 9, '1000': 9, '0000': 12, '1110': 19, '1111': 4,
                   '0111': 1, '1100': 2, '1010': 5, '0110': 1}
 
     Returns:
@@ -57,13 +57,12 @@ def count_dict_2_PaulCoef(label, count_dict):
     num_shots = sum(count_dict.values())
 
     freq = {k: (v) / (num_shots) for k, v in count_dict.items()}
-    parity_freq = {
-        k: (-1) ** effective_parity(k, label) * v for k, v in freq.items()
-    }
+    parity_freq = {k: (-1) ** effective_parity(k, label) * v for k, v in freq.items()}
     coef = sum(parity_freq.values())
-    #data2 = {label: coef}
+    # data2 = {label: coef}
 
     return coef
+
 
 def Test_measurement(labels, data_dict_list):
 
@@ -85,12 +84,12 @@ def Test_measurement(labels, data_dict_list):
     #
     # = measurements.MeasurementStore.calc_measurement_list
     #
-    count_dict_list = [data_dict[label] for label in labels]            # in the order of labels
+    count_dict_list = [data_dict[label] for label in labels]  # in the order of labels
     measurement_list2 = measurements.measurement_list_calc(labels, count_dict_list)
     print(np.array(measurement_list2) - np.array(measurement_list))
 
     #
-    #  how measurements.measurement_list_calc works 
+    #  how measurements.measurement_list_calc works
     #
     measurement_object_list = [
         Measurement(label, count_dict)
@@ -153,10 +152,12 @@ if __name__ == "__main__":
 
         measurement_list4 = []
 
-        for (label, count_dict) in zip(*[labels, count_dict_list]):    # count_dict_list in the order of labels
+        for label, count_dict in zip(
+            *[labels, count_dict_list]
+        ):  # count_dict_list in the order of labels
 
             coef = count_dict_2_PaulCoef(label, count_dict)
-      
+
             measurement_list4.append(coef)
 
         print(np.allclose(np.array(measurement_list4), np.array(measurement_list)))
