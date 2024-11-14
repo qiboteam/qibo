@@ -9,15 +9,11 @@ from qibo.models import Circuit
 def iam_operator(n):
     """Construct quantum circuit for 'inversion around mean' operator.
 
-    Parameters
-    ----------
-    n : int
-        Number of qubits.
+    Args:
+        n (int): number of qubits.
 
-    Returns
-    -------
-    :class:`qibo.models.Circuit`
-        Quantum circuit.
+    Returns:
+        :class:`qibo.models.Circuit`: quantum circuit.
     """
     qc = Circuit(n)
 
@@ -42,16 +38,14 @@ def iam_operator(n):
 def grover_qc(qc, n, oracle, n_indices_flip):
     """Construct quantum circuit for Grover's algorithm.
 
-    Parameters
-    ----------
-    qc : :class:`qibo.models.Circuit`
-        Initial quantum circuit to build up on.
-    n : int
-        Number of qubits
-    oracle : :class:`qibo.models.Circuit`)
-        Quantum circuit representing an Oracle operator.
-    n_indices_flip : int
-        Number of indices which have been selected by Oracle operator.
+    Args:
+        qc (:class:`qibo.models.Circuit`): initial quantum circuit to build up on.
+        n (int): number of qubits.
+        oracle (:class:`qibo.models.Circuit`): quantum circuit representing an Oracle operator.
+        n_indices_flip (int): number of indices which have been selected by Oracle operator.
+
+    Returns:
+        :class:`qibo.models.Circuit`: quantum circuit.
 
     """
     if n_indices_flip:
@@ -65,4 +59,5 @@ def grover_qc(qc, n, oracle, n_indices_flip):
         qc.add(qc_diff.on_qubits(*(list(range(n)))))  # apply inversion around mean
 
     qc.add(gates.M(*list(range(n))))
+
     return qc

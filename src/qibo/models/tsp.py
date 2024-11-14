@@ -166,8 +166,8 @@ class TSP:
             An initial state that is used to start TSP QAOA.
 
         """
-        c = Circuit(len(ordering) ** 2)
+        circuit = Circuit(len(ordering) ** 2)
         for i in range(len(ordering)):
-            c.add(gates.X(int(self.two_to_one[ordering[i], i])))
-        result = self.backend.execute_circuit(c)
+            circuit.add(gates.X(int(self.two_to_one[ordering[i], i])))
+        result = self.backend.execute_circuit(circuit)
         return result.state()

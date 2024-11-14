@@ -37,14 +37,14 @@ Here another example with more gates and shots simulation:
 import numpy as np
 from qibo import Circuit, gates
 
-c = Circuit(2)
-c.add(gates.X(0))
+circuit = Circuit(2)
+circuit.add(gates.X(0))
 
 # Add a measurement register on both qubits
-c.add(gates.M(0, 1))
+circuit.add(gates.M(0, 1))
 
 # Execute the circuit with the default initial state |00>.
-result = c(nshots=100)
+result = circuit(nshots=100)
 ```
 
 In both cases, the simulation will run in a single device CPU or GPU in double precision `complex128`.
