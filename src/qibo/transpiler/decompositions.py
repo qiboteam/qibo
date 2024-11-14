@@ -525,10 +525,8 @@ standard_decompositions.add(
     lambda gate: [
         gates.H(0),
         gates.CNOT(0, 1),
-        gates.H(1),
         gates.RY(0, gate.parameters[0]),
-        gates.RY(1, -gate.parameters[0]),
-        gates.H(1),
+        gates.RY(1, gate.parameters[0]),
         gates.CNOT(0, 1),
         gates.H(0),
     ],

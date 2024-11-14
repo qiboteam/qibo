@@ -35,7 +35,7 @@ class Router(ABC):
         """Match circuit to hardware connectivity.
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be routed.
+            circuit (:class:`qibo.models.Circuit`): circuit to be routed.
             initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
 
         Returns:

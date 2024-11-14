@@ -107,13 +107,16 @@ def assert_transpiling(
     """Check that all transpiler passes have been executed correctly.
 
     Args:
-        original_circuit (qibo.models.Circuit): circuit before transpiling.
-        transpiled_circuit (qibo.models.Circuit): circuit after transpiling.
-        connectivity (networkx.Graph): chip qubits connectivity.
+        original_circuit (:class:`qibo.models.Circuit`): circuit before transpiling.
+        transpiled_circuit (:class:`qibo.models.Circuit`): circuit after transpiling.
+        connectivity (:class:`networkx.Graph`): chip qubits connectivity.
         initial_layout (dict): initial physical-logical qubit mapping.
         final_layout (dict): final physical-logical qubit mapping.
-        native_gates (NativeGates): native gates supported by the hardware.
-        check_circuit_equivalence (Bool): use simulations to check if the transpiled circuit is the same as the original.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates
+            supported by the hardware. Defaults to
+            :meth:`qibo.transpiler.unroller.NativeGates.default`.
+        check_circuit_equivalence (bool, optional): use simulations to check if the
+            transpiled circuit is the same as the original. Defaults to ``True``.
     """
     assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
     assert_decomposition(
