@@ -118,47 +118,47 @@ class Grover:
 
     def initialize(self):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
-        c = Circuit(self.nqubits)
-        c.add(gates.X(self.nqubits - 1))
-        c.add(gates.H(self.nqubits - 1))
+        circuit = Circuit(self.nqubits)
+        circuit.add(gates.X(self.nqubits - 1))
+        circuit.add(gates.H(self.nqubits - 1))
         if self.initial_state_circuit:
-            c.add(
+            circuit.add(
                 self.initial_state_circuit.invert().on_qubits(
                     *range(self.initial_state_circuit.nqubits)
                 )
             )
-        c.add(self.superposition.on_qubits(*self.space_sup))
-        return c
+        circuit.add(self.superposition.on_qubits(*self.space_sup))
+        return circuit
 
     def diffusion(self):
         """Construct the diffusion operator out of the superposition circuit."""
         nqubits = self.superposition.nqubits + 1
-        c = Circuit(nqubits)
-        c.add(self.superposition.invert().on_qubits(*range(nqubits - 1)))
+        circuit = Circuit(nqubits)
+        circuit.add(self.superposition.invert().on_qubits(*range(nqubits - 1)))
         if self.initial_state_circuit:
-            c.add(
+            circuit.add(
                 self.initial_state_circuit.invert().on_qubits(
                     *range(self.initial_state_circuit.nqubits)
                 )
             )
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
-        c.add(gates.X(nqubits - 1).controlled_by(*range(self.sup_qubits)))
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
+        circuit.add([gates.X(i) for i in range(self.sup_qubits)])
+        circuit.add(gates.X(nqubits - 1).controlled_by(*range(self.sup_qubits)))
+        circuit.add([gates.X(i) for i in range(self.sup_qubits)])
         if self.initial_state_circuit:
-            c.add(
+            circuit.add(
                 self.initial_state_circuit.on_qubits(
                     *range(self.initial_state_circuit.nqubits)
                 )
             )
-        c.add(self.superposition.on_qubits(*range(nqubits - 1)))
-        return c
+        circuit.add(self.superposition.on_qubits(*range(nqubits - 1)))
+        return circuit
 
     def step(self):
         """Combine oracle and diffusion for a Grover step."""
-        c = Circuit(self.nqubits)
-        c.add(self.oracle.on_qubits(*self.space_ora))
-        c.add(self.diffusion().on_qubits(*(self.space_sup + [self.nqubits - 1])))
-        return c
+        circuit = Circuit(self.nqubits)
+        circuit.add(self.oracle.on_qubits(*self.space_ora))
+        circuit.add(self.diffusion().on_qubits(*(self.space_sup + [self.nqubits - 1])))
+        return circuit
 
     def circuit(self, iterations):
         """Creates circuit that performs Grover's algorithm with a set amount of iterations.
@@ -169,12 +169,12 @@ class Grover:
         Returns:
             :class:`qibo.core.circuit.Circuit` that performs Grover's algorithm.
         """
-        c = Circuit(self.nqubits)
-        c += self.initialize()
+        circuit = Circuit(self.nqubits)
+        circuit += self.initialize()
         for _ in range(iterations):
-            c += self.step()
-        c.add(gates.M(*range(self.sup_qubits)))
-        return c
+            circuit += self.step()
+        circuit.add(gates.M(*range(self.sup_qubits)))
+        return circuit
 
     def iterative_grover(self, lamda_value=6 / 5, backend=None):
         """Iterative approach of Grover for when the number of solutions is not known.

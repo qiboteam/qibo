@@ -3,11 +3,13 @@ import argparse
 
 import numpy as np
 
-from qibo import gates, hamiltonians, models
+from qibo import Circuit, gates
+from qibo.hamiltonians import XXZ, X
+from qibo.models.variational import AAVQE
 
 
 def main(nqubits, layers, maxsteps, T_max):
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(layers):
         circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
         circuit.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
@@ -15,10 +17,10 @@ def main(nqubits, layers, maxsteps, T_max):
         circuit.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
-    problem_hamiltonian = hamiltonians.XXZ(nqubits)
-    easy_hamiltonian = hamiltonians.X(nqubits)
+    problem_hamiltonian = XXZ(nqubits)
+    easy_hamiltonian = X(nqubits)
     s = lambda t: t
-    aavqe = models.variational.AAVQE(
+    aavqe = AAVQE(
         circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=maxsteps, t_max=T_max
     )
 

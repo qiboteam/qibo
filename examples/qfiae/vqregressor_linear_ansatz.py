@@ -139,8 +139,8 @@ class VQRegressor_linear_ansatz:
         Returns: circuit's prediction of the output variable, evaluated as difference of probabilities
         """
 
-        c = self.linear_ansatz(self.params, this_feature)
-        results = c().probabilities(qubits=[0])
+        circuit = self.linear_ansatz(self.params, this_feature)
+        results = circuit().probabilities(qubits=[0])
         res = results[0] - results[1]
         return res
 

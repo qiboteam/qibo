@@ -17,14 +17,18 @@ class VQE:
         .. testcode::
 
             import numpy as np
-            from qibo import gates, models, hamiltonians
+
+            from qibo import Circuit, gates
+            from qibo.hamiltonians import XXZ
+            from qibo.models import VQE
+
             # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
+            circuit = Circuit(2)
             circuit.add(gates.RY(0, theta=0))
             # create XXZ Hamiltonian for two qubits
-            hamiltonian = hamiltonians.XXZ(2)
+            hamiltonian = XXZ(2)
             # create VQE model for the circuit and Hamiltonian
-            vqe = models.VQE(circuit, hamiltonian)
+            vqe = VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
             vqe.minimize(initial_parameters)
@@ -154,20 +158,30 @@ class AAVQE:
         .. testcode::
 
             import numpy as np
-            from qibo import gates, models, hamiltonians
+
+            from qibo import Circuit, gates
+            from qibo.hamiltonians import X, XXZ
+            from qibo.models import AAVQE
+
             # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
+            circuit = Circuit(2)
             circuit.add(gates.RY(0, theta=0))
             circuit.add(gates.RY(1, theta=0))
             # define the easy and the problem Hamiltonians.
-            easy_hamiltonian=hamiltonians.X(2)
-            problem_hamiltonian=hamiltonians.XXZ(2)
+            easy_hamiltonian = X(2)
+            problem_hamiltonian = XXZ(2)
             # define a scheduling function with only one parameter
             # and boundary conditions s(0) = 0, s(1) = 1
             s = lambda t: t
             # create AAVQE model
-            aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian,
-                                s, nsteps=10, t_max=1)
+            aavqe = AAVQE(
+                circuit,
+                easy_hamiltonian,
+                problem_hamiltonian,
+                s,
+                nsteps=10,
+                t_max=1
+            )
             # optimize using random initial variational parameters
             np.random.seed(0)
             initial_parameters = np.random.uniform(0, 2*np.pi, 2)

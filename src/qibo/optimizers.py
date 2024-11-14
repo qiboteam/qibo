@@ -58,7 +58,7 @@ def optimize(
         .. testcode::
 
             import numpy as np
-            from qibo import gates, models
+            from qibo import Circuit, gates
             from qibo.optimizers import optimize
 
             # create custom loss function
@@ -68,7 +68,7 @@ def optimize(
                 return np.square(np.sum(circuit().state())) # returns numpy array
 
             # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
+            circuit = Circuit(2)
             circuit.add(gates.RY(0, theta=0))
 
             # optimize using random initial variational parameters

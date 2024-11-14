@@ -14,14 +14,14 @@ Here is an example of a circuit with 2 qubits:
     from qibo import Circuit, gates
 
     # Construct the circuit
-    c = Circuit(2)
+    circuit = Circuit(2)
     # Add some gates
-    c.add(gates.H(0))
-    c.add(gates.H(1))
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
     # Define an initial state (optional - default initial state is |00>)
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
-    result = c(initial_state) # c.execute(initial_state) also works
+    result = circuit(initial_state) # circuit.execute(initial_state) also works
     print(result.state())
     # should print `tf.Tensor([1, 0, 0, 0])`
     print(result.state())
@@ -44,15 +44,15 @@ evaluation performance, e.g.:
     qibo.set_backend(backend="qiboml", platform="tensorflow")
     from qibo import Circuit, gates
 
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CU1(0, 1, 0.1234))
-    c.compile()
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(1))
+    circuit.add(gates.CU1(0, 1, 0.1234))
+    circuit.compile()
 
     for i in range(100):
         init_state = np.ones(4) / 2.0 + i
-        c(init_state)
+        circuit(init_state)
 
 Note that compiling is only supported when the ``tensorflow`` backend is
 used. This backend is much slower than ``qibojit`` which uses custom operators
@@ -72,14 +72,14 @@ For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.H(2))
-    c.add(gates.TOFFOLI(0, 1, 2))
-    print(c.summary())
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.H(2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    print(circuit.summary())
     # Prints
     '''
     Circuit depth = 5
@@ -111,23 +111,23 @@ For example for the circuit of the previous example:
 
     from qibo import Circuit, gates
 
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.H(2))
-    c.add(gates.TOFFOLI(0, 1, 2))
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.H(2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
 
 .. testcode::
 
-    common_gates = c.gate_names.most_common()
+    common_gates = circuit.gate_names.most_common()
     # returns the list [("h", 3), ("cx", 2), ("ccx", 1)]
 
     most_common_gate = common_gates[0][0]
     # returns "h"
 
-    all_h_gates = c.gates_of_type(gates.H)
+    all_h_gates = circuit.gates_of_type(gates.H)
     # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))]
 
 A circuit may contain multi-controlled or other gates that are not supported by
@@ -158,12 +158,12 @@ information about the measured samples. For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(2)
-    c.add(gates.X(0))
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
     # Add a measurement register on both qubits
-    c.add(gates.M(0, 1))
+    circuit.add(gates.M(0, 1))
     # Execute the circuit with the default initial state |00>.
-    result = c(nshots=100)
+    result = circuit(nshots=100)
 
 Measurements are now accessible using the ``samples`` and ``frequencies`` methods
 on the ``result`` object. In particular
@@ -185,12 +185,12 @@ during the addition of measurement gates in the circuit. For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(5)
-    c.add(gates.X(0))
-    c.add(gates.X(4))
-    c.add(gates.M(0, 1, register_name="A"))
-    c.add(gates.M(3, 4, register_name="B"))
-    result = c(nshots=100)
+    circuit = Circuit(5)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(4))
+    circuit.add(gates.M(0, 1, register_name="A"))
+    circuit.add(gates.M(3, 4, register_name="B"))
+    result = circuit(nshots=100)
 
 creates a circuit with five qubits that has two registers: ``A`` consisting of
 qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
@@ -309,8 +309,8 @@ For example
 
     from qibo.models import QFT
 
-    c = QFT(5)
-    c.draw()
+    circuit = QFT(5)
+    circuit.draw()
     # Prints
     '''
     q0: ─H─U1─U1─U1─U1───────────────────────────x───
@@ -348,15 +348,15 @@ For example, we can draw the QFT circuit for 5-qubits:
         from qibo.ui import plot_circuit
 
         # create a 5-qubits QFT circuit
-        c = QFT(5)
-        c.add(gates.M(qubit) for qubit in range(2))
+        circuit = QFT(5)
+        circuit.add(gates.M(qubit) for qubit in range(2))
 
         # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
-        plot_circuit(c);
+        plot_circuit(circuit);
 
         # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
         # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
-        plot_circuit(c, scale = 0.8, cluster_gates = True, style="garnacha");
+        plot_circuit(circuit, scale = 0.8, cluster_gates = True, style="garnacha");
 
         # plot the Qibo circuit with a custom style
         custom_style = {
@@ -369,4 +369,4 @@ For example, we can draw the QFT circuit for 5-qubits:
             "controlcolor" : "#360000"
         }
 
-        plot_circuit(c, scale = 0.8, cluster_gates = True, style=custom_style);
+        plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
