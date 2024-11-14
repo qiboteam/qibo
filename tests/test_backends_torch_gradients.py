@@ -5,7 +5,7 @@ import pytest
 from qiboml.backends import PyTorchBackend
 
 from qibo import Circuit, gates
-from qibo.backends import PyTorchBackend, construct_backend
+from qibo.backends import construct_backend
 from qibo.quantum_info.metrics import infidelity
 
 
