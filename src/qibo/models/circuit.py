@@ -325,6 +325,7 @@ class Circuit:
             ]
         else:
             self._wire_names = [f"q{i}" for i in range(self.nqubits)]
+        self.init_kwargs["wire_names"] = self._wire_names
 
     @property
     def repeated_execution(self):

@@ -461,7 +461,7 @@ class ReverseTraversal(Placer):
             gates_qubits_pairs.reverse()
         assembled_gates_qubits_pairs += gates_qubits_pairs[0:remainder]
 
-        new_circuit = Circuit(circuit.nqubits)
+        new_circuit = Circuit(**circuit.init_kwargs)
         for qubits in assembled_gates_qubits_pairs:
             # As only the connectivity is important here we can replace everything with CZ gates
             new_circuit.add(gates.CZ(qubits[0], qubits[1]))
