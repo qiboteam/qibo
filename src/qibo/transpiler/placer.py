@@ -180,14 +180,14 @@ class Trivial(Placer):
                 )
             trivial_layout = dict(
                 zip(
-                    ["q" + str(i) for i in list(self.connectivity.nodes())],
+                    [i for i in list(self.connectivity.nodes())],
                     range(circuit.nqubits),
                 )
             )
         else:
             trivial_layout = dict(
                 zip(
-                    ["q" + str(i) for i in range(circuit.nqubits)],
+                    [i for i in range(circuit.nqubits)],
                     range(circuit.nqubits),
                 )
             )
