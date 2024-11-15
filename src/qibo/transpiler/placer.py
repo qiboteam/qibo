@@ -171,7 +171,14 @@ class Trivial(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        if self.connectivity is not None:
+        if circuit.wire_names is not None:
+            trivial_layout = dict(
+                zip(
+                    circuit.wire_names,
+                    range(circuit.nqubits),
+                )
+            )
+        elif self.connectivity is not None:
             if self.connectivity.number_of_nodes() != circuit.nqubits:
                 raise_error(
                     PlacementError,
