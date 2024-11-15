@@ -300,8 +300,8 @@ class Circuit:
                     f"but is {len(wire_names)}.",
                 )
 
-            if any([not isinstance(name, str) for name in wire_names]):
-                raise_error(ValueError, "all wire names must be type ``str``.")
+            # if any([not isinstance(name, str) for name in wire_names]):
+            #     raise_error(ValueError, "all wire names must be type ``str``.")
 
             self._wire_names = wire_names
         elif isinstance(wire_names, dict):
@@ -312,14 +312,13 @@ class Circuit:
                     + "cannot be bigger than ``nqubits``.",
                 )
 
-            if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
-                [not isinstance(name, str) for name in wire_names.values()]
-            ):
-                pass
-                # raise_error(
-                #     ValueError,
-                #     "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
-                # )
+            # if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
+            #     [not isinstance(name, str) for name in wire_names.values()]
+            # ):
+            #     raise_error(
+            #         ValueError,
+            #         "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
+            #     )
 
             self._wire_names = [
                 wire_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
