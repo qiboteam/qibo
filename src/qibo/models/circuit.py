@@ -171,13 +171,13 @@ class Circuit:
                 f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
-        self.wire_names = wire_names
         self.init_kwargs = {
             "nqubits": nqubits,
             "accelerators": accelerators,
             "density_matrix": density_matrix,
             "wire_names": wire_names,
         }
+        self.wire_names = wire_names
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -315,16 +315,19 @@ class Circuit:
             if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
                 [not isinstance(name, str) for name in wire_names.values()]
             ):
-                raise_error(
-                    ValueError,
-                    "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
-                )
+                pass
+                # raise_error(
+                #     ValueError,
+                #     "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
+                # )
 
             self._wire_names = [
                 wire_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
             ]
         else:
             self._wire_names = [f"q{i}" for i in range(self.nqubits)]
+
+        self.init_kwargs["wire_names"] = self._wire_names
 
     @property
     def repeated_execution(self):
@@ -1282,6 +1285,7 @@ class Circuit:
         """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
+        wire_names = [str(name) for name in self.wire_names]
         idx = [0] * self.nqubits
 
         for gate in self.queue:
@@ -1303,12 +1307,12 @@ class Circuit:
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
         # Print to terminal
-        max_name_len = max(len(name) for name in self.wire_names)
+        max_name_len = max(len(name) for name in wire_names)
         output = ""
         for q in range(self.nqubits):
             output += (
-                self.wire_names[q]
-                + " " * (max_name_len - len(self.wire_names[q]))
+                wire_names[q]
+                + " " * (max_name_len - len(wire_names[q]))
                 + ": ─"
                 + "".join(matrix[q])
                 + "\n"
@@ -1350,8 +1354,8 @@ class Circuit:
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
-                        self.wire_names[row]
-                        + " " * (max_name_len - len(self.wire_names[row]))
+                        wire_names[row]
+                        + " " * (max_name_len - len(wire_names[row]))
                         + ": "
                     )
                     if i == 0:
