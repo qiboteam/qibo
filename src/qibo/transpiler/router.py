@@ -54,10 +54,10 @@ def _relabel_connectivity(connectivity, layout):
     """
     node_mapping = {}
     layout = dict(
-        sorted(layout.items(), key=lambda item: int(item[0][1:]))
+        sorted(layout.items(), key=lambda item: int(item[0]))
     )  # for q_i naming
     for i, node in enumerate(list(layout.keys())):
-        node_mapping[int(node[1:])] = i  # for q_i naming
+        node_mapping[int(node)] = i  # for q_i naming
     new_connectivity = nx.relabel_nodes(connectivity, node_mapping)
     return new_connectivity
 
