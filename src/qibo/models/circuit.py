@@ -1110,7 +1110,18 @@ class Circuit:
 
         backend = _Global.backend()
         transpiler = _Global.transpiler()
+
+        if backend.qubits is not None:
+            node_mapping = {q: i for i, q in enumerate(backend.qubits)}
+            self.wire_names = [node_mapping[q] for q in self.wire_names]
+
         transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
+
+        if backend.qubits is not None:
+            self.wire_names = [
+                list(node_mapping)[list(node_mapping.values()).index(q)]
+                for q in self.wire_names
+            ]
 
         if self.accelerators:  # pragma: no cover
             return backend.execute_distributed_circuit(
