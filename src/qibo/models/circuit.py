@@ -1118,9 +1118,9 @@ class Circuit:
         transpiled_circuit, _ = transpiler(self)  # pylint: disable=E1102
 
         if backend.qubits is not None:
-            self.wire_names = [
+            transpiled_circuit.wire_names = [
                 list(node_mapping)[list(node_mapping.values()).index(q)]
-                for q in self.wire_names
+                for q in transpiled_circuit.wire_names
             ]
 
         if self.accelerators:  # pragma: no cover
