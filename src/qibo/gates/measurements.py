@@ -48,8 +48,8 @@ class M(Gate):
         register_name: Optional[str] = None,
         collapse: bool = False,
         basis: Union[Gate, str] = Z,
-        p0: Optional["ProbsType"] = None,
-        p1: Optional["ProbsType"] = None,
+        p0: Optional["ProbsType"] = None,  # type: ignore
+        p1: Optional["ProbsType"] = None,  # type: ignore
     ):
         super().__init__()
         self.name = "measure"
@@ -119,7 +119,7 @@ class M(Gate):
 
     @staticmethod
     def _get_bitflip_tuple(
-        qubits: Tuple[int, ...], probs: "ProbsType"
+        qubits: Tuple[int, ...], probs: "ProbsType"  # type: ignore
     ) -> Tuple[float, ...]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
@@ -146,7 +146,7 @@ class M(Gate):
 
         raise_error(TypeError, f"Invalid type {probs} of bitflip map.")
 
-    def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:
+    def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:  # type: ignore
         """Creates dictionary with bitflip probabilities."""
         if p is None:
             return {q: 0 for q in self.qubits}
@@ -163,8 +163,8 @@ class M(Gate):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
-        by the `models.Circuit`.
-        The user is not supposed to use this method and a `ValueError` is
+        by the :class:`qibo.models.Circuit`.
+        The user is not supposed to use this method and a ``ValueError`` is
         raised if he does so.
 
         Args:
@@ -232,22 +232,24 @@ class M(Gate):
         and preserving the measurement result register.
 
         Args:
-            qubit_map (int): Dictionary mapping original qubit indices to new ones.
+            qubit_map (dict): dictionary mapping original qubit indices to new ones.
 
         Returns:
-            A :class:`qibo.gates.Gate.M` object of the original gate
-            type targeting the given qubits.
+            :class:`qibo.gates.Gate.M`: object of the original gate type targeting
+            the given qubits.
 
         Example:
 
             .. testcode::
 
-                from qibo import models, gates
+                from qibo import Circuit, gates
+
                 measurement = gates.M(0, 1)
-                c = models.Circuit(3)
-                c.add(measurement.on_qubits({0: 0, 1: 2}))
-                assert c.queue[0].result is measurement.result
-                c.draw()
+
+                circuit = Circuit(3)
+                circuit.add(measurement.on_qubits({0: 0, 1: 2}))
+                assert circuit.queue[0].result is measurement.result
+                circuit.draw()
             .. testoutput::
 
                 0: ─M─

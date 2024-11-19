@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import matrices
+from qibo import Circuit, matrices
 from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.transpiler.optimizer import Preprocessing
@@ -86,10 +86,10 @@ def test_set_metropolis_threshold():
 
 def test_circuit_execution():
     qibo.set_backend("numpy")
-    c = qibo.models.Circuit(2)
-    c.add(qibo.gates.H(0))
-    c()
-    c.unitary()
+    circuit = Circuit(2)
+    circuit.add(qibo.gates.H(0))
+    circuit()
+    circuit.unitary()
 
 
 def test_gate_matrix():

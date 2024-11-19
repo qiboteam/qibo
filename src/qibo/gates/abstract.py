@@ -36,7 +36,7 @@ class Gate:
     Attributes:
         name (str): Name of the gate.
         draw_label (str): Optional label for drawing the gate in a circuit
-            with :func:`qibo.models.Circuit.draw`.
+            with :meth:`qibo.models.Circuit.draw`.
         is_controlled_by (bool): ``True`` if the gate was created using the
             :meth:`qibo.gates.abstract.Gate.controlled_by` method,
             otherwise ``False``.
@@ -263,14 +263,14 @@ class Gate:
 
             .. testcode::
 
-                from qibo import models, gates
-                c = models.Circuit(4)
+                from qibo import Circuit, gates
+                circuit = Circuit(4)
                 # Add some CNOT gates
-                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
-                c.draw()
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
+                circuit.draw()
             .. testoutput::
 
                 0: ───X─────

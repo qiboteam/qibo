@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates, matrices, models
+from qibo import Circuit, gates, matrices
 from qibo.hamiltonians import terms
 from qibo.quantum_info import random_density_matrix, random_statevector
 
@@ -49,15 +49,17 @@ def test_hamiltonian_term_gates(backend):
 
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = term(backend, backend.np.copy(initial_state), nqubits)
-    c = models.Circuit(nqubits)
-    c.add(gates.Unitary(matrix, 1, 2))
-    target_state = backend.execute_circuit(c, backend.np.copy(initial_state)).state()
+    circuit = Circuit(nqubits)
+    circuit.add(gates.Unitary(matrix, 1, 2))
+    target_state = backend.execute_circuit(
+        circuit, backend.np.copy(initial_state)
+    ).state()
     backend.assert_allclose(final_state, target_state)
 
 
 def test_hamiltonian_term_exponentiation(backend):
     """Test exp gate application of ``HamiltonianTerm``."""
-    from scipy.linalg import expm
+    from scipy.linalg import expm  # pylint: disable=C0415
 
     matrix = np.random.random((2, 2))
     term = terms.HamiltonianTerm(matrix, 1)

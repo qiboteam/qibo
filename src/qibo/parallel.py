@@ -2,7 +2,7 @@
 Resources for parallel circuit evaluation.
 """
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from joblib import Parallel, delayed
 
@@ -10,7 +10,7 @@ from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 
-def parallel_execution(circuit, states, processes=None, backend=None):
+def parallel_execution(circuit, states, processes: Optional[int] = None, backend=None):
     """Execute circuit for multiple states.
 
     Example:
@@ -32,9 +32,10 @@ def parallel_execution(circuit, states, processes=None, backend=None):
             results = parallel_execution(circuit, states, processes=2)
 
     Args:
-        circuit (qibo.models.Circuit): the input circuit.
+        circuit (:class:`qibo.models.Circuit`): the input circuit.
         states (list): list of states for the circuit evaluation.
-        processes (int): number of processes for parallel evaluation.
+        processes (int, optional): number of processes for parallel evaluation.
+            If ``None``, defaults to :math:`1`. Defaults to ``None``.
 
     Returns:
         Circuit evaluation for input states.
@@ -119,22 +120,28 @@ def parallel_circuits_execution(
 
 
 def parallel_parametrized_execution(
-    circuit, parameters, initial_state=None, processes=None, backend=None
+    circuit,
+    parameters,
+    initial_state=None,
+    processes: Optional[int] = None,
+    backend=None,
 ):
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
         .. code-block:: python
 
-            import qibo
-            qibo.set_backend('qibojit')
-            from qibo import models, gates, set_threads
-            from qibo.parallel import parallel_parametrized_execution
             import numpy as np
+
+            from qibo import Circuit, gates, set_backend, set_threads
+            from qibo.parallel import parallel_parametrized_execution
+
+            set_backend('qibojit')
+
             # create circuit
             nqubits = 6
             nlayers = 2
-            circuit = models.Circuit(nqubits)
+            circuit = Circuit(nqubits)
             for l in range(nlayers):
                 circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
                 circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
@@ -151,9 +158,9 @@ def parallel_parametrized_execution(
             results = parallel_parametrized_execution(circuit, parameters, processes=2)
 
     Args:
-        circuit (qibo.models.Circuit): the input circuit.
+        circuit (:class:`qibo.models.Circuit`): the input circuit.
         parameters (list): list of parameters for the circuit evaluation.
-        initial_state (np.array): initial state for the circuit evaluation.
+        initial_state (ndarray): initial state for the circuit evaluation.
         processes (int): number of processes for parallel evaluation.
             This corresponds to the number of threads, if a single thread is used
             for each circuit evaluation. If more threads are used for each circuit

@@ -5,23 +5,24 @@ from qibo import Circuit, gates
 
 def bell_circuit(basis):
     """Create a Bell circuit with a distinct measurement basis and parametrizable gates.
+
     Args:
         basis (str): '00', '01, '10', '11' where a '1' marks a measurement in the X basis
-                    and a '0' a measurement in the Z basis.
+            and a '0' a measurement in the Z basis.
 
     Returns:
         :class:`qibo.core.circuit.Circuit`
 
     """
-    c = Circuit(2)
-    c.add(gates.RY(0, theta=0))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.RY(0, theta=0))
+    circuit = Circuit(2)
+    circuit.add(gates.RY(0, theta=0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.RY(0, theta=0))
     for a in range(2):
         if basis[a] == "1":
-            c.add(gates.H(a))
-    c.add(gates.M(*range(2)))
-    return c
+            circuit.add(gates.H(a))
+    circuit.add(gates.M(*range(2)))
+    return circuit
 
 
 def set_parametrized_circuits():
