@@ -922,24 +922,24 @@ numpy = ">=1.21,<2.0"
 
 [[package]]
 name = "custatevec-cu11"
-version = "1.6.0.post1"
+version = "1.7.0"
 description = "cuStateVec - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "custatevec_cu11-1.6.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:6840bd957455d33f9df1f2e266fe33079e429b2442f5ff6ef5eae6c1b618108e"},
-    {file = "custatevec_cu11-1.6.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:8d57ada4d3cc77b24b3be83b55929942186698e71edadaa952448c1b0af43539"},
+    {file = "custatevec_cu11-1.7.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:dabdd80bab8e19413904c8377268dcfbc0468b3a8438a04cca422502c70b34d0"},
+    {file = "custatevec_cu11-1.7.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:11b3a2a79de52afaab1acc970e3d810d219e90170405aaded78ac6dcfa1bb389"},
 ]
 
 [[package]]
 name = "custatevec-cu12"
-version = "1.6.0.post1"
+version = "1.7.0"
 description = "cuStateVec - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "custatevec_cu12-1.6.0.post1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:4f38175cb6cb9dfa0008e5109e22bf92eeedd3aad843be3ce27ad41b53318f95"},
-    {file = "custatevec_cu12-1.6.0.post1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:0c875981de852091f5f3c040d705b284424171aa5df07f843728ff2fae450016"},
+    {file = "custatevec_cu12-1.7.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:0e9c5d810285ddcdf97c980725580a0f549fccec4475a76d28779c112c79c2aa"},
+    {file = "custatevec_cu12-1.7.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:df81b4eeeadc841b4c3ac4816e6b9e3dde6b288f13a2c0005fecbd0501f9ea6d"},
 ]
 
 [[package]]
@@ -968,31 +968,31 @@ files = [
 
 [[package]]
 name = "cutensornet-cu11"
-version = "2.5.0"
+version = "2.6.0"
 description = "cuTensorNet - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cutensornet_cu11-2.5.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:144f0f804a06e86efba15900fc79c234a5de09466c2245be82a795cc945c41e2"},
-    {file = "cutensornet_cu11-2.5.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:be33d47531a965233c73b9ad0cbec5ce399271372d62d77393e167cb9da2894d"},
+    {file = "cutensornet_cu11-2.6.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:ded8b2b3124fd2acd6ce9c13060b0ea17692bcbca727314b2930c6ab341035ef"},
+    {file = "cutensornet_cu11-2.6.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f7be9781de96cd897b59ac81cfb5c407a79a9781d236a25358656e24c9e81b71"},
 ]
 
 [package.dependencies]
-cutensor-cu11 = ">=2.0.1,<3"
+cutensor-cu11 = ">=2.0.2,<3"
 
 [[package]]
 name = "cutensornet-cu12"
-version = "2.5.0"
+version = "2.6.0"
 description = "cuTensorNet - a component of NVIDIA cuQuantum SDK"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cutensornet_cu12-2.5.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:3d0c55b39b5fb0696c7b219f35a8af91c14fc557f836153d2801c4e31bb3fe70"},
-    {file = "cutensornet_cu12-2.5.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:c2937ff3e2fd2fd984e5bb0a098919981c145ce59ada18857e9f7f4923a3e6c8"},
+    {file = "cutensornet_cu12-2.6.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:39b6f50b8bd47e5a4fcb745472c1005fc9d3889b907c92a91ea76e30a91e11cd"},
+    {file = "cutensornet_cu12-2.6.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:64b582679c4e16faecd9143103272376e847e4b7ff02c97cde72f39ea6243f5e"},
 ]
 
 [package.dependencies]
-cutensor-cu12 = ">=2.0.1,<3"
+cutensor-cu12 = ">=2.0.2,<3"
 
 [[package]]
 name = "cycler"
@@ -4275,7 +4275,7 @@ qibo = {git = "https://github.com/qiboteam/qibo"}
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "HEAD"
-resolved_reference = "800e800d54f4962f4890716c4b1539014c69c1b5"
+resolved_reference = "3e52004c497ca738730e21aa5a2ca8c2f6044398"
 
 [[package]]
 name = "qibotn"
@@ -4301,13 +4301,13 @@ resolved_reference = "4f547726b616f73d074abf77811644cf2cb54383"
 
 [[package]]
 name = "quimb"
-version = "1.8.4"
+version = "1.9.0"
 description = "Quantum information and many-body library."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "quimb-1.8.4-py3-none-any.whl", hash = "sha256:357c42c5c1a696ba8234e1d7e1361aabc182ac76ff046a85fabb37f63d989d2d"},
-    {file = "quimb-1.8.4.tar.gz", hash = "sha256:51b7b6f09a451f44468d7b41ac990635b2e718b437aee8db992f892c3e5d30b5"},
+    {file = "quimb-1.9.0-py3-none-any.whl", hash = "sha256:edb2f621948410e8ba6fa30b023888a4b6fe46682ebf0cdb7acafe2d87b964d9"},
+    {file = "quimb-1.9.0.tar.gz", hash = "sha256:f5a769e0403094f4fbccd9833648e48e7fac209a43b329b0586e7c4332a1b963"},
 ]
 
 [package.dependencies]
