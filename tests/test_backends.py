@@ -113,7 +113,7 @@ def test_construct_backend(backend):
 
 
 def test_list_available_backends():
-    tensorflow = False if platform.system() == "Windows" else True
+    tensorflow = False if platform.system() in ["Windows", "Darwin"] else True
     qulacs = (
         False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
     )
