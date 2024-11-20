@@ -111,6 +111,7 @@ class _Global:
     @classmethod
     def set_backend(cls, backend, **kwargs):
         cls._backend = construct_backend(backend, **kwargs)
+        cls._transpiler = None
         log.info(f"Using {cls._backend} backend on {cls._backend.device}")
 
     @classmethod
