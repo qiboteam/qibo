@@ -128,9 +128,9 @@ def test_set_get_transpiler():
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
-            Preprocessing(connectivity),
-            Random(connectivity, seed=0),
-            Sabre(connectivity),
+            Preprocessing(),
+            Random(seed=0),
+            Sabre(),
             Unroller(NativeGates.default()),
         ],
     )

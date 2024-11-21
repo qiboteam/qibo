@@ -151,9 +151,9 @@ class _Global:
             return Passes(
                 connectivity=connectivity,
                 passes=[
-                    Preprocessing(connectivity),
-                    Trivial(connectivity),
-                    Sabre(connectivity),
+                    Preprocessing(),
+                    Trivial(),
+                    Sabre(),
                     Unroller(NativeGates[natives]),
                 ],
             )

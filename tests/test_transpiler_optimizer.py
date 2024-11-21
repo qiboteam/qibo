@@ -8,7 +8,16 @@ from qibo.transpiler.optimizer import Preprocessing, Rearrange
 
 def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
+
+    preprocesser = Preprocessing()
+    with pytest.raises(ValueError):
+        new_circuit = preprocesser(circuit=circ)
+
     preprocesser = Preprocessing(connectivity=star_connectivity())
+    with pytest.raises(ValueError):
+        new_circuit = preprocesser(circuit=circ)
+
+    circ = Circuit(5, wire_names=[0, 1, 2, "q3", "q4"])
     with pytest.raises(ValueError):
         new_circuit = preprocesser(circuit=circ)
 

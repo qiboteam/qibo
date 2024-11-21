@@ -122,6 +122,12 @@ def assert_placement(circuit: Circuit, connectivity: nx.Graph):
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
         connectivity (:class:`networkx.Graph`, optional): Chip connectivity.
     """
+    if connectivity is None:
+        raise_error(
+            ValueError,
+            "Connectivity graph is missing.",
+        )
+
     if circuit.nqubits != len(circuit.wire_names) or circuit.nqubits != len(
         connectivity.nodes
     ):

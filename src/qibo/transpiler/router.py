@@ -33,14 +33,7 @@ class StarConnectivityRouter(Router):
 
     def __init__(self, connectivity: nx.Graph):
         self.connectivity = connectivity
-        for node in self.connectivity.nodes:
-            if self.connectivity.degree(node) == 4:
-                self.middle_qubit = node
-            elif self.connectivity.degree(node) != 1:
-                raise_error(
-                    ValueError,
-                    "This connectivity graph is not a star graph.",
-                )
+        self.middle_qubit = None
 
     def __call__(self, circuit: Circuit):
         """Apply the transpiler transformation on a given circuit.
@@ -49,7 +42,9 @@ class StarConnectivityRouter(Router):
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 Only single qubit gates and two qubits gates are supported by the router.
         """
+        self._check_star_connectivity()
         assert_placement(circuit, self.connectivity)
+
         middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
         nqubits = circuit.nqubits
         new = Circuit(nqubits=nqubits, wire_names=circuit.wire_names)
@@ -93,6 +88,17 @@ class StarConnectivityRouter(Router):
             else:
                 new.add(gate.__class__(*routed_qubits, **gate.init_kwargs))
         return new, {circuit.wire_names[i]: l2p[i] for i in range(nqubits)}
+
+    def _check_star_connectivity(self):
+        """Check if the connectivity graph is a star graph."""
+        for node in self.connectivity.nodes:
+            if self.connectivity.degree(node) == 4:
+                self.middle_qubit = node
+            elif self.connectivity.degree(node) != 1:
+                raise_error(
+                    ValueError,
+                    "This connectivity graph is not a star graph.",
+                )
 
 
 def _find_connected_qubit(qubits, queue, error, mapping):
@@ -308,7 +314,7 @@ class ShortestPaths(Router):
             If ``None``, defaults to :math:`42`. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph, seed: Optional[int] = None):
+    def __init__(self, connectivity: nx.Graph = None, seed: Optional[int] = None):
         self.connectivity = connectivity
         self._front_layer = None
         self.circuit_map = None
@@ -595,7 +601,7 @@ class Sabre(Router):
 
     def __init__(
         self,
-        connectivity: nx.Graph,
+        connectivity: nx.Graph = None,
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,

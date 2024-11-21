@@ -48,16 +48,9 @@ class StarConnectivityPlacer(Placer):
         connectivity (:class:`networkx.Graph`): star connectivity graph.
     """
 
-    def __init__(self, connectivity: nx.Graph):
+    def __init__(self, connectivity: nx.Graph = None):
         self.connectivity = connectivity
-        for node in self.connectivity.nodes:
-            if self.connectivity.degree(node) == 4:
-                self.middle_qubit = node
-            elif self.connectivity.degree(node) != 1:
-                raise_error(
-                    ValueError,
-                    "This connectivity graph is not a star graph.",
-                )
+        self.middle_qubit = None
 
     def __call__(self, circuit: Circuit):
         """Apply the transpiler transformation on a given circuit.
@@ -67,6 +60,8 @@ class StarConnectivityPlacer(Placer):
                 Only single qubit gates and two qubits gates are supported by the router.
         """
         assert_placement(circuit, self.connectivity)
+        self._check_star_connectivity()
+
         middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
         wire_names = circuit.wire_names.copy()
 
@@ -96,6 +91,17 @@ class StarConnectivityPlacer(Placer):
 
         circuit.wire_names = wire_names
 
+    def _check_star_connectivity(self):
+        """Check if the connectivity graph is a star graph."""
+        for node in self.connectivity.nodes:
+            if self.connectivity.degree(node) == 4:
+                self.middle_qubit = node
+            elif self.connectivity.degree(node) != 1:
+                raise_error(
+                    ValueError,
+                    "This connectivity graph is not a star graph.",
+                )
+
 
 class Trivial(Placer):
     """Place qubits according to the order of the qubit names that the user provides."""
@@ -103,7 +109,7 @@ class Trivial(Placer):
     def __init__(self, connectivity: nx.Graph = None):
         self.connectivity = connectivity
 
-    def __call__(self, circuit: Circuit = None):
+    def __call__(self, circuit: Circuit):
         """Find the trivial placement for the circuit.
 
         Args:
@@ -122,7 +128,7 @@ class Custom(Placer):
             - If **list**, it should contain physical qubit names, arranged in the order of the logical qubits.
     """
 
-    def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph):
+    def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph = None):
         self.initial_map = initial_map
         self.connectivity = connectivity
 
@@ -141,7 +147,7 @@ class Custom(Placer):
         else:
             raise_error(TypeError, "Use dict or list to define mapping.")
 
-        assert_placement(circuit, connectivity=self.connectivity)
+        assert_placement(circuit, self.connectivity)
 
 
 class Subgraph(Placer):
@@ -155,7 +161,7 @@ class Subgraph(Placer):
         connectivity (:class:`networkx.Graph`): chip connectivity.
     """
 
-    def __init__(self, connectivity: nx.Graph):
+    def __init__(self, connectivity: nx.Graph = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
@@ -213,7 +219,7 @@ class Random(Placer):
             initializes a generator with a random seed. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph, samples: int = 100, seed=None):
+    def __init__(self, connectivity: nx.Graph = None, samples: int = 100, seed=None):
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
@@ -296,8 +302,8 @@ class ReverseTraversal(Placer):
 
     def __init__(
         self,
-        connectivity: nx.Graph,
         routing_algorithm: Router,
+        connectivity: nx.Graph = None,
         depth: Optional[int] = None,
     ):
         self.connectivity = connectivity

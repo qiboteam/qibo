@@ -140,17 +140,16 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
     custom_passes = []
-    custom_passes.append(Preprocessing(connectivity=connectivity))
+    custom_passes.append(Preprocessing())
     if placer == ReverseTraversal:
         custom_passes.append(
             placer(
-                connectivity=connectivity,
-                routing_algorithm=router(connectivity=connectivity),
+                routing_algorithm=router(),
             )
         )
     else:
-        custom_passes.append(placer(connectivity=connectivity))
-    custom_passes.append(router(connectivity=connectivity))
+        custom_passes.append(placer())
+    custom_passes.append(router())
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
@@ -177,17 +176,16 @@ def test_custom_passes_restrict(
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=3, ngates=ngates, names=restrict_names)
     custom_passes = []
-    custom_passes.append(Preprocessing(connectivity=connectivity))
+    custom_passes.append(Preprocessing())
     if placer == ReverseTraversal:
         custom_passes.append(
             placer(
-                connectivity=connectivity,
-                routing_algorithm=routing(connectivity=connectivity),
+                routing_algorithm=routing(),
             )
         )
     else:
-        custom_passes.append(placer(connectivity=connectivity))
-    custom_passes.append(routing(connectivity=connectivity))
+        custom_passes.append(placer())
+    custom_passes.append(routing())
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
@@ -220,9 +218,9 @@ def test_int_qubit_names(star_connectivity):
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
-            Preprocessing(connectivity),
-            Random(connectivity, seed=0),
-            Sabre(connectivity),
+            Preprocessing(),
+            Random(seed=0),
+            Sabre(),
             Unroller(NativeGates.default()),
         ],
     )

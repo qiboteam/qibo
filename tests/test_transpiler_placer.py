@@ -201,7 +201,7 @@ def test_reverse_traversal(ngates, names, star_connectivity):
     circuit = star_circuit(names=names)
     connectivity = star_connectivity(names=names)
     routing = ShortestPaths(connectivity=connectivity)
-    placer = ReverseTraversal(connectivity, routing, depth=ngates)
+    placer = ReverseTraversal(routing, connectivity, depth=ngates)
     placer(circuit)
     assert_placement(circuit, connectivity)
 
@@ -209,7 +209,7 @@ def test_reverse_traversal(ngates, names, star_connectivity):
 def test_reverse_traversal_no_gates(star_connectivity):
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = ReverseTraversal(connectivity, routing, depth=10)
+    placer = ReverseTraversal(routing, connectivity, depth=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
         placer(circuit)
@@ -261,4 +261,5 @@ def test_star_connectivity_placer_error(first, star_connectivity):
     chip = nx.Graph()
     chip.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 4)])
     with pytest.raises(ValueError):
-        StarConnectivityPlacer(chip)
+        placer = StarConnectivityPlacer(chip)
+        placer(circ)

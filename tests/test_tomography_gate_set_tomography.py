@@ -280,9 +280,9 @@ def test_GST_with_transpiler(backend, star_connectivity):
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
-            Preprocessing(connectivity),
-            Random(connectivity),
-            Sabre(connectivity),
+            Preprocessing(),
+            Random(),
+            Sabre(),
             Unroller(NativeGates.default(), backend=backend),
         ],
     )

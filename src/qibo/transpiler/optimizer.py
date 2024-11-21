@@ -13,10 +13,18 @@ class Preprocessing(Optimizer):
         connectivity (:class:`networkx.Graph`): hardware chip connectivity.
     """
 
-    def __init__(self, connectivity: nx.Graph):
+    def __init__(self, connectivity: nx.Graph = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit) -> Circuit:
+        if self.connectivity is None or not all(
+            qubit in self.connectivity.nodes for qubit in circuit.wire_names
+        ):
+            raise_error(
+                ValueError,
+                "The circuit qubits are not in the connectivity graph.",
+            )
+
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
         if logical_qubits > physical_qubits:

@@ -1183,7 +1183,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         connectivity = nx.Graph(connectivity_edges)
         transpiler = Passes(
             connectivity=connectivity,
-            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
+            passes=[Custom(initial_map=qubit_map)],
         )
         circuit, _ = transpiler(circuit)
     elif noise_model is not None:
