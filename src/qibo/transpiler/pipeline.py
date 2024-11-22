@@ -60,8 +60,8 @@ class Passes:
 
     def __init__(
         self,
-        connectivity: nx.Graph,
         passes: list = None,
+        connectivity: nx.Graph = None,
         native_gates: NativeGates = NativeGates.default(),
         on_qubits: list = None,
     ):
