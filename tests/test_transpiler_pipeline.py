@@ -67,33 +67,6 @@ def test_restrict_qubits(star_connectivity):
     assert list(new_connectivity.edges) == [("A", "C"), ("B", "C")]
 
 
-@pytest.mark.parametrize("ngates", [5, 10, 50])
-@pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_pipeline_default(ngates, names, star_connectivity):
-    circ = generate_random_circuit(nqubits=5, ngates=ngates, names=names)
-    connectivity = star_connectivity(names)
-
-    default_transpiler = Passes(passes=None, connectivity=connectivity)
-    transpiled_circ, final_layout = default_transpiler(circ)
-    assert_transpiling(
-        original_circuit=circ,
-        transpiled_circuit=transpiled_circ,
-        connectivity=connectivity,
-        final_layout=final_layout,
-        native_gates=NativeGates.default(),
-        check_circuit_equivalence=False,
-    )
-
-
-def test_int_qubit_names_default(star_connectivity):
-    names = [1244, 1532, 2315, 6563, 8901]
-    circ = Circuit(5, wire_names=names)
-    connectivity = star_connectivity(names)
-    default_transpiler = Passes(passes=None, connectivity=connectivity)
-    _, final_layout = default_transpiler(circ)
-    assert final_layout == {names[i]: i for i in range(5)}
-
-
 def test_assert_circuit_equivalence_wrong_nqubits():
     circ1 = Circuit(1)
     circ2 = Circuit(2)
@@ -102,15 +75,12 @@ def test_assert_circuit_equivalence_wrong_nqubits():
         assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
-def test_error_connectivity():
-    with pytest.raises(TranspilerPipelineError):
-        Passes(passes=None, connectivity=None)
-
-
 @pytest.mark.parametrize("qubits", [3, 5])
 def test_is_satisfied(qubits, star_connectivity):
-    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
-    circuit = Circuit(qubits)
+    default_transpiler = Passes(
+        passes=None, connectivity=star_connectivity(), on_qubits=list(range(qubits))
+    )
+    circuit = Circuit(qubits, wire_names=list(range(qubits)))
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.Z(0))
     assert default_transpiler.is_satisfied(circuit)
@@ -152,7 +122,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
     custom_passes.append(router())
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
-        custom_passes,
+        passes=custom_passes,
         connectivity=connectivity,
         native_gates=NativeGates.default(),
     )
@@ -188,7 +158,7 @@ def test_custom_passes_restrict(
     custom_passes.append(routing())
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
-        custom_passes,
+        passes=custom_passes,
         connectivity=connectivity,
         native_gates=NativeGates.default(),
         on_qubits=restrict_names,

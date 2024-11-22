@@ -112,8 +112,8 @@ def test_temp_cnot_decomposition():
     glist = [gates.GPI2, gates.RZ, gates.Z, gates.M, gates.CNOT]
     native_gates = NativeGates(0).from_gatelist(glist)
 
-    custom_pipeline = Passes([Unroller(native_gates=native_gates)])
-    transpiled_circuit, _ = custom_pipeline(circ)
+    unroller = Unroller(native_gates=native_gates)
+    transpiled_circuit = unroller(circ)
 
     # H
     assert transpiled_circuit.queue[0].name == "z"

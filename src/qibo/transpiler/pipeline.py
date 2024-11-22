@@ -4,11 +4,13 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer, Placer, Router
-from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.placer import StarConnectivityPlacer
-from qibo.transpiler.router import ConnectivityError, StarConnectivityRouter
+from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.unroller import DecompositionError, NativeGates, Unroller
-from qibo.transpiler.utils import assert_connectivity, assert_decomposition
+from qibo.transpiler.utils import (
+    assert_connectivity,
+    assert_decomposition,
+    assert_placement,
+)
 
 
 def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):
@@ -47,8 +49,6 @@ class Passes:
             If ``None``, default transpiler will be used.
             Defaults to ``None``.
         connectivity (:class:`networkx.Graph`, optional): physical qubits connectivity.
-            If ``None``, full connectivity is assumed.
-            Defaults to ``None``.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): native gates.
             Defaults to :math:`qibo.transpiler.unroller.NativeGates.default`.
         on_qubits (list, optional): list of physical qubits to be used.
@@ -57,8 +57,8 @@ class Passes:
 
     def __init__(
         self,
+        connectivity: nx.Graph,
         passes: list = None,
-        connectivity: nx.Graph = None,
         native_gates: NativeGates = NativeGates.default(),
         on_qubits: list = None,
     ):
@@ -66,26 +66,7 @@ class Passes:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
         self.connectivity = connectivity
         self.native_gates = native_gates
-        self.passes = self.default() if passes is None else passes
-
-    def default(self):
-        """Return the default star connectivity transpiler pipeline."""
-        if not isinstance(self.connectivity, nx.Graph):
-            raise_error(
-                TranspilerPipelineError,
-                "Define the hardware chip connectivity to use default transpiler",
-            )
-        default_passes = []
-        # preprocessing
-        default_passes.append(Preprocessing(connectivity=self.connectivity))
-        # default placer pass
-        default_passes.append(StarConnectivityPlacer(connectivity=self.connectivity))
-        # default router pass
-        default_passes.append(StarConnectivityRouter(connectivity=self.connectivity))
-        # default unroller pass
-        default_passes.append(Unroller(native_gates=self.native_gates))
-
-        return default_passes
+        self.passes = [] if passes is None else passes
 
     def __call__(self, circuit):
         """
@@ -123,6 +104,7 @@ class Passes:
             (bool): satisfiability condition.
         """
         try:
+            assert_placement(circuit=circuit, connectivity=self.connectivity)
             assert_connectivity(circuit=circuit, connectivity=self.connectivity)
             assert_decomposition(circuit=circuit, native_gates=self.native_gates)
             return True
