@@ -2,9 +2,12 @@ import networkx as nx
 
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import TranspilerPipelineError
+from qibo.transpiler._exceptions import (
+    ConnectivityError,
+    PlacementError,
+    TranspilerPipelineError,
+)
 from qibo.transpiler.abstract import Optimizer, Placer, Router
-from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.unroller import DecompositionError, NativeGates, Unroller
 from qibo.transpiler.utils import (
     assert_connectivity,
@@ -108,7 +111,5 @@ class Passes:
             assert_connectivity(circuit=circuit, connectivity=self.connectivity)
             assert_decomposition(circuit=circuit, native_gates=self.native_gates)
             return True
-        except ConnectivityError:
-            return False
-        except DecompositionError:
+        except (ConnectivityError, DecompositionError, PlacementError, ValueError):
             return False

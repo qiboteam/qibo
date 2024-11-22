@@ -86,6 +86,12 @@ def test_is_satisfied(qubits, star_connectivity):
     assert default_transpiler.is_satisfied(circuit)
 
 
+def test_is_satisfied_false_placement(star_connectivity):
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
+    circuit = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
+    assert not default_transpiler.is_satisfied(circuit)
+
+
 def test_is_satisfied_false_decomposition(star_connectivity):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
