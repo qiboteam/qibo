@@ -135,7 +135,6 @@ class _Global:
     def _default_transpiler(cls):
         from qibo.transpiler.optimizer import Preprocessing
         from qibo.transpiler.pipeline import Passes
-        from qibo.transpiler.placer import Trivial
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
@@ -152,7 +151,6 @@ class _Global:
                 connectivity=connectivity,
                 passes=[
                     Preprocessing(),
-                    Trivial(),
                     Sabre(),
                     Unroller(NativeGates[natives]),
                 ],

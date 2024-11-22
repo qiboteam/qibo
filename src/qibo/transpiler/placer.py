@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import networkx as nx
 
@@ -101,53 +101,6 @@ class StarConnectivityPlacer(Placer):
                     ValueError,
                     "This connectivity graph is not a star graph.",
                 )
-
-
-class Trivial(Placer):
-    """Place qubits according to the order of the qubit names that the user provides."""
-
-    def __init__(self, connectivity: nx.Graph = None):
-        self.connectivity = connectivity
-
-    def __call__(self, circuit: Circuit):
-        """Find the trivial placement for the circuit.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-        """
-        assert_placement(circuit, self.connectivity)
-        return
-
-
-class Custom(Placer):
-    """Define a custom initial qubit mapping.
-
-    Args:
-        map (list or dict): A mapping between physical and logical qubits.
-            - If **dict**, the keys should be physical qubit names, and the values should be the corresponding logical qubit numbers.
-            - If **list**, it should contain physical qubit names, arranged in the order of the logical qubits.
-    """
-
-    def __init__(self, initial_map: Union[list, dict], connectivity: nx.Graph = None):
-        self.initial_map = initial_map
-        self.connectivity = connectivity
-
-    def __call__(self, circuit: Circuit):
-        """Apply the custom placement to the given circuit.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-        """
-        assert_placement(circuit, self.connectivity)
-
-        if isinstance(self.initial_map, dict):
-            circuit.wire_names = sorted(self.initial_map, key=self.initial_map.get)
-        elif isinstance(self.initial_map, list):
-            circuit.wire_names = self.initial_map
-        else:
-            raise_error(TypeError, "Use dict or list to define mapping.")
-
-        assert_placement(circuit, self.connectivity)
 
 
 class Subgraph(Placer):

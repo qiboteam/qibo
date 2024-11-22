@@ -6,12 +6,10 @@ from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError, TranspilerPipelineError
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
-    Custom,
     Random,
     ReverseTraversal,
     StarConnectivityPlacer,
     Subgraph,
-    Trivial,
     _find_gates_qubits_pairs,
 )
 from qibo.transpiler.router import ShortestPaths
@@ -39,80 +37,6 @@ def test_gates_qubits_pairs_error():
     circuit.add(gates.TOFFOLI(0, 1, 2))
     with pytest.raises(ValueError):
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
-
-
-def test_trivial(star_connectivity):
-    names = ["q4", "q3", "q2", "q1", "q0"]
-    circuit = Circuit(5, wire_names=names)
-    connectivity = star_connectivity(names)
-    placer = Trivial(connectivity=connectivity)
-    placer(circuit)
-    assert circuit.wire_names == names
-    assert_placement(circuit, connectivity)
-
-
-def test_trivial_restricted(star_connectivity):
-    names = ["q0", "q2"]
-    circuit = Circuit(2, wire_names=names)
-    connectivity = star_connectivity(["q0", "q1", "q2", "q3", "q4"])
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, names)
-    placer = Trivial(connectivity=restricted_connectivity)
-    placer(circuit)
-    assert circuit.wire_names == names
-    assert_placement(circuit, restricted_connectivity)
-
-
-@pytest.mark.parametrize(
-    "custom_layout",
-    [["E", "D", "C", "B", "A"], {"E": 0, "D": 1, "C": 2, "B": 3, "A": 4}],
-)
-def test_custom(custom_layout, star_connectivity):
-    names = ["A", "B", "C", "D", "E"]
-    circuit = Circuit(5, wire_names=names)
-    connectivity = star_connectivity(names)
-    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    placer(circuit)
-    assert circuit.wire_names == ["E", "D", "C", "B", "A"]
-
-
-@pytest.mark.parametrize(
-    "custom_layout", [[4, 3, 2, 1, 0], {4: 0, 3: 1, 2: 2, 1: 3, 0: 4}]
-)
-def test_custom_int(custom_layout, star_connectivity):
-    names = [0, 1, 2, 3, 4]
-    circuit = Circuit(5, wire_names=names)
-    connectivity = star_connectivity(names)
-    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    placer(circuit)
-    assert circuit.wire_names == [4, 3, 2, 1, 0]
-
-
-@pytest.mark.parametrize("custom_layout", [["D", "C"], {"C": 1, "D": 0}])
-def test_custom_restricted(custom_layout, star_connectivity):
-    circuit = Circuit(2, wire_names=["C", "D"])
-    connectivity = star_connectivity(["A", "B", "C", "D", "E"])
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, ["C", "D"])
-    placer = Custom(connectivity=restricted_connectivity, initial_map=custom_layout)
-    placer(circuit)
-    assert circuit.wire_names == ["D", "C"]
-    assert_placement(circuit, restricted_connectivity)
-
-
-def test_custom_error_circuit(star_connectivity):
-    circuit = Circuit(3)
-    custom_layout = [4, 3, 2, 1, 0]
-    connectivity = star_connectivity(names=custom_layout)
-    placer = Custom(connectivity=connectivity, initial_map=custom_layout)
-    with pytest.raises(PlacementError):
-        placer(circuit)
-
-
-def test_custom_error_type(star_connectivity):
-    circuit = Circuit(5)
-    connectivity = star_connectivity()
-    placer = Custom(connectivity=connectivity, initial_map=1)
-    with pytest.raises(TypeError):
-        placer(circuit)
 
 
 def test_subgraph_perfect(star_connectivity):

@@ -2139,8 +2139,6 @@ Qibo implements a built-in transpiler with customizable options for each step. T
 be used at each transpiler step are reported below with a short description.
 
 The initial placement can be found with one of the following procedures:
-- Trivial: logical-physical qubit mapping is an identity.
-- Custom: custom logical-physical qubit mapping.
 - Random greedy: the best mapping is found within a set of random layouts based on a greedy policy.
 - Subgraph isomorphism: the initial mapping is the one that guarantees the execution of most gates at
 the beginning of the circuit without introducing any SWAP.

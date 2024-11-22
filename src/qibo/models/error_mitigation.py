@@ -1174,18 +1174,11 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         qibo.states.CircuitResult: The result of the circuit execution.
     """
     from qibo.transpiler.pipeline import Passes
-    from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
-        connectivity_edges = backend.connectivity
-        connectivity = nx.Graph(connectivity_edges)
-        transpiler = Passes(
-            connectivity=connectivity,
-            passes=[Custom(initial_map=qubit_map)],
-        )
-        circuit, _ = transpiler(circuit)
+        circuit.wire_names = qubit_map
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 

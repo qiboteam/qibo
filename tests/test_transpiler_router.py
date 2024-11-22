@@ -10,13 +10,7 @@ from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
-from qibo.transpiler.placer import (
-    Custom,
-    Random,
-    StarConnectivityPlacer,
-    Subgraph,
-    Trivial,
-)
+from qibo.transpiler.placer import Random, StarConnectivityPlacer, Subgraph
 from qibo.transpiler.router import (
     CircuitMap,
     Sabre,
@@ -114,10 +108,9 @@ def test_bell_state_3q():
 
 
 @pytest.mark.parametrize("ngates", [5, 25])
-@pytest.mark.parametrize("placer", [Trivial, Random])
-def test_random_circuits_5q(ngates, placer, star_connectivity):
+def test_random_circuits_5q(ngates, star_connectivity):
     connectivity = star_connectivity()
-    placer = placer(connectivity)
+    placer = Random(connectivity)
     transpiler = ShortestPaths(connectivity)
 
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
@@ -137,10 +130,9 @@ def test_random_circuits_5q(ngates, placer, star_connectivity):
 
 
 @pytest.mark.parametrize("ngates", [5, 25])
-@pytest.mark.parametrize("placer", [Trivial, Random])
-def test_random_circuits_5q_grid(ngates, placer, grid_connectivity):
+def test_random_circuits_5q_grid(ngates, grid_connectivity):
     connectivity = grid_connectivity()
-    placer = placer(connectivity)
+    placer = Random(connectivity)
     transpiler = ShortestPaths(connectivity)
 
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
@@ -204,10 +196,8 @@ def test_star_circuit(star_connectivity):
 def test_star_circuit_custom_map(star_connectivity):
     connectivity = star_connectivity()
     circuit = star_circuit()
-    placer = Custom(initial_map=[1, 0, 2, 3, 4], connectivity=connectivity)
+    circuit.wire_names = [1, 0, 2, 3, 4]
     transpiler = ShortestPaths(connectivity=connectivity)
-
-    placer(circuit)
     transpiled_circuit, final_qubit_map = transpiler(circuit)
 
     assert transpiler.added_swaps == 1
@@ -225,10 +215,8 @@ def test_routing_with_measurements(star_connectivity):
     circuit = Circuit(5)
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.M(0, 2, 3))
-    placer = Trivial(connectivity)
-    transpiler = ShortestPaths(connectivity)
 
-    placer(circuit=circuit)
+    transpiler = ShortestPaths(connectivity)
     transpiled_circuit, final_qubit_map = transpiler(circuit)
 
     assert transpiled_circuit.ngates == 3
@@ -243,7 +231,7 @@ def test_routing_with_measurements(star_connectivity):
 
 def test_sabre_looping():
     # Setup where the looping occurs
-    # Line connectivity, gates with gate_array, Trivial placer
+    # Line connectivity, gates with gate_array
 
     connectivity = line_connectivity(10, None)
     gate_array = [(7, 2), (6, 0), (5, 6), (4, 8), (3, 5), (9, 1)]
@@ -251,13 +239,11 @@ def test_sabre_looping():
     for qubits in gate_array:
         loop_circ.add(gates.CZ(*qubits))
 
-    placer = Trivial(connectivity)
     router_no_threshold = Sabre(
         connectivity=connectivity, swap_threshold=np.inf
     )  # Without reset
     router_threshold = Sabre(connectivity=connectivity)  # With reset
 
-    placer(loop_circ)
     routed_no_threshold, final_mapping_no_threshold = router_no_threshold(loop_circ)
     routed_threshold, final_mapping_threshold = router_threshold(loop_circ)
 
@@ -286,10 +272,8 @@ def test_sabre_shortest_path_routing():
 
     connectivity = line_connectivity(10, None)
 
-    placer = Trivial(connectivity)
     router = Sabre(connectivity)
 
-    placer(loop_circ)
     router._preprocessing(circuit=loop_circ)
     router._shortest_path_routing()  # q2 should be moved adjacent to q8
 
@@ -388,10 +372,8 @@ def test_sabre_matched(names, star_connectivity):
     connectivity = star_connectivity(names=names)
     circuit = matched_circuit(names)
     original_circuit = circuit.copy()
-    placer = Trivial(connectivity=connectivity)
-    router = Sabre(connectivity=connectivity)
 
-    placer(circuit)
+    router = Sabre(connectivity=connectivity)
     routed_circuit, final_map = router(circuit)
 
     assert router.added_swaps == 0
@@ -409,10 +391,8 @@ def test_sabre_simple(seed, star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     original_circuit = circ.copy()
-    placer = Trivial(connectivity=connectivity)
-    router = Sabre(connectivity=connectivity, seed=seed)
 
-    placer(circ)
+    router = Sabre(connectivity=connectivity, seed=seed)
     routed_circuit, final_map = router(circ)
 
     assert router.added_swaps == 1
@@ -431,14 +411,13 @@ def test_sabre_simple(seed, star_connectivity):
 @pytest.mark.parametrize("n_gates", [10, 40])
 @pytest.mark.parametrize("look", [0, 5])
 @pytest.mark.parametrize("decay", [0.5, 1.0])
-@pytest.mark.parametrize("placer_param", [Trivial, Random])
-def test_sabre_random_circuits(n_gates, look, decay, placer_param, star_connectivity):
+def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
     connectivity = star_connectivity()
     circuit = generate_random_circuit(nqubits=5, ngates=n_gates)
     measurement = gates.M(*range(5))
     circuit.add(measurement)
     original_circuit = circuit.copy()
-    placer = placer_param(connectivity)
+    placer = Random(connectivity)
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
     placer(circuit)
@@ -459,16 +438,13 @@ def test_sabre_random_circuits(n_gates, look, decay, placer_param, star_connecti
 @pytest.mark.parametrize("n_gates", [10, 40])
 @pytest.mark.parametrize("look", [0, 5])
 @pytest.mark.parametrize("decay", [0.5, 1.0])
-@pytest.mark.parametrize("placer_param", [Trivial, Random])
-def test_sabre_random_circuits_grid(
-    n_gates, look, decay, placer_param, grid_connectivity
-):
+def test_sabre_random_circuits_grid(n_gates, look, decay, grid_connectivity):
     connectivity = grid_connectivity()
     circuit = generate_random_circuit(nqubits=5, ngates=n_gates)
     measurement = gates.M(*range(5))
     circuit.add(measurement)
     original_circuit = circuit.copy()
-    placer = placer_param(connectivity)
+    placer = Random(connectivity)
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
     placer(circuit)
@@ -488,9 +464,7 @@ def test_sabre_random_circuits_grid(
 
 def test_sabre_memory_map(star_connectivity):
     connectivity = star_connectivity()
-    placer = Trivial(connectivity=connectivity)
     layout_circ = Circuit(5)
-    placer(layout_circ)
     router = Sabre(connectivity=connectivity)
     router._preprocessing(circuit=star_circuit())
     router._memory_map = [[1, 0, 2, 3, 4]]

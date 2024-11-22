@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
-from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
+from qibo.transpiler.placer import Random, ReverseTraversal
 from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
 from qibo.transpiler.utils import assert_circuit_equivalence, assert_transpiling
@@ -134,7 +134,7 @@ def test_is_satisfied_false_connectivity(star_connectivity):
 
 @pytest.mark.parametrize("nqubits", [2, 3, 5])
 @pytest.mark.parametrize("ngates", [5, 20])
-@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("placer", [Random, ReverseTraversal])
 @pytest.mark.parametrize("router", [ShortestPaths, Sabre])
 def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
     connectivity = star_connectivity()
@@ -167,7 +167,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
 
 
 @pytest.mark.parametrize("ngates", [5, 20])
-@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("placer", [Random, ReverseTraversal])
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
 @pytest.mark.parametrize("restrict_names", [[1, 2, 3], [0, 2, 4], [4, 2, 3]])
 def test_custom_passes_restrict(
