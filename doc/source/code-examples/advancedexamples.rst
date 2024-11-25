@@ -2171,7 +2171,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     from qibo.transpiler.router import ShortestPaths
     from qibo.transpiler.unroller import Unroller, NativeGates
     from qibo.transpiler.placer import Random
-    from qibo.transpiler.utils import assert_transpiling
+    from qibo.transpiler.asserts import assert_transpiling
 
     # Define connectivity as nx.Graph
     def star_connectivity():
