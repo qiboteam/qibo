@@ -8,12 +8,12 @@ from qibo.transpiler._exceptions import (
     TranspilerPipelineError,
 )
 from qibo.transpiler.abstract import Optimizer, Placer, Router
-from qibo.transpiler.unroller import DecompositionError, NativeGates, Unroller
-from qibo.transpiler.utils import (
+from qibo.transpiler.asserts import (
     assert_connectivity,
     assert_decomposition,
     assert_placement,
 )
+from qibo.transpiler.unroller import DecompositionError, NativeGates, Unroller
 
 
 def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):

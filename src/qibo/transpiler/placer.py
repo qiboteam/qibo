@@ -8,8 +8,8 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
+from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
-from qibo.transpiler.utils import assert_placement
 
 
 def _find_gates_qubits_pairs(circuit: Circuit):
@@ -48,7 +48,7 @@ class StarConnectivityPlacer(Placer):
         connectivity (:class:`networkx.Graph`): star connectivity graph.
     """
 
-    def __init__(self, connectivity: nx.Graph = None):
+    def __init__(self, connectivity: Optional[nx.Graph] = None):
         self.connectivity = connectivity
         self.middle_qubit = None
 
@@ -114,7 +114,7 @@ class Subgraph(Placer):
         connectivity (:class:`networkx.Graph`): chip connectivity.
     """
 
-    def __init__(self, connectivity: nx.Graph = None):
+    def __init__(self, connectivity: Optional[nx.Graph] = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
@@ -172,7 +172,9 @@ class Random(Placer):
             initializes a generator with a random seed. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph = None, samples: int = 100, seed=None):
+    def __init__(
+        self, connectivity: Optional[nx.Graph] = None, samples: int = 100, seed=None
+    ):
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
@@ -256,7 +258,7 @@ class ReverseTraversal(Placer):
     def __init__(
         self,
         routing_algorithm: Router,
-        connectivity: nx.Graph = None,
+        connectivity: Optional[nx.Graph] = None,
         depth: Optional[int] = None,
     ):
         self.connectivity = connectivity

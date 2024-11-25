@@ -4,6 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError, TranspilerPipelineError
+from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
     Random,
@@ -13,7 +14,6 @@ from qibo.transpiler.placer import (
     _find_gates_qubits_pairs,
 )
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.utils import assert_placement
 
 
 def star_circuit(names=[0, 1, 2, 3, 4]):

@@ -10,8 +10,8 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
+from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
-from qibo.transpiler.utils import assert_placement
 
 
 class StarConnectivityRouter(Router):
@@ -31,7 +31,7 @@ class StarConnectivityRouter(Router):
         connectivity (:class:`networkx.Graph`): star connectivity graph.
     """
 
-    def __init__(self, connectivity: nx.Graph):
+    def __init__(self, connectivity: Optional[nx.Graph] = None):
         self.connectivity = connectivity
         self.middle_qubit = None
 
@@ -314,7 +314,9 @@ class ShortestPaths(Router):
             If ``None``, defaults to :math:`42`. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph = None, seed: Optional[int] = None):
+    def __init__(
+        self, connectivity: Optional[nx.Graph] = None, seed: Optional[int] = None
+    ):
         self.connectivity = connectivity
         self._front_layer = None
         self.circuit_map = None
@@ -601,7 +603,7 @@ class Sabre(Router):
 
     def __init__(
         self,
-        connectivity: nx.Graph = None,
+        connectivity: Optional[nx.Graph] = None,
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,

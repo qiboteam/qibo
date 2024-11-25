@@ -165,7 +165,7 @@ class Circuit:
 
     def __init__(
         self,
-        nqubits: Optional[Union[str, list]] = None,
+        nqubits: Optional[Union[int, list]] = None,
         accelerators=None,
         density_matrix: bool = False,
         wire_names: Optional[list] = None,

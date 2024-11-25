@@ -9,6 +9,12 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
+from qibo.transpiler.asserts import (
+    _transpose_qubits,
+    assert_circuit_equivalence,
+    assert_connectivity,
+    assert_placement,
+)
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, StarConnectivityPlacer, Subgraph
 from qibo.transpiler.router import (
@@ -16,12 +22,6 @@ from qibo.transpiler.router import (
     Sabre,
     ShortestPaths,
     StarConnectivityRouter,
-)
-from qibo.transpiler.utils import (
-    _transpose_qubits,
-    assert_circuit_equivalence,
-    assert_connectivity,
-    assert_placement,
 )
 
 

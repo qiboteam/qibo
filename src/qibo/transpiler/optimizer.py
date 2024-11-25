@@ -1,3 +1,5 @@
+from typing import Optional
+
 import networkx as nx
 
 from qibo import gates
@@ -13,13 +15,11 @@ class Preprocessing(Optimizer):
         connectivity (:class:`networkx.Graph`): hardware chip connectivity.
     """
 
-    def __init__(self, connectivity: nx.Graph = None):
+    def __init__(self, connectivity: Optional[nx.Graph] = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit) -> Circuit:
-        if self.connectivity is None or not all(
-            qubit in self.connectivity.nodes for qubit in circuit.wire_names
-        ):
+        if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
             raise_error(
                 ValueError,
                 "The circuit qubits are not in the connectivity graph.",

@@ -8,14 +8,14 @@ from qibo.transpiler._exceptions import (
     PlacementError,
     TranspilerPipelineError,
 )
-from qibo.transpiler.pipeline import restrict_connectivity_qubits
-from qibo.transpiler.unroller import NativeGates
-from qibo.transpiler.utils import (
+from qibo.transpiler.asserts import (
     assert_circuit_equivalence,
     assert_connectivity,
     assert_decomposition,
     assert_placement,
 )
+from qibo.transpiler.pipeline import restrict_connectivity_qubits
+from qibo.transpiler.unroller import NativeGates
 
 
 def test_assert_circuit_equivalence_equal():
