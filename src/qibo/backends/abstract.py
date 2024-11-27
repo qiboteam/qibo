@@ -431,3 +431,395 @@ class Backend(abc.ABC):
         The outcomes of such tests depend on the backend.
         """
         raise_error(NotImplementedError)
+
+    # --------------------------------------------------------------------------------------------
+    # newly introduced by the refactor
+
+    # array creation and manipulation
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def array(self, x: Union[list, tuple], **kwargs):
+        """Construct a native array of the backend starting from a `list` or `tuple`.
+
+        Args:
+            x (list | tuple): input list or tuple.
+            kwargs: keyword argument passed to the `Backend.cast` method.
+        """
+        return self.cast(x, **kwargs)
+
+    @abc.abstractmethod
+    def eye(self, *args, **kwargs):
+        """Numpy-like eye: https://numpy.org/devdocs/reference/generated/numpy.eye.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def zeros(self, *args, **kwargs):
+        """Numpy-like zeros: https://numpy.org/devdocs/reference/generated/numpy.zeros.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def ones(self, *args, **kwargs):
+        """Numpy-like ones: https://numpy.org/devdocs/reference/generated/numpy.ones.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def copy(self, *args, **kwargs):
+        """Numpy-like copy: https://numpy.org/devdocs/reference/generated/numpy.copy.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def reshape(self, *args, **kwargs):
+        """Numpy-like reshape: https://numpy.org/devdocs/reference/generated/numpy.reshape.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def transpose(self, *args, **kwargs):
+        """Numpy-like transpose: https://numpy.org/devdocs/reference/generated/numpy.transpose.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def concatenate(self, *args, **kwargs):
+        """Numpy-like concatenate: https://numpy.org/devdocs/reference/generated/numpy.concatenate.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def expand_dims(self, *args, **kwargs):
+        """Numpy-like expand_dims: https://numpy.org/devdocs/reference/generated/numpy.expand_dims.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def squeeze(self, *args, **kwargs):
+        """Numpy-like squeeze: https://numpy.org/devdocs/reference/generated/numpy.squeeze.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def stack(self, *args, **kwargs):
+        """Numpy-like stack: https://numpy.org/devdocs/reference/generated/numpy.stack.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def vstack(self, *args, **kwargs):
+        """Numpy-like vstack: https://numpy.org/devdocs/reference/generated/numpy.vstack.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def unique(self, *args, **kwargs):
+        """Numpy-like unique: https://numpy.org/devdocs/reference/generated/numpy.unique.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def where(self, *args, **kwargs):
+        """Numpy-like where: https://numpy.org/doc/stable/reference/generated/numpy.where.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def flip(self, *args, **kwargs):
+        """Numpy-like flip: https://numpy.org/doc/stable/reference/generated/numpy.flip.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def swapaxes(self, *args, **kwargs):
+        """Numpy-like swapaxes: https://numpy.org/doc/stable/reference/generated/numpy.swapaxes.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def diagonal(self, *args, **kwargs):
+        """Numpy-like diagonal: https://numpy.org/doc/stable/reference/generated/numpy.diagonal.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def flatnonzero(self, *args, **kwargs):
+        """Numpy-like flatnonzero: https://numpy.org/doc/stable/reference/generated/numpy.flatnonzero.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def nonzero(self, *args, **kwargs):
+        """Numpy-like nonzero: https://numpy.org/doc/stable/reference/generated/numpy.nonzero.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def sign(self, *args, **kwargs):
+        """Numpy-like element-wise sign function: https://numpy.org/doc/stable/reference/generated/numpy.sign.html"""
+        raise NotImplementedError
+
+    # linear algebra
+    # ^^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def matmul(self, *args, **kwargs):
+        """Numpy-like matmul: https://numpy.org/devdocs/reference/generated/numpy.matmul.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def multiply(self, *args, **kwargs):
+        """Numpy-like multiply: https://numpy.org/doc/stable/reference/generated/numpy.multiply.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def prod(self, *args, **kwargs):
+        """Numpy-like prod: https://numpy.org/doc/stable/reference/generated/numpy.prod.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def tensordot(self, *args, **kwargs):
+        """Numpy-like tensordot: https://numpy.org/doc/stable/reference/generated/numpy.tensordot.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def kron(self, *args, **kwargs):
+        """Numpy-like kron: https://numpy.org/doc/stable/reference/generated/numpy.kron.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def outer(self, *args, **kwargs):
+        """Numpy-like outer: https://numpy.org/doc/stable/reference/generated/numpy.outer.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def diag(self, *args, **kwargs):
+        """Numpy-like diag: https://numpy.org/devdocs/reference/generated/numpy.diag.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def trace(self, *args, **kwargs):
+        """Numpy-like trace: https://numpy.org/devdocs/reference/generated/numpy.trace.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def linalg_svd(self, *args, **kwargs):
+        """Numpy-like linalg.svd: https://numpy.org/devdocs/reference/generated/numpy.linalg.svd.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def linalg_norm(self, *args, **kwargs):
+        """Numpy-like linalg.norm: https://numpy.org/devdocs/reference/generated/numpy.linalg.norm.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def det(self, *args, **kwargs):
+        """Numpy-like matrix determinant: https://numpy.org/doc/stable/reference/generated/numpy.linalg.det.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def qr(self, *args, **kwargs):
+        """Numpy linear algebra QR decomposition: https://numpy.org/doc/stable/reference/generated/numpy.linalg.qr.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def inverse(self, *args, **kwargs):
+        """Numpy linear algebra inverse: https://numpy.org/doc/stable/reference/generated/numpy.linalg.inv.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def eigvalsh(self, *args, **kwargs):
+        """Numpy-like eigvalsh: https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigvalsh.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def eigvals(self, *args, **kwargs):
+        """Eigenvalues of a matrix: https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigvals.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def eigh(self, *args, **kwargs):
+        """Numpy-like eigvals: https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigh.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def eig(self, *args, **kwargs):
+        """Numpy-like eig: https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def expm(self, *args, **kwargs):
+        """Scipy-like expm: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.expm.html"""
+        raise NotImplementedError
+
+    # randomization
+    # ^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def random_choice(self, *args, **kwargs):
+        """Numpy-like random.choice: https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def seed(self, *args, **kwargs):
+        """Numpy-like random seed: https://numpy.org/devdocs/reference/random/generated/numpy.random.seed.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def permutation(self, *args, **kwargs):
+        """Numpy-like random permutation: https://numpy.org/doc/stable/reference/random/generated/numpy.random.permutation.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def multinomial(self, *args, **kwargs):
+        """Numpy-like multinomial: https://numpy.org/doc/2.0/reference/random/generated/numpy.random.multinomial.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def default_rng(self, *args, **kwargs):
+        """Numpy-like random default_rng: https://numpy.org/doc/stable/reference/random/generator.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def rand(self, *args, **kwargs):
+        """Numpy-like random rand: https://numpy.org/doc/stable/reference/random/generated/numpy.random.rand.html"""
+        raise NotImplementedError
+
+    # logical operations
+    # ^^^^^^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def less(self, *args, **kwargs):
+        """Numpy-like less: https://numpy.org/doc/stable/reference/generated/numpy.less.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def any(self, *args, **kwargs):
+        """Numpy-like any: https://numpy.org/doc/stable/reference/generated/numpy.any.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def allclose(self, *args, **kwargs):
+        """Numpy-like allclose: https://numpy.org/doc/stable/reference/generated/numpy.allclose.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def right_shift(self, *args, **kwargs):
+        """Numpy-like element-wise right shift: https://numpy.org/doc/stable/reference/generated/numpy.right_shift.html"""
+        raise NotImplementedError
+
+    # mathematical operations
+    # ^^^^^^^^^^^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def sum(self, *args, **kwargs):
+        """Numpy-like sum: https://numpy.org/devdocs/reference/generated/numpy.sum.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def conj(self, *args, **kwargs):
+        """Numpy-like conj: https://numpy.org/devdocs/reference/generated/numpy.conj.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def exp(self, *args, **kwargs):
+        """Numpy-like exp: https://numpy.org/devdocs/reference/generated/numpy.exp.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def log(self, *args, **kwargs):
+        """Numpy-like log: https://numpy.org/doc/stable/reference/generated/numpy.log.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def log2(self, *args, **kwargs):
+        """Numpy-like log2: https://numpy.org/doc/stable/reference/generated/numpy.log2.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def real(self, *args, **kwargs):
+        """Numpy-like real: https://numpy.org/devdocs/reference/generated/numpy.real.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def imag(self, *args, **kwargs):
+        """Numpy-like imag: https://numpy.org/doc/stable/reference/generated/numpy.imag.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def abs(self, *args, **kwargs):
+        """Numpy-like abs: https://numpy.org/devdocs/reference/generated/numpy.abs.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def pow(self, *args, **kwargs):
+        """Numpy-like element-wise power: https://numpy.org/doc/stable/reference/generated/numpy.power.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def sqrt(self, *args, **kwargs):
+        """Numpy-like sqrt: https://numpy.org/devdocs/reference/generated/numpy.sqrt.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def mean(self, *args, **kwargs):
+        """Numpy-like mean: https://numpy.org/doc/stable/reference/generated/numpy.mean.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def std(self, *args, **kwargs):
+        """Numpy-like standard deviation: https://numpy.org/doc/stable/reference/generated/numpy.std.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def cos(self, *args, **kwargs):
+        """Numpy-like cos: https://numpy.org/devdocs/reference/generated/numpy.cos.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def sin(self, *args, **kwargs):
+        """Numpy-like sin: https://numpy.org/devdocs/reference/generated/numpy.sin.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def arccos(self, *args, **kwargs):
+        """Numpy-like arccos: https://numpy.org/doc/stable/reference/generated/numpy.arccos.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def arctan2(self, *args, **kwargs):
+        """Numpy-like arctan2: https://numpy.org/doc/stable/reference/generated/numpy.arctan2.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def angle(self, *args, **kwargs):
+        """Numpy-like angle: https://numpy.org/doc/stable/reference/generated/numpy.angle.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def mod(self, *args, **kwargs):
+        """Numpy-like element-wise modulus: https://numpy.org/doc/stable/reference/generated/numpy.mod.html"""
+        raise NotImplementedError
+
+    # misc
+    # ^^^^
+
+    @abc.abstractmethod
+    def sort(self, *args, **kwargs):
+        """Numpy-like sort: https://numpy.org/doc/stable/reference/generated/numpy.sort.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def count_nonzero(self, *args, **kwargs):
+        """Numpy-like count_nonzero: https://numpy.org/doc/stable/reference/generated/numpy.count_nonzero.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def finfo(self, *args, **kwargs):
+        """Numpy-like finfo: https://numpy.org/doc/stable/reference/generated/numpy.finfo.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def device(
+        self,
+    ):
+        """Computation device, e.g. CPU, GPU, ..."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def __version__(
+        self,
+    ):
+        """Version of the backend engine."""
+        raise_error(NotImplementedError)
+
+    # Optimization
+    # ^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def jacobian(self, *args, **kwargs):
+        """Compute the Jacobian matrix"""
+        raise NotImplementedError
