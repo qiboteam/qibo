@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.models.circuit import _resolve_qubits
 from qibo.models.utils import initialize
 
 
@@ -46,6 +47,44 @@ def test_queue_class():
 def test_circuit_init():
     c = Circuit(2)
     assert c.nqubits == 2
+
+
+def test_resolve_qubits():
+    nqubits, wire_names = _resolve_qubits(3, None)
+    assert nqubits == 3 and wire_names is None
+    nqubits, wire_names = _resolve_qubits(3, ["a", "b", "c"])
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(["a", "b", "c"], None)
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(None, ["x", "y", "z"])
+    assert nqubits == 3 and wire_names == ["x", "y", "z"]
+
+    with pytest.raises(ValueError):
+        _resolve_qubits(None, None)
+    with pytest.raises(ValueError):
+        _resolve_qubits(3, ["a", "b"])
+    with pytest.raises(ValueError):
+        _resolve_qubits(["a", "b", "c"], ["x", "y"])
+
+
+def test_circuit_init_resolve_qubits():
+    a = Circuit(3)
+    assert a.nqubits == 3 and a.wire_names == [0, 1, 2]
+    b = Circuit(3, wire_names=["a", "b", "c"])
+    assert b.nqubits == 3 and b.wire_names == ["a", "b", "c"]
+    c = Circuit(["a", "b", "c"])
+    assert c.nqubits == 3 and c.wire_names == ["a", "b", "c"]
+    d = Circuit(wire_names=["x", "y", "z"])
+    assert d.nqubits == 3 and d.wire_names == ["x", "y", "z"]
+
+
+def test_circuit_init_resolve_qubits_err():
+    with pytest.raises(ValueError):
+        a = Circuit()
+    with pytest.raises(ValueError):
+        b = Circuit(3, wire_names=["a", "b"])
+    with pytest.raises(ValueError):
+        c = Circuit(["a", "b", "c"], wire_names=["x", "y"])
 
 
 def test_eigenstate(backend):
@@ -625,7 +664,7 @@ def test_circuit_draw():
         "q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
         "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -636,17 +675,19 @@ def test_circuit_draw():
     assert str(circuit) == ref
 
 
-def test_circuit_wire_names_errors():
+def test_circuit_wire_names():
+    circuit = Circuit(5)
+    assert circuit.wire_names == [0, 1, 2, 3, 4]
+    assert circuit._wire_names == None
+
+    circuit.wire_names = ["a", "b", "c", "d", "e"]
+    assert circuit.wire_names == ["a", "b", "c", "d", "e"]
+    assert circuit._wire_names == ["a", "b", "c", "d", "e"]
+
     with pytest.raises(TypeError):
-        circuit = Circuit(5, wire_names=1)
+        circuit.wire_names = 5
     with pytest.raises(ValueError):
-        circuit = Circuit(5, wire_names=["a", "b", "c"])
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names=["1", 2])
+        circuit.wire_names = ["a", "b", "c", "d"]
 
 
 def test_circuit_draw_wire_names():
@@ -666,6 +707,24 @@ def test_circuit_draw_wire_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
+    assert str(circuit) == ref
+
+
+def test_circuit_draw_wire_names_int():
+    ref = (
+        "2133: ─H─U1─U1─U1─U1───────────────────────────x───\n"
+        + "8   : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
+        + "2319: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
+        + "0   : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
+        + "1908: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5, wire_names=[2133, 8, 2319, 0, 1908])
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
     assert str(circuit) == ref
 
 
@@ -705,7 +764,7 @@ def test_circuit_draw_line_wrap(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -766,7 +825,7 @@ def test_circuit_draw_line_wrap_names(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5, wire_names={"q1": "a"})
+    circuit = Circuit(5, wire_names=["q0", "a", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -795,7 +854,7 @@ def test_circuit_draw_line_wrap_names(capsys):
 def test_circuit_draw_channels(capsys, legend):
     """Check that channels are drawn correctly."""
 
-    circuit = Circuit(2, density_matrix=True)
+    circuit = Circuit(2, density_matrix=True, wire_names=["q0", "q1"])
     circuit.add(gates.H(0))
     circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
     circuit.add(gates.H(1))
@@ -832,7 +891,7 @@ def test_circuit_draw_callbacks(capsys, legend):
     from qibo.callbacks import EntanglementEntropy
 
     entropy = EntanglementEntropy([0])
-    c = Circuit(2)
+    c = Circuit(2, wire_names=["q0", "q1"])
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))
@@ -863,7 +922,7 @@ def test_circuit_draw_labels():
         + "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -884,7 +943,7 @@ def test_circuit_draw_names(capsys):
         + "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):

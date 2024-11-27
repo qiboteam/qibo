@@ -136,7 +136,6 @@ class _Global:
     def _default_transpiler(cls):
         from qibo.transpiler.optimizer import Preprocessing
         from qibo.transpiler.pipeline import Passes
-        from qibo.transpiler.placer import Trivial
         from qibo.transpiler.router import Sabre
         from qibo.transpiler.unroller import NativeGates, Unroller
 
@@ -148,21 +147,12 @@ class _Global:
             and natives is not None
             and connectivity_edges is not None
         ):
-            # only for q{i} naming
-            node_mapping = {q: i for i, q in enumerate(qubits)}
-            edges = [
-                (node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges
-            ]
-            connectivity = nx.Graph()
-            connectivity.add_nodes_from(list(node_mapping.values()))
-            connectivity.add_edges_from(edges)
-
+            connectivity = nx.Graph(connectivity_edges)
             return Passes(
                 connectivity=connectivity,
                 passes=[
-                    Preprocessing(connectivity),
-                    Trivial(connectivity),
-                    Sabre(connectivity),
+                    Preprocessing(),
+                    Sabre(),
                     Unroller(NativeGates[natives]),
                 ],
             )
