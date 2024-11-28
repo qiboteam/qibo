@@ -482,7 +482,7 @@ def test_measurementresult_nshots(backend):
     # nshots starting from samples
     nshots = 10
     samples = backend.cast(
-        [[i % 2, i % 2, i % 2] for i in range(nshots)], backend.np.int64
+        [[i % 2, i % 2, i % 2] for i in range(nshots)], backend.get_dtype("int64")
     )
     result.register_samples(samples)
     assert result.nshots == nshots
@@ -505,7 +505,9 @@ def test_measurement_serialization(backend):
         "p1": 0.2,
     }
     gate = gates.M(*range(3), **kwargs)
-    samples = backend.cast(np.random.randint(2, size=(100, 3)), backend.np.int64)
+    samples = backend.cast(
+        np.random.randint(2, size=(100, 3)), backend.get_dtype("int64")
+    )
     gate.result.register_samples(samples)
     dump = gate.to_json()
     load = gates.M.from_dict(json.loads(dump))

@@ -214,7 +214,7 @@ def ZNE(
     )
     expected_values = backend.cast(expected_values, backend.precision)
 
-    return backend.np.sum(gamma * expected_values)
+    return backend.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
@@ -266,8 +266,8 @@ def sample_training_circuit_cdr(
 
         replacement.append(rep_gates)
         distance.append(
-            backend.np.real(
-                backend.np.linalg.norm(
+            backend.real(
+                backend.linalg_norm(
                     gate.matrix(backend)
                     - backend.cast(
                         [rep_gate.matrix(backend) for rep_gate in rep_gates]
@@ -278,14 +278,14 @@ def sample_training_circuit_cdr(
             )
         )
 
-    distance = backend.np.vstack(distance)
-    prob = backend.np.exp(-(distance**2) / sigma**2)
+    distance = backend.vstack(distance)
+    prob = backend.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
-        p=backend.to_numpy(backend.np.sum(prob, -1) / backend.np.sum(prob)),
+        p=backend.to_numpy(backend.sum(prob, -1) / backend.sum(prob)),
     )
 
     gates_to_replace = np.array([gates_to_replace[i] for i in index])
@@ -332,8 +332,8 @@ def _curve_fit(
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
-        loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
-        optimizer = backend.np.optim.LBFGS(
+        loss = lambda pred, target: backend.mean((pred - target) ** 2)
+        optimizer = backend.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
         )
 
@@ -530,7 +530,7 @@ def vnCDR(
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if model is None:
-        model = lambda x, *params: backend.np.sum(x * backend.np.vstack(params), axis=0)
+        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -981,7 +981,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
     observable.nqubits = num_qubits
     observable_liouville = vectorization(
-        backend.np.transpose(backend.np.conj(unitary_matrix), (1, 0))
+        backend.transpose(backend.conj(unitary_matrix), (1, 0))
         @ observable.matrix
         @ unitary_matrix,
         order="row",
@@ -989,9 +989,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     )
     observable_pauli_liouville = comp_to_pauli @ observable_liouville
 
-    index = int(
-        backend.np.where(backend.np.abs(observable_pauli_liouville) >= 1e-5)[0][0]
-    )
+    index = int(backend.where(backend.abs(observable_pauli_liouville) >= 1e-5)[0][0])
 
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
 
@@ -1006,14 +1004,14 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     for i in range(num_qubits):
         observable_i = pauli_gates[observable_pauli[i]]
         random_init = pauli_gates["I"]
-        while backend.np.any(
-            backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
-        ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
+        while backend.any(
+            backend.abs(observable_i - pauli_gates["Z"]) > 1e-5
+        ) and backend.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
             random_init = random_clifford(
                 1, return_circuit=False, seed=local_state, backend=backend
             )
             observable_i = (
-                backend.np.conj(backend.np.transpose(random_init, (1, 0)))
+                backend.conj(backend.transpose(random_init, (1, 0)))
                 @ pauli_gates[observable_pauli[i]]
                 @ random_init
             )
@@ -1119,8 +1117,8 @@ def ICS(
         lambda_list.append(1 - noisy_expectation / expectation)
 
     lambda_list = backend.cast(lambda_list, backend.precision)
-    dep_param = backend.np.mean(lambda_list)
-    dep_param_std = backend.np.std(lambda_list)
+    dep_param = backend.mean(lambda_list)
+    dep_param_std = backend.std(lambda_list)
 
     noisy_expectation = get_expectation_val_with_readout_mitigation(
         circuit,

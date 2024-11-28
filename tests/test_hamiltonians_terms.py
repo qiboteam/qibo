@@ -48,12 +48,10 @@ def test_hamiltonian_term_gates(backend):
     backend.assert_allclose(gate.matrix(backend), matrix)
 
     initial_state = random_statevector(2**nqubits, backend=backend)
-    final_state = term(backend, backend.np.copy(initial_state), nqubits)
+    final_state = term(backend, backend.copy(initial_state), nqubits)
     circuit = Circuit(nqubits)
     circuit.add(gates.Unitary(matrix, 1, 2))
-    target_state = backend.execute_circuit(
-        circuit, backend.np.copy(initial_state)
-    ).state()
+    target_state = backend.execute_circuit(circuit, backend.copy(initial_state)).state()
     backend.assert_allclose(final_state, target_state)
 
 
@@ -67,9 +65,9 @@ def test_hamiltonian_term_exponentiation(backend):
     backend.assert_allclose(term.exp(0.5), exp_matrix)
 
     initial_state = random_statevector(4, backend=backend)
-    final_state = term(backend, backend.np.copy(initial_state), 2, term.expgate(0.5))
+    final_state = term(backend, backend.copy(initial_state), 2, term.expgate(0.5))
     exp_gate = gates.Unitary(exp_matrix, 1)
-    target_state = backend.apply_gate(exp_gate, backend.np.copy(initial_state), 2)
+    target_state = backend.apply_gate(exp_gate, backend.copy(initial_state), 2)
     backend.assert_allclose(final_state, target_state)
 
 
@@ -187,9 +185,9 @@ def test_symbolic_term_call(backend, density_matrix):
         else random_statevector(2**3, backend=backend)
     )
     final_state = term(
-        backend, backend.np.copy(initial_state), 3, density_matrix=density_matrix
+        backend, backend.copy(initial_state), 3, density_matrix=density_matrix
     )
-    target_state = 2 * backend.np.copy(initial_state)
+    target_state = 2 * backend.copy(initial_state)
     for matrix in matrixlist:
         target_state = matrix @ target_state
     backend.assert_allclose(final_state, target_state)

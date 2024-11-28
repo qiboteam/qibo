@@ -99,7 +99,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = backend.execute_circuit(c, backend.np.copy(initial_rho)).state()
+    final_rho = backend.execute_circuit(c, backend.copy(initial_rho)).state()
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])

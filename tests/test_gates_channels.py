@@ -21,22 +21,22 @@ def test_general_channel(backend):
         * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     )
     initial_state = random_density_matrix(2**2, backend=backend)
-    m_1 = backend.np.kron(backend.identity_density_matrix(1, normalize=False), a_1)
+    m_1 = backend.kron(backend.identity_density_matrix(1, normalize=False), a_1)
     m_1 = backend.cast(m_1, dtype=m_1.dtype)
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
-    target_state = backend.np.matmul(
-        backend.np.matmul(m_1, initial_state),
-        backend.np.transpose(backend.np.conj(m_1), (1, 0)),
+    target_state = backend.matmul(
+        backend.matmul(m_1, initial_state),
+        backend.transpose(backend.conj(m_1), (1, 0)),
     )
-    target_state = target_state + backend.np.matmul(
-        backend.np.matmul(m_2, initial_state),
-        backend.np.transpose(backend.np.conj(m_2), (1, 0)),
+    target_state = target_state + backend.matmul(
+        backend.matmul(m_2, initial_state),
+        backend.transpose(backend.conj(m_2), (1, 0)),
     )
 
     channel1 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
     assert channel1.target_qubits == (0, 1)
     final_state = backend.apply_channel_density_matrix(
-        channel1, backend.np.copy(initial_state), 2
+        channel1, backend.copy(initial_state), 2
     )
     backend.assert_allclose(final_state, target_state)
 
@@ -45,7 +45,7 @@ def test_general_channel(backend):
     channel2 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
     assert channel2.target_qubits == (0, 1)
     final_state = backend.apply_channel_density_matrix(
-        channel2, backend.np.copy(initial_state), 2
+        channel2, backend.copy(initial_state), 2
     )
     backend.assert_allclose(final_state, target_state)
 
@@ -152,18 +152,18 @@ def test_unitary_channel(backend):
     channel = gates.UnitaryChannel(qubits, matrices_)
     initial_state = random_density_matrix(2**4, backend=backend)
     final_state = backend.apply_channel_density_matrix(
-        channel, backend.np.copy(initial_state), 4
+        channel, backend.copy(initial_state), 4
     )
 
     eye = backend.identity_density_matrix(1, normalize=False)
-    ma_1 = backend.np.kron(backend.np.kron(a_1, eye), backend.np.kron(eye, eye))
-    ma_2 = backend.np.kron(backend.np.kron(eye, eye), a_2)
+    ma_1 = backend.kron(backend.kron(a_1, eye), backend.kron(eye, eye))
+    ma_2 = backend.kron(backend.kron(eye, eye), a_2)
     ma_1 = backend.cast(ma_1, dtype=ma_1.dtype)
     ma_2 = backend.cast(ma_2, dtype=ma_2.dtype)
     target_state = (
         0.3 * initial_state
-        + 0.4 * backend.np.matmul(ma_1, backend.np.matmul(initial_state, ma_1))
-        + 0.3 * backend.np.matmul(ma_2, backend.np.matmul(initial_state, ma_2))
+        + 0.4 * backend.matmul(ma_1, backend.matmul(initial_state, ma_1))
+        + 0.3 * backend.matmul(ma_2, backend.matmul(initial_state, ma_2))
     )
     backend.assert_allclose(final_state, target_state)
 
@@ -186,7 +186,7 @@ def test_unitary_channel_probability_tolerance(backend):
     matrices_ = [(p, np.random.random((4, 4))) for p in probs]
     identity_channel = gates.UnitaryChannel(qubits, matrices_)
     backend.assert_allclose(
-        identity_channel.to_liouville(backend=backend), backend.np.eye(num_terms)
+        identity_channel.to_liouville(backend=backend), backend.eye(num_terms)
     )
 
 
@@ -217,11 +217,11 @@ def test_pauli_noise_channel(backend, pauli_order):
     qubits = (1,)
     channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
     final_state = backend.apply_channel_density_matrix(
-        channel, backend.np.copy(initial_state), 2
+        channel, backend.copy(initial_state), 2
     )
     gate = gates.X(1)
     target_state = backend.apply_gate_density_matrix(
-        gate, backend.np.copy(initial_state), 2
+        gate, backend.copy(initial_state), 2
     )
     target_state = 0.3 * target_state + 0.7 * initial_state
     backend.assert_allclose(final_state, target_state)
@@ -262,9 +262,7 @@ def test_depolarizing_channel(backend):
     initial_state = random_density_matrix(2**3, backend=backend)
     initial_state_r = partial_trace(initial_state, (2,), backend=backend)
     channel = gates.DepolarizingChannel((0, 1), lam)
-    final_state = channel.apply_density_matrix(
-        backend, backend.np.copy(initial_state), 3
-    )
+    final_state = channel.apply_density_matrix(backend, backend.copy(initial_state), 3)
     final_state_r = partial_trace(final_state, (2,), backend=backend)
     target_state_r = (1 - lam) * initial_state_r + lam * backend.cast(
         np.identity(4)
@@ -288,12 +286,10 @@ def test_amplitude_damping_channel(backend):
     channel = gates.AmplitudeDampingChannel(0, gamma)
 
     initial_state = random_density_matrix(2**1, backend=backend)
-    final_state = channel.apply_density_matrix(
-        backend, backend.np.copy(initial_state), 1
-    )
-    target_state = kraus_0 @ initial_state @ backend.np.transpose(
-        backend.np.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.np.transpose(backend.np.conj(kraus_1), (1, 0))
+    final_state = channel.apply_density_matrix(backend, backend.copy(initial_state), 1)
+    target_state = kraus_0 @ initial_state @ backend.transpose(
+        backend.conj(kraus_0), (1, 0)
+    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
 
     backend.assert_allclose(final_state, target_state)
 
@@ -314,12 +310,10 @@ def test_phase_damping_channel(backend):
     channel = gates.PhaseDampingChannel(0, gamma)
 
     initial_state = random_density_matrix(2**1, backend=backend)
-    final_state = channel.apply_density_matrix(
-        backend, backend.np.copy(initial_state), 1
-    )
-    target_state = kraus_0 @ initial_state @ backend.np.transpose(
-        backend.np.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.np.transpose(backend.np.conj(kraus_1), (1, 0))
+    final_state = channel.apply_density_matrix(backend, backend.copy(initial_state), 1)
+    target_state = kraus_0 @ initial_state @ backend.transpose(
+        backend.conj(kraus_0), (1, 0)
+    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
 
     backend.assert_allclose(final_state, target_state)
 
@@ -331,7 +325,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     initial_state = random_density_matrix(2**3, backend=backend)
     gate = gates.ThermalRelaxationChannel(0, [t_1, t_2, time, excpop])
-    final_state = gate.apply_density_matrix(backend, backend.np.copy(initial_state), 3)
+    final_state = gate.apply_density_matrix(backend, backend.copy(initial_state), 3)
 
     if t_2 > t_1:
         p_0, p_1, exp = (
@@ -343,7 +337,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950
-        target_state = backend.np.copy(initial_state).reshape(6 * (2,))
+        target_state = backend.copy(initial_state).reshape(6 * (2,))
         target_state = np.einsum(
             "abcd,aJKcjk->bJKdjk", matrix, backend.to_numpy(target_state)
         )
@@ -354,9 +348,9 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
             gate.init_kwargs["p_1"],
             gate.init_kwargs["p_z"],
         )
-        m_z = backend.np.kron(
+        m_z = backend.kron(
             backend.cast(matrices.Z),
-            backend.np.kron(backend.cast(matrices.I), backend.cast(matrices.I)),
+            backend.kron(backend.cast(matrices.I), backend.cast(matrices.I)),
         )
         m_z = backend.cast(m_z, dtype=m_z.dtype)
         z_rho = m_z @ initial_state @ m_z
@@ -376,9 +370,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         ones = backend.cast(ones, dtype=ones.dtype)
 
         target_state = (1 - p_0 - p_1 - p_z) * initial_state + p_z * z_rho
-        target_state += backend.np.reshape(
-            p_0 * zeros + p_1 * ones, initial_state.shape
-        )
+        target_state += backend.reshape(p_0 * zeros + p_1 * ones, initial_state.shape)
 
     target_state = backend.cast(target_state, dtype=target_state.dtype)
 
@@ -433,7 +425,7 @@ def test_reset_channel(backend):
     initial_state = random_density_matrix(2**3, backend=backend)
     gate = gates.ResetChannel(0, [0.2, 0.2])
     final_state = backend.reset_error_density_matrix(
-        gate, backend.np.copy(initial_state), 3
+        gate, backend.copy(initial_state), 3
     )
 
     trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
@@ -446,7 +438,7 @@ def test_reset_channel(backend):
     zeros = backend.cast(zeros, dtype=zeros.dtype)
     ones = backend.cast(ones, dtype=ones.dtype)
 
-    target_state = 0.6 * initial_state + 0.2 * backend.np.reshape(
+    target_state = 0.6 * initial_state + 0.2 * backend.reshape(
         zeros + ones, initial_state.shape
     )
 

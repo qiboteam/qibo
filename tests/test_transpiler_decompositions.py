@@ -34,7 +34,7 @@ def assert_matrices_allclose(gate, natives, backend):
     # There can still be phase differences of -1, -1j, 1j
     c = 0
     for phase in [1, -1, 1j, -1j]:
-        if backend.np.allclose(
+        if backend.allclose(
             phase * native_unitary,
             target_unitary,
             atol=1e-6,

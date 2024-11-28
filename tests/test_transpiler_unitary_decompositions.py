@@ -32,7 +32,7 @@ def bell_unitary(hx, hy, hz, backend):
 
 def assert_single_qubits(backend, psi, ua, ub):
     """Assert UA, UB map the maximally entangled basis ``psi`` to the magic basis."""
-    uaub = backend.to_numpy(backend.np.kron(ua, ub))
+    uaub = backend.to_numpy(backend.kron(ua, ub))
     psi = backend.to_numpy(psi)
     for i, j in zip(range(4), [0, 1, 3, 2]):
         final_state = np.matmul(uaub, psi[:, i])
@@ -67,7 +67,7 @@ def test_eigenbasis_entanglement(backend, seed):
         """Check that the eigenvectors of UT_U are maximally entangled."""
         states, eigvals = calculate_psi(unitary, backend=backend)
         eigvals = backend.cast(eigvals, dtype=eigvals.dtype)
-        backend.assert_allclose(backend.np.abs(eigvals), np.ones(4))
+        backend.assert_allclose(backend.abs(eigvals), np.ones(4))
         for state in states.T:
             state = partial_trace(state, [1], backend=backend)
             backend.assert_allclose(purity(state, backend=backend), 0.5)
@@ -95,9 +95,7 @@ def test_u_decomposition(backend, seed):
             calculate_psi(unitary, backend=backend)
     else:
         psi, eigvals = calculate_psi(unitary, backend=backend)
-        psi_tilde = backend.np.conj(backend.np.sqrt(eigvals)) * backend.np.matmul(
-            unitary, psi
-        )
+        psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
         ua_dagger, ub_dagger = calculate_single_qubit_unitaries(
             psi_tilde, backend=backend
         )
@@ -114,17 +112,17 @@ def test_ud_eigenvalues(backend, seed):
     else:
         ua, ub, ud, va, vb = magic_decomposition(unitary, backend=backend)
         # Check kron
-        unitary_recon = backend.np.kron(ua, ub) @ ud @ backend.np.kron(va, vb)
+        unitary_recon = backend.kron(ua, ub) @ ud @ backend.kron(va, vb)
         backend.assert_allclose(unitary_recon, unitary)
 
         ud_bell = (
-            backend.np.transpose(backend.np.conj(backend.cast(bell_basis)), (1, 0))
+            backend.transpose(backend.conj(backend.cast(bell_basis)), (1, 0))
             @ ud
             @ backend.cast(bell_basis)
         )
-        ud_diag = backend.np.diag(ud_bell)
-        backend.assert_allclose(backend.np.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6)
-        backend.assert_allclose(backend.np.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
+        ud_diag = backend.diag(ud_bell)
+        backend.assert_allclose(backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6)
+        backend.assert_allclose(backend.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])

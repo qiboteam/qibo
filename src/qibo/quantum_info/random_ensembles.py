@@ -184,12 +184,12 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.np.matmul(backend.np.conj(matrix).T, matrix)
+        matrix = backend.matmul(backend.conj(matrix).T, matrix)
     else:
-        matrix = (matrix + backend.np.conj(matrix).T) / 2
+        matrix = (matrix + backend.conj(matrix).T) / 2
 
     if normalize:
-        matrix = matrix / np.linalg.norm(backend.to_numpy(matrix))
+        matrix = matrix / backend.linalg_norm(backend.to_numpy(matrix))
 
     return matrix
 
@@ -231,11 +231,11 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
         # Tensorflow experi
-        Q, R = backend.np.linalg.qr(unitary)
-        D = backend.np.diag(R)
-        D = D / backend.np.abs(D)
-        R = backend.np.diag(D)
-        unitary = backend.np.matmul(Q, R)
+        Q, R = backend.qr(unitary)
+        D = backend.diag(R)
+        D = D / backend.abs(D)
+        R = backend.diag(D)
+        unitary = backend.matmul(Q, R)
     elif measure is None:
         from scipy.linalg import expm
 
@@ -351,7 +351,7 @@ def random_quantum_channel(
     else:
         super_op = random_unitary(dims, measure, local_state, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = backend.np.outer(super_op, backend.np.conj(super_op))
+        super_op = backend.outer(super_op, backend.conj(super_op))
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -438,7 +438,7 @@ def random_statevector(dims: int, seed=None, backend=None):
 
     state = backend.cast(local_state.standard_normal(dims).astype(complex))
     state = state + 1.0j * backend.cast(local_state.standard_normal(dims))
-    state = state / backend.np.linalg.norm(state)
+    state = state / backend.linalg_norm(state)
 
     return state
 
@@ -545,35 +545,35 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=local_state, backend=backend)
-        state = backend.np.outer(state, backend.np.conj(state).T)
+        state = backend.outer(state, backend.conj(state).T)
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
                 dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            state = backend.matmul(
+                state, backend.transpose(backend.conj(state), (1, 0))
             )
-            state = state / backend.np.trace(state)
+            state = state / backend.trace(state)
         else:
-            nqubits = int(np.log2(dims))
+            nqubits = int(backend.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
             state += random_unitary(dims, seed=local_state, backend=backend)
-            state = backend.np.matmul(
+            state = backend.matmul(
                 state,
                 random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            state = backend.matmul(
+                state, backend.transpose(backend.conj(state), (1, 0))
             )
-            state /= backend.np.trace(state)
+            state /= backend.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
     if basis is not None:
         pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
-            int(np.log2(dims)),
+            int(backend.log2(dims)),
             normalize=normalize,
             order=order,
             pauli_order=pauli_order,
@@ -637,15 +637,15 @@ def random_clifford(
         nqubits, local_state=local_state
     )
 
-    delta_matrix = np.eye(nqubits, dtype=int)
-    delta_matrix_prime = np.copy(delta_matrix)
+    delta_matrix = backend.eye(nqubits, dtype=int)
+    delta_matrix_prime = backend.copy(delta_matrix)
 
     gamma_matrix_prime = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix_prime = np.diag(gamma_matrix_prime)
+    gamma_matrix_prime = backend.diag(gamma_matrix_prime)
 
     gamma_matrix = local_state.integers(0, 2, size=nqubits)
     gamma_matrix = hadamards * gamma_matrix
-    gamma_matrix = np.diag(gamma_matrix)
+    gamma_matrix = backend.diag(gamma_matrix)
 
     # filling off-diagonal elements of gammas and deltas matrices
     for j in range(nqubits):
@@ -937,21 +937,21 @@ def random_pauli_hamiltonian(
         )
         eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
 
-        hamiltonian = np.zeros((d, d), dtype=complex)
+        hamiltonian = backend.zeros((d, d), dtype=complex)
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
-            eigenvalues[1:], backend.np.transpose(eigenvectors, (1, 0))[1:]
+            eigenvalues[1:], backend.transpose(eigenvectors, (1, 0))[1:]
         ):
-            hamiltonian = hamiltonian + eigenvalue * backend.np.outer(
-                eigenvector, backend.np.conj(eigenvector)
+            hamiltonian = hamiltonian + eigenvalue * backend.outer(
+                eigenvector, backend.conj(eigenvector)
             )
 
     U = comp_basis_to_pauli(
         nqubits, normalize=True, pauli_order=pauli_order, backend=backend
     )
 
-    hamiltonian = backend.np.real(U @ vectorization(hamiltonian, backend=backend))
+    hamiltonian = backend.real(U @ vectorization(hamiltonian, backend=backend))
 
     return hamiltonian, eigenvalues
 
@@ -1035,9 +1035,9 @@ def random_stochastic_matrix(
     if diagonally_dominant:
         matrix /= dims**2
         for k, row in enumerate(matrix):
-            row = np.delete(row, obj=k)
-            matrix[k, k] = 1 - np.sum(row)
-    row_sum = np.sum(matrix, axis=1)
+            row = backend.delete(row, obj=k)
+            matrix[k, k] = 1 - backend.sum(row)
+    row_sum = backend.sum(matrix, axis=1)
 
     row_sum = matrix.sum(axis=1)
 
@@ -1046,23 +1046,23 @@ def random_stochastic_matrix(
         count = 0
         while count <= max_iterations - 1 and (
             (
-                np.any(row_sum >= 1 + precision_tol)
-                or np.any(row_sum <= 1 - precision_tol)
+                backend.any(row_sum >= 1 + precision_tol)
+                or backend.any(row_sum <= 1 - precision_tol)
             )
             or (
-                np.any(column_sum >= 1 + precision_tol)
-                or np.any(column_sum <= 1 - precision_tol)
+                backend.any(column_sum >= 1 + precision_tol)
+                or backend.any(column_sum <= 1 - precision_tol)
             )
         ):
             matrix = matrix / matrix.sum(axis=0)
-            matrix = matrix / matrix.sum(axis=1)[:, np.newaxis]
+            matrix = matrix / matrix.sum(axis=1)[:, None]
             row_sum = matrix.sum(axis=1)
             column_sum = matrix.sum(axis=0)
             count += 1
         if count == max_iterations:
             warnings.warn("Reached max iterations.", RuntimeWarning)
     else:
-        matrix = matrix / np.outer(row_sum, [1] * dims)
+        matrix = matrix / backend.outer(row_sum, [1] * dims)
 
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
@@ -1196,37 +1196,37 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    nqubits = int(np.log2(dims))
+    nqubits = int(backend.log2(dims))
 
     super_op = random_gaussian_matrix(
         dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
     )
-    super_op = super_op @ backend.np.conj(super_op).T
+    super_op = super_op @ backend.conj(super_op).T
 
     # partial trace implemented with einsum
-    super_op_reduced = np.einsum(
-        "ijik->jk", np.reshape(backend.to_numpy(super_op), (dims,) * 4)
+    super_op_reduced = backend.einsum(
+        "ijik->jk", backend.reshape(backend.to_numpy(super_op), (dims,) * 4)
     )
 
-    eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
+    eigenvalues, eigenvectors = backend.eigh(super_op_reduced)
 
-    eigenvalues = np.sqrt(1.0 / eigenvalues)
+    eigenvalues = backend.sqrt(1.0 / eigenvalues)
 
-    operator = np.zeros((dims, dims), dtype=complex)
+    operator = backend.zeros((dims, dims), dtype=complex)
     operator = backend.cast(operator, dtype=operator.dtype)
     for eigenvalue, eigenvector in zip(
         backend.cast(eigenvalues), backend.cast(eigenvectors).T
     ):
-        operator = operator + eigenvalue * backend.np.outer(
-            eigenvector, backend.np.conj(eigenvector)
+        operator = operator + eigenvalue * backend.outer(
+            eigenvector, backend.conj(eigenvector)
         )
 
     if order == "row":
-        operator = backend.np.kron(
+        operator = backend.kron(
             backend.identity_density_matrix(nqubits, normalize=False), operator
         )
     if order == "column":
-        operator = backend.np.kron(
+        operator = backend.kron(
             operator, backend.identity_density_matrix(nqubits, normalize=False)
         )
 

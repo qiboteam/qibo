@@ -230,7 +230,7 @@ def test_matrix_power(backend, power, singular):
         power = matrix_power(state, power, backend=backend)
 
         backend.assert_allclose(
-            float(backend.np.real(backend.np.trace(power))),
+            float(backend.real(backend.trace(power))),
             purity(state, backend=backend),
         )
 
@@ -253,13 +253,13 @@ def test_singular_value_decomposition(backend):
     for k, coeff in enumerate(coeffs):
         bitstring = f"{k:0{2}b}"
         a, b = int(bitstring[0]), int(bitstring[1])
-        ket = backend.np.kron(base[a], base[b])
-        state = state + coeff * backend.np.outer(ket, ket.T)
+        ket = backend.kron(base[a], base[b])
+        state = state + coeff * backend.outer(ket, ket.T)
 
     _, S, _ = singular_value_decomposition(state, backend=backend)
 
-    S_sorted = backend.np.sort(S)
-    coeffs_sorted = backend.np.sort(coeffs)
+    S_sorted = backend.sort(S)
+    coeffs_sorted = backend.sort(coeffs)
     if backend.name == "pytorch":
         S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
 
@@ -273,7 +273,7 @@ def test_schmidt_decomposition(backend):
 
     state_A = random_statevector(4, seed=10, backend=backend)
     state_B = random_statevector(4, seed=11, backend=backend)
-    state = backend.np.kron(state_A, state_B)
+    state = backend.kron(state_A, state_B)
 
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
@@ -282,13 +282,13 @@ def test_schmidt_decomposition(backend):
     recovered = backend.cast(recovered, dtype=recovered.dtype)
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
-            recovered = recovered + coeff * backend.np.kron(u, vh)
+            recovered = recovered + coeff * backend.kron(u, vh)
 
     backend.assert_allclose(recovered, state)
 
     # entropy test
-    coeffs = backend.np.abs(S) ** 2
-    entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
-    entropy = -backend.np.sum(coeffs * entropy)
+    coeffs = backend.abs(S) ** 2
+    entropy = backend.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
+    entropy = -backend.sum(coeffs * entropy)
 
     backend.assert_allclose(entropy, 0.0, atol=1e-14)

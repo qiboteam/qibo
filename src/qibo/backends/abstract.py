@@ -478,6 +478,11 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def ravel(self, *args, **kwargs):
+        """Numpy-like ravel: https://numpy.org/devdocs/reference/generated/numpy.ravel.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def transpose(self, *args, **kwargs):
         """Numpy-like transpose: https://numpy.org/devdocs/reference/generated/numpy.transpose.html"""
         raise_error(NotImplementedError)
@@ -542,8 +547,18 @@ class Backend(abc.ABC):
         """Numpy-like element-wise sign function: https://numpy.org/doc/stable/reference/generated/numpy.sign.html"""
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def delete(a, obj, axis=None):
+        """Numpy-like delete function: https://numpy.org/doc/stable/reference/generated/numpy.delete.html"""
+        raise NotImplementedError
+
     # linear algebra
     # ^^^^^^^^^^^^^^
+
+    @abc.abstractmethod
+    def einsum(self, *args, **kwargs):
+        """Numpy-like einsum: https://numpy.org/devdocs/reference/generated/numpy.einsum.html"""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def matmul(self, *args, **kwargs):
@@ -737,6 +752,11 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def pow(self, *args, **kwargs):
         """Numpy-like element-wise power: https://numpy.org/doc/stable/reference/generated/numpy.power.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def square(self, *args, **kwargs):
+        """Numpy-like element-wise square: https://numpy.org/doc/stable/reference/generated/numpy.square.html"""
         raise NotImplementedError
 
     @abc.abstractmethod

@@ -141,24 +141,24 @@ def partial_trace(
     statevector = bool(len(state.shape) == 1)
 
     factor = 1 if statevector else 2
-    state = backend.np.reshape(state, factor * nqubits * (2,))
+    state = backend.reshape(state, factor * nqubits * (2,))
 
     if statevector:
         axes = 2 * [list(traced_qubits)]
-        rho = backend.np.tensordot(state, backend.np.conj(state), axes)
+        rho = backend.tensordot(state, backend.conj(state), axes)
         shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
 
-        return backend.np.reshape(rho, shape)
+        return backend.reshape(rho, shape)
 
     order = tuple(sorted(traced_qubits))
     order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
     order += tuple(k + nqubits for k in order)
     shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
 
-    state = backend.np.transpose(state, order)
-    state = backend.np.reshape(state, shape)
+    state = backend.transpose(state, order)
+    state = backend.reshape(state, shape)
 
-    return backend.np.einsum("abac->bc", state)
+    return backend.einsum("abac->bc", state)
 
 
 def partial_transpose(
@@ -215,10 +215,10 @@ def partial_transpose(
     nqubits = int(nqubits)
 
     if len(shape) == 1:
-        operator = backend.np.outer(operator, backend.np.conj(operator.T))
+        operator = backend.outer(operator, backend.conj(operator.T))
     elif len(shape) == 3 and shape[1] == 1:
-        operator = backend.np.einsum(
-            "aij,akl->aijkl", operator, backend.np.conj(operator)
+        operator = backend.einsum(
+            "aij,akl->aijkl", operator, backend.conj(operator)
         ).reshape(nstates, dims, dims)
 
     new_shape = list(range(2 * nqubits + 1))
@@ -228,14 +228,14 @@ def partial_transpose(
         new_shape[ind + nqubits] = ind
     new_shape = tuple(new_shape)
 
-    reshaped = backend.np.reshape(operator, [-1] + [2] * (2 * nqubits))
-    reshaped = backend.np.transpose(reshaped, new_shape)
+    reshaped = backend.reshape(operator, [-1] + [2] * (2 * nqubits))
+    reshaped = backend.transpose(reshaped, new_shape)
 
     final_shape = (dims, dims)
     if len(operator.shape) == 3:
         final_shape = (nstates,) + final_shape
 
-    return backend.np.reshape(reshaped, final_shape)
+    return backend.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(
@@ -377,8 +377,8 @@ def schmidt_decomposition(
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
 
-    tensor = backend.np.reshape(state, [2] * nqubits)
-    tensor = backend.np.transpose(tensor, partition + partition_2)
-    tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
+    tensor = backend.reshape(state, [2] * nqubits)
+    tensor = backend.transpose(tensor, partition + partition_2)
+    tensor = backend.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)

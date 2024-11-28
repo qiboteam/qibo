@@ -148,8 +148,8 @@ class Hamiltonian(AbstractHamiltonian):
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
         if (
-            self.backend.np.count_nonzero(
-                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
+            self.backend.count_nonzero(
+                obs - self.backend.diag(self.backend.diagonal(obs))
             )
             != 0
         ):
@@ -168,7 +168,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return self.backend.np.real(expval)
+        return self.backend.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -197,7 +197,7 @@ class Hamiltonian(AbstractHamiltonian):
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
         average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
+        return self.backend.sqrt(self.backend.abs(average_h2 - energy**2))
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -263,13 +263,13 @@ class Hamiltonian(AbstractHamiltonian):
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
         o = self.backend.cast(o)
         if self._eigenvalues is not None:
-            if self.backend.np.real(o) >= 0:  # TODO: check for side effects K.qnp
+            if self.backend.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
-                r._eigenvalues = o * self.backend.np.flip(self._eigenvalues, axis)
+                r._eigenvalues = o * self.backend.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
-            if self.backend.np.real(o) > 0:  # TODO: see above
+            if self.backend.real(o) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif o == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -669,7 +669,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
+        return self.backend.sum(expvals @ counts.T) + self.constant.real
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
