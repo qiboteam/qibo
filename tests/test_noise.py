@@ -423,7 +423,7 @@ def test_readout_error(backend, density_matrix):
         backend, backend.copy(state), nqubits
     )
 
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state.state(), target_state)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -766,4 +766,4 @@ def test_ibmq_noise(
     backend.set_seed(2024)
     state_target = backend.execute_circuit(noisy_circuit_target, nshots=10)
 
-    backend.assert_allclose(state, state_target)
+    backend.assert_allclose(state.state(), state_target.state())

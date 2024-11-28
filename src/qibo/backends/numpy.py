@@ -155,23 +155,23 @@ class NumpyBackend(Backend):
             num_controls = len(gate.control_qubits)
             if num_controls > 0:
                 gmatrix = block_diag(
-                    np.eye(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
+                    self.eye(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
                 )
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
-            eye = np.eye(2 ** (rank - len(gate.qubits)))
-            gmatrix = np.kron(gmatrix, eye)
+            eye = self.eye(2 ** (rank - len(gate.qubits)))
+            gmatrix = self.kron(gmatrix, eye)
             # Transpose the new matrix indices so that it targets the
             # target qubits of the original gate
             original_shape = gmatrix.shape
-            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
+            gmatrix = self.reshape(gmatrix, 2 * rank * (2,))
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
-            indices = np.argsort(indices)
+            indices = self.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
-            gmatrix = np.transpose(gmatrix, transpose_indices)
-            gmatrix = np.reshape(gmatrix, original_shape)
+            gmatrix = self.transpose(gmatrix, transpose_indices)
+            gmatrix = self.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             # we are using sparse matrices to improve perfomances
             matrix = sparse.csr_matrix(gmatrix).dot(matrix)
@@ -271,7 +271,7 @@ class NumpyBackend(Backend):
         return self.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
         index = self.sample_shots(probabilities, 1)[0]
         if index != len(channel.gates):
             gate = channel.gates[index]
@@ -572,7 +572,7 @@ class NumpyBackend(Backend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = self.cast(np.mean(self.to_numpy(final_states), 0))
+            final_state = self.cast(self.mean(self.to_numpy(final_states), 0))
             if circuit.measurements:
                 final_result = CircuitResult(
                     final_state,
@@ -608,10 +608,10 @@ class NumpyBackend(Backend):
     ):
         state = self.to_numpy(state)
         terms = []
-        for i in np.nonzero(state)[0]:
+        for i in self.nonzero(state)[0]:
             b = bin(i)[2:].zfill(nqubits)
-            if np.abs(state[i]) >= cutoff:
-                x = np.round(state[i], decimals)
+            if self.abs(state[i]) >= cutoff:
+                x = self.round(state[i], decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -623,12 +623,12 @@ class NumpyBackend(Backend):
     ):
         state = self.to_numpy(state)
         terms = []
-        indi, indj = np.nonzero(state)
+        indi, indj = self.nonzero(state)
         for i, j in zip(indi, indj):
             bi = bin(i)[2:].zfill(nqubits)
             bj = bin(j)[2:].zfill(nqubits)
-            if np.abs(state[i, j]) >= cutoff:
-                x = np.round(state[i, j], decimals)
+            if self.abs(state[i, j]) >= cutoff:
+                x = self.round(state[i, j], decimals)
                 terms.append(f"{x}|{bi}><{bj}|")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -675,19 +675,19 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        return np.mod(np.right_shift(samples[:, None], qrange), 2)
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=np.int32)
+        return self.mod(self.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         ### This is faster just staying @ NumPy.
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=np.int32)
         qrange = (2**qrange)[:, None]
         samples = np.asarray(samples.tolist())
-        return np.matmul(samples, qrange)[:, 0]
+        return self.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
         # Samples are a list of strings so there is no advantage in using other backends
-        res, counts = np.unique(samples, return_counts=True)
+        res, counts = self.unique(samples, return_counts=True)
         res = self.to_numpy(res).tolist()
         counts = self.to_numpy(counts).tolist()
         return collections.Counter(dict(zip(res, counts)))
@@ -715,7 +715,7 @@ class NumpyBackend(Backend):
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         noiseless_samples = self.cast(noiseless_samples, dtype=noiseless_samples.dtype)
         fprobs = self.cast(bitflip_probabilities, dtype="float64")
-        sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
+        sprobs = self.cast(self.rand(*noiseless_samples.shape), dtype="float64")
         flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
         flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
@@ -746,8 +746,8 @@ class NumpyBackend(Backend):
             )
             return self.calculate_eigenvectors(matrix, k=k)[0]
         if hermitian:
-            return np.linalg.eigvalsh(matrix)
-        return np.linalg.eigvals(matrix)
+            return self.eigvalsh(matrix)
+        return self.eigvals(matrix)
 
     def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):
@@ -758,8 +758,8 @@ class NumpyBackend(Backend):
             else:  # pragma: no cover
                 matrix = self.to_numpy(matrix)
         if hermitian:
-            return np.linalg.eigh(matrix)
-        return np.linalg.eig(matrix)
+            return self.eigh(matrix)
+        return self.eig(matrix)
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.conj(state)
@@ -784,7 +784,7 @@ class NumpyBackend(Backend):
                 from scipy.linalg import expm
             return expm(-1j * a * matrix)
         expd = self.diag(self.exp(-1j * a * eigenvalues))
-        ud = self.transpose(np.conj(eigenvectors))
+        ud = self.transpose(self.conj(eigenvectors))
         return self.matmul(eigenvectors, self.matmul(expd, ud))
 
     def calculate_matrix_power(
@@ -841,7 +841,7 @@ class NumpyBackend(Backend):
             target = target.state()
         value = self.to_numpy(value)
         target = self.to_numpy(target)
-        np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+        self.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     def _test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
@@ -882,6 +882,11 @@ class NumpyBackend(Backend):
     def ones(shape, **kwargs):
         """Numpy-like ones: https://numpy.org/devdocs/reference/generated/numpy.ones.html"""
         return np.ones(shape, **kwargs)
+
+    @staticmethod
+    def arange(*args, **kwargs):
+        """Numpy-like arange: https://numpy.org/devdocs/reference/generated/numpy.arange.html"""
+        return np.arange(*args, **kwargs)
 
     @staticmethod
     def copy(a, **kwargs):
@@ -1240,6 +1245,11 @@ class NumpyBackend(Backend):
         """Numpy-like element-wise modulus: https://numpy.org/doc/stable/reference/generated/numpy.mod.html"""
         return np.mod(x, y, **kwargs)
 
+    @staticmethod
+    def round(a, decimals=0, out=None):
+        """Numpy-like element-wise round: https://numpy.org/doc/stable/reference/generated/numpy.round.html"""
+        return np.round(a, decimals=decimals, out=out)
+
     # misc
     # ^^^^
 
@@ -1247,6 +1257,11 @@ class NumpyBackend(Backend):
     def sort(a, **kwargs):
         """Numpy-like sort: https://numpy.org/doc/stable/reference/generated/numpy.sort.html"""
         return np.sort(a, **kwargs)
+
+    @staticmethod
+    def argsort(a, **kwargs):
+        """Numpy-like argsort: https://numpy.org/doc/stable/reference/generated/numpy.argsort.html"""
+        return np.argsort(a, **kwargs)
 
     @staticmethod
     def count_nonzero(a, **kwargs):
@@ -1273,6 +1288,13 @@ class NumpyBackend(Backend):
     def get_dtype(type_name: str):
         """Backend engine dtype"""
         return getattr(np, type_name)
+
+    @staticmethod
+    def assert_allclose(a, b, **kwargs):
+        """
+        Numpy-like allclose: https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
+        """
+        return np.testing.assert_allclose(a, b, **kwargs)
 
     # Optimization
     # ^^^^^^^^^^^^^

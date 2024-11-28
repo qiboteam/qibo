@@ -287,7 +287,7 @@ def test_final_state(backend, accelerators):
     c.add(gates.X(2))
     c.add(gates.X(3))
     target_state = backend.execute_circuit(c)
-    backend.assert_allclose(c.final_state, target_state)
+    backend.assert_allclose(c.final_state.state(), target_state.state())
 
 
 def test_measurement_gate_bitflip_errors():

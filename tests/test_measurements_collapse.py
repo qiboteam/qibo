@@ -41,7 +41,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     initial_rho = random_density_matrix(2**nqubits, backend=backend)
     c = Circuit(nqubits, density_matrix=True)
     r = c.add(gates.M(*targets, collapse=True))
-    final_rho = backend.execute_circuit(c, backend.copy(initial_rho), nshots=1)
+    final_rho = backend.execute_circuit(c, backend.copy(initial_rho), nshots=1).state()
 
     samples = r.samples()[0]
     target_rho = backend.reshape(initial_rho, 2 * nqubits * (2,))
@@ -88,6 +88,9 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
     if not density_matrix:
         final_state = final_state.samples()[0]
         target_state = target_state.samples()[0]
+    else:
+        final_state = final_state.state()
+        target_state = target_state.state()
     backend.assert_allclose(final_state, target_state)
 
 
@@ -113,7 +116,7 @@ def test_measurement_result_parameters_random(backend):
         c.add(gates.RY(0, theta=np.pi / 5))
         c.add(gates.RX(2, theta=np.pi / 4))
         target_state = backend.execute_circuit(c, initial_state=target_state)
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state.state(), target_state.state())
 
 
 @pytest.mark.parametrize("use_loop", [True, False])
@@ -210,7 +213,7 @@ def test_measurement_result_parameters_multiple_qubits(backend):
         target_state = backend.apply_gate_density_matrix(
             gates.RX(3, theta=np.pi / 3), target_state, 4
         )
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state.state(), target_state)
 
 
 @pytest.mark.skip(reason="this has to be updated for density matrices")
@@ -248,7 +251,7 @@ def test_collapse_after_measurement(backend):
             ct.add(gates.X(i))
     ct.add(gates.H(i) for i in qubits)
     target_state = backend.execute_circuit(ct)
-    backend.assert_allclose(final_state, target_state, atol=1e-15)
+    backend.assert_allclose(final_state.state(), target_state.state(), atol=1e-15)
 
 
 def test_collapse_error(backend):

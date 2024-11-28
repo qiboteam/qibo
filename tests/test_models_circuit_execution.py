@@ -88,7 +88,7 @@ def test_final_state_property(backend):
 
     backend.execute_circuit(c)._state
     target_state = np.ones(4) / 2
-    backend.assert_allclose(c.final_state, target_state)
+    backend.assert_allclose(c.final_state.state(), target_state)
 
 
 def test_density_matrix_circuit(backend):

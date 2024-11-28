@@ -468,6 +468,11 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def arange(self, *args, **kwargs):
+        """Numpy-like arange: https://numpy.org/devdocs/reference/generated/numpy.arange.html"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def copy(self, *args, **kwargs):
         """Numpy-like copy: https://numpy.org/devdocs/reference/generated/numpy.copy.html"""
         raise_error(NotImplementedError)
@@ -801,7 +806,12 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def mod(self, *args, **kwargs):
-        """Numpy-like element-wise modulus: https://numpy.org/doc/stable/reference/generated/numpy.mod.html"""
+        """Numpy-like element-wise mod: https://numpy.org/doc/stable/reference/generated/numpy.mod.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def round(self, *args, **kwargs):
+        """Numpy-like element-wise round: https://numpy.org/doc/stable/reference/generated/numpy.round.html"""
         raise NotImplementedError
 
     # misc
@@ -810,6 +820,11 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def sort(self, *args, **kwargs):
         """Numpy-like sort: https://numpy.org/doc/stable/reference/generated/numpy.sort.html"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def argsort(self, *args, **kwargs):
+        """Numpy-like argsort: https://numpy.org/doc/stable/reference/generated/numpy.argsort.html"""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -835,6 +850,16 @@ class Backend(abc.ABC):
     ):
         """Version of the backend engine."""
         raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_dtype(self, type_name: str):
+        """Backend engine dtype"""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def assert_allclose(self, *args, **kwargs):
+        """Numpy-like testing.assert_allclose: https://numpy.org/doc/stable/reference/generated/numpy.testing.assert_allclose.html"""
+        raise NotImplementedError
 
     # Optimization
     # ^^^^^^^^^^^^^
