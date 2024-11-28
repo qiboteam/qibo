@@ -282,7 +282,7 @@ def sgd(
             callback=callback,
         )
 
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."
