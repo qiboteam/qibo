@@ -603,7 +603,9 @@ refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
 Note that if the Stochastic Gradient Descent optimizer is used then the user
 has to use a backend based on tensorflow or pytorch primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
-To switch the backend one can do ``qibo.set_backend("tensorflow")`` or ``qibo.set_backend("pytorch")``.
+To switch the backend one can do ``qibo.set_backend(backend="qiboml", platform="tensorflow")``
+or ``qibo.set_backend(backend="qiboml", platform="pytorch")``, after ensuring the
+``qiboml`` package has been installed.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
@@ -849,7 +851,7 @@ using the ``pytorch`` framework.
     import torch
 
     from qibo import Circuit, gates, set_backend
-    set_backend("pytorch")
+    set_backend(backend="qiboml", platform="pytorch")
 
     # Optimization parameters
     nepochs = 1000
@@ -1550,8 +1552,10 @@ combined with the readout mitigation:
 Clifford Data Regression (CDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For CDR instead, you don't need to define anything additional. However, keep in mind that the input
-circuit is expected to be decomposed in the set of primitive gates :math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
+For CDR instead, you don't need to define anything additional.
+However, keep in mind that the input circuit is expected to be
+decomposed in the set of primitive gates
+:math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
 
 .. testcode::
 
@@ -1575,14 +1579,16 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
    ...
 
-Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
+Again, the mitigated expected value improves over the noisy one
+and is also slightly better compared to ZNE.
 
 
 Variable Noise CDR (vnCDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Being a combination of ZNE and CDR, vnCDR requires you to define the noise levels as done in ZNE, and the same
-caveat about the input circuit for CDR is valid here as well.
+Being a combination of ZNE and CDR, vnCDR requires you to define
+the noise levels as done in ZNE, and the same caveat about the
+input circuit for CDR is valid here as well.
 
 .. testcode::
 
@@ -1608,8 +1614,10 @@ caveat about the input circuit for CDR is valid here as well.
 
    ...
 
-The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
-however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
+The result is similar to the one obtained by CDR.
+Usually, one would expect slightly better results for vnCDR.
+However, this can substantially vary depending on the circuit
+and the observable considered and, therefore, it is hard to tell
 a priori.
 
 
@@ -1640,8 +1648,11 @@ The use of iCS is straightforward, analogous to CDR and vnCDR.
 
    ...
 
-Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
-This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
+Again, the mitigated expected value improves over the noisy
+one and is also slightly better compared to ZNE.
+This was just a basic example usage of the three methods,
+for all the details about them you should check the API-reference page
+:ref:`Error Mitigation <error-mitigation>`.
 
 .. _timeevol-example:
 

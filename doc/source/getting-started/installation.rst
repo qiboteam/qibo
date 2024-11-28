@@ -7,15 +7,15 @@ Operating systems support
 In the table below we summarize the status of *pre-compiled binaries
 distributed with pypi* for the packages listed above.
 
-+------------------+------+---------+------------+
-| Operating System | qibo | qibojit | tensorflow |
-+==================+======+=========+============+
-| Linux x86        | Yes  | Yes     | Yes        |
-+------------------+------+---------+------------+
-| MacOS >= 10.15   | Yes  | Yes     | Yes        |
-+------------------+------+---------+------------+
-| Windows          | Yes  | Yes     | Yes        |
-+------------------+------+---------+------------+
++------------------+------+---------+-----------+---------+
+| Operating System | qibo | qibojit |Tensorflow | Pytorch |
++==================+======+=========+===========+=========+
+| Linux x86        | Yes  | Yes     | Yes       | Yes     |
++------------------+------+---------+-----------+---------+
+| MacOS >= 10.15   | Yes  | Yes     | Yes       | Yes     |
++------------------+------+---------+-----------+---------+
+| Windows          | Yes  | Yes     | Yes       | Yes     |
++------------------+------+---------+-----------+---------+
 
 .. note::
       All packages are supported for Python >= 3.9.
@@ -148,35 +148,6 @@ Then proceed with the ``qibojit`` installation using ``pip``
 
 _______________________
 
-.. _installing-tensorflow:
-
-tensorflow
-^^^^^^^^^^
-
-If the `TensorFlow <https://www.tensorflow.org>`_ package is installed Qibo
-will detect and provide to the user the possibility to use ``tensorflow``
-backend.
-
-This backend is used by default if ``qibojit`` is not installed, however, if
-needed, in order to switch to the ``tensorflow`` backend please do:
-
-.. code-block::  python
-
-      import qibo
-      qibo.set_backend("tensorflow")
-
-In order to install the package, we recommend the installation using:
-
-.. code-block:: bash
-
-      pip install qibo tensorflow
-
-.. note::
-      TensorFlow can be installed following its `documentation
-      <https://www.tensorflow.org/install>`_.
-
-_______________________
-
 .. _installing-numpy:
 
 numpy
@@ -197,26 +168,45 @@ please do:
 _______________________
 
 
-.. _installing-pytorch:
+.. _installing-qml-backends:
 
-pytorch
-^^^^^^^
+Backends with automatic differentiation support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If the `PyTorch <https://pytorch.org/>`_ package is installed Qibo
-will detect and provide to the user the possibility to use ``pytorch``
-backend.
+If you need automatic differentiation support, for tracing gradients of your
+quantum algorithm or for building some quantum machine learning routine,
+the right backends for you are those provided by the `Qiboml <https://github.com/qiboteam/qiboml>`__
+package.
 
-In order to switch to the ``pytorch`` backend please do:
+In particular, Qiboml currently support `Pytorch <https://pytorch.org/>`_ and
+`Tensorflow <https://www.tensorflow.org>`_ interfaces, integrating the qibo functionalities
+into these well-known machine learning frameworks. Quantum layers can be constructed
+and added to your Pytorch or Tensorflow models, and trained using any supported
+optimization routine.
+
+In order to use these quantum machine learning backends please make sure the
+preferred package is installed following `Tensorflow's <https://www.tensorflow.org/install>`_
+or `Pytorch's <https://pytorch.org/get-started/locally/>`_ installation instructions.
+
+To switch to Tensorflow or Pytorch backend please do:
 
 .. code-block::  python
 
       import qibo
-      qibo.set_backend("pytorch")
+      # in case of Tensorflow
+      qibo.set_backend(backend="qiboml", platform="tensorflow")
+      # in case of Pytorch
+      qibo.set_backend(backend="qiboml", platform="pytorch")
 
-In order to install the package, we recommend the installation using:
+In order to start using automatic differentiation tools with Qibo,
+we recommend the installation using:
 
 .. code-block:: bash
 
-      pip install qibo torch
+      pip install qibo qiboml tensorflow
 
-_______________________
+or
+
+.. code-block:: bash
+
+      pip install qibo qiboml torch

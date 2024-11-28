@@ -2597,6 +2597,7 @@ For a complete list of available backends, refer to the :ref:`Packages <packages
 To create new backends, inherit from :class:`qibo.backends.abstract.Backend` and implement
 its abstract methods. This abstract class defines the required methods for circuit execution.
 
+
 The user can set the backend using the :func:`qibo.set_backend` function.
 
 .. code-block::  python
