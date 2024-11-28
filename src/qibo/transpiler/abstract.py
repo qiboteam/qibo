@@ -7,9 +7,15 @@ from qibo.models import Circuit
 
 
 class Placer(ABC):
+    """Maps logical qubits to physical qubits."""
+
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        """A placer implements the initial logical-physical qubit mapping"""
+        """Initializes the placer.
+
+        Args:
+            connectivity (nx.Graph): hardware topology.
+        """
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args):
@@ -21,9 +27,15 @@ class Placer(ABC):
 
 
 class Router(ABC):
+    """Makes the circuit executable on the given topology."""
+
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        """A router implements the mapping of a circuit on a specific hardware."""
+        """Initializes the router.
+
+        Args:
+            connectivity (nx.Graph): hardware topology.
+        """
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Tuple[Circuit, dict]:
@@ -33,19 +45,19 @@ class Router(ABC):
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): routed circuit.
+            (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and dictionary containing the final wire_names mapping.
         """
 
 
 class Optimizer(ABC):
-    """An optimizer tries to reduce the number of gates during transpilation."""
+    """Reduces the number of gates in the circuit."""
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Circuit:
         """Optimize transpiled circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized.
 
         Returns:
             (:class:`qibo.models.circuit.Circuit`): circuit with optimized number of gates.
