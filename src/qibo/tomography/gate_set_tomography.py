@@ -1,14 +1,13 @@
 from functools import cache
 from inspect import signature
 from itertools import product
-from random import Random
 from typing import List, Union
 
 import numpy as np
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import _check_backend
+from qibo.backends import _check_backend, get_transpiler
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.transpiler.optimizer import Preprocessing
@@ -261,15 +260,7 @@ def GST(
     backend = _check_backend(backend)
 
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
-        transpiler = Passes(
-            connectivity=backend.platform.topology,
-            passes=[
-                Preprocessing(backend.platform.topology),
-                Random(backend.platform.topology),
-                Sabre(backend.platform.topology),
-                Unroller(NativeGates.default()),
-            ],
-        )
+        transpiler = get_transpiler()
 
     matrices = []
     empty_matrices = []

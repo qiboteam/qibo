@@ -3,10 +3,10 @@ from functools import reduce
 
 import numpy as np
 import pytest
-from qiboml.backends import TensorflowBackend
+from qiboml.backends import PyTorchBackend, TensorflowBackend
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import CliffordBackend, PyTorchBackend
+from qibo.backends import CliffordBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,

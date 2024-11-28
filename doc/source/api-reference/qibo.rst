@@ -2595,12 +2595,11 @@ The main calculation engine is defined in the abstract backend object
 :class:`qibo.backends.abstract.Backend`. This object defines the methods
 required by all Qibo models to perform simulation.
 
-Qibo currently provides two different calculation backends, one based on
-numpy and one based on Tensorflow. It is possible to define new backends by
-inheriting :class:`qibo.backends.abstract.Backend` and implementing
-its abstract methods.
+Qibo supports several backends (see the :ref:`Backend drivers section <backend-drivers>`),
+which can be used depending on the specific needs:
+lightweight simulation, quantum machine learning, hardware execution, etc.
 
-An additional backend is shipped as the separate library qibojit.
+Among them, the default choice is a backend provided by the qibojit library.
 This backend is supplemented by custom operators defined under which can be
 used to efficiently apply gates to state vectors or density matrices.
 

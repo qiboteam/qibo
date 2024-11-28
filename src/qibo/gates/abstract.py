@@ -273,10 +273,10 @@ class Gate:
                 circuit.draw()
             .. testoutput::
 
-                q0: ───X─────
-                q1: ───|─o─X─
-                q2: ─o─|─|─o─
-                q3: ─X─o─X───
+                0: ───X─────
+                1: ───|─o─X─
+                2: ─o─|─|─o─
+                3: ─X─o─X───
         """
         if self.is_controlled_by:
             targets = (qubit_map.get(q) for q in self.target_qubits)

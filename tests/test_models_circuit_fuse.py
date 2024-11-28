@@ -228,7 +228,7 @@ def test_fused_gate_draw():
         "q3: ───────────────o──|───────────o──|──[─o──H─]─|──[─U1───]─|─x─\n"
         "q4: ──────────────────o──────────────o───────────o──[─o──H─]─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
