@@ -5,13 +5,13 @@ Here are a few short advanced `how to` examples.
 
 .. _gpu-examples:
 
-How to select hardware devices?
--------------------------------
+How to select classical hardware devices for circuit execution?
+----------------------------------------------------------------
 
-Qibo supports execution on different hardware configurations including CPU with
+Qibo supports execution on different classical hardware configurations including CPU with
 multi-threading, single GPU and multiple GPUs. Here we provide some useful
 information on how to control the devices that Qibo uses for circuit execution
-in order to maximize performance for the available hardware configuration.
+in order to maximize performance for the available classical hardware configuration.
 
 Switching between CPU and GPU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -143,6 +143,14 @@ however the user may create the full state as follows:
     # Access the full state (will double memory usage)
     final_state = result.state()
     # ``final_state`` is a ``tf.Tensor``
+
+
+How to select quantum hardware devices for circuit execution?
+-------------------------------------------------------------
+
+Qibo supports execution on different quantum hardware configurations
+
+
 
 
 How to use callbacks?
@@ -2119,17 +2127,26 @@ rather each term is treated separately every time.
 .. _tutorials_transpiler:
 
 How to use transpile a circuit?
------------------------------
+-------------------------------
 
-Quantum hardware has a specific qubit connectivity and a set of native gates that it can execute. Circuit transpilation is the process of converting a quantum circuit into an equivalent one that can be executed on a given hardware configuration. This is done by applying several passes. The main passes are:
+Quantum hardware has a specific qubit connectivity and a set of native gates that it can execute.
+Circuit transpilation is the process of converting a quantum circuit into an equivalent one
+that can be executed on a given hardware configuration. This is done by applying several passes.
+The main passes are:
 
 - Optimization: Simplifies the circuit by removing redundant gates.
 - Placement: Maps logical qubits to physical qubits to minimize the number of required SWAP gates during routing.
 - Routing: Makes all gates executable by adding SWAP gates where necessary.
 - Unrolling: Decomposes gates into the native gates of the hardware.
 
-Each pass has various algorithms. Since transpilation introduces additional gates, it is important for users to select the most efficient algorithms for their specific application.
-Qibo provides a built-in transpiler :class:`qibo.transpiler.pipeline.Passes`, which can be customized by adding the desired transpilation algorithms. In this example, we used :class:`qibo.transpiler.optimizer.Preprocessing`, :class:`qibo.transpiler.placer.Random`, :class:`qibo.transpiler.router.ShortestPaths`, and :class:`qibo.transpiler.unroller.Unroller` passes to transpile the circuit on a star-shaped hardware connectivity and a custom set of native gates.
+Each pass has various algorithms. Since transpilation introduces additional gates,
+it is important for users to select the most efficient algorithms for their specific application.
+Qibo provides a built-in transpiler :class:`qibo.transpiler.pipeline.Passes`,
+which can be customized by adding the desired transpilation algorithms.
+In this example, we used :class:`qibo.transpiler.optimizer.Preprocessing`,
+:class:`qibo.transpiler.placer.Random`, :class:`qibo.transpiler.router.ShortestPaths`,
+and :class:`qibo.transpiler.unroller.Unroller` passes to transpile the circuit
+on a star-shaped hardware connectivity and a custom set of native gates.
 
 
 .. testcode:: python
