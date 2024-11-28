@@ -2118,7 +2118,7 @@ rather each term is treated separately every time.
 
 .. _tutorials_transpiler:
 
-How to modify the transpiler?
+How to use transpile a circuit?
 -----------------------------
 
 Quantum hardware has a specific qubit connectivity and a set of native gates that it can execute. Circuit transpilation is the process of converting a quantum circuit into an equivalent one that can be executed on a given hardware configuration. This is done by applying several passes. The main passes are:
