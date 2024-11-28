@@ -14,15 +14,17 @@ class Placer(ABC):
         """Initializes the placer.
 
         Args:
-            connectivity (nx.Graph): hardware topology.
+            connectivity (nx.Graph): Hardware topology.
         """
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args):
-        """Find initial qubit mapping. Mapping is saved in the circuit.
+        """Find initial qubit mapping.
+
+        Method works in-place.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be mapped.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
         """
 
 
@@ -34,7 +36,7 @@ class Router(ABC):
         """Initializes the router.
 
         Args:
-            connectivity (nx.Graph): hardware topology.
+            connectivity (nx.Graph): Hardware topology.
         """
 
     @abstractmethod
@@ -42,10 +44,10 @@ class Router(ABC):
         """Match circuit to hardware connectivity.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and dictionary containing the final wire_names mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final logical-physical qubit mapping.
         """
 
 
@@ -57,8 +59,8 @@ class Optimizer(ABC):
         """Optimize transpiled circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): circuit with optimized number of gates.
+            (:class:`qibo.models.circuit.Circuit`): Optimized circuit.
         """

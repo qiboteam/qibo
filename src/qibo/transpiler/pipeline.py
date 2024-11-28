@@ -20,11 +20,11 @@ def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list[str]):
     """Restrict the connectivity to selected qubits.
 
     Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        qubits (list): list of physical qubits to be used.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+        qubits (list): List of qubits to select.
 
     Returns:
-        (:class:`networkx.Graph`): restricted connectivity.
+        (:class:`networkx.Graph`): New restricted connectivity.
     """
     if not set(qubits).issubset(set(connectivity.nodes)):
         raise_error(
@@ -48,14 +48,12 @@ class Passes:
     """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
 
     Args:
-        passes (list, optional): list of passes to be applied sequentially.
-            If ``None``, default transpiler will be used.
-            Defaults to ``None``.
-        connectivity (:class:`networkx.Graph`, optional): physical qubits connectivity.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): native gates.
-            Defaults to :math:`qibo.transpiler.unroller.NativeGates.default`.
-        on_qubits (list, optional): list of physical qubits to be used.
-            If "None" all qubits are used. Defaults to ``None``.
+        passes (list, optional): List of transpiler passes to be applied sequentially.
+            If ``None``, default transpiler will be used. Defaults to ``None``.
+        connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware. Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
+        on_qubits (list, optional): List of qubits to be used in the transpiler.
+            If ``None``, all qubits in the connectivity will be used. Defaults to ``None``.
     """
 
     def __init__(
@@ -72,9 +70,13 @@ class Passes:
         self.passes = [] if passes is None else passes
 
     def __call__(self, circuit):
-        """
-        This function returns the compiled circuits and the dictionary mapping
-        physical (keys) to logical (values) qubit.
+        """Apply the transpiler pipeline to the circuit.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final logical-physical qubit mapping.
         """
 
         final_layout = None
@@ -98,13 +100,13 @@ class Passes:
         return circuit, final_layout
 
     def is_satisfied(self, circuit: Circuit):
-        """Returns ``True`` if the circuit respects the hardware connectivity and native gates, ``False`` otherwise.
+        """Check if the circuit respects the hardware connectivity and native gates.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be checked.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be checked.
 
         Returns:
-            (bool): satisfiability condition.
+            (bool): ``True`` if the circuit respects the hardware connectivity and native gates, ``False`` otherwise.
         """
         try:
             assert_placement(circuit=circuit, connectivity=self.connectivity)
