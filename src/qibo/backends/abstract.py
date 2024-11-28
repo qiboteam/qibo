@@ -1,7 +1,10 @@
 import abc
+import collections
 from typing import Optional, Union
 
-from qibo.config import raise_error
+from qibo.backends import einsum_utils
+from qibo.config import log, raise_error
+from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class Backend(abc.ABC):
@@ -105,244 +108,8 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def zero_state(self, nqubits):  # pragma: no cover
-        """Generate :math:`|000 \\cdots 0 \\rangle` state vector as an array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def zero_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate :math:`|000\\cdots0\\rangle\\langle000\\cdots0|` density matrix as an array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def identity_density_matrix(
-        self, nqubits, normalize: bool = True
-    ):  # pragma: no cover
-        """Generate density matrix
-
-        .. math::
-            \\rho = \\frac{1}{2^\\text{nqubits}} \\, \\sum_{k=0}^{2^\\text{nqubits} - 1} \\,
-                |k \\rangle \\langle k|
-
-        if ``normalize=True``. If ``normalize=False``, returns the unnormalized
-        Identity matrix, which is equivalent to :func:`numpy.eye`.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def plus_state(self, nqubits):  # pragma: no cover
-        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def plus_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate :math:`|+++\\cdots+\\rangle\\langle+++\\cdots+|` density matrix as an array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def matrix(self, gate):  # pragma: no cover
-        """Convert a :class:`qibo.gates.Gate` to the corresponding matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def matrix_parametrized(self, gate):  # pragma: no cover
-        """Equivalent to :meth:`qibo.backends.abstract.Backend.matrix` for parametrized gates."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate(self, gate, state, nqubits):  # pragma: no cover
-        """Apply a gate to state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
-        """Apply a gate to density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate_half_density_matrix(self, gate, state, nqubits):  # pragma: no cover
-        """Apply a gate to one side of the density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_channel(self, channel, state, nqubits):  # pragma: no cover
-        """Apply a channel to state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_channel_density_matrix(self, channel, state, nqubits):  # pragma: no cover
-        """Apply a channel to density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def collapse_state(
-        self, state, qubits, shot, nqubits, normalize=True
-    ):  # pragma: no cover
-        """Collapse state vector according to measurement shot."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def collapse_density_matrix(
-        self, state, qubits, shot, nqubits, normalize=True
-    ):  # pragma: no cover
-        """Collapse density matrix according to measurement shot."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def reset_error_density_matrix(self, gate, state, nqubits):  # pragma: no cover
-        """Apply reset error to density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def thermal_error_density_matrix(self, gate, state, nqubits):  # pragma: no cover
-        """Apply thermal relaxation error to density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None
-    ):  # pragma: no cover
-        """Execute a :class:`qibo.models.circuit.Circuit`."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def execute_circuits(
-        self, circuits, initial_states=None, nshots=None
-    ):  # pragma: no cover
-        """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def execute_circuit_repeated(
-        self, circuit, nshots, initial_state=None
-    ):  # pragma: no cover
-        """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
-
-        Useful for noise simulation using state vectors or for simulating gates
-        controlled by measurement outcomes.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def execute_distributed_circuit(
-        self, circuit, initial_state=None, nshots=None
-    ):  # pragma: no cover
-        """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_symbolic(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):  # pragma: no cover
-        """Dirac representation of a state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_symbolic_density_matrix(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):  # pragma: no cover
-        """Dirac representation of a density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_probabilities(self, state, qubits, nqubits):  # pragma: no cover
-        """Calculate probabilities given a state vector."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_probabilities_density_matrix(
-        self, state, qubits, nqubits
-    ):  # pragma: no cover
-        """Calculate probabilities given a density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def set_seed(self, seed):  # pragma: no cover
-        """Set the seed of the random number generator."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def sample_shots(self, probabilities, nshots):  # pragma: no cover
-        """Sample measurement shots according to a probability distribution."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def aggregate_shots(self, shots):  # pragma: no cover
-        """Collect shots to a single array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def samples_to_binary(self, samples, nqubits):  # pragma: no cover
-        """Convert samples from decimal representation to binary."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def samples_to_decimal(self, samples, nqubits):  # pragma: no cover
-        """Convert samples from binary representation to decimal."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_frequencies(self, samples):  # pragma: no cover
-        """Calculate measurement frequencies from shots."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def update_frequencies(
-        self, frequencies, probabilities, nsamples
-    ):  # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def sample_frequencies(self, probabilities, nshots):  # pragma: no cover
-        """Sample measurement frequencies according to a probability distribution."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_norm(self, state, order=2):  # pragma: no cover
-        """Calculate norm of a state vector.
-
-        For specifications on possible values of the parameter ``order``
-        for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
-        """Calculate norm of a density matrix. Default is the ``nuclear`` norm.
-
-        If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian (also known as trace norm).
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_overlap(self, state1, state2):  # pragma: no cover
-        """Calculate overlap of two state vectors."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
-        """Calculate overlap of two density matrices."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_eigenvalues(
-        self, matrix, k: int = 6, hermitian: bool = True
-    ):  # pragma: no cover
-        """Calculate eigenvalues of a matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -350,20 +117,6 @@ class Backend(abc.ABC):
         self, matrix, k: int = 6, hermitian: bool = True
     ):  # pragma: no cover
         """Calculate eigenvectors of a matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_expectation_state(
-        self, hamiltonian, state, normalize
-    ):  # pragma: no cover
-        """Calculate expectation value of a state vector given the observable matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_expectation_density_matrix(
-        self, hamiltonian, state, normalize
-    ):  # pragma: no cover
-        """Calculate expectation value of a density matrix given the observable matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -392,45 +145,693 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
-        """Calculate the Singular Value Decomposition of ``matrix``."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_jacobian_matrix(
         self, circuit, parameters, initial_state=None, return_complex: bool = True
     ):  # pragma: no cover
         """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def calculate_hamiltonian_matrix_product(
-        self, matrix1, matrix2
-    ):  # pragma: no cover
-        """Multiply two matrices."""
-        raise_error(NotImplementedError)
+    def zero_state(self, nqubits):
+        state = self.zeros(2**nqubits, dtype=self.dtype)
+        state[0] = 1
+        return state
 
-    @abc.abstractmethod
-    def calculate_hamiltonian_state_product(self, matrix, state):  # pragma: no cover
-        """Multiply a matrix to a state vector or density matrix."""
-        raise_error(NotImplementedError)
+    def zero_density_matrix(self, nqubits):
+        state = self.zeros(2 * (2**nqubits,), dtype=self.dtype)
+        state[0, 0] = 1
+        return state
 
-    @abc.abstractmethod
-    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):  # pragma: no cover
-        raise_error(NotImplementedError)
+    def identity_density_matrix(self, nqubits, normalize: bool = True):
+        state = self.eye(2**nqubits, dtype=self.dtype)
+        if normalize is True:
+            state /= 2**nqubits
+        return state
+
+    def plus_state(self, nqubits):
+        state = self.ones(2**nqubits, dtype=self.dtype)
+        state /= self.sqrt(2**nqubits)
+        return state
+
+    def plus_density_matrix(self, nqubits):
+        state = self.ones(2 * (2**nqubits,), dtype=self.dtype)
+        state /= 2**nqubits
+        return state
+
+    def matrix(self, gate):
+        """Convert a gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if callable(_matrix):
+            _matrix = _matrix(2 ** len(gate.target_qubits))
+        return self.cast(_matrix, dtype=_matrix.dtype)
+
+    def matrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+        else:
+            _matrix = _matrix(*gate.parameters)
+        return self.cast(_matrix, dtype=_matrix.dtype)
+
+    def apply_gate(self, gate, state, nqubits):
+        state = self.reshape(state, nqubits * (2,))
+        matrix = gate.matrix(self)
+        if gate.is_controlled_by:
+            matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+            ncontrol = len(gate.control_qubits)
+            nactive = nqubits - ncontrol
+            order, targets = einsum_utils.control_order(gate, nqubits)
+            state = self.transpose(state, order)
+            # Apply `einsum` only to the part of the state where all controls
+            # are active. This should be `state[-1]`
+            state = self.reshape(state, (2**ncontrol,) + nactive * (2,))
+            opstring = einsum_utils.apply_gate_string(targets, nactive)
+            updates = self.einsum(opstring, state[-1], matrix)
+            # Concatenate the updated part of the state `updates` with the
+            # part of of the state that remained unaffected `state[:-1]`.
+            state = self.concatenate([state[:-1], updates[None]], axis=0)
+            state = self.reshape(state, nqubits * (2,))
+            # Put qubit indices back to their proper places
+            state = self.transpose(state, einsum_utils.reverse_order(order))
+        else:
+            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            state = self.einsum(opstring, state, matrix)
+        return self.reshape(state, (2**nqubits,))
+
+    def apply_gate_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.matrix(self)
+        if gate.is_controlled_by:
+            matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+            matrixc = self.conj(matrix)
+            ncontrol = len(gate.control_qubits)
+            nactive = nqubits - ncontrol
+            n = 2**ncontrol
+
+            order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
+            state = self.transpose(state, order)
+            state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+
+            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
+                targets, nactive
+            )
+            state01 = state[: n - 1, n - 1]
+            state01 = self.einsum(rightc, state01, matrixc)
+            state10 = state[n - 1, : n - 1]
+            state10 = self.einsum(leftc, state10, matrix)
+
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                targets, nactive
+            )
+            state11 = state[n - 1, n - 1]
+            state11 = self.einsum(right, state11, matrixc)
+            state11 = self.einsum(left, state11, matrix)
+
+            state00 = state[range(n - 1)]
+            state00 = state00[:, range(n - 1)]
+            state01 = self.concatenate([state00, state01[:, None]], axis=1)
+            state10 = self.concatenate([state10, state11[None]], axis=0)
+            state = self.concatenate([state01, state10[None]], axis=0)
+            state = self.reshape(state, 2 * nqubits * (2,))
+            state = self.transpose(state, einsum_utils.reverse_order(order))
+        else:
+            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrixc = self.conj(matrix)
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
+            state = self.einsum(right, state, matrixc)
+            state = self.einsum(left, state, matrix)
+        return self.reshape(state, 2 * (2**nqubits,))
+
+    def apply_gate_half_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.matrix(self)
+        if gate.is_controlled_by:  # pragma: no cover
+            raise_error(
+                NotImplementedError,
+                "Gate density matrix half call is "
+                "not implemented for ``controlled_by``"
+                "gates.",
+            )
+        else:
+            matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            left, _ = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
+            state = self.einsum(left, state, matrix)
+        return self.reshape(state, 2 * (2**nqubits,))
+
+    def apply_channel(self, channel, state, nqubits):
+        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
+        index = self.sample_shots(probabilities, 1)[0]
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = self.apply_gate(gate, state, nqubits)
+        return state
+
+    def apply_channel_density_matrix(self, channel, state, nqubits):
+        state = self.cast(state)
+        new_state = (1 - channel.coefficient_sum) * state
+        for coeff, gate in zip(channel.coefficients, channel.gates):
+            new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
+        return new_state
+
+    def _append_zeros(self, state, qubits, results):
+        """Helper method for collapse."""
+        for q, r in zip(qubits, results):
+            state = self.expand_dims(state, q)
+            state = (
+                self.concatenate([self.zeros(state.shape, dtype=state.dtype), state], q)
+                if r == 1
+                else self.concatenate(
+                    [state, self.zeros(state.shape, dtype=state.dtype)], q
+                )
+            )
+        return state
+
+    def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
+        state = self.cast(state)
+        shape = state.shape
+        binshot = self.samples_to_binary(shot, len(qubits))[0]
+        state = self.reshape(state, nqubits * (2,))
+        order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
+        state = self.transpose(state, order)
+        subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
+        state = self.reshape(state, subshape)[int(shot)]
+        if normalize:
+            norm = self.sqrt(self.sum(self.abs(state) ** 2))
+            state = state / norm
+        state = self._append_zeros(state, qubits, binshot)
+        return self.reshape(state, shape)
+
+    def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True):
+        state = self.cast(state)
+        shape = state.shape
+        binshot = list(self.samples_to_binary(shot, len(qubits))[0])
+        order = list(qubits) + [q + nqubits for q in qubits]
+        order.extend(q for q in range(nqubits) if q not in qubits)
+        order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        state = self.transpose(state, order)
+        subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
+        state = self.reshape(state, subshape)[int(shot), int(shot)]
+        n = 2 ** (len(state.shape) // 2)
+        if normalize:
+            norm = self.trace(self.reshape(state, (n, n)))
+            state = state / norm
+        qubits = qubits + [q + nqubits for q in qubits]
+        state = self._append_zeros(state, qubits, 2 * binshot)
+        return self.reshape(state, shape)
+
+    def reset_error_density_matrix(self, gate, state, nqubits):
+        from qibo.gates import X  # pylint: disable=C0415
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            partial_trace,
+        )
+
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits[0]
+        p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
+        trace = partial_trace(state, (q,), backend=self)
+        trace = self.reshape(trace, 2 * (nqubits - 1) * (2,))
+        zero = self.zero_density_matrix(1)
+        zero = self.tensordot(trace, zero, 0)
+        order = list(range(2 * nqubits - 2))
+        order.insert(q, 2 * nqubits - 2)
+        order.insert(q + nqubits, 2 * nqubits - 1)
+        zero = self.reshape(self.transpose(zero, order), shape)
+        state = (1 - p_0 - p_1) * state + p_0 * zero
+        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+
+    def thermal_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        state = self.apply_gate(gate, self.ravel(state), 2 * nqubits)
+        return self.reshape(state, shape)
+
+    def depolarizing_error_density_matrix(self, gate, state, nqubits):
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
+            partial_trace,
+        )
+
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits
+        lam = gate.init_kwargs["lam"]
+        trace = partial_trace(state, q, backend=self)
+        trace = self.reshape(trace, 2 * (nqubits - len(q)) * (2,))
+        identity = self.identity_density_matrix(len(q))
+        identity = self.reshape(identity, 2 * len(q) * (2,))
+        identity = self.tensordot(trace, identity, 0)
+        qubits = list(range(nqubits))
+        for j in q:
+            qubits.pop(qubits.index(j))
+        qubits.sort()
+        qubits += list(q)
+        qubit_1 = list(range(nqubits - len(q))) + list(
+            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
+        )
+        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
+            range(2 * nqubits - len(q), 2 * nqubits)
+        )
+        qs = [qubit_1, qubit_2]
+        order = []
+        for qj in qs:
+            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            order += qj
+        identity = self.reshape(self.transpose(identity, order), shape)
+        state = (1 - lam) * state + lam * identity
+        return state
+
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+
+        if isinstance(initial_state, type(circuit)):
+            if not initial_state.density_matrix == circuit.density_matrix:
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
+                      initial state for circuit with density_matrix {circuit.density_matrix}.""",
+                )
+            elif (
+                not initial_state.accelerators == circuit.accelerators
+            ):  # pragma: no cover
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
+                      initial state for circuit with accelerators {circuit.density_matrix}.""",
+                )
+            else:
+                return self.execute_circuit(initial_state + circuit, None, nshots)
+        elif initial_state is not None:
+            initial_state = self.cast(initial_state)
+            valid_shape = (
+                2 * (2**circuit.nqubits,)
+                if circuit.density_matrix
+                else (2**circuit.nqubits,)
+            )
+            if tuple(initial_state.shape) != valid_shape:
+                raise_error(
+                    ValueError,
+                    f"Given initial state has shape {initial_state.shape} instead of "
+                    f"the expected {valid_shape}.",
+                )
+
+        if circuit.repeated_execution:
+            if circuit.measurements or circuit.has_collapse:
+                return self.execute_circuit_repeated(circuit, nshots, initial_state)
+            else:
+                raise_error(
+                    RuntimeError,
+                    "Attempting to perform noisy simulation with `density_matrix=False` "
+                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                    + "statistics of the outcomes please include measurements in the circuit, "
+                    + "otherwise set `density_matrix=True` to recover the final state.",
+                )
+
+        if circuit.accelerators:  # pragma: no cover
+            return self.execute_distributed_circuit(circuit, initial_state, nshots)
+
+        try:
+            nqubits = circuit.nqubits
+
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    state = self.cast(initial_state)
+
+                for gate in circuit.queue:
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
+            else:
+                if initial_state is None:
+                    state = self.zero_state(nqubits)
+                else:
+                    state = self.cast(initial_state)
+
+                for gate in circuit.queue:
+                    state = gate.apply(self, state, nqubits)
+
+            if circuit.has_unitary_channel:
+                # here we necessarily have `density_matrix=True`, otherwise
+                # execute_circuit_repeated would have been called
+                if circuit.measurements:
+                    circuit._final_state = CircuitResult(
+                        state, circuit.measurements, backend=self, nshots=nshots
+                    )
+                    return circuit._final_state
+                else:
+                    circuit._final_state = QuantumState(state, backend=self)
+                    return circuit._final_state
+
+            else:
+                if circuit.measurements:
+                    circuit._final_state = CircuitResult(
+                        state, circuit.measurements, backend=self, nshots=nshots
+                    )
+                    return circuit._final_state
+                else:
+                    circuit._final_state = QuantumState(state, backend=self)
+                    return circuit._final_state
+
+        except self.oom_error:
+            raise_error(
+                RuntimeError,
+                f"State does not fit in {self.device} memory."
+                "Please switch the execution device to a "
+                "different one using ``qibo.set_device``.",
+            )
+
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=1000, processes=None
+    ):
+        from qibo.parallel import parallel_circuits_execution
+
+        return parallel_circuits_execution(
+            circuits, initial_states, nshots, processes, backend=self
+        )
+
+    def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
+        """
+        Execute the circuit `nshots` times to retrieve probabilities, frequencies
+        and samples. Note that this method is called only if a unitary channel
+        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
+        if some collapsing measurement is performed.
+        """
+
+        if (
+            circuit.has_collapse
+            and not circuit.measurements
+            and not circuit.density_matrix
+        ):
+            raise_error(
+                RuntimeError,
+                "The circuit contains only collapsing measurements (`collapse=True`) but "
+                + "`density_matrix=False`. Please set `density_matrix=True` to retrieve "
+                + "the final state after execution.",
+            )
+
+        results, final_states = [], []
+        nqubits = circuit.nqubits
+
+        if not circuit.density_matrix:
+            samples = []
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+
+        for _ in range(nshots):
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    state = self.cast(initial_state, copy=True)
+
+                for gate in circuit.queue:
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply_density_matrix(self, state, nqubits)
+            else:
+                if circuit.accelerators:  # pragma: no cover
+                    # pylint: disable=E1111
+                    state = self.execute_distributed_circuit(circuit, initial_state)
+                else:
+                    if initial_state is None:
+                        state = self.zero_state(nqubits)
+                    else:
+                        state = self.cast(initial_state, copy=True)
+
+                    for gate in circuit.queue:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = gate.apply(self, state, nqubits)
+
+            if circuit.density_matrix:
+                final_states.append(state)
+            if circuit.measurements:
+                result = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=1
+                )
+                sample = result.samples()[0]
+                results.append(sample)
+                if not circuit.density_matrix:
+                    samples.append("".join([str(int(s)) for s in sample]))
+                for gate in circuit.measurements:
+                    gate.result.reset()
+
+        if circuit.density_matrix:  # this implies also it has_collapse
+            assert circuit.has_collapse
+            final_state = self.cast(self.mean(self.to_numpy(final_states), 0))
+            if circuit.measurements:
+                final_result = CircuitResult(
+                    final_state,
+                    circuit.measurements,
+                    backend=self,
+                    samples=self.aggregate_shots(results),
+                    nshots=nshots,
+                )
+            else:
+                final_result = QuantumState(final_state, backend=self)
+            circuit._final_state = final_result
+            return final_result
+        else:
+            final_result = MeasurementOutcomes(
+                circuit.measurements,
+                backend=self,
+                samples=self.aggregate_shots(results),
+                nshots=nshots,
+            )
+            final_result._repeated_execution_frequencies = self.calculate_frequencies(
+                samples
+            )
+            circuit._final_state = final_result
+            return final_result
+
+    def calculate_symbolic(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        state = self.to_numpy(state)
+        terms = []
+        for i in self.nonzero(state)[0]:
+            b = bin(i)[2:].zfill(nqubits)
+            if self.abs(state[i]) >= cutoff:
+                x = self.round(state[i], decimals)
+                terms.append(f"{x}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    def calculate_symbolic_density_matrix(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        state = self.to_numpy(state)
+        terms = []
+        indi, indj = self.nonzero(state)
+        for i, j in zip(indi, indj):
+            bi = bin(i)[2:].zfill(nqubits)
+            bj = bin(j)[2:].zfill(nqubits)
+            if self.abs(state[i, j]) >= cutoff:
+                x = self.round(state[i, j], decimals)
+                terms.append(f"{x}|{bi}><{bj}|")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    def _order_probabilities(self, probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        unmeasured, reduced = [], {}
+        for i in range(nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return self.transpose(probs, [reduced.get(i) for i in qubits])
+
+    def calculate_probabilities(self, state, qubits, nqubits):
+        rtype = self.real(state).dtype
+        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+        state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
+        probs = self.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+        return self.ravel(self._order_probabilities(probs, qubits, nqubits))
+
+    def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(nqubits) if i not in qubits)
+        order = order + tuple(i + nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+        state = self.reshape(state, 2 * nqubits * (2,))
+        state = self.reshape(self.transpose(state, order), shape)
+        probs = self.abs(self.einsum("abab->a", state))
+        probs = self.reshape(probs, len(qubits) * (2,))
+        return self.ravel(self._order_probabilities(probs, qubits, nqubits))
+
+    def set_seed(self, seed):
+        self.seed(seed)
+
+    def sample_shots(self, probabilities, nshots):
+        return self.random_choice(
+            range(len(probabilities)), size=nshots, p=probabilities
+        )
+
+    def aggregate_shots(self, shots):
+        return self.cast(shots, dtype=shots[0].dtype)
+
+    def samples_to_binary(self, samples, nqubits):
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=self.get_dtype("int32"))
+        return self.mod(self.right_shift(samples[:, None], qrange), 2)
+
+    def samples_to_decimal(self, samples, nqubits):
+        ### This is faster just staying @ NumPy.
+        ## --> should we keep this method abstract then?
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=self.get_dtype("int32"))
+        qrange = (2**qrange)[:, None]
+        samples = self.cast(samples, dtype=self.get_dtype("int32"))
+        return self.matmul(samples, qrange)[:, 0]
+
+    def calculate_frequencies(self, samples):
+        # Samples are a list of strings so there is no advantage in using other backends
+        res, counts = self.unique(samples, return_counts=True)
+        res = self.to_numpy(res).tolist()
+        counts = self.to_numpy(counts).tolist()
+        return collections.Counter(dict(zip(res, counts)))
+
+    def update_frequencies(self, frequencies, probabilities, nsamples):
+        samples = self.sample_shots(probabilities, nsamples)
+        res, counts = self.unique(samples, return_counts=True)
+        frequencies[res] += counts
+        return frequencies
+
+    def sample_frequencies(self, probabilities, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+
+        nprobs = probabilities / self.sum(probabilities)
+        frequencies = self.zeros(len(nprobs), dtype=self.get_dtype("int64"))
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
+        frequencies = self.update_frequencies(
+            frequencies, nprobs, nshots % SHOT_BATCH_SIZE
+        )
+        return collections.Counter(
+            {i: int(f) for i, f in enumerate(frequencies) if f > 0}
+        )
+
+    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+        noiseless_samples = self.cast(noiseless_samples, dtype=noiseless_samples.dtype)
+        fprobs = self.cast(bitflip_probabilities, dtype="float64")
+        sprobs = self.cast(self.rand(*noiseless_samples.shape), dtype="float64")
+        flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
+        noisy_samples = noisy_samples - noiseless_samples * flip_1
+        return noisy_samples
+
+    def calculate_norm(self, state, order=2):
+        state = self.cast(state)
+        return self.linalg_norm(state, order)
+
+    def calculate_norm_density_matrix(self, state, order="nuc"):
+        state = self.cast(state)
+        return self.linalg_norm(state, ord=order)
+
+    def calculate_overlap(self, state1, state2):
+        return self.abs(self.sum(self.conj(self.cast(state1)) * self.cast(state2)))
+
+    def calculate_overlap_density_matrix(self, state1, state2):
+        return self.trace(
+            self.matmul(self.conj(self.cast(state1)).T, self.cast(state2))
+        )
+
+    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
+        if self.is_sparse(matrix):
+            log.warning(
+                "Calculating sparse matrix eigenvectors because "
+                "sparse modules do not provide ``eigvals`` method."
+            )
+            return self.calculate_eigenvectors(matrix, k=k)[0]
+        if hermitian:
+            return self.eigvalsh(matrix)
+        return self.eigvals(matrix)
+
+    def calculate_expectation_state(self, hamiltonian, state, normalize):
+        statec = self.conj(state)
+        hstate = hamiltonian @ state
+        ev = self.real(self.sum(statec * hstate))
+        if normalize:
+            ev /= self.sum(self.square(self.abs(state)))
+        return ev
+
+    def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
+        ev = self.real(self.trace(self.cast(hamiltonian @ state)))
+        if normalize:
+            norm = self.real(self.trace(state))
+            ev /= norm
+        return ev
+
+    def calculate_singular_value_decomposition(self, matrix):
+        return self.linalg_svd(matrix)
+
+    # TODO: remove this method
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        return matrix1 @ matrix2
+
+    # TODO: remove this method
+    def calculate_hamiltonian_state_product(self, matrix, state):
+        if len(tuple(state.shape)) > 2:
+            raise_error(
+                ValueError,
+                f"Cannot multiply Hamiltonian with rank-{len(tuple(state.shape))} tensor.",
+            )
+        return matrix @ state
+
+    def _test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+            ]
+        elif name == "test_probabilistic_measurement":
+            return {0: 249, 1: 231, 2: 253, 3: 267}
+        elif name == "test_unbalanced_probabilistic_measurement":
+            return {0: 171, 1: 148, 2: 161, 3: 520}
+        elif name == "test_post_measurement_bitflips_on_circuit":
+            return [
+                {5: 30},
+                {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
+            ]
+
+    def _calculate_negative_power_singular_matrix(
+        self, matrix, power: Union[float, int], precision_singularity: float
+    ):
+        """Calculate negative power of singular matrix."""
+        U, S, Vh = self.calculate_singular_value_decomposition(matrix)
+        # cast needed because of different dtypes in `torch`
+        S = self.cast(S)
+        S_inv = self.where(self.abs(S) < precision_singularity, 0.0, S**power)
+
+        return self.inverse(Vh) @ self.diag(S_inv) @ self.inverse(U)
 
     def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
-
-    @abc.abstractmethod
-    def _test_regressions(self, name):  # pragma: no cover
-        """Correct outcomes for tests that involve random numbers.
-
-        The outcomes of such tests depend on the backend.
-        """
-        raise_error(NotImplementedError)
 
     # --------------------------------------------------------------------------------------------
     # New methods introduced by the refactor:
