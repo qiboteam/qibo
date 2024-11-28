@@ -299,7 +299,7 @@ class Circuit:
             if len(wire_names) != self.nqubits:
                 raise_error(
                     ValueError,
-                    "Number of wire names must be equal to the number of qubits, "
+                    f"Number of wire names must be equal to the number of qubits ({self.nqubits}), "
                     f"but is {len(wire_names)}.",
                 )
             self._wire_names = wire_names.copy()
