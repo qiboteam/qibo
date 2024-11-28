@@ -433,7 +433,12 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     # --------------------------------------------------------------------------------------------
-    # newly introduced by the refactor
+    # New methods introduced by the refactor:
+    # in my view this might be considered as some sort of the core of the backend,
+    # i.e. the computation engine that defines how the single small operations
+    # are performed and it is going to be completely abstract. All the methods defined
+    # above are possibly going to be combination of the core methods below and, therefore,
+    # directly implemented in the abstract backend.
 
     # array creation and manipulation
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -526,11 +531,6 @@ class Backend(abc.ABC):
     def diagonal(self, *args, **kwargs):
         """Numpy-like diagonal: https://numpy.org/doc/stable/reference/generated/numpy.diagonal.html"""
         raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def flatnonzero(self, *args, **kwargs):
-        """Numpy-like flatnonzero: https://numpy.org/doc/stable/reference/generated/numpy.flatnonzero.html"""
-        raise NotImplementedError
 
     @abc.abstractmethod
     def nonzero(self, *args, **kwargs):
