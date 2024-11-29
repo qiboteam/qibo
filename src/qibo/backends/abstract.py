@@ -814,6 +814,39 @@ class Backend(abc.ABC):
         ud = self.transpose(self.conj(eigenvectors))
         return self.matmul(eigenvectors, self.matmul(expd, ud))
 
+    def calculate_matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+    ):
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return self._calculate_negative_power_singular_matrix(
+                    matrix, power, precision_singularity
+                )
+
+        return self.fractional_matrix_power(matrix, power)
+
+    def _calculate_negative_power_singular_matrix(
+        self, matrix, power: Union[float, int], precision_singularity: float
+    ):
+        """Calculate negative power of singular matrix."""
+        U, S, Vh = self.calculate_singular_value_decomposition(matrix)
+        # cast needed because of different dtypes in `torch`
+        S = self.cast(S)
+        S_inv = self.where(self.abs(S) < precision_singularity, 0.0, S**power)
+
+        return self.inverse(Vh) @ self.diag(S_inv) @ self.inverse(U)
+
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.conj(state)
         hstate = hamiltonian @ state
@@ -863,17 +896,6 @@ class Backend(abc.ABC):
                 {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
             ]
-
-    def _calculate_negative_power_singular_matrix(
-        self, matrix, power: Union[float, int], precision_singularity: float
-    ):
-        """Calculate negative power of singular matrix."""
-        U, S, Vh = self.calculate_singular_value_decomposition(matrix)
-        # cast needed because of different dtypes in `torch`
-        S = self.cast(S)
-        S_inv = self.where(self.abs(S) < precision_singularity, 0.0, S**power)
-
-        return self.inverse(Vh) @ self.diag(S_inv) @ self.inverse(U)
 
     def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
         value = self.execute_circuit(circuit)._state
