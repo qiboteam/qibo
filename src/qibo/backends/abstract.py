@@ -80,11 +80,12 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def cast(self, x, copy=False):  # pragma: no cover
+    def cast(self, x, dtype=None, copy=False):  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
         Args:
             x: Object to cast to array.
+            dtype: native backend array dtype.
             copy (bool): If ``True`` a copy of the object is created in memory.
         """
         raise_error(NotImplementedError)
@@ -99,38 +100,6 @@ class Backend(abc.ABC):
         """Compile the given method.
 
         Available only for the tensorflow backend.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_eigenvectors(
-        self, matrix, k: int = 6, hermitian: bool = True
-    ):  # pragma: no cover
-        """Calculate eigenvectors of a matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_matrix_exp(
-        self, a, matrix, eigenvectors=None, eigenvalues=None
-    ):  # pragma: no cover
-        """Calculate matrix exponential of a matrix.
-        If the eigenvectors and eigenvalues are given the matrix diagonalization is
-        used for exponentiation.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_matrix_power(
-        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
-    ):  # pragma: no cover
-        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
-        i.e. :math:`A^{\\alpha}`.
-
-        .. note::
-            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
-            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
-            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
-            an integer.
         """
         raise_error(NotImplementedError)
 
@@ -648,6 +617,10 @@ class Backend(abc.ABC):
             circuit._final_state = final_result
             return final_result
 
+    @abc.abstractmethod
+    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
+        raise_error(NotImplementedError)
+
     def calculate_symbolic(
         self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
     ):
@@ -1023,7 +996,7 @@ class Backend(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def delete(a, obj, axis=None):
+    def delete(self, a, obj, axis=None):
         """Numpy-like delete function: https://numpy.org/doc/stable/reference/generated/numpy.delete.html"""
         raise NotImplementedError
 
@@ -1348,13 +1321,6 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def finfo(self, *args, **kwargs):
         """Numpy-like finfo: https://numpy.org/doc/stable/reference/generated/numpy.finfo.html"""
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def device(
-        self,
-    ):
-        """Computation device, e.g. CPU, GPU, ..."""
         raise NotImplementedError
 
     @abc.abstractmethod

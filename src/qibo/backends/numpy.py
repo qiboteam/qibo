@@ -550,11 +550,6 @@ class NumpyBackend(Backend):
         return np.finfo(dtype)
 
     @staticmethod
-    def device():
-        """Computation device, e.g. CPU, GPU, ..."""
-        return "CPU"
-
-    @staticmethod
     def __version__():
         """Version of the backend engine."""
         return np.__version__
