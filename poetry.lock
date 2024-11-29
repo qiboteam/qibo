@@ -4243,7 +4243,7 @@ develop = false
 [package.dependencies]
 numba = ">=0.59.0"
 psutil = "^5.9.5"
-qibo = "^0.2.13"
+qibo = {git = "https://github.com/qiboteam/qibo", branch = "backend_refactor"}
 scipy = "^1.10.1"
 
 [package.extras]
@@ -4253,8 +4253,8 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "HEAD"
-resolved_reference = "290b1776c2ba272f1c9eb59cba1d31964a239f2a"
+reference = "backend_refactor"
+resolved_reference = "10f6d8cf3da9971cddc8f41282c0b6e04c96e6c0"
 
 [[package]]
 name = "qiboml"
@@ -5584,4 +5584,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "9f7f77d0d0c0d6dffd3df0cee71684ad08faa320ae15d36c192bec7b590d54bc"
+content-hash = "81af6b3dcd0dd854722a50e06a1799ac1d47d53444432635af890c6222bf4324"
