@@ -39,9 +39,9 @@ evaluation performance, e.g.:
 .. code-block::  python
 
     import numpy as np
-    # switch backend to "tensorflow"
+    # switch backend to "tensorflow" through the Qiboml provider
     import qibo
-    qibo.set_backend("tensorflow")
+    qibo.set_backend(backend="qiboml", platform="tensorflow")
     from qibo import Circuit, gates
 
     circuit = Circuit(2)
@@ -54,7 +54,7 @@ evaluation performance, e.g.:
         init_state = np.ones(4) / 2.0 + i
         circuit(init_state)
 
-Note that compiling is only supported when the native ``tensorflow`` backend is
+Note that compiling is only supported when the ``tensorflow`` backend is
 used. This backend is much slower than ``qibojit`` which uses custom operators
 to apply gates.
 
@@ -226,7 +226,7 @@ For applications that require the state vector to be collapsed during measuremen
 we refer to the :ref:`How to collapse state during measurements? <collapse-examples>`
 
 The measured shots are obtained using pseudo-random number generators of the
-underlying backend (numpy or Tensorflow). If the user has installed a custom
+underlying backend. If the user has installed a custom
 backend (eg. qibojit) and asks for frequencies with more than 100000 shots,
 a custom Metropolis algorithm will be used to obtain the corresponding samples,
 for increase performance. The user can change the threshold for which this
@@ -313,20 +313,20 @@ For example
     circuit.draw()
     # Prints
     '''
-    q0: ─H─U1─U1─U1─U1───────────────────────────x───
-    q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
-    q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
-    q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
-    q4: ────────────o──────────o───────o────o──H─x───
+    0: ─H─U1─U1─U1─U1───────────────────────────x───
+    1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
+    2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
+    3: ─────────o──|───────o──|────o──|──H─U1───|─x─
+    4: ────────────o──────────o───────o────o──H─x───
     '''
 .. testoutput::
     :hide:
 
-    q0: ─H─U1─U1─U1─U1───────────────────────────x───
-    q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
-    q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
-    q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
-    q4: ────────────o──────────o───────o────o──H─x───
+    0: ─H─U1─U1─U1─U1───────────────────────────x───
+    1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
+    2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
+    3: ─────────o──|───────o──|────o──|──H─U1───|─x─
+    4: ────────────o──────────o───────o────o──H─x───
 
 How to visualize a circuit with style?
 --------------------------------------

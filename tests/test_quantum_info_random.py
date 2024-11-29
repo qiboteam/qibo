@@ -173,7 +173,8 @@ def test_random_unitary(backend, measure):
     matrix = random_unitary(dims, measure=measure, backend=backend)
     matrix_dagger = backend.conj(matrix).T
     matrix_inv = (
-        backend.inverse(matrix) if backend.name == "pytorch" else np.linalg.inv(matrix)
+        backend.inverse(matrix)
+        # backend.inverse(matrix) if backend.platform == "pytorch" else np.linalg.inv(matrix)
     )
     norm = float(
         backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2)

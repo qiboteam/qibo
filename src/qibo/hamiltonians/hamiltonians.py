@@ -7,7 +7,6 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo.backends import PyTorchBackend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -266,7 +265,7 @@ class Hamiltonian(AbstractHamiltonian):
             if self.backend.real(o) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
-                axis = (0,) if isinstance(self.backend, PyTorchBackend) else 0
+                axis = (0,) if (self.backend.platform == "pytorch") else 0
                 r._eigenvalues = o * self.backend.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
             if self.backend.real(o) > 0:  # TODO: see above

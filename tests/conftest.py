@@ -5,6 +5,7 @@ Pytest fixtures.
 
 import sys
 
+import networkx as nx
 import pytest
 
 from qibo.backends import _Global, construct_backend
@@ -79,6 +80,40 @@ def clear():
     yield
     _Global._backend = None
     _Global._transpiler = None
+
+
+@pytest.fixture
+def star_connectivity():
+    def _star_connectivity(names=list(range(5)), middle_qubit_idx=2):
+        chip = nx.Graph()
+        chip.add_nodes_from(names)
+        graph_list = [
+            (names[i], names[middle_qubit_idx])
+            for i in range(len(names))
+            if i != middle_qubit_idx
+        ]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    return _star_connectivity
+
+
+@pytest.fixture
+def grid_connectivity():
+    def _grid_connectivity(names=list(range(5))):
+        chip = nx.Graph()
+        chip.add_nodes_from(names)
+        graph_list = [
+            (names[0], names[1]),
+            (names[1], names[2]),
+            (names[2], names[3]),
+            (names[3], names[0]),
+            (names[0], names[4]),
+        ]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    return _grid_connectivity
 
 
 def pytest_generate_tests(metafunc):

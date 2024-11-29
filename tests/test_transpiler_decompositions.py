@@ -5,7 +5,8 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
-from qibo.transpiler.unroller import NativeGates, assert_decomposition, translate_gate
+from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.unroller import NativeGates, translate_gate
 
 default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
 

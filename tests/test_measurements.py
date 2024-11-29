@@ -434,7 +434,7 @@ def test_measurement_basis(backend, nqubits, outcome):
 
 
 def test_measurement_basis_list(backend):
-    c = Circuit(4)
+    c = Circuit(4, wire_names=["q0", "q1", "q2", "q3"])
     c.add(gates.H(0))
     c.add(gates.X(2))
     c.add(gates.H(2))

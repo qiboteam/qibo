@@ -119,8 +119,23 @@ class Circuit:
     This circuit is symbolic and cannot perform calculations.
     A specific backend has to be used for performing calculations.
 
+    Circuits can be created with a specific number of qubits and wire names.
+    Example:
+        .. testcode::
+            from qibo import Circuit
+            c = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
+            c = Circuit(["A", "B", "C", "D", "E"])
+            c = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
+            c = Circuit(wire_names=["A", "B", "C", "D", "E"])
+
     Args:
-        nqubits (int): Total number of qubits in the circuit.
+        nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
+        wire_names (list, optional): List of wire names.
+            - Either ``nqubits`` or ``wire_names`` must be provided.
+            - If only ``nqubits`` is provided, wire names will default to [``0``, ``1``, ..., ``nqubits - 1``].
+            - If only ``wire_names`` is provided, ``nqubits`` will be set to the length of ``wire_names``.
+            - ``nqubits`` and ``wire_names`` must be consistent with each other.
+
         init_kwargs (dict): a dictionary with the following keys
 
             - *nqubits*
@@ -141,11 +156,6 @@ class Circuit:
             Defaults to ``False``.
         accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
-        wire_names (list or dict, optional): Names for qubit wires.
-            If ``None``, defaults to (``q0``, ``q1``... ``qn``).
-            If ``list`` is passed, length of ``list`` must match ``nqubits``.
-            If ``dict`` is passed, the keys should match the default pattern.
-            Defaults to ``None``.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
         nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
@@ -155,29 +165,20 @@ class Circuit:
 
     def __init__(
         self,
-        nqubits: int,
+        nqubits: Optional[Union[int, list]] = None,
         accelerators=None,
         density_matrix: bool = False,
-        wire_names: Optional[Union[list, dict]] = None,
+        wire_names: Optional[list] = None,
     ):
-        if not isinstance(nqubits, int):
-            raise_error(
-                TypeError,
-                f"Number of qubits must be an integer but is {nqubits}.",
-            )
-        if nqubits < 1:
-            raise_error(
-                ValueError,
-                f"Number of qubits must be positive but is {nqubits}.",
-            )
+        nqubits, wire_names = _resolve_qubits(nqubits, wire_names)
         self.nqubits = nqubits
-        self.wire_names = wire_names
         self.init_kwargs = {
             "nqubits": nqubits,
             "accelerators": accelerators,
             "density_matrix": density_matrix,
             "wire_names": wire_names,
         }
+        self.wire_names = wire_names
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -282,49 +283,29 @@ class Circuit:
 
     @property
     def wire_names(self):
+        if self._wire_names is None:
+            return list(range(self.nqubits))
         return self._wire_names
 
     @wire_names.setter
-    def wire_names(self, wire_names: Union[list, dict]):
-        if not isinstance(wire_names, (list, dict, type(None))):
+    def wire_names(self, wire_names: Optional[list]):
+        if not isinstance(wire_names, (list, type(None))):
             raise_error(
                 TypeError,
-                f"``wire_names`` must be type ``list`` or ``dict``, but is {type(wire_names)}.",
+                f"``wire_names`` must be type ``list``, but is {type(wire_names)}.",
             )
 
-        if isinstance(wire_names, list):
+        if wire_names is not None:
             if len(wire_names) != self.nqubits:
                 raise_error(
                     ValueError,
                     "Number of wire names must be equal to the number of qubits, "
                     f"but is {len(wire_names)}.",
                 )
-
-            if any([not isinstance(name, str) for name in wire_names]):
-                raise_error(ValueError, "all wire names must be type ``str``.")
-
-            self._wire_names = wire_names
-        elif isinstance(wire_names, dict):
-            if len(wire_names.keys()) > self.nqubits:
-                raise_error(
-                    ValueError,
-                    "number of elements in the ``wire_names`` dictionary "
-                    + "cannot be bigger than ``nqubits``.",
-                )
-
-            if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
-                [not isinstance(name, str) for name in wire_names.values()]
-            ):
-                raise_error(
-                    ValueError,
-                    "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
-                )
-
-            self._wire_names = [
-                wire_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
-            ]
+            self._wire_names = wire_names.copy()
         else:
-            self._wire_names = [f"q{i}" for i in range(self.nqubits)]
+            self._wire_names = None
+        self.init_kwargs["wire_names"] = self._wire_names
 
     @property
     def repeated_execution(self):
@@ -407,8 +388,8 @@ class Circuit:
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
+        kwargs["wire_names"] = [self.wire_names[q] for q in sorted(qubits)]
         circuit = self.__class__(**kwargs)
-        circuit.wire_names = [self.wire_names[q] for q in list(sorted(qubits))]
         circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
 
@@ -1282,6 +1263,7 @@ class Circuit:
         """Build the string representation of the circuit diagram."""
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
+        wire_names = [str(name) for name in self.wire_names]
         idx = [0] * self.nqubits
 
         for gate in self.queue:
@@ -1303,12 +1285,12 @@ class Circuit:
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
         # Print to terminal
-        max_name_len = max(len(name) for name in self.wire_names)
+        max_name_len = max(len(name) for name in wire_names)
         output = ""
         for q in range(self.nqubits):
             output += (
-                self.wire_names[q]
-                + " " * (max_name_len - len(self.wire_names[q]))
+                wire_names[q]
+                + " " * (max_name_len - len(wire_names[q]))
                 + ": ─"
                 + "".join(matrix[q])
                 + "\n"
@@ -1350,8 +1332,8 @@ class Circuit:
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
-                        self.wire_names[row]
-                        + " " * (max_name_len - len(self.wire_names[row]))
+                        wire_names[row]
+                        + " " * (max_name_len - len(wire_names[row]))
                         + ": "
                     )
                     if i == 0:
@@ -1388,3 +1370,32 @@ class Circuit:
             String containing text circuit diagram.
         """
         sys.stdout.write(self.diagram(line_wrap, legend) + "\n")
+
+
+def _resolve_qubits(qubits, wire_names):
+    """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
+
+    Example:
+        .. code-block:: python
+            from qibo import Circuit
+            c = Circuit(3)
+            c = Circuit(3, wire_names=["q0", "q1", "q2"])
+            c = Circuit(["q0", "q1", "q2"])
+            c = Circuit(wire_names=["q0", "q1", "q2"])
+    """
+    if qubits is None and wire_names is not None:
+        return len(wire_names), wire_names
+    if qubits is not None and wire_names is None:
+        if isinstance(qubits, int) and qubits > 0:
+            return qubits, None
+        if isinstance(qubits, list):
+            return len(qubits), qubits
+    if qubits is not None and wire_names is not None:
+        if isinstance(qubits, int) and isinstance(wire_names, list):
+            if qubits == len(wire_names):
+                return qubits, wire_names
+
+    raise_error(
+        ValueError,
+        "Invalid input arguments for defining a circuit.",
+    )

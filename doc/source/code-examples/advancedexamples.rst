@@ -554,7 +554,9 @@ refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
 Note that if the Stochastic Gradient Descent optimizer is used then the user
 has to use a backend based on tensorflow or pytorch primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
-To switch the backend one can do ``qibo.set_backend("tensorflow")`` or ``qibo.set_backend("pytorch")``.
+To switch the backend one can do ``qibo.set_backend(backend="qiboml", platform="tensorflow")``
+or ``qibo.set_backend(backend="qiboml", platform="pytorch")``, after ensuring the
+``qiboml`` package has been installed.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
@@ -800,7 +802,7 @@ using the ``pytorch`` framework.
     import torch
 
     from qibo import Circuit, gates, set_backend
-    set_backend("pytorch")
+    set_backend(backend="qiboml", platform="pytorch")
 
     # Optimization parameters
     nepochs = 1000
@@ -1314,9 +1316,9 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    # visualize the circuit
    circuit.draw()
 
-   #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
-   #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
-   #  q2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
+   #  0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
+   #  1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
+   #  2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
 
 .. testoutput::
    :hide:
@@ -1432,12 +1434,12 @@ number of CNOT or RX pairs (depending on the value of ``insertion_gate``) insert
 circuit in correspondence to the original ones. Since we decided to simulate noisy CNOTs::
 
    Level 1
-   q0: ─X─  -->  q0: ─X───X──X─
-   q1: ─o─  -->  q1: ─o───o──o─
+   0: ─X─  -->  0: ─X───X──X─
+   1: ─o─  -->  1: ─o───o──o─
 
    Level 2
-   q0: ─X─  -->  q0: ─X───X──X───X──X─
-   q1: ─o─  -->  q1: ─o───o──o───o──o─
+   0: ─X─  -->  0: ─X───X──X───X──X─
+   1: ─o─  -->  1: ─o───o──o───o──o─
 
    .
    .
@@ -1501,8 +1503,10 @@ combined with the readout mitigation:
 Clifford Data Regression (CDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For CDR instead, you don't need to define anything additional. However, keep in mind that the input
-circuit is expected to be decomposed in the set of primitive gates :math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
+For CDR instead, you don't need to define anything additional.
+However, keep in mind that the input circuit is expected to be
+decomposed in the set of primitive gates
+:math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
 
 .. testcode::
 
@@ -1526,14 +1530,16 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
    ...
 
-Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
+Again, the mitigated expected value improves over the noisy one
+and is also slightly better compared to ZNE.
 
 
 Variable Noise CDR (vnCDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Being a combination of ZNE and CDR, vnCDR requires you to define the noise levels as done in ZNE, and the same
-caveat about the input circuit for CDR is valid here as well.
+Being a combination of ZNE and CDR, vnCDR requires you to define
+the noise levels as done in ZNE, and the same caveat about the
+input circuit for CDR is valid here as well.
 
 .. testcode::
 
@@ -1559,8 +1565,10 @@ caveat about the input circuit for CDR is valid here as well.
 
    ...
 
-The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
-however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
+The result is similar to the one obtained by CDR.
+Usually, one would expect slightly better results for vnCDR.
+However, this can substantially vary depending on the circuit
+and the observable considered and, therefore, it is hard to tell
 a priori.
 
 
@@ -1591,8 +1599,11 @@ The use of iCS is straightforward, analogous to CDR and vnCDR.
 
    ...
 
-Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
-This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
+Again, the mitigated expected value improves over the noisy
+one and is also slightly better compared to ZNE.
+This was just a basic example usage of the three methods,
+for all the details about them you should check the API-reference page
+:ref:`Error Mitigation <error-mitigation>`.
 
 .. _timeevol-example:
 
@@ -2139,8 +2150,6 @@ Qibo implements a built-in transpiler with customizable options for each step. T
 be used at each transpiler step are reported below with a short description.
 
 The initial placement can be found with one of the following procedures:
-- Trivial: logical-physical qubit mapping is an identity.
-- Custom: custom logical-physical qubit mapping.
 - Random greedy: the best mapping is found within a set of random layouts based on a greedy policy.
 - Subgraph isomorphism: the initial mapping is the one that guarantees the execution of most gates at
 the beginning of the circuit without introducing any SWAP.
@@ -2168,22 +2177,22 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     from qibo import gates
     from qibo.models import Circuit
-    from qibo.transpiler.pipeline import Passes, assert_transpiling
+    from qibo.transpiler.pipeline import Passes
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.router import ShortestPaths
     from qibo.transpiler.unroller import Unroller, NativeGates
     from qibo.transpiler.placer import Random
+    from qibo.transpiler.asserts import assert_transpiling
 
     # Define connectivity as nx.Graph
     def star_connectivity():
-        chip = nx.Graph()
-        chip.add_nodes_from(list(range(5)))
-        graph_list = [(i, 2) for i in range(5) if i != 2]
-        chip.add_edges_from(graph_list)
+        chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
         return chip
 
     # Define the circuit
-    circuit = Circuit(2)
+    # wire_names must match nodes in the connectivity graph.
+    # The index in wire_names represents the logical qubit number in the circuit.
+    circuit = Circuit(2, wire_names=["q0", "q1"])
     circuit.add(gates.H(0))
     circuit.add(gates.CZ(0, 1))
 
@@ -2205,13 +2214,10 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     transpiled_circ, final_layout = custom_pipeline(circuit)
 
     # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
-    # For this test it is necessary to get the initial layout
-    initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
-        initial_layout=initial_layout,
         final_layout=final_layout,
         native_gates=NativeGates.default()
     )

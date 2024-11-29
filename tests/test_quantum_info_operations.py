@@ -260,8 +260,8 @@ def test_singular_value_decomposition(backend):
 
     S_sorted = backend.sort(S)
     coeffs_sorted = backend.sort(coeffs)
-    if backend.name == "pytorch":
-        S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
+    # if backend.platform == "pytorch":
+    #    S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
 

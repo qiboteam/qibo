@@ -69,10 +69,10 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
         H2 = hamiltonians.XXZ(nqubits=2, delta=1, backend=backend)
         mH1, mH2 = backend.to_numpy(H1.matrix), backend.to_numpy(H2.matrix)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
 
         mH1 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
         mH2 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
@@ -99,10 +99,10 @@ def test_hamiltonian_addition(backend, sparse_type):
         H1 = hamiltonians.Y(nqubits=3, backend=backend)
         H2 = hamiltonians.TFIM(nqubits=3, h=1.0, backend=backend)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
         H1 = hamiltonians.Hamiltonian(
             6,
             random_sparse_matrix(backend, 64, sparse_type=sparse_type),
@@ -147,10 +147,10 @@ def test_hamiltonian_operation_errors(backend):
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_matmul(backend, sparse_type):
     """Test matrix multiplication between Hamiltonians."""
-    if backend.name == "pytorch":
-        pytest.skip("Pytorch does not support operations with sparse matrices.")
-    if backend.platform == "tensorflow":
-        pytest.skip("Tensorflow does not support operations with sparse matrices.")
+    if backend.platform in ["tensorflow", "pytorch"]:
+        pytest.skip(
+            "Tensorflow and Pytorch do not support operations with sparse matrices."
+        )
     if sparse_type is None:
         nqubits = 3
         H1 = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
@@ -191,10 +191,10 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
         nqubits = 3
         H = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
         nqubits = 3
         nstates = 2**nqubits
         matrix = random_sparse_matrix(backend, nstates, sparse_type)
@@ -228,10 +228,10 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
     if sparse_type is None:
         h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense, backend=backend)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
         h = hamiltonians.Hamiltonian(
             6, random_sparse_matrix(backend, 64, sparse_type), backend=backend
         )
@@ -323,10 +323,10 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
     if sparse_type is None:
         H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
         from scipy import sparse
 
         H1 = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
@@ -400,10 +400,10 @@ def test_hamiltonian_ground_state(backend, sparse_type, dense):
     if sparse_type is None:
         H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
-        if backend.platform == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        elif backend.name == "pytorch":
-            pytest.skip("Pytorch does not support operations with sparse matrices.")
+        if backend.platform in ["tensorflow", "pytorch"]:
+            pytest.skip(
+                "Tensorflow and Pytorch do not support operations with sparse matrices."
+            )
         from scipy import sparse
 
         H = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
@@ -432,12 +432,10 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
         if sparse_type is None:
             return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
         else:
-            if backend.platform == "tensorflow":
+            if backend.platform in ["tensorflow", "pytorch"]:
                 pytest.skip(
-                    "Tensorflow does not support operations with sparse matrices."
+                    "Tensorflow and Pytorch do not support operations with sparse matrices."
                 )
-            elif backend.name == "pytorch":
-                pytest.skip("Pytorch does not support operations with sparse matrices.")
             from scipy import sparse
 
             ham = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)

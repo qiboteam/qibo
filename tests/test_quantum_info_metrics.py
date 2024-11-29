@@ -394,7 +394,7 @@ def test_frame_potential(backend, nqubits, power_t, samples):
 @pytest.mark.parametrize("return_complex", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 8])
 def test_qfim(backend, nqubits, return_complex, params_flag):
-    if backend.name == "pytorch" or backend.platform == "tensorflow":
+    if backend.platform in ["tensorflow", "pytorch"]:
         # QFIM from https://arxiv.org/abs/2405.20408 is known analytically
         data = np.random.rand(nqubits)
         data = backend.cast(data, dtype=data.dtype)
