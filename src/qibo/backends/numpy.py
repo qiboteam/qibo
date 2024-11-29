@@ -1,5 +1,4 @@
 from functools import cache
-from typing import Union
 
 import numpy as np
 import scipy as sp
@@ -7,11 +6,9 @@ from scipy import sparse
 from scipy.linalg import block_diag, fractional_matrix_power
 
 from qibo import __version__
-from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
-from qibo.config import log, raise_error
-from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
+from qibo.config import raise_error
 
 
 class NumpyBackend(Backend):
@@ -77,105 +74,18 @@ class NumpyBackend(Backend):
             return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
 
-    def is_sparse(self, x):
-        from scipy import sparse
-
-        return sparse.issparse(x)
-
     def to_numpy(self, x):
         if self.is_sparse(x):
-            return x.toarray()
+            return self.to_dense(x)
         return x
 
     def compile(self, func):
         return func
 
-    def matrix_fused(self, fgate):
-        rank = len(fgate.target_qubits)
-        matrix = sparse.eye(2**rank)
-
-        for gate in fgate.gates:
-            # transfer gate matrix to numpy as it is more efficient for
-            # small tensor calculations
-            # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
-            gmatrix = self.to_numpy(gate.matrix(self))
-            # add controls if controls were instantiated using
-            # the ``Gate.controlled_by`` method
-            num_controls = len(gate.control_qubits)
-            if num_controls > 0:
-                gmatrix = block_diag(
-                    self.eye(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
-                )
-            # Kronecker product with identity is needed to make the
-            # original matrix have shape (2**rank x 2**rank)
-            eye = self.eye(2 ** (rank - len(gate.qubits)))
-            gmatrix = self.kron(gmatrix, eye)
-            # Transpose the new matrix indices so that it targets the
-            # target qubits of the original gate
-            original_shape = gmatrix.shape
-            gmatrix = self.reshape(gmatrix, 2 * rank * (2,))
-            qubits = list(gate.qubits)
-            indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
-            indices = self.argsort(indices)
-            transpose_indices = list(indices)
-            transpose_indices.extend(indices + rank)
-            gmatrix = self.transpose(gmatrix, transpose_indices)
-            gmatrix = self.reshape(gmatrix, original_shape)
-            # fuse the individual gate matrix to the total ``FusedGate`` matrix
-            # we are using sparse matrices to improve perfomances
-            matrix = sparse.csr_matrix(gmatrix).dot(matrix)
-
-        return self.cast(matrix.toarray())
-
     def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
         )
-
-    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
-        if self.is_sparse(matrix):
-            if k < matrix.shape[0]:
-                from scipy.sparse.linalg import eigsh
-
-                return eigsh(matrix, k=k, which="SA")
-            else:  # pragma: no cover
-                matrix = self.to_numpy(matrix)
-        if hermitian:
-            return self.eigh(matrix)
-        return self.eig(matrix)
-
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None or self.is_sparse(matrix):
-            if self.is_sparse(matrix):
-                from scipy.sparse.linalg import expm
-            else:
-                from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.diag(self.exp(-1j * a * eigenvalues))
-        ud = self.transpose(self.conj(eigenvectors))
-        return self.matmul(eigenvectors, self.matmul(expd, ud))
-
-    def calculate_matrix_power(
-        self,
-        matrix,
-        power: Union[float, int],
-        precision_singularity: float = 1e-14,
-    ):
-        if not isinstance(power, (float, int)):
-            raise_error(
-                TypeError,
-                f"``power`` must be either float or int, but it is type {type(power)}.",
-            )
-
-        if power < 0.0:
-            # negative powers of singular matrices via SVD
-            determinant = self.det(matrix)
-            if abs(determinant) < precision_singularity:
-                return _calculate_negative_power_singular_matrix(
-                    matrix, power, precision_singularity, self
-                )
-
-        return fractional_matrix_power(matrix, power)
 
     def calculate_jacobian_matrix(
         self, circuit, parameters=None, initial_state=None, return_complex: bool = True
@@ -394,6 +304,49 @@ class NumpyBackend(Backend):
     def expm(a):
         """Scipy-like expm: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.expm.html"""
         return sp.linalg.expm(a)
+
+    @staticmethod
+    def fractional_matrix_power(A, t):
+        """Scipy-like fractional_matrix_power: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.fractional_matrix_power.html"""
+        return sp.linalg.fractional_matrix_power(A, t)
+
+    @staticmethod
+    def block_diag(*args, **kwargs):
+        """Scipy-like block_diag: https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.block_diag.html"""
+        return sp.linalg.block_diag(*args, **kwargs)
+
+    # sparse
+    # ^^^^^^
+
+    @staticmethod
+    def is_sparse(x):
+        """Scipy-like issparse: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.issparse.html"""
+        return sparse.issparse(x)
+
+    @staticmethod
+    def sparse_csr_matrix(*args, **kwargs):
+        """Scipy-like sparse csr matrix: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html"""
+        return sparse.csr_matrix(*args, **kwargs)
+
+    @staticmethod
+    def sparse_eye(*args, **kwargs):
+        """Scipy-like sparse eye: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.eye.html"""
+        return sparse.eye(*args, **kwargs)
+
+    @staticmethod
+    def to_dense(a):
+        """Scipy-like sparse to dense: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.toarray.html"""
+        return a.toarray()
+
+    @staticmethod
+    def sparse_expm(A):
+        """Scipy-like sparse expm: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.expm.html"""
+        return sparse.linalg.expm(A)
+
+    @staticmethod
+    def sparse_eigsh(*args, **kwargs):
+        """Scipy-like sparse eigsh: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.eigsh.html"""
+        return sparse.linalg.eigsh(*args, **kwargs)
 
     # randomization
     # ^^^^^^^^^^^^^
@@ -627,15 +580,3 @@ class NumpyBackend(Backend):
     def jacobian(*args, **kwargs):
         """Compute the Jacobian matrix"""
         raise NotImplementedError
-
-
-def _calculate_negative_power_singular_matrix(
-    matrix, power: Union[float, int], precision_singularity: float, backend
-):
-    """Calculate negative power of singular matrix."""
-    U, S, Vh = backend.calculate_singular_value_decomposition(matrix)
-    # cast needed because of different dtypes in `torch`
-    S = backend.cast(S)
-    S_inv = backend.where(backend.abs(S) < precision_singularity, 0.0, S**power)
-
-    return backend.inverse(Vh) @ backend.diag(S_inv) @ backend.inverse(U)
