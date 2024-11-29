@@ -3,10 +3,9 @@ from functools import reduce
 
 import numpy as np
 import pytest
-from qiboml.backends import TensorflowBackend
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import CliffordBackend, PyTorchBackend
+from qibo.backends import CliffordBackend
 from qibo.backends.clifford import _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
@@ -18,9 +17,10 @@ from qibo.quantum_info.random_ensembles import random_clifford
 
 
 def construct_clifford_backend(backend):
-    if (
-        isinstance(backend, (TensorflowBackend, PyTorchBackend))
-        or backend.__class__.__name__ == "CuQuantumBackend"
+    if backend.__class__.__name__ in (
+        "CuQuantumBackend",
+        "TensorflowBackend",
+        "PyTorchBackend",
     ):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend.name)

@@ -3,7 +3,6 @@ from functools import cache
 import numpy as np
 import scipy as sp
 from scipy import sparse
-from scipy.linalg import block_diag, fractional_matrix_power
 
 from qibo import __version__
 from qibo.backends.abstract import Backend
