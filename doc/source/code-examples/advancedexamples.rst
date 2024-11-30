@@ -183,11 +183,10 @@ Users can specify the hardware qubits to be used by setting the ``wire_names``.
     circuit.wire_names = ["C", "A", "B", "D"]
 
     # This is equivalent to:
-    # circuit = Circuit(4)
-    # circuit.add(gates.H("C"))
-    # circuit.add(gates.CNOT("C", "A"))
-    # circuit.add(gates.CZ("C", "B"))
-    # circuit.add(gates.M("B", "D"))
+    # H gate on qubit "C"
+    # CNOT gate on qubits "C" and "A"
+    # CZ gate on qubits "C" and "B"
+    # M gate on qubit "B" and "D"
 
 For example, if the user sets ``wire_names`` to ``["C", "A", "B", "D"]``,
 it means that the first qubit in the circuit is mapped to the physical qubit named ``C``,
