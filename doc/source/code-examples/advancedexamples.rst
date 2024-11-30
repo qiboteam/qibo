@@ -167,6 +167,8 @@ How to select specific hardware qubits for circuit execution?
 The :class:`qibo.models.Circuit` has a ``wire_names`` property that stores the physical names of the qubits in the circuit.
 The physical qubit name ``wire_names[i]`` is assigned to the ``i`` th qubit in the circuit.
 Users can specify the hardware qubits to be used by setting the ``wire_names``.
+During circuit execution, Qibolab uses the ``wire_names`` to find the corresponding hardware qubits.
+
 
 .. code-block:: python
 
@@ -191,6 +193,13 @@ Users can specify the hardware qubits to be used by setting the ``wire_names``.
 For example, if the user sets ``wire_names`` to ``["C", "A", "B", "D"]``,
 it means that the first qubit in the circuit is mapped to the physical qubit named ``C``,
 the second qubit is mapped to ``A``, and so on.
+
+If the circuit with the given ``wire_names`` does not meet the hardware device's constraints
+(e.g., connectivity and native gate requirements),
+the :ref:`default transpiler <tutorials_set_transpiler>` will automatically modify
+the circuit to satisfy these constraints.
+In this case, different hardware qubits may be used to execute the circuit.
+If the user disables the default transpiler, executing the circuit will result in compilation errors.
 
 
 How to use callbacks?
