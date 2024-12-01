@@ -2209,7 +2209,6 @@ In this example, we used :class:`qibo.transpiler.optimizer.Preprocessing`,
 and :class:`qibo.transpiler.unroller.Unroller` passes to transpile the circuit
 on a star-shaped hardware connectivity and a custom set of native gates.
 
-
 .. testcode:: python
 
     import networkx as nx
@@ -2257,6 +2256,18 @@ on a star-shaped hardware connectivity and a custom set of native gates.
         final_layout=final_layout,
         native_gates=NativeGates.default()
     )
+
+
+In the current Qibo version, transpiler passes require that
+``wire_names`` match the qubit names in the given connectivity graph.
+This can be done manually or by using :class:`qibo.transpiler.optimizer.Preprocessing`
+or the ``on_qubits`` parameter.
+
+.. note::
+
+    - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
+    - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
+
 
 .. _tutorials_set_transpiler:
 
