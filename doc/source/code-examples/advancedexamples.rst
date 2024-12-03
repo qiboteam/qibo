@@ -2240,7 +2240,7 @@ Let's first define the set of gates we want to estimate:
 
    from qibo import gates
 
-   gate_set = {gates.X, gates.H, gates.CZ}
+   gate_set = {gates.X(0), gates.H(0), gates.CZ(0, 1)}
 
 For simulation purposes we can define a noise model. Naturally this is not needed when running on real quantum hardware, which is intrinsically noisy. For example, we can suppose that the three gates we want to estimate are going to be noisy:
 
