@@ -2591,7 +2591,7 @@ size circuits you may benefit from single thread per process, thus set
 Backends
 --------
 
-Backend is the main calculation engine to execute circuits.
+:class:`qibo.backends.abstract.Backend` is the main calculation engine to execute circuits.
 Qibo provides backends for quantum simulation on classical hardware and quantum hardware management and control.
 For a complete list of available backends, refer to the :ref:`Packages <packages>` section.
 To create new backends, inherit from :class:`qibo.backends.abstract.Backend` and implement
