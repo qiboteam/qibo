@@ -1,6 +1,5 @@
-from typing import Union, List, Tuple
-
 from functools import reduce
+from typing import List, Tuple, Union
 
 import numpy as np
 
