@@ -54,19 +54,19 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.np.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
-    log_prob = backend.np.where(
-        prob_dist != 0, backend.np.log2(prob_dist) / np.log2(base), 0.0
+    log_prob = backend.where(
+        prob_dist != 0, backend.log2(prob_dist) / np.log2(base), 0.0
     )
 
-    shan_entropy = -backend.np.sum(prob_dist * log_prob)
+    shan_entropy = -backend.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    shan_entropy = backend.np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
+    shan_entropy = backend.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
     return np.real(float(shan_entropy))
 
@@ -118,9 +118,9 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
             ValueError,
             "All elements of the probability array must be between 0. and 1..",
         )
-    total_sum_p = backend.np.sum(prob_dist_p)
+    total_sum_p = backend.sum(prob_dist_p)
 
-    total_sum_q = backend.np.sum(prob_dist_q)
+    total_sum_q = backend.sum(prob_dist_q)
 
     if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
@@ -130,13 +130,13 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
 
-    log_prob_q = backend.np.where(
-        prob_dist_q != 0.0, backend.np.log2(prob_dist_q) / np.log2(base), -np.inf
+    log_prob_q = backend.where(
+        prob_dist_q != 0.0, backend.log2(prob_dist_q) / np.log2(base), -np.inf
     )
 
-    log_prob = backend.np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
+    log_prob = backend.where(prob_dist_p != 0.0, log_prob_q, 0.0)
 
-    relative = backend.np.sum(prob_dist_p * log_prob)
+    relative = backend.sum(prob_dist_p * log_prob)
 
     return entropy_p - relative
 
@@ -240,7 +240,7 @@ def classical_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.np.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -252,11 +252,11 @@ def classical_renyi_entropy(
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
     if alpha == np.inf:
-        return -1 * backend.np.log2(max(prob_dist)) / np.log2(base)
+        return -1 * backend.log2(max(prob_dist)) / np.log2(base)
 
-    total_sum = backend.np.sum(prob_dist**alpha)
+    total_sum = backend.sum(prob_dist**alpha)
 
-    renyi_ent = (1 / (1 - alpha)) * backend.np.log2(total_sum) / np.log2(base)
+    renyi_ent = (1 / (1 - alpha)) * backend.log2(total_sum) / np.log2(base)
 
     return renyi_ent
 
@@ -333,8 +333,8 @@ def classical_relative_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum_p = backend.np.sum(prob_dist_p)
-    total_sum_q = backend.np.sum(prob_dist_q)
+    total_sum_p = backend.sum(prob_dist_p)
+    total_sum_q = backend.sum(prob_dist_q)
 
     if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
@@ -343,10 +343,10 @@ def classical_relative_renyi_entropy(
         raise_error(ValueError, "Second probability array must sum to 1.")
 
     if alpha == 0.5:
-        total_sum = backend.np.sqrt(prob_dist_p * prob_dist_q)
-        total_sum = backend.np.sum(total_sum)
+        total_sum = backend.sqrt(prob_dist_p * prob_dist_q)
+        total_sum = backend.sum(total_sum)
 
-        return -2 * backend.np.log2(total_sum) / np.log2(base)
+        return -2 * backend.log2(total_sum) / np.log2(base)
 
     if alpha == 1.0:
         return classical_relative_entropy(
@@ -354,14 +354,14 @@ def classical_relative_renyi_entropy(
         )
 
     if alpha == np.inf:
-        return backend.np.log2(max(prob_dist_p / prob_dist_q)) / np.log2(base)
+        return backend.log2(max(prob_dist_p / prob_dist_q)) / np.log2(base)
 
     prob_p = prob_dist_p**alpha
     prob_q = prob_dist_q ** (1 - alpha)
 
-    total_sum = backend.np.sum(prob_p * prob_q)
+    total_sum = backend.sum(prob_p * prob_q)
 
-    return (1 / (alpha - 1)) * backend.np.log2(total_sum) / np.log2(base)
+    return (1 / (alpha - 1)) * backend.log2(total_sum) / np.log2(base)
 
 
 def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
@@ -417,7 +417,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.np.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -426,7 +426,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
     total_sum = prob_dist**alpha
-    total_sum = backend.np.sum(total_sum)
+    total_sum = backend.sum(total_sum)
 
     return (1 / (alpha - 1)) * (1 - total_sum)
 
@@ -478,7 +478,7 @@ def classical_relative_tsallis_entropy(
     element_wise = prob_dist_p**alpha
     element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q, alpha)
 
-    return backend.np.sum(element_wise)
+    return backend.sum(element_wise)
 
 
 def von_neumann_entropy(
@@ -543,15 +543,15 @@ def von_neumann_entropy(
         hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
     )
 
-    log_prob = backend.np.where(
-        backend.np.real(eigenvalues) > 0.0,
-        backend.np.log2(eigenvalues) / np.log2(base),
+    log_prob = backend.where(
+        backend.real(eigenvalues) > 0.0,
+        backend.log2(eigenvalues) / np.log2(base),
         0.0,
     )
 
-    ent = -backend.np.sum(eigenvalues * log_prob)
+    ent = -backend.sum(eigenvalues * log_prob)
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    ent = backend.np.abs(ent) if ent == 0.0 else backend.np.real(ent)
+    ent = backend.abs(ent) if ent == 0.0 else backend.real(ent)
 
     if return_spectrum:
         log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
@@ -632,10 +632,10 @@ def relative_von_neumann_entropy(
         return 0.0
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     if len(target.shape) == 1:
-        target = backend.np.outer(target, backend.np.conj(target))
+        target = backend.outer(target, backend.conj(target))
 
     eigenvalues_state, eigenvectors_state = backend.calculate_eigenvectors(
         state,
@@ -646,29 +646,29 @@ def relative_von_neumann_entropy(
         hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
     )
 
-    overlaps = backend.np.conj(eigenvectors_state.T) @ eigenvectors_target
-    overlaps = backend.np.abs(overlaps) ** 2
+    overlaps = backend.conj(eigenvectors_state.T) @ eigenvectors_target
+    overlaps = backend.abs(overlaps) ** 2
 
-    log_state = backend.np.where(
-        backend.np.real(eigenvalues_state) > precision_tol,
-        backend.np.log2(eigenvalues_state) / np.log2(base),
+    log_state = backend.where(
+        backend.real(eigenvalues_state) > precision_tol,
+        backend.log2(eigenvalues_state) / np.log2(base),
         0.0,
     )
-    log_target = backend.np.where(
-        backend.np.real(eigenvalues_target) > precision_tol,
-        backend.np.log2(eigenvalues_target) / np.log2(base),
+    log_target = backend.where(
+        backend.real(eigenvalues_target) > precision_tol,
+        backend.log2(eigenvalues_target) / np.log2(base),
         0.0,
     )
 
     log_target = overlaps @ log_target
 
-    log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
+    log_target = backend.where(eigenvalues_state != 0.0, log_target, 0.0)
 
-    entropy_state = backend.np.sum(eigenvalues_state * log_state)
+    entropy_state = backend.sum(eigenvalues_state * log_state)
 
-    relative = backend.np.sum(eigenvalues_state * log_target)
+    relative = backend.sum(eigenvalues_state * log_target)
 
-    return float(backend.np.real(entropy_state - relative))
+    return float(backend.real(entropy_state - relative))
 
 
 def mutual_information(
@@ -783,11 +783,11 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     if alpha == np.inf:
         return (
             -1
-            * backend.np.log2(backend.calculate_norm_density_matrix(state, order=2))
+            * backend.log2(backend.calculate_norm_density_matrix(state, order=2))
             / np.log2(base)
         )
 
-    log = backend.np.log2(backend.np.trace(matrix_power(state, alpha, backend=backend)))
+    log = backend.log2(backend.trace(matrix_power(state, alpha, backend=backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -880,7 +880,7 @@ def relative_renyi_entropy(
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     if alpha == 1.0:
         return relative_von_neumann_entropy(state, target, base, backend=backend)
@@ -889,7 +889,7 @@ def relative_renyi_entropy(
         new_state = matrix_power(state, 0.5, backend=backend)
         new_target = matrix_power(target, 0.5, backend=backend)
 
-        log = backend.np.log2(
+        log = backend.log2(
             backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
         )
 
@@ -897,7 +897,7 @@ def relative_renyi_entropy(
 
     log = matrix_power(state, alpha, backend=backend)
     log = log @ matrix_power(target, 1 - alpha, backend=backend)
-    log = backend.np.log2(backend.np.trace(log))
+    log = backend.log2(backend.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
 
@@ -954,7 +954,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (
-        backend.np.trace(matrix_power(state, alpha, backend=backend)) - 1
+        backend.trace(matrix_power(state, alpha, backend=backend)) - 1
     )
 
 
@@ -1027,14 +1027,14 @@ def relative_tsallis_entropy(
     factor = 1 - alpha
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state.T))
+        state = backend.outer(state, backend.conj(state.T))
 
     if len(target.shape) == 1:
-        target = backend.np.outer(target, backend.np.conj(target.T))
+        target = backend.outer(target, backend.conj(target.T))
 
     trace = matrix_power(state, alpha, backend=backend)
     trace = trace @ matrix_power(target, factor, backend=backend)
-    trace = backend.np.trace(trace)
+    trace = backend.trace(trace)
 
     return (1 - trace) / factor
 

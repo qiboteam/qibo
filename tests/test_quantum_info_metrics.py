@@ -41,7 +41,7 @@ def test_purity_and_impurity(backend):
     backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
-    state = backend.np.outer(backend.np.conj(state), state)
+    state = backend.outer(backend.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
@@ -96,8 +96,8 @@ def test_trace_distance(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
         0.0,
@@ -144,8 +144,8 @@ def test_hilbert_schmidt_distance(backend):
         hilbert_schmidt_distance(state, target, backend=backend), 0.0
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         hilbert_schmidt_distance(state, target, backend=backend), 0.0
     )
@@ -209,8 +209,8 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         fidelity(state, target, check_hermitian, backend=backend),
         1.0,
@@ -404,9 +404,9 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
 
         target = [1]
         for param in params[:-1]:
-            elem = float(target[-1] * backend.np.sin(param) ** 2)
+            elem = float(target[-1] * backend.sin(param) ** 2)
             target.append(elem)
-        target = 4 * backend.np.diag(backend.cast(target, dtype=np.float64))
+        target = 4 * backend.diag(backend.cast(target, dtype=np.float64))
 
         # numerical qfim from quantum_info
         circuit = unary_encoder(data, "diagonal")

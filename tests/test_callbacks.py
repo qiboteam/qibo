@@ -98,9 +98,7 @@ def test_entropy_in_circuit(backend, density_matrix, base):
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [0.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
-    entropy_spectrum = backend.np.ravel(
-        backend.np.concatenate(entropy.spectrum)
-    ).tolist()
+    entropy_spectrum = backend.ravel(backend.concatenate(entropy.spectrum)).tolist()
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
 
@@ -121,7 +119,7 @@ def test_entropy_in_distributed_circuit(
     """Check that various entropy configurations work in distributed circuit."""
     target_c = Circuit(4)
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c).state()
 
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(4, accelerators)
@@ -132,7 +130,7 @@ def test_entropy_in_distributed_circuit(
             c.add(gates.CNOT(0, 1))
         elif gate == "entropy":
             c.add(gates.CallbackGate(entropy))
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(c).state()
     backend.assert_allclose(final_state, target_state)
     values = [backend.to_numpy(x) for x in entropy[:]]
     backend.assert_allclose(values, target_entropy, atol=PRECISION_TOL)
@@ -142,7 +140,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.1234), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c).state()
 
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(4, accelerators)
@@ -150,19 +148,19 @@ def test_entropy_multiple_executions(backend, accelerators):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c).state()
     backend.assert_allclose(state, target_state)
 
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.4321), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c).state()
 
     c = Circuit(4, accelerators)
     c.add(gates.RY(0, 0.4321))
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c).state()
     backend.assert_allclose(state, target_state)
 
     def target_entropy(t):
@@ -217,7 +215,7 @@ def test_entropy_large_circuit(backend, accelerators):
     c.add(gates.RY(i, thetas[2, i]) for i in range(8))
     c.add(gates.CZ(i, i + 1) for i in range(0, 7, 2))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c).state()
 
     backend.assert_allclose(state3, state)
     values = [backend.to_numpy(x) for x in entropy[:]]
@@ -234,9 +232,9 @@ def test_entropy_density_matrix(backend):
     u = backend.cast(u, dtype=u.dtype)
     matrix = np.random.random(u.shape[0])
     matrix = backend.cast(matrix, dtype=u.dtype)
-    rho = backend.np.matmul(
-        backend.np.matmul(u, backend.np.diag(5 * matrix)),
-        backend.np.conj(backend.np.transpose(u, (1, 0))),
+    rho = backend.matmul(
+        backend.matmul(u, backend.diag(5 * matrix)),
+        backend.conj(backend.transpose(u, (1, 0))),
     )
     # this is a positive rho
 
@@ -284,7 +282,7 @@ def test_norm(backend, density_matrix, seed):
     if density_matrix:
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
-        target_norm = backend.np.trace(state)
+        target_norm = backend.trace(state)
         final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
@@ -336,7 +334,7 @@ def test_energy(backend, density_matrix):
         from qibo.quantum_info import random_density_matrix
 
         state = random_density_matrix(2**4, backend=backend)
-        target_energy = backend.np.trace(backend.np.matmul(matrix, state))
+        target_energy = backend.trace(backend.matmul(matrix, state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
         from qibo.quantum_info import random_statevector

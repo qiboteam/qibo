@@ -134,7 +134,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.np.real(state[indexes])
+    state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,
@@ -298,6 +298,6 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)

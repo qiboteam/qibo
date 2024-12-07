@@ -96,7 +96,7 @@ class VQE:
         if method == "cma":
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
-            dtype = self.hamiltonian.backend.np.float64
+            dtype = self.hamiltonian.backend.get_dtype("float64")
             loss = (
                 (lambda p, c, h: loss_func(p, c, h).item())
                 if str(dtype) == "torch.float64"

@@ -93,7 +93,7 @@ def pauli_basis(
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    einsum = np.einsum if backend.platform == "tensorflow" else backend.np.einsum
+    einsum = np.einsum if backend.platform == "tensorflow" else backend.einsum
 
     if nqubits > 1:
         input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
@@ -105,12 +105,15 @@ def pauli_basis(
         basis_full = basis_single
 
     if vectorize and sparse:
-        if backend.platform == "pytorch":
-            nonzero = lambda x: backend.np.nonzero(x, as_tuple=True)
-        else:
-            nonzero = backend.np.nonzero
+
+        # if backend.platform == "pytorch":
+        #    nonzero = lambda x: backend.nonzero(x, as_tuple=True)
+        # else:
+        #    nonzero = backend.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
-        indices = nonzero(backend.np.abs(basis))  # abs needed because of ``tensorflow``
+        indices = backend.nonzero(
+            backend.abs(basis)
+        )  # abs needed because of ``tensorflow``
         basis = basis[indices].reshape(-1, dim)
         indices = indices[1].reshape(-1, dim)
 
@@ -195,7 +198,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = backend.np.conj(elements)
+        elements = backend.conj(elements)
 
         return elements, indexes
 
@@ -209,7 +212,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = backend.np.conj(unitary)
+    unitary = backend.conj(unitary)
 
     return unitary
 
@@ -273,7 +276,7 @@ def pauli_to_comp_basis(
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = backend.np.flatnonzero(row)
+            index_list = backend.nonzero(backend.ravel(row))
             indexes.append(index_list)
             elements.append(row[index_list])
 

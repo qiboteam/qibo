@@ -100,8 +100,8 @@ class Channel(Gate):
             kraus_op.append(gate)
             kraus_op = kraus_op.matrix(backend)
             kraus_op = vectorization(kraus_op, order=order, backend=backend)
-            super_op = super_op + coeff * backend.np.outer(
-                kraus_op, backend.np.conj(kraus_op)
+            super_op = super_op + coeff * backend.outer(
+                kraus_op, backend.conj(kraus_op)
             )
             del kraus_op
 
@@ -181,9 +181,7 @@ class Channel(Gate):
             nqubits, normalize, pauli_order=pauli_order, backend=backend
         )
 
-        super_op = (
-            unitary @ super_op @ backend.np.transpose(backend.np.conj(unitary), (1, 0))
-        )
+        super_op = unitary @ super_op @ backend.transpose(backend.conj(unitary), (1, 0))
 
         return super_op
 

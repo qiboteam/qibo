@@ -291,7 +291,7 @@ class MeasurementOutcomes:
         probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(
-            self.backend.np.sqrt(probs), qubits, nqubits
+            self.backend.sqrt(probs), qubits, nqubits
         )
 
     def has_samples(self):
@@ -326,7 +326,7 @@ class MeasurementOutcomes:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = self.backend.np.concatenate(
+                self._samples = self.backend.concatenate(
                     [gate.result.samples() for gate in self.measurements],
                     axis=1,
                 )

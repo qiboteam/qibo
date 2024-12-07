@@ -88,7 +88,7 @@ def test_final_state_property(backend):
 
     backend.execute_circuit(c)._state
     target_state = np.ones(4) / 2
-    backend.assert_allclose(c.final_state, target_state)
+    backend.assert_allclose(c.final_state.state(), target_state)
 
 
 def test_density_matrix_circuit(backend):
@@ -99,7 +99,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = backend.execute_circuit(c, backend.np.copy(initial_rho)).state()
+    final_rho = backend.execute_circuit(c, backend.copy(initial_rho)).state()
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
