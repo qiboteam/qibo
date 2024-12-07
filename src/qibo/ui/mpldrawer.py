@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Union
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 from qibo import gates
@@ -377,7 +378,7 @@ def _swapx(ax, x, y, plot_params):
 
 def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
-    fig = matplotlib.pyplot.figure(
+    fig = plt.figure(
         figsize=(ng * scale, nq * scale),
         facecolor=plot_params["facecolor"],
         edgecolor=plot_params["edgecolor"],
