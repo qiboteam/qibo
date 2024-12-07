@@ -2610,7 +2610,7 @@ The user can set the backend using the :func:`qibo.set_backend` function.
 
 
 If no backend is specified, the default backend is used.
-The default backend is selected from the available options: ``qibojit``, ``numpy``, ``qiboml``, and ``pytorch``.
+The default backend is selected in the following order: ``qibojit``, ``numpy``, and ``qiboml``.
 The list of default backend candidates can be changed using the ``QIBO_BACKEND`` environment variable.
 
 Some backends support different platforms. For example, the ``qibojit`` backend
