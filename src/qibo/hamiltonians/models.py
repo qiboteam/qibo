@@ -3,7 +3,7 @@ from typing import List, Tuple, Union
 
 import numpy as np
 
-from qibo.backends import matrices
+from qibo.backends import matrices, _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
@@ -182,6 +182,8 @@ def Heisenberg(
     elif isinstance(coupling_constants, (float, int)):
         coupling_constants = [coupling_constants] * 3
 
+    backend = _check_backend(backend)
+
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -192,9 +194,10 @@ def Heisenberg(
             - coupling_constants[1] * hy
             - coupling_constants[2] * hz
         )
+        matrix = backend.cast(matrix, dtype=matrix.dtype)
 
         for pauli in [matrices.X, matrices.Y, matrices.Z]:
-            matrix += (
+            matrix = matrix + (
                 external_field_strength
                 * _OneBodyPauli(nqubits, pauli, dense, backend).matrix
             )
