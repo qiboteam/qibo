@@ -172,7 +172,7 @@ def Heisenberg(
             Defaults to ``None``.
 
     Returns:
-        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`: 
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
         Heisenberg Hamiltonian.
     """
     if isinstance(coupling_constants, (list, tuple)) and len(coupling_constants) != 3:
@@ -257,23 +257,8 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
-    if dense:
-        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
-        hx = _build_spin_model(nqubits, matrices.X, condition)
-        hy = _build_spin_model(nqubits, matrices.Y, condition)
-        hz = _build_spin_model(nqubits, matrices.Z, condition)
-        matrix = hx + hy + delta * hz
-        return Hamiltonian(nqubits, matrix, backend=backend)
 
-    hx = _multikron([matrices.X, matrices.X])
-    hy = _multikron([matrices.Y, matrices.Y])
-    hz = _multikron([matrices.Z, matrices.Z])
-    matrix = hx + hy + delta * hz
-    terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
-    terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    ham = SymbolicHamiltonian(backend=backend)
-    ham.terms = terms
-    return ham
+    return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
 
 
 def _multikron(matrix_list):
