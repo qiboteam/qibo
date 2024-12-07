@@ -1,2 +1,2 @@
 from qibo.hamiltonians.hamiltonians import *
-from qibo.hamiltonians.models import Heisenberg, TFIM, XXZ, MaxCut, X, Y, Z
+from qibo.hamiltonians.models import TFIM, XXZ, Heisenberg, MaxCut, X, Y, Z
