@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import List, Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -157,7 +157,7 @@ def Heisenberg(
         \\end{align}
 
     where :math:`\\{J_{x}, \\, J_{y}, \\, J_{z}\\}` are called the ``coupling constants``,
-    :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}` are called the ``external field strengths``, 
+    :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}` are called the ``external field strengths``,
     and :math:`\\{X, \\, Y, \\, Z\\}` are the usual Pauli operators.
 
     Args:
@@ -165,7 +165,7 @@ def Heisenberg(
         coupling_constants (list or tuple or float or int): list or tuple with the
             three coupling constants :math:`\\{J_{x}, J_{y}, J{z}\\}`.
             If ``int`` or ``float``, then :math:`J_{x} = J_{y} = J_{z}`.
-        external_field_strength (list or tuple or float or int): list or tuple with the 
+        external_field_strength (list or tuple or float or int): list or tuple with the
             external magnetic field strengths :math:`\\{h_{x}, \\, h_{y}, \\, h_{z}\\}`.
             If ``int`` or ``float``, then :math:`h_{x} = h_{y} = h_{z}`.
         dense (bool, optional): If ``True``, creates the Hamiltonian as a
