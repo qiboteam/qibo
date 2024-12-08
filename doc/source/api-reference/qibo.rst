@@ -1267,13 +1267,6 @@ In addition to the abstract Hamiltonian models, Qibo provides the following
 pre-coded Hamiltonians:
 
 
-Heisenberg XXZ
-^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.hamiltonians.XXZ
-    :members:
-    :member-order: bysource
-
 Non-interacting Pauli-X
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1325,6 +1318,30 @@ Max Cut
     and time evolution via the Trotter decomposition of the evolution operator.
     This is useful for systems that contain many qubits for which constructing
     the full matrix is intractable.
+
+
+Heisenberg model
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.Heisenberg
+    :members:
+    :member-order: bysource
+
+
+Heisenberg XXX
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.XXX
+    :members:
+    :member-order: bysource
+
+
+Heisenberg XXZ
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.XXZ
+    :members:
+    :member-order: bysource
 
 _______________________
 
