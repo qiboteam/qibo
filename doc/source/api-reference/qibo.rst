@@ -1328,6 +1328,14 @@ Heisenberg model
     :member-order: bysource
 
 
+Heisenberg XXX
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.XXX
+    :members:
+    :member-order: bysource
+
+
 Heisenberg XXZ
 ^^^^^^^^^^^^^^
 
