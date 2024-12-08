@@ -97,13 +97,13 @@ def test_bell_state_3q():
     c = circuit.copy()
     connectivity = line_connectivity(3, None)
     router = Sabre(connectivity=connectivity)
-    routed_circuit, final_map = router(c)
+    routed_circuit, final_layout = router(c)
 
     backend = NumpyBackend()
     state = np.array([1, 0, 0, 0, 0, 0, 0, 0])
     original_state = backend.execute_circuit(circuit, state).state()
     target_state = backend.execute_circuit(routed_circuit, state).state()
-    target_state = _transpose_qubits(target_state, list(final_map.values()))
+    target_state = _transpose_qubits(target_state, list(final_layout.values()))
     assert np.all(np.isclose(np.real(original_state), np.real(target_state)))
 
 
@@ -116,7 +116,7 @@ def test_random_circuits_5q(ngates, star_connectivity):
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
     original_circuit = circuit.copy()
     placer(circuit)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
@@ -125,7 +125,7 @@ def test_random_circuits_5q(ngates, star_connectivity):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -138,7 +138,7 @@ def test_random_circuits_5q_grid(ngates, grid_connectivity):
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
     original_circuit = circuit.copy()
     placer(circuit)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
@@ -147,7 +147,7 @@ def test_random_circuits_5q_grid(ngates, grid_connectivity):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -161,7 +161,7 @@ def test_random_circuits_15q_50g(nqubits, ngates):
     original_circuit = circuit.copy()
 
     placer(circuit)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
@@ -170,7 +170,7 @@ def test_random_circuits_15q_50g(nqubits, ngates):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -181,7 +181,7 @@ def test_star_circuit(star_connectivity):
     transpiler = ShortestPaths(connectivity=connectivity)
 
     placer(circuit)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps == 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
@@ -189,7 +189,7 @@ def test_star_circuit(star_connectivity):
     assert_circuit_equivalence(
         original_circuit=star_circuit(),
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -198,7 +198,7 @@ def test_star_circuit_custom_map(star_connectivity):
     circuit = star_circuit()
     circuit.wire_names = [1, 0, 2, 3, 4]
     transpiler = ShortestPaths(connectivity=connectivity)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps == 1
     assert_connectivity(star_connectivity(), transpiled_circuit)
@@ -206,7 +206,7 @@ def test_star_circuit_custom_map(star_connectivity):
     assert_circuit_equivalence(
         original_circuit=star_circuit(),
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -217,7 +217,7 @@ def test_routing_with_measurements(star_connectivity):
     circuit.add(gates.M(0, 2, 3))
 
     transpiler = ShortestPaths(connectivity)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiled_circuit.ngates == 3
     measured_qubits = transpiled_circuit.queue[2].qubits
@@ -225,7 +225,7 @@ def test_routing_with_measurements(star_connectivity):
     assert_circuit_equivalence(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
@@ -244,8 +244,8 @@ def test_sabre_looping():
     )  # Without reset
     router_threshold = Sabre(connectivity=connectivity)  # With reset
 
-    routed_no_threshold, final_mapping_no_threshold = router_no_threshold(loop_circ)
-    routed_threshold, final_mapping_threshold = router_threshold(loop_circ)
+    routed_no_threshold, final_layout_no_threshold = router_no_threshold(loop_circ)
+    routed_threshold, final_layout_threshold = router_threshold(loop_circ)
 
     count_no_threshold = router_no_threshold.added_swaps
     count_threshold = router_threshold.added_swaps
@@ -254,12 +254,12 @@ def test_sabre_looping():
     assert_circuit_equivalence(
         original_circuit=loop_circ,
         transpiled_circuit=routed_no_threshold,
-        final_map=final_mapping_no_threshold,
+        final_layout=final_layout_no_threshold,
     )
     assert_circuit_equivalence(
         original_circuit=loop_circ,
         transpiled_circuit=routed_threshold,
-        final_map=final_mapping_threshold,
+        final_layout=final_layout_threshold,
     )
 
 
@@ -374,14 +374,14 @@ def test_sabre_matched(names, star_connectivity):
     original_circuit = circuit.copy()
 
     router = Sabre(connectivity=connectivity)
-    routed_circuit, final_map = router(circuit)
+    routed_circuit, final_layout = router(circuit)
 
     assert router.added_swaps == 0
     assert_connectivity(circuit=routed_circuit, connectivity=connectivity)
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=routed_circuit,
-        final_map=final_map,
+        final_layout=final_layout,
     )
 
 
@@ -393,10 +393,10 @@ def test_sabre_simple(seed, star_connectivity):
     original_circuit = circ.copy()
 
     router = Sabre(connectivity=connectivity, seed=seed)
-    routed_circuit, final_map = router(circ)
+    routed_circuit, final_layout = router(circ)
 
     assert router.added_swaps == 1
-    assert final_map == {0: 2, 1: 1, 2: 0, 3: 3, 4: 4}
+    assert final_layout == {0: 2, 1: 1, 2: 0, 3: 3, 4: 4}
     assert routed_circuit.queue[0].qubits == (0, 2)
     assert isinstance(routed_circuit.queue[0], gates.SWAP)
     assert isinstance(routed_circuit.queue[1], gates.CZ)
@@ -404,7 +404,7 @@ def test_sabre_simple(seed, star_connectivity):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=routed_circuit,
-        final_map=final_map,
+        final_layout=final_layout,
     )
 
 
@@ -421,7 +421,7 @@ def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
     placer(circuit)
-    transpiled_circuit, final_qubit_map = router(circuit)
+    transpiled_circuit, final_layout = router(circuit)
 
     assert router.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
@@ -430,7 +430,7 @@ def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
     assert transpiled_circuit.queue[-1].register_name == measurement.register_name
 
@@ -448,7 +448,7 @@ def test_sabre_random_circuits_grid(n_gates, look, decay, grid_connectivity):
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
     placer(circuit)
-    transpiled_circuit, final_qubit_map = router(circuit)
+    transpiled_circuit, final_layout = router(circuit)
 
     assert router.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
@@ -457,7 +457,7 @@ def test_sabre_random_circuits_grid(n_gates, look, decay, grid_connectivity):
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
     assert transpiled_circuit.queue[-1].register_name == measurement.register_name
 
@@ -502,7 +502,7 @@ def test_restrict_qubits(router_algorithm, star_connectivity):
     assert_circuit_equivalence(
         original_circuit=circ,
         transpiled_circuit=routed_circ,
-        final_map=final_layout,
+        final_layout=final_layout,
     )
     assert_connectivity(restricted_connectivity, routed_circ)
     assert_placement(routed_circ, connectivity=restricted_connectivity)
@@ -558,13 +558,13 @@ def test_star_router(
     placer = StarConnectivityPlacer(connectivity)
 
     placer(circuit)
-    transpiled_circuit, final_qubit_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
     assert_connectivity(connectivity, transpiled_circuit)
     assert_placement(transpiled_circuit, connectivity)
     assert_circuit_equivalence(
         original_circuit=original_circuit,
         transpiled_circuit=transpiled_circuit,
-        final_map=final_qubit_map,
+        final_layout=final_layout,
     )
 
 
