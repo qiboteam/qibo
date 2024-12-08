@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians, matrices
+from qibo.hamiltonians.models import XXX, Heisenberg
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -59,3 +60,25 @@ def test_maxcut(backend, nqubits, dense, calcterms):
 def test_missing_neighbour_qubit(backend, model):
     with pytest.raises(ValueError):
         H = getattr(hamiltonians, model)(nqubits=1, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [True, False])
+def test_xxx(backend, dense):
+    nqubits = 2
+
+    with pytest.raises(ValueError):
+        test = XXX(
+            nqubits, external_field_strengths=[0, 1], dense=dense, backend=backend
+        )
+
+    with pytest.raises(TypeError):
+        test = XXX(nqubits, coupling_constant=[1], dense=dense, backend=backend)
+
+    with pytest.raises(ValueError):
+        test = Heisenberg(
+            nqubits,
+            coupling_constants=[0, 1],
+            external_field_strengths=1,
+            dense=dense,
+            backend=backend,
+        )
