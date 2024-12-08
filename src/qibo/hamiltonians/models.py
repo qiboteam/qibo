@@ -300,7 +300,7 @@ def XXX(
 
     return Heisenberg(
         nqubits,
-        coupling_constants=[coupling_constant] * 3,
+        coupling_constants=coupling_constant,
         external_field_strengths=external_field_strengths,
         dense=dense,
         backend=backend,
