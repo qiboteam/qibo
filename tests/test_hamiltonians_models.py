@@ -68,7 +68,11 @@ def test_xxx(backend, dense):
 
     with pytest.raises(ValueError):
         test = XXX(
-            nqubits, external_field_strengths=[0, 1], dense=dense, backend=backend
+            nqubits,
+            coupling_constant=1,
+            external_field_strengths=[0, 1],
+            dense=dense,
+            backend=backend,
         )
 
     with pytest.raises(TypeError):

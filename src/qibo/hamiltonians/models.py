@@ -186,6 +186,9 @@ def Heisenberg(
             f"When `coupling_constants` is type `int` or `list`, it must have length == 3.",
         )
 
+    if isinstance(coupling_constants, (float, int)):
+        coupling_constants = [coupling_constants] * 3
+
     if (
         isinstance(external_field_strengths, (list, tuple))
         and len(external_field_strengths) != 3
@@ -194,9 +197,6 @@ def Heisenberg(
             ValueError,
             f"When `external_field_strengths` is type `int` or `list`, it must have length == 3.",
         )
-
-    if isinstance(coupling_constants, (float, int)):
-        coupling_constants = [coupling_constants] * 3
 
     if isinstance(external_field_strengths, (float, int)):
         external_field_strengths = [external_field_strengths] * 3
