@@ -1,13 +1,13 @@
 from functools import cache
-from inspect import signature
 from itertools import product
+from random import Random
 from typing import List, Union
 
 import numpy as np
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import _check_backend, get_transpiler
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.transpiler.optimizer import Preprocessing
@@ -260,7 +260,15 @@ def GST(
     backend = _check_backend(backend)
 
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
-        transpiler = get_transpiler()
+        transpiler = Passes(
+            connectivity=backend.platform.topology,
+            passes=[
+                Preprocessing(backend.platform.topology),
+                Random(backend.platform.topology),
+                Sabre(backend.platform.topology),
+                Unroller(NativeGates.default()),
+            ],
+        )
 
     matrices = []
     empty_matrices = []
@@ -278,17 +286,12 @@ def GST(
 
     for gate in gate_set:
         if gate is not None:
-            init_args = signature(gate).parameters
-            if "q" in init_args:
-                nqubits = 1
-            elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-                nqubits = 2
-            else:
+            nqubits = len(gate.qubits)
+            if nqubits not in (1, 2):
                 raise_error(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
-            gate = gate(*range(nqubits))
 
         matrices.append(
             _gate_tomography(
