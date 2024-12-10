@@ -1347,3 +1347,18 @@ class Backend(abc.ABC):
     def jacobian(self, *args, **kwargs):
         """Compute the Jacobian matrix"""
         raise NotImplementedError
+
+
+# backend methods used for the execution
+
+# cast
+# zero_state/density_matrix
+# apply_gate/...
+# mean
+# reshape
+# transpose
+# einsum
+# concatenate
+# conj
+# sum
+# sample_shots
