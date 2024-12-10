@@ -25,8 +25,8 @@ def test_assert_circuit_equivalence_equal():
     circ1.add(gates.CZ(0, 1))
     circ2.add(gates.X(0))
     circ2.add(gates.CZ(0, 1))
-    final_map = {0: 0, 1: 1}
-    assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+    final_layout = {0: 0, 1: 1}
+    assert_circuit_equivalence(circ1, circ2, final_layout=final_layout)
 
 
 def test_assert_circuit_equivalence_swap():
@@ -35,8 +35,8 @@ def test_assert_circuit_equivalence_swap():
     circ1.add(gates.X(0))
     circ2.add(gates.SWAP(0, 1))
     circ2.add(gates.X(1))
-    final_map = {0: 1, 1: 0}
-    assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+    final_layout = {0: 1, 1: 0}
+    assert_circuit_equivalence(circ1, circ2, final_layout=final_layout)
 
 
 def test_assert_circuit_equivalence_false():
@@ -45,9 +45,9 @@ def test_assert_circuit_equivalence_false():
     circ1.add(gates.X(0))
     circ2.add(gates.SWAP(0, 1))
     circ2.add(gates.X(1))
-    final_map = {0: 0, 1: 1}
+    final_layout = {0: 0, 1: 1}
     with pytest.raises(TranspilerPipelineError):
-        assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+        assert_circuit_equivalence(circ1, circ2, final_layout=final_layout)
 
 
 def test_assert_placement_true(star_connectivity):
