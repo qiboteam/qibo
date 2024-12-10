@@ -69,7 +69,6 @@ scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
 pylint = "3.1.0"
 matplotlib = "^3.7.0"
-tensorflow = { version = "^2.16.1", markers = "sys_platform == 'linux'" }
 torch = "^2.1.1,<2.4"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch = "rename_methods" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
