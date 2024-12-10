@@ -328,7 +328,7 @@ def _curve_fit(
     Returns:
         ndarray: the optimal parameters.
     """
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
@@ -1174,21 +1174,11 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         qibo.states.CircuitResult: The result of the circuit execution.
     """
     from qibo.transpiler.pipeline import Passes
-    from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
-        qubits = backend.qubits
-        connectivity_edges = backend.connectivity
-        node_mapping = {q: i for i, q in enumerate(qubits)}
-        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
-        connectivity = nx.Graph(edges)
-        transpiler = Passes(
-            connectivity=connectivity,
-            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
-        )
-        circuit, _ = transpiler(circuit)
+        circuit.wire_names = qubit_map
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 

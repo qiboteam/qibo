@@ -3,12 +3,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import DecompositionError
-from qibo.transpiler.unroller import (
-    NativeGates,
-    Unroller,
-    assert_decomposition,
-    translate_gate,
-)
+from qibo.transpiler.asserts import assert_decomposition
+from qibo.transpiler.unroller import NativeGates, Unroller, translate_gate
 
 
 def test_native_gates_from_gatelist():
@@ -41,36 +37,6 @@ def test_translate_gate_error_2q():
     natives = NativeGates(0)
     with pytest.raises(DecompositionError):
         translate_gate(gates.CZ(0, 1), natives)
-
-
-def test_assert_decomposition():
-    circuit = Circuit(2)
-    circuit.add(gates.CZ(0, 1))
-    circuit.add(gates.Z(0))
-    circuit.add(gates.M(1))
-    assert_decomposition(circuit, native_gates=NativeGates.default())
-
-
-def test_assert_decomposition_fail_1q():
-    circuit = Circuit(1)
-    circuit.add(gates.X(0))
-    with pytest.raises(DecompositionError):
-        assert_decomposition(circuit, native_gates=NativeGates.default())
-
-
-@pytest.mark.parametrize("gate", [gates.CNOT(0, 1), gates.iSWAP(0, 1)])
-def test_assert_decomposition_fail_2q(gate):
-    circuit = Circuit(2)
-    circuit.add(gate)
-    with pytest.raises(DecompositionError):
-        assert_decomposition(circuit, native_gates=NativeGates.default())
-
-
-def test_assert_decomposition_fail_3q():
-    circuit = Circuit(3)
-    circuit.add(gates.TOFFOLI(0, 1, 2))
-    with pytest.raises(DecompositionError):
-        assert_decomposition(circuit, native_gates=NativeGates.default())
 
 
 @pytest.mark.parametrize(
@@ -146,8 +112,8 @@ def test_temp_cnot_decomposition():
     glist = [gates.GPI2, gates.RZ, gates.Z, gates.M, gates.CNOT]
     native_gates = NativeGates(0).from_gatelist(glist)
 
-    custom_pipeline = Passes([Unroller(native_gates=native_gates)])
-    transpiled_circuit, _ = custom_pipeline(circ)
+    unroller = Unroller(native_gates=native_gates)
+    transpiled_circuit = unroller(circ)
 
     # H
     assert transpiled_circuit.queue[0].name == "z"

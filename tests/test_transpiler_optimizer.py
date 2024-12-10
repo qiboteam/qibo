@@ -6,22 +6,18 @@ from qibo.models import Circuit
 from qibo.transpiler.optimizer import Preprocessing, Rearrange
 
 
-def star_connectivity():
-    chip = nx.Graph()
-    chip.add_nodes_from(list(range(5)))
-    graph_list = [(i, 2) for i in range(5) if i != 2]
-    chip.add_edges_from(graph_list)
-    return chip
-
-
-def test_preprocessing_error():
+def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
     preprocesser = Preprocessing(connectivity=star_connectivity())
     with pytest.raises(ValueError):
         new_circuit = preprocesser(circuit=circ)
 
+    circ = Circuit(5, wire_names=[0, 1, 2, "q3", "q4"])
+    with pytest.raises(ValueError):
+        new_circuit = preprocesser(circuit=circ)
 
-def test_preprocessing_same():
+
+def test_preprocessing_same(star_connectivity):
     circ = Circuit(5)
     circ.add(gates.CNOT(0, 1))
     preprocesser = Preprocessing(connectivity=star_connectivity())
@@ -29,7 +25,7 @@ def test_preprocessing_same():
     assert new_circuit.ngates == 1
 
 
-def test_preprocessing_add():
+def test_preprocessing_add(star_connectivity):
     circ = Circuit(3)
     circ.add(gates.CNOT(0, 1))
     preprocesser = Preprocessing(connectivity=star_connectivity())

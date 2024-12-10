@@ -125,39 +125,6 @@ class Unroller:
         return translated_circuit
 
 
-def assert_decomposition(
-    circuit: Circuit,
-    native_gates: NativeGates,
-):
-    """Checks if a circuit has been correctly decomposed into native gates.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
-            native gates in the transpiled circuit.
-    """
-    for gate in circuit.queue:
-        if isinstance(gate, gates.M):
-            continue
-        if len(gate.qubits) <= 2:
-            try:
-                native_type_gate = NativeGates.from_gate(gate)
-                if not native_type_gate & native_gates:
-                    raise_error(
-                        DecompositionError,
-                        f"{gate.name} is not a native gate.",
-                    )
-            except ValueError:
-                raise_error(
-                    DecompositionError,
-                    f"{gate.name} is not a native gate.",
-                )
-        else:
-            raise_error(
-                DecompositionError, f"{gate.name} acts on more than two qubits."
-            )
-
-
 def translate_gate(
     gate,
     native_gates: NativeGates,

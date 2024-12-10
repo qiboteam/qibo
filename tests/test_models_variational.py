@@ -109,13 +109,11 @@ test_values = [
 def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and (
-        (backend.name != "pytorch") or (backend.platform != "tensorflow")
+        backend.platform not in ["tensorflow", "pytorch"]
     ):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name == "pytorch":
-        pytest.skip("Skipping scipy optimizers for pytorch.")
-    if method != "sgd" and backend.platform == "tensorflow":
-        pytest.skip("Skipping scipy optimizers for tensorflow.")
+    if method != "sgd" and (backend.platform in ["tensorflow", "pytorch"]):
+        pytest.skip("Skipping scipy optimizers for pytorch and tensorflow.")
     n_threads = backend.nthreads
     backend.set_threads(1)
     nqubits = 3
@@ -138,7 +136,7 @@ def test_vqe(backend, method, options, compile, filename):
     initial_parameters = backend.cast(
         np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits), dtype="float64"
     )
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         initial_parameters.requires_grad = True
     v = VQE(circuit, hamiltonian)
 
@@ -281,14 +279,14 @@ test_values = [
 
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, dense, filename):
-    if (method == "sgd") and (backend.name not in ["tensorflow", "pytorch"]):
+    if (method == "sgd") and (backend.platform not in ["tensorflow", "pytorch"]):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name in ("tensorflow", "pytorch"):
+    if method != "sgd" and backend.platform in ("tensorflow", "pytorch"):
         pytest.skip("Skipping scipy optimizers for tensorflow and pytorch.")
     h = XXZ(3, dense=dense, backend=backend)
     qaoa = QAOA(h)
     initial_p = backend.cast([0.05, 0.06, 0.07, 0.08], dtype="float64")
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         initial_p.requires_grad = True
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
