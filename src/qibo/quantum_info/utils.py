@@ -251,7 +251,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
-        backend.calculate_norm(
+        backend.calculate_vector_norm(
             backend.np.sqrt(prob_dist_p) - backend.np.sqrt(prob_dist_q)
         )
         / np.sqrt(2)
@@ -386,7 +386,7 @@ def total_variation_distance(
         if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    tvd = backend.calculate_norm(prob_dist_p - prob_dist_q, order=1)
+    tvd = backend.calculate_vector_norm(prob_dist_p - prob_dist_q, order=1)
 
     return tvd / 2
 
