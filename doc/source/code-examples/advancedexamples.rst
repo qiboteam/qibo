@@ -802,6 +802,8 @@ using the ``pytorch`` framework.
     import torch
 
     from qibo import Circuit, gates, set_backend
+    from qibo.quantum_info.metrics import infidelity
+
     set_backend(backend="qiboml", platform="pytorch")
 
     # Optimization parameters
