@@ -51,7 +51,8 @@ class Passes:
         passes (list, optional): List of transpiler passes to be applied sequentially.
             If ``None``, default transpiler will be used. Defaults to ``None``.
         connectivity (:class:`networkx.Graph`, optional): Hardware connectivity.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware. Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware. 
+            Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
         on_qubits (list, optional): List of qubits to be used in the transpiler.
             If ``None``, all qubits in the connectivity will be used. Defaults to ``None``.
     """
