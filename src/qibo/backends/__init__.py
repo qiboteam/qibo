@@ -139,7 +139,11 @@ class _Global:
         natives = cls._backend.natives
         connectivity_edges = cls._backend.connectivity
         if qubits is not None and natives is not None:
-            connectivity = nx.Graph(connectivity_edges) if connectivity_edges is not None else nx.Graph()
+            connectivity = (
+                nx.Graph(connectivity_edges)
+                if connectivity_edges is not None
+                else nx.Graph()
+            )
             connectivity.add_nodes_from(qubits)
 
             return Passes(
