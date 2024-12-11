@@ -1,4 +1,5 @@
 from functools import cache
+from inspect import signature
 from itertools import product
 from random import Random
 from typing import List, Union
@@ -227,7 +228,12 @@ def GST(
     """Runs Gate Set Tomography on the input ``gate_set``.
 
     Args:
-        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` to run GST on.
+        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
+            GST on.
+            E.g. target_gates = [gates.RX(0, np.pi/3), gates.Z(0), gates.PRX(0, np.pi/2, np.pi/3),
+                                 gates.GPI(0, np.pi/7), gates.CNOT(0,1)]
+                 gate_set = [(g.__class__, [g.parameters[i] for i in range(len(g.parameters))])
+                             if g.parameters else (g.__class__, []) for g in target_gates]
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -286,12 +292,25 @@ def GST(
 
     for gate in gate_set:
         if gate is not None:
-            nqubits = len(gate.qubits)
-            if nqubits not in (1, 2):
+            init_args = signature(gate[0]).parameters
+            params = gate[1]
+
+            angle_names = [name for name in init_args if name in {"theta", "phi"}]
+
+            angle_values = {}
+            for name, value in zip(angle_names, params):  # Zip ensures correct order
+                angle_values[name] = value
+
+            if "q" in init_args:
+                nqubits = 1
+            elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+                nqubits = 2
+            else:
                 raise_error(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
+            gate = gate[0](*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
