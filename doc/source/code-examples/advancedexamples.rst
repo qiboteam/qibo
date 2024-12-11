@@ -174,15 +174,17 @@ During circuit execution, Qibolab uses the ``wire_names`` to find the correspond
 
     from qibo import Circuit, gates
 
-    # Define the circuit with 4 qubits
-    circuit = Circuit(4)
+    # Create a circuit with 4 qubits and assign physical qubit names
+    circuit = Circuit(4, wire_names=["C", "A", "B", "D"])
+
+    # wire_names can also be set after circuit initialization
+    # circuit.wire_names = ["C", "A", "B", "D"]
+
+    # Add gates to the circuit
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.M(2, 3))
-
-    # Set the physical qubit names
-    circuit.wire_names = ["C", "A", "B", "D"]
 
     # This is equivalent to:
     # H gate on qubit "C"

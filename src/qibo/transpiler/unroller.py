@@ -94,6 +94,12 @@ class Unroller:
     ):
         self.native_gates = native_gates
         self.backend = backend
+        """Initializes the unroller.
+
+        Args:
+            native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates to use in the transpiled circuit.
+            backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
+        """
 
     def __call__(self, circuit: Circuit):
         """Decomposes a circuit to native gates.
