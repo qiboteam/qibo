@@ -2228,8 +2228,8 @@ on a star-shaped hardware connectivity and a custom set of native gates.
         return chip
 
     # Define a custom set of native gates
-    glist = [gates.GPI2, gates.RZ, gates.Z, gates.CZ]
-    natives = NativeGates(0).from_gatelist(glist)
+    gate_list = [gates.GPI2, gates.RZ, gates.Z, gates.CZ]
+    natives = NativeGates(0).from_gatelist(gate_list)
 
     # Create a quantum circuit with 5 qubits
     # Define the hardware qubit names to be used in wire_names
