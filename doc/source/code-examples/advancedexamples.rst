@@ -2302,7 +2302,7 @@ Once set, the transpiler will automatically transpile the circuit before each ci
     custom_pipeline = Passes(custom_passes, connectivity=star_connectivity())
 
     # Attach the transpiler to the current backend
-    qibo.set_transpiler(custom_pipeline)
+    set_transpiler(custom_pipeline)
 
 If the user does not explicitly set a transpiler, the default transpiler is used.
 
