@@ -2279,7 +2279,7 @@ Once set, the transpiler will automatically transpile the circuit before each ci
 
 .. testcode:: python
 
-    import qibo
+    from qibo import set_transpiler
     from qibo.transpiler import (
         NativeGates,
         Passes,
