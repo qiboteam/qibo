@@ -77,7 +77,8 @@ def assert_circuit_equivalence(
     if transpiled_circuit.nqubits != original_circuit.nqubits:
         raise_error(
             ValueError,
-            f"Transpiled circuit ({transpiled_circuit.nqubits}) and original circuit ({original_circuit.nqubits}) do not have the same number of qubits.",
+            f"Transpiled circuit ({transpiled_circuit.nqubits}) and original circuit "
+            + f"({original_circuit.nqubits}) do not have the same number of qubits.",
         )
 
     if test_states is None:
