@@ -2280,10 +2280,13 @@ Once set, the transpiler will automatically transpile the circuit before each ci
 .. testcode:: python
 
     import qibo
-    from qibo.transpiler.pipeline import Passes
-    from qibo.transpiler.optimizer import Preprocessing
-    from qibo.transpiler.router import ShortestPaths
-    from qibo.transpiler.unroller import Unroller, NativeGates
+    from qibo.transpiler import (
+        NativeGates,
+        Passes,
+        Preprocessing,
+        ShortestPaths,
+        Unroller,
+    )
 
     # Define hardware connectivity
     def star_connectivity():
