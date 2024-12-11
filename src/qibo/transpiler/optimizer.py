@@ -30,8 +30,6 @@ class Preprocessing(Optimizer):
         if logical_qubits > physical_qubits:
             raise_error(
                 ValueError,
-                # "The number of qubits in the circuit can't be greater "
-                # + "than the number of physical qubits.",
                 f"The number of qubits in the circuit ({logical_qubits}) "
                 + f"can't be greater than the number of physical qubits ({physical_qubits}).",
             )
