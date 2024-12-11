@@ -2314,10 +2314,10 @@ Setting an empty transpiler is equivalent to disabling transpilation.
 
 .. testcode:: python
 
-    import qibo
+    from qibo import set_transpiler
     from qibo.transpiler.pipeline import Passes
 
-    qibo.set_transpiler(Passes())
+    set_transpiler(Passes())
 
 .. _gst_example:
 
