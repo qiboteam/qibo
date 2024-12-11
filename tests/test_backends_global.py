@@ -148,11 +148,13 @@ def test_default_transpiler_sim():
         and backend.qubits is None
     )
 
+
 CONNECTIVITY = [
     [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")],
     [("A1", "A2")],
     [],
-]  
+]
+
 
 @pytest.mark.parametrize("connectivity", CONNECTIVITY)
 def test_default_transpiler_hw(connectivity):
@@ -183,5 +185,3 @@ def test_default_transpiler_hw(connectivity):
         NativeGates.CZ in transpiler.native_gates
         and NativeGates.GPI2 in transpiler.native_gates
     )
-
-
