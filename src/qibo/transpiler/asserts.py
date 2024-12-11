@@ -69,7 +69,7 @@ def assert_circuit_equivalence(
         final_layout (dict): Final logical-physical qubit mapping.
         test_states (list, optional): List of states to test the equivalence.
             If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
-        ntests (int, optional): Number of random states to test the equivalence. Defaults to ``3``.
+        ntests (int, optional): Number of random states to test the equivalence. Defaults to :math: `3`.
     """
     backend = NumpyBackend()
     if transpiled_circuit.nqubits != original_circuit.nqubits:
