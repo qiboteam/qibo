@@ -156,10 +156,10 @@ When executing the circuit, it will be automatically transpiled using the :ref:`
 
 .. code-block:: python
 
-    import qibo
+    from qibo import set_backend
 
     # Set the backend and platform
-    qibo.set_backend("qibolab", platform="dummy")
+    set_backend("qibolab", platform="dummy")
 
 How to select specific hardware qubits for circuit execution?
 -------------------------------------------------------------
