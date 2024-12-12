@@ -149,7 +149,15 @@ def test_default_transpiler_sim():
     )
 
 
-def test_default_transpiler_hw():
+CONNECTIVITY = [
+    [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")],
+    [("A1", "A2")],
+    [],
+]
+
+
+@pytest.mark.parametrize("connectivity", CONNECTIVITY)
+def test_default_transpiler_hw(connectivity):
     class TempBackend(NumpyBackend):
         def __init__(self):
             super().__init__()
@@ -161,7 +169,7 @@ def test_default_transpiler_hw():
 
         @property
         def connectivity(self):
-            return [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")]
+            return connectivity
 
         @property
         def natives(self):
@@ -172,12 +180,7 @@ def test_default_transpiler_hw():
     transpiler = _Global.transpiler()
 
     assert list(transpiler.connectivity.nodes) == ["A1", "A2", "A3", "A4", "A5"]
-    assert list(transpiler.connectivity.edges) == [
-        ("A1", "A2"),
-        ("A2", "A3"),
-        ("A3", "A4"),
-        ("A4", "A5"),
-    ]
+    assert list(transpiler.connectivity.edges) == connectivity
     assert (
         NativeGates.CZ in transpiler.native_gates
         and NativeGates.GPI2 in transpiler.native_gates
