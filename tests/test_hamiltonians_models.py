@@ -4,20 +4,21 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians, matrices
+from qibo.hamiltonians.models import XXX, Heisenberg
 
 models_config = [
-    ("TFIM", {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
-    ("TFIM", {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.out"),
-    ("TFIM", {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0.out"),
-    ("XXZ", {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0.out"),
-    ("XXZ", {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5.out"),
-    ("XXZ", {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0.out"),
     ("X", {"nqubits": 3}, "x_N3.out"),
     ("Y", {"nqubits": 4}, "y_N4.out"),
     ("Z", {"nqubits": 5}, "z_N5.out"),
+    ("TFIM", {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
+    ("TFIM", {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.out"),
+    ("TFIM", {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0.out"),
     ("MaxCut", {"nqubits": 3}, "maxcut_N3.out"),
     ("MaxCut", {"nqubits": 4}, "maxcut_N4.out"),
     ("MaxCut", {"nqubits": 5}, "maxcut_N5.out"),
+    ("XXZ", {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0.out"),
+    ("XXZ", {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5.out"),
+    ("XXZ", {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0.out"),
 ]
 
 
@@ -59,3 +60,29 @@ def test_maxcut(backend, nqubits, dense, calcterms):
 def test_missing_neighbour_qubit(backend, model):
     with pytest.raises(ValueError):
         H = getattr(hamiltonians, model)(nqubits=1, backend=backend)
+
+
+@pytest.mark.parametrize("dense", [True, False])
+def test_xxx(backend, dense):
+    nqubits = 2
+
+    with pytest.raises(ValueError):
+        test = XXX(
+            nqubits,
+            coupling_constant=1,
+            external_field_strengths=[0, 1],
+            dense=dense,
+            backend=backend,
+        )
+
+    with pytest.raises(TypeError):
+        test = XXX(nqubits, coupling_constant=[1], dense=dense, backend=backend)
+
+    with pytest.raises(ValueError):
+        test = Heisenberg(
+            nqubits,
+            coupling_constants=[0, 1],
+            external_field_strengths=1,
+            dense=dense,
+            backend=backend,
+        )
