@@ -2310,7 +2310,9 @@ If the user does not explicitly set a transpiler, the default transpiler is used
 
 * For simulator backends, the default transpiler has no passes, so no transpilation is done.
 
-* For hardware backends, the default transpiler includes the :class:`qibo.transpiler.optimizer.Preprocessing`, :class:`qibo.transpiler.router.Sabre`, and :class:`qibo.transpiler.unroller.Unroller` passes, configured with the backend's connectivity and native gates.
+* For hardware backends, the default transpiler includes the :class:`qibo.transpiler.optimizer.Preprocessing`, 
+:class:`qibo.transpiler.router.Sabre`, and :class:`qibo.transpiler.unroller.Unroller` passes, 
+configured with the backend's connectivity and native gates.
 
 Setting an empty transpiler is equivalent to disabling transpilation.
 
