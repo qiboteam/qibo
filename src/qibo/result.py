@@ -38,6 +38,37 @@ class QuantumState:
         self.nqubits = int(np.log2(state.shape[0]))
         self._state = state
 
+    # state symbolic/array representation
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def _calculate_symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
+        terms = []
+        for i in np.nonzero(self._state)[0]:
+            b = bin(i)[2:].zfill(self.nqubits)
+            if np.abs(self._state[i]) >= cutoff:
+                x = np.round(self._state[i], decimals)
+                terms.append(f"{x}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    def _calculate_symbolic_density_matrix(
+        self, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        terms = []
+        indi, indj = np.nonzero(self._state)
+        for i, j in zip(indi, indj):
+            bi = bin(i)[2:].zfill(self.nqubits)
+            bj = bin(j)[2:].zfill(self.nqubits)
+            if np.abs(self._state[i, j]) >= cutoff:
+                x = np.round(self._state[i, j], decimals)
+                terms.append(f"{x}|{bi}><{bj}|")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
         """Dirac notation representation of the state in the computational basis.
 
@@ -53,13 +84,9 @@ class QuantumState:
             (str): A string representing the state in the computational basis.
         """
         if self.density_matrix:
-            terms = self.backend.calculate_symbolic_density_matrix(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
+            terms = self._calculate_symbolic_density_matrix(decimals, cutoff, max_terms)
         else:
-            terms = self.backend.calculate_symbolic(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
+            terms = self._calculate_symbolic(decimals, cutoff, max_terms)
         return " + ".join(terms)
 
     def state(self, numpy: bool = False):
@@ -77,6 +104,37 @@ class QuantumState:
             return np.array(self._state.tolist())
 
         return self._state
+
+    # probabilities
+    # ^^^^^^^^^^^^^
+
+    def _order_probabilities(self, probs, qubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        unmeasured, reduced = [], {}
+        for i in range(self.nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return np.transpose(probs, [reduced.get(i) for i in qubits])
+
+    def _calculate_probabilities(self, qubits):
+        rtype = np.real(self._state).dtype
+        unmeasured_qubits = tuple(i for i in range(self.nqubits) if i not in qubits)
+        state = np.reshape(np.abs(self._state) ** 2, self.nqubits * (2,))
+        probs = np.sum(state.astype(dtype=rtype), axis=unmeasured_qubits)
+        return np.ravel(self._order_probabilities(probs, qubits))
+
+    def _calculate_probabilities_density_matrix(self, qubits):
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(self.nqubits) if i not in qubits)
+        order = order + tuple(i + self.nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (self.nqubits - len(qubits)))
+        state = np.reshape(self._state, 2 * self.nqubits * (2,))
+        state = np.reshape(np.transpose(state, order), shape)
+        probs = np.abs(np.einsum("abab->a", state))
+        probs = np.reshape(probs, len(qubits) * (2,))
+        return np.ravel(self._order_probabilities(probs, qubits))
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculates measurement probabilities by tracing out qubits.
@@ -98,11 +156,12 @@ class QuantumState:
             qubits = tuple(range(self.nqubits))
 
         if self.density_matrix:
-            return self.backend.calculate_probabilities_density_matrix(
-                self._state, qubits, self.nqubits
-            )
+            return self._calculate_probabilities_density_matrix(qubits)
 
-        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
+        return self._calculate_probabilities(qubits)
+
+    # serialization
+    # ^^^^^^^^^^^^^
 
     def __str__(self):
         return self.symbolic()
