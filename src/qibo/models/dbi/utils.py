@@ -70,15 +70,15 @@ def cs_angle_sgn(dbi_object, d, backend=None):
     """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
     backend = _check_backend(backend)
     d = backend.cast(d)
-    norm = backend.np.trace(
-        backend.np.matmul(
-            backend.np.conj(
+    norm = backend.trace(
+        backend.matmul(
+            backend.conj(
                 dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
             ).T,
             dbi_object.commutator(d, dbi_object.h.matrix),
         )
     )
-    return backend.np.real(backend.np.sign(norm))
+    return backend.real(backend.sign(norm))
 
 
 def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list, backend=None):
@@ -87,7 +87,7 @@ def decompose_into_pauli_basis(h_matrix: np.array, pauli_operators: list, backen
     backend = _check_backend(backend)
     decomposition = []
     for Z_i in pauli_operators:
-        expect = backend.np.trace(h_matrix @ Z_i) / 2**nqubits
+        expect = backend.trace(h_matrix @ Z_i) / 2**nqubits
         decomposition.append(expect)
     return decomposition
 
@@ -221,9 +221,8 @@ def least_squares_polynomial_expansion_coef(dbi_object, d, n: int = 3, backend=N
     # coefficients
     coef = np.empty(n)
     for i in range(n):
-        coef[i] = backend.np.real(
-            exp_list[i]
-            * backend.np.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
+        coef[i] = backend.real(
+            exp_list[i] * backend.trace(dbi_object.backend.cast(d) @ Gamma_list[i + 1])
         )
     coef = list(reversed(coef))
     return coef

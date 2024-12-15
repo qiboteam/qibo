@@ -34,9 +34,9 @@ def purity(state, backend=None):
         )
 
     if len(state.shape) == 1:
-        pur = backend.np.real(backend.calculate_norm(state)) ** 2
+        pur = backend.real(backend.calculate_norm(state)) ** 2
     else:
-        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
+        pur = backend.real(backend.trace(backend.matmul(state, state)))
     return float(pur)
 
 
@@ -102,16 +102,15 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     difference = state - target
     if check_hermitian is True:
         hermitian = bool(
             float(
                 backend.calculate_norm_density_matrix(
-                    backend.np.transpose(backend.np.conj(difference), (1, 0))
-                    - difference,
+                    backend.transpose(backend.conj(difference), (1, 0)) - difference,
                     order=2,
                 )
             )
@@ -129,7 +128,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     else:
         eigenvalues = backend.calculate_eigenvalues(difference)
 
-    distance = backend.np.sum(backend.np.absolute(eigenvalues)) / 2
+    distance = backend.sum(backend.abs(eigenvalues)) / 2
 
     return distance
 
@@ -155,9 +154,9 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
     """
     backend = _check_backend(backend)
 
-    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
+    inner_product = backend.trace(backend.conj(operator_A.T) @ operator_B)
 
-    return backend.np.real(inner_product)
+    return backend.real(inner_product)
 
 
 def hilbert_schmidt_distance(state, target, backend=None):
@@ -202,8 +201,8 @@ def hilbert_schmidt_distance(state, target, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     difference = state - target
 
@@ -277,11 +276,9 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             state = np.zeros(state.shape, dtype=complex)
             state = backend.cast(state, dtype=state.dtype)
             for eig, eigvec in zip(
-                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
+                eigenvalues, backend.transpose(eigenvectors, (1, 0))
             ):
-                matrix = backend.np.sqrt(eig) * backend.np.outer(
-                    eigvec, backend.np.conj(eigvec)
-                )
+                matrix = backend.sqrt(eig) * backend.outer(eigvec, backend.conj(eigvec))
                 matrix = backend.cast(matrix, dtype=matrix.dtype)
                 state = state + matrix
                 del matrix
@@ -295,25 +292,25 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             fid = np.zeros(state.shape, dtype=complex)
             fid = backend.cast(fid, dtype=fid.dtype)
             for eig, eigvec in zip(
-                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
+                eigenvalues, backend.transpose(eigenvectors, (1, 0))
             ):
-                if backend.np.real(eig) > PRECISION_TOL:
-                    matrix = backend.np.sqrt(eig) * backend.np.outer(
-                        eigvec, backend.np.conj(eigvec)
+                if backend.real(eig) > PRECISION_TOL:
+                    matrix = backend.sqrt(eig) * backend.outer(
+                        eigvec, backend.conj(eigvec)
                     )
                     matrix = backend.cast(matrix, dtype=matrix.dtype)
                     fid = fid + matrix
                     del matrix
 
-            fid = backend.np.real(backend.np.trace(fid))
+            fid = backend.real(backend.trace(fid))
 
             return fid
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        backend.np.abs(backend.np.matmul(backend.np.conj(state), target)) ** 2
+        backend.abs(backend.matmul(backend.conj(state), target)) ** 2
         if len(state.shape) == 1
-        else backend.np.real(backend.np.trace(backend.np.matmul(state, target)))
+        else backend.real(backend.trace(backend.matmul(state, target)))
     )
 
     return fid
@@ -368,8 +365,8 @@ def bures_angle(state, target, check_hermitian: bool = False, backend=None):
     """
     backend = _check_backend(backend)
 
-    angle = backend.np.arccos(
-        backend.np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
+    angle = backend.arccos(
+        backend.sqrt(fidelity(state, target, check_hermitian, backend=backend))
     )
 
     return angle
@@ -398,10 +395,8 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
         float: Bures distance between ``state`` and ``target``.
     """
     backend = _check_backend(backend)
-    sqrt_fid = backend.np.sqrt(
-        fidelity(state, target, check_hermitian, backend=backend)
-    )
-    distance = backend.np.sqrt(2 * (1 - sqrt_fid))
+    sqrt_fid = backend.sqrt(fidelity(state, target, check_hermitian, backend=backend))
+    distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
 
@@ -441,10 +436,10 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     if check_unitary is True:
         norm_channel = float(
             backend.calculate_norm_density_matrix(
-                backend.np.matmul(
-                    backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
+                backend.matmul(
+                    backend.conj(backend.transpose(channel, (1, 0))), channel
                 )
-                - backend.np.eye(dim**2)
+                - backend.eye(dim**2)
             )
         )
         if target is None and norm_channel > PRECISION_TOL:
@@ -452,10 +447,10 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         if target is not None:
             norm_target = float(
                 backend.calculate_norm(
-                    backend.np.matmul(
-                        backend.np.conj(backend.np.transpose(target, (1, 0))), target
+                    backend.matmul(
+                        backend.conj(backend.transpose(target, (1, 0))), target
                     )
-                    - backend.np.eye(dim**2)
+                    - backend.eye(dim**2)
                 )
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
@@ -463,15 +458,15 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        process_fid = backend.np.real(backend.np.trace(channel)) / dim**2
+        process_fid = backend.real(backend.trace(channel)) / dim**2
         process_fid = float(process_fid)
 
         return process_fid
 
-    process_fid = backend.np.matmul(
-        backend.np.transpose(backend.np.conj(channel), (1, 0)), target
+    process_fid = backend.matmul(
+        backend.transpose(backend.conj(channel), (1, 0)), target
     )
-    process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
+    process_fid = backend.real(backend.trace(process_fid)) / dim**2
 
     return process_fid
 
@@ -644,9 +639,9 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
     channel = backend.to_numpy(channel)
 
-    channel = backend.np.transpose(channel, (1, 0))
-    channel_real = backend.np.real(channel)
-    channel_imag = backend.np.imag(channel)
+    channel = backend.transpose(channel, (1, 0))
+    channel_real = backend.real(channel)
+    channel_imag = backend.imag(channel)
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -836,9 +831,9 @@ def frame_potential(
             unitary_2.set_parameters(params_2)
             unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
 
-            potential += backend.np.abs(
-                backend.np.trace(
-                    backend.np.transpose(backend.np.conj(unitary_1), (1, 0)) @ unitary_2
+            potential += backend.abs(
+                backend.trace(
+                    backend.transpose(backend.conj(unitary_1), (1, 0)) @ unitary_2
                 )
             ) ** (2 * power_t)
 
@@ -910,9 +905,9 @@ def quantum_fisher_information_matrix(
     overlaps = jacobian.T @ state
 
     qfim = jacobian.T @ jacobian
-    qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
+    qfim = qfim - backend.outer(overlaps, backend.conj(overlaps.T))
 
-    return 4 * backend.np.real(qfim)
+    return 4 * backend.real(qfim)
 
 
 def _check_hermitian(matrix, backend=None):
@@ -930,7 +925,7 @@ def _check_hermitian(matrix, backend=None):
     backend = _check_backend(backend)
 
     norm = backend.calculate_norm_density_matrix(
-        backend.np.conj(matrix).T - matrix, order=2
+        backend.conj(matrix).T - matrix, order=2
     )
 
     hermitian = bool(float(norm) <= PRECISION_TOL)

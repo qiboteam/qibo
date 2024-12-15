@@ -367,7 +367,7 @@ def test_gpi(backend):
     matrix = np.array([[0, np.conj(phase)], [phase, 0]])
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     assert gates.GPI(0, phi).qasm_label == "gpi"
@@ -387,7 +387,7 @@ def test_gpi2(backend):
     matrix = np.array([[1, -1.0j * np.conj(phase)], [-1.0j * phase, 1]]) / np.sqrt(2)
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     assert gates.GPI2(0, phi).qasm_label == "gpi2"
@@ -455,17 +455,17 @@ def test_u3(backend, seed_state, seed_observable):
     matrix = np.array([[ep.conj() * cost, -em.conj() * sint], [em * sint, ep * cost]])
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -491,7 +491,7 @@ def test_u1q(backend, seed_state):
     )
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -531,7 +531,7 @@ def test_cy(backend, seed_state, seed_observable):
     )
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
@@ -549,10 +549,10 @@ def test_cy(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -573,7 +573,7 @@ def test_cz(backend, seed_state, seed_observable):
     matrix[3, 3] = -1
     matrix = backend.cast(matrix)
 
-    target_state = backend.np.matmul(matrix, initial_state)
+    target_state = backend.matmul(matrix, initial_state)
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
@@ -591,10 +591,10 @@ def test_cz(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -718,7 +718,7 @@ def test_cun(backend, name, params):
     _matrix = gate.matrix(backend)
     gate = backend.cast(_matrix, dtype=_matrix.dtype)
 
-    target_state = backend.np.matmul(gate, initial_state)
+    target_state = backend.matmul(gate, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -814,7 +814,7 @@ def test_fsim(backend):
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, backend.cast(target_state))
+    target_state = backend.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1034,10 +1034,10 @@ def test_rxxyy(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     # testing random expectation value due to global phase difference
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1072,7 +1072,7 @@ def test_ms(backend):
     matrix[1, 2] = -1.0j * np.conj(minus)
     matrix /= np.sqrt(2)
     matrix = backend.cast(matrix)
-    target_state = backend.np.matmul(matrix, backend.cast(target_state))
+    target_state = backend.matmul(matrix, backend.cast(target_state))
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
@@ -1194,10 +1194,10 @@ def test_ecr(backend):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.np.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.np.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1705,8 +1705,8 @@ def test_unitary_dagger(backend, nqubits):
     gate = gates.Unitary(matrix, *range(nqubits))
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
-    target_state = backend.np.matmul(matrix, initial_state)
-    target_state = backend.np.matmul(backend.np.conj(matrix).T, target_state)
+    target_state = backend.matmul(matrix, initial_state)
+    target_state = backend.matmul(backend.conj(matrix).T, target_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
@@ -1774,9 +1774,9 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     initial_state = random_statevector(2**nqubits, backend=backend)
-    target_state = backend.apply_gate(gate, backend.np.copy(initial_state), nqubits)
+    target_state = backend.apply_gate(gate, backend.copy(initial_state), nqubits)
     dgates = gate.decompose(*free, use_toffolis=use_toffolis)
-    final_state = backend.np.copy(initial_state)
+    final_state = backend.copy(initial_state)
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)
     backend.assert_allclose(final_state, target_state, atol=1e-6)

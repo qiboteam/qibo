@@ -401,7 +401,7 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
         target = classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
     else:
         target = ((prob_dist_p / prob_dist_q) ** (1 - alpha) - 1) / (1 - alpha)
-        target = backend.np.sum(prob_dist_p**alpha * target)
+        target = backend.sum(prob_dist_p**alpha * target)
 
     if kind is not None:
         prob_dist_p = kind(prob_dist_p)
@@ -527,7 +527,7 @@ def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevecto
     )
 
     if statevector:
-        state = backend.np.outer(state, backend.np.conj(state.T))
+        state = backend.outer(state, backend.conj(state.T))
 
     entropy_target = von_neumann_entropy(
         state, base=base, check_hermitian=check_hermitian, backend=backend
@@ -557,7 +557,7 @@ def test_mutual_information(backend, base, check_hermitian):
 
     state_a = random_density_matrix(4, backend=backend)
     state_b = random_density_matrix(4, backend=backend)
-    state = backend.np.kron(state_a, state_b)
+    state = backend.kron(state_a, state_b)
 
     backend.assert_allclose(
         mutual_information(state, [0, 1], base, check_hermitian, backend),
@@ -591,7 +591,7 @@ def test_renyi_entropy(backend, alpha, base):
         target = von_neumann_entropy(state, base=base, backend=backend)
     elif alpha == np.inf:
         target = backend.calculate_norm_density_matrix(state, order=2)
-        target = -1 * backend.np.log2(target) / np.log2(base)
+        target = -1 * backend.log2(target) / np.log2(base)
     else:
         target = np.log2(
             np.trace(np.linalg.matrix_power(backend.to_numpy(state), alpha))
@@ -674,19 +674,17 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 )
             elif alpha == np.inf:
                 state_outer = (
-                    backend.np.outer(state, backend.np.conj(state.T))
-                    if state_flag
-                    else state
+                    backend.outer(state, backend.conj(state.T)) if state_flag else state
                 )
                 target_outer = (
-                    backend.np.outer(target, backend.np.conj(target.T))
+                    backend.outer(target, backend.conj(target.T))
                     if target_flag
                     else target
                 )
                 new_state = matrix_power(state_outer, 0.5, backend=backend)
                 new_target = matrix_power(target_outer, 0.5, backend=backend)
 
-                log = backend.np.log2(
+                log = backend.log2(
                     backend.calculate_norm_density_matrix(
                         new_state @ new_target, order=1
                     )
@@ -695,14 +693,14 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 log = -2 * log / np.log2(base)
             else:
                 if len(state.shape) == 1:
-                    state = backend.np.outer(state, backend.np.conj(state))
+                    state = backend.outer(state, backend.conj(state))
 
                 if len(target.shape) == 1:
-                    target = backend.np.outer(target, backend.np.conj(target))
+                    target = backend.outer(target, backend.conj(target))
 
                 log = matrix_power(state, alpha, backend=backend)
                 log = log @ matrix_power(target, 1 - alpha, backend=backend)
-                log = backend.np.log2(backend.np.trace(log))
+                log = backend.log2(backend.trace(log))
 
                 log = (1 / (alpha - 1)) * log / np.log2(base)
 
@@ -747,7 +745,7 @@ def test_tsallis_entropy(backend, alpha, base):
         target = von_neumann_entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
-            backend.np.trace(matrix_power(state, alpha, backend=backend)) - 1
+            backend.trace(matrix_power(state, alpha, backend=backend)) - 1
         )
 
     backend.assert_allclose(
@@ -808,14 +806,14 @@ def test_relative_tsallis_entropy(
             alpha = 2 - alpha
 
         if state_flag:
-            state = backend.np.outer(state, backend.np.conj(state.T))
+            state = backend.outer(state, backend.conj(state.T))
 
         if target_flag:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         target_value = matrix_power(state, alpha, backend=backend)
         target_value = target_value @ matrix_power(target, 1 - alpha, backend=backend)
-        target_value = (1 - backend.np.trace(target_value)) / (1 - alpha)
+        target_value = (1 - backend.trace(target_value)) / (1 - alpha)
 
     backend.assert_allclose(value, target_value, atol=1e-10)
 
@@ -879,7 +877,7 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
     backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
 
     # Product state
-    state = backend.np.kron(
+    state = backend.kron(
         random_statevector(2, backend=backend), random_statevector(2, backend=backend)
     )
 
