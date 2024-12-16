@@ -635,7 +635,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Args:
             freq (dict): input frequencies of the samples.
-            qubit_map (dict): qubit map.
+            qubit_map (list): qubit map.
 
         Returns:
             (float): the calculated expectation value.
@@ -661,7 +661,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             expvals.extend(
                 [
                     term.coefficient.real
-                    * (-1) ** [state[qubit_map[q]] for q in qubits].count("1")
+                    * (-1) ** [state[qubit_map.index(q)] for q in qubits].count("1")
                     for state in keys
                 ]
             )

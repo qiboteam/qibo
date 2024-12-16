@@ -286,25 +286,29 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
             local_ev = local_ham.expectation(state)
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize(
+    "observable,qubit_map",
+    [
+        (2 * Z(0) * Z(3) + Z(0) * Z(2), [0, 1, 2, 3]),
+        (Z(1) + Z(3), [0, 1, 3]),
+    ]
+)
+def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(0)
-    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
-    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
-    h0 = SymbolicHamiltonian(obs0, backend=backend)
-    h1 = SymbolicHamiltonian(obs1, backend=backend)
+    hamiltonian = SymbolicHamiltonian(observable, backend=backend)
     c = Circuit(4)
     c.add(gates.RX(0, np.random.rand()))
     c.add(gates.RX(1, np.random.rand()))
     c.add(gates.RX(2, np.random.rand()))
     c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(0, 1, 2, 3))
+    c.add(gates.M(*qubit_map)
     nshots = 10**5
     result = backend.execute_circuit(c, nshots=nshots)
     freq = result.frequencies(binary=True)
-    ev0 = h0.expectation_from_samples(freq, qubit_map=None)
-    ev1 = h1.expectation(result.state())
-    backend.assert_allclose(ev0, ev1, atol=20 / np.sqrt(nshots))
+    from_samples = hamiltonian.expectation_from_samples(freq, qubit_map=qubit_map)
+    from_state  = hamiltonian.expectation(result.state())
+    backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
