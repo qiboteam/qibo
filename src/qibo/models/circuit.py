@@ -133,6 +133,7 @@ class Circuit:
 
             from qibo import Circuit
 
+            # Every circuit initialization below is valid
             circuit = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
             circuit = Circuit(["A", "B", "C", "D", "E"])
             circuit = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
