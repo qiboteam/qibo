@@ -121,7 +121,14 @@ class Circuit:
 
     Circuits can be created with a specific number of qubits and wire names.
 
+        - Either ``nqubits`` or ``wire_names`` must be provided.
+        - If only ``nqubits`` is provided, wire names will default to ``[0, 1, ..., nqubits - 1]``.
+        - If only ``wire_names`` is provided, ``nqubits`` will be set to the length of ``wire_names``.
+        - ``nqubits`` and ``wire_names`` must be consistent with each other.
+
+
     Example:
+
         .. code-block:: python
 
             from qibo import Circuit
@@ -133,12 +140,7 @@ class Circuit:
 
     Args:
         nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
-        wire_names (list, optional): List of wire names.
-            - Either ``nqubits`` or ``wire_names`` must be provided.
-            - If only ``nqubits`` is provided, wire names will default to [``0``, ``1``, ..., ``nqubits - 1``].
-            - If only ``wire_names`` is provided, ``nqubits`` will be set to the length of ``wire_names``.
-            - ``nqubits`` and ``wire_names`` must be consistent with each other.
-
+        wire_names (list, optional): List of wire names
         init_kwargs (dict): a dictionary with the following keys
 
             - *nqubits*
@@ -302,7 +304,7 @@ class Circuit:
             if len(wire_names) != self.nqubits:
                 raise_error(
                     ValueError,
-                    "Number of wire names must be equal to the number of qubits, "
+                    f"Number of wire names must be equal to the number of qubits ({self.nqubits}), "
                     f"but is {len(wire_names)}.",
                 )
             self._wire_names = wire_names.copy()
