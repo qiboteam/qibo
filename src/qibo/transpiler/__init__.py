@@ -7,4 +7,4 @@ from qibo.transpiler.placer import (
     Subgraph,
 )
 from qibo.transpiler.router import Sabre, ShortestPaths, StarConnectivityRouter
-from qibo.transpiler.unroller import NativeGates
+from qibo.transpiler.unroller import NativeGates, Unroller

@@ -138,12 +138,14 @@ class _Global:
         qubits = cls._backend.qubits
         natives = cls._backend.natives
         connectivity_edges = cls._backend.connectivity
-        if (
-            qubits is not None
-            and natives is not None
-            and connectivity_edges is not None
-        ):
-            connectivity = nx.Graph(connectivity_edges)
+        if qubits is not None and natives is not None:
+            connectivity = (
+                nx.Graph(connectivity_edges)
+                if connectivity_edges is not None
+                else nx.Graph()
+            )
+            connectivity.add_nodes_from(qubits)
+
             return Passes(
                 connectivity=connectivity,
                 passes=[
@@ -152,7 +154,6 @@ class _Global:
                     Unroller(NativeGates[natives]),
                 ],
             )
-
         return Passes(passes=[])
 
 
