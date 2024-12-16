@@ -5,13 +5,13 @@ Here are a few short advanced `how to` examples.
 
 .. _gpu-examples:
 
-How to select hardware devices?
--------------------------------
+How to select a classical hardware device for circuit execution?
+----------------------------------------------------------------
 
-Qibo supports execution on different hardware configurations including CPU with
+Qibo supports execution on different classical hardware configurations including CPU with
 multi-threading, single GPU and multiple GPUs. Here we provide some useful
 information on how to control the devices that Qibo uses for circuit execution
-in order to maximize performance for the available hardware configuration.
+in order to maximize performance for the available classical hardware configuration.
 
 Switching between CPU and GPU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -143,6 +143,65 @@ however the user may create the full state as follows:
     # Access the full state (will double memory usage)
     final_state = result.state()
     # ``final_state`` is a ``tf.Tensor``
+
+
+How to select a quantum hardware device for circuit execution?
+--------------------------------------------------------------
+
+Qibolab is the dedicated Qibo backend for quantum hardware control.
+For installation instructions, see the `Qibolab Documentation <https://qibo.science/qibolab/stable/>`_.
+The ``Platform`` class in Qibolab represents a QPU device controlled by one or more instruments.
+By specifying the platform name, the user can select the quantum hardware device for circuit execution.
+When executing the circuit, it will be automatically transpiled using the :ref:`Default Transpiler <tutorials_set_transpiler>`.
+
+.. code-block:: python
+
+    from qibo import set_backend
+
+    # Set the backend and platform
+    set_backend("qibolab", platform="dummy")
+
+How to select specific hardware qubits for circuit execution?
+-------------------------------------------------------------
+
+The :class:`qibo.models.Circuit` has a ``wire_names`` property that stores the physical names of the qubits in the circuit.
+The physical qubit name ``wire_names[i]`` is assigned to the ``i`` th qubit in the circuit.
+Users can specify the hardware qubits to be used by setting the ``wire_names``.
+During circuit execution, Qibolab uses the ``wire_names`` to find the corresponding hardware qubits.
+
+
+.. code-block:: python
+
+    from qibo import Circuit, gates
+
+    # Create a circuit with 4 qubits and assign physical qubit names
+    circuit = Circuit(4, wire_names=["C", "A", "B", "D"])
+
+    # wire_names can also be set after circuit initialization
+    # circuit.wire_names = ["C", "A", "B", "D"]
+
+    # Add gates to the circuit
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.M(2, 3))
+
+    # This is equivalent to:
+    # H gate on qubit "C"
+    # CNOT gate on qubits "C" and "A"
+    # CZ gate on qubits "C" and "B"
+    # M gate on qubit "B" and "D"
+
+For example, if the user sets ``wire_names`` to ``["C", "A", "B", "D"]``,
+it means that the first qubit in the circuit is mapped to the physical qubit named ``C``,
+the second qubit is mapped to ``A``, and so on.
+
+If the circuit with the given ``wire_names`` does not meet the hardware device's constraints
+(e.g., connectivity and native gate requirements),
+the :ref:`default transpiler <tutorials_set_transpiler>` will automatically modify
+the circuit to satisfy these constraints.
+In this case, different hardware qubits may be used to execute the circuit.
+If the user disables the default transpiler, executing the circuit will result in compilation errors.
 
 
 How to use callbacks?
@@ -2131,47 +2190,28 @@ rather each term is treated separately every time.
 
 .. _tutorials_transpiler:
 
-How to modify the transpiler?
------------------------------
+How to transpile a circuit?
+---------------------------
 
-Logical quantum circuits for quantum algorithms are hardware agnostic. Usually an all-to-all qubit connectivity
-is assumed while most current hardware only allows the execution of two-qubit gates on a restricted subset of qubit
-pairs. Moreover, quantum devices are restricted to executing a subset of gates, referred to as native.
-This means that, in order to execute circuits on a real quantum chip, they must be transformed into an equivalent,
-hardware specific, circuit. The transformation of the circuit is carried out by the transpiler through the resolution
-of two key steps: connectivity matching and native gates decomposition.
-In order to execute a gate between two qubits that are not directly connected SWAP gates are required. This procedure is called routing.
-As on NISQ devices two-qubit gates are a large source of noise, this procedure generates an overall noisier circuit.
-Therefore, the goal of an efficient routing algorithm is to minimize the number of SWAP gates introduced.
-An important step to ease the connectivity problem, is finding anoptimal initial mapping between logical and physical qubits.
-This step is called placement.
-The native gates decomposition in the transpiling procedure is performed by the unroller. An optimal decomposition uses the least amount
-of two-qubit native gates. It is also possible to reduce the number of gates of the resulting circuit by exploiting
-commutation relations, KAK decomposition or machine learning techniques.
-Qibo implements a built-in transpiler with customizable options for each step. The main algorithms that can
-be used at each transpiler step are reported below with a short description.
+Quantum hardware has a specific qubit connectivity and a set of native gates that it can execute.
+Circuit transpilation is the process of converting a quantum circuit into an equivalent one
+that can be executed on a given hardware configuration. This is done by applying several passes.
+The main passes are:
 
-The initial placement can be found with one of the following procedures:
-- Random greedy: the best mapping is found within a set of random layouts based on a greedy policy.
-- Subgraph isomorphism: the initial mapping is the one that guarantees the execution of most gates at
-the beginning of the circuit without introducing any SWAP.
-- Reverse traversal: this technique uses one or more reverse routing passes to find an optimal mapping by
-starting from a trivial layout.
+- Optimization: Simplifies the circuit by removing redundant gates.
+- Placement: Maps logical qubits to physical qubits to minimize the number of required SWAP gates during routing.
+- Routing: Makes all gates executable by adding SWAP gates where necessary.
+- Unrolling: Decomposes gates into the native gates of the hardware.
 
-The routing problem can be solved with the following algorithms:
-- Shortest paths: when unconnected logical qubits have to interact, they are moved on the chip on
-the shortest path connecting them. When multiple shortest paths are present, the one that also matches
-the largest number of the following two-qubit gates is chosen.
-- Sabre: this heuristic routing technique uses a customizable cost function to add SWAP gates
-that reduce the distance between unconnected qubits involved in two-qubit gates.
+Each pass has various algorithms. Since transpilation introduces additional gates,
+it is important for users to select the most efficient algorithms for their specific application.
+Qibo provides a built-in transpiler :class:`qibo.transpiler.pipeline.Passes`,
+which can be customized by adding the desired transpilation algorithms.
 
-Qibolab unroller applies recursively a set of hard-coded gates decompositions in order to translate any gate into
-single and two-qubit native gates. Single qubit gates are translated into U3, RX, RZ, X and Z gates. It is possible to
-fuse multiple single qubit gates acting on the same qubit into a single U3 gate. For the two-qubit native gates it
-is possible to use CZ and/or iSWAP. When both CZ and iSWAP gates are available the chosen decomposition is the
-one that minimizes the use of two-qubit gates.
-
-Multiple transpilation steps can be implemented using the :class:`qibo.transpiler.pipeline.Pipeline`:
+In this example, we used :class:`qibo.transpiler.optimizer.Preprocessing`,
+:class:`qibo.transpiler.placer.Random`, :class:`qibo.transpiler.router.ShortestPaths`,
+and :class:`qibo.transpiler.unroller.Unroller` passes to transpile the circuit
+on a star-shaped hardware connectivity and a custom set of native gates.
 
 .. testcode:: python
 
@@ -2186,36 +2226,33 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     from qibo.transpiler.placer import Random
     from qibo.transpiler.asserts import assert_transpiling
 
-    # Define connectivity as nx.Graph
+    # Define hardware connectivity using nx.Graph
     def star_connectivity():
         chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
         return chip
 
-    # Define the circuit
-    # wire_names must match nodes in the connectivity graph.
-    # The index in wire_names represents the logical qubit number in the circuit.
-    circuit = Circuit(2, wire_names=["q0", "q1"])
+    # Define a custom set of native gates
+    gate_list = [gates.GPI2, gates.RZ, gates.Z, gates.CZ]
+    natives = NativeGates(0).from_gatelist(gate_list)
+
+    # Create a quantum circuit with 5 qubits
+    # Define the hardware qubit names to be used in wire_names
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     circuit.add(gates.H(0))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.CZ(3, 4))
+    circuit.add(gates.X(1))
 
-    # Define custom passes as a list
-    custom_passes = []
-    # Preprocessing adds qubits in the original circuit to match the number of qubits in the chip
-    custom_passes.append(Preprocessing(connectivity=star_connectivity()))
-    # Placement step
-    custom_passes.append(Random(connectivity=star_connectivity()))
-    # Routing step
-    custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
-    # Gate decomposition step
-    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    # Define a custom list of passes for the transpiler
+    custom_passes = [Preprocessing(), Random(), ShortestPaths(), Unroller(native_gates=natives)]
 
-    # Define the general pipeline
-    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeGates.default())
+    # Create a transpiler pipeline with hardware configuration
+    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity())
 
-    # Call the transpiler pipeline on the circuit
+    # Transpile the circuit using the custom transpiler pipeline
     transpiled_circ, final_layout = custom_pipeline(circuit)
 
-    # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
+    # Verify that the transpiled circuit can be executed on the hardware (optional)
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circ,
@@ -2224,10 +2261,69 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
         native_gates=NativeGates.default()
     )
 
-In this case circuits will first be transpiled to respect the 5-qubit star connectivity, with qubit 2 as the middle qubit. This will potentially add some SWAP gates.
-Then all gates will be converted to native. The :class:`qibo.transpiler.unroller.Unroller` transpiler used in this example assumes Z, RZ, GPI2 or U3 as
-the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives. In this case we restricted the two-qubit gate set to CZ only.
-The final_layout contains the final logical-physical qubit mapping.
+
+In the current Qibo version, transpiler passes require that
+``wire_names`` match the qubit names in the given connectivity graph.
+This can be done manually or by using :class:`qibo.transpiler.optimizer.Preprocessing`
+or the ``on_qubits`` parameter.
+
+.. note::
+
+    - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
+    - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
+
+
+.. _tutorials_set_transpiler:
+
+How to attach a transpiler to a backend?
+----------------------------------------
+
+The transpiler can be attached to the current backend using the ``set_transpiler`` method.
+Once set, the transpiler will automatically transpile the circuit before each circuit execution.
+
+.. testcode:: python
+
+    from qibo import set_transpiler
+    from qibo.transpiler import (
+        NativeGates,
+        Passes,
+        Preprocessing,
+        ShortestPaths,
+        Unroller,
+    )
+
+    # Define hardware connectivity
+    def star_connectivity():
+        chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
+        return chip
+
+    # Define a custom set of native gates
+    glist = [gates.GPI2, gates.RZ, gates.Z, gates.CZ]
+    natives = NativeGates(0).from_gatelist(glist)
+
+    # Define a custom transpiler pipeline
+    custom_passes = [Preprocessing(), Random(), ShortestPaths(), Unroller(native_gates=natives)]
+    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity())
+
+    # Attach the transpiler to the current backend
+    set_transpiler(custom_pipeline)
+
+If the user does not explicitly set a transpiler, the default transpiler is used.
+
+* For simulator backends, the default transpiler has no passes, so no transpilation is done.
+
+* For hardware backends, the default transpiler includes the :class:`qibo.transpiler.optimizer.Preprocessing`,
+:class:`qibo.transpiler.router.Sabre`, and :class:`qibo.transpiler.unroller.Unroller` passes,
+configured with the backend's connectivity and native gates.
+
+Setting an empty transpiler is equivalent to disabling transpilation.
+
+.. testcode:: python
+
+    from qibo import set_transpiler
+    from qibo.transpiler.pipeline import Passes
+
+    set_transpiler(Passes())
 
 .. _gst_example:
 

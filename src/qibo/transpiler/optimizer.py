@@ -9,10 +9,10 @@ from qibo.transpiler.abstract import Optimizer
 
 
 class Preprocessing(Optimizer):
-    """Match the number of qubits of the circuit with the number of qubits of the chip if possible.
+    """Pad the circuit with unused qubits to match the number of physical qubits.
 
     Args:
-        connectivity (:class:`networkx.Graph`): hardware chip connectivity.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
     """
 
     def __init__(self, connectivity: Optional[nx.Graph] = None):
@@ -22,7 +22,7 @@ class Preprocessing(Optimizer):
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
             raise_error(
                 ValueError,
-                "The circuit qubits are not in the connectivity graph.",
+                "Some wire_names in the circuit are not in the connectivity graph.",
             )
 
         physical_qubits = self.connectivity.number_of_nodes()
@@ -30,8 +30,8 @@ class Preprocessing(Optimizer):
         if logical_qubits > physical_qubits:
             raise_error(
                 ValueError,
-                "The number of qubits in the circuit can't be greater "
-                + "than the number of physical qubits.",
+                f"The number of qubits in the circuit ({logical_qubits}) "
+                + f"can't be greater than the number of physical qubits ({physical_qubits}).",
             )
         if logical_qubits == physical_qubits:
             return circuit
@@ -50,7 +50,7 @@ class Rearrange(Optimizer):
     but this has not been tested.
 
     Args:
-        max_qubits (int, optional): maximum number of qubits to fuse gates.
+        max_qubits (int, optional): Maximum number of qubits to fuse.
             Defaults to :math:`1`.
     """
 
