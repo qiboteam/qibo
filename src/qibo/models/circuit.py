@@ -120,9 +120,12 @@ class Circuit:
     A specific backend has to be used for performing calculations.
 
     Circuits can be created with a specific number of qubits and wire names.
+
     Example:
-        .. testcode::
+        .. code-block:: python
+
             from qibo import Circuit
+
             c = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
             c = Circuit(["A", "B", "C", "D", "E"])
             c = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
