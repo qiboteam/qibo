@@ -291,7 +291,7 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
     [
         (2 * Z(0) * Z(3) + Z(0) * Z(2), [0, 1, 2, 3]),
         (Z(1) + Z(3), [0, 1, 3]),
-    ]
+    ],
 )
 def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
     """Test Hamiltonian expectation value calculation."""
@@ -307,7 +307,7 @@ def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
     result = backend.execute_circuit(c, nshots=nshots)
     freq = result.frequencies(binary=True)
     from_samples = hamiltonian.expectation_from_samples(freq, qubit_map=qubit_map)
-    from_state  = hamiltonian.expectation(result.state())
+    from_state = hamiltonian.expectation(result.state())
     backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
 
 
