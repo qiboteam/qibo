@@ -302,7 +302,7 @@ def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
     c.add(gates.RX(1, np.random.rand()))
     c.add(gates.RX(2, np.random.rand()))
     c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(*qubit_map)
+    c.add(gates.M(*qubit_map))
     nshots = 10**5
     result = backend.execute_circuit(c, nshots=nshots)
     freq = result.frequencies(binary=True)
