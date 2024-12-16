@@ -127,15 +127,15 @@ class Circuit:
         - ``nqubits`` and ``wire_names`` must be consistent with each other.
 
 
-    Example:
+    Example::
 
-        .. testcode::
+        from qibo import Circuit
 
-            from qibo import Circuit
-            c = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
-            c = Circuit(["A", "B", "C", "D", "E"])
-            c = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
-            c = Circuit(wire_names=["A", "B", "C", "D", "E"])
+        # Every circuit initialization below is valid
+        circuit = Circuit(5)  # Default wire names are [0, 1, 2, 3, 4]
+        circuit = Circuit(["A", "B", "C", "D", "E"])
+        circuit = Circuit(5, wire_names=["A", "B", "C", "D", "E"])
+        circuit = Circuit(wire_names=["A", "B", "C", "D", "E"])
 
     Args:
         nqubits (int | list, optional): Number of qubits in the circuit or a list of wire names.
