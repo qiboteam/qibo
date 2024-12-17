@@ -556,7 +556,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def expectation_from_circuit(
-        self, circuit: "Circuit", qubit_map: dict = None, nshots: int = 1000
+        # self, circuit: "Circuit", qubit_map: list = None, nshots: int = 1000
+        self,
+        circuit: "Circuit",
+        nshots: int = 1000,
     ) -> float:
         """
         Calculate the expectation value from a circuit.
@@ -572,21 +575,21 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Args:
             circuit (Circuit): input circuit.
-            qubit_map (dict): qubit map, defaults to ``{0: 0, 1: 1, ..., n: n}``
+            qubit_map (list): qubit map, defaults to ``[0, 1, ..., n]``
             nshots (int): number of shots, defaults to 1000.
 
         Returns:
             (float): the calculated expectation value.
         """
-        from qibo import Circuit, gates
+        from qibo import gates
 
-        if qubit_map is None:
-            qubit_map = list(range(self.nqubits))
+        # if qubit_map is None:
+        #     qubit_map = list(range(self.nqubits))
 
         rotated_circuits = []
         coefficients = []
         Z_observables = []
-        q_maps = []
+        qubit_maps = []
         for term in self.terms:
             # store coefficient
             coefficients.append(term.coefficient)
@@ -598,37 +601,37 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     backend=self.backend,
                 )
             )
+            # Get the qubits we want to measure for each term
+            qubit_map = sorted(
+                factor.target_qubit
+                for factor in set(term.factors)
+                if factor.name[0] != "I"
+            )
             # prepare the measurement basis and append it to the circuit
             measurements = [
                 gates.M(factor.target_qubit, basis=factor.gate.__class__)
                 for factor in set(term.factors)
+                if factor.name[0] != "I"
             ]
             circ_copy = circuit.copy(True)
             circ_copy.add(measurements)
             rotated_circuits.append(circ_copy)
-            # map the original qubits into 0, 1, 2, ...
-            q_maps.append(
-                dict(
-                    zip(
-                        [qubit_map[q] for q in term.target_qubits],
-                        range(len(term.target_qubits)),
-                    )
-                )
-            )
+            # map the obtained sample frequencies to the original qubits
+            qubit_maps.append(qubit_map)
         frequencies = [
             result.frequencies()
             for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
         ]
         return sum(
             [
-                coeff * obs.expectation_from_samples(freq, qmap)
-                for coeff, freq, obs, qmap in zip(
-                    coefficients, frequencies, Z_observables, q_maps
+                coeff * obs.expectation_from_samples(freq, qubit_map)
+                for coeff, freq, obs, qubit_map in zip(
+                    coefficients, frequencies, Z_observables, qubit_maps
                 )
             ]
         )
 
-    def expectation_from_samples(self, freq: dict, qubit_map: dict = None) -> float:
+    def expectation_from_samples(self, freq: dict, qubit_map: list = None) -> float:
         """
         Calculate the expectation value from the samples.
         The observable has to be diagonal in the computational basis.
