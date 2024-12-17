@@ -722,6 +722,12 @@ def test_cun(backend, name, params):
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
+    if name == "CRY":
+        decomposition = Circuit(2)
+        decomposition.add(gate.decompose())
+        decomposition = decomposition.unitary(backend=backend)
+        backend.assert_allclose(decomposition, _matrix)
+
 
 def test_swap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SWAP(0, 1)], nqubits=2)
