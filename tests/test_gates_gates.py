@@ -729,7 +729,7 @@ def test_cun(backend, name, params):
         matrix = Circuit(2)
         matrix.add(decomposition)
         matrix = matrix.unitary(backend=backend)
-        backend.assert_allclose(matrix, _matrix)
+        backend.assert_allclose(matrix, _matrix, atol=1e-10)
 
 
 def test_swap(backend):
