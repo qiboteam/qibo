@@ -587,7 +587,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # build diagonal observable
             Z_observables.append(
                 SymbolicHamiltonian(
-                    prod([Z(q) for q in term.target_qubits]),
+                    prod(
+                        [
+                            Z(factor.target_qubit)
+                            for factor in term.factors
+                            if factor.name[0] != "I"
+                        ]
+                    ),
                     nqubits=circuit.nqubits,
                     backend=self.backend,
                 )
@@ -649,7 +655,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
         expvals = []
         for term in self.terms:
-            qubits = term.target_qubits
+            qubits = {
+                factor.target_qubit for factor in term.factors if factor.name[0] != "I"
+            }
             expvals.extend(
                 [
                     term.coefficient.real
