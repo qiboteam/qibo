@@ -359,6 +359,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self._form
 
     def _calculate_nqubits_from_form(self, form):
+        """Calculate number of qubits in the system described by the given
+        Hamiltonian formula
+        """
         nqubits = 0
         for symbol in form.free_symbols:
             if isinstance(symbol, self._qiboSymbol):
@@ -383,25 +386,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 TypeError,
                 f"Symbolic Hamiltonian should be a ``sympy`` expression but is {type(form)}.",
             )
-        # Calculate number of qubits in the system described by the given
-        # Hamiltonian formula
-        nqubits = 0
-        for symbol in form.free_symbols:
-            if isinstance(symbol, self._qiboSymbol):
-                q = symbol.target_qubit
-            elif isinstance(symbol, sympy.Expr):
-                if symbol not in self.symbol_map:
-                    raise_error(ValueError, f"Symbol {symbol} is not in symbol map.")
-                q, matrix = self.symbol_map.get(symbol)
-                if not isinstance(matrix, self.backend.tensor_types):
-                    # ignore symbols that do not correspond to quantum operators
-                    # for example parameters in the MaxCut Hamiltonian
-                    q = 0
-            if q > nqubits:
-                nqubits = q
-
         self._form = form
-        self.nqubits = nqubits + 1
+        self.nqubits = self._calculate_nqubits_from_form(form)
 
     @cached_property
     def terms(self):
@@ -409,22 +395,21 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Terms will be objects of type :class:`qibo.core.terms.HamiltonianTerm`.
         """
-        if self._terms is None:
-            # Calculate terms based on ``self.form``
-            from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
-                SymbolicTerm,
-            )
+        # Calculate terms based on ``self.form``
+        from qibo.hamiltonians.terms import (  # pylint: disable=import-outside-toplevel
+            SymbolicTerm,
+        )
 
-            form = sympy.expand(self.form)
-            terms = []
-            for f, c in form.as_coefficients_dict().items():
-                term = SymbolicTerm(c, f, self.symbol_map)
-                if term.target_qubits:
-                    terms.append(term)
-                else:
-                    self.constant += term.coefficient
-            self._terms = terms
-        return self._terms
+        self.constant = 0.0
+
+        form = sympy.expand(self.form)
+        terms = []
+        for f, c in form.as_coefficients_dict().items():
+            term = SymbolicTerm(c, f, self.symbol_map)
+            if term.target_qubits:
+                terms.append(term)
+            else:
+                self.constant += term.coefficient
 
     @property
     def matrix(self):
@@ -548,10 +533,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
 
     def calculate_dense(self):
-        if self._terms is None:
-            # calculate dense matrix directly using the form to avoid the
-            # costly ``sympy.expand`` call
-            return self._calculate_dense_from_form()
+        # if self._terms is None:
+        # calculate dense matrix directly using the form to avoid the
+        # costly ``sympy.expand`` call
+        #    return self._calculate_dense_from_form()
         return self._calculate_dense_from_terms()
 
     def expectation(self, state, normalize=False):
@@ -672,120 +657,48 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
         return self.backend.np.sum(expvals @ counts.T) + self.constant.real
 
-    def __add__(self, o):
+    def _compose(self, o, operator):
+        new_ham = self.__class__(
+            form=self._form, symbol_map=dict(self.symbol_map), backend=self.backend
+        )
+
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be added.",
+                    "Only hamiltonians with the same number of qubits can be composed.",
                 )
-            new_ham = self.__class__(
-                symbol_map=dict(self.symbol_map), backend=self.backend
-            )
-            if self._form is not None and o._form is not None:
-                new_ham.form = self.form + o.form
+
+            if o._form is not None:
                 new_ham.symbol_map.update(o.symbol_map)
-            if self._terms is not None and o._terms is not None:
-                new_ham.terms = self.terms + o.terms
-                new_ham.constant = self.constant + o.constant
-            if self._dense is not None and o._dense is not None:
-                new_ham.dense = self.dense + o.dense
+                new_ham.form = (
+                    operator(self._form, o._form) if self._form is not None else o._form
+                )
 
-        elif isinstance(o, self.backend.numeric_types):
-            new_ham = self.__class__(
-                symbol_map=dict(self.symbol_map), backend=self.backend
+        elif isinstance(o, (self.backend.numeric_types, self.backend.tensor_types)):
+            new_ham.form = (
+                operator(self._form, o) if self._form is not None else complex(o)
             )
-            if self._form is not None:
-                new_ham.form = self.form + o
-            if self._terms is not None:
-                new_ham.terms = self.terms
-                new_ham.constant = self.constant + o
-            if self._dense is not None:
-                new_ham.dense = self.dense + o
-
         else:
             raise_error(
                 NotImplementedError,
-                f"SymbolicHamiltonian addition to {type(o)} not implemented.",
+                f"SymbolicHamiltonian composition to {type(o)} not implemented.",
             )
+
         return new_ham
+
+    def __add__(self, o):
+        return self._compose(o, lambda x, y: x + y)
 
     def __sub__(self, o):
-        if isinstance(o, self.__class__):
-            if self.nqubits != o.nqubits:
-                raise_error(
-                    RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be subtracted.",
-                )
-            new_ham = self.__class__(
-                symbol_map=dict(self.symbol_map), backend=self.backend
-            )
-            if self._form is not None and o._form is not None:
-                new_ham.form = self.form - o.form
-                new_ham.symbol_map.update(o.symbol_map)
-            if self._terms is not None and o._terms is not None:
-                new_ham.terms = self.terms + [-1 * x for x in o.terms]
-                new_ham.constant = self.constant - o.constant
-            if self._dense is not None and o._dense is not None:
-                new_ham.dense = self.dense - o.dense
-
-        elif isinstance(o, self.backend.numeric_types):
-            new_ham = self.__class__(
-                symbol_map=dict(self.symbol_map), backend=self.backend
-            )
-            if self._form is not None:
-                new_ham.form = self.form - o
-            if self._terms is not None:
-                new_ham.terms = self.terms
-                new_ham.constant = self.constant - o
-            if self._dense is not None:
-                new_ham.dense = self.dense - o
-
-        else:
-            raise_error(
-                NotImplementedError,
-                f"Hamiltonian subtraction to {type(o)} " "not implemented.",
-            )
-        return new_ham
+        return self._compose(o, lambda x, y: x - y)
 
     def __rsub__(self, o):
-        if isinstance(o, self.backend.numeric_types):
-            new_ham = self.__class__(
-                symbol_map=dict(self.symbol_map), backend=self.backend
-            )
-            if self._form is not None:
-                new_ham.form = o - self.form
-            if self._terms is not None:
-                new_ham.terms = [-1 * x for x in self.terms]
-                new_ham.constant = o - self.constant
-            if self._dense is not None:
-                new_ham.dense = o - self.dense
-        else:
-            raise_error(
-                NotImplementedError,
-                f"Hamiltonian subtraction to {type(o)} not implemented.",
-            )
-        return new_ham
+        return self._compose(o, lambda x, y: y - x)
 
     def __mul__(self, o):
-        if not isinstance(o, (self.backend.numeric_types, self.backend.tensor_types)):
-            raise_error(
-                NotImplementedError,
-                f"Hamiltonian multiplication to {type(o)} not implemented.",
-            )
-        o = complex(o)
-        new_ham = self.__class__(symbol_map=dict(self.symbol_map), backend=self.backend)
-        if self._form is not None:
-            new_ham.form = o * self.form
-        if self._terms is not None:
-            new_ham.terms = [o * x for x in self.terms]
-            new_ham.constant = self.constant * o
-        if self._dense is not None:
-            new_ham.dense = o * self._dense
-
-        new_ham.nqubits = self.nqubits
-
-        return new_ham
+        # o = complex(o)
+        return self._compose(o, lambda x, y: y * x)
 
     def apply_gates(self, state, density_matrix=False):
         """Applies gates corresponding to the Hamiltonian terms.
@@ -821,8 +734,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             new_ham = self.__class__(
                 new_form, symbol_map=new_symbol_map, backend=self.backend
             )
-            if self._dense is not None and o._dense is not None:
-                new_ham.dense = self.dense @ o.dense
+            # if self._dense is not None and o._dense is not None:
+            #    new_ham.dense = self.dense @ o.dense
             return new_ham
 
         if isinstance(o, self.backend.tensor_types):
