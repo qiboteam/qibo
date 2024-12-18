@@ -2608,61 +2608,39 @@ size circuits you may benefit from single thread per process, thus set
 Backends
 --------
 
-The main calculation engine is defined in the abstract backend object
-:class:`qibo.backends.abstract.Backend`. This object defines the methods
-required by all Qibo models to perform simulation.
+:class:`qibo.backends.abstract.Backend` is the main calculation engine to execute circuits.
+Qibo provides backends for quantum simulation on classical hardware, as well as quantum hardware management and control.
+For a complete list of available backends, refer to the :ref:`Packages <packages>` section.
+To create new backends, inherit from :class:`qibo.backends.abstract.Backend` and implement
+its abstract methods. This abstract class defines the required methods for circuit execution.
 
-Qibo supports several backends (see the :ref:`Backend drivers section <backend-drivers>`),
-which can be used depending on the specific needs:
-lightweight simulation, quantum machine learning, hardware execution, etc.
 
-Among them, the default choice is a backend provided by the qibojit library.
-This backend is supplemented by custom operators defined under which can be
-used to efficiently apply gates to state vectors or density matrices.
-
-We refer to :ref:`Packages <packages>` section for a complete list of the
-available computation backends and instructions on how to install each of
-these libraries on top of qibo.
-
-Custom operators are much faster than implementations based on numpy or Tensorflow
-primitives, such as ``einsum``, but do not support some features, such as
-automatic differentiation for backpropagation of variational circuits which is
-only supported by the native ``tensorflow`` backend.
-
-The user can switch backends using
+The user can set the backend using the :func:`qibo.set_backend` function.
 
 .. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit")
+
+    # Switch to the numpy backend
     qibo.set_backend("numpy")
 
-before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``pytorch``, ``tensorflow``, ``numpy``.
 
-Some backends support different platforms. For example, the qibojit backend
+If no backend is specified, the default backend is used.
+The default backend is selected in the following order: ``qibojit``, ``numpy``, and ``qiboml``.
+The list of default backend candidates can be changed using the ``QIBO_BACKEND`` environment variable.
+
+Some backends support different platforms. For example, the ``qibojit`` backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
-The active platform can be switched using
+The platform can be specified using the ``platform`` parameter in the :func:`qibo.set_backend` function.
 
 .. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit", platform="cuquantum")
+
+    # Switch to the cupy platform
     qibo.set_backend("qibojit", platform="cupy")
-
-The default backend order is qibojit (if available), tensorflow (if available),
-numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
-variable.
-
-Qibo optionally provides an interface to `qulacs <https://github.com/qulacs/qulacs>`_ through the :class:`qibo.backends.qulacs.QulacsBackend`. To use ``qulacs`` for simulating a quantum circuit you can globally set the backend as in the other cases
-
-.. testcode:: python
-
-   import qibo
-   qibo.set_backend("qulacs")
-
-.. note::
-   GPU simulation through ``qulacs`` is not supported yet.
 
 .. autoclass:: qibo.backends.abstract.Backend
     :members:
