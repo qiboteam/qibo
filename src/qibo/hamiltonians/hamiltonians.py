@@ -1,5 +1,6 @@
 """Module defining Hamiltonian classes."""
 
+from functools import cached_property
 from itertools import chain
 from math import prod
 from typing import Optional
@@ -325,9 +326,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def __init__(self, form=None, nqubits=None, symbol_map={}, backend=None):
         super().__init__()
         self._form = None
-        self._terms = None
         self.constant = 0  # used only when we perform calculations using ``_terms``
-        self._dense = None
         self.symbol_map = symbol_map
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
@@ -342,31 +341,39 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         if form is not None:
             self.form = form
-        if nqubits is not None:
-            self.nqubits = nqubits
+            self.nqubits = (
+                self._calculate_nqubits_from_form(form) if nqubits is None else nqubits
+            )
 
-    @property
+    @cached_property
     def dense(self) -> "MatrixHamiltonian":
         """Creates the equivalent Hamiltonian matrix."""
-        if self._dense is None:
-            log.warning(
-                "Calculating the dense form of a symbolic Hamiltonian. "
-                "This operation is memory inefficient."
-            )
-            self.dense = self.calculate_dense()
-        return self._dense
-
-    @dense.setter
-    def dense(self, hamiltonian):
-        assert isinstance(hamiltonian, Hamiltonian)
-        self._dense = hamiltonian
-        self._eigenvalues = hamiltonian._eigenvalues
-        self._eigenvectors = hamiltonian._eigenvectors
-        self._exp = hamiltonian._exp
+        log.warning(
+            "Calculating the dense form of a symbolic Hamiltonian. "
+            "This operation is memory inefficient."
+        )
+        return self.calculate_dense()
 
     @property
     def form(self):
         return self._form
+
+    def _calculate_nqubits_from_form(self, form):
+        nqubits = 0
+        for symbol in form.free_symbols:
+            if isinstance(symbol, self._qiboSymbol):
+                q = symbol.target_qubit
+            elif isinstance(symbol, sympy.Expr):
+                if symbol not in self.symbol_map:
+                    raise_error(ValueError, f"Symbol {symbol} is not in symbol map.")
+                q, matrix = self.symbol_map.get(symbol)
+                if not isinstance(matrix, self.backend.tensor_types):
+                    # ignore symbols that do not correspond to quantum operators
+                    # for example parameters in the MaxCut Hamiltonian
+                    q = 0
+            if q > nqubits:
+                nqubits = q
+        return nqubits + 1
 
     @form.setter
     def form(self, form):
@@ -396,7 +403,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._form = form
         self.nqubits = nqubits + 1
 
-    @property
+    @cached_property
     def terms(self):
         """List of terms of which the Hamiltonian is a sum of.
 
@@ -418,11 +425,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     self.constant += term.coefficient
             self._terms = terms
         return self._terms
-
-    @terms.setter
-    def terms(self, terms):
-        self._terms = terms
-        self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
     @property
     def matrix(self):
