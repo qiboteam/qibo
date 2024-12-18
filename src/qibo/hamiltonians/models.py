@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 
+from qibo import symbols
 from qibo.backends import _check_backend, matrices
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
@@ -25,7 +26,7 @@ def X(nqubits, dense: bool = True, backend=None):
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, matrices.X, dense, backend=backend)
+    return _OneBodyPauli(nqubits, symbols.X, dense, backend=backend)
 
 
 def Y(nqubits, dense: bool = True, backend=None):
@@ -43,7 +44,7 @@ def Y(nqubits, dense: bool = True, backend=None):
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, matrices.Y, dense, backend=backend)
+    return _OneBodyPauli(nqubits, symbols.Y, dense, backend=backend)
 
 
 def Z(nqubits, dense: bool = True, backend=None):
@@ -61,7 +62,7 @@ def Z(nqubits, dense: bool = True, backend=None):
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    return _OneBodyPauli(nqubits, matrices.Z, dense, backend=backend)
+    return _OneBodyPauli(nqubits, symbols.Z, dense, backend=backend)
 
 
 def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
@@ -82,19 +83,25 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
         raise_error(ValueError, "Number of qubits must be larger than one.")
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
-        ham = -_build_spin_model(nqubits, matrices.Z, condition)
+        ham = -_build_spin_model(nqubits, backend.matrices.Z, condition, backend)
         if h != 0:
             condition = lambda i, j: i == j % nqubits
-            ham -= h * _build_spin_model(nqubits, matrices.X, condition)
+            ham -= h * _build_spin_model(
+                nqubits, backend.matrices.X, condition, backend
+            )
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    matrix = -(
-        _multikron([matrices.Z, matrices.Z]) + h * _multikron([matrices.X, matrices.I])
+    term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1) * symbols.I(
+        q2
     )
-    terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
-    terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    ham = SymbolicHamiltonian(backend=backend)
-    ham.terms = terms
+    form = sum(term(i, i + 1) for i in range(nqubits - 1))
+    # matrix = -(
+    #    _multikron([backend.matrices.Z, backend.matrices.Z], backend) + h * _multikron([backend.matrices.X, backend.matrices.I], backend)
+    # )
+    # terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
+    # terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
+    ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
+    # ham.terms = terms
     return ham
 
 
@@ -210,7 +217,7 @@ def Heisenberg(
         matrix = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         for ind, pauli in enumerate(paulis):
-            double_term = _build_spin_model(nqubits, pauli, condition)
+            double_term = _build_spin_model(nqubits, pauli, condition, backend)
             double_term = backend.cast(double_term, dtype=double_term.dtype)
             matrix = matrix - coupling_constants[ind] * double_term
             matrix = (
@@ -221,6 +228,26 @@ def Heisenberg(
 
         return Hamiltonian(nqubits, matrix, backend=backend)
 
+    paulis = (symbols.X, symbols.Y, symbols.Z)
+
+    def h(symbol):
+        return lambda q1, q2: symbol(q1) * symbol(q2)
+
+    def term(q1, q2):
+        return -1 * sum(
+            coeff * h(operator)(q1, q2)
+            for coeff, operator in zip(coupling_constants, paulis)
+        )
+
+    form = sum(term(i, i + 1) for i in range(nqubits - 1))
+    form -= sum(
+        field_strength * pauli(qubit)
+        for qubit in range(nqubits)
+        for field_strength, pauli in zip(external_field_strengths, paulis)
+        if field_strength != 0.0
+    )
+
+    """
     hx = _multikron([matrices.X, matrices.X])
     hy = _multikron([matrices.Y, matrices.Y])
     hz = _multikron([matrices.Z, matrices.Z])
@@ -242,9 +269,10 @@ def Heisenberg(
             if field_strength != 0.0
         ]
     )
+    """
 
-    ham = SymbolicHamiltonian(backend=backend)
-    ham.terms = terms
+    ham = SymbolicHamiltonian(form=form, backend=backend)
+    # ham.terms = terms
 
     return ham
 
@@ -342,7 +370,7 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
 
 
-def _multikron(matrix_list):
+def _multikron(matrix_list, backend=None):
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -351,28 +379,82 @@ def _multikron(matrix_list):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
+    """
+    # this is a better implementation but requires the whole
+    # hamiltonian/symbols modules to be adapted
+    indices = list(range(2*len(matrix_list)))
+    even, odd = indices[::2], indices[1::2]
+    lhs = zip(even, odd)
+    rhs = even + odd
+    einsum_args = [item for pair in zip(matrix_list, lhs) for item in pair]
+    dim = 2 ** len(matrix_list)
+    if backend.platform != "tensorflow":
+        h = backend.np.einsum(*einsum_args, rhs)
+    else:
+        h = np.einsum(*einsum_args, rhs)
+    h = backend.np.sum(backend.np.reshape(h, (dim, dim)), axis=0)
+    return h
+    """
     return reduce(np.kron, matrix_list)
 
 
-def _build_spin_model(nqubits, matrix, condition):
+def _build_spin_model(nqubits, matrix, condition, backend):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(
-        _multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
-        for i in range(nqubits)
+    indices = list(range(2 * nqubits))
+    even, odd = indices[::2], indices[1::2]
+    lhs = zip(
+        nqubits
+        * [
+            len(indices),
+        ],
+        even,
+        odd,
     )
+    rhs = (
+        [
+            len(indices),
+        ]
+        + even
+        + odd
+    )
+    columns = [
+        backend.np.reshape(
+            backend.np.concatenate(
+                [
+                    matrix if condition(i, j) else backend.matrices.I()
+                    for i in range(nqubits)
+                ],
+                axis=0,
+            ),
+            (nqubits, 2, 2),
+        )
+        for j in range(nqubits)
+    ]
+    einsum_args = [item for pair in zip(columns, lhs) for item in pair]
+    dim = 2**nqubits
+    if backend.platform != "tensorflow":
+        h = backend.np.einsum(*einsum_args, rhs)
+    else:
+        h = np.einsum(*einsum_args, rhs)
+    h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)
+    # h = sum(
+    #    _multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
+    #    for i in range(nqubits)
+    # )
     return h
 
 
-def _OneBodyPauli(nqubits, matrix, dense: bool = True, backend=None):
-    """Helper method for constracting non-interacting
+def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
+    """Helper method for constructing non-interacting
     :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
     if dense:
         condition = lambda i, j: i == j % nqubits
-        ham = -_build_spin_model(nqubits, matrix, condition)
+        ham = -_build_spin_model(nqubits, operator(0).matrix, condition, backend)
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    matrix = -matrix
-    terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    ham = SymbolicHamiltonian(backend=backend)
-    ham.terms = terms
+    # matrix = -matrix
+    # terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
+    form = sum([-1 * operator(i) for i in range(nqubits)])
+    ham = SymbolicHamiltonian(form=form, backend=backend)
+    # ham.terms = terms
     return ham

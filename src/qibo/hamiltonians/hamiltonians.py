@@ -348,10 +348,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     @cached_property
     def dense(self) -> "MatrixHamiltonian":
         """Creates the equivalent Hamiltonian matrix."""
-        log.warning(
-            "Calculating the dense form of a symbolic Hamiltonian. "
-            "This operation is memory inefficient."
-        )
         return self.calculate_dense()
 
     @property
@@ -533,11 +529,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
 
     def calculate_dense(self):
+        log.warning(
+            "Calculating the dense form of a symbolic Hamiltonian. "
+            "This operation is memory inefficient."
+        )
         # if self._terms is None:
         # calculate dense matrix directly using the form to avoid the
         # costly ``sympy.expand`` call
-        #    return self._calculate_dense_from_form()
-        return self._calculate_dense_from_terms()
+        return self._calculate_dense_from_form()
+        # return self._calculate_dense_from_terms()
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
