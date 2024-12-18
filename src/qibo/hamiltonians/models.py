@@ -210,14 +210,16 @@ def Heisenberg(
 
     backend = _check_backend(backend)
 
-    paulis = [matrices.X, matrices.Y, matrices.Z]
+    paulis = (symbols.X, symbols.Y, symbols.Z)
 
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         matrix = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         for ind, pauli in enumerate(paulis):
-            double_term = _build_spin_model(nqubits, pauli, condition, backend)
+            double_term = _build_spin_model(
+                nqubits, backend.cast(pauli(0).matrix), condition, backend
+            )
             double_term = backend.cast(double_term, dtype=double_term.dtype)
             matrix = matrix - coupling_constants[ind] * double_term
             matrix = (
@@ -432,10 +434,12 @@ def _build_spin_model(nqubits, matrix, condition, backend):
     ]
     einsum_args = [item for pair in zip(columns, lhs) for item in pair]
     dim = 2**nqubits
-    if backend.platform != "tensorflow":
-        h = backend.np.einsum(*einsum_args, rhs)
-    else:
+    if backend.platform == "tensorflow":
         h = np.einsum(*einsum_args, rhs)
+    elif backend.platform == "cupy":
+        h = backend.cp.einsum(*einsum_args, rhs)
+    else:
+        h = backend.np.einsum(*einsum_args, rhs)
     h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)
     # h = sum(
     #    _multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
@@ -449,7 +453,9 @@ def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
     :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
     if dense:
         condition = lambda i, j: i == j % nqubits
-        ham = -_build_spin_model(nqubits, operator(0).matrix, condition, backend)
+        ham = -_build_spin_model(
+            nqubits, backend.cast(operator(0).matrix), condition, backend
+        )
         return Hamiltonian(nqubits, ham, backend=backend)
 
     # matrix = -matrix

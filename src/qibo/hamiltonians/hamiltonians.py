@@ -406,6 +406,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 terms.append(term)
             else:
                 self.constant += term.coefficient
+        return terms
 
     @property
     def matrix(self):
