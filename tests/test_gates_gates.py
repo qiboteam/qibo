@@ -698,6 +698,9 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
+    if name == "CRY":
+        decomposition = gate.decompose()
+
     assert gate.unitary
 
     if name != "CU2":
@@ -721,6 +724,12 @@ def test_cun(backend, name, params):
     target_state = backend.np.matmul(gate, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+    if name == "CRY":
+        matrix = Circuit(2)
+        matrix.add(decomposition)
+        matrix = matrix.unitary(backend=backend)
+        backend.assert_allclose(matrix, _matrix, atol=1e-10)
 
 
 def test_swap(backend):
