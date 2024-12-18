@@ -584,31 +584,24 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         for term in self.terms:
             # store coefficient
             coefficients.append(term.coefficient)
+            # Only care about non-I terms
+            non_identity_factors = [
+                factor for factor in term.factors if factor.name[0] != "I"
+            ]
             # build diagonal observable
             Z_observables.append(
                 SymbolicHamiltonian(
-                    prod(
-                        [
-                            Z(factor.target_qubit)
-                            for factor in term.factors
-                            if factor.name[0] != "I"
-                        ]
-                    ),
+                    prod(Z(factor.target_qubit) for factor in non_identity_factors),
                     nqubits=circuit.nqubits,
                     backend=self.backend,
                 )
             )
             # Get the qubits we want to measure for each term
-            qubit_map = sorted(
-                factor.target_qubit
-                for factor in set(term.factors)
-                if factor.name[0] != "I"
-            )
+            qubit_map = sorted(factor.target_qubit for factor in non_identity_factors)
             # prepare the measurement basis and append it to the circuit
             measurements = [
                 gates.M(factor.target_qubit, basis=factor.gate.__class__)
-                for factor in set(term.factors)
-                if factor.name[0] != "I"
+                for factor in non_identity_factors
             ]
             circ_copy = circuit.copy(True)
             circ_copy.add(measurements)
