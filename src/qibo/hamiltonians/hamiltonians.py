@@ -723,21 +723,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
-            if self._form is None or o._form is None:
-                raise_error(
-                    NotImplementedError,
-                    "Multiplication of symbolic Hamiltonians "
-                    "without symbolic form is not implemented.",
-                )
-            new_form = self.form * o.form
-            new_symbol_map = dict(self.symbol_map)
-            new_symbol_map.update(o.symbol_map)
-            new_ham = self.__class__(
-                new_form, symbol_map=new_symbol_map, backend=self.backend
-            )
-            # if self._dense is not None and o._dense is not None:
-            #    new_ham.dense = self.dense @ o.dense
-            return new_ham
+            return o * self
 
         if isinstance(o, self.backend.tensor_types):
             rank = len(tuple(o.shape))

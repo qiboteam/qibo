@@ -91,10 +91,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
             )
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1) * symbols.I(
-        q2
-    )
-    form = sum(term(i, i + 1) for i in range(nqubits - 1))
+    term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1)
+    form = sum(term(i, i + 1) for i in range(nqubits - 1)) + term(nqubits - 1, 0)
+    print(form)
     # matrix = -(
     #    _multikron([backend.matrices.Z, backend.matrices.Z], backend) + h * _multikron([backend.matrices.X, backend.matrices.I], backend)
     # )
