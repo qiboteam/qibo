@@ -1384,6 +1384,14 @@ class CRY(_CRn_):
     def qasm_label(self):
         return "cry"
 
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CRY}` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class CRZ(_CRn_):
     """Controlled rotation around the Z-axis for the Bloch sphere.

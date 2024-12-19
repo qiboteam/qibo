@@ -7,46 +7,60 @@ from qibo.models import Circuit
 
 
 class Placer(ABC):
+    """Maps logical qubits to physical qubits."""
+
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        """A placer implements the initial logical-physical qubit mapping"""
+        """Initializes the placer.
+
+        Args:
+            connectivity (nx.Graph): Hardware topology.
+        """
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args):
-        """Find initial qubit mapping. Mapping is saved in the circuit.
+        """Find initial qubit mapping.
+
+        Method works in-place.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be mapped.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be placed.
         """
 
 
 class Router(ABC):
+    """Makes the circuit executable on the given topology."""
+
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        """A router implements the mapping of a circuit on a specific hardware."""
+        """Initializes the router.
+
+        Args:
+            connectivity (nx.Graph): Hardware topology.
+        """
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Tuple[Circuit, dict]:
         """Match circuit to hardware connectivity.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): routed circuit.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final logical-physical qubit mapping.
         """
 
 
 class Optimizer(ABC):
-    """An optimizer tries to reduce the number of gates during transpilation."""
+    """Reduces the number of gates in the circuit."""
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Circuit:
         """Optimize transpiled circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be optimized.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): circuit with optimized number of gates.
+            (:class:`qibo.models.circuit.Circuit`): Optimized circuit.
         """

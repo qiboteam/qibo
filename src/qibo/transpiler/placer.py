@@ -17,7 +17,7 @@ def _find_gates_qubits_pairs(circuit: Circuit):
     Translate circuit into a list of pairs of qubits to be used by the router and placer.
 
     Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be translated.
 
     Returns:
         (list): Pairs of qubits targeted by two qubits gates.
@@ -45,7 +45,7 @@ class StarConnectivityPlacer(Placer):
              q
 
     Args:
-        connectivity (:class:`networkx.Graph`): star connectivity graph.
+        connectivity (:class:`networkx.Graph`): Star connectivity graph.
     """
 
     def __init__(self, connectivity: Optional[nx.Graph] = None):
@@ -111,7 +111,7 @@ class Subgraph(Placer):
     This initialization method may fail for very short circuits.
 
     Attributes:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
     """
 
     def __init__(self, connectivity: Optional[nx.Graph] = None):
@@ -122,11 +122,11 @@ class Subgraph(Placer):
         Circuit must contain at least two two-qubit gates to implement subgraph placement.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
         assert_placement(circuit, self.connectivity)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
-        if len(gates_qubits_pairs) < 3:
+        if len(gates_qubits_pairs) < 2:
             raise_error(
                 ValueError,
                 "Circuit must contain at least two two-qubit gates "
@@ -164,8 +164,8 @@ class Random(Placer):
     gates can be applied without introducing any SWAP gate.
 
     Attributes:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        samples (int, optional): number of initial random layouts tested.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+        samples (int, optional): Number of random initializations to try.
             Defaults to :math:`100`.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
@@ -219,8 +219,8 @@ class Random(Placer):
         Compute the cost associated to an initial layout as the lengh of the reduced circuit.
 
         Args:
-            graph (:class:`networkx.Graph`): current hardware qubit mapping.
-            gates_qubits_pairs (list): circuit representation.
+            graph (:class:`networkx.Graph`): Hardware connectivity.
+            gates_qubits_pairs (list): Circuit representation.
 
         Returns:
             (int): lengh of the reduced circuit.
@@ -239,9 +239,9 @@ class ReverseTraversal(Placer):
     Compatible with all the available ``Router``s.
 
     Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        routing_algorithm (:class:`qibo.transpiler.abstract.Router`): routing algorithm.
-        depth (int, optional): number of two-qubit gates considered before finding initial layout.
+        connectivity (:class:`networkx.Graph`): Hardware connectivity.
+        routing_algorithm (:class:`qibo.transpiler.abstract.Router`): Router to be used.
+        depth (int, optional): Number of two-qubit gates to be considered for routing.
             If ``None`` just one backward step will be implemented.
             If depth is greater than the number of two-qubit gates in the circuit,
             the circuit will be routed more than once.
@@ -269,7 +269,7 @@ class ReverseTraversal(Placer):
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
         assert_placement(circuit, self.connectivity)
         self.routing_algorithm.connectivity = self.connectivity
@@ -283,11 +283,10 @@ class ReverseTraversal(Placer):
         using depth :math:`d = 6`, the function will return the circuit :math:`C-D-D-C-B-A`.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be assembled.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`): assembled circuit to perform
-                Reverse Traversal placement.
+            (:class:`qibo.models.circuit.Circuit`): Assembled circuit to perform Reverse Traversal placement.
         """
 
         if self.depth is None:
@@ -318,7 +317,7 @@ class ReverseTraversal(Placer):
         """Perform routing of the circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
         """
         _, final_mapping = self.routing_algorithm(circuit)
 

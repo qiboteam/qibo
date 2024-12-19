@@ -70,9 +70,9 @@ def test_restrict_qubits(star_connectivity):
 def test_assert_circuit_equivalence_wrong_nqubits():
     circ1 = Circuit(1)
     circ2 = Circuit(2)
-    final_map = {0: 0, 1: 1}
+    final_layout = {0: 0, 1: 1}
     with pytest.raises(ValueError):
-        assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+        assert_circuit_equivalence(circ1, circ2, final_layout=final_layout)
 
 
 @pytest.mark.parametrize("qubits", [3, 5])
@@ -204,11 +204,11 @@ def test_int_qubit_names(star_connectivity):
     circuit.add(gates.I(0))
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
-    transpiled_circuit, final_map = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit)
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,
         connectivity=connectivity,
-        final_layout=final_map,
+        final_layout=final_layout,
         native_gates=NativeGates.default(),
     )
