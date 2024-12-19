@@ -81,6 +81,7 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
+    backend = _check_backend(backend)
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, backend.matrices.Z, condition, backend)
@@ -447,6 +448,7 @@ def _build_spin_model(nqubits, matrix, condition, backend):
 def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
     """Helper method for constructing non-interacting
     :math:`X`, :math:`Y`, and :math:`Z` Hamiltonians."""
+    backend = _check_backend(backend)
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(
