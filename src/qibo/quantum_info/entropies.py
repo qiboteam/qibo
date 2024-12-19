@@ -843,7 +843,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     if alpha == np.inf:
         return (
             -1
-            * backend.np.log2(backend.calculate_norm_density_matrix(state, order=2))
+            * backend.np.log2(backend.calculate_matrix_norm(state, order=2))
             / np.log2(base)
         )
 
@@ -951,7 +951,7 @@ def relative_renyi_entropy(
         new_target = matrix_power(target, 0.5, backend=backend)
 
         log = backend.np.log2(
-            backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
+            backend.calculate_matrix_norm(new_state @ new_target, order=1)
         )
 
         return -2 * log / np.log2(base)

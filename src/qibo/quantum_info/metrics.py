@@ -38,7 +38,7 @@ def purity(state, backend=None):
         )
 
     if len(state.shape) == 1:
-        pur = backend.np.real(backend.calculate_norm(state)) ** 2
+        pur = backend.np.real(backend.calculate_vector_norm(state)) ** 2
     else:
         pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
     return float(pur)
@@ -122,7 +122,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     if check_hermitian is True:
         hermitian = bool(
             float(
-                backend.calculate_norm_density_matrix(
+                backend.calculate_matrix_norm(
                     backend.np.transpose(backend.np.conj(difference), (1, 0))
                     - difference,
                     order=2,
@@ -494,7 +494,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if check_unitary is True:
         norm_channel = float(
-            backend.calculate_norm_density_matrix(
+            backend.calculate_matrix_norm(
                 backend.np.matmul(
                     backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
                 )
@@ -505,7 +505,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = float(
-                backend.calculate_norm(
+                backend.calculate_vector_norm(
                     backend.np.matmul(
                         backend.np.conj(backend.np.transpose(target, (1, 0))), target
                     )
@@ -843,7 +843,7 @@ def expressibility(
         circuit.nqubits, power_t, samples=None, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = float(backend.calculate_norm(deviation, order=order))
+    fid = float(backend.calculate_vector_norm(deviation, order=order))
 
     return fid
 
@@ -1010,9 +1010,7 @@ def _check_hermitian(matrix, backend=None):
     """
     backend = _check_backend(backend)
 
-    norm = backend.calculate_norm_density_matrix(
-        backend.np.conj(matrix).T - matrix, order=2
-    )
+    norm = backend.calculate_matrix_norm(backend.np.conj(matrix).T - matrix, order=2)
 
     hermitian = bool(float(norm) <= PRECISION_TOL)
 

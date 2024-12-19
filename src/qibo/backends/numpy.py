@@ -719,11 +719,11 @@ class NumpyBackend(Backend):
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
-    def calculate_norm(self, state, order=2):
+    def calculate_vector_norm(self, state, order=2):
         state = self.cast(state)
         return self.np.linalg.norm(state, order)
 
-    def calculate_norm_density_matrix(self, state, order="nuc"):
+    def calculate_matrix_norm(self, state, order="nuc"):
         state = self.cast(state)
         return self.np.linalg.norm(state, ord=order)
 
