@@ -433,8 +433,6 @@ def _build_spin_model(nqubits, matrix, condition, backend):
     dim = 2**nqubits
     if backend.platform == "tensorflow":
         h = np.einsum(*einsum_args, rhs)
-    elif backend.platform == "cupy":
-        h = backend.cp.einsum(*einsum_args, rhs)
     else:
         h = backend.np.einsum(*einsum_args, rhs)
     h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)

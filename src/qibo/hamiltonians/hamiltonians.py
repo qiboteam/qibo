@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
+from qibo.backends import Backend, _check_backend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -323,11 +324,22 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             Defaults to ``None``.
     """
 
-    def __init__(self, form=None, nqubits=None, symbol_map={}, backend=None):
+    def __init__(
+        self,
+        form: sympy.Expr,
+        nqubits: Optional[int] = None,
+        symbol_map: Optional[dict] = None,
+        backend: Optional[Backend] = None,
+    ):
         super().__init__()
-        self._form = None
+        if not isinstance(form, sympy.Expr):
+            raise_error(
+                TypeError,
+                f"The ``form`` of a ``SymbolicHamiltonian`` has to be a ``sympy.Expr``, but a {type(form)} was passed.",
+            )
+        self._form = form
         self.constant = 0  # used only when we perform calculations using ``_terms``
-        self.symbol_map = symbol_map
+        self.symbol_map = symbol_map if symbol_map is not None else {}
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
 
@@ -335,15 +347,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         self._qiboSymbol = Symbol  # also used in ``self._get_symbol_matrix``
 
-        from qibo.backends import _check_backend
-
         self.backend = _check_backend(backend)
 
-        if form is not None:
-            self.form = form
-            self.nqubits = (
-                self._calculate_nqubits_from_form(form) if nqubits is None else nqubits
-            )
+        self.nqubits = (
+            self._calculate_nqubits_from_form(form) if nqubits is None else nqubits
+        )
 
     @cached_property
     def dense(self) -> "MatrixHamiltonian":
@@ -516,17 +524,27 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
         matrix = 0
-        chars = EINSUM_CHARS[: 2 * self.nqubits]
+        # chars = EINSUM_CHARS[: 2 * self.nqubits]
+        indices = list(range(2 * self.nqubits))
         for term in self.terms:
             ntargets = len(term.target_qubits)
             tmat = np.reshape(term.matrix, 2 * ntargets * (2,))
             n = self.nqubits - ntargets
             emat = np.reshape(np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,))
-            gen = lambda x: (chars[i + x] for i in term.target_qubits)
-            tc = "".join(chain(gen(0), gen(self.nqubits)))
-            ec = "".join(c for c in chars if c not in tc)
-            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
-        matrix = np.reshape(matrix, 2 * (2**self.nqubits,))
+            # gen = lambda x: (chars[i + x] for i in term.target_qubits)
+            gen = lambda x: (indices[i + x] for i in term.target_qubits)
+            # tc = "".join(chain(gen(0), gen(self.nqubits)))
+            tc = list(chain(gen(0), gen(self.nqubits)))
+            # ec = "".join(c for c in chars if c not in tc)
+            ec = list(c for c in indices if c not in tc)
+            # matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+            matrix += np.einsum(tmat, tc, emat, ec, indices)
+
+        matrix = (
+            np.reshape(matrix, 2 * (2**self.nqubits,))
+            if len(self.terms) > 0
+            else self.backend.np.zeros(2 * (2**self.nqubits,))
+        )
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
 
     def calculate_dense(self):
@@ -537,8 +555,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # if self._terms is None:
         # calculate dense matrix directly using the form to avoid the
         # costly ``sympy.expand`` call
-        return self._calculate_dense_from_form()
-        # return self._calculate_dense_from_terms()
+        # return self._calculate_dense_from_form()
+        return self._calculate_dense_from_terms()
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
