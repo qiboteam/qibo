@@ -1,13 +1,14 @@
 from functools import cache
 from inspect import signature
 from itertools import product
+from random import Random
 from typing import List, Union
 
 import numpy as np
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import _check_backend, get_transpiler
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.transpiler.optimizer import Preprocessing
@@ -227,7 +228,12 @@ def GST(
     """Runs Gate Set Tomography on the input ``gate_set``.
 
     Args:
-        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` to run GST on.
+        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
+            GST on.
+            E.g. target_gates = [gates.RX(0, np.pi/3), gates.Z(0), gates.PRX(0, np.pi/2, np.pi/3),
+                                 gates.GPI(0, np.pi/7), gates.CNOT(0,1)]
+                 gate_set = [(g.__class__, [g.parameters[i] for i in range(len(g.parameters))])
+                             if g.parameters else (g.__class__, []) for g in target_gates]
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -260,7 +266,15 @@ def GST(
     backend = _check_backend(backend)
 
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
-        transpiler = get_transpiler()
+        transpiler = Passes(
+            connectivity=backend.platform.topology,
+            passes=[
+                Preprocessing(backend.platform.topology),
+                Random(backend.platform.topology),
+                Sabre(backend.platform.topology),
+                Unroller(NativeGates.default()),
+            ],
+        )
 
     matrices = []
     empty_matrices = []
@@ -278,7 +292,15 @@ def GST(
 
     for gate in gate_set:
         if gate is not None:
-            init_args = signature(gate).parameters
+            init_args = signature(gate[0]).parameters
+            params = gate[1]
+
+            angle_names = [name for name in init_args if name in {"theta", "phi"}]
+
+            angle_values = {}
+            for name, value in zip(angle_names, params):  # Zip ensures correct order
+                angle_values[name] = value
+
             if "q" in init_args:
                 nqubits = 1
             elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
@@ -288,7 +310,7 @@ def GST(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
-            gate = gate(*range(nqubits))
+            gate = gate[0](*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
