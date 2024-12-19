@@ -652,9 +652,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self.backend.np.sum(expvals @ counts.T) + self.constant.real
 
     def _compose(self, o, operator):
-        new_ham = self.__class__(
-            form=self._form, symbol_map=dict(self.symbol_map), backend=self.backend
-        )
+        form = self._form
+        symbol_map = self.symbol_map
 
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
@@ -664,22 +663,20 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 )
 
             if o._form is not None:
-                new_ham.symbol_map.update(o.symbol_map)
-                new_ham.form = (
-                    operator(self._form, o._form) if self._form is not None else o._form
-                )
+                symbol_map.update(o.symbol_map)
+                form = operator(form, o._form) if form is not None else o._form
 
         elif isinstance(o, (self.backend.numeric_types, self.backend.tensor_types)):
-            new_ham.form = (
-                operator(self._form, o) if self._form is not None else complex(o)
-            )
+            form = operator(form, complex(o)) if form is not None else complex(o)
         else:
             raise_error(
                 NotImplementedError,
                 f"SymbolicHamiltonian composition to {type(o)} not implemented.",
             )
 
-        return new_ham
+        return self.__class__(
+            form=form, symbol_map=symbol_map, nqubits=self.nqubits, backend=self.backend
+        )
 
     def __add__(self, o):
         return self._compose(o, lambda x, y: x + y)
