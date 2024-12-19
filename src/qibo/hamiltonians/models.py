@@ -92,8 +92,7 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
         return Hamiltonian(nqubits, ham, backend=backend)
 
     term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1)
-    form = sum(term(i, i + 1) for i in range(nqubits - 1)) + term(nqubits - 1, 0)
-    print(form)
+    form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
     # matrix = -(
     #    _multikron([backend.matrices.Z, backend.matrices.Z], backend) + h * _multikron([backend.matrices.X, backend.matrices.I], backend)
     # )
@@ -229,18 +228,16 @@ def Heisenberg(
 
         return Hamiltonian(nqubits, matrix, backend=backend)
 
-    paulis = (symbols.X, symbols.Y, symbols.Z)
-
     def h(symbol):
         return lambda q1, q2: symbol(q1) * symbol(q2)
 
     def term(q1, q2):
-        return -1 * sum(
+        return sum(
             coeff * h(operator)(q1, q2)
             for coeff, operator in zip(coupling_constants, paulis)
         )
 
-    form = sum(term(i, i + 1) for i in range(nqubits - 1))
+    form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
     form -= sum(
         field_strength * pauli(qubit)
         for qubit in range(nqubits)
