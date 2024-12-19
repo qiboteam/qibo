@@ -126,7 +126,7 @@ class Subgraph(Placer):
         """
         assert_placement(circuit, self.connectivity)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
-        if len(gates_qubits_pairs) < 3:
+        if len(gates_qubits_pairs) < 2:
             raise_error(
                 ValueError,
                 "Circuit must contain at least two two-qubit gates "
