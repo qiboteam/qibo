@@ -335,7 +335,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         if not isinstance(form, sympy.Expr):
             raise_error(
                 TypeError,
-                f"The ``form`` of a ``SymbolicHamiltonian`` has to be a ``sympy.Expr``, but a {type(form)} was passed.",
+                f"The ``form`` of a ``SymbolicHamiltonian`` has to be a ``sympy.Expr``, but a ``{type(form)}`` was passed.",
             )
         self._form = form
         self.constant = 0  # used only when we perform calculations using ``_terms``
@@ -436,6 +436,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def exp(self, a):
         return self.dense.exp(a)
 
+    # only useful for dense_from_form, which might not be needed in the end
     def _get_symbol_matrix(self, term):
         """Calculates numerical matrix corresponding to symbolic expression.
 
@@ -509,6 +510,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return result
 
+    # not sure this is useful, it appears to be significantly slower than
+    # the from_terms counterpart
     def _calculate_dense_from_form(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using symbolic form.
 
@@ -519,35 +522,41 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def _calculate_dense_from_terms(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using the term representation."""
-        if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
-            # case not tested because it only happens in large examples
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
         matrix = 0
-        # chars = EINSUM_CHARS[: 2 * self.nqubits]
         indices = list(range(2 * self.nqubits))
+        # most likely the looped einsum could be avoided by preparing all the
+        # matrices first and performing a single einsum in the end with a suitable
+        # choice of indices
         for term in self.terms:
             ntargets = len(term.target_qubits)
-            tmat = np.reshape(term.matrix, 2 * ntargets * (2,))
+            # I have to cast to a backend array because SymbolicTerm does not support
+            # backend declaration and just works with numpy, might be worth implementing
+            # a SymbolicTerm.matrix(backend=None) method that returns the matrix in the
+            # desired backend type and defaults to numpy or GlobalBackend
+            # A similar argument holds for qibo Symbols
+            tmat = self.backend.np.reshape(
+                self.backend.cast(term.matrix), 2 * ntargets * (2,)
+            )
             n = self.nqubits - ntargets
-            emat = np.reshape(np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,))
-            # gen = lambda x: (chars[i + x] for i in term.target_qubits)
+            emat = self.backend.np.reshape(
+                self.backend.np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,)
+            )
             gen = lambda x: (indices[i + x] for i in term.target_qubits)
-            # tc = "".join(chain(gen(0), gen(self.nqubits)))
             tc = list(chain(gen(0), gen(self.nqubits)))
-            # ec = "".join(c for c in chars if c not in tc)
             ec = list(c for c in indices if c not in tc)
-            # matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
-            matrix += np.einsum(tmat, tc, emat, ec, indices)
+            if self.backend.platform == "tensorflow":
+                matrix += np.einsum(tmat, tc, emat, ec, indices)
+            else:
+                matrix += self.backend.np.einsum(tmat, tc, emat, ec, indices)
 
         matrix = (
-            np.reshape(matrix, 2 * (2**self.nqubits,))
+            self.backend.np.reshape(matrix, 2 * (2**self.nqubits,))
             if len(self.terms) > 0
             else self.backend.np.zeros(2 * (2**self.nqubits,))
         )
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
 
-    def calculate_dense(self):
+    def calculate_dense(self) -> Hamiltonian:
         log.warning(
             "Calculating the dense form of a symbolic Hamiltonian. "
             "This operation is memory inefficient."
