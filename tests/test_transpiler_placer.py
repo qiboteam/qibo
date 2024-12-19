@@ -93,6 +93,16 @@ def test_subgraph_restricted(star_connectivity):
     assert_placement(circuit, restricted_connectivity)
 
 
+def test_subgraph_leasttwoqubitgates(star_connectivity):
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 3))
+    circuit.add(gates.CNOT(1, 2))
+    connectivity = star_connectivity()
+    placer = Subgraph(connectivity=connectivity)
+    placer(circuit)
+    assert_placement(circuit, connectivity)
+
+
 @pytest.mark.parametrize("reps", [1, 10, 100])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
 def test_random(reps, names, star_connectivity):
