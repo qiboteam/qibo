@@ -119,7 +119,9 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 def binary_encoder(data, **kwargs):
     """Create circuit that encodes ``data`` in all amplitudes of the computational basis.
 
-    Data has to be normalized with respect to the Hilbert-Schmidt norm.
+    ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
+    Resulting circuit parametrizes ``data`` in Hopf coordinates in the 
+    :math:`(2^{n} - 1)`-unit sphere.
     
     Args:
         data (ndarray or list): :math:`1`-dimensional array or length :math:`2^{n}`
