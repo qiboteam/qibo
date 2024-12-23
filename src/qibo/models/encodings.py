@@ -119,6 +119,8 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 def binary_encoder(data, **kwargs):
     """Create circuit that encodes ``data`` in all amplitudes of the computational basis.
 
+    Data has to be normalized with respect to the Hilbert-Schmidt norm.
+    
     Args:
         data (ndarray or list): :math:`1`-dimensional array or length :math:`2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.

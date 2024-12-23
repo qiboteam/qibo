@@ -108,8 +108,6 @@ def test_phase_encoder(backend, rotation, kind):
 def test_binary_encoder(backend, nqubits):
     dims = 2**nqubits
     target = backend.np.real(random_statevector(dims, backend=backend))
-    # target = np.arange(1, dims + 1).astype(float)
-    # target = 2 * np.random.rand(dims) - 1
     target /= np.linalg.norm(target)
     circuit = binary_encoder(target)
     state = backend.execute_circuit(circuit).state()
