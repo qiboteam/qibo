@@ -167,7 +167,9 @@ def binary_encoder(data, **kwargs):
         gate_list = []
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        gate_list.append(gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols)))
+        gate_list.append(
+            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
+        )
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
@@ -176,7 +178,6 @@ def binary_encoder(data, **kwargs):
     circuit.set_parameters(2 * angles)
 
     return circuit
-
 
 
 def unary_encoder(data, architecture: str = "tree", **kwargs):
