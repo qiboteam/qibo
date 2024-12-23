@@ -120,9 +120,9 @@ def binary_encoder(data, **kwargs):
     """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
 
     ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
-    Resulting circuit parametrizes ``data`` in Hopf coordinates in the 
+    Resulting circuit parametrizes ``data`` in Hopf coordinates in the
     :math:`(2^{n} - 1)`-unit sphere.
-    
+
     Args:
         data (ndarray or list): :math:`1`-dimensional array or length :math:`2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
