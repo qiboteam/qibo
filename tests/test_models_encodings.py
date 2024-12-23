@@ -113,6 +113,7 @@ def test_binary_encoder(backend, nqubits):
     state = backend.execute_circuit(circuit).state()
     backend.assert_allclose(state, target)
 
+
 @pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [8])

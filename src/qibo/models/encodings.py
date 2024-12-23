@@ -120,7 +120,7 @@ def binary_encoder(data, **kwargs):
     """Create circuit that encodes ``data`` in all amplitudes of the computational basis.
 
     Data has to be normalized with respect to the Hilbert-Schmidt norm.
-    
+
     Args:
         data (ndarray or list): :math:`1`-dimensional array or length :math:`2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
@@ -165,7 +165,9 @@ def binary_encoder(data, **kwargs):
         gate_list = []
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        gate_list.append(gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols)))
+        gate_list.append(
+            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
+        )
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
@@ -174,7 +176,6 @@ def binary_encoder(data, **kwargs):
     circuit.set_parameters(2 * angles)
 
     return circuit
-
 
 
 def unary_encoder(data, architecture: str = "tree", **kwargs):
