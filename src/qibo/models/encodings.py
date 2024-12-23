@@ -168,6 +168,9 @@ def binary_encoder(data, **kwargs):
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
 
+    angles = _generate_rbs_angles(data, dims, "tree")
+    circuit.set_parameters(2 * angles)
+
     return circuit
 
 

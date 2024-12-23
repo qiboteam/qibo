@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    binary_encoder,
     comp_basis_encoder,
     entangling_layer,
     ghz_state,
@@ -16,6 +17,7 @@ from qibo.models.encodings import (
     unary_encoder,
     unary_encoder_random_gaussian,
 )
+from qibo.quantum_info.random_ensembles import random_statevector
 
 
 def _gaussian(x, a, b, c):
@@ -101,6 +103,17 @@ def test_phase_encoder(backend, rotation, kind):
 
     backend.assert_allclose(state, target)
 
+
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_binary_encoder(backend, nqubits):
+    dims = 2**nqubits
+    target = backend.np.real(random_statevector(dims, backend=backend))
+    # target = np.arange(1, dims + 1).astype(float)
+    # target = 2 * np.random.rand(dims) - 1
+    target /= np.linalg.norm(target)
+    circuit = binary_encoder(target)
+    state = backend.execute_circuit(circuit).state()
+    backend.assert_allclose(state, target)
 
 @pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
