@@ -124,15 +124,12 @@ def binary_encoder(data, **kwargs):
     :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray or list): :math:`1`-dimensional array or length :math:`2^{n}`
+        data (ndarray): :math:`1`-dimensional array or length :math:`2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binay encoding.
     """
-    if isinstance(data, list):
-        data = np.array(data)
-
     nqubits = float(np.log2(len(data)))
     if not nqubits.is_integer():
         raise_error(ValueError, "`data` size must be a power of 2.")
