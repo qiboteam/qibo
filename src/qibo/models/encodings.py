@@ -128,7 +128,7 @@ def binary_encoder(data, **kwargs):
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binay encoding.
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binary encoding.
     """
     nqubits = float(np.log2(len(data)))
     if not nqubits.is_integer():
