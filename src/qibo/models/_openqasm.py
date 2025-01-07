@@ -110,6 +110,8 @@ def _qibo_gate_name(gate):
         return "TOFFOLI"
 
     if gate in ["u", "U"]:
+        # `u` for QASM 2.0
+        # `U` for QASM 3.0
         return "U3"
 
     return gate.upper()
