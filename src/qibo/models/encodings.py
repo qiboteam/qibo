@@ -140,8 +140,6 @@ def binary_encoder(data, **kwargs):
     base_strings = np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        # new_row = [row[0] for row in base_strings]
-        # base_strings = np.reshape(new_row, (-1, 2))
         base_strings = np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
