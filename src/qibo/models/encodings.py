@@ -135,7 +135,7 @@ def binary_encoder(data, **kwargs):
         raise_error(ValueError, "`data` size must be a power of 2.")
 
     nqubits = int(nqubits)
-    dims = 2**nqubits
+    dims = len(data)
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
     base_strings = np.reshape(base_strings, (-1, 2))
