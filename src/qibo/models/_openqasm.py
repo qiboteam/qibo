@@ -109,6 +109,9 @@ def _qibo_gate_name(gate):
     if gate == "ccx":
         return "TOFFOLI"
 
+    if gate in ["u", "U"]:
+        return "U3"
+
     return gate.upper()
 
 
