@@ -130,19 +130,19 @@ def binary_encoder(data, **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binary encoding.
     """
-    nqubits = float(np.log2(len(data)))
+    dims = len(data)
+    nqubits = float(np.log2(dims))
     if not nqubits.is_integer():
         raise_error(ValueError, "`data` size must be a power of 2.")
-
     nqubits = int(nqubits)
-    dims = len(data)
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
     base_strings = np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        new_row = [row[0] for row in base_strings]
-        base_strings = np.reshape(new_row, (-1, 2))
+        # new_row = [row[0] for row in base_strings]
+        # base_strings = np.reshape(new_row, (-1, 2))
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 
@@ -150,12 +150,12 @@ def binary_encoder(data, **kwargs):
     for pairs in strings:
         for pair in pairs:
             targets, controls, anticontrols = [], [], []
-            for k, (bit_0, bit_1) in enumerate(zip(pair[0], pair[1])):
-                if bit_0 == "0" and bit_1 == "0":
+            for k, bits in enumerate(zip(pair[0], pair[1])):
+                if bits == ("0", "0"):
                     anticontrols.append(k)
-                elif bit_0 == "1" and bit_1 == "1":
+                elif bits == ("1", "1"):
                     controls.append(k)
-                elif bit_0 == "0" and bit_1 == "1":
+                elif bits == ("0", "1"):
                     targets.append(k)
             targets_and_controls.append([targets, controls, anticontrols])
 
