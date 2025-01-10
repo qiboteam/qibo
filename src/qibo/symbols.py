@@ -1,8 +1,10 @@
+from typing import Optional
+
 import numpy as np
 import sympy
 
 from qibo import gates
-from qibo.backends import matrices
+from qibo.backends import Backend, _check_backend, get_backend, matrices
 from qibo.config import raise_error
 
 
@@ -42,7 +44,14 @@ class Symbol(sympy.Symbol):
         assumptions["commutative"] = commutative
         return super().__new__(cls=cls, name=name, **assumptions)
 
-    def __init__(self, q, matrix=None, name="Symbol", commutative=False):
+    def __init__(
+        self,
+        q,
+        matrix=None,
+        name="Symbol",
+        commutative=False,
+        backend: Optional[Backend] = None,
+    ):
         self.target_qubit = q
         self._gate = None
         if not (
@@ -64,7 +73,8 @@ class Symbol(sympy.Symbol):
             )
         ):
             raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
-        self.matrix = matrix
+        self._matrix = matrix
+        self.backend = _check_backend(backend)
 
     def __getstate__(self):
         return {
@@ -78,6 +88,7 @@ class Symbol(sympy.Symbol):
         self.matrix = data.get("matrix")
         self.name = data.get("name")
         self._gate = None
+        self.backend = get_backend()
 
     @property
     def gate(self):
@@ -89,11 +100,20 @@ class Symbol(sympy.Symbol):
     def calculate_gate(self):  # pragma: no cover
         return gates.Unitary(self.matrix, self.target_qubit)
 
+    @property
+    def matrix(self):
+        return self.backend.cast(self._matrix)
+
+    @matrix.setter
+    def matrix(self, matrix):
+        self._matrix = matrix
+
     def full_matrix(self, nqubits):
         """Calculates the full dense matrix corresponding to the symbol as part of a bigger system.
 
         Args:
             nqubits (int): Total number of qubits in the system.
+            backend (Backend): Optional backend to represent the matrix with. By default the global backend is used.
 
         Returns:
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
@@ -101,7 +121,7 @@ class Symbol(sympy.Symbol):
         """
         from qibo.hamiltonians.models import _multikron
 
-        matrix_list = self.target_qubit * [matrices.I]
+        matrix_list = self.target_qubit * [backend.matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
         matrix_list.extend(matrices.I for _ in range(n))
@@ -113,10 +133,10 @@ class PauliSymbol(Symbol):
         matrix = getattr(matrices, cls.__name__)
         return super().__new__(cls, q, matrix, cls.__name__, commutative, **assumptions)
 
-    def __init__(self, q, commutative=False):
+    def __init__(self, q, commutative=False, backend: Optional[Backend] = None):
         name = self.__class__.__name__
         matrix = getattr(matrices, name)
-        super().__init__(q, matrix, name, commutative)
+        super().__init__(q, matrix, name, commutative, backend=backend)
 
     def calculate_gate(self):
         name = self.__class__.__name__

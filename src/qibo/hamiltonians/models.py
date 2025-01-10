@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -94,17 +94,16 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
 
     term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1)
     form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
-    # matrix = -(
-    #    _multikron([backend.matrices.Z, backend.matrices.Z], backend) + h * _multikron([backend.matrices.X, backend.matrices.I], backend)
-    # )
-    # terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
-    # terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
     ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
-    # ham.terms = terms
     return ham
 
 
-def MaxCut(nqubits, dense: bool = True, backend=None):
+def MaxCut(
+    nqubits,
+    dense: bool = True,
+    adj_matrix: Optional[Union[list[list[float]], np.ndarray]] = None,
+    backend=None,
+):
     """Max Cut Hamiltonian.
 
     .. math::
@@ -115,26 +114,29 @@ def MaxCut(nqubits, dense: bool = True, backend=None):
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        adj_matrix (list[list[float]] | np.ndarray): Adjecency matrix of the graph. Defaults to a
+            homogeneous fully connected graph with all edges having an equal 1.0 weight.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    import sympy as sp
+    if adj_matrix is None:
+        adj_matrix = np.ones((nqubits, nqubits))
+    elif len(adj_matrix) != nqubits:
+        raise_error(
+            RuntimeError,
+            f"Expected an adjacency matrix of shape ({nqubits},{nqubits}) for a {nqubits}-qubits system.",
+        )
 
-    Z = sp.symbols(f"Z:{nqubits}")
-    V = sp.symbols(f"V:{nqubits**2}")
-    sham = -sum(
-        V[i * nqubits + j] * (1 - Z[i] * Z[j])
+    form = -sum(
+        adj_matrix[i][j]
+        * (1 - symbols.Z(i, backend=backend) * symbols.Z(j, backend=backend))
         for i in range(nqubits)
         for j in range(nqubits)
     )
-    sham /= 2
+    form /= 2
 
-    v = np.ones(nqubits**2)
-    smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
-    smap.update({s: (i, v[i]) for i, s in enumerate(V)})
-
-    ham = SymbolicHamiltonian(sham, symbol_map=smap, backend=backend)
+    ham = SymbolicHamiltonian(form, nqubits=nqubits, backend=backend)
     if dense:
         return ham.dense
     return ham
@@ -246,33 +248,7 @@ def Heisenberg(
         if field_strength != 0.0
     )
 
-    """
-    hx = _multikron([matrices.X, matrices.X])
-    hy = _multikron([matrices.Y, matrices.Y])
-    hz = _multikron([matrices.Z, matrices.Z])
-
-    matrix = (
-        -coupling_constants[0] * hx
-        - coupling_constants[1] * hy
-        - coupling_constants[2] * hz
-    )
-
-    terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
-    terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-
-    terms.extend(
-        [
-            -field_strength * HamiltonianTerm(pauli, qubit)
-            for qubit in range(nqubits)
-            for field_strength, pauli in zip(external_field_strengths, paulis)
-            if field_strength != 0.0
-        ]
-    )
-    """
-
     ham = SymbolicHamiltonian(form=form, backend=backend)
-    # ham.terms = terms
-
     return ham
 
 

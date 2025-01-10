@@ -561,7 +561,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             "Calculating the dense form of a symbolic Hamiltonian. "
             "This operation is memory inefficient."
         )
-        # if self._terms is None:
         # calculate dense matrix directly using the form to avoid the
         # costly ``sympy.expand`` call
         if len(self.terms) > 40:
