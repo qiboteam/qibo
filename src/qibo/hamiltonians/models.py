@@ -1,4 +1,3 @@
-from functools import reduce
 from typing import Optional, Union
 
 import numpy as np
@@ -354,10 +353,10 @@ def _multikron(matrix_list, backend):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
-    """
+
     # this is a better implementation but requires the whole
     # hamiltonian/symbols modules to be adapted
-    indices = list(range(2*len(matrix_list)))
+    indices = list(range(2 * len(matrix_list)))
     even, odd = indices[::2], indices[1::2]
     lhs = zip(even, odd)
     rhs = even + odd
@@ -367,10 +366,11 @@ def _multikron(matrix_list, backend):
         h = backend.np.einsum(*einsum_args, rhs)
     else:
         h = np.einsum(*einsum_args, rhs)
-    h = backend.np.sum(backend.np.reshape(h, (dim, dim)), axis=0)
+    h = backend.np.sum(backend.np.reshape(h, (-1, dim, dim)), axis=0)
     return h
     """
     return reduce(backend.np.kron, matrix_list)
+    """
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):

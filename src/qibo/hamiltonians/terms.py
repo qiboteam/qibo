@@ -216,6 +216,10 @@ class SymbolicTerm(HamiltonianTerm):
         """
         if self._matrix is None:
 
+            einsum = (
+                self.backend.np.einsum if self.backend.name != "qiboml" else np.einsum
+            )
+
             def matrices_product(matrices):
                 """Product of matrices that act on the same tuple of qubits.
 
@@ -223,12 +227,11 @@ class SymbolicTerm(HamiltonianTerm):
                     matrices (list): List of matrices to multiply, as exists in
                         the values of ``SymbolicTerm.matrix_map``.
                 """
-                if len(matrices) == 1:
-                    return matrices[0]
-                matrix = np.copy(matrices[0])
-                for m in matrices[1:]:
-                    matrix = matrix @ m
-                return matrix
+                nmat = len(matrices)
+                indices = zip(range(nmat), range(1, nmat + 1))
+                lhs = zip(matrices, indices)
+                lhs = [el for item in lhs for el in item]
+                return einsum(*lhs, (0, nmat))
 
             self._matrix = self.coefficient
             for q in self.target_qubits:
