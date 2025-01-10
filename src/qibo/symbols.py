@@ -121,11 +121,11 @@ class Symbol(sympy.Symbol):
         """
         from qibo.hamiltonians.models import _multikron
 
-        matrix_list = self.target_qubit * [backend.matrices.I]
+        matrix_list = self.target_qubit * [self.backend.matrices.I()]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
-        matrix_list.extend(matrices.I for _ in range(n))
-        return _multikron(matrix_list)
+        matrix_list.extend(self.backend.matrices.I() for _ in range(n))
+        return _multikron(matrix_list, backend=self.backend)
 
 
 class PauliSymbol(Symbol):

@@ -345,7 +345,7 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
 
 
-def _multikron(matrix_list, backend=None):
+def _multikron(matrix_list, backend):
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -370,7 +370,7 @@ def _multikron(matrix_list, backend=None):
     h = backend.np.sum(backend.np.reshape(h, (dim, dim)), axis=0)
     return h
     """
-    return reduce(np.kron, matrix_list)
+    return reduce(backend.np.kron, matrix_list)
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):
