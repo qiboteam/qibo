@@ -4,7 +4,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import symbols
-from qibo.backends import _check_backend, matrices
+from qibo.backends import Backend, _check_backend, matrices
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
@@ -102,7 +102,7 @@ def MaxCut(
     nqubits,
     dense: bool = True,
     adj_matrix: Optional[Union[list[list[float]], np.ndarray]] = None,
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Max Cut Hamiltonian.
 

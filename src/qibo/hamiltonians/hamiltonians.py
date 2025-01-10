@@ -208,7 +208,9 @@ class Hamiltonian(AbstractHamiltonian):
                     "Only hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = self.matrix + o.matrix
-        elif isinstance(o, self.backend.numeric_types):
+        elif isinstance(o, self.backend.numeric_types) or isinstance(
+            o, self.backend.tensor_types
+        ):
             new_matrix = self.matrix + o * self.eye()
         else:
             raise_error(
@@ -561,7 +563,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             "Calculating the dense form of a symbolic Hamiltonian. "
             "This operation is memory inefficient."
         )
-        # if self._terms is None:
         # calculate dense matrix directly using the form to avoid the
         # costly ``sympy.expand`` call
         if len(self.terms) > 40:
