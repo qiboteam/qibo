@@ -219,7 +219,7 @@ def Heisenberg(
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         for ind, pauli in enumerate(paulis):
             double_term = _build_spin_model(
-                nqubits, backend.cast(pauli(0).matrix), condition, backend
+                nqubits, pauli(0, backend=backend).matrix, condition, backend
             )
             double_term = backend.cast(double_term, dtype=double_term.dtype)
             matrix = matrix - coupling_constants[ind] * double_term
@@ -392,13 +392,13 @@ def _build_spin_model(nqubits, matrix, condition, backend):
         + even
         + odd
     )
+    eye = backend.matrices.I()
+    if backend.platform == "cupy":
+        eye = backend.cast(eye)
     columns = [
         backend.np.reshape(
             backend.np.concatenate(
-                [
-                    matrix if condition(i, j) else backend.matrices.I()
-                    for i in range(nqubits)
-                ],
+                [matrix if condition(i, j) else eye for i in range(nqubits)],
                 axis=0,
             ),
             (nqubits, 2, 2),
@@ -426,7 +426,7 @@ def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(
-            nqubits, backend.cast(operator(0).matrix), condition, backend
+            nqubits, operator(0, backend=backend).matrix, condition, backend
         )
         return Hamiltonian(nqubits, ham, backend=backend)
 

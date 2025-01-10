@@ -1,7 +1,10 @@
+from typing import Optional
+
 import numpy as np
 import sympy
 
 from qibo import gates, symbols
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.symbols import I, X, Y, Z
 
@@ -135,11 +138,14 @@ class SymbolicTerm(HamiltonianTerm):
             symbols were not available.
     """
 
-    def __init__(self, coefficient, factors=1, symbol_map={}):
+    def __init__(
+        self, coefficient, factors=1, symbol_map={}, backend: Optional[Backend] = None
+    ):
         self.coefficient = complex(coefficient)
         self._matrix = None
         self._gate = None
         self.hamiltonian = None
+        self.backend = _check_backend(backend)
 
         # List of :class:`qibo.symbols.Symbol` that represent the term factors
         self.factors = []
@@ -175,7 +181,7 @@ class SymbolicTerm(HamiltonianTerm):
                     factor = Symbol(q, matrix, name=factor.name)
 
                 if isinstance(factor, sympy.Symbol):
-                    if isinstance(factor.matrix, np.ndarray):
+                    if isinstance(factor.matrix, self.backend.tensor_types):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple
