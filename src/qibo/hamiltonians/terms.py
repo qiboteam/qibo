@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Optional
 
 import numpy as np
@@ -142,7 +143,6 @@ class SymbolicTerm(HamiltonianTerm):
         self, coefficient, factors=1, symbol_map={}, backend: Optional[Backend] = None
     ):
         self.coefficient = complex(coefficient)
-        self._matrix = None
         self._gate = None
         self.hamiltonian = None
         self.backend = _check_backend(backend)
@@ -178,7 +178,7 @@ class SymbolicTerm(HamiltonianTerm):
                     from qibo.symbols import Symbol
 
                     q, matrix = symbol_map.get(factor)
-                    factor = Symbol(q, matrix, name=factor.name)
+                    factor = Symbol(q, matrix, name=factor.name, backend=self.backend)
 
                 if isinstance(factor, sympy.Symbol):
                     if isinstance(factor.matrix, self.backend.tensor_types):
@@ -205,7 +205,7 @@ class SymbolicTerm(HamiltonianTerm):
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
-    @property
+    @cached_property
     def matrix(self):
         """Calculates the full matrix corresponding to this term.
 
@@ -214,30 +214,32 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        if self._matrix is None:
+        einsum = (
+            self.backend.np.einsum
+            if self.backend.platform != "tensorflow"
+            else np.einsum
+        )
 
-            einsum = (
-                self.backend.np.einsum if self.backend.name != "qiboml" else np.einsum
-            )
+        def matrices_product(matrices):
+            """Product of matrices that act on the same tuple of qubits.
 
-            def matrices_product(matrices):
-                """Product of matrices that act on the same tuple of qubits.
+            Args:
+                matrices (list): List of matrices to multiply, as exists in
+                    the values of ``SymbolicTerm.matrix_map``.
+            """
+            nmat = len(matrices)
+            indices = zip(range(nmat), range(1, nmat + 1))
+            lhs = zip(matrices, indices)
+            lhs = [el for item in lhs for el in item]
+            return einsum(*lhs, (0, nmat))
 
-                Args:
-                    matrices (list): List of matrices to multiply, as exists in
-                        the values of ``SymbolicTerm.matrix_map``.
-                """
-                nmat = len(matrices)
-                indices = zip(range(nmat), range(1, nmat + 1))
-                lhs = zip(matrices, indices)
-                lhs = [el for item in lhs for el in item]
-                return einsum(*lhs, (0, nmat))
-
-            self._matrix = self.coefficient
-            for q in self.target_qubits:
-                matrix = matrices_product(self.matrix_map.get(q))
-                self._matrix = np.kron(self._matrix, matrix)
-        return self._matrix
+        # if self.backend.platform == "pytorch":
+        #    breakpoint()
+        matrix = self.coefficient * self.backend.np.ones(1)
+        for q in self.target_qubits:
+            prod = matrices_product(self.matrix_map.get(q))
+            matrix = self.backend.np.kron(matrix, prod)
+        return matrix
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""

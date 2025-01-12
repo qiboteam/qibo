@@ -536,9 +536,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # a SymbolicTerm.matrix(backend=None) method that returns the matrix in the
             # desired backend type and defaults to numpy or GlobalBackend
             # A similar argument holds for qibo Symbols
-            tmat = self.backend.np.reshape(
-                self.backend.cast(term.matrix), 2 * ntargets * (2,)
-            )
+            tmat = self.backend.np.reshape(term.matrix, 2 * ntargets * (2,))
             n = self.nqubits - ntargets
             emat = self.backend.np.reshape(
                 self.backend.np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,)
