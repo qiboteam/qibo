@@ -53,10 +53,12 @@ class Symbol(sympy.Symbol):
         backend: Optional[Backend] = None,
     ):
         self.target_qubit = q
+        self.backend = _check_backend(backend)
         self._gate = None
         if not (
             matrix is None
             or isinstance(matrix, np.ndarray)
+            or isinstance(matrix, self.backend.tensor_types)
             or isinstance(
                 matrix,
                 (
@@ -74,7 +76,6 @@ class Symbol(sympy.Symbol):
         ):
             raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
         self._matrix = matrix
-        self.backend = _check_backend(backend)
 
     def __getstate__(self):
         return {

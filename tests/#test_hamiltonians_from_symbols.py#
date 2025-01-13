@@ -29,10 +29,7 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
     """Check creating TFIM Hamiltonian using sympy."""
     if hamtype == "symbolic":
         h = 0.5
-        symham = sum(
-            Z(i, backend=backend) * Z(i + 1, backend=backend)
-            for i in range(nqubits - 1)
-        )
+        symham = sum(Z(i, backend=backend) * Z(i + 1, backend=backend) for i in range(nqubits - 1))
         symham += Z(0, backend=backend) * Z(nqubits - 1, backend=backend)
         symham += h * sum(X(i, backend=backend) for i in range(nqubits))
         ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
@@ -66,9 +63,7 @@ def test_from_symbolic_with_power(backend, hamtype, calcterms):
             Symbol(0, matrix, backend=backend) ** 2
             - Symbol(1, matrix, backend=backend) ** 2
             + 3 * Symbol(1, matrix, backend=backend)
-            - 2
-            * Symbol(0, matrix, backend=backend)
-            * Symbol(2, matrix, backend=backend)
+            - 2 * Symbol(0, matrix, backend=backend) * Symbol(2, matrix, backend=backend)
             + 1
         )
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
@@ -172,7 +167,8 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
     else:
         x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(nqubits)))
         symham = -sum(x_symbols)
-        symmap = {x: (i, backend.matrices.X) for i, x in enumerate(x_symbols)}
+        symmap = {x: (i, backend.
+                      matrices.X) for i, x in enumerate(x_symbols)}
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
     if calcterms:
         _ = ham.terms
@@ -186,20 +182,8 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
 def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
     if hamtype == "symbolic":
-        symham = (
-            X(0, backend=backend) * Y(1, backend=backend) * Z(2, backend=backend)
-            + 0.5
-            * Y(0, backend=backend)
-            * Z(1, backend=backend)
-            * X(3, backend=backend)
-            + Z(0, backend=backend) * X(2, backend=backend)
-        )
-        symham += (
-            Y(2, backend=backend)
-            + 1.5 * Z(1, backend=backend)
-            - 2
-            - 3 * X(1, backend=backend) * Y(3, backend=backend)
-        )
+        symham = X(0, backend=backend) * Y(1, backend=backend) * Z(2, backend=backend) + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * X(3, backend=backend) + Z(0, backend=backend) * X(2, backend=backend)
+        symham += Y(2, backend=backend) + 1.5 * Z(1, backend=backend) - 2 - 3 * X(1, backend=backend) * Y(3, backend=backend)
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
         x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(4)))
@@ -222,28 +206,22 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
         _ = ham.terms
     final_matrix = ham.matrix
     target_matrix = backend.np.kron(
-        backend.np.kron(backend.matrices.X, backend.matrices.Y),
-        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.np.kron(backend.matrices.X, backend.matrices.Y), backend.np.kron(backend.matrices.Z, backend.matrices.I())
     )
     target_matrix += 0.5 * backend.np.kron(
-        backend.np.kron(backend.matrices.Y, backend.matrices.Z),
-        backend.np.kron(backend.matrices.I(), backend.matrices.X),
+        backend.np.kron(backend.matrices.Y, backend.matrices.Z), backend.np.kron(backend.matrices.I(), backend.matrices.X)
     )
     target_matrix += backend.np.kron(
-        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
-        backend.np.kron(backend.matrices.X, backend.matrices.I()),
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()), backend.np.kron(backend.matrices.X, backend.matrices.I())
     )
     target_matrix += -3 * backend.np.kron(
-        backend.np.kron(backend.matrices.I(), backend.matrices.X),
-        backend.np.kron(backend.matrices.I(), backend.matrices.Y),
+        backend.np.kron(backend.matrices.I(), backend.matrices.X), backend.np.kron(backend.matrices.I(), backend.matrices.Y)
     )
     target_matrix += backend.np.kron(
-        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
-        backend.np.kron(backend.matrices.Y, backend.matrices.I()),
+        backend.np.kron(backend.matrices.I(), backend.matrices.I()), backend.np.kron(backend.matrices.Y, backend.matrices.I())
     )
     target_matrix += 1.5 * backend.np.kron(
-        backend.np.kron(backend.matrices.I(), backend.matrices.Z),
-        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
+        backend.np.kron(backend.matrices.I(), backend.matrices.Z), backend.np.kron(backend.matrices.I(), backend.matrices.I())
     )
     target_matrix -= 2 * backend.np.eye(2**4, dtype=target_matrix.dtype)
     backend.assert_allclose(final_matrix, target_matrix)
@@ -252,26 +230,19 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_hamiltonian_with_identity_symbol(backend, calcterms):
     """Check creating Hamiltonian from expression which contains the identity symbol."""
-    symham = (
-        X(0, backend=backend) * I(1, backend=backend) * Z(2, backend=backend)
-        + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * I(3, backend=backend)
-        + Z(0, backend=backend) * I(1, backend=backend) * X(2, backend=backend)
-    )
+    symham = X(0, backend=backend) * I(1, backend=backend) * Z(2, backend=backend) + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * I(3, backend=backend) + Z(0, backend=backend) * I(1, backend=backend) * X(2, backend=backend)
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
     if calcterms:
         _ = ham.terms
     final_matrix = ham.matrix
     target_matrix = backend.np.kron(
-        backend.np.kron(backend.matrices.X, backend.matrices.I()),
-        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.np.kron(backend.matrices.X, backend.matrices.I()), backend.np.kron(backend.matrices.Z, backend.matrices.I())
     )
     target_matrix += 0.5 * np.kron(
-        backend.np.kron(backend.matrices.Y, backend.matrices.Z),
-        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
+        backend.np.kron(backend.matrices.Y, backend.matrices.Z), backend.np.kron(backend.matrices.I(), backend.matrices.I())
     )
     target_matrix += backend.np.kron(
-        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
-        backend.np.kron(backend.matrices.X, backend.matrices.I()),
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()), backend.np.kron(backend.matrices.X, backend.matrices.I())
     )
     backend.assert_allclose(final_matrix, target_matrix)

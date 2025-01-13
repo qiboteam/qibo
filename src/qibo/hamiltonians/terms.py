@@ -25,14 +25,15 @@ class HamiltonianTerm:
         q (list): List of target qubit ids.
     """
 
-    def __init__(self, matrix, *q):
+    def __init__(self, matrix, *q, backend: Optional[Backend] = None):
+        self.backend = _check_backend(backend)
         for qi in q:
             if qi < 0:
                 raise_error(
                     ValueError,
                     f"Invalid qubit id {qi} < 0 was given in Hamiltonian term.",
                 )
-        if not isinstance(matrix, np.ndarray):
+        if not isinstance(matrix, self.backend.tensor_types):
             raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
         dim = int(matrix.shape[0])
         if 2 ** len(q) != dim:
@@ -82,8 +83,10 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
-        matrix = np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.np.kron(
+            term.matrix, self.backend.np.eye(2 ** (len(self) - len(term)))
+        )
+        matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -93,15 +96,19 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = np.transpose(matrix, order)
-        matrix = np.reshape(matrix, 2 * (2 ** len(self),))
-        return HamiltonianTerm(self.matrix + matrix, *self.target_qubits)
+        matrix = self.backend.np.transpose(matrix, order)
+        matrix = self.backend.np.reshape(matrix, 2 * (2 ** len(self),))
+        return HamiltonianTerm(
+            self.matrix + matrix, *self.target_qubits, backend=self.backend
+        )
 
     def __len__(self):
         return len(self.target_qubits)
 
     def __mul__(self, x):
-        return HamiltonianTerm(x * self.matrix, *self.target_qubits)
+        return HamiltonianTerm(
+            x * self.matrix, *self.target_qubits, backend=self.backend
+        )
 
     def __rmul__(self, x):
         return self.__mul__(x)
@@ -142,15 +149,17 @@ class SymbolicTerm(HamiltonianTerm):
     def __init__(
         self, coefficient, factors=1, symbol_map={}, backend: Optional[Backend] = None
     ):
-        self.coefficient = complex(coefficient)
         self._gate = None
         self.hamiltonian = None
         self.backend = _check_backend(backend)
+        self.coefficient = complex(coefficient)
 
         # List of :class:`qibo.symbols.Symbol` that represent the term factors
         self.factors = []
         # Dictionary that maps target qubit ids to a list of matrices that act on each qubit
         self.matrix_map = {}
+        # if backend.name == "qiboml":
+        #    breakpoint()
         if factors != 1:
             for factor in factors.as_ordered_factors():
                 # check if factor has some power ``power`` so that the corresponding
@@ -214,32 +223,39 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
+        from qibo.hamiltonians.models import _multikron
+
         einsum = (
             self.backend.np.einsum
             if self.backend.platform != "tensorflow"
             else np.einsum
         )
 
-        def matrices_product(matrices):
-            """Product of matrices that act on the same tuple of qubits.
-
-            Args:
-                matrices (list): List of matrices to multiply, as exists in
-                    the values of ``SymbolicTerm.matrix_map``.
-            """
-            nmat = len(matrices)
-            indices = zip(range(nmat), range(1, nmat + 1))
-            lhs = zip(matrices, indices)
-            lhs = [el for item in lhs for el in item]
-            return einsum(*lhs, (0, nmat))
-
-        # if self.backend.platform == "pytorch":
-        #    breakpoint()
-        matrix = self.coefficient * self.backend.np.ones(1)
-        for q in self.target_qubits:
-            prod = matrices_product(self.matrix_map.get(q))
-            matrix = self.backend.np.kron(matrix, prod)
-        return matrix
+        # find the max number of matrices for each qubit
+        max_len = max(len(v) for v in self.matrix_map.values())
+        nqubits = len(self.matrix_map)
+        # pad each list with identity to max_len
+        matrix = []
+        for qubit, matrices in self.matrix_map.items():
+            matrix.append(
+                self.backend.np.concatenate(
+                    self.matrix_map[qubit]
+                    + (max_len - len(matrices)) * [self.backend.np.eye(2)],
+                    axis=0,
+                )
+            )
+        # separate in `max_len`-column tensors of shape (`nqubits`, 2, 2)
+        matrix = self.backend.np.transpose(
+            self.backend.np.reshape(
+                self.backend.np.concatenate(matrix, axis=0), (nqubits, max_len, 2, 2)
+            ),
+            (1, 0, 2, 3),
+        )
+        indices = list(zip(max_len * [0], range(1, max_len + 1), range(2, max_len + 2)))
+        lhs = zip(matrix, indices)
+        lhs = [el for item in lhs for el in item]
+        matrix = einsum(*lhs, (0, 1, max_len + 1))
+        return self.coefficient * _multikron(matrix, self.backend)
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
@@ -253,8 +269,6 @@ class SymbolicTerm(HamiltonianTerm):
         """Multiplication of scalar to the Hamiltonian term."""
         new = self.copy()
         new.coefficient *= x
-        if self._matrix is not None:
-            new._matrix = x * self._matrix
         return new
 
     def __call__(self, backend, state, nqubits, density_matrix=False):

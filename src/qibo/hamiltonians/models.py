@@ -91,7 +91,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
             )
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    term = lambda q1, q2: symbols.Z(q1) * symbols.Z(q2) + h * symbols.X(q1)
+    term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
+        q2, backend=backend
+    ) + h * symbols.X(q1, backend=backend)
     form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
     ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
     return ham
@@ -231,7 +233,7 @@ def Heisenberg(
         return Hamiltonian(nqubits, matrix, backend=backend)
 
     def h(symbol):
-        return lambda q1, q2: symbol(q1) * symbol(q2)
+        return lambda q1, q2: symbol(q1, backend=backend) * symbol(q2, backend=backend)
 
     def term(q1, q2):
         return sum(
@@ -368,9 +370,6 @@ def _multikron(matrix_list, backend):
         h = np.einsum(*einsum_args, rhs)
     h = backend.np.sum(backend.np.reshape(h, (-1, dim, dim)), axis=0)
     return h
-    """
-    return reduce(backend.np.kron, matrix_list)
-    """
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):
@@ -430,9 +429,6 @@ def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
         )
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    # matrix = -matrix
-    # terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    form = sum([-1 * operator(i) for i in range(nqubits)])
+    form = sum([-1 * operator(i, backend=backend) for i in range(nqubits)])
     ham = SymbolicHamiltonian(form=form, backend=backend)
-    # ham.terms = terms
     return ham

@@ -492,17 +492,19 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if not isinstance(matrix, self.backend.tensor_types):
                     # symbols that do not correspond to quantum operators
                     # for example parameters in the MaxCut Hamiltonian
-                    result = complex(matrix) * np.eye(2**self.nqubits)
+                    result = complex(matrix) * self.backend.np.eye(2**self.nqubits)
                 else:
                     # if we do not have a Qibo symbol we construct one and use
                     # :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
-                    result = self._qiboSymbol(q, matrix).full_matrix(self.nqubits)
+                    result = self._qiboSymbol(
+                        q, matrix, backend=self.backend
+                    ).full_matrix(self.nqubits)
 
         elif term.is_number:
             # if the term is number we should return in the form of identity
             # matrix because in expressions like `1 + Z`, `1` is not correspond
             # to the float 1 but the identity operator (matrix)
-            result = complex(term) * np.eye(2**self.nqubits)
+            result = complex(term) * self.backend.np.eye(2**self.nqubits, dtype=float)
 
         else:
             raise_error(
