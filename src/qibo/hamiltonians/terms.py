@@ -190,6 +190,10 @@ class SymbolicTerm(HamiltonianTerm):
                     factor = Symbol(q, matrix, name=factor.name, backend=self.backend)
 
                 if isinstance(factor, sympy.Symbol):
+                    # forces the backend of the factor
+                    # this way it is not necessary to explicitely define the
+                    # backend of a symbol, i.e. Z(q, backend=backend)
+                    factor.backend = self.backend
                     if isinstance(factor.matrix, self.backend.tensor_types):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
