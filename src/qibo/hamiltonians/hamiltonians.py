@@ -70,34 +70,6 @@ class Hamiltonian(AbstractHamiltonian):
             )
         self._matrix = mat
 
-    @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, backend=None):
-        """Creates a :class:`qibo.hamiltonian.Hamiltonian` from a symbolic Hamiltonian.
-
-        We refer to :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
-        for more details.
-
-        Args:
-            symbolic_hamiltonian (sympy.Expr): full Hamiltonian written with ``sympy`` symbols.
-            symbol_map (dict): Dictionary that maps each symbol that appears in
-                the Hamiltonian to a pair ``(target, matrix)``.
-            backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-                in the execution. If ``None``, it uses the current backend.
-                Defaults to ``None``.
-
-        Returns:
-            :class:`qibo.hamiltonians.SymbolicHamiltonian`: object that implements the
-            Hamiltonian represented by the given symbolic expression.
-        """
-        log.warning(
-            "`Hamiltonian.from_symbolic` and the use of symbol maps is "
-            "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
-            "to construct Hamiltonians using symbols."
-        )
-        return SymbolicHamiltonian(
-            symbolic_hamiltonian, symbol_map=symbol_map, backend=backend
-        )
-
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
             self._eigenvalues = self.backend.calculate_eigenvalues(self.matrix, k)
@@ -313,14 +285,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             Hamiltonian should be written using Qibo symbols.
             See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
             example for more details.
-        symbol_map (dict): Dictionary that maps each ``sympy.Symbol`` to a tuple
-            of (target qubit, matrix representation). This feature is kept for
-            compatibility with older versions where Qibo symbols were not available
-            and may be deprecated in the future.
-            It is not required if the Hamiltonian is constructed using Qibo symbols.
-            The symbol_map can also be used to pass non-quantum operator arguments
-            to the symbolic Hamiltonian, such as the parameters in the
-            :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -330,7 +294,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self,
         form: sympy.Expr,
         nqubits: Optional[int] = None,
-        symbol_map: Optional[dict] = None,
         backend: Optional[Backend] = None,
     ):
         super().__init__()
@@ -341,9 +304,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             )
         self._form = form
         self.constant = 0  # used only when we perform calculations using ``_terms``
-        self.symbol_map = symbol_map if symbol_map is not None else {}
-        # if a symbol in the given form is not a Qibo symbol it must be
-        # included in the ``symbol_map``
 
         from qibo.symbols import Symbol  # pylint: disable=import-outside-toplevel
 
@@ -372,14 +332,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         for symbol in form.free_symbols:
             if isinstance(symbol, self._qiboSymbol):
                 q = symbol.target_qubit
-            elif isinstance(symbol, sympy.Expr):
-                if symbol not in self.symbol_map:
-                    raise_error(ValueError, f"Symbol {symbol} is not in symbol map.")
-                q, matrix = self.symbol_map.get(symbol)
-                if not isinstance(matrix, self.backend.tensor_types):
-                    # ignore symbols that do not correspond to quantum operators
-                    # for example parameters in the MaxCut Hamiltonian
-                    q = 0
+            else:
+                raise_error(
+                    RuntimeError,
+                    f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, you can define a custom symbol for {symbol} by subclassing ``qibo.symbols.Symbol``.",
+                )
             if q > nqubits:
                 nqubits = q
         return nqubits + 1
@@ -411,7 +368,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         form = sympy.expand(self.form)
         terms = []
         for f, c in form.as_coefficients_dict().items():
-            term = SymbolicTerm(c, f, self.symbol_map, backend=self.backend)
+            term = SymbolicTerm(c, f, backend=self.backend)
             if term.target_qubits:
                 terms.append(term)
             else:
@@ -480,25 +437,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             for _ in range(exponent - 1):
                 result = result @ matrix
 
-        elif isinstance(term, sympy.Symbol):
-            # if the term is a ``Symbol`` then it corresponds to a quantum
-            # operator for which we can construct the full matrix directly
-            if isinstance(term, self._qiboSymbol):
-                # if we have a Qibo symbol the matrix construction is
-                # implemented in :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
-                result = term.full_matrix(self.nqubits)
-            else:
-                q, matrix = self.symbol_map.get(term)
-                if not isinstance(matrix, self.backend.tensor_types):
-                    # symbols that do not correspond to quantum operators
-                    # for example parameters in the MaxCut Hamiltonian
-                    result = complex(matrix) * self.backend.np.eye(2**self.nqubits)
-                else:
-                    # if we do not have a Qibo symbol we construct one and use
-                    # :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
-                    result = self._qiboSymbol(
-                        q, matrix, backend=self.backend
-                    ).full_matrix(self.nqubits)
+        elif isinstance(term, self._qiboSymbol):
+            # if we have a Qibo symbol the matrix construction is
+            # implemented in :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
+            result = term.full_matrix(self.nqubits)
 
         elif term.is_number:
             # if the term is number we should return in the form of identity
@@ -682,7 +624,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def _compose(self, o, operator):
         form = self._form
-        symbol_map = self.symbol_map
 
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
@@ -692,7 +633,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 )
 
             if o._form is not None:
-                symbol_map.update(o.symbol_map)
                 form = operator(form, o._form) if form is not None else o._form
 
         elif isinstance(o, (self.backend.numeric_types, self.backend.tensor_types)):
@@ -703,9 +643,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 f"SymbolicHamiltonian composition to {type(o)} not implemented.",
             )
 
-        return self.__class__(
-            form=form, symbol_map=symbol_map, nqubits=self.nqubits, backend=self.backend
-        )
+        return self.__class__(form=form, nqubits=self.nqubits, backend=self.backend)
 
     def __add__(self, o):
         return self._compose(o, lambda x, y: x + y)
@@ -788,19 +726,3 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
         return circuit
-
-
-class TrotterHamiltonian:
-    """"""
-
-    def __init__(self, *parts):
-        raise_error(
-            NotImplementedError,
-            "`TrotterHamiltonian` is substituted by `SymbolicHamiltonian` "
-            + "and is no longer supported. Please check the documentation "
-            + "of `SymbolicHamiltonian` for more details.",
-        )
-
-    @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
-        return cls()

@@ -139,16 +139,9 @@ class SymbolicTerm(HamiltonianTerm):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (sympy.Expr): Sympy expression for the underlying term.
-        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
-            expression to tuples of (target qubit id, matrix).
-            This is required only if the expression is not created using Qibo
-            symbols and to keep compatibility with older versions where Qibo
-            symbols were not available.
     """
 
-    def __init__(
-        self, coefficient, factors=1, symbol_map={}, backend: Optional[Backend] = None
-    ):
+    def __init__(self, coefficient, factors=1, backend: Optional[Backend] = None):
         self._gate = None
         self.hamiltonian = None
         self.backend = _check_backend(backend)
@@ -180,14 +173,6 @@ class SymbolicTerm(HamiltonianTerm):
                         pow = int(pow)
                 else:
                     pow = 1
-
-                # if the user is using ``symbol_map`` instead of qibo symbols,
-                # create the corresponding symbols
-                if factor in symbol_map:
-                    from qibo.symbols import Symbol
-
-                    q, matrix = symbol_map.get(factor)
-                    factor = Symbol(q, matrix, name=factor.name, backend=self.backend)
 
                 if isinstance(factor, sympy.Symbol):
                     # forces the backend of the factor

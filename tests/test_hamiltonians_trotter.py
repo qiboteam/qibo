@@ -104,11 +104,3 @@ def test_symbolic_hamiltonian_circuit_different_dts(backend):
     matrix1 = ham.circuit(0.2).unitary(backend)
     matrix2 = (a + b).unitary(backend)
     backend.assert_allclose(matrix1, matrix2)
-
-
-def test_old_trotter_hamiltonian_errors():
-    """Check errors when creating the deprecated ``TrotterHamiltonian`` object."""
-    with pytest.raises(NotImplementedError):
-        h = hamiltonians.TrotterHamiltonian()
-    with pytest.raises(NotImplementedError):
-        h = hamiltonians.TrotterHamiltonian.from_symbolic(0, 1)

@@ -33,10 +33,8 @@ def test_hamiltonian_models(backend, model, kwargs, filename):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-@pytest.mark.parametrize(
-    "dense,calcterms", [(True, False), (False, False), (False, True)]
-)
-def test_maxcut(backend, nqubits, dense, calcterms):
+@pytest.mark.parametrize("dense", [True, False])
+def test_maxcut(backend, nqubits, dense):
     size = 2**nqubits
     ham = np.zeros(shape=(size, size), dtype=np.complex128)
     for i in range(nqubits):
@@ -51,8 +49,6 @@ def test_maxcut(backend, nqubits, dense, calcterms):
             ham += M
     target_ham = backend.cast(-ham / 2)
     final_ham = hamiltonians.MaxCut(nqubits, dense, backend=backend)
-    if (not dense) and calcterms:
-        _ = final_ham.terms
     backend.assert_allclose(final_ham.matrix, target_ham)
 
 
