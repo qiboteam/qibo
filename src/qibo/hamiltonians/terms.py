@@ -151,8 +151,6 @@ class SymbolicTerm(HamiltonianTerm):
         self.factors = []
         # Dictionary that maps target qubit ids to a list of matrices that act on each qubit
         self.matrix_map = {}
-        # if backend.name == "qiboml":
-        #    breakpoint()
         if factors != 1:
             for factor in factors.as_ordered_factors():
                 # check if factor has some power ``power`` so that the corresponding

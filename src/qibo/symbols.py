@@ -39,7 +39,7 @@ class Symbol(sympy.Symbol):
             (for example when the Hamiltonian consists of Z terms only).
     """
 
-    def __new__(cls, q, matrix=None, name="Symbol", commutative=False, **assumptions):
+    def __new__(cls, q, matrix, name="Symbol", commutative=False, **assumptions):
         name = f"{name}{q}"
         assumptions["commutative"] = commutative
         return super().__new__(cls=cls, name=name, **assumptions)
@@ -47,7 +47,7 @@ class Symbol(sympy.Symbol):
     def __init__(
         self,
         q,
-        matrix=None,
+        matrix,
         name="Symbol",
         commutative=False,
         backend: Optional[Backend] = None,
@@ -56,8 +56,7 @@ class Symbol(sympy.Symbol):
         self.backend = _check_backend(backend)
         self._gate = None
         if not (
-            matrix is None
-            or isinstance(matrix, np.ndarray)
+            isinstance(matrix, np.ndarray)
             or isinstance(matrix, self.backend.tensor_types)
             or isinstance(
                 matrix,

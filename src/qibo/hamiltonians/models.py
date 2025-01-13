@@ -356,8 +356,6 @@ def _multikron(matrix_list, backend):
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
 
-    # this is a better implementation but requires the whole
-    # hamiltonian/symbols modules to be adapted
     indices = list(range(2 * len(matrix_list)))
     even, odd = indices[::2], indices[1::2]
     lhs = zip(even, odd)
@@ -411,10 +409,6 @@ def _build_spin_model(nqubits, matrix, condition, backend):
     else:
         h = backend.np.einsum(*einsum_args, rhs)
     h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)
-    # h = sum(
-    #    _multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
-    #    for i in range(nqubits)
-    # )
     return h
 
 
