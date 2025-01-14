@@ -377,6 +377,17 @@ def _multikron(matrix_list, backend):
 
 def _build_spin_model(nqubits, matrix, condition, backend):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(
+        reduce(
+            backend.np.kron,
+            (
+                matrix if condition(i, j) else backend.matrices.I()
+                for j in range(nqubits)
+            ),
+        )
+        for i in range(nqubits)
+    )
+    """
     indices = list(range(2 * nqubits))
     even, odd = indices[::2], indices[1::2]
     lhs = zip(
@@ -412,8 +423,9 @@ def _build_spin_model(nqubits, matrix, condition, backend):
     if backend.platform == "tensorflow":
         h = np.einsum(*einsum_args, rhs)
     else:
-        h = backend.np.einsum(*einsum_args, rhs)
+        h = backend.np.einsum(*einsum_args, rhs, optimize=True)
     h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)
+    """
     return h
 
 
