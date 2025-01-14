@@ -249,7 +249,7 @@ class SymbolicTerm(HamiltonianTerm):
             reduce(self.backend.np.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
         ]
-        return self.coefficient * reduce(self.backend.np.kron, matrices)
+        return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""

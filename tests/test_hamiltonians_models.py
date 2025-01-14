@@ -40,24 +40,24 @@ def test_maxcut(backend, nqubits, adj_matrix, dense):
             final_ham = hamiltonians.MaxCut(
                 nqubits, dense, adj_matrix=adj_matrix, backend=backend
             )
-
-    size = 2**nqubits
-    ham = np.zeros(shape=(size, size), dtype=np.complex128)
-    for i in range(nqubits):
-        for j in range(nqubits):
-            h = np.eye(1)
-            for k in range(nqubits):
-                if (k == i) ^ (k == j):
-                    h = np.kron(h, matrices.Z)
-                else:
-                    h = np.kron(h, matrices.I)
-            M = np.eye(2**nqubits) - h
-            ham += M
-    target_ham = backend.cast(-ham / 2)
-    final_ham = hamiltonians.MaxCut(
-        nqubits, dense, adj_matrix=adj_matrix, backend=backend
-    )
-    backend.assert_allclose(final_ham.matrix, target_ham)
+    else:
+        size = 2**nqubits
+        ham = np.zeros(shape=(size, size), dtype=np.complex128)
+        for i in range(nqubits):
+            for j in range(nqubits):
+                h = np.eye(1)
+                for k in range(nqubits):
+                    if (k == i) ^ (k == j):
+                        h = np.kron(h, matrices.Z)
+                    else:
+                        h = np.kron(h, matrices.I)
+                M = np.eye(2**nqubits) - h
+                ham += M
+        target_ham = backend.cast(-ham / 2)
+        final_ham = hamiltonians.MaxCut(
+            nqubits, dense, adj_matrix=adj_matrix, backend=backend
+        )
+        backend.assert_allclose(final_ham.matrix, target_ham)
 
 
 @pytest.mark.parametrize("model", ["XXZ", "TFIM"])
