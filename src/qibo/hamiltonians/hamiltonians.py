@@ -395,7 +395,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def exp(self, a):
         return self.dense.exp(a)
 
-    # only useful for dense_from_form, which might not be needed in the end
     @cache
     def _get_symbol_matrix(self, term):
         """Calculates numerical matrix corresponding to symbolic expression.
@@ -434,11 +433,18 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # symbolic op for power
             base, exponent = term.as_base_exp()
             matrix = self._get_symbol_matrix(base)
-            result = self.backend.np.linalg.matrix_power(matrix, exponent)
+            matrix_power = (
+                np.linalg.matrix_power
+                if self.backend.name == "tensorflow"
+                else self.backend.np.linalg.matrix_power
+            )
+            result = matrix_power(matrix, int(exponent))
 
         elif isinstance(term, self._qiboSymbol):
             # if we have a Qibo symbol the matrix construction is
             # implemented in :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
+            # I have to force the symbol's backend
+            term.backend = self.backend
             result = term.full_matrix(self.nqubits)
 
         elif term.is_number:
@@ -455,8 +461,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         return result
 
-    # not sure this is useful, it appears to be significantly slower than
-    # the from_terms counterpart
     def _calculate_dense_from_form(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using symbolic form.
 
@@ -465,8 +469,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         matrix = self._get_symbol_matrix(self.form)
         return Hamiltonian(self.nqubits, matrix, backend=self.backend)
 
+    """
     def _calculate_dense_from_terms(self) -> Hamiltonian:
-        """Calculates equivalent Hamiltonian using the term representation."""
+        "Calculates equivalent Hamiltonian using the term representation."
         matrix = 0
         indices = list(range(2 * self.nqubits))
         einsum = (
@@ -492,6 +497,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             else self.backend.np.zeros(2 * (2**self.nqubits,))
         )
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
+    """
 
     def calculate_dense(self) -> Hamiltonian:
         log.warning(
@@ -500,9 +506,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
         # calculate dense matrix directly using the form to avoid the
         # costly ``sympy.expand`` call
-        if len(self.terms) > 40:
-            return self._calculate_dense_from_form()
-        return self._calculate_dense_from_terms()
+        # if len(self.terms) > 40:
+        return self._calculate_dense_from_form()
+        # return self._calculate_dense_from_terms()
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)

@@ -49,6 +49,15 @@ def test_symbolic_hamiltonian_form_setter(backend):
     assert h.nqubits == 4
 
 
+def test_symbolic_hamiltonian_dense(backend):
+    target_matrix = backend.cast(
+        Z(0).matrix @ Z(0).matrix + X(0).matrix @ Y(0).matrix + np.eye(2)
+    )
+    form = Z(0) ** 2 + X(0) * Y(0) + 1
+    sham = SymbolicHamiltonian(form, nqubits=1, backend=backend)
+    backend.assert_allclose(sham.dense.matrix, target_matrix)
+
+
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_symbolictfim_hamiltonian_to_dense(backend, nqubits):
     final_ham = SymbolicHamiltonian(
