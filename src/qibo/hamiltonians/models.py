@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Optional, Union
 
 import numpy as np
@@ -355,7 +356,8 @@ def _multikron(matrix_list, backend):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
-
+    # TO DO: check whether this scales better on gpu
+    """
     indices = list(range(2 * len(matrix_list)))
     even, odd = indices[::2], indices[1::2]
     lhs = zip(even, odd)
@@ -368,6 +370,9 @@ def _multikron(matrix_list, backend):
         h = np.einsum(*einsum_args, rhs)
     h = backend.np.sum(backend.np.reshape(h, (-1, dim, dim)), axis=0)
     return h
+    """
+    # reduce appears to be faster especially when matrix_list is long
+    return reduce(backend.np.kron, matrix_list)
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):
@@ -389,13 +394,13 @@ def _build_spin_model(nqubits, matrix, condition, backend):
         + even
         + odd
     )
-    eye = backend.matrices.I()
-    if backend.platform == "cupy":
-        eye = backend.cast(eye)
     columns = [
         backend.np.reshape(
             backend.np.concatenate(
-                [matrix if condition(i, j) else eye for i in range(nqubits)],
+                [
+                    matrix if condition(i, j) else backend.matrices.I()
+                    for i in range(nqubits)
+                ],
                 axis=0,
             ),
             (nqubits, 2, 2),

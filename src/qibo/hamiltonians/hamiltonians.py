@@ -1,6 +1,6 @@
 """Module defining Hamiltonian classes."""
 
-from functools import cached_property
+from functools import cache, cached_property, reduce
 from itertools import chain
 from math import prod
 from typing import Optional
@@ -396,6 +396,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self.dense.exp(a)
 
     # only useful for dense_from_form, which might not be needed in the end
+    @cache
     def _get_symbol_matrix(self, term):
         """Calculates numerical matrix corresponding to symbolic expression.
 
@@ -424,18 +425,16 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # note that we need to use matrix multiplication even though
             # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
-            result = self._get_symbol_matrix(factors[0])
-            for subterm in factors[1:]:
-                result = result @ self._get_symbol_matrix(subterm)
+            result = reduce(
+                self.backend.np.matmul,
+                [self._get_symbol_matrix(subterm) for subterm in factors],
+            )
 
         elif isinstance(term, sympy.Pow):
             # symbolic op for power
             base, exponent = term.as_base_exp()
             matrix = self._get_symbol_matrix(base)
-            # multiply ``base`` matrix ``exponent`` times to itself
-            result = matrix
-            for _ in range(exponent - 1):
-                result = result @ matrix
+            result = self.backend.np.linalg.matrix_power(matrix, exponent)
 
         elif isinstance(term, self._qiboSymbol):
             # if we have a Qibo symbol the matrix construction is
@@ -470,16 +469,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """Calculates equivalent Hamiltonian using the term representation."""
         matrix = 0
         indices = list(range(2 * self.nqubits))
-        # most likely the looped einsum could be avoided by preparing all the
-        # matrices first and performing a single einsum in the end with a suitable
-        # choice of indices
+        einsum = (
+            np.einsum
+            if self.backend.platform == "tensorflow"
+            else self.backend.np.einsum
+        )
         for term in self.terms:
             ntargets = len(term.target_qubits)
-            # I have to cast to a backend array because SymbolicTerm does not support
-            # backend declaration and just works with numpy, might be worth implementing
-            # a SymbolicTerm.matrix(backend=None) method that returns the matrix in the
-            # desired backend type and defaults to numpy or GlobalBackend
-            # A similar argument holds for qibo Symbols
             tmat = self.backend.np.reshape(term.matrix, 2 * ntargets * (2,))
             n = self.nqubits - ntargets
             emat = self.backend.np.reshape(
@@ -488,10 +484,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             gen = lambda x: (indices[i + x] for i in term.target_qubits)
             tc = list(chain(gen(0), gen(self.nqubits)))
             ec = list(c for c in indices if c not in tc)
-            if self.backend.platform == "tensorflow":
-                matrix += np.einsum(tmat, tc, emat, ec, indices)
-            else:
-                matrix += self.backend.np.einsum(tmat, tc, emat, ec, indices)
+            matrix += einsum(tmat, tc, emat, ec, indices)
 
         matrix = (
             self.backend.np.reshape(matrix, 2 * (2**self.nqubits,))
@@ -655,7 +648,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self._compose(o, lambda x, y: y - x)
 
     def __mul__(self, o):
-        # o = complex(o)
         return self._compose(o, lambda x, y: y * x)
 
     def apply_gates(self, state, density_matrix=False):

@@ -1,4 +1,4 @@
-from functools import cached_property
+from functools import cached_property, reduce
 from typing import Optional
 
 import numpy as np
@@ -210,8 +210,9 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        from qibo.hamiltonians.models import _multikron
+        # from qibo.hamiltonians.models import _multikron
 
+        """
         einsum = (
             self.backend.np.einsum
             if self.backend.platform != "tensorflow"
@@ -243,6 +244,12 @@ class SymbolicTerm(HamiltonianTerm):
         lhs = [el for item in lhs for el in item]
         matrix = einsum(*lhs, (0, 1, max_len + 1))
         return self.coefficient * _multikron(matrix, self.backend)
+        """
+        matrices = [
+            reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            for q in self.target_qubits
+        ]
+        return self.coefficient * reduce(self.backend.np.kron, matrices)
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""

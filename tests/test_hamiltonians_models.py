@@ -32,9 +32,15 @@ def test_hamiltonian_models(backend, model, kwargs, filename):
     assert_regression_fixture(backend, matrix, filename)
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nqubits,adj_matrix", zip([3, 4], [None, [[0, 1], [2, 3]]]))
 @pytest.mark.parametrize("dense", [True, False])
-def test_maxcut(backend, nqubits, dense):
+def test_maxcut(backend, nqubits, adj_matrix, dense):
+    if adj_matrix is not None:
+        with pytest.raises(RuntimeError):
+            final_ham = hamiltonians.MaxCut(
+                nqubits, dense, adj_matrix=adj_matrix, backend=backend
+            )
+
     size = 2**nqubits
     ham = np.zeros(shape=(size, size), dtype=np.complex128)
     for i in range(nqubits):
@@ -48,7 +54,9 @@ def test_maxcut(backend, nqubits, dense):
             M = np.eye(2**nqubits) - h
             ham += M
     target_ham = backend.cast(-ham / 2)
-    final_ham = hamiltonians.MaxCut(nqubits, dense, backend=backend)
+    final_ham = hamiltonians.MaxCut(
+        nqubits, dense, adj_matrix=adj_matrix, backend=backend
+    )
     backend.assert_allclose(final_ham.matrix, target_ham)
 
 

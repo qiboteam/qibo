@@ -41,6 +41,14 @@ def test_symbolic_hamiltonian_errors(backend):
         dense = ham.dense
 
 
+def test_symbolic_hamiltonian_form_setter(backend):
+    h = SymbolicHamiltonian(Z(0), backend=backend)
+    new_form = Z(0) * X(1) * Y(3)
+    h.form = new_form
+    assert h.form == new_form
+    assert h.nqubits == 4
+
+
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_symbolictfim_hamiltonian_to_dense(backend, nqubits):
     final_ham = SymbolicHamiltonian(
