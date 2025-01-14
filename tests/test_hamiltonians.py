@@ -341,14 +341,14 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    H2_eigen = sorted(backend.to_numpy(H2._eigenvalues))
+    H2_eigen = sorted(backend.to_numpy(H2.eigenvalues()))
     hH2_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(c1 * H1.matrix)))
     backend.assert_allclose(H2_eigen, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     if sparse_type is None:
-        H3_eigen = sorted(backend.to_numpy(H3._eigenvalues))
+        H3_eigen = sorted(backend.to_numpy(H3.eigenvalues()))
         hH3_eigen = sorted(
             backend.to_numpy(backend.calculate_eigenvalues(H1.matrix * c2))
         )
@@ -369,20 +369,20 @@ def test_hamiltonian_eigenvectors(backend, dtype, dense):
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    V2 = backend.to_numpy(H2._eigenvectors)
-    U2 = backend.to_numpy(H2._eigenvalues)
+    V2 = backend.to_numpy(H2.eigenvectors())
+    U2 = backend.to_numpy(H2.eigenvalues())
     backend.assert_allclose(H2.matrix, V2 @ np.diag(U2) @ V2.T)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     V3 = backend.to_numpy(H3.eigenvectors())
-    U3 = backend.to_numpy(H3._eigenvalues)
+    U3 = backend.to_numpy(H3.eigenvalues())
     backend.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)
     H4 = c3 * H1
-    V4 = backend.to_numpy(H4._eigenvectors)
-    U4 = backend.to_numpy(H4._eigenvalues)
+    V4 = backend.to_numpy(H4.eigenvectors())
+    U4 = backend.to_numpy(H4.eigenvalues())
     backend.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
 
 
