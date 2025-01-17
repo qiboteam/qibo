@@ -224,7 +224,7 @@ def GST(
     backend=None,
     transpiler=None,
 ):
-    """Runs Gate Set Tomography on the input ``gate_set``.
+    """Run Gate Set Tomography on the input ``gate_set``.
 
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
