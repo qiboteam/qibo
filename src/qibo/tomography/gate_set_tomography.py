@@ -293,10 +293,12 @@ def GST(
             if isinstance(gate, tuple):
                 angles = ["theta", "phi", "lam"]
                 gate, params = gate
-                angle_values = dict(zip(angles[: len(params)], params))
+                init_args = signature(gate).parameters
+                valid_angles = [arg for arg in init_args if arg in angles]
+                angle_values = dict(zip(valid_angles, params))
             else:
                 angle_values = {}
-            init_args = signature(gate).parameters
+                init_args = signature(gate).parameters
 
             if "q" in init_args:
                 nqubits = 1
