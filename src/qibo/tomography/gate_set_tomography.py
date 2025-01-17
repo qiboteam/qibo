@@ -307,7 +307,7 @@ def GST(
             else:
                 raise_error(
                     RuntimeError,
-                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
+                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
                 )
             gate = gate(*range(nqubits), **angle_values)
 
