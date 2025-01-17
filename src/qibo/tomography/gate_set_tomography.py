@@ -292,13 +292,20 @@ def GST(
 
     for gate in gate_set:
         if gate is not None:
-            init_args = signature(gate[0]).parameters
-            params = gate[1]
+            if isinstance(gate, tuple):
+                init_args = signature(gate[0]).parameters
+                params = gate[1]
+                gate_class = gate[0]
+            else:
+                init_args = signature(gate).parameters
+                params = []
+                gate_class = gate
 
-            angle_names = [name for name in init_args if name in {"theta", "phi"}]
-
+            angle_names = [
+                name for name in init_args if name in {"theta", "phi", "lam"}
+            ]
             angle_values = {}
-            for name, value in zip(angle_names, params):  # Zip ensures correct order
+            for name, value in zip(angle_names, params):
                 angle_values[name] = value
 
             if "q" in init_args:
@@ -310,12 +317,12 @@ def GST(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
                 )
-            gate = gate[0](*range(nqubits), **angle_values)
+            what_gate = gate_class(*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
                 nqubits=nqubits,
-                gate=gate,
+                gate=what_gate,
                 nshots=nshots,
                 noise_model=noise_model,
                 backend=backend,
