@@ -61,8 +61,6 @@ To get in touch with the community and the developers, consider joining the Qibo
 
 [![Matrix](https://img.shields.io/matrix/qibo%3Amatrix.org?logo=matrix)](https://matrix.to/#/#qibo:matrix.org)
 
-If you have a question about the project, please contact us with [📫](mailto:qiboteam@qibo.science).
-
 ## Supporters and collaborators
 
 - Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
