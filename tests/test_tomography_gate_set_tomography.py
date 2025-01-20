@@ -204,7 +204,15 @@ def test_gate_tomography_noise_model(backend):
 
 @pytest.mark.parametrize(
     "target_gates",
-    [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]],
+    [
+        [
+            gates.SX(0),
+            gates.RX(0, np.pi / 4),
+            gates.PRX(0, np.pi, np.pi / 2),
+            gates.CY(0, 1),
+        ],
+        [gates.TOFFOLI(0, 1, 2)],
+    ],
 )
 @pytest.mark.parametrize("pauli_liouville", [False, True])
 def test_GST(backend, target_gates, pauli_liouville):
@@ -215,9 +223,13 @@ def test_GST(backend, target_gates, pauli_liouville):
     target_matrices = [
         to_pauli_liouville(m, normalize=True, backend=backend) for m in target_matrices
     ]
-    gate_set = [g.__class__ for g in target_gates]
 
-    if len(target_gates) == 3:
+    gate_set = [
+        ((g.__class__, list(g.parameters)) if g.parameters else g.__class__)
+        for g in target_gates
+    ]
+
+    if len(target_gates) == 4:
         empty_1q, empty_2q, *approx_gates = GST(
             gate_set=gate_set,
             nshots=int(1e4),
@@ -225,7 +237,6 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        print(type(empty_1q), type(empty_2q))
         T_2q = np.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
@@ -241,7 +252,7 @@ def test_GST(backend, target_gates, pauli_liouville):
     else:
         with pytest.raises(RuntimeError):
             empty_1q, empty_2q, *approx_gates = GST(
-                gate_set=[g.__class__ for g in target_gates],
+                gate_set=gate_set,
                 nshots=int(1e4),
                 include_empty=True,
                 pauli_liouville=pauli_liouville,
@@ -265,7 +276,10 @@ def test_GST_with_transpiler(backend, star_connectivity):
     import networkx as nx
 
     target_gates = [gates.SX(0), gates.Z(0), gates.CNOT(0, 1)]
-    gate_set = [g.__class__ for g in target_gates]
+    gate_set = [
+        ((g.__class__, list(g.parameters)) if g.parameters else g.__class__)
+        for g in target_gates
+    ]
     # standard not transpiled GST
     empty_1q, empty_2q, *approx_gates = GST(
         gate_set=gate_set,

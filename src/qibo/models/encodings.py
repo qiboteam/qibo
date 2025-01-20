@@ -15,7 +15,7 @@ from qibo.models.circuit import Circuit
 def comp_basis_encoder(
     basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None, **kwargs
 ):
-    """Creates circuit that performs encoding of bitstrings into computational basis states.
+    """Create circuit that performs encoding of bitstrings into computational basis states.
 
     Args:
         basis_element (int or str or list or tuple): bitstring to be encoded.
@@ -31,7 +31,7 @@ def comp_basis_encoder(
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-       :class:`qibo.models.circuit.Circuit`: circuit encoding computational basis element.
+       :class:`qibo.models.circuit.Circuit`: Circuit encoding computational basis element.
     """
     if not isinstance(basis_element, (int, str, list, tuple)):
         raise_error(
@@ -74,7 +74,7 @@ def comp_basis_encoder(
 
 
 def phase_encoder(data, rotation: str = "RY", **kwargs):
-    """Creates circuit that performs the phase encoding of ``data``.
+    """Create circuit that performs the phase encoding of ``data``.
 
     Args:
         data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
@@ -86,7 +86,7 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in phase encoding.
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in phase encoding.
     """
     if isinstance(data, list):
         data = np.array(data)
@@ -116,8 +116,67 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     return circuit
 
 
+def binary_encoder(data, **kwargs):
+    """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
+
+    ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
+    Resulting circuit parametrizes ``data`` in Hopf coordinates in the
+    :math:`(2^{n} - 1)`-unit sphere.
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array or length :math:`2^{n}`
+            to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binary encoding.
+    """
+    dims = len(data)
+    nqubits = float(np.log2(dims))
+    if not nqubits.is_integer():
+        raise_error(ValueError, "`data` size must be a power of 2.")
+    nqubits = int(nqubits)
+
+    base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
+    base_strings = np.reshape(base_strings, (-1, 2))
+    strings = [base_strings]
+    for _ in range(nqubits - 1):
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
+        strings.append(base_strings)
+    strings = strings[::-1]
+
+    targets_and_controls = []
+    for pairs in strings:
+        for pair in pairs:
+            targets, controls, anticontrols = [], [], []
+            for k, bits in enumerate(zip(pair[0], pair[1])):
+                if bits == ("0", "0"):
+                    anticontrols.append(k)
+                elif bits == ("1", "1"):
+                    controls.append(k)
+                elif bits == ("0", "1"):
+                    targets.append(k)
+            targets_and_controls.append([targets, controls, anticontrols])
+
+    circuit = Circuit(nqubits, **kwargs)
+    for targets, controls, anticontrols in targets_and_controls:
+        gate_list = []
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        gate_list.append(
+            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
+        )
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        circuit.add(gate_list)
+
+    angles = _generate_rbs_angles(data, dims, "tree")
+    circuit.set_parameters(2 * angles)
+
+    return circuit
+
+
 def unary_encoder(data, architecture: str = "tree", **kwargs):
-    """Creates circuit that performs the (deterministic) unary encoding of ``data``.
+    """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
         data (ndarray): :math:`1`-dimensional array of data to be loaded.
@@ -129,7 +188,7 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in unary representation.
     """
     if isinstance(data, list):
         data = np.array(data)
@@ -173,7 +232,7 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
 def unary_encoder_random_gaussian(
     nqubits: int, architecture: str = "tree", seed=None, **kwargs
 ):
-    """Creates a circuit that performs the unary encoding of a random Gaussian state.
+    """Create a circuit that performs the unary encoding of a random Gaussian state.
 
     At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
     gates :math:`RBS(\\theta_{k})` are sampled from the following probability density function:
@@ -197,7 +256,7 @@ def unary_encoder_random_gaussian(
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: circuit that loads a random Gaussian array in unary representation.
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads a random Gaussian array in unary representation.
 
     References:
         1. A. Bouland, A. Dandapani, and A. Prakash, *A quantum spectral method for simulating
@@ -271,7 +330,7 @@ def entangling_layer(
     closed_boundary: bool = False,
     **kwargs,
 ):
-    """Creates a layer of two-qubit, entangling gates.
+    """Create a layer of two-qubit, entangling gates.
 
     If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
 
@@ -377,7 +436,7 @@ def entangling_layer(
 
 
 def ghz_state(nqubits: int, **kwargs):
-    """Generates an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
+    """Generate an :math:`n`-qubit Greenberger-Horne-Zeilinger (GHZ) state that takes the form
 
     .. math::
         \\ket{\\text{GHZ}} = \\frac{\\ket{0}^{\\otimes n} + \\ket{1}^{\\otimes n}}{\\sqrt{2}}
@@ -406,7 +465,7 @@ def ghz_state(nqubits: int, **kwargs):
 
 
 def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
-    """Generating list of indexes representing the RBS connections
+    """Generate list of indexes representing the RBS connections.
 
     Creates circuit with all RBS initialised with 0.0 phase.
 
@@ -420,8 +479,8 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        (:class:`qibo.models.circuit.Circuit`, list): circuit composed of :class:`qibo.gates.gates.RBS`
-            and list of indexes of target qubits per depth.
+        (:class:`qibo.models.circuit.Circuit`, list): Circuit composed of :class:`qibo.gates.gates.RBS`
+        and list of indexes of target qubits per depth.
     """
 
     if architecture == "diagonal":
@@ -451,7 +510,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
 
 
 def _generate_rbs_angles(data, nqubits: int, architecture: str):
-    """Generating list of angles for RBS gates based on ``architecture``.
+    """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
         data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
@@ -462,7 +521,7 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
             Defaults to ``tree``.
 
     Returns:
-        list: list of phases for RBS gates.
+        list: List of phases for RBS gates.
     """
     if architecture == "diagonal":
         engine = _check_engine(data)
@@ -494,7 +553,7 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
 
 
 def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
-    """Returns two-qubit gate initialized with or without phases."""
+    """Return two-qubit gate initialized with or without phases."""
     if params is not None:
         return gate(q0, q1, *params)
 
