@@ -214,7 +214,7 @@ def newtonian(
 
         m = minimize(
             loss,
-            initial_parameters,
+            backend.to_numpy(initial_parameters),
             args=args,
             method=method,
             jac=jac,
