@@ -84,7 +84,9 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
-        return cmaes(loss, initial_parameters, args, callback, options)
+        return cmaes(
+            loss, backend.to_numpy(initial_parameters), args, callback, options
+        )
     elif method == "sgd":
         from qibo.backends import _check_backend
 
@@ -208,7 +210,7 @@ def newtonian(
             callback=callback,
             options=options,
         )
-        m = o.run(initial_parameters)
+        m = o.run(backend.to_numpy(initial_parameters))
     else:
         from scipy.optimize import minimize
 
