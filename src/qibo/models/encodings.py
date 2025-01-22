@@ -334,6 +334,49 @@ def hamming_weight_encoder(
     decompose: bool = False,
     **kwargs,
 ):
+    """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
+
+    Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size :math:`d = \\binom{n}{k}` and
+    :math:`B_{k} \\equiv \\{ \\ket{b_{j}} : b_{j} \\in \\{0, 1\\}^{\\otimes n} \\,\\, \\text{and}
+    \\,\\, |b_{j}| = k \\}` be a set of :math:`d` computational basis states of :math:`n` qubits
+    that are represented by bitstrings of Hamming weight :math:`k`. Then, an amplitude encoder
+    in the basis :math:`B_{k}` is an :math:`n`-qubit parameterized quantum circuit
+    :math:`\\operatorname{Load}_{B_{k}}` such that
+
+    .. math::
+        \\operatorname{Load}(\\mathbf{x}) \\, \\ket{0}^{\\otimes n} = \\frac{1}{\\|\\mathbf{x}\\|}
+            \\, \\sum_{j = 1}^{d} \\, x_{j} \\, \\ket{b_{j}}
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array of data to be loaded.
+        nqubits (int): number of qubits.
+        weight (int): Hamming weight that defines the subspace in which ``data`` will be encoded.
+        full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
+            first bitstring of Hamming weight ``k = weight``. If ``True``, circuit is full
+            Hamming weight preserving. Defaults to ```False``.
+        phase_correction (bool, optional): to be used when ``data`` is complex. If ``True``,
+            a :math:`(k - 1)`-controlled :class:`qibo.gates.RZ` rotation is added to the end
+            of the circuit and the complex ``data`` array is encoded exactly. If ``False``,
+            the aforementioned gate is not added to the circuit, and ``data`` is encoded
+            up to a global phase. Defaults to ``True``.
+        optimize_controls (bool, optional): if ``True``, removes unnecessary controlled operations.
+            Defaults to ``True``.
+        decompose (bool, optional): if ``True``, decomposes the (possibly multi-controlled)
+            :class:`qibo.gates.RBS` gates into :class:`qibo.gates.CNOT` gates and single-qubit
+            rotations. If ``False``, returns circuit as composition of (multi-)controlled
+            :class:`qibo.gates.RBS` gates. Defaults to ``False``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data``in
+        Hamming-weight-:math:`k` representation.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+    """
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
