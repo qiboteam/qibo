@@ -228,6 +228,8 @@ def test_entangling_layer_errors():
         entangling_layer(10, entangling_gate=gates.GeneralizedfSim)
     with pytest.raises(NotImplementedError):
         entangling_layer(10, entangling_gate=gates.TOFFOLI)
+    with pytest.raises(ValueError):
+        entangling_layer(7, architecture="x")
 
 
 @pytest.mark.parametrize("closed_boundary", [False, True])
