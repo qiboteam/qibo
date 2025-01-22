@@ -339,7 +339,8 @@ def entangling_layer(
         architecture (str, optional): Architecture of the entangling layer.
             In alphabetical order, options are ``"diagonal"``, ``"even_layer"``,
             ``"next_nearest"``, ``"odd_layer"``, ``"pyramid"``, ``"shifted"``,
-            ``"v"``, and ``"x"``. Defaults to ``"diagonal"``.
+            ``"v"``, and ``"x"``. The ``"x"`` architecture is only defined for an even number
+            of qubits. Defaults to ``"diagonal"``.
         entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
             in the entangling layer. If ``entangling_gate`` is a parametrized gate,
             all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
@@ -384,6 +385,11 @@ def entangling_layer(
             f"``architecture`` {architecture} not found.",
         )
 
+    if architecture == "x" and nqubits % 2 != 0.0:
+        raise_error(
+            ValueError, "``x`` architecture only defined for an even number of qubites."
+        )
+
     if not isinstance(closed_boundary, bool):
         raise_error(
             TypeError,
@@ -402,17 +408,6 @@ def entangling_layer(
             "This function does not support the ``GeneralizedfSim`` gate.",
         )
 
-    # Finds the number of correct number of parameters to initialize the gate class.
-    parameters = list(signature(gate).parameters)
-
-    if "q2" in parameters:
-        raise_error(
-            NotImplementedError, f"This function does not accept three-qubit gates."
-        )
-
-    # If gate is parametrized, sets all angles to 0.0
-    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
-
     if architecture in ["next_nearest", "pyramid", "v", "x"]:
         circuit = _non_trivial_layers(
             nqubits,
@@ -422,6 +417,17 @@ def entangling_layer(
             **kwargs,
         )
     else:
+        # Finds the number of correct number of parameters to initialize the gate class.
+        parameters = list(signature(gate).parameters)
+
+        if "q2" in parameters:
+            raise_error(
+                NotImplementedError, f"This function does not accept three-qubit gates."
+            )
+
+        # If gate is parametrized, sets all angles to 0.0
+        parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
         circuit = Circuit(nqubits, **kwargs)
 
         if architecture == "diagonal":
