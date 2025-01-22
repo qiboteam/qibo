@@ -816,7 +816,7 @@ def _get_gate(
         # gate_list = gRBS(list(qubits_out), list(qubits_in), theta, phi, controls)
         gate_list = [
             gates.GeneralizedRBS(
-                list(qubits_in), list(qubits_out, theta, phi)
+                list(qubits_in), list(qubits_out), theta, phi
             ).controlled_by(*controls)
         ]
 
