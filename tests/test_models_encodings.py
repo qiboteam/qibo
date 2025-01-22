@@ -233,7 +233,7 @@ def test_entangling_layer_errors():
 @pytest.mark.parametrize("closed_boundary", [False, True])
 @pytest.mark.parametrize("entangling_gate", ["CNOT", gates.CZ, gates.RBS])
 @pytest.mark.parametrize(
-    "architecture", ["diagonal", "shifted", "even-layer", "odd-layer"]
+    "architecture", ["diagonal", "shifted", "even_layer", "odd_layer"]
 )
 @pytest.mark.parametrize("nqubits", [4, 9])
 def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundary):
@@ -243,12 +243,12 @@ def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundar
             _helper_entangling_test(entangling_gate, qubit)
             for qubit in range(nqubits - 1)
         )
-    elif architecture == "even-layer":
+    elif architecture == "even_layer":
         target_circuit.add(
             _helper_entangling_test(entangling_gate, qubit)
             for qubit in range(0, nqubits - 1, 2)
         )
-    elif architecture == "odd-layer":
+    elif architecture == "odd_layer":
         target_circuit.add(
             _helper_entangling_test(entangling_gate, qubit)
             for qubit in range(1, nqubits - 1, 2)
