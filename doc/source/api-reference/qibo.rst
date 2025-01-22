@@ -372,7 +372,7 @@ If the chosen gate is parametrized, all phases are set to :math:`0.0`.
 Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
 There are four possible choices of layer ``architecture``:
-``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
+``diagonal``, ``shifted``, ``even_layer``, and ``odd_layer``.
 For instance, we show below an example of each architecture for ``nqubits = 6``.
 
 
