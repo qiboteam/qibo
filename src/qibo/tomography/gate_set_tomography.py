@@ -187,7 +187,7 @@ def _gate_tomography(
         gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
-    matrix_jk = np.zeros((4**nqubits, 4**nqubits))
+    matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
         circ.add(_prepare_state(k, nqubits))
@@ -211,7 +211,7 @@ def _gate_tomography(
                     backend.execute_circuit(new_circ, nshots=nshots).frequencies()
                 )
             matrix_jk[j, k] = exp_val
-    return backend.cast(matrix_jk)
+    return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 
 
 def GST(
