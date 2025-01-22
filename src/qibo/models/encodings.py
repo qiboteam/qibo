@@ -330,20 +330,22 @@ def entangling_layer(
     closed_boundary: bool = False,
     **kwargs,
 ):
-    """Create a layer of two-qubit, entangling gates.
+    """Create a layer of two-qubit entangling gates.
 
     If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
         architecture (str, optional): Architecture of the entangling layer.
-            Options are ``diagonal``, ``shifted``, ``even_layer``, and ``odd_layer``.
-            Defaults to ``"diagonal"``.
+            In alphabetical order, options are ``"diagonal"``, ``"even_layer"``,
+            ``"next_nearest"``, ``"odd_layer"``, ``"pyramid"``, ``"shifted"``,
+            ``"v"``, and ``"x"``. Defaults to ``"diagonal"``.
         entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
             in the entangling layer. If ``entangling_gate`` is a parametrized gate,
             all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
-        closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
-            to the entangling layer. Defaults to ``False``.
+        closed_boundary (bool, optional): If ``True`` and ``architecture not in
+            ["pyramid", "v", "x"]``, adds a closed-boundary condition to the entangling layer.
+            Defaults to ``False``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
@@ -372,6 +374,7 @@ def entangling_layer(
         "even_layer",
         "next_nearest",
         "odd_layer",
+        "pyramid",
         "shifted",
         "v",
         "x",
