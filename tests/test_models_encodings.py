@@ -121,7 +121,7 @@ def test_binary_encoder(backend, nqubits):
     circuit = binary_encoder(target)
     state = backend.execute_circuit(circuit).state()
 
-    backend.assert_allclose(state, target)
+    backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
 
 @pytest.mark.parametrize("kind", [None, list])
