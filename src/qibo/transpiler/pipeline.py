@@ -77,7 +77,7 @@ class Passes:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final logical-physical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final {logical: physical} qubit mapping.
         """
 
         final_layout = None
