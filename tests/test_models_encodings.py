@@ -11,6 +11,7 @@ from scipy.special import binom
 from qibo import Circuit, gates
 from qibo.models.encodings import (
     _ehrlich_algorithm,
+    _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
     entangling_layer,
@@ -264,6 +265,7 @@ def test_hamming_weight_encoder(
 
     # edge case for coverage
     _ehrlich_algorithm(np.array([0] * nqubits))
+    _get_next_bistring(np.array([0] * nqubits), [], 2)
 
 
 def test_entangling_layer_errors():
