@@ -6,13 +6,16 @@ from itertools import product
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
+from scipy.special import binom
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    _ehrlich_algorithm,
     binary_encoder,
     comp_basis_encoder,
     entangling_layer,
     ghz_state,
+    hamming_weight_encoder,
     phase_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
@@ -213,6 +216,53 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     backend.assert_allclose(stddev, theoretical_norm, atol=1e-1)
 
 
+@pytest.mark.parametrize("optimize_controls", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("full_hwp", [False, True])
+@pytest.mark.parametrize("weight", [1, 2, 3])
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_hamming_weight_encoder(
+    backend,
+    nqubits,
+    weight,
+    full_hwp,
+    complex_data,
+    optimize_controls,
+):
+    n_choose_k = int(binom(nqubits, weight))
+    dims = 2**nqubits
+    dtype = complex if complex_data else float
+
+    initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+    indices = _ehrlich_algorithm(initial_string, False)
+    indices = [int(string, 2) for string in indices]
+
+    rng = np.random.default_rng(10)
+    data = rng.random(n_choose_k)
+    if complex_data:
+        data = data.astype(complex) + 1j * rng.random(n_choose_k)
+    data /= np.linalg.norm(data)
+
+    target = np.zeros(dims, dtype=dtype)
+    target[indices] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = hamming_weight_encoder(
+        data,
+        nqubits=nqubits,
+        weight=weight,
+        full_hwp=full_hwp,
+        optimize_controls=optimize_controls,
+    )
+    if full_hwp:
+        circuit.queue = [
+            gates.X(nqubits - 1 - qubit) for qubit in range(weight)
+        ] + circuit.queue
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target)
+
+
 def test_entangling_layer_errors():
     with pytest.raises(TypeError):
         entangling_layer(10.5)
@@ -269,6 +319,10 @@ def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundar
     circuit = entangling_layer(nqubits, architecture, entangling_gate, closed_boundary)
     for gate, target in zip(circuit.queue, target_circuit.queue):
         assert gate.__class__.__name__ == target.__class__.__name__
+        assert gate.qubits == target.qubits
+        assert gate.target_qubits == target.target_qubits
+        assert gate.control_qubits == target.control_qubits
+        assert gate.parameters == target.parameters
 
 
 def _helper_entangling_test(gate, qubit_0, qubit_1=None):
