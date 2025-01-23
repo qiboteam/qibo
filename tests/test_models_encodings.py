@@ -262,6 +262,9 @@ def test_hamming_weight_encoder(
 
     backend.assert_allclose(state, target, atol=1e-7)
 
+    # edge case for coverage
+    _ehrlich_algorithm(np.array([0] * nqubits))
+
 
 def test_entangling_layer_errors():
     with pytest.raises(TypeError):

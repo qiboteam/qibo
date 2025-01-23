@@ -666,11 +666,7 @@ def _angle_mod_two_pi(angle):
 
 
 def _get_markers(bitstring, last_run: bool = False):
-    if not isinstance(bitstring, np.ndarray):
-        bitstring = np.asarray(bitstring)
-
     nqubits = len(bitstring)
-
     markers = [len(bitstring) - 1]
     for ind, value in zip(range(nqubits - 2, -1, -1), bitstring[::-1][1:]):
         if value == bitstring[-1]:
@@ -778,7 +774,8 @@ def _get_gate(
         *Quantum encoder for fixed Hamming-weight subspaces*
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
-    if len(qubits_in) == 0 and len(qubits_out) == 1:
+    if len(qubits_in) == 0 and len(qubits_out) == 1:  # pragma: no cover
+        # Important for future binary encoder
         gate_list = (
             gates.U3(*qubits_out, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
             if complex_data
@@ -800,7 +797,8 @@ def _get_gate(
                 gate = [g.controlled_by(*controls) for g in gate]
             gate_list.extend(gate)
 
-    else:
+    else:  # pragma: no cover
+        # Important for future sparse encoder
         gate_list = [
             gates.GeneralizedRBS(
                 list(qubits_in), list(qubits_out), theta, phi
