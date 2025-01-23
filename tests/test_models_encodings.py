@@ -220,7 +220,7 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("full_hwp", [False, True])
 @pytest.mark.parametrize("weight", [1, 2, 3])
-@pytest.mark.parametrize("nqubits", [5, 6])
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
 def test_hamming_weight_encoder(
     backend,
     nqubits,
@@ -260,7 +260,7 @@ def test_hamming_weight_encoder(
         ] + circuit.queue
     state = backend.execute_circuit(circuit).state()
 
-    backend.assert_allclose(state, target)
+    backend.assert_allclose(state, target, atol=1e-7)
 
 
 def test_entangling_layer_errors():

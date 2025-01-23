@@ -330,7 +330,6 @@ def hamming_weight_encoder(
     weight: int,
     full_hwp: bool = False,
     optimize_controls: bool = True,
-    decompose: bool = False,
     **kwargs,
 ):
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
@@ -355,10 +354,6 @@ def hamming_weight_encoder(
             Hamming weight preserving. Defaults to ```False``.
         optimize_controls (bool, optional): if ``True``, removes unnecessary controlled operations.
             Defaults to ``True``.
-        decompose (bool, optional): if ``True``, decomposes the (possibly multi-controlled)
-            :class:`qibo.gates.RBS` gates into :class:`qibo.gates.CNOT` gates and single-qubit
-            rotations. If ``False``, returns circuit as composition of (multi-)controlled
-            :class:`qibo.gates.RBS` gates. Defaults to ``False``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
@@ -419,7 +414,6 @@ def hamming_weight_encoder(
             controls,
             theta,
             phi,
-            decompose,
             complex_data,
         )
         circuit.add(gate)
@@ -759,13 +753,12 @@ def _get_gate(
     controls: List[int],
     theta: float,
     phi: float,
-    decompose: bool = False,
     complex_data: bool = False,
 ):
     """Return gate(s) necessary to encode a complex amplitude in a given computational basis state,
     given the computational basis state used to encode the previous amplitude.
 
-    Information about computational baiss states in question are contained
+    Information about computational basis states in question are contained
     in the indexing of ``qubits_in``, ``qubits_out``, and ``controls``.
 
     Args:
@@ -774,8 +767,6 @@ def _get_gate(
         controls (list): list of qubits that control the resulting gate.
         theta (float): first phase, used to encode the ``abs`` of amplitude.
         phi (float): second phase, used to encode the complex phase of amplitude.
-        decompose (bool): if ``True``, all two-qubit gates are decomposed in terms of CNOTs.
-            If ``False``, original gates are left uncompiled. Defaults to ``False``.
         complex_data (bool): if ``True``, uses :class:`qibo.gates.U3` to as basis gate.
             If ``False``, uses :class:`qibo.gates.RY` as basis gate. Defaults to ``False``.
 
@@ -795,126 +786,26 @@ def _get_gate(
         )
         gate_list = [gate_list]
     elif len(qubits_in) == 1 and len(qubits_out) == 1:
-        ## chooses best combilation of complex RBS gate
+        ## chooses best combination of complex RBS gate
         ## given number of controls and if data is real or complex
-        gate_list = _compiled_RBS(
-            qubits_in,
-            qubits_out,
-            controls,
-            theta,
-            phi,
-            decompose,
-            complex_data,
-        )
+        gate_list = []
+        gate = gates.RBS(*qubits_in, *qubits_out, theta)
+        if len(controls) > 0:
+            gate = gate.controlled_by(*controls)
+        gate_list.append(gate)
+
+        if complex_data:
+            gate = [gates.RZ(*qubits_in, -phi), gates.RZ(*qubits_out, phi)]
+            if len(controls) > 0:
+                gate = [g.controlled_by(*controls) for g in gate]
+            gate_list.extend(gate)
+
     else:
         gate_list = [
             gates.GeneralizedRBS(
                 list(qubits_in), list(qubits_out), theta, phi
             ).controlled_by(*controls)
         ]
-
-    return gate_list
-
-
-def _compiled_RBS(
-    qubits_in: List[int],
-    qubits_out: List[int],
-    controls: List[int],
-    theta: float,
-    phi: float,
-    decompose: bool = False,
-    complex_data: bool = False,
-) -> List:
-    """Returns (un)compiled version of complex RBS gate depending on number of controls and data type.
-
-    Qubit labelling has to be flipped from paper below due to difference between
-    big-endinan and little-endian notations (see e.g.
-    `Wikipedia page on Endianness <https://en.wikipedia.org/wiki/Endianness>`_).
-
-    Args:
-        qubits_in (List[int]): qubits with ``in`` label.
-        qubits_out (List[int]): qubits with ``out`` label.
-        controls (List[int]): qubits that control the RBS gate.
-        theta (float): first phase, used to encode the ``abs`` of amplitude.
-        phi (float): second phase, used to encode the complex phase of amplitude.
-        decompose (bool): if ``True``, all two-qubit gates are decomposed in terms of CNOTs.
-            If ``False``, original gates are left uncompiled. Defaults to ``False``.
-        complex_data (bool): if ``True``, uses :class:`qibo.gates.U3` to as basis gate.
-            If ``False``, uses :class:`qibo.gates.RY` as basis gate. Defaults to ``False``.
-
-    Returns:
-        List[:class:`qibo.gates.Gate`]: compilation (or not) of (controlled) RBS gate.
-
-    References:
-        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
-    """
-    gate_list = []
-
-    if len(controls) == 0:
-        if decompose:
-            # Without controls, the best decomposition uses two CNOTs
-            gate_list.extend(
-                [
-                    gates.H(*qubits_in),
-                    gates.CNOT(*qubits_in, *qubits_out),
-                    gates.RY(*qubits_in, theta),
-                    gates.RY(*qubits_out, theta),
-                    gates.CNOT(*qubits_in, *qubits_out),
-                    gates.H(*qubits_in),
-                ]
-            )
-        else:
-            gate_list.append(gates.RBS(*qubits_in, *qubits_out, theta))
-
-        if complex_data:
-            gate_list.append(gates.RZ(*qubits_in, -phi))
-            gate_list.append(gates.RZ(*qubits_out, phi))
-
-    elif len(controls) == 1 and not complex_data:
-        if decompose:
-            # Best decomposition for 1 control and real data
-            gate_list.extend(
-                [
-                    gates.H(*qubits_out),
-                    gates.CNOT(*qubits_out, *qubits_in),
-                    gates.RY(*qubits_out, 2 * theta).controlled_by(*controls),
-                    gates.RY(*qubits_in, 2 * theta).controlled_by(*controls),
-                    gates.CNOT(*qubits_out, *qubits_in),
-                    gates.H(*qubits_out),
-                ]
-            )
-        else:
-            gate_list.append(
-                gates.RBS(*qubits_in, *qubits_out, theta).controlled_by(*controls)
-            )
-
-    else:
-        if decompose:
-            # Best decompositon in any other case
-            controls.extend(qubits_in)
-            gate_list.append(gates.CNOT(*qubits_out, *qubits_in))
-
-            if complex_data:
-                gate_list.append(
-                    gates.U3(*qubits_out, 2 * theta, 2 * phi, 0.0).controlled_by(
-                        *controls
-                    )
-                )
-            else:
-                gate_list.append(
-                    gates.RY(*qubits_out, 2 * theta).controlled_by(*controls)
-                )
-
-            gate_list.append(gates.CNOT(*qubits_out, *qubits_in))
-        else:
-            gate_list.append(
-                gates.RBS(*qubits_in, *qubits_out, theta).controlled_by(*controls)
-            )
-            if complex_data:
-                gate_list.append(gates.RZ(*qubits_in, -phi).controlled_by(*controls))
-                gate_list.append(gates.RZ(*qubits_out, phi).controlled_by(*controls))
 
     return gate_list
 
