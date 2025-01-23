@@ -329,7 +329,6 @@ def hamming_weight_encoder(
     nqubits: int,
     weight: int,
     full_hwp: bool = False,
-    phase_correction: bool = True,
     optimize_controls: bool = True,
     decompose: bool = False,
     **kwargs,
@@ -354,11 +353,6 @@ def hamming_weight_encoder(
         full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
             first bitstring of Hamming weight ``k = weight``. If ``True``, circuit is full
             Hamming weight preserving. Defaults to ```False``.
-        phase_correction (bool, optional): to be used when ``data`` is complex. If ``True``,
-            a :math:`(k - 1)`-controlled :class:`qibo.gates.RZ` rotation is added to the end
-            of the circuit and the complex ``data`` array is encoded exactly. If ``False``,
-            the aforementioned gate is not added to the circuit, and ``data`` is encoded
-            up to a global phase. Defaults to ``True``.
         optimize_controls (bool, optional): if ``True``, removes unnecessary controlled operations.
             Defaults to ``True``.
         decompose (bool, optional): if ``True``, decomposes the (possibly multi-controlled)
@@ -384,7 +378,7 @@ def hamming_weight_encoder(
 
     """Calculate all gate phases necessary to encode the amplitudes."""
     _data = np.abs(data) if complex_data else data
-    thetas = _generate_rbs_angles(data, nqubits, architecture="diagonal")
+    thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
     phis = np.zeros(len(thetas) + 1)
     if complex_data:
@@ -430,7 +424,7 @@ def hamming_weight_encoder(
         )
         circuit.add(gate)
 
-    if complex_data and phase_correction:
+    if complex_data:
         circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
 
     return circuit
@@ -813,7 +807,6 @@ def _get_gate(
             complex_data,
         )
     else:
-        # gate_list = gRBS(list(qubits_out), list(qubits_in), theta, phi, controls)
         gate_list = [
             gates.GeneralizedRBS(
                 list(qubits_in), list(qubits_out), theta, phi
@@ -919,6 +912,9 @@ def _compiled_RBS(
             gate_list.append(
                 gates.RBS(*qubits_in, *qubits_out, theta).controlled_by(*controls)
             )
+            if complex_data:
+                gate_list.append(gates.RZ(*qubits_in, -phi).controlled_by(*controls))
+                gate_list.append(gates.RZ(*qubits_out, phi).controlled_by(*controls))
 
     return gate_list
 
