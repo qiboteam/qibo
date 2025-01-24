@@ -371,7 +371,7 @@ def hamming_weight_encoder(
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
-    """Calculate all gate phases necessary to encode the amplitudes."""
+    # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
