@@ -16,7 +16,7 @@ from qibo.result import CircuitResult, QuantumState
 
 
 def circuit_to_qulacs(
-    circuit: "qibo.Circuit", # type: ignore
+    circuit: "qibo.Circuit",  # type: ignore
 ) -> "qulacs.QuantumCircuit":  # pylint: disable=no-member
     """
     Converts a qibo circuit in a qulacs circuit.
