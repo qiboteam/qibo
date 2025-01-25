@@ -12,10 +12,6 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
 
-def _get_engine_name(backend):
-    return backend.platform if backend.platform is not None else backend.name
-
-
 class CliffordBackend(NumpyBackend):
     """Backend for the simulation of Clifford circuits following
     `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
@@ -35,7 +31,10 @@ class CliffordBackend(NumpyBackend):
             self._stim = stim
         else:
             if engine is None:
-                from qibo.backends import _check_backend  # pylint: disable=C0415
+                from qibo.backends import (
+                    _check_backend,
+                    _get_engine_name,
+                )  # pylint: disable=C0415
 
                 engine = _get_engine_name(_check_backend(engine))
 
