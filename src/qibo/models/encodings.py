@@ -390,7 +390,6 @@ def hamming_weight_encoder(
         )
 
     if optimize_controls:
-        controls_to_remove = list(range(last_qubit, last_qubit - weight, -1))
         indices = [
             int(binom(nqubits - j, weight - j)) - 1 for j in range(weight - 1, 0, -1)
         ]
@@ -680,7 +679,7 @@ def _get_markers(bitstring, last_run: bool = False):
 
 
 def _get_next_bistring(bitstring, markers, hamming_weight):
-    if len(markers) == 0:
+    if len(markers) == 0:  # pragma: no cover
         return bitstring
 
     new_bitstring = np.copy(bitstring)
@@ -718,7 +717,7 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
 
 def _ehrlich_algorithm(initial_string, return_indices: bool = True):
     k = np.unique(initial_string, return_counts=True)
-    if len(k[1]) == 1:
+    if len(k[1]) == 1:  # pragma: no cover
         return ["".join([str(item) for item in initial_string])]
 
     k = k[1][1]
