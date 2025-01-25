@@ -2,19 +2,35 @@ import numpy as np
 from scipy.special import binom
 
 from qibo.backends.numpy import NumpyBackend
+from qibo.models.encodings import _ehrlich_algorithm
 
 
 class HammingWeightBackend(NumpyBackend):
-    def __init__(self):
+    def __init__(self, engine=None):
         super().__init__()
+
+        if engine is None:
+            from qibo.backends import (
+                _check_backend,
+                _get_engine_name,
+            )  # pylint: disable=C0415
+
+            engine = _get_engine_name(_check_backend(engine))
+
+        self.platform = engine
+
+        self.np = self.engine.np
+        
         self._dict_cached_strings = {}
+
+        self.name = "hamming_weight"
 
     def _get_cached_strings(self, nqubits: int, weight: int, ncontrols: int = 0):
         initial_string = np.array(
             [1] * (weight - 1 - ncontrols)
             + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
         )
-        strings =_ ehrlich_algorithm(initial_string, False)
+        strings = _ehrlich_algorithm(initial_string, False)
         strings = [list(string) for string in strings]
         strings = np.asarray(strings, dtype=int)
 
@@ -37,7 +53,7 @@ class HammingWeightBackend(NumpyBackend):
 
         strings = self._dict_cached_strings[key]
 
-        matrix = gate.matrix().real
+        matrix = gate.matrix(backend=self.engine).real
         matrix_0101 = matrix[1, 1]
         matrix_0110 = matrix[1, 2]
         matrix_1001 = matrix[2, 1]

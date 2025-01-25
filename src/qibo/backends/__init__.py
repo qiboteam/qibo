@@ -286,6 +286,10 @@ def _check_backend(backend):
     return backend
 
 
+def _get_engine_name(backend):
+    return backend.platform if backend.platform is not None else backend.name
+
+
 def list_available_backends(*providers: str) -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()
