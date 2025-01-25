@@ -245,7 +245,7 @@ class CircuitMap:
         return self._routed_blocks.circuit(circuit_kwargs=circuit_kwargs)
 
     def final_layout(self):
-        """Returns the final physical-logical qubits mapping."""
+        """Returns the final {logical: physical} qubits mapping."""
 
         return {self.wire_names[i]: self._l2p[i] for i in range(self.nqubits)}
 
@@ -338,7 +338,7 @@ class ShortestPaths(Router):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be matched to hardware connectivity.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final logical-physical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
         self._preprocessing(circuit=circuit)
@@ -519,7 +519,7 @@ class ShortestPaths(Router):
 
     def _preprocessing(self, circuit: Circuit):
         """The following objects will be initialised:
-            - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+            - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
             - _front_layer: list containing the blocks to be executed.
 
@@ -629,7 +629,7 @@ class Sabre(Router):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final logical-physical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
         assert_placement(circuit, self.connectivity)
         self._preprocessing(circuit=circuit)
@@ -669,7 +669,7 @@ class Sabre(Router):
 
     def _preprocessing(self, circuit: Circuit):
         """The following objects will be initialised:
-            - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+            - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
             - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
             - _dag: direct acyclic graph of the circuit based on commutativity.
