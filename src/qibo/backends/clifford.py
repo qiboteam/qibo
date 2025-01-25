@@ -31,10 +31,10 @@ class CliffordBackend(NumpyBackend):
             self._stim = stim
         else:
             if engine is None:
-                from qibo.backends import (
+                from qibo.backends import (  # pylint: disable=C0415
                     _check_backend,
                     _get_engine_name,
-                )  # pylint: disable=C0415
+                )
 
                 engine = _get_engine_name(_check_backend(engine))
 

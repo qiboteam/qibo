@@ -10,17 +10,17 @@ class HammingWeightBackend(NumpyBackend):
         super().__init__()
 
         if engine is None:
-            from qibo.backends import (
+            from qibo.backends import (  # pylint: disable=C0415
                 _check_backend,
                 _get_engine_name,
-            )  # pylint: disable=C0415
+            )
 
             engine = _get_engine_name(_check_backend(engine))
 
         self.platform = engine
 
         self.np = self.engine.np
-        
+
         self._dict_cached_strings = {}
 
         self.name = "hamming_weight"
