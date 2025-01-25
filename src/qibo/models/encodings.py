@@ -403,10 +403,7 @@ def hamming_weight_encoder(
         controls.sort()
 
         if optimize_controls:
-            comparison = k < np.asarray(indices)
-            controls_to_remove = list(np.argwhere(comparison == True).flatten())
-            for control_index in controls_to_remove[::-1]:
-                controls.pop(control_index)
+            controls = list(np.asarray(controls)[k >= np.asarray(indices)])
 
         gate = _get_gate(
             [targets[0]],
