@@ -1,3 +1,5 @@
+"""Module defining the Numpy backend."""
+
 import collections
 import math
 from typing import Union

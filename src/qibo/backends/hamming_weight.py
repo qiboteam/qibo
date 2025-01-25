@@ -1,3 +1,5 @@
+"""Module defining the Hamming-weight-preserving backend."""
+
 import numpy as np
 from scipy.special import binom
 
@@ -85,8 +87,6 @@ class HammingWeightBackend(NumpyBackend):
         return state
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
-        # Right now, it works only for ``weight'>=3`` and for gates with
-        # number of controls < weight.
         nqubits = circuit.nqubits
         n_choose_k = int(binom(nqubits, weight))
         indexes = list(range(n_choose_k))
