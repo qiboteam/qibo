@@ -93,13 +93,18 @@ class StarConnectivityPlacer(Placer):
 
     def _check_star_connectivity(self):
         """Check if the connectivity graph is a star graph."""
+        if len(self.connectivity.node) != 5:
+            raise_error(
+                ValueError,
+                f"This connectivity graph is not a star graph. Length of nodes provided: {self.connectivity.node} != 5.",
+            )
         for node in self.connectivity.nodes:
             if self.connectivity.degree(node) == 4:
                 self.middle_qubit = node
             elif self.connectivity.degree(node) != 1:
                 raise_error(
                     ValueError,
-                    "This connectivity graph is not a star graph.",
+                    "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4.",
                 )
 
 
