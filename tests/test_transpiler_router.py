@@ -614,14 +614,16 @@ def test_logical_to_physical_setter():
 def test_star_connectivity_plus_disconnected_edges(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(5,6)
-    placer = StarConnectivityRouter(connectivity=connectivity)
-    with pytest.raises(ConnectivityError, match=f"This connectivity graph is not a star graph. Length of nodes provided: {len(connectivity.nodes)} != 5."):
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
+    with pytest.raises(ConnectivityError, match=error_msg):
         placer(Circuit(5))
 
 
 def test_incorrect_star_connectivity(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(3,4)
-    placer = StarConnectivityRouter(connectivity=connectivity)
-    with pytest.raises(ConnectivityError, match="This connectivity graph is not a star graph. There is a node with degree different from 1 or 4."):
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4."
+    with pytest.raises(ConnectivityError, match=error_msg):
         placer(Circuit(5))
