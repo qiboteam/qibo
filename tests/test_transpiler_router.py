@@ -615,7 +615,9 @@ def test_star_connectivity_plus_disconnected_edges(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(5, 6)
     placer = StarConnectivityPlacer(connectivity=connectivity)
-    error_msg = "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
+    error_msg = (
+        "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
+    )
     with pytest.raises(ConnectivityError, match=error_msg):
         placer(Circuit(5))
 
