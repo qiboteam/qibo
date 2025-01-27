@@ -788,10 +788,12 @@ def _non_trivial_layers(
 
 
 def _angle_mod_two_pi(angle):
+    """Return angle mod 2pi."""
     return angle % (2 * np.pi)
 
 
 def _get_markers(bitstring, last_run: bool = False):
+    """Subroutine of the Ehrlich algorithm."""
     nqubits = len(bitstring)
     markers = [len(bitstring) - 1]
     for ind, value in zip(range(nqubits - 2, -1, -1), bitstring[::-1][1:]):
@@ -809,6 +811,7 @@ def _get_markers(bitstring, last_run: bool = False):
 
 
 def _get_next_bistring(bitstring, markers, hamming_weight):
+    """Subroutine of the Ehrlich algorithm."""
     if len(markers) == 0:  # pragma: no cover
         return bitstring
 
@@ -846,6 +849,22 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
 
 
 def _ehrlich_algorithm(initial_string, return_indices: bool = True):
+    """Return list of bitstrings with mininal Hamming distance between consecutive strings.
+
+    Based on the Gray code called Ehrlich algorithm.
+
+    Args:
+        initial_string (_type_): _description_
+        return_indices (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        _type_: _description_
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+    """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
         return ["".join([str(item) for item in initial_string])]
@@ -935,6 +954,8 @@ def _get_gate(
 
 
 def _get_phase_gate_correction(last_string, phase: float):
+    """Return final gate of HW-k circuits that encode complex data."""
+
     # to avoid circular import error
     from qibo.quantum_info.utils import hamming_weight
 
