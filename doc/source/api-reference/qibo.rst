@@ -362,6 +362,12 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
+Fixed Hamming-weight Encoder
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+
+
 Entangling layer
 """"""""""""""""
 

@@ -2,9 +2,10 @@
 
 import math
 from inspect import signature
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
+from scipy.special import binom
 
 from qibo import gates
 from qibo.config import raise_error
@@ -323,6 +324,102 @@ def unary_encoder_random_gaussian(
     return circuit
 
 
+def hamming_weight_encoder(
+    data,
+    nqubits: int,
+    weight: int,
+    full_hwp: bool = False,
+    optimize_controls: bool = True,
+    **kwargs,
+):
+    """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
+
+    Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size :math:`d = \\binom{n}{k}` and
+    :math:`B_{k} \\equiv \\{ \\ket{b_{j}} : b_{j} \\in \\{0, 1\\}^{\\otimes n} \\,\\, \\text{and}
+    \\,\\, |b_{j}| = k \\}` be a set of :math:`d` computational basis states of :math:`n` qubits
+    that are represented by bitstrings of Hamming weight :math:`k`. Then, an amplitude encoder
+    in the basis :math:`B_{k}` is an :math:`n`-qubit parameterized quantum circuit
+    :math:`\\operatorname{Load}_{B_{k}}` such that
+
+    .. math::
+        \\operatorname{Load}(\\mathbf{x}) \\, \\ket{0}^{\\otimes n} = \\frac{1}{\\|\\mathbf{x}\\|}
+            \\, \\sum_{j = 1}^{d} \\, x_{j} \\, \\ket{b_{j}}
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array of data to be loaded.
+        nqubits (int): number of qubits.
+        weight (int): Hamming weight that defines the subspace in which ``data`` will be encoded.
+        full_hwp (bool, optional): if ``False``, includes Pauli-:math:`X` gates that prepare the
+            first bitstring of Hamming weight ``k = weight``. If ``True``, circuit is full
+            Hamming weight preserving. Defaults to ```False``.
+        optimize_controls (bool, optional): if ``True``, removes unnecessary controlled operations.
+            Defaults to ``True``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data``in
+        Hamming-weight-:math:`k` representation.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+    """
+    complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+
+    initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+    bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
+
+    # Calculate all gate phases necessary to encode the amplitudes.
+    _data = np.abs(data) if complex_data else data
+    thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
+    thetas = np.asarray(thetas, dtype=type(thetas[0]))
+    phis = np.zeros(len(thetas) + 1)
+    if complex_data:
+        phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
+        for k in range(1, len(phis)):
+            phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+
+    last_qubit = nqubits - 1
+
+    circuit = Circuit(nqubits, **kwargs)
+    if not full_hwp:
+        circuit.add(
+            gates.X(qubit) for qubit in range(last_qubit, last_qubit - weight, -1)
+        )
+
+    if optimize_controls:
+        indices = [
+            int(binom(nqubits - j, weight - j)) - 1 for j in range(weight - 1, 0, -1)
+        ]
+
+    for k, ((targets, controls), theta, phi) in enumerate(
+        zip(targets_and_controls, thetas, phis)
+    ):
+        targets = list(last_qubit - np.asarray(targets))
+        controls = list(last_qubit - np.asarray(controls))
+        controls.sort()
+
+        if optimize_controls:
+            controls = list(np.asarray(controls)[k >= np.asarray(indices)])
+
+        gate = _get_gate(
+            [targets[0]],
+            [targets[1]],
+            controls,
+            theta,
+            phi,
+            complex_data,
+        )
+        circuit.add(gate)
+
+    if complex_data:
+        circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
+
+    return circuit
+
+
 def entangling_layer(
     nqubits: int,
     architecture: str = "diagonal",
@@ -558,3 +655,166 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
         return gate(q0, q1, *params)
 
     return gate(q0, q1)
+
+
+def _angle_mod_two_pi(angle):
+    return angle % (2 * np.pi)
+
+
+def _get_markers(bitstring, last_run: bool = False):
+    nqubits = len(bitstring)
+    markers = [len(bitstring) - 1]
+    for ind, value in zip(range(nqubits - 2, -1, -1), bitstring[::-1][1:]):
+        if value == bitstring[-1]:
+            markers.append(ind)
+        else:
+            break
+
+    markers = set(markers)
+
+    if not last_run:
+        markers = set(range(nqubits)) - markers
+
+    return markers
+
+
+def _get_next_bistring(bitstring, markers, hamming_weight):
+    if len(markers) == 0:  # pragma: no cover
+        return bitstring
+
+    new_bitstring = np.copy(bitstring)
+
+    nqubits = len(new_bitstring)
+
+    indexes = np.argsort(bitstring)
+    zeros, ones = np.sort(indexes[:-hamming_weight]), np.sort(indexes[-hamming_weight:])
+
+    max_index = max(markers)
+    nearest_one = ones[ones > max_index]
+    nearest_one = None if len(nearest_one) == 0 else nearest_one[0]
+    if new_bitstring[max_index] == 0 and nearest_one is not None:
+        new_bitstring[max_index] = 1
+        new_bitstring[nearest_one] = 0
+    else:
+        farthest_zero = zeros[zeros > max_index]
+        if nearest_one is not None:
+            farthest_zero = farthest_zero[farthest_zero < nearest_one]
+        farthest_zero = farthest_zero[-1]
+        new_bitstring[max_index] = 0
+        new_bitstring[farthest_zero] = 1
+
+    markers.remove(max_index)
+    last_run = _get_markers(new_bitstring, last_run=True)
+    markers = markers | (set(range(max_index + 1, nqubits)) - last_run)
+
+    new_ones = np.argsort(new_bitstring)[-hamming_weight:]
+    controls = list(set(ones) & set(new_ones))
+    difference = new_bitstring - bitstring
+    qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
+
+    return new_bitstring, markers, [qubits, controls]
+
+
+def _ehrlich_algorithm(initial_string, return_indices: bool = True):
+    k = np.unique(initial_string, return_counts=True)
+    if len(k[1]) == 1:  # pragma: no cover
+        return ["".join([str(item) for item in initial_string])]
+
+    k = k[1][1]
+    n = len(initial_string)
+    n_choose_k = int(binom(n, k))
+
+    markers = _get_markers(initial_string, last_run=False)
+    string = initial_string
+    strings = ["".join(string[::-1].astype(str))]
+    controls_and_targets = []
+    for _ in range(n_choose_k - 1):
+        string, markers, c_and_t = _get_next_bistring(string, markers, k)
+        strings.append("".join(string[::-1].astype(str)))
+        controls_and_targets.append(c_and_t)
+
+    if return_indices:
+        return strings, controls_and_targets
+
+    return strings
+
+
+def _get_gate(
+    qubits_in: List[int],
+    qubits_out: List[int],
+    controls: List[int],
+    theta: float,
+    phi: float,
+    complex_data: bool = False,
+):
+    """Return gate(s) necessary to encode a complex amplitude in a given computational basis state,
+    given the computational basis state used to encode the previous amplitude.
+
+    Information about computational basis states in question are contained
+    in the indexing of ``qubits_in``, ``qubits_out``, and ``controls``.
+
+    Args:
+        qubits_in (list): list of qubits with ``in`` label.
+        qubits_out (list): list of qubits with ``out`` label.
+        controls (list): list of qubits that control the resulting gate.
+        theta (float): first phase, used to encode the ``abs`` of amplitude.
+        phi (float): second phase, used to encode the complex phase of amplitude.
+        complex_data (bool): if ``True``, uses :class:`qibo.gates.U3` to as basis gate.
+            If ``False``, uses :class:`qibo.gates.RY` as basis gate. Defaults to ``False``.
+
+    Returns:
+        List[:class:`qibo.gates.Gate`]: gate(s) to be added to circuit.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+    """
+    if len(qubits_in) == 0 and len(qubits_out) == 1:  # pragma: no cover
+        # Important for future binary encoder
+        gate_list = (
+            gates.U3(*qubits_out, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
+            if complex_data
+            else gates.RY(*qubits_out, 2 * theta).controlled_by(*controls)
+        )
+        gate_list = [gate_list]
+    elif len(qubits_in) == 1 and len(qubits_out) == 1:
+        ## chooses best combination of complex RBS gate
+        ## given number of controls and if data is real or complex
+        gate_list = []
+        gate = gates.RBS(*qubits_in, *qubits_out, theta)
+        if len(controls) > 0:
+            gate = gate.controlled_by(*controls)
+        gate_list.append(gate)
+
+        if complex_data:
+            gate = [gates.RZ(*qubits_in, -phi), gates.RZ(*qubits_out, phi)]
+            if len(controls) > 0:
+                gate = [g.controlled_by(*controls) for g in gate]
+            gate_list.extend(gate)
+
+    else:  # pragma: no cover
+        # Important for future sparse encoder
+        gate_list = [
+            gates.GeneralizedRBS(
+                list(qubits_in), list(qubits_out), theta, phi
+            ).controlled_by(*controls)
+        ]
+
+    return gate_list
+
+
+def _get_phase_gate_correction(last_string, phase: float):
+    # to avoid circular import error
+    from qibo.quantum_info.utils import hamming_weight
+
+    if isinstance(last_string, str):
+        last_string = np.asarray(list(last_string), dtype=int)
+
+    last_weight = hamming_weight(last_string)
+    last_ones = np.argsort(last_string)
+    last_zero = last_ones[0]
+    last_controls = last_ones[-last_weight:]
+
+    # adding an RZ gate to correct the phase of the last amplitude encoded
+    return gates.RZ(last_zero, 2 * phase).controlled_by(*last_controls)
