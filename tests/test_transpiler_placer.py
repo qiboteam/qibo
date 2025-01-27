@@ -197,14 +197,16 @@ def test_star_connectivity_placer_error(first, star_connectivity):
     with pytest.raises(ValueError):
         placer = StarConnectivityPlacer(chip)
         placer(circ)
-        
+
+
 def test_star_connectivity_plus_disconnected_edges(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(5,6)
     placer = StarConnectivityPlacer(connectivity=connectivity)
     with pytest.raises(ConnectivityError, match=f"This connectivity graph is not a star graph. Length of nodes provided: {len(connectivity.nodes)} != 5."):
         placer(Circuit(5))
-        
+
+
 def test_incorrect_star_connectivity(star_connectivity):
     connectivity = star_connectivity()
     connectivity.add_edge(3,4)
