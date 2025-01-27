@@ -201,7 +201,7 @@ def test_star_connectivity_placer_error(first, star_connectivity):
 
 def test_star_connectivity_plus_disconnected_edges(star_connectivity):
     connectivity = star_connectivity()
-    connectivity.add_edge(5,6)
+    connectivity.add_edge(5, 6)
     placer = StarConnectivityPlacer(connectivity=connectivity)
     error_msg = "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
     with pytest.raises(ConnectivityError, match=error_msg):
@@ -210,7 +210,7 @@ def test_star_connectivity_plus_disconnected_edges(star_connectivity):
 
 def test_incorrect_star_connectivity(star_connectivity):
     connectivity = star_connectivity()
-    connectivity.add_edge(3,4)
+    connectivity.add_edge(3, 4)
     placer = StarConnectivityPlacer(connectivity=connectivity)
     error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4."
     with pytest.raises(ConnectivityError, match=error_msg):
