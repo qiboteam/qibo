@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import PlacementError
+from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.router import _find_connected_qubit
@@ -95,15 +95,15 @@ class StarConnectivityPlacer(Placer):
         """Check if the connectivity graph is a star graph."""
         if len(self.connectivity.nodes) != 5:
             raise_error(
-                ValueError,
-                f"This connectivity graph is not a star graph. Length of nodes provided: {self.connectivity.node} != 5.",
+                ConnectivityError,
+                f"This connectivity graph is not a star graph. Length of nodes provided: {len(self.connectivity.nodes)} != 5.",
             )
         for node in self.connectivity.nodes:
             if self.connectivity.degree(node) == 4:
                 self.middle_qubit = node
             elif self.connectivity.degree(node) != 1:
                 raise_error(
-                    ValueError,
+                    ConnectivityError,
                     "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4.",
                 )
 
