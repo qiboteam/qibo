@@ -32,7 +32,7 @@ def assert_transpiling(
         original_circuit (:class:`qibo.models.circuit.Circuit`): Circuit before transpiling.
         transpiled_circuit (:class:`qibo.models.circuit.Circuit`): Circuit after transpiling.
         connectivity (:class:`networkx.Graph`): Hardware connectivity.
-        final_layout (dict): Final logical-physical qubit mapping.
+        final_layout (dict): Final {logical: physical} qubit mapping.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): Native gates supported by the hardware.
             Defaults to :class:`qibo.transpiler.unroller.NativeGates.default()`.
         check_circuit_equivalence (bool, optional): Check if the transpiled circuit is equivalent to the original one.
@@ -68,7 +68,7 @@ def assert_circuit_equivalence(
     Args:
         original_circuit (:class:`qibo.models.circuit.Circuit`): Circuit before transpiling.
         transpiled_circuit (:class:`qibo.models.circuit.Circuit`): Circuit after transpiling.
-        final_layout (dict): Final logical-physical qubit mapping.
+        final_layout (dict): Final {logical: physical} qubit mapping.
         test_states (list, optional): List of states to test the equivalence.
             If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
         ntests (int, optional): Number of random states to test the equivalence. Defaults to :math: `3`.
