@@ -3,7 +3,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler._exceptions import PlacementError, TranspilerPipelineError
+from qibo.transpiler._exceptions import ConnectivityError, PlacementError
 from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
@@ -197,3 +197,23 @@ def test_star_connectivity_placer_error(first, star_connectivity):
     with pytest.raises(ValueError):
         placer = StarConnectivityPlacer(chip)
         placer(circ)
+
+
+def test_star_connectivity_plus_disconnected_edges(star_connectivity):
+    connectivity = star_connectivity()
+    connectivity.add_edge(5, 6)
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = (
+        "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
+    )
+    with pytest.raises(ConnectivityError, match=error_msg):
+        placer(Circuit(5))
+
+
+def test_incorrect_star_connectivity(star_connectivity):
+    connectivity = star_connectivity()
+    connectivity.add_edge(3, 4)
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4."
+    with pytest.raises(ConnectivityError, match=error_msg):
+        placer(Circuit(5))

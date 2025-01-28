@@ -609,3 +609,23 @@ def test_logical_to_physical_setter():
     circuit_map.logical_to_physical = [2, 0, 1, 3]
     assert circuit_map.logical_to_physical == [2, 0, 1, 3]
     assert circuit_map.physical_to_logical == [1, 2, 0, 3]
+
+
+def test_star_connectivity_plus_disconnected_edges(star_connectivity):
+    connectivity = star_connectivity()
+    connectivity.add_edge(5, 6)
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = (
+        "This connectivity graph is not a star graph. Length of nodes provided: 7 != 5."
+    )
+    with pytest.raises(ConnectivityError, match=error_msg):
+        placer(Circuit(5))
+
+
+def test_incorrect_star_connectivity(star_connectivity):
+    connectivity = star_connectivity()
+    connectivity.add_edge(3, 4)
+    placer = StarConnectivityPlacer(connectivity=connectivity)
+    error_msg = "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4."
+    with pytest.raises(ConnectivityError, match=error_msg):
+        placer(Circuit(5))
