@@ -102,7 +102,7 @@ class StarConnectivityRouter(Router):
             elif self.connectivity.degree(node) != 1:
                 raise_error(
                     ConnectivityError,
-                    "This connectivity graph is not a star graph. There is a node with degree different from 1 or 4.",
+                    "This connectivity graph is not a star graph. There is a node with degree different from 1 and 4.",
                 )
 
 
