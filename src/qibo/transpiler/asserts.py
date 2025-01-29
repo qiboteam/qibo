@@ -137,7 +137,7 @@ def assert_placement(circuit: Circuit, connectivity: nx.Graph):
         raise_error(
             PlacementError,
             f"Number of qubits in the circuit ({circuit.nqubits}) "
-            + f"does not match the number of qubits in the layout ({len(circuit.wire_names)}) "
+            + f"does not match either the number of qubits in the layout ({len(circuit.wire_names)}) "
             + f"or the connectivity graph ({len(connectivity.nodes)}).",
         )
     if set(circuit.wire_names) != set(connectivity.nodes):

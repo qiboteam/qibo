@@ -377,9 +377,9 @@ any of the two-qubit gates implemented in ``qibo`` can be selected to customize 
 If the chosen gate is parametrized, all phases are set to :math:`0.0`.
 Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
-There are four possible choices of layer ``architecture``:
-``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
-For instance, we show below an example of each architecture for ``nqubits = 6``.
+The possible choices of layer ``architecture`` are the following, in alphabetical order:
+``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
+For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
 
 
 .. image:: ../_static/entangling_layer.png

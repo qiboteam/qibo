@@ -427,20 +427,23 @@ def entangling_layer(
     closed_boundary: bool = False,
     **kwargs,
 ):
-    """Create a layer of two-qubit, entangling gates.
+    """Create a layer of two-qubit entangling gates.
 
     If the chosen gate is a parametrized gate, all phases are set to :math:`0.0`.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
         architecture (str, optional): Architecture of the entangling layer.
-            Options are ``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
-            Defaults to ``"diagonal"``.
+            In alphabetical order, options are ``"diagonal"``, ``"even_layer"``,
+            ``"next_nearest"``, ``"odd_layer"``, ``"pyramid"``, ``"shifted"``,
+            ``"v"``, and ``"x"``. The ``"x"`` architecture is only defined for an even number
+            of qubits. Defaults to ``"diagonal"``.
         entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
             in the entangling layer. If ``entangling_gate`` is a parametrized gate,
             all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
-        closed_boundary (bool, optional): If ``True`` adds a closed-boundary condition
-            to the entangling layer. Defaults to ``False``.
+        closed_boundary (bool, optional): If ``True`` and ``architecture not in
+            ["pyramid", "v", "x"]``, adds a closed-boundary condition to the entangling layer.
+            Defaults to ``False``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
@@ -464,16 +467,30 @@ def entangling_layer(
             f"``architecture`` must be type str, but it is type {type(architecture)}.",
         )
 
-    if architecture not in ["diagonal", "shifted", "even-layer", "odd-layer"]:
+    if architecture not in [
+        "diagonal",
+        "even_layer",
+        "next_nearest",
+        "odd_layer",
+        "pyramid",
+        "shifted",
+        "v",
+        "x",
+    ]:
         raise_error(
             NotImplementedError,
             f"``architecture`` {architecture} not found.",
         )
 
+    if architecture == "x" and nqubits % 2 != 0.0:
+        raise_error(
+            ValueError, "``x`` architecture only defined for an even number of qubits."
+        )
+
     if not isinstance(closed_boundary, bool):
         raise_error(
             TypeError,
-            f"closed_boundary must be type bool, but it is type {type(closed_boundary)}.",
+            f"``closed_boundary`` must be type bool, but it is type {type(closed_boundary)}.",
         )
 
     gate = (
@@ -488,46 +505,44 @@ def entangling_layer(
             "This function does not support the ``GeneralizedfSim`` gate.",
         )
 
-    # Finds the number of correct number of parameters to initialize the gate class.
-    parameters = list(signature(gate).parameters)
-
-    if "q2" in parameters:
-        raise_error(
-            NotImplementedError, f"This function does not accept three-qubit gates."
-        )
-
-    # If gate is parametrized, sets all angles to 0.0
-    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
-
-    circuit = Circuit(nqubits, **kwargs)
-
-    if architecture == "diagonal":
-        circuit.add(
-            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in range(nqubits - 1)
-        )
-    elif architecture == "even-layer":
-        circuit.add(
-            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-    elif architecture == "odd-layer":
-        circuit.add(
-            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in range(1, nqubits - 1, 2)
+    if architecture in ["next_nearest", "pyramid", "v", "x"]:
+        circuit = _non_trivial_layers(
+            nqubits,
+            architecture=architecture,
+            entangling_gate=entangling_gate,
+            closed_boundary=closed_boundary,
+            **kwargs,
         )
     else:
+        # Finds the correct number of parameters to initialize the gate class.
+        parameters = list(signature(gate).parameters)
+
+        if "q2" in parameters:
+            raise_error(
+                NotImplementedError, f"This function does not accept three-qubit gates."
+            )
+
+        # If gate is parametrized, sets all angles to 0.0
+        parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
+        circuit = Circuit(nqubits, **kwargs)
+
+        if architecture == "diagonal":
+            qubits = range(nqubits - 1)
+        elif architecture == "even_layer":
+            qubits = range(0, nqubits - 1, 2)
+        elif architecture == "odd_layer":
+            qubits = range(1, nqubits - 1, 2)
+        else:
+            qubits = tuple(range(0, nqubits - 1, 2)) + tuple(range(1, nqubits - 1, 2))
+
         circuit.add(
             _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-        circuit.add(
-            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-            for qubit in range(1, nqubits - 1, 2)
+            for qubit in qubits
         )
 
-    if closed_boundary:
-        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
+        if closed_boundary:
+            circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
 
     return circuit
 
@@ -657,11 +672,153 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
     return gate(q0, q1)
 
 
+def _next_nearest_layer(
+    nqubits: int, gate, parameters, closed_boundary: bool, **kwargs
+):
+    """Create entangling layer with next-nearest-neighbour connectivity."""
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, qubit, qubit + 2, parameters)
+        for qubit in range(nqubits - 2)
+    )
+
+    if closed_boundary:
+        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
+
+    return circuit
+
+
+def _pyramid_layer(nqubits: int, gate, parameters, **kwargs):
+    """Create entangling layer in triangular shape."""
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates
+    )
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for k in range(1, len(pairs_gates))
+        for pair in pairs_gates[:-k]
+    )
+
+    return circuit
+
+
+def _v_layer(nqubits: int, gate, parameters, **kwargs):
+    """Create entangling layer in V shape."""
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates
+    )
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates[::-1][1:]
+    )
+
+    return circuit
+
+
+def _x_layer(nqubits, gate, parameters, **kwargs):
+    """Create entangling layer in X shape."""
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    middle = int(np.floor(len(pairs_gates) / 2))
+    pairs_1 = pairs_gates[:middle]
+    pairs_2 = pairs_gates[-middle:]
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    for first, second in zip(pairs_1, pairs_2[::-1]):
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, first[0][1], first[0][0], parameters)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, second[0][1], second[0][0], parameters)
+        )
+
+    circuit.add(
+        _parametrized_two_qubit_gate(
+            gate,
+            pairs_gates[middle][0][1],
+            pairs_gates[middle][0][0],
+            parameters,
+        )
+    )
+
+    for first, second in zip(pairs_1[::-1], pairs_2):
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, first[0][1], first[0][0], parameters)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, second[0][1], second[0][0], parameters)
+        )
+
+    return circuit
+
+
+def _non_trivial_layers(
+    nqubits: int,
+    architecture: str = "pyramid",
+    entangling_gate: Union[str, gates.Gate] = "RBS",
+    closed_boundary: bool = False,
+    **kwargs,
+):
+    """Create more intricate entangling layers of different shapes.
+
+    Args:
+        nqubits (int): number of qubits.
+        architecture (str, optional): Architecture of the entangling layer.
+            In alphabetical order, options are ``"next_nearest"``, ``"pyramid"``,
+            ``"v"``, and ``"x"``. The ``"x"`` architecture is only defined for
+            an even number of qubits. Defaults to ``"pyramid"``.
+        entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
+            in the entangling layer. If ``entangling_gate`` is a parametrized gate,
+            all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
+        closed_boundary (bool, optional): If ``True`` and ``architecture="next_nearest"``,
+            adds a closed-boundary condition to the entangling layer. Defaults to ``False``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
+    """
+
+    gate = (
+        getattr(gates, entangling_gate)
+        if isinstance(entangling_gate, str)
+        else entangling_gate
+    )
+
+    parameters = list(signature(gate).parameters)
+    parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
+
+    if architecture == "next_nearest":
+        return _next_nearest_layer(nqubits, gate, parameters, closed_boundary, **kwargs)
+
+    if architecture == "v":
+        return _v_layer(nqubits, gate, parameters, **kwargs)
+
+    if architecture == "x":
+        return _x_layer(nqubits, gate, parameters, **kwargs)
+
+    return _pyramid_layer(nqubits, gate, parameters, **kwargs)
+
+
 def _angle_mod_two_pi(angle):
+    """Return angle mod 2pi."""
     return angle % (2 * np.pi)
 
 
 def _get_markers(bitstring, last_run: bool = False):
+    """Subroutine of the Ehrlich algorithm."""
     nqubits = len(bitstring)
     markers = [len(bitstring) - 1]
     for ind, value in zip(range(nqubits - 2, -1, -1), bitstring[::-1][1:]):
@@ -679,6 +836,7 @@ def _get_markers(bitstring, last_run: bool = False):
 
 
 def _get_next_bistring(bitstring, markers, hamming_weight):
+    """Subroutine of the Ehrlich algorithm."""
     if len(markers) == 0:  # pragma: no cover
         return bitstring
 
@@ -716,6 +874,32 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
 
 
 def _ehrlich_algorithm(initial_string, return_indices: bool = True):
+    """Return list of bitstrings with mininal Hamming distance between consecutive strings.
+
+    Based on the Gray code called Ehrlich algorithm. For more details, please see Ref. [1].
+
+    Args:
+        initial_string (ndarray): initial bitstring as an :math:`1`-dimensional array
+            of size :math:`n`. All ones in the bitstring need to be consecutive.
+            For instance, for :math:`n = 6` and :math:`k = 2`, the bistrings
+            :math:`000011` and :math:`001100` are examples of acceptable inputs.
+            In contrast, :math:`001001` is not an acceptable input.
+        return_indices (bool, optional): if ``True``, returns the list of indices of
+            qubits that act like controls and targets of the circuit to be created.
+            Defaults to ``True``.
+
+    Returns:
+        list or tuple(list, list): If ``return_indices=False``, returns list containing
+        sequence of bistrings in the order generated by the Gray code.
+        If ``return_indices=True`` returns tuple with the aforementioned list and the list
+        of control anf target qubits of gates to be implemented based on the sequence of
+        bitstrings.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+    """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
         return ["".join([str(item) for item in initial_string])]
@@ -805,6 +989,8 @@ def _get_gate(
 
 
 def _get_phase_gate_correction(last_string, phase: float):
+    """Return final gate of HW-k circuits that encode complex data."""
+
     # to avoid circular import error
     from qibo.quantum_info.utils import hamming_weight
 
