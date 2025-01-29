@@ -534,19 +534,12 @@ def entangling_layer(
         elif architecture == "odd_layer":
             qubits = range(1, nqubits - 1, 2)
         else:
-            qubits = range(0, nqubits - 1, 2)
-            qubits_2 = range(1, nqubits - 1, 2)
+            qubits = tuple(range(0, nqubits - 1, 2)) + tuple(range(1, nqubits - 1, 2))
 
         circuit.add(
             _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
             for qubit in qubits
         )
-
-        if architecture == "shifted":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in qubits_2
-            )
 
         if closed_boundary:
             circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
