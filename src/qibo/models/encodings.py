@@ -514,7 +514,7 @@ def entangling_layer(
             **kwargs,
         )
     else:
-        # Finds the number of correct number of parameters to initialize the gate class.
+        # Finds the correct number of parameters to initialize the gate class.
         parameters = list(signature(gate).parameters)
 
         if "q2" in parameters:
