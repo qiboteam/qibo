@@ -528,28 +528,24 @@ def entangling_layer(
         circuit = Circuit(nqubits, **kwargs)
 
         if architecture == "diagonal":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in range(nqubits - 1)
-            )
+            qubits = range(nqubits - 1)
         elif architecture == "even_layer":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in range(0, nqubits - 1, 2)
-            )
+            qubits = range(0, nqubits - 1, 2)
         elif architecture == "odd_layer":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in range(1, nqubits - 1, 2)
-            )
+            qubits = range(1, nqubits - 1, 2)
         else:
+            qubits = range(0, nqubits - 1, 2)
+            qubits_2 = range(1, nqubits - 1, 2)
+
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
+            for qubit in qubits
+        )
+
+        if architecture == "shifted":
             circuit.add(
                 _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in range(0, nqubits - 1, 2)
-            )
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 1, parameters)
-                for qubit in range(1, nqubits - 1, 2)
+                for qubit in qubits_2
             )
 
         if closed_boundary:
@@ -683,6 +679,94 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
     return gate(q0, q1)
 
 
+def _next_nearest_layer(
+    nqubits: int, gate, parameters, closed_boundary: bool, **kwargs
+):
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, qubit, qubit + 2, parameters)
+        for qubit in range(nqubits - 2)
+    )
+
+    if closed_boundary:
+        circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
+
+    return circuit
+
+
+def _pyramid_layer(nqubits: int, gate, parameters, **kwargs):
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates
+    )
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for k in range(1, len(pairs_gates))
+        for pair in pairs_gates[:-k]
+    )
+
+    return circuit
+
+
+def _v_layer(nqubits: int, gate, parameters, **kwargs):
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates
+    )
+    circuit.add(
+        _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
+        for pair in pairs_gates[::-1][1:]
+    )
+
+    return circuit
+
+
+def _x_layer(nqubits, gate, parameters, **kwargs):
+    _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
+    pairs_gates = pairs_gates[::-1]
+
+    middle = int(np.floor(len(pairs_gates) / 2))
+    pairs_1 = pairs_gates[:middle]
+    pairs_2 = pairs_gates[-middle:]
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    for first, second in zip(pairs_1, pairs_2[::-1]):
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, first[0][1], first[0][0], parameters)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, second[0][1], second[0][0], parameters)
+        )
+
+    circuit.add(
+        _parametrized_two_qubit_gate(
+            gate,
+            pairs_gates[middle][0][1],
+            pairs_gates[middle][0][0],
+            parameters,
+        )
+    )
+
+    for first, second in zip(pairs_1[::-1], pairs_2):
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, first[0][1], first[0][0], parameters)
+        )
+        circuit.add(
+            _parametrized_two_qubit_gate(gate, second[0][1], second[0][0], parameters)
+        )
+
+    return circuit
+
+
 def _non_trivial_layers(
     nqubits: int,
     architecture: str = "pyramid",
@@ -710,81 +794,16 @@ def _non_trivial_layers(
     parameters = list(signature(gate).parameters)
     parameters = (0.0,) * (len(parameters) - 3) if len(parameters) > 2 else None
 
-    circuit = Circuit(nqubits, **kwargs)
-
     if architecture == "next_nearest":
-        for qubit in range(nqubits - 2):
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, qubit, qubit + 2, parameters)
-            )
-        if closed_boundary:
-            circuit.add(_parametrized_two_qubit_gate(gate, nqubits - 1, 0, parameters))
-    else:
-        _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
-        pairs_gates = pairs_gates[::-1]
+        return _next_nearest_layer(nqubits, gate, parameters, closed_boundary, **kwargs)
 
-        if architecture == "pyramid":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
-                for pair in pairs_gates
-            )
-            for k in range(1, len(pairs_gates)):
-                for pair in pairs_gates[:-k]:
-                    circuit.add(
-                        _parametrized_two_qubit_gate(
-                            gate, pair[0][1], pair[0][0], parameters
-                        )
-                    )
-        elif architecture == "v":
-            circuit.add(
-                _parametrized_two_qubit_gate(gate, pair[0][1], pair[0][0], parameters)
-                for pair in pairs_gates
-            )
-            for pair in pairs_gates[::-1][1:]:
-                circuit.add(
-                    _parametrized_two_qubit_gate(
-                        gate, pair[0][1], pair[0][0], parameters
-                    )
-                )
-        else:
-            middle = int(np.floor(len(pairs_gates) / 2))
-            pairs_1 = pairs_gates[:middle]
-            pairs_2 = pairs_gates[-middle:]
+    if architecture == "v":
+        return _v_layer(nqubits, gate, parameters, **kwargs)
 
-            for first, second in zip(pairs_1, pairs_2[::-1]):
-                circuit.add(
-                    _parametrized_two_qubit_gate(
-                        gate, first[0][1], first[0][0], parameters
-                    )
-                )
-                circuit.add(
-                    _parametrized_two_qubit_gate(
-                        gate, second[0][1], second[0][0], parameters
-                    )
-                )
+    if architecture == "x":
+        return _x_layer(nqubits, gate, parameters, **kwargs)
 
-            circuit.add(
-                _parametrized_two_qubit_gate(
-                    gate,
-                    pairs_gates[middle][0][1],
-                    pairs_gates[middle][0][0],
-                    parameters,
-                )
-            )
-
-            for first, second in zip(pairs_1[::-1], pairs_2):
-                circuit.add(
-                    _parametrized_two_qubit_gate(
-                        gate, first[0][1], first[0][0], parameters
-                    )
-                )
-                circuit.add(
-                    _parametrized_two_qubit_gate(
-                        gate, second[0][1], second[0][0], parameters
-                    )
-                )
-
-    return circuit
+    return _pyramid_layer(nqubits, gate, parameters, **kwargs)
 
 
 def _angle_mod_two_pi(angle):
