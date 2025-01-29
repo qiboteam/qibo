@@ -279,45 +279,84 @@ def test_entangling_layer_errors():
         entangling_layer(10, entangling_gate=gates.GeneralizedfSim)
     with pytest.raises(NotImplementedError):
         entangling_layer(10, entangling_gate=gates.TOFFOLI)
+    with pytest.raises(ValueError):
+        entangling_layer(7, architecture="x")
 
 
 @pytest.mark.parametrize("closed_boundary", [False, True])
 @pytest.mark.parametrize("entangling_gate", ["CNOT", gates.CZ, gates.RBS])
 @pytest.mark.parametrize(
-    "architecture", ["diagonal", "shifted", "even-layer", "odd-layer"]
+    "architecture",
+    [
+        "diagonal",
+        "even_layer",
+        "next_nearest",
+        "odd_layer",
+        "pyramid",
+        "shifted",
+        "v",
+        "x",
+    ],
 )
-@pytest.mark.parametrize("nqubits", [4, 9])
+@pytest.mark.parametrize("nqubits", [4, 6])
 def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundary):
     target_circuit = Circuit(nqubits)
-    if architecture == "diagonal":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(nqubits - 1)
-        )
-    elif architecture == "even-layer":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-    elif architecture == "odd-layer":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(1, nqubits - 1, 2)
-        )
+    if architecture in ["next_nearest", "pyramid", "v", "x"]:
+        if architecture == "next_nearest":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit, qubit + 2)
+                for qubit in range(nqubits - 2)
+            )
+            if closed_boundary:
+                target_circuit.add(
+                    _helper_entangling_test(entangling_gate, nqubits - 1, 0)
+                )
+        elif architecture == "pyramid":
+            for end in range(nqubits - 1, 1, -1):
+                target_circuit.add(
+                    _helper_entangling_test(entangling_gate, qubit)
+                    for qubit in range(end)
+                )
+        elif architecture == "v":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit, qubit + 1)
+                for qubit in range(nqubits - 1)
+            )
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit - 1, qubit)
+                for qubit in range(nqubits - 2, 1, -1)
+            )
     else:
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(1, nqubits - 1, 2)
-        )
+        if architecture == "diagonal":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(nqubits - 1)
+            )
+        elif architecture == "even_layer":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(0, nqubits - 1, 2)
+            )
+        elif architecture == "odd_layer":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(1, nqubits - 1, 2)
+            )
+        else:
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(0, nqubits - 1, 2)
+            )
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(1, nqubits - 1, 2)
+            )
 
-    if closed_boundary:
-        target_circuit.add(_helper_entangling_test(entangling_gate, nqubits - 1, 0))
+        if closed_boundary:
+            target_circuit.add(_helper_entangling_test(entangling_gate, nqubits - 1, 0))
 
     circuit = entangling_layer(nqubits, architecture, entangling_gate, closed_boundary)
+
     for gate, target in zip(circuit.queue, target_circuit.queue):
         assert gate.__class__.__name__ == target.__class__.__name__
         assert gate.qubits == target.qubits
