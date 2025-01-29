@@ -675,6 +675,7 @@ def _parametrized_two_qubit_gate(gate, q0, q1, params=None):
 def _next_nearest_layer(
     nqubits: int, gate, parameters, closed_boundary: bool, **kwargs
 ):
+    """Create entangling layer with next-nearest-neighbour connectivity."""
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(
         _parametrized_two_qubit_gate(gate, qubit, qubit + 2, parameters)
@@ -688,6 +689,7 @@ def _next_nearest_layer(
 
 
 def _pyramid_layer(nqubits: int, gate, parameters, **kwargs):
+    """Create entangling layer in triangular shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
     pairs_gates = pairs_gates[::-1]
 
@@ -706,6 +708,7 @@ def _pyramid_layer(nqubits: int, gate, parameters, **kwargs):
 
 
 def _v_layer(nqubits: int, gate, parameters, **kwargs):
+    """Create entangling layer in V shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
     pairs_gates = pairs_gates[::-1]
 
@@ -723,6 +726,7 @@ def _v_layer(nqubits: int, gate, parameters, **kwargs):
 
 
 def _x_layer(nqubits, gate, parameters, **kwargs):
+    """Create entangling layer in X shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
     pairs_gates = pairs_gates[::-1]
 
@@ -767,17 +771,26 @@ def _non_trivial_layers(
     closed_boundary: bool = False,
     **kwargs,
 ):
-    """Create
+    """Create more intricate entangling layers of different shapes.
 
     Args:
-        nqubits (int): _description_
-        architecture (str, optional): _description_. Defaults to "pyramid".
-        entangling_gate (Union[str, gates.Gate], optional): _description_. Defaults to "RBS".
-        closed_boundary (bool, optional): _description_. Defaults to False.
+        nqubits (int): number of qubits.
+        architecture (str, optional): Architecture of the entangling layer.
+            In alphabetical order, options are ``"next_nearest"``, ``"pyramid"``,
+            ``"v"``, and ``"x"``. The ``"x"`` architecture is only defined for
+            an even number of qubits. Defaults to ``"pyramid"``.
+        entangling_gate (str or :class:`qibo.gates.Gate`, optional): Two-qubit gate to be used
+            in the entangling layer. If ``entangling_gate`` is a parametrized gate,
+            all phases are initialized as :math:`0.0`. Defaults to  ``"CNOT"``.
+        closed_boundary (bool, optional): If ``True`` and ``architecture="next_nearest"``,
+            adds a closed-boundary condition to the entangling layer. Defaults to ``False``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        _type_: _description_
+        :class:`qibo.models.circuit.Circuit`: Circuit containing layer of two-qubit gates.
     """
+
     gate = (
         getattr(gates, entangling_gate)
         if isinstance(entangling_gate, str)
