@@ -484,7 +484,7 @@ def entangling_layer(
 
     if architecture == "x" and nqubits % 2 != 0.0:
         raise_error(
-            ValueError, "``x`` architecture only defined for an even number of qubites."
+            ValueError, "``x`` architecture only defined for an even number of qubits."
         )
 
     if not isinstance(closed_boundary, bool):
