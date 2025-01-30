@@ -10,77 +10,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prepare:
-    if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - id: set-matrix
-        env:
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          platforms="{\"platform\":["
-          combined=""
-          shopt -s lastpipe
-          jq -c '.[]' <<< "$LABELS" | while read label; do
-              platform=(${label//-/ })
-              if [ ${platform[0]} == "\"run" ] && [ ${platform[1]} == "on" ]; then
-                platforms="${platforms}${combined:+,}\"${platform[2]}"
-                combined=${platforms}
-              fi
-          done
-          platforms+="]}"
-          echo ${platforms}
-          echo matrix="${platforms}" >> $GITHUB_OUTPUT
   build:
     if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
-    needs: prepare
-    strategy:
-      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
-      fail-fast: false
-    runs-on: self-hosted
-    steps:
-      - name: Cleanup workspace manually
-        run: |
-          rm -rf _work/*
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-      - name: Install and configure poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-      - name: Install package
-        run: |
-          python -m venv testenv
-          source testenv/bin/activate
-          poetry install --no-interaction --with cuda11,tests
-      - name: Execute on ${{ matrix.platform }} queue
-        run: |
-          sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' selfhosted
-          if [[ "${{ matrix.platform }}" == "sim" ]]; then
-            srun -p ${{ matrix.platform }} --gpus-per-node 1 selfhosted
-          else
-            srun -p ${{ matrix.platform }} selfhosted
-          fi
-          mkdir coverage
-          mv coverage.xml coverage/
-          mv htmlcov coverage/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: coverage-from-self-hosted
-          path: coverage/
-      - name: Notify the Pull Request
-        uses: thollander/actions-comment-pull-request@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          message: |
-            Run on QPU `${{ matrix.platform }}` completed! :atom:
+    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@v1
+    with:
+      used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+      python-version: "3.10"
+      artifact-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      poetry-extras: "--with cuda11,tests"
 
-            > *You can download the coverage report as an artifact, from the workflow summary page:*
-            > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      repo_token: ${{ secrets.GITHUB_TOKEN }}
