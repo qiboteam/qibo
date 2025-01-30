@@ -99,21 +99,12 @@ def test_hamiltonian_term_merge(backend):
         term1.merge(term2)
 
 
-@pytest.mark.parametrize("use_symbols", [True, False])
-def test_symbolic_term_creation(backend, use_symbols):
+def test_symbolic_term_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression."""
-    if use_symbols:
-        from qibo.symbols import X, Y
+    from qibo.symbols import X, Y
 
-        expression = X(0) * Y(1) * X(1)
-        symbol_map = {}
-    else:
-        import sympy
-
-        x0, x1, y1 = sympy.symbols("X0 X1 Y1", commutative=False)
-        expression = x0 * y1 * x1
-        symbol_map = {x0: (0, matrices.X), x1: (1, matrices.X), y1: (1, matrices.Y)}
-    term = terms.SymbolicTerm(2, expression, symbol_map)
+    expression = X(0) * Y(1) * X(1)
+    term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0, 1)
     assert len(term.matrix_map) == 2
     backend.assert_allclose(term.matrix_map.get(0)[0], matrices.X)
