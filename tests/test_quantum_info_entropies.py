@@ -436,7 +436,7 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
             state, base=base, check_hermitian="False", backend=backend
         )
 
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+    if backend.__class__.__name__ in ["CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             state = random_unitary(4, backend=backend)
             test = von_neumann_entropy(
@@ -842,16 +842,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
             check_hermitian=check_hermitian,
             backend=backend,
         )
-    if backend.__class__.__name__ == "CupyBackend":
-        with pytest.raises(NotImplementedError):
-            state = random_unitary(4, backend=backend)
-            test = entanglement_entropy(
-                state,
-                bipartition=bipartition,
-                base=base,
-                check_hermitian=True,
-                backend=backend,
-            )
 
     # Bell state
     state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)
