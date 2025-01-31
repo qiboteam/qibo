@@ -216,7 +216,9 @@ def test_gate_tomography_noise_model(backend):
 )
 @pytest.mark.parametrize("pauli_liouville", [False, True])
 def test_GST(backend, target_gates, pauli_liouville):
-    T = np.array([[1.0, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
+    T = np.array(
+        [[1.0, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]], dtype=np.complex128
+    )
     T = backend.cast(T)
     target_matrices = [g.matrix(backend=backend) for g in target_gates]
     # superoperator representation of the target gates in the Pauli basis
