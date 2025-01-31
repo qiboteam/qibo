@@ -694,11 +694,11 @@ class PRX(ParametrizedGate):
 
     Corresponds to the following unitary matrix
 
-        .. math::
-            \\begin{pmatrix}
-                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
-                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
-            \\end{pmatrix}
+    .. math::
+        \\begin{pmatrix}
+            \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\\\
+            -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
