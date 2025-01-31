@@ -4,12 +4,13 @@ import numpy as np
 from scipy.special import binom
 
 from qibo.backends.numpy import NumpyBackend
-from qibo.models.encodings import _ehrlich_algorithm
 
 
 class HammingWeightBackend(NumpyBackend):
     def __init__(self, engine=None):
         super().__init__()
+
+        from qibo.backends import construct_backend  # pylint: disable=C415
 
         if engine is None:
             from qibo.backends import (  # pylint: disable=C0415
@@ -20,7 +21,7 @@ class HammingWeightBackend(NumpyBackend):
             engine = _get_engine_name(_check_backend(engine))
 
         self.platform = engine
-
+        self.engine = construct_backend(self.platform)
         self.np = self.engine.np
 
         # cached order of operations for single-qubit gates
@@ -31,7 +32,38 @@ class HammingWeightBackend(NumpyBackend):
 
         self.name = "hamming_weight"
 
+    def apply_gate(self, gate, state, nqubits, weight):
+        if len(gate.target_qubits) == 1:
+            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+
+        return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+
+    def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
+        nqubits = circuit.nqubits
+        n_choose_k = int(binom(nqubits, weight))
+        indexes = list(range(n_choose_k))
+
+        lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
+        lexicographical_order = [
+            "".join(item.astype(str)) for item in lexicographical_order
+        ]
+        lexicographical_order.sort()
+        self._dict_indexes = dict(zip(lexicographical_order, indexes))
+        del lexicographical_order, indexes
+
+        if initial_state is None:
+            initial_state = self.engine.cast(self.np.zeros(n_choose_k))
+            initial_state[0] = 1
+
+        state = initial_state
+        for gate in circuit.queue:
+            state = self.apply_gate(gate, state, nqubits, weight)
+
+        return state
+
     def _gray_code(self, initial_string):
+        from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
+
         strings = _ehrlich_algorithm(initial_string, False)
         strings = [list(string) for string in strings]
         strings = np.asarray(strings, dtype=int)
@@ -49,14 +81,14 @@ class HammingWeightBackend(NumpyBackend):
             strings = self._gray_code(initial_string)
         else:
             initial_string = np.array(
-                [1] * (weight - 1 - ncontrols)
-                + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+                [1] * (weight - ncontrols)
+                + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols))
             )
             strings_0 = self._gray_code(initial_string)
 
             initial_string = np.array(
                 [1] * (weight - 1 - ncontrols)
-                + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+                + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols)))
             )
             strings_1 = self._gray_code(initial_string)
 
@@ -95,23 +127,30 @@ class HammingWeightBackend(NumpyBackend):
         matrix = self._get_single_qubit_matrix(gate)
         matrix_00, matrix_11 = self.np.diag(matrix)
 
-        indexes_zero = np.zeros((len(strings_0), nqubits), dtype=str)
         indexes_one = np.zeros((len(strings_1), nqubits), dtype=str)
 
-        indexes_zero[:, other_qubits] = strings_0
-        if len(controls) > 0:
-            indexes_zero[:, controls] = "1"
-        indexes_zero[:, qubits] = ["0"]
-
-        indexes_one[:, other_qubits] = strings_1
-        if len(controls) > 0:
-            indexes_zero[:, controls] = "1"
-        indexes_zero[:, qubits] = ["1"]
-
         if matrix_00 != 1.0:
-            state[indexes_one] *= matrix_11
+            indexes_zero = np.zeros((len(strings_0), nqubits), dtype=str)
+            indexes_zero[:, other_qubits] = strings_0
+            indexes_zero[:, qubits] = ["0"]
+            if len(controls) > 0:
+                indexes_zero[:, controls] = "1"
+            indexes_zero = np.array(
+                [self._dict_indexes["".join(elem)] for elem in indexes_zero]
+            )
 
-        if matrix_11 != 1.0:
+            state[indexes_zero] *= matrix_00
+
+        if matrix_11 != 1.0 and weight - ncontrols > 0:
+            indexes_one[:, other_qubits] = strings_1
+            if len(controls) > 0:
+                indexes_one[:, controls] = "1"
+
+            indexes_one[:, qubits] = ["1"]
+            indexes_one = np.array(
+                [self._dict_indexes["".join(elem)] for elem in indexes_one]
+            )
+
             state[indexes_one] *= matrix_11
 
         return state
@@ -131,9 +170,9 @@ class HammingWeightBackend(NumpyBackend):
                 nqubits, weight, ncontrols
             )
 
-        strings = self._dict_cached_strings[key]
+        strings = self._dict_cached_strings_two[key]
 
-        matrix = gate.matrix(backend=self.engine).real
+        matrix = gate.matrix(backend=self.engine)
         matrix_0101 = matrix[1, 1]
         matrix_0110 = matrix[1, 2]
         matrix_1001 = matrix[2, 1]
@@ -161,34 +200,5 @@ class HammingWeightBackend(NumpyBackend):
 
         state[indexes_in] = new_amplitudes_in
         state[indexes_out] = new_amplitudes_out
-
-        return state
-
-    def apply_gate(self, gate, state, nqubits, weight):
-        if len(gate.target_qubits) == 1:
-            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
-
-        return self._apply_gate_two_qubit(gate, state, nqubits, weight)
-
-    def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
-        nqubits = circuit.nqubits
-        n_choose_k = int(binom(nqubits, weight))
-        indexes = list(range(n_choose_k))
-
-        lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
-        lexicographical_order = [
-            "".join(item.astype(str)) for item in lexicographical_order
-        ]
-        lexicographical_order.sort()
-        self._dict_indexes = dict(zip(lexicographical_order, indexes))
-        del lexicographical_order, indexes
-
-        if initial_state is None:
-            initial_state = self.np.zeros(n_choose_k, dtype=float)
-            initial_state[0] = 1
-
-        state = initial_state
-        for gate in circuit.queue:
-            state = self.apply_gate(gate, state, nqubits, weight)
 
         return state
