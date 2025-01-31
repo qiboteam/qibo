@@ -4,6 +4,7 @@ Pytest fixtures.
 """
 
 import sys
+from contextlib import contextmanager
 
 import networkx as nx
 import pytest
@@ -136,3 +137,20 @@ def pytest_generate_tests(metafunc):
 
         elif "accelerators" in metafunc.fixturenames:
             metafunc.parametrize("accelerators", ACCELERATORS)
+
+
+@pytest.fixture
+def numba_threads():
+    from numba import get_num_threads, set_num_threads
+
+    original_threads = get_num_threads()
+
+    @contextmanager
+    def nthreads(n: int):
+        set_num_threads(n)
+        try:
+            yield
+        finally:
+            set_num_threads(original_threads)
+
+    yield nthreads
