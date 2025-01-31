@@ -6,6 +6,7 @@ import numpy as np
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
+from qibo.backends.hamming_weight import HammingWeightBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
