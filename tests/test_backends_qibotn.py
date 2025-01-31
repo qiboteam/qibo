@@ -1,9 +1,9 @@
+from qibotn.backends.quimb import QuimbBackend
+
 from qibo import get_backend, set_backend
 
 
 def test_backend_qibotn():
-    from qibotn.backends.quimb import QuimbBackend
-
     set_backend(backend="qibotn", platform="qutensornet", runcard=None)
     assert isinstance(get_backend(), QuimbBackend)
     set_backend("numpy")
