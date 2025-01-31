@@ -23,22 +23,100 @@ class HammingWeightBackend(NumpyBackend):
 
         self.np = self.engine.np
 
-        self._dict_cached_strings = {}
+        # cached order of operations for single-qubit gates
+        self._dict_cached_strings_one = {}
+
+        # cached order of operations for two-qubit gates
+        self._dict_cached_strings_two = {}
 
         self.name = "hamming_weight"
 
-    def _get_cached_strings(self, nqubits: int, weight: int, ncontrols: int = 0):
-        initial_string = np.array(
-            [1] * (weight - 1 - ncontrols)
-            + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
-        )
+    def _gray_code(self, initial_string):
         strings = _ehrlich_algorithm(initial_string, False)
         strings = [list(string) for string in strings]
         strings = np.asarray(strings, dtype=int)
 
         return strings
 
-    def apply_gate(self, gate, state, nqubits, weight):
+    def _get_cached_strings(
+        self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
+    ):
+        if two_qubit_gate:
+            initial_string = np.array(
+                [1] * (weight - 1 - ncontrols)
+                + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+            )
+            strings = self._gray_code(initial_string)
+        else:
+            initial_string = np.array(
+                [1] * (weight - 1 - ncontrols)
+                + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+            )
+            strings_0 = self._gray_code(initial_string)
+
+            initial_string = np.array(
+                [1] * (weight - 1 - ncontrols)
+                + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+            )
+            strings_1 = self._gray_code(initial_string)
+
+            strings = [strings_0, strings_1]
+
+        return strings
+
+    def _get_single_qubit_matrix(self, gate):
+        matrix = gate.matrix(backend=self.engine)
+
+        if gate.name in ["cz", "crz", "cu1"]:
+            matrix = matrix[2:, 2:]
+
+        return matrix
+
+    def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
+        qubits = list(gate.target_qubits)
+        controls = list(gate.control_qubits)
+        ncontrols = len(controls)
+        other_qubits = list(set(list(range(nqubits))) ^ set(qubits + controls))
+
+        key_0, key_1 = f"{ncontrols}_0", f"{ncontrols}_1"
+        if (
+            key_0 not in self._dict_cached_strings_one
+            or key_1 not in self._dict_cached_strings_one
+        ):
+            strings_0, strings_1 = self._get_cached_strings(
+                nqubits, weight, ncontrols, False
+            )
+            self._dict_cached_strings_one[key_0] = strings_0
+            self._dict_cached_strings_one[key_1] = strings_1
+        else:
+            strings_0 = self._dict_cached_strings_one[key_0]
+            strings_1 = self._dict_cached_strings_one[key_1]
+
+        matrix = self._get_single_qubit_matrix(gate)
+        matrix_00, matrix_11 = self.np.diag(matrix)
+
+        indexes_zero = np.zeros((len(strings_0), nqubits), dtype=str)
+        indexes_one = np.zeros((len(strings_1), nqubits), dtype=str)
+
+        indexes_zero[:, other_qubits] = strings_0
+        if len(controls) > 0:
+            indexes_zero[:, controls] = "1"
+        indexes_zero[:, qubits] = ["0"]
+
+        indexes_one[:, other_qubits] = strings_1
+        if len(controls) > 0:
+            indexes_zero[:, controls] = "1"
+        indexes_zero[:, qubits] = ["1"]
+
+        if matrix_00 != 1.0:
+            state[indexes_one] *= matrix_11
+
+        if matrix_11 != 1.0:
+            state[indexes_one] *= matrix_11
+
+        return state
+
+    def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
         # Right now, it works only with two-qubit Givens rotations,
         # e.g. gates.RBS, gates.GIVENS, gates.SWAP, gates.iSWAP,
         # gates.SiSWAP, and gates.RZZ (up to global phase).
@@ -48,8 +126,8 @@ class HammingWeightBackend(NumpyBackend):
         other_qubits = list(set(list(range(nqubits))) ^ set(qubits + controls))
 
         key = f"{ncontrols}"
-        if key not in self._dict_cached_strings:
-            self._dict_cached_strings[key] = self._get_cached_strings(
+        if key not in self._dict_cached_strings_two:
+            self._dict_cached_strings_two[key] = self._get_cached_strings(
                 nqubits, weight, ncontrols
             )
 
@@ -85,6 +163,12 @@ class HammingWeightBackend(NumpyBackend):
         state[indexes_out] = new_amplitudes_out
 
         return state
+
+    def apply_gate(self, gate, state, nqubits, weight):
+        if len(gate.target_qubits) == 1:
+            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+
+        return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
         nqubits = circuit.nqubits
