@@ -33,18 +33,22 @@ class MetaBackend:
             :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
+        if backend not in QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight"):
             raise_error(
                 ValueError,
                 f"Backend {backend} is not available. "
-                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford',)}",
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight")}",
             )
 
-        if backend == "clifford":
+        if backend in ["clifford", "hamming_weight"]:
+            backend_class = (
+                CliffordBackend if backend == "clifford" else HammingWeightBackend
+            )
+
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
 
-            return CliffordBackend(**kwargs)
+            return backend_class(**kwargs)
 
         if backend == "qulacs":
             from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
@@ -313,7 +317,7 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
     """
-    if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
+    if backend in QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight"):
         return MetaBackend.load(backend, **kwargs)
 
     provider = backend.replace("-", "_")
