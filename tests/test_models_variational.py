@@ -144,7 +144,8 @@ def test_vqe(backend, method, options, compile, filename):
 
     def callback(parameters, loss_values=loss_values, vqe=v):
         vqe.circuit.set_parameters(parameters)
-        loss_values.append(vqe.hamiltonian.expectation(vqe.circuit().state()))
+        state = vqe.backend.execute_circuit(vqe.circuit).state()
+        loss_values.append(vqe.hamiltonian.expectation(state))
 
     best, params, _ = v.minimize(
         initial_parameters,
