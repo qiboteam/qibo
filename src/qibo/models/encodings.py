@@ -371,7 +371,7 @@ def hamming_weight_encoder(
     # get list of bitstrings from the Gray code
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
-    
+
     # sort data such that the encoding is performed in lexicographical order
     bitstrings_lexicographical = list(zip(bitstrings, range(len(bitstrings))))
     bitstrings_lexicographical.sort()
