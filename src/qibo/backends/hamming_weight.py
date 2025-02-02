@@ -24,11 +24,13 @@ class HammingWeightBackend(NumpyBackend):
         self.engine = construct_backend(self.platform)
         self.np = self.engine.np
 
-        # cached order of operations for single-qubit gates
+        # cached order of operations for single- and two-qubit gates
         self._dict_cached_strings_one = {}
-
-        # cached order of operations for two-qubit gates
         self._dict_cached_strings_two = {}
+
+        # map to translate the order of bitstrings from the Gray code
+        # to the lexicographical (i.e. ascending) order
+        self._lexicographical_order = None
 
         self.name = "hamming_weight"
 

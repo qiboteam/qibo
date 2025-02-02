@@ -368,8 +368,18 @@ def hamming_weight_encoder(
     """
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
+    # get list of bitstrings from the Gray code
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
+    
+    # sort data such that the encoding is performed in lexicographical order
+    bitstrings_lexicographical = list(zip(bitstrings, range(len(bitstrings))))
+    bitstrings_lexicographical.sort()
+    bitstrings_lexicographical = np.asarray(bitstrings_lexicographical)
+    lexicographical_order = list(bitstrings_lexicographical[:, 1].astype(int))
+    bitstrings_lexicographical = list(bitstrings_lexicographical[:, 0])
+    data = data[lexicographical_order]
+    del bitstrings_lexicographical
 
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
