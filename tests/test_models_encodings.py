@@ -217,6 +217,7 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     backend.assert_allclose(stddev, theoretical_norm, atol=1e-1)
 
 
+@pytest.mark.parametrize("seed", [10])
 @pytest.mark.parametrize("optimize_controls", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("full_hwp", [False, True])
@@ -229,6 +230,7 @@ def test_hamming_weight_encoder(
     full_hwp,
     complex_data,
     optimize_controls,
+    seed,
 ):
     n_choose_k = int(binom(nqubits, weight))
     dims = 2**nqubits
@@ -237,15 +239,17 @@ def test_hamming_weight_encoder(
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     indices = _ehrlich_algorithm(initial_string, False)
     indices = [int(string, 2) for string in indices]
+    indices_lex = list(np.copy(indices))
+    indices_lex.sort()
 
-    rng = np.random.default_rng(10)
+    rng = np.random.default_rng(seed)
     data = rng.random(n_choose_k)
     if complex_data:
         data = data.astype(complex) + 1j * rng.random(n_choose_k)
     data /= np.linalg.norm(data)
 
     target = np.zeros(dims, dtype=dtype)
-    target[indices] = data
+    target[indices_lex] = data
     target = backend.cast(target, dtype=target.dtype)
 
     circuit = hamming_weight_encoder(
