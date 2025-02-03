@@ -436,19 +436,8 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
             state, base=base, check_hermitian="False", backend=backend
         )
 
-    if backend.__class__.__name__ in [
-        "CuQuantumBackend",
-    ]:
-        with pytest.raises(NotImplementedError):
-            state = random_unitary(4, backend=backend)
-            test = von_neumann_entropy(
-                state, base=base, check_hermitian=True, backend=backend
-            )
-    else:
-        state = random_unitary(4, backend=backend)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian=True, backend=backend
-        )
+    state = random_unitary(4, backend=backend)
+    test = von_neumann_entropy(state, base=base, check_hermitian=True, backend=backend)
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)

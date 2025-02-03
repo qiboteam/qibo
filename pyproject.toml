@@ -89,7 +89,7 @@ test-docs = "make -C doc doctest"
 optional = true
 
 [tool.poetry.group.cuda11.dependencies]
-cupy-cuda11x = "^12.0.0"
+cupy-cuda11x = "^13.1.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="cupy_matrices" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
@@ -99,7 +99,7 @@ qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 optional = true
 
 [tool.poetry.group.cuda12.dependencies]
-cupy-cuda12x = "^12.0.0"
+cupy-cuda12x = "^13.1.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="cupy_matrices" }
 qibotn = { git = "https://github.com/qiboteam/qibotn.git" }

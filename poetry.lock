@@ -155,35 +155,36 @@ tests = ["coverage", "numpy", "pytest", "pytest-cov"]
 
 [[package]]
 name = "babel"
-version = "2.16.0"
+version = "2.17.0"
 description = "Internationalization utilities"
 optional = false
 python-versions = ">=3.8"
 groups = ["docs"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "babel-2.16.0-py3-none-any.whl", hash = "sha256:368b5b98b37c06b7daf6696391c3240c938b37767d4584413e8438c5c435fa8b"},
-    {file = "babel-2.16.0.tar.gz", hash = "sha256:d1f3554ca26605fe173f3de0c65f750f5a42f924499bf134de6423582298e316"},
+    {file = "babel-2.17.0-py3-none-any.whl", hash = "sha256:4d0b53093fdfb4b21c92b5213dba5a1b23885afa8383709427046b21c366e5f2"},
+    {file = "babel-2.17.0.tar.gz", hash = "sha256:0c54cffb19f690cdcc52a3b50bcbf71e07a808d1c80d549f2459b9d2cf0afb9d"},
 ]
 
 [package.extras]
-dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
+dev = ["backports.zoneinfo", "freezegun (>=1.0,<2.0)", "jinja2 (>=3.0)", "pytest (>=6.0)", "pytest-cov", "pytz", "setuptools", "tzdata"]
 
 [[package]]
 name = "beautifulsoup4"
-version = "4.12.3"
+version = "4.13.0"
 description = "Screen-scraping library"
 optional = false
 python-versions = ">=3.6.0"
 groups = ["docs", "tests"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "beautifulsoup4-4.12.3-py3-none-any.whl", hash = "sha256:b80878c9f40111313e55da8ba20bdba06d8fa3969fc68304167741bbf9e082ed"},
-    {file = "beautifulsoup4-4.12.3.tar.gz", hash = "sha256:74e3d1928edc070d21748185c46e3fb33490f22f52a3addee9aee0f4f7781051"},
+    {file = "beautifulsoup4-4.13.0-py3-none-any.whl", hash = "sha256:9c4c3dfa67aba55f6cd03769c441b21e6a369797fd6766e4b4c6b3399aae2735"},
+    {file = "beautifulsoup4-4.13.0.tar.gz", hash = "sha256:b6e5afb3a2b1472c8db751a92eabf7834e5c7099f990c5e4b35f1f16b60bae64"},
 ]
 
 [package.dependencies]
 soupsieve = ">1.2"
+typing-extensions = "*"
 
 [package.extras]
 cchardet = ["cchardet"]
@@ -866,73 +867,67 @@ toml = ["tomli"]
 
 [[package]]
 name = "cupy-cuda11x"
-version = "12.3.0"
+version = "13.3.0"
 description = "CuPy: NumPy & SciPy for GPU"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["cuda11"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "cupy_cuda11x-12.3.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:be948cc7625c7ebeddaa42f39d0222e061b18911b56b2766efd638aa1a88c53c"},
-    {file = "cupy_cuda11x-12.3.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:1a8d5f867cbe65966d4ca9cb56bc19d316d3947149d07d5e779b90913587ffd3"},
-    {file = "cupy_cuda11x-12.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:04d3ee82364d26dc3209e35864e1fbacb10d11294296752f6047ad009bee7bb1"},
-    {file = "cupy_cuda11x-12.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:804d49f53a6c817c88fd289de753018ca22c127fac51ec8acda5ef70532a8ae2"},
-    {file = "cupy_cuda11x-12.3.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:4173486906388c91a70f639003313b96e9449cb8a008137e8ac4bcd872bcf34c"},
-    {file = "cupy_cuda11x-12.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:191a0cb9d7620fdb8baf1dc9f8e60ebef0562d7102990244f94b8ba7ab2a48df"},
-    {file = "cupy_cuda11x-12.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:3dd934a2e3c88798a342be8556fef9f608282adb0bce979b957400a235f492c4"},
-    {file = "cupy_cuda11x-12.3.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:09accf46c9352ae56422a7f37c03413c943f4b254cfaad4cc824c947368b96ce"},
-    {file = "cupy_cuda11x-12.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:6eb6874d756f936c4aecd053b81376ec132079c6a9f8e97e210261816b81b2e4"},
-    {file = "cupy_cuda11x-12.3.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:26139bb797017296e2f2ed7cbf6aabd31a6bf914955fa6e6193f3ea93a23ac8e"},
-    {file = "cupy_cuda11x-12.3.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:0d53e6f08979e67142cfc4e4d734cc9c6275f8be88f149849ad41d42f57a2d6e"},
-    {file = "cupy_cuda11x-12.3.0-cp38-cp38-win_amd64.whl", hash = "sha256:6a65056e317a0d8ab88477c3fcbc30f116a540f35856b81c98bbbde207fa25ad"},
-    {file = "cupy_cuda11x-12.3.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:fa2abd3b166e1cd6f2499604814b03d9220a4412dcb1a1f383fc4a6d571ea5fb"},
-    {file = "cupy_cuda11x-12.3.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:ec83f9f39b9703d8fdc703c04f0f126be1355876c6bdf5d261488bfddccdfb74"},
-    {file = "cupy_cuda11x-12.3.0-cp39-cp39-win_amd64.whl", hash = "sha256:c1ec71333cb8871826cbc8573d506da65e9dc53236bd61dfce7ea73f9c3f174e"},
+    {file = "cupy_cuda11x-13.3.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:ef854f0c63525d8163ab7af19f503d964de9dde0dd1cf9ea806a6ecb302cdce3"},
+    {file = "cupy_cuda11x-13.3.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:54bf12a6663d0471e3e37e62972add348c5263ce803688f48bbfab1b20ebdb02"},
+    {file = "cupy_cuda11x-13.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:972d133efa2af80bb8ef321858ffe7cabc3abf8f58bcc4f13541dd497c05077d"},
+    {file = "cupy_cuda11x-13.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:766ef1558a3ed967d5f092829bfb99edbcfaf75224925e1fb1a9f531e1e79f36"},
+    {file = "cupy_cuda11x-13.3.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:77a81fa48d1a392b731885555a53cf2febde39cc33db55f2d78ba64b5ef4689b"},
+    {file = "cupy_cuda11x-13.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:a8e8b7f7f73677afe2f70c38562f01f82688e43147550b3e192a5a2206e17fe1"},
+    {file = "cupy_cuda11x-13.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:199f1b24bcd568b41705cb46870ee7086088932c78d46037fdf05d195636ab70"},
+    {file = "cupy_cuda11x-13.3.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:ffe153d5c32bc033c1cd94460c04d90219367d7283fcaefa9f1cf7b461fbdd7d"},
+    {file = "cupy_cuda11x-13.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:85df9054ed023adb5db04c4e9138cf4eff99746e7f3fb47479232da009ef8839"},
+    {file = "cupy_cuda11x-13.3.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:72136c4cbd17adc665fd0831c1b8805ed3d61b643ba6d587344c62466c072d91"},
+    {file = "cupy_cuda11x-13.3.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:e0b4434c36658c7a40754bd90d372bfe21f2a38ee703f9a412eca6e8709bef3f"},
+    {file = "cupy_cuda11x-13.3.0-cp39-cp39-win_amd64.whl", hash = "sha256:969e1d7af1f506e1f439b70385df0ffc4a8c75dcbbddace4b1aa203bffcfc1c8"},
 ]
 
 [package.dependencies]
 fastrlock = ">=0.5"
-numpy = ">=1.20,<1.29"
+numpy = ">=1.22,<2.3"
 
 [package.extras]
-all = ["Cython (>=0.29.22,<3)", "optuna (>=2.0)", "scipy (>=1.6,<1.14)"]
+all = ["Cython (>=0.29.22,<3)", "optuna (>=2.0)", "scipy (>=1.7,<1.14)"]
 stylecheck = ["autopep8 (==1.5.5)", "flake8 (==3.8.4)", "mypy (==1.4.1)", "pbr (==5.5.1)", "pycodestyle (==2.6.0)", "types-setuptools (==57.4.14)"]
-test = ["hypothesis (>=6.37.2,<6.55.0)", "pytest (>=7.2)"]
+test = ["hypothesis (>=6.37.2,<6.55.0)", "mpmath", "packaging", "pytest (>=7.2)"]
 
 [[package]]
 name = "cupy-cuda12x"
-version = "12.3.0"
+version = "13.3.0"
 description = "CuPy: NumPy & SciPy for GPU"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["cuda12"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "cupy_cuda12x-12.3.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:77687b019383eb89da981638cfec6d5ba556a15f1be0945e8f7f80030b851d04"},
-    {file = "cupy_cuda12x-12.3.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:32d0e03789ef3f02f0c098818e957c235b75c1636e9e0036299480db0c423dcd"},
-    {file = "cupy_cuda12x-12.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:6ab0d67db0ae74118b3b29c96cd79428593ee646c1e7b4f92ad76028033d3646"},
-    {file = "cupy_cuda12x-12.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:e8a4906da820f6ce39a3a1d18c4504da4e0faad87598761ea9d6bf8288423d69"},
-    {file = "cupy_cuda12x-12.3.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:49626a975c87008a11b67a43ca4b5bd00c3029e093430511c83cbda422b6a89f"},
-    {file = "cupy_cuda12x-12.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:182fed8568f60208bec43b8ad011f4ab2a80f5bc428bd34672b9ef130a93f772"},
-    {file = "cupy_cuda12x-12.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:43c54e121d9fdc92b246df438bc3f49d47a85c1562deefc9f5e16e55c27cec6a"},
-    {file = "cupy_cuda12x-12.3.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:3e65f1cfd32fa5d9894681de35e57a79a8bf74e8a84e6ee3d24542ba71aaca34"},
-    {file = "cupy_cuda12x-12.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:c7282a51a6e74a2221285b44eb6deefac96965016b7eb4387903e5cee059bcb7"},
-    {file = "cupy_cuda12x-12.3.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:5dea10a66a0e208f83ef80fca0e57f6ed227b93c138a65c6d23ff2d8350a3a33"},
-    {file = "cupy_cuda12x-12.3.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:27993b46a1dd5a6b2c269ab436e0927b5eb66adb03d24b9b321850a1b4140d7a"},
-    {file = "cupy_cuda12x-12.3.0-cp38-cp38-win_amd64.whl", hash = "sha256:8fe596e792ef47bab71cc85fe0982d752357276d6eb701cfc823697d29e83257"},
-    {file = "cupy_cuda12x-12.3.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:716db7567453a88795c1e157f4e9059d291f759e01d7c18df65feafb02209b31"},
-    {file = "cupy_cuda12x-12.3.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:1ac1312fa4f24598bced9ddd6b2cd66236c53171e9941c5ee170c5b14c7f0e3a"},
-    {file = "cupy_cuda12x-12.3.0-cp39-cp39-win_amd64.whl", hash = "sha256:3c7ba97dcb78f8b65ff7c179eacde3e3f2cd895d5fd5041c5617e717d15b2e76"},
+    {file = "cupy_cuda12x-13.3.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:674488e990998042cc54d2486d3c37cae80a12ba3787636be5a10b9446dd6914"},
+    {file = "cupy_cuda12x-13.3.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:cf4a2a0864364715881b50012927e88bd7ec1e6f1de3987970870861ae5ed25e"},
+    {file = "cupy_cuda12x-13.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:7c0dc8c49d271d1c03e49a5d6c8e42e8fee3114b10f269a5ecc387731d693eaa"},
+    {file = "cupy_cuda12x-13.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:c0cc095b9a3835fd5db66c45ed3c58ecdc5a3bb14e53e1defbfd4a0ce5c8ecdb"},
+    {file = "cupy_cuda12x-13.3.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:a0e3bead04e502ebde515f0343444ca3f4f7aed09cbc3a316a946cba97f2ea66"},
+    {file = "cupy_cuda12x-13.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:5f11df1149c7219858b27e4c8be92cb4eaf7364c94af6b78c40dffb98050a61f"},
+    {file = "cupy_cuda12x-13.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:bbd0d916310391faf0d7dc9c58fff7a6dc996b67e5768199160bbceb5ebdda8c"},
+    {file = "cupy_cuda12x-13.3.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:e206bd8664f0763732b6012431f484ee535bffd77a5ae95e9bfe1c7c72396625"},
+    {file = "cupy_cuda12x-13.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:88ef1478f00ae252da0026e7f04f70c9bb6a2dc130ba5f1e5bc5e8069a928bf5"},
+    {file = "cupy_cuda12x-13.3.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:3a52aa49ffcc940d034f2bb39728c90e9fa83c7a49e376404507956adb6d6ec4"},
+    {file = "cupy_cuda12x-13.3.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:3ef13f3cbc449d2a0f816594ab1fa0236e1f06ad1eaa81ad04c75e47cbeb87be"},
+    {file = "cupy_cuda12x-13.3.0-cp39-cp39-win_amd64.whl", hash = "sha256:8f5433eec3e5cd8d39e8fcb82e0fdab7c22eba8e3304fcb0b42f2ea988fef0d6"},
 ]
 
 [package.dependencies]
 fastrlock = ">=0.5"
-numpy = ">=1.20,<1.29"
+numpy = ">=1.22,<2.3"
 
 [package.extras]
-all = ["Cython (>=0.29.22,<3)", "optuna (>=2.0)", "scipy (>=1.6,<1.14)"]
+all = ["Cython (>=0.29.22,<3)", "optuna (>=2.0)", "scipy (>=1.7,<1.14)"]
 stylecheck = ["autopep8 (==1.5.5)", "flake8 (==3.8.4)", "mypy (==1.4.1)", "pbr (==5.5.1)", "pycodestyle (==2.6.0)", "types-setuptools (==57.4.14)"]
-test = ["hypothesis (>=6.37.2,<6.55.0)", "pytest (>=7.2)"]
+test = ["hypothesis (>=6.37.2,<6.55.0)", "mpmath", "packaging", "pytest (>=7.2)"]
 
 [[package]]
 name = "cuquantum-python-cu11"
@@ -1567,15 +1562,15 @@ woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
 
 [[package]]
 name = "fsspec"
-version = "2024.12.0"
+version = "2025.2.0"
 description = "File-system specification"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "tests"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "fsspec-2024.12.0-py3-none-any.whl", hash = "sha256:b520aed47ad9804237ff878b504267a3b0b441e97508bd6d2d8774e3db85cee2"},
-    {file = "fsspec-2024.12.0.tar.gz", hash = "sha256:670700c977ed2fb51e0d9f9253177ed20cbde4a3e5c0283cc5385b5870c8533f"},
+    {file = "fsspec-2025.2.0-py3-none-any.whl", hash = "sha256:9de2ad9ce1f85e1931858535bc882543171d197001a0a5eb2ddc04f1781ab95b"},
+    {file = "fsspec-2025.2.0.tar.gz", hash = "sha256:1c24b16eaa0a1798afa0337aa0db9b256718ab2a89c425371f5628d22c3b6afd"},
 ]
 
 [package.extras]
@@ -1602,7 +1597,7 @@ sftp = ["paramiko"]
 smb = ["smbprotocol"]
 ssh = ["paramiko"]
 test = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "numpy", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "requests"]
-test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask-expr", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
+test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
 test-full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "cloudpickle", "dask", "distributed", "dropbox", "dropboxdrivefs", "fastparquet", "fusepy", "gcsfs", "jinja2", "kerchunk", "libarchive-c", "lz4", "notebook", "numpy", "ocifs", "pandas", "panel", "paramiko", "pyarrow", "pyarrow (>=1)", "pyftpdlib", "pygit2", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "python-snappy", "requests", "smbprotocol", "tqdm", "urllib3", "zarr", "zstandard"]
 tqdm = ["tqdm"]
 
@@ -5856,7 +5851,7 @@ files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
-markers = {main = "python_version <= \"3.11\" or python_version >= \"3.12\"", dev = "python_version < \"3.10\"", docs = "python_version < \"3.11\"", tests = "python_version <= \"3.11\" or python_version >= \"3.12\""}
+markers = {main = "python_version <= \"3.11\" or python_version >= \"3.12\"", dev = "python_version < \"3.10\"", docs = "python_version <= \"3.11\" or python_version >= \"3.12\"", tests = "python_version <= \"3.11\" or python_version >= \"3.12\""}
 
 [[package]]
 name = "tzdata"
@@ -6067,4 +6062,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.13"
-content-hash = "d467e5a9163bc9ab6a6862985b63d6d1b911f2d97c7c4ba7f99c6ac6c4b38253"
+content-hash = "04677d61e1c3eb9768d0e4e8f3ea7cccb2d155ad8c286fdcda633bb4a90f0f14"
