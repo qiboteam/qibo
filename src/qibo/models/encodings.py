@@ -373,12 +373,6 @@ def hamming_weight_encoder(
 
     # sort data such that the encoding is performed in lexicographical order
     lex_order = [int(string, 2) for string in bitstrings]
-    # bitstrings_lexicographical = list(
-    #     zip(bitstrings_lexicographical, range(len(bitstrings_lexicographical)))
-    # )
-    # bitstrings_lexicographical.sort()
-    # bitstrings_lexicographical = np.asarray(bitstrings_lexicographical)
-    # lexicographical_order = list(bitstrings_lexicographical[:, 1].astype(int))
     lex_order_sorted = np.sort(np.copy(lex_order))
     lex_order = [np.where(lex_order_sorted == num)[0][0] for num in lex_order]
     data = data[lex_order]
