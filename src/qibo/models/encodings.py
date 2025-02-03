@@ -373,13 +373,11 @@ def hamming_weight_encoder(
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
     # sort data such that the encoding is performed in lexicographical order
-    bitstrings_lexicographical = list(zip(bitstrings, range(len(bitstrings))))
-    bitstrings_lexicographical.sort()
-    bitstrings_lexicographical = np.asarray(bitstrings_lexicographical)
-    lexicographical_order = list(bitstrings_lexicographical[:, 1].astype(int))
-    bitstrings_lexicographical = list(bitstrings_lexicographical[:, 0])
-    data = data[lexicographical_order]
-    del bitstrings_lexicographical
+    lex_order = [int(string, 2) for string in bitstrings]
+    lex_order_sorted = np.sort(np.copy(lex_order))
+    lex_order = [np.where(lex_order_sorted == num)[0][0] for num in lex_order]
+    data = data[lex_order]
+    del lex_order, lex_order_sorted
 
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
