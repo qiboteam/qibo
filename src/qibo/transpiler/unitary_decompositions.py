@@ -52,14 +52,6 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
         ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
 
-    if backend.__class__.__name__ in [
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            f"{backend.__class__.__name__} does not support `linalg.eig.`",
-        )
-
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
