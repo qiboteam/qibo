@@ -32,7 +32,8 @@ def u3_decomposition(unitary, backend):
     minus = backend.np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
-    return theta, phi, lam
+    # explicit conversion to float to avoid issue on GPU
+    return float(theta), float(phi), float(lam)
 
 
 def calculate_psi(unitary, backend, magic_basis=magic_basis):

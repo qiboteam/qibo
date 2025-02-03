@@ -4590,7 +4590,7 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "update_cuquantum"
-resolved_reference = "3fac93041d74e988da5cf4960842c011cc2e978c"
+resolved_reference = "dadf2ece85c560f261193352621e7b4324b6ac4a"
 
 [[package]]
 name = "qiboml"
