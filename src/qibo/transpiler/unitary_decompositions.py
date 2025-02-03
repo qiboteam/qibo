@@ -24,7 +24,7 @@ def u3_decomposition(unitary, backend):
     Returns:
         (float, float, float): parameters of U3 gate.
     """
-    unitary = backend.cast(unitary)
+    unitary = backend.to_numpy(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / backend.np.sqrt(backend.np.linalg.det(unitary))
     theta = 2 * backend.np.arctan2(backend.np.abs(su2[1, 0]), backend.np.abs(su2[0, 0]))
@@ -32,7 +32,6 @@ def u3_decomposition(unitary, backend):
     minus = backend.np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
-
     return theta, phi, lam
 
 
@@ -51,15 +50,6 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     Returns:
         ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
-
-    if backend.__class__.__name__ in [
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            f"{backend.__class__.__name__} does not support `linalg.eig.`",
-        )
-
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
