@@ -7,6 +7,8 @@ import pytest
 from qibo import construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
+from .conftest import AVAILABLE_BACKENDS
+
 ####################### Test `matrix` #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),
@@ -119,7 +121,10 @@ def test_list_available_backends():
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,
-        "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
+        "qibojit": {
+            platform: any(platform in backend for backend in AVAILABLE_BACKENDS)
+            for platform in ["numba", "cupy", "cuquantum"]
+        },
         "qibolab": False,
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
