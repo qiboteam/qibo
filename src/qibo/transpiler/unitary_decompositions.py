@@ -24,7 +24,7 @@ def u3_decomposition(unitary, backend):
     Returns:
         (float, float, float): parameters of U3 gate.
     """
-    unitary = backend.to_numpy(unitary)
+    unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / backend.np.sqrt(backend.np.linalg.det(unitary))
     theta = 2 * backend.np.arctan2(backend.np.abs(su2[1, 0]), backend.np.abs(su2[0, 0]))
