@@ -239,8 +239,7 @@ def test_hamming_weight_encoder(
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     indices = _ehrlich_algorithm(initial_string, False)
     indices = [int(string, 2) for string in indices]
-    indices_lex = list(np.copy(indices))
-    indices_lex.sort()
+    indices_lex = np.sort(np.copy(indices))
 
     rng = np.random.default_rng(seed)
     data = rng.random(n_choose_k)
