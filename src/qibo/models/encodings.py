@@ -371,6 +371,13 @@ def hamming_weight_encoder(
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
+    # sort data such that the encoding is performed in lexicographical order
+    lex_order = [int(string, 2) for string in bitstrings]
+    lex_order_sorted = np.sort(np.copy(lex_order))
+    lex_order = [np.where(lex_order_sorted == num)[0][0] for num in lex_order]
+    data = data[lex_order]
+    del lex_order, lex_order_sorted
+
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
