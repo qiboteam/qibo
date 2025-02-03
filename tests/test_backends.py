@@ -116,10 +116,27 @@ def test_list_available_backends():
     qulacs = (
         False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
     )
+    try:
+        import cupy
+
+        cupy_available = True
+    except ModuleNotFoundError:
+        cupy_available = False
+    try:
+        import cuquantum
+
+        cuquantum_available = True
+    except ModuleNotFoundError:
+        cuquantum_available = False
+
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,
-        "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
+        "qibojit": {
+            "numba": True,
+            "cupy": cupy_available,
+            "cuquantum": cuquantum_available,
+        },
         "qibolab": False,
         "qibo-cloud-backends": False,
         "qibotn": {"cutensornet": False, "qutensornet": True},
