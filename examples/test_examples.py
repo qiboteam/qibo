@@ -248,7 +248,7 @@ def test_adiabatic_linear(nqubits, hfield, T, dt, solver, save=False):
 
 @pytest.mark.parametrize("nqubits,hfield,dt, params", [(4, 1, 1e-2, [1.0])])
 @pytest.mark.parametrize("solver", ["exp"])
-@pytest.mark.parametrize("method", [("Powell")])
+@pytest.mark.parametrize("method", ["Powell"])
 def test_adiabatic_optimize(
     nqubits, hfield, params, dt, solver, method, maxiter=None, save=False
 ):
