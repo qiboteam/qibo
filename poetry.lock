@@ -4589,8 +4589,8 @@ cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "update_cuquantum"
-resolved_reference = "dadf2ece85c560f261193352621e7b4324b6ac4a"
+reference = "cupy_matrices"
+resolved_reference = "0de449d304be3de773a268392ed5a839cc348dc7"
 
 [[package]]
 name = "qiboml"
@@ -6067,4 +6067,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.13"
-content-hash = "179fab360b872216eea4bf4b03870d698220e43fb3863a45df50ef794b621441"
+content-hash = "04677d61e1c3eb9768d0e4e8f3ea7cccb2d155ad8c286fdcda633bb4a90f0f14"
