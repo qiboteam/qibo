@@ -7,6 +7,8 @@ import pytest
 from qibo import construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
+from .conftest import AVAILABLE_BACKENDS
+
 ####################### Test `matrix` #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),
@@ -116,26 +118,12 @@ def test_list_available_backends():
     qulacs = (
         False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
     )
-    try:
-        import cupy
-
-        cupy_available = True
-    except ModuleNotFoundError:
-        cupy_available = False
-    try:
-        import cuquantum
-
-        cuquantum_available = True
-    except ModuleNotFoundError:
-        cuquantum_available = False
-
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,
         "qibojit": {
-            "numba": True,
-            "cupy": cupy_available,
-            "cuquantum": cuquantum_available,
+            platform: any(platform in backend for backend in AVAILABLE_BACKENDS)
+            for platform in ["numba", "cupy", "cuquantum"]
         },
         "qibolab": False,
         "qibo-cloud-backends": False,

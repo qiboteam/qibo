@@ -72,7 +72,6 @@ def test_eigenbasis_entanglement(backend, seed):
 def test_v_decomposition(backend, seed):
     """Check that V_A V_B |psi_k> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
-
     psi, _ = calculate_psi(unitary, backend=backend)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     assert_single_qubits(backend, psi, va, vb)

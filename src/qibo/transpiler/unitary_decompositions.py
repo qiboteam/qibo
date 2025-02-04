@@ -32,8 +32,8 @@ def u3_decomposition(unitary, backend):
     minus = backend.np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
-
-    return theta, phi, lam
+    # explicit conversion to float to avoid issue on GPU
+    return float(theta), float(phi), float(lam)
 
 
 def calculate_psi(unitary, backend, magic_basis=magic_basis):
@@ -51,7 +51,6 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     Returns:
         ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
-
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
