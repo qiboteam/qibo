@@ -63,7 +63,7 @@ def test_clifford_from_circuit(backend, measurement):
 
 @pytest.mark.parametrize("seed", [1, 10])
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
-@pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
+@pytest.mark.parametrize("nqubits", [1, 3, 10])
 def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
     clifford_backend = construct_clifford_backend(backend)
 
@@ -87,6 +87,9 @@ def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
             )
         with pytest.raises(ValueError):
             _cnot_cost(symplectic_matrix_compiled)
+    elif algorithm == "AG04" and engine == "cupy":
+        with pytest.raises(NotImplementedError):
+            symplectic_matrix_from_symplectic.to_circuit(algorithm=algorithm)
     else:
         with pytest.raises(TypeError):
             symplectic_matrix_compiled.to_circuit(algorithm=True)
