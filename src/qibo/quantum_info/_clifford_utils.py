@@ -117,7 +117,7 @@ def _decomposition_AG04(clifford):
     nqubits = clifford.nqubits
 
     circuit = Circuit(nqubits)
-    if clifford._backend.platform == "cupy":
+    if clifford._backend.platform == "cupy":  # pragma: no cover
         raise_error(
             NotImplementedError,
             "``AG04`` algorithm currently not supported with the ``cupy`` engine, please use the ``BM20`` algorithm instead or switch clifford engine.",

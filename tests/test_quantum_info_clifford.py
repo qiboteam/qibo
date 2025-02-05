@@ -87,7 +87,7 @@ def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
             )
         with pytest.raises(ValueError):
             _cnot_cost(symplectic_matrix_compiled)
-    elif algorithm == "AG04" and engine == "cupy":  # pragma: no cover
+    elif algorithm == "AG04" and engine == "cupy":
         with pytest.raises(NotImplementedError):
             symplectic_matrix_from_symplectic.to_circuit(algorithm=algorithm)
     else:
