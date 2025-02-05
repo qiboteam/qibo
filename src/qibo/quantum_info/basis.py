@@ -46,33 +46,6 @@ def pauli_basis(
             elements and an array with their row-wise indexes.
     """
 
-    if nqubits <= 0:
-        raise_error(ValueError, "nqubits must be a positive int.")
-
-    if not isinstance(normalize, bool):
-        raise_error(
-            TypeError,
-            f"normalize must be type bool, but it is type {type(normalize)} instead.",
-        )
-
-    if not isinstance(vectorize, bool):
-        raise_error(
-            TypeError,
-            f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
-        )
-
-    if not isinstance(sparse, bool):
-        raise_error(
-            TypeError,
-            f"sparse must be type bool, but it is type {type(sparse)} instead.",
-        )
-
-    if not isinstance(pauli_order, str):
-        raise_error(
-            TypeError,
-            f"pauli_order must be type str, but it is type {type(pauli_order)} instead.",
-        )
-
     if set(pauli_order) != {"I", "X", "Y", "Z"}:
         raise_error(
             ValueError,
@@ -90,7 +63,10 @@ def pauli_basis(
 
     backend = _check_backend(backend)
 
-    pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    # pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    pauli_labels = {
+        label: getattr(self.backend.matrices, label) for label in ("I", "X", "Y", "Z")
+    }
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
     einsum = np.einsum if backend.platform == "tensorflow" else backend.np.einsum
