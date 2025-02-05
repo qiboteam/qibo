@@ -375,6 +375,14 @@ def test_circuit_serialization():
     assert Circuit.from_dict(raw).raw == raw
 
 
+def test_circuit_serialization_with_wire_names():
+    c = Circuit(2, wire_names=["a", "b"])
+    raw = c.raw
+    assert "wire_names" in raw
+    new_c = Circuit.from_dict(raw)
+    assert new_c.wire_names == c.wire_names
+
+
 def test_circuit_light_cone():
     from qibo import __version__
 
