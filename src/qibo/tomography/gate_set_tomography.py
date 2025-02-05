@@ -7,7 +7,7 @@ import numpy as np
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import _check_backend, get_transpiler
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.transpiler.optimizer import Preprocessing
@@ -187,7 +187,7 @@ def _gate_tomography(
         gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
-    matrix_jk = np.zeros((4**nqubits, 4**nqubits))
+    matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
         circ.add(_prepare_state(k, nqubits))
@@ -211,7 +211,7 @@ def _gate_tomography(
                     backend.execute_circuit(new_circ, nshots=nshots).frequencies()
                 )
             matrix_jk[j, k] = exp_val
-    return matrix_jk
+    return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 
 
 def GST(
@@ -224,10 +224,13 @@ def GST(
     backend=None,
     transpiler=None,
 ):
-    """Runs Gate Set Tomography on the input ``gate_set``.
+    """Run Gate Set Tomography on the input ``gate_set``.
 
     Args:
-        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` to run GST on.
+        gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
+            GST on.
+            E.g. gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX, [np.pi/2, np.pi/3]),
+                             (gates.GPI, [np.pi/7]), gates.CNOT]
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -260,7 +263,15 @@ def GST(
     backend = _check_backend(backend)
 
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
-        transpiler = get_transpiler()
+        transpiler = Passes(
+            connectivity=backend.platform.topology,
+            passes=[
+                Preprocessing(backend.platform.topology),
+                Random(backend.platform.topology),
+                Sabre(backend.platform.topology),
+                Unroller(NativeGates.default()),
+            ],
+        )
 
     matrices = []
     empty_matrices = []
@@ -278,7 +289,17 @@ def GST(
 
     for gate in gate_set:
         if gate is not None:
-            init_args = signature(gate).parameters
+
+            if isinstance(gate, tuple):
+                angles = ["theta", "phi", "lam"]
+                gate, params = gate
+                init_args = signature(gate).parameters
+                valid_angles = [arg for arg in init_args if arg in angles]
+                angle_values = dict(zip(valid_angles, params))
+            else:
+                angle_values = {}
+                init_args = signature(gate).parameters
+
             if "q" in init_args:
                 nqubits = 1
             elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
@@ -286,9 +307,9 @@ def GST(
             else:
                 raise_error(
                     RuntimeError,
-                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubits gates are supported.",
+                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
                 )
-            gate = gate(*range(nqubits))
+            gate = gate(*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
@@ -306,20 +327,20 @@ def GST(
             if np.linalg.det(gauge_matrix) == 0:
                 raise_error(ValueError, "Matrix is not invertible")
         else:
-            gauge_matrix = np.array(
+            gauge_matrix = backend.cast(
                 [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
             )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
-        gauge_matrix_2q = np.kron(gauge_matrix, gauge_matrix)
+        gauge_matrix_2q = backend.np.kron(gauge_matrix, gauge_matrix)
         for matrix in matrices:
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
                 gauge_matrix
-                @ np.linalg.inv(empty)
+                @ backend.np.linalg.inv(empty)
                 @ matrix
-                @ np.linalg.inv(gauge_matrix)
+                @ backend.np.linalg.inv(gauge_matrix)
             )
         matrices = PL_matrices
 

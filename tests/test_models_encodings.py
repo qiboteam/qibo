@@ -6,16 +6,22 @@ from itertools import product
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
+from scipy.special import binom
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    _ehrlich_algorithm,
+    _get_next_bistring,
+    binary_encoder,
     comp_basis_encoder,
     entangling_layer,
     ghz_state,
+    hamming_weight_encoder,
     phase_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
+from qibo.quantum_info.random_ensembles import random_statevector
 
 
 def _gaussian(x, a, b, c):
@@ -100,6 +106,26 @@ def test_phase_encoder(backend, rotation, kind):
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_binary_encoder(backend, nqubits):
+    with pytest.raises(ValueError):
+        dims = 5
+        test = np.random.rand(dims)
+        test = backend.cast(test, dtype=test.dtype)
+        test = binary_encoder(test)
+
+    dims = 2**nqubits
+
+    target = backend.np.real(random_statevector(dims, backend=backend))
+    target /= np.linalg.norm(target)
+    target = backend.cast(target, dtype=np.float64)
+
+    circuit = binary_encoder(target)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -191,6 +217,56 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     backend.assert_allclose(stddev, theoretical_norm, atol=1e-1)
 
 
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("optimize_controls", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("full_hwp", [False, True])
+@pytest.mark.parametrize("weight", [1, 2, 3])
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
+def test_hamming_weight_encoder(
+    backend,
+    nqubits,
+    weight,
+    full_hwp,
+    complex_data,
+    optimize_controls,
+    seed,
+):
+    n_choose_k = int(binom(nqubits, weight))
+    dims = 2**nqubits
+    dtype = complex if complex_data else float
+
+    initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+    indices = _ehrlich_algorithm(initial_string, False)
+    indices = [int(string, 2) for string in indices]
+    indices_lex = np.sort(np.copy(indices))
+
+    rng = np.random.default_rng(seed)
+    data = rng.random(n_choose_k)
+    if complex_data:
+        data = data.astype(complex) + 1j * rng.random(n_choose_k)
+    data /= np.linalg.norm(data)
+
+    target = np.zeros(dims, dtype=dtype)
+    target[indices_lex] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = hamming_weight_encoder(
+        data,
+        nqubits=nqubits,
+        weight=weight,
+        full_hwp=full_hwp,
+        optimize_controls=optimize_controls,
+    )
+    if full_hwp:
+        circuit.queue = [
+            gates.X(nqubits - 1 - qubit) for qubit in range(weight)
+        ] + circuit.queue
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-7)
+
+
 def test_entangling_layer_errors():
     with pytest.raises(TypeError):
         entangling_layer(10.5)
@@ -206,47 +282,90 @@ def test_entangling_layer_errors():
         entangling_layer(10, entangling_gate=gates.GeneralizedfSim)
     with pytest.raises(NotImplementedError):
         entangling_layer(10, entangling_gate=gates.TOFFOLI)
+    with pytest.raises(ValueError):
+        entangling_layer(7, architecture="x")
 
 
 @pytest.mark.parametrize("closed_boundary", [False, True])
 @pytest.mark.parametrize("entangling_gate", ["CNOT", gates.CZ, gates.RBS])
 @pytest.mark.parametrize(
-    "architecture", ["diagonal", "shifted", "even-layer", "odd-layer"]
+    "architecture",
+    [
+        "diagonal",
+        "even_layer",
+        "next_nearest",
+        "odd_layer",
+        "pyramid",
+        "shifted",
+        "v",
+        "x",
+    ],
 )
-@pytest.mark.parametrize("nqubits", [4, 9])
+@pytest.mark.parametrize("nqubits", [4, 6])
 def test_entangling_layer(nqubits, architecture, entangling_gate, closed_boundary):
     target_circuit = Circuit(nqubits)
-    if architecture == "diagonal":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(nqubits - 1)
-        )
-    elif architecture == "even-layer":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-    elif architecture == "odd-layer":
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(1, nqubits - 1, 2)
-        )
+    if architecture in ["next_nearest", "pyramid", "v", "x"]:
+        if architecture == "next_nearest":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit, qubit + 2)
+                for qubit in range(nqubits - 2)
+            )
+            if closed_boundary:
+                target_circuit.add(
+                    _helper_entangling_test(entangling_gate, nqubits - 1, 0)
+                )
+        elif architecture == "pyramid":
+            for end in range(nqubits - 1, 1, -1):
+                target_circuit.add(
+                    _helper_entangling_test(entangling_gate, qubit)
+                    for qubit in range(end)
+                )
+        elif architecture == "v":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit, qubit + 1)
+                for qubit in range(nqubits - 1)
+            )
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit - 1, qubit)
+                for qubit in range(nqubits - 2, 1, -1)
+            )
     else:
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(0, nqubits - 1, 2)
-        )
-        target_circuit.add(
-            _helper_entangling_test(entangling_gate, qubit)
-            for qubit in range(1, nqubits - 1, 2)
-        )
+        if architecture == "diagonal":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(nqubits - 1)
+            )
+        elif architecture == "even_layer":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(0, nqubits - 1, 2)
+            )
+        elif architecture == "odd_layer":
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(1, nqubits - 1, 2)
+            )
+        else:
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(0, nqubits - 1, 2)
+            )
+            target_circuit.add(
+                _helper_entangling_test(entangling_gate, qubit)
+                for qubit in range(1, nqubits - 1, 2)
+            )
 
-    if closed_boundary:
-        target_circuit.add(_helper_entangling_test(entangling_gate, nqubits - 1, 0))
+        if closed_boundary:
+            target_circuit.add(_helper_entangling_test(entangling_gate, nqubits - 1, 0))
 
     circuit = entangling_layer(nqubits, architecture, entangling_gate, closed_boundary)
+
     for gate, target in zip(circuit.queue, target_circuit.queue):
         assert gate.__class__.__name__ == target.__class__.__name__
+        assert gate.qubits == target.qubits
+        assert gate.target_qubits == target.target_qubits
+        assert gate.control_qubits == target.control_qubits
+        assert gate.parameters == target.parameters
 
 
 def _helper_entangling_test(gate, qubit_0, qubit_1=None):

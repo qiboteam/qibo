@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 from openqasm3 import parser
 
-import qibo
 from qibo import Circuit, __version__, gates
 
 
@@ -188,12 +187,25 @@ cry(0.3) q[2],q[1];"""
         target = c.to_qasm()
 
 
-@pytest.mark.parametrize(
-    "measurements",
-    [
-        [gates.M(0, 1)],
-    ],
-)
+@pytest.mark.parametrize("qasm_type", [2, 3])
+def test_u3_gate(qasm_type):
+    target = Circuit(1)
+    target.add(gates.U3(0, 1, 2, 3))
+    target = target.to_qasm()
+
+    # hardcoding the example to not create a `qiskit` dependency
+    string = (
+        ('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[1];\nu(1.0,2.0,3.0) q[0];')
+        if qasm_type == 2
+        else 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nU(1.0, 2.0, 3.0) q[0];\n'
+    )
+    string = Circuit.from_qasm(string)
+    string = string.to_qasm()
+
+    assert_strings_equal(string, target)
+
+
+@pytest.mark.parametrize("measurements", [[gates.M(0, 1)]])
 def test_measurements(measurements):
     c = Circuit(2)
     c.add(gates.X(0))
