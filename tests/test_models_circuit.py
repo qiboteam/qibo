@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 from networkx import Graph
 
-from qibo import Circuit, gates, get_backend, get_transpiler
+from qibo import Circuit, gates
 from qibo.models.circuit import _resolve_qubits
 from qibo.models.utils import initialize
-from qibo.transpiler import Sabre
+from qibo.transpiler import Passes, Sabre
 from qibo.transpiler._exceptions import PlacementError
 
 
