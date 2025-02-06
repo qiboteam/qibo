@@ -51,7 +51,9 @@ def test_symbolic_hamiltonian_form_setter(backend):
 
 def test_symbolic_hamiltonian_dense(backend):
     target_matrix = backend.cast(
-        Z(0).matrix @ Z(0).matrix + X(0).matrix @ Y(0).matrix + np.eye(2)
+        Z(0, backend=backend).matrix @ Z(0, backend=backend).matrix
+        + X(0, backend=backend).matrix @ Y(0, backend=backend).matrix
+        + backend.matrices.I()
     )
     form = Z(0) ** 2 + X(0) * Y(0) + 1
     sham = SymbolicHamiltonian(form, nqubits=1, backend=backend)

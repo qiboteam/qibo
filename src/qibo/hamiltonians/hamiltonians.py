@@ -451,7 +451,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # if the term is number we should return in the form of identity
             # matrix because in expressions like `1 + Z`, `1` is not correspond
             # to the float 1 but the identity operator (matrix)
-            result = complex(term) * self.backend.np.eye(2**self.nqubits, dtype=float)
+            result = complex(term) * self.backend.matrices.I(2**self.nqubits)
 
         else:
             raise_error(

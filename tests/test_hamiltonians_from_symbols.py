@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import sympy
 
-from qibo import hamiltonians, matrices
+from qibo import get_backend, hamiltonians, matrices
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
@@ -19,7 +19,7 @@ def test_symbols_pickling(symbol):
     new_symbol = pickle.loads(dumped_symbol)
     for attr in ("target_qubit", "name", "_gate"):
         assert getattr(symbol, attr) == getattr(new_symbol, attr)
-    np.testing.assert_allclose(symbol.matrix, new_symbol.matrix)
+    get_backend().assert_allclose(symbol.matrix, new_symbol.matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -133,7 +133,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype):
         backend.np.kron(backend.matrices.I(), backend.matrices.Z),
         backend.np.kron(backend.matrices.I(), backend.matrices.I()),
     )
-    target_matrix -= 2 * backend.np.eye(2**4, dtype=target_matrix.dtype)
+    target_matrix -= 2 * backend.matrices.I(2**4)
     backend.assert_allclose(final_matrix, target_matrix)
 
 

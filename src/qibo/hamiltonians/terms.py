@@ -46,7 +46,7 @@ class HamiltonianTerm:
         self.target_qubits = tuple(q)
         self._gate = None
         self.hamiltonian = None
-        self._matrix = matrix
+        self._matrix = self.backend.cast(matrix)
 
     @property
     def matrix(self):
@@ -62,9 +62,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        from scipy.linalg import expm
-
-        return expm(-1j * x * self.matrix)
+        return self.backend.calculate_matrix_exp(x, self.matrix)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -84,7 +82,7 @@ class HamiltonianTerm:
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
         matrix = self.backend.np.kron(
-            term.matrix, self.backend.np.eye(2 ** (len(self) - len(term)))
+            term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
         matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
         order = []
@@ -257,6 +255,7 @@ class SymbolicTerm(HamiltonianTerm):
         new.factors = self.factors
         new.matrix_map = self.matrix_map
         new.target_qubits = self.target_qubits
+        new.backend = self.backend
         return new
 
     def __mul__(self, x):

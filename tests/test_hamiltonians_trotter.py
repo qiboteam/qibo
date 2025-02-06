@@ -98,7 +98,7 @@ def test_trotter_hamiltonian_matmul(backend, nqubits, normalize):
 
 def test_symbolic_hamiltonian_circuit_different_dts(backend):
     """Issue: https://github.com/qiboteam/qibo/issues/1357."""
-    ham = hamiltonians.SymbolicHamiltonian(symbols.Z(0))
+    ham = hamiltonians.SymbolicHamiltonian(symbols.Z(0), backend=backend)
     a = ham.circuit(0.1)
     b = ham.circuit(0.1)
     matrix1 = ham.circuit(0.2).unitary(backend)
