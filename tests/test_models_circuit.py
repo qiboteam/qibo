@@ -387,13 +387,7 @@ def test_circuit_serialization_with_wire_names():
     new_c = Circuit.from_dict(raw)
     assert new_c.wire_names == c.wire_names
 
-    get_backend()  # this has to be called before get_transpiler
-    # otherwise it crashes
-    transpiler = get_transpiler()
-    g = Graph()
-    g.add_edge(*wire_names)
-    transpiler.connectivity = g
-    transpiler.passes = [Sabre()]
+    transpiler = Passes(passes=[Sabre()], connectivity=Graph([wire_names]))
 
     c, _ = transpiler(c)
     new_c, _ = transpiler(new_c)
