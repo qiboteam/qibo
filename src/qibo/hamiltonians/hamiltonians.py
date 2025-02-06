@@ -426,7 +426,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             factors = term.as_ordered_factors()
             result = reduce(
                 self.backend.np.matmul,
-                [self._get_symbol_matrix(subterm) for subterm in factors],
+                (self._get_symbol_matrix(subterm) for subterm in factors),
             )
 
         elif isinstance(term, sympy.Pow):
