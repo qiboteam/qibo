@@ -4,10 +4,13 @@ from collections import Counter
 
 import numpy as np
 import pytest
+from networkx import Graph
 
-from qibo import Circuit, gates
+from qibo import Circuit, gates, get_backend, get_transpiler
 from qibo.models.circuit import _resolve_qubits
 from qibo.models.utils import initialize
+from qibo.transpiler import Sabre
+from qibo.transpiler._exceptions import PlacementError
 
 
 def test_parametrizedgates_class():
@@ -376,11 +379,29 @@ def test_circuit_serialization():
 
 
 def test_circuit_serialization_with_wire_names():
-    c = Circuit(2, wire_names=["a", "b"])
+
+    wire_names = ["a", "b"]
+    c = Circuit(2, wire_names=wire_names)
     raw = c.raw
     assert "wire_names" in raw
     new_c = Circuit.from_dict(raw)
     assert new_c.wire_names == c.wire_names
+
+    get_backend()  # this has to be called before get_transpiler
+    # otherwise it crashes
+    transpiler = get_transpiler()
+    g = Graph()
+    g.add_edge(*wire_names)
+    transpiler.connectivity = g
+    transpiler.passes = [Sabre()]
+
+    c, _ = transpiler(c)
+    new_c, _ = transpiler(new_c)
+    assert new_c.wire_names == c.wire_names
+
+    with pytest.raises(PlacementError):
+        c.wire_names = ["c", "b"]
+        transpiler(c)
 
 
 def test_circuit_light_cone():
