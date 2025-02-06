@@ -3,9 +3,9 @@
 # Script for running the selfhosted tests on QPUs directly from GitHub
 # Tests need to be copied to /tmp/ because coverage does not work with NFS
 
-cp -r tests /tmp/
-cp pyproject.toml /tmp/
-cd /tmp/tests
+cp -r tests /tmp/qibo
+cp pyproject.toml /tmp/qibo
+cd /tmp/qibo/tests
 source /nfs/users/github/actions-runner/_work/qibo/qibo/testenv/bin/activate
 pytest
 pytest_status=$?
@@ -14,6 +14,6 @@ if [[ $pytest_status -ne 0 ]]
         exit $pytest_status
 fi
 cd -
-mv /tmp/tests/coverage.xml .
-mv /tmp/tests/htmlcov .
-rm -r /tmp/tests
+mv /tmp/qibo/tests/coverage.xml .
+mv /tmp/qibo/tests/htmlcov .
+rm -r /tmp/qibo/tests
