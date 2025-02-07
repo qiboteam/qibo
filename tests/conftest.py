@@ -82,7 +82,7 @@ def pytest_configure(config):
 
 @pytest.fixture
 def backend(backend_name, request):
-    if request.config.getoption("--gpu_only"):  # pragma: no cover
+    if request.config.getoption("--gpu-only"):  # pragma: no cover
         if backend_name not in ("cupy", "cuquantum"):
             pytest.skip("Skipping non-gpu backend.")
     yield get_backend(backend_name)
