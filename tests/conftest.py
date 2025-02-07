@@ -13,7 +13,7 @@ from qibo.backends import _Global, construct_backend
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--gpu_only",
+        "--gpu-only",
         action="store_true",
         default=False,
         help="Run on GPU backends only.",
