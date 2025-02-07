@@ -1,4 +1,4 @@
-""" Implement a Quantum Convolutional Neural Network (QCNN) for classification tasks.
+"""Implement a Quantum Convolutional Neural Network (QCNN) for classification tasks.
 The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_
 for the identification of quantum phases.
 

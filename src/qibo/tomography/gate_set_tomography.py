@@ -187,7 +187,7 @@ def _gate_tomography(
         gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
-    matrix_jk = np.zeros((4**nqubits, 4**nqubits))
+    matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
         circ.add(_prepare_state(k, nqubits))
@@ -211,7 +211,7 @@ def _gate_tomography(
                     backend.execute_circuit(new_circ, nshots=nshots).frequencies()
                 )
             matrix_jk[j, k] = exp_val
-    return matrix_jk
+    return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 
 
 def GST(
@@ -327,20 +327,20 @@ def GST(
             if np.linalg.det(gauge_matrix) == 0:
                 raise_error(ValueError, "Matrix is not invertible")
         else:
-            gauge_matrix = np.array(
+            gauge_matrix = backend.cast(
                 [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
             )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
-        gauge_matrix_2q = np.kron(gauge_matrix, gauge_matrix)
+        gauge_matrix_2q = backend.np.kron(gauge_matrix, gauge_matrix)
         for matrix in matrices:
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
                 gauge_matrix
-                @ np.linalg.inv(empty)
+                @ backend.np.linalg.inv(empty)
                 @ matrix
-                @ np.linalg.inv(gauge_matrix)
+                @ backend.np.linalg.inv(gauge_matrix)
             )
         matrices = PL_matrices
 
