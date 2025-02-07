@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import ndarray
+from scipy.linalg import expm
 
 
 def _pauli_basis(
@@ -56,36 +57,68 @@ def _vectorization_system(state: ndarray) -> ndarray:
     return np.reshape(state, (-1, 2 ** (2 * nqubits)))
 
 
-def vectorization(state: ndarray, order: str) -> ndarray:
-    if (
-        (len(state.shape) > 3)
-        or (len(state) == 0)
-        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
-    ):
-        raise TypeError(
-            f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}."
-        )
-    if order not in ["row", "column", "system"]:
-        raise ValueError(
-            f"order must be either 'row' or 'column' or 'system', but it is {order}."
-        )
+def _random_statevector(dims):
+    state = np.random.standard_normal(dims)
+    state = state + 1.0j * np.random.standard_normal(dims)
+    return state / np.linalg.norm(state)
 
-    dim = state.shape[-1]
 
-    if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
-    elif len(state.shape) == 3 and state.shape[1] == 1:
-        state = np.einsum("aij,akl->aijkl", state, np.conj(state)).reshape(
-            state.shape[0], dim, dim
-        )
+def _random_density_matrix_pure(dims):
+    state = _random_statevector(dims)
+    return np.outer(state, np.conj(state).T)
 
-    if order == "row":
-        state = _vectorization_row(state, dim)
-    elif order == "column":
-        state = _vectorization_column(state, dim)
-    else:
-        state = _vectorization_system(state)
 
-    return np.squeeze(
-        state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
+def _random_gaussian_matrix(dims, rank, mean, stddev):
+    dims = (dims, rank)
+    matrix = 1.0j * np.random.normal(loc=mean, scale=stddev, size=dims)
+    matrix += np.random.normal(loc=mean, scale=stddev, size=dims)
+    return matrix
+
+
+def _random_density_matrix_hs_ginibre(dims, rank, mean, stddev):
+    state = _random_gaussian_matrix(dims, rank, mean, stddev)
+    state = np.matmul(state, np.transpose(np.conj(state), (1, 0)))
+    return state / np.trace(state)
+
+
+def _random_hermitian(dims, rank, mean, stddev):
+    matrix = _random_gaussian_matrix(dims, rank, mean, stddev)
+    return (matrix + np.conj(matrix).T) / 2
+
+
+def _random_unitary(dims, rank, mean, stddev):
+    H = _random_hermitian(dims, rank, mean, stddev)
+    return expm(-1.0j * H / 2)
+
+
+def _random_density_matrix_bures(dims, rank, mean, stddev):
+    nqubits = int(np.log2(dims))
+    state = np.eye(dims)
+    state += _random_unitary(dims, rank, mean, stddev)
+    state = np.matmul(
+        state,
+        _random_gaussian_matrix(dims, rank, mean, stddev),
     )
+    state = np.matmul(state, np.transpose(np.conj(state), (1, 0)))
+    return state / np.trace(state)
+
+
+def _sample_from_quantum_mallows_distribution(nqubits: int):
+    mute_index = list(range(nqubits))
+    exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
+    powers = 4**exponents
+    powers[powers == 0] = np.iinfo(np.int64).max
+    r = np.random.uniform(0, 1, size=nqubits)
+    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / powers)))
+    hadamards = 1 * (indexes < exponents)
+    permutations = np.zeros(nqubits, dtype=int)
+    for l, (index, m) in enumerate(zip(indexes, exponents)):
+        k = index if index < m else 2 * m - index - 1
+        k = int(k)
+        permutations[l] = mute_index[k]
+        del mute_index[k]
+    return hadamards, permutations
+
+
+def _delta_gamma_matrices():
+    pass
