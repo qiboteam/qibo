@@ -47,6 +47,10 @@ class CliffordBackend(NumpyBackend):
         if engine == "numpy":
             pass
         elif engine == "numba":
+            from numba import set_num_threads
+
+            set_num_threads(1)
+
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_cpu,
             )

@@ -32,8 +32,8 @@ def u3_decomposition(unitary, backend):
     minus = backend.np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
-
-    return theta, phi, lam
+    # explicit conversion to float to avoid issue on GPU
+    return float(theta), float(phi), float(lam)
 
 
 def calculate_psi(unitary, backend, magic_basis=magic_basis):
@@ -51,16 +51,6 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     Returns:
         ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
-
-    if backend.__class__.__name__ in [
-        "CupyBackend",
-        "CuQuantumBackend",
-    ]:  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            f"{backend.__class__.__name__} does not support `linalg.eig.`",
-        )
-
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
@@ -71,10 +61,12 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
-    if backend.__class__.__name__ != "PyTorchBackend":
+    if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         # eig seems to have a different behavior based on backend/hardware,
         # use np.round to increase precision seems to fix the issue
-        eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
+        eigvals, psi_magic = backend.calculate_eigenvectors(
+            np.round(ut_u, decimals=20), hermitian=False
+        )
     else:
         eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)

@@ -1,10 +1,6 @@
-import os
-
-from qibo import get_backend, get_threads, set_backend
-
-# Force quimb to use qibojit default number of threads.
-os.environ["NUMBA_NUM_THREADS"] = f"{get_threads()}"
 from qibotn.backends.quimb import QuimbBackend
+
+from qibo import get_backend, set_backend
 
 
 def test_backend_qibotn():
