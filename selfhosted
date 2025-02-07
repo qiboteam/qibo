@@ -3,8 +3,7 @@
 # Script for running the selfhosted tests on QPUs directly from GitHub
 # Tests need to be copied to /tmp/ because coverage does not work with NFS
 
-tmpdir=/tmp/$(date +%s)
-mkdir $tmpdir
+tmpdir=$(mktemp -d)
 cp -r tests $tmpdir
 cp pyproject.toml $tmpdir
 cd $tmpdir/tests
