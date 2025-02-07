@@ -1115,6 +1115,7 @@ class Circuit:
             "queue": [gate.raw for gate in self.queue],
             "nqubits": self.nqubits,
             "density_matrix": self.density_matrix,
+            "wire_names": self.wire_names,
             "qibo_version": qibo.__version__,
         }
 
@@ -1124,7 +1125,11 @@ class Circuit:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        circ = cls(raw["nqubits"], density_matrix=raw["density_matrix"])
+        circ = cls(
+            raw["nqubits"],
+            density_matrix=raw["density_matrix"],
+            wire_names=raw.get("wire_names"),
+        )
 
         for gate in raw["queue"]:
             circ.add(Gate.from_dict(gate))
