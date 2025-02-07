@@ -10,6 +10,16 @@ import pytest
 
 from qibo.backends import _Global, construct_backend
 
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--gpu_only",
+        action="store_true",
+        default=False,
+        help="Run on GPU backends only.",
+    )
+
+
 # backends to be tested
 BACKENDS = [
     "numpy",
@@ -72,6 +82,9 @@ def pytest_configure(config):
 
 @pytest.fixture
 def backend(backend_name):
+    if request.config.getoption("--gpu_only"):  # pragma: no cover
+        if backend_name not in ("cupy", "cuquantum"):
+            pytest.skip("Skipping non-gpu backend.")
     yield get_backend(backend_name)
 
 
