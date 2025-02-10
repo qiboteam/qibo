@@ -36,8 +36,8 @@ class NumpyBackend(Backend):
         )
         # load the quantum info basic operations
         spec = find_spec("qibo.quantum_info.quantum_info")
-        self.quantum_info = module_from_spec(spec)
-        spec.loader.exec_module(self.quantum_info)
+        self.qinfo = module_from_spec(spec)
+        spec.loader.exec_module(self.qinfo)
 
     @property
     def qubits(self):
