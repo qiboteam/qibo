@@ -53,16 +53,11 @@ def vectorization(state, order: str = "row", backend=None):
             f"Object must have dims either (k,), (k, k), (N, 1, k) or (N, k, k), but have dims {state.shape}.",
         )
 
-    if not isinstance(order, str):
+    if order not in ["row", "column", "system"]:
         raise_error(
-            TypeError, f"order must be type str, but it is type {type(order)} instead."
+            ValueError,
+            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
         )
-    else:
-        if order not in ["row", "column", "system"]:
-            raise_error(
-                ValueError,
-                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
-            )
 
     backend = _check_backend(backend)
 
@@ -76,22 +71,11 @@ def vectorization(state, order: str = "row", backend=None):
         ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.qinfo.vectorization_row(state, dims)
     elif order == "column":
-        indices = list(range(len(state.shape)))
-        indices[-2:] = reversed(indices[-2:])
-        state = backend.np.transpose(state, indices)
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.qinfo.vectorization_column(state, dims)
     else:
-        nqubits = int(np.log2(state.shape[-1]))
-
-        new_axis = [0]
-        for qubit in range(nqubits):
-            new_axis.extend([qubit + nqubits + 1, qubit + 1])
-
-        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
-        state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
+        state = backend.qinfo.vectorization_system(state)
 
     state = backend.np.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
