@@ -6,6 +6,7 @@ from functools import cache
 from typing import Optional, Union
 
 import numpy as np
+from numpy.random import permutation
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates, matrices
@@ -161,7 +162,7 @@ def random_hermitian(
     backend = _check_backend(backend)
     backend.set_seed(seed)
     if semidefinite:
-        matrix = backend.qinfo._random_hermitian_seimidefinite(dims)
+        matrix = backend.qinfo._random_hermitian_semidefinite(dims)
     else:
         matrix = backend.qinfo._random_hermitian(dims)
 
@@ -299,14 +300,15 @@ def random_quantum_channel(
             NotImplementedError, f"order {order} not implemented for measure {measure}."
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if measure == "bcsz":
         super_op = _super_op_from_bcsz_measure(
-            dims=dims, rank=rank, order=order, seed=local_state, backend=backend
+            dims=dims, rank=rank, order=order, seed=seed, backend=backend
         )
     else:
-        super_op = random_unitary(dims, measure, local_state, backend)
+        super_op = random_unitary(dims, measure, seed, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
         super_op = backend.np.outer(super_op, backend.np.conj(super_op))
 
@@ -524,6 +526,10 @@ def random_clifford(
         nqubits
     )
 
+    gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime = (
+        backend.qinfo._gamma_delta_matrices(nqubits, hadamards, permutations)
+    )
+    """
     delta_matrix = np.eye(nqubits, dtype=int)
     delta_matrix_prime = np.copy(delta_matrix)
 
@@ -576,7 +582,7 @@ def random_clifford(
             ):  # pragma: no cover
                 b = local_state.integers(0, 2)
                 delta_matrix[k, j] = b
-
+    """
     # get first element of the Borel group
     clifford_circuit = _operator_from_hadamard_free_group(
         gamma_matrix, delta_matrix, density_matrix
@@ -597,7 +603,7 @@ def random_clifford(
             depth=1,
             return_circuit=True,
             density_matrix=density_matrix,
-            seed=local_state,
+            seed=seed,
             backend=backend,
         ),
     )
@@ -651,28 +657,6 @@ def random_pauli(
 
     """
 
-    if (
-        not isinstance(qubits, int)
-        and not isinstance(qubits, list)
-        and not isinstance(qubits, np.ndarray)
-    ):
-        raise_error(
-            TypeError,
-            f"qubits must be either type int, list or ndarray, but it is type {type(qubits)}.",
-        )
-
-    if isinstance(qubits, int) and qubits < 0:
-        raise_error(ValueError, "qubits must be a non-negative integer.")
-
-    if isinstance(qubits, int) is False and any(q < 0 for q in qubits):
-        raise_error(ValueError, "qubit indexes must be non-negative integers.")
-
-    if isinstance(depth, int) and depth <= 0:
-        raise_error(ValueError, "depth must be a positive integer.")
-
-    if isinstance(max_qubits, int) and max_qubits <= 0:
-        raise_error(ValueError, "max_qubits must be a positive integer.")
-
     if max_qubits is not None:
         if isinstance(qubits, int) and qubits >= max_qubits:
             raise_error(
@@ -682,29 +666,24 @@ def random_pauli(
         elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
             raise_error(ValueError, "all qubit indexes must be < max_qubits.")
 
-    if not isinstance(return_circuit, bool):
-        raise_error(
-            TypeError,
-            f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
-        )
-
-    if subset is not None and not isinstance(subset, list):
-        raise_error(
-            TypeError, f"subset must be type list, but it is type {type(subset)}."
-        )
-
     if subset is not None and any(isinstance(item, str) is False for item in subset):
         raise_error(
             TypeError,
             "subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     complete_set = (
         {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
         if return_circuit
-        else {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+        else {
+            "I": backend.matrices.I(),
+            "X": backend.matrices.X,
+            "Y": backend.matrices.Y,
+            "Z": backend.matrices.Z,
+        }
     )
 
     if subset is None:
@@ -724,7 +703,8 @@ def random_pauli(
         if isinstance(qubits, int):
             qubits = [qubits]
 
-    indexes = local_state.integers(0, len(subset), size=(len(qubits), depth))
+    # this may be optimized as well (the sampling mostly) but maybe it's not worth it
+    indexes = backend.np.random.randint(0, len(subset), size=(len(qubits), depth))
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:
@@ -734,6 +714,7 @@ def random_pauli(
                 if subset[column_item] != gates.I:
                     gate_grid.add(subset[column_item](qubit))
     else:
+        # most likely this cast is not needed
         gate_grid = backend.cast(
             [[subset[column_item] for column_item in row] for row in indexes]
         )

@@ -71,11 +71,11 @@ def vectorization(state, order: str = "row", backend=None):
         ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.qinfo.vectorization_row(state, dims)
+        state = backend.qinfo._vectorization_row(state, dims)
     elif order == "column":
-        state = backend.qinfo.vectorization_column(state, dims)
+        state = backend.qinfo._vectorization_column(state, dims)
     else:
-        state = backend.qinfo.vectorization_system(state)
+        state = backend.qinfo._vectorization_system(state)
 
     state = backend.np.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)

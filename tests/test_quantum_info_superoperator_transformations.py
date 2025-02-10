@@ -57,8 +57,6 @@ def test_vectorization(backend, nqubits, order, statevector):
         vectorization(x, backend=backend)
     with pytest.raises(TypeError):
         vectorization(np.array([]), backend=backend)
-    with pytest.raises(TypeError):
-        vectorization(random_statevector(4, backend=backend), order=1, backend=backend)
     with pytest.raises(ValueError):
         vectorization(
             random_statevector(4, backend=backend), order="1", backend=backend

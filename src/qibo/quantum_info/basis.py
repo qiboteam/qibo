@@ -63,9 +63,10 @@ def pauli_basis(
 
     backend = _check_backend(backend)
 
-    pauli_labels = {
-        label: getattr(backend.matrices, label) for label in ("I", "X", "Y", "Z")
-    }
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
 

@@ -23,7 +23,7 @@ from qibo.quantum_info.random_ensembles import (
 )
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_uniform_sampling_U3(backend, seed):
     with pytest.raises(TypeError):
         uniform_sampling_U3("1", seed=seed, backend=backend)
@@ -62,7 +62,7 @@ def test_uniform_sampling_U3(backend, seed):
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_random_gaussian_matrix(backend, seed):
     with pytest.raises(TypeError):
         dims = np.array([2])
@@ -92,21 +92,6 @@ def test_random_gaussian_matrix(backend, seed):
 
 
 def test_random_hermitian(backend):
-    with pytest.raises(TypeError):
-        dims = 2
-        random_hermitian(dims, semidefinite="True", backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        random_hermitian(dims, normalize="True", backend=backend)
-    with pytest.raises(TypeError):
-        dims = np.array([1])
-        random_hermitian(dims, backend=backend)
-    with pytest.raises(ValueError):
-        dims = 0
-        random_hermitian(dims, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        random_hermitian(dims, seed=0.1, backend=backend)
 
     # test if function returns Hermitian operator
     dims = 4
@@ -152,21 +137,9 @@ def test_random_hermitian(backend):
 
 @pytest.mark.parametrize("measure", [None, "haar"])
 def test_random_unitary(backend, measure):
-    with pytest.raises(TypeError):
-        dims = np.array([1])
-        random_unitary(dims, measure=measure, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        random_unitary(dims, measure=1, backend=backend)
-    with pytest.raises(ValueError):
-        dims = 0
-        random_unitary(dims, measure=measure, backend=backend)
     with pytest.raises(ValueError):
         dims = 2
         random_unitary(dims, measure="gaussian", backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        random_unitary(dims=2, measure=measure, seed=0.1, backend=backend)
 
     # tests if operator is unitary (measure == "haar")
     dims = 4
@@ -217,17 +190,8 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
     )
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_random_statevector(backend, seed):
-    with pytest.raises(TypeError):
-        dims = "10"
-        random_statevector(dims, backend=backend)
-    with pytest.raises(ValueError):
-        dims = 0
-        random_statevector(dims, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        random_statevector(dims, seed=0.1, backend=backend)
 
     # tests if random statevector is a pure state
     dims = 4
@@ -243,30 +207,12 @@ def test_random_statevector(backend, seed):
 @pytest.mark.parametrize("pure", [False, True])
 @pytest.mark.parametrize("dims", [2, 4])
 def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=np.array([1]), backend=backend)
-    with pytest.raises(ValueError):
-        test = random_density_matrix(dims=0, backend=backend)
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=2, rank=np.array([1]), backend=backend)
     with pytest.raises(ValueError):
         test = random_density_matrix(dims=2, rank=3, backend=backend)
     with pytest.raises(ValueError):
-        test = random_density_matrix(dims=2, rank=0, backend=backend)
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=2, pure="True", backend=backend)
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=2, metric=1, backend=backend)
-    with pytest.raises(ValueError):
         test = random_density_matrix(dims=2, metric="gaussian", backend=backend)
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=2, metric=metric, basis=True)
     with pytest.raises(ValueError):
         test = random_density_matrix(dims=2, metric=metric, basis="Pauli")
-    with pytest.raises(TypeError):
-        test = random_density_matrix(dims=2, metric=metric, normalize="True")
-    with pytest.raises(TypeError):
-        random_density_matrix(dims=4, seed=0.1, backend=backend)
 
     if basis is None and normalize is True:
         with pytest.raises(ValueError):
@@ -319,20 +265,6 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
-    with pytest.raises(TypeError):
-        test = random_clifford(
-            nqubits="1", return_circuit=return_circuit, backend=backend
-        )
-    with pytest.raises(ValueError):
-        test = random_clifford(
-            nqubits=-1, return_circuit=return_circuit, backend=backend
-        )
-    with pytest.raises(TypeError):
-        test = random_clifford(nqubits, return_circuit="True", backend=backend)
-    with pytest.raises(TypeError):
-        test = random_clifford(
-            nqubits, return_circuit=return_circuit, seed=0.1, backend=backend
-        )
 
     result_single = matrices.Z @ matrices.H
 

@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import ndarray
+from numpy import index_exp, ndarray
 from numpy.random import permutation
 from scipy.linalg import expm
 
@@ -121,7 +121,7 @@ def _random_unitary_haar(dims: int):
 
 def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: float):
     nqubits = int(ENGINE.log2(dims))
-    state = ENGINE.eye(dims)
+    state = ENGINE.eye(dims, dtype=complex)
     state += _random_unitary(dims)
     state = ENGINE.matmul(
         state,
@@ -140,15 +140,19 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
     indexes = -1 * (ENGINE.ceil(ENGINE.log2(r + (1 - r) / powers)))
     hadamards = 1 * (indexes < exponents)
     permutations = ENGINE.zeros(nqubits, dtype=int)
+    # probably equivalent to the loop below, doublecheck!
+    # idx_gt_exp = indexes > exponents
+    # indexes[idx_gt_exp] = 2 * exponents[idx_gt_exp] - indexes[idx_gt_exp] - 1
     for l, (index, m) in enumerate(zip(indexes, exponents)):
         k = index if index < m else 2 * m - index - 1
         k = int(k)
         permutations[l] = mute_index[k]
         del mute_index[k]
+
     return hadamards, permutations
 
 
-def _delta_gamma_matrices(nqubits: int, hadamards: ndarray, permutations: ndarray):
+def _gamma_delta_matrices(nqubits: int, hadamards: ndarray, permutations: ndarray):
     delta_matrix = ENGINE.eye(nqubits, dtype=int)
     delta_matrix_prime = ENGINE.copy(delta_matrix)
 
@@ -217,3 +221,5 @@ def _delta_gamma_matrices(nqubits: int, hadamards: ndarray, permutations: ndarra
             ):  # pragma: no cover
                 b = ENGINE.random.randint(0, 2)
                 delta_matrix[k, j] = b
+
+    return gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime

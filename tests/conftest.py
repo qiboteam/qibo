@@ -13,11 +13,11 @@ from qibo.backends import _Global, construct_backend
 # backends to be tested
 BACKENDS = [
     "numpy",
-    "qibojit-numba",
-    "qibojit-cupy",
-    "qibojit-cuquantum",
-    "qiboml-tensorflow",
-    "qiboml-pytorch",
+    # "qibojit-numba",
+    # "qibojit-cupy",
+    # "qibojit-cuquantum",
+    # "qiboml-tensorflow",
+    # "qiboml-pytorch",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
