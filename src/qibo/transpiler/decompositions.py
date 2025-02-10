@@ -47,7 +47,9 @@ class GateDecompositions:
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
         return [
-            g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
+            g.on_qubits(
+                {i: q for i, q in enumerate(gate.target_qubits + gate.control_qubits)}
+            )
             for g in decomposition
         ]
 
@@ -535,8 +537,12 @@ standard_decompositions.add(
     lambda gate: [
         gates.H(0),
         gates.CNOT(0, 1),
-        gates.RY(0, gate.parameters[0]),
-        gates.RY(1, gate.parameters[0]),
+        gates.RY(0, gate.parameters[0]).controlled_by(
+            *range(2, 2 + len(gate.control_qubits))
+        ),
+        gates.RY(1, gate.parameters[0]).controlled_by(
+            *range(2, 2 + len(gate.control_qubits))
+        ),
         gates.CNOT(0, 1),
         gates.H(0),
     ],
