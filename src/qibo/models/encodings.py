@@ -2,6 +2,7 @@
 
 import math
 from inspect import signature
+from re import finditer
 from typing import List, Optional, Union
 
 import numpy as np
@@ -117,7 +118,7 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     return circuit
 
 
-def binary_encoder(data, **kwargs):
+def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
     """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
 
     ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
@@ -136,6 +137,65 @@ def binary_encoder(data, **kwargs):
     if not nqubits.is_integer():
         raise_error(ValueError, "`data` size must be a power of 2.")
     nqubits = int(nqubits)
+
+    complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+
+    if parametrization == "hopf":
+        circuit = _binary_encoder_hopf(nqubits, complex_data=complex_data, **kwargs)
+
+        angles = _generate_rbs_angles(data, dims, "tree")
+        circuit.set_parameters(2 * angles)
+    else:
+        last_qubit = nqubits - 1
+ 
+        circuit = Circuit(nqubits, **kwargs)
+        circuit.add(gates.RY(last_qubit, 0.0))
+        if complex_data:
+            circuit.add(gates.RZ(last_qubit, 0.0))
+        
+        initial_string = np.array([1] + [0] * (nqubits - 1))
+        for weight in range(1, nqubits):
+            n_choose_k = int(binom(nqubits, weight))
+            placeholder = np.random.rand(n_choose_k)
+            if complex_data:
+                placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
+
+            circuit += hamming_weight_encoder(
+                placeholder,
+                nqubits,
+                weight,
+                full_hwp=True,
+                optimize_controls=False,
+                initial_string=initial_string,
+                **kwargs
+            )
+
+            initial_string = _ehrlich_algorithm(initial_string, False)[-1]
+            controls = [item.start() for item in finditer("1", initial_string)]
+            index = (
+                initial_string.find("0")
+                if weight % 2 == 0
+                else last_qubit - initial_string[::-1].find("0")
+            )
+            initial_string = np.array(list(initial_string), dtype=int)
+            initial_string[index] = 1
+            initial_string = initial_string[::-1]
+
+            circuit.add(
+                gates.RY(index, 0.0).controlled_by(*controls)
+            )
+            if complex_data:
+                circuit.add(
+                    gates.RZ(index, 0.0).controlled_by(
+                        *controls
+                    )
+                )
+
+    return circuit
+
+
+def _binary_encoder_hopf(nqubits, complex_data, **kwargs):
+    dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
     base_strings = np.reshape(base_strings, (-1, 2))
@@ -169,9 +229,6 @@ def binary_encoder(data, **kwargs):
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
-
-    angles = _generate_rbs_angles(data, dims, "tree")
-    circuit.set_parameters(2 * angles)
 
     return circuit
 
@@ -330,6 +387,8 @@ def hamming_weight_encoder(
     weight: int,
     full_hwp: bool = False,
     optimize_controls: bool = True,
+    phase_correction: bool = True,
+    initial_string=None,
     **kwargs,
 ):
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
@@ -368,7 +427,8 @@ def hamming_weight_encoder(
     """
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
-    initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+    if initial_string is None:
+        initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
     # sort data such that the encoding is performed in lexicographical order
@@ -421,7 +481,7 @@ def hamming_weight_encoder(
         )
         circuit.add(gate)
 
-    if complex_data:
+    if complex_data and phase_correction:
         circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
 
     return circuit
