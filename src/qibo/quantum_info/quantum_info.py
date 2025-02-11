@@ -15,7 +15,9 @@ def _pauli_basis(
     output_indices = (i for indices in zip(*input_indices) for i in indices)
     operands = [basis_single for _ in range(nqubits)]
     inputs = [item for pair in zip(operands, input_indices) for item in pair]
-    return ENGINE.einsum(*inputs, output_indices).reshape(4**nqubits, dim, dim)
+    return ENGINE.einsum(  # pylint: disable=too-many-function-args
+        *inputs, output_indices
+    ).reshape(4**nqubits, dim, dim)
 
 
 def _post_sparse_pauli_basis_vectorization(
