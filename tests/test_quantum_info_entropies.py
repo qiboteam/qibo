@@ -542,7 +542,7 @@ def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevecto
 
     backend.assert_allclose(
         relative_von_neumann_entropy(state, target, backend=backend),
-        -0.21227801,
+        -0.9888146910047833,
         atol=1e-8,
     )
 

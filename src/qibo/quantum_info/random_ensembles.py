@@ -10,7 +10,12 @@ from numpy.random import permutation
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import NumpyBackend, _check_backend, _check_backend_and_local_state
+from qibo.backends import (
+    NumpyBackend,
+    _check_backend,
+    _check_backend_and_local_state,
+    clifford,
+)
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
@@ -529,60 +534,7 @@ def random_clifford(
     gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime = (
         backend.qinfo._gamma_delta_matrices(nqubits, hadamards, permutations)
     )
-    """
-    delta_matrix = np.eye(nqubits, dtype=int)
-    delta_matrix_prime = np.copy(delta_matrix)
 
-    gamma_matrix_prime = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix_prime = np.diag(gamma_matrix_prime)
-
-    gamma_matrix = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix = hadamards * gamma_matrix
-    gamma_matrix = np.diag(gamma_matrix)
-
-    # filling off-diagonal elements of gammas and deltas matrices
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            b = local_state.integers(0, 2)
-            gamma_matrix_prime[k, j] = b
-            gamma_matrix_prime[j, k] = b
-
-            b = local_state.integers(0, 2)
-            delta_matrix_prime[k, j] = b
-
-            if hadamards[k] == 1 and hadamards[j] == 1:  # pragma: no cover
-                b = local_state.integers(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-                if permutations[k] > permutations[j]:
-                    b = local_state.integers(0, 2)
-                    delta_matrix[k, j] = b
-
-            if hadamards[k] == 0 and hadamards[j] == 1:
-                b = local_state.integers(0, 2)
-                delta_matrix[k, j] = b
-                if permutations[k] > permutations[j]:
-                    b = local_state.integers(0, 2)
-                    gamma_matrix[k, j] = b
-                    gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 1
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = local_state.integers(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 0
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = local_state.integers(0, 2)
-                delta_matrix[k, j] = b
-    """
     # get first element of the Borel group
     clifford_circuit = _operator_from_hadamard_free_group(
         gamma_matrix, delta_matrix, density_matrix
@@ -665,6 +617,8 @@ def random_pauli(
             )
         elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
             raise_error(ValueError, "all qubit indexes must be < max_qubits.")
+    if depth < 1:
+        raise_error(ValueError, "``depth`` must be >= 1.")
 
     if subset is not None and any(isinstance(item, str) is False for item in subset):
         raise_error(
@@ -714,7 +668,6 @@ def random_pauli(
                 if subset[column_item] != gates.I:
                     gate_grid.add(subset[column_item](qubit))
     else:
-        # most likely this cast is not needed
         gate_grid = backend.cast(
             [[subset[column_item] for column_item in row] for row in indexes]
         )
@@ -783,11 +736,12 @@ def random_pauli_hamiltonian(
             "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     d = 2**nqubits
 
-    hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
+    hamiltonian = random_hermitian(d, normalize=True, seed=seed, backend=backend)
 
     eigenvalues, eigenvectors = backend.calculate_eigenvectors(hamiltonian)
     if backend.platform == "tensorflow":

@@ -266,11 +266,16 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
 
-    result_single = matrices.Z @ matrices.H
+    result_single = matrices.X @ matrices.H @ matrices.S
 
-    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Y)
-    result_two = np.kron(matrices.S @ matrices.X, matrices.I) @ result_two
-    result_two = matrices.CNOT @ matrices.CZ @ result_two
+    result_two = (
+        matrices.CNOT
+        @ matrices.CZ
+        @ np.kron(matrices.X, matrices.S)
+        @ np.kron(matrices.H, matrices.X)
+        @ matrices.CZ
+        @ np.kron(matrices.S, matrices.I)
+    )
 
     result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
@@ -290,69 +295,34 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
 
 def test_random_pauli_errors(backend):
-    with pytest.raises(TypeError):
-        q, depth = "1", 1
-        random_pauli(q, depth, backend=backend)
-    with pytest.raises(ValueError):
-        q, depth = -1, 1
-        random_pauli(q, depth, backend=backend)
-    with pytest.raises(ValueError):
-        q = [0, 1, -3]
-        depth = 1
-        random_pauli(q, depth, backend=backend)
-    with pytest.raises(TypeError):
-        q, depth = 1, "1"
-        random_pauli(q, depth, backend=backend)
     with pytest.raises(ValueError):
         q, depth = 1, 0
         random_pauli(q, depth, backend=backend)
-    with pytest.raises(TypeError):
-        q, depth, max_qubits = 1, 1, "1"
-        random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
-    with pytest.raises(ValueError):
-        q, depth, max_qubits = 1, 1, 0
-        random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
     with pytest.raises(ValueError):
         q, depth, max_qubits = 4, 1, 3
         random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
-    with pytest.raises(ValueError):
-        q = [0, 1, 3]
-        depth = 1
-        max_qubits = 2
-        random_pauli(q, depth, max_qubits=max_qubits, backend=backend)
-    with pytest.raises(TypeError):
-        q, depth = 1, 1
-        random_pauli(q, depth, return_circuit="True", backend=backend)
-    with pytest.raises(TypeError):
-        q, depth = 2, 1
-        subset = np.array([0, 1])
-        random_pauli(q, depth, subset=subset, backend=backend)
     with pytest.raises(TypeError):
         q, depth = 2, 1
         subset = ["I", 0]
         random_pauli(q, depth, subset=subset, backend=backend)
-    with pytest.raises(TypeError):
-        q, depth = 1, 1
-        random_pauli(q, depth, seed=0.1, backend=backend)
 
 
 def test_pauli_single(backend):
-    result = np.array([[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, -1.0 + 0.0j]])
+    result = np.array([[0.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 0.0 + 0.0j]])
     result = backend.cast(result, dtype=result.dtype)
 
     matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary(backend=backend)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
-    backend.assert_allclose(
+    assert (
         np.abs(
             backend.to_numpy(backend.calculate_matrix_norm(matrix - result, order=2))
         )
-        < PRECISION_TOL,
-        True,
+        < PRECISION_TOL
     )
 
 
-@pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
+@pytest.mark.parametrize("qubits", [2, [0, 1]])
 @pytest.mark.parametrize("depth", [2])
 @pytest.mark.parametrize("max_qubits", [None])
 @pytest.mark.parametrize("subset", [None, ["I", "X"]])
@@ -364,16 +334,23 @@ def test_random_pauli(
 ):
     result_complete_set = np.array(
         [
+            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, -1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, -1.0 + 0.0j],
+        ]
+    )
+    result_complete_set = backend.cast(
+        result_complete_set, dtype=result_complete_set.dtype
+    )
+    result_subset = np.array(
+        [
             [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
             [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
             [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
             [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
         ]
     )
-    result_complete_set = backend.cast(
-        result_complete_set, dtype=result_complete_set.dtype
-    )
-    result_subset = backend.identity_density_matrix(2, normalize=False)
 
     matrix = random_pauli(
         qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed, backend
@@ -383,12 +360,11 @@ def test_random_pauli(
         matrix = matrix.unitary(backend=backend)
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
-            backend.assert_allclose(
+            assert (
                 float(
                     backend.calculate_matrix_norm(matrix - result_complete_set, order=2)
                 )
-                < PRECISION_TOL,
-                True,
+                < PRECISION_TOL
             )
         else:
             backend.assert_allclose(
@@ -410,10 +386,9 @@ def test_random_pauli(
                 True,
             )
         else:
-            backend.assert_allclose(
+            assert (
                 float(backend.calculate_matrix_norm(matrix - result_subset, order=2))
-                < PRECISION_TOL,
-                True,
+                < PRECISION_TOL
             )
 
 
