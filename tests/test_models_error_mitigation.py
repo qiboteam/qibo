@@ -342,7 +342,7 @@ def test_ics(backend, nqubits, noise, full_output, readout):
     # Define the circuit
     c = get_circuit(nqubits, nqubits - 1)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits - 1)])
+    obs = np.prod([Z(i, backend=backend) for i in range(nqubits - 1)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
