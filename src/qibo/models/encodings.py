@@ -141,150 +141,11 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
     if parametrization == "hopf":
-        circuit = _binary_encoder_hopf(nqubits, complex_data=complex_data, **kwargs)
+        return _binary_encoder_hopf(data, nqubits, complex_data=complex_data, **kwargs)
 
-        angles = _generate_rbs_angles(data, dims, "tree")
-        circuit.set_parameters(2 * angles)
-    else:
-        last_qubit = nqubits - 1
-
-        indexes_to_double, lex_order_global = [0], [0]
-
-        circuit = Circuit(nqubits, **kwargs)
-        if complex_data:
-            circuit.add(gates.U3(last_qubit, 0.0, 0.0, 0.0))
-        else:
-            circuit.add(gates.RY(last_qubit, 0.0))
-
-        cummul_n_k = 0
-        initial_string = np.array([1] + [0] * (nqubits - 1))
-        for weight in range(1, nqubits):
-            n_choose_k = int(binom(nqubits, weight))
-            cummul_n_k += n_choose_k
-            placeholder = np.random.rand(n_choose_k)
-            if complex_data:
-                placeholder = placeholder.astype(complex) + 1j * np.random.rand(
-                    n_choose_k
-                )
-
-            circuit += hamming_weight_encoder(
-                placeholder,
-                nqubits,
-                weight,
-                full_hwp=True,
-                optimize_controls=False,
-                phase_correction=False,
-                initial_string=initial_string,
-                **kwargs,
-            )
-
-            # sort data such that the encoding is performed in lexicographical order
-            bitstrings = _ehrlich_algorithm(initial_string, False)
-            initial_string = bitstrings[-1]
-            lex_order = [int(string, 2) for string in bitstrings]
-            lex_order_global.extend(lex_order)
-
-            controls = [item.start() for item in finditer("1", initial_string)]
-            index = (
-                initial_string.find("0")
-                if weight % 2 == 0
-                else last_qubit - initial_string[::-1].find("0")
-            )
-            initial_string = np.array(list(initial_string), dtype=int)
-            initial_string[index] = 1
-            initial_string = initial_string[::-1]
-
-            # phase_index = len(circuit.get_parameters())
-            phase_index = cummul_n_k
-            indexes_to_double.append(phase_index)
-            if complex_data:
-                circuit.add(gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls))
-            else:
-                circuit.add(gates.RY(index, 0.0).controlled_by(*controls))
-
-        # sort data such that the encoding is performed in lexicographical order
-        lex_order_global.append(dims - 1)
-        lex_order_sorted = np.sort(np.copy(lex_order_global))
-        lex_order_global = [
-            np.where(lex_order_sorted == num)[0][0] for num in lex_order_global
-        ]
-        data = data[lex_order_global]
-        del lex_order_global, lex_order_sorted
-
-        _data = np.abs(data) if complex_data else data
-
-        thetas = _generate_rbs_angles(_data, dims, architecture="diagonal")
-        thetas = np.asarray(thetas, dtype=type(thetas[0]))
-
-        if complex_data:
-            phis = np.zeros(len(thetas) + 1)
-            phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
-            for k in range(1, len(phis)):
-                phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
-
-        angles = []
-        for k in range(len(thetas)):
-            if k in indexes_to_double:
-                angle = (
-                    [2 * thetas[k], 2 * phis[k], 0.0]
-                    if complex_data
-                    else [2 * thetas[k]]
-                )
-            else:
-                angle = [thetas[k], -phis[k], phis[k]] if complex_data else [thetas[k]]
-
-            angles.extend(angle)
-
-        if complex_data:
-            angles[-2] = 2 * _angle_mod_two_pi(
-                (np.angle(data[-1]) - np.angle(data[-2])) / 2
-            )
-            angles[-1] = 2 * _angle_mod_two_pi(
-                (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
-            )
-
-        circuit.set_parameters(angles)
-
-    return circuit
-
-
-def _binary_encoder_hopf(nqubits, complex_data, **kwargs):
-    dims = 2**nqubits
-
-    base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = np.reshape(base_strings, (-1, 2))
-    strings = [base_strings]
-    for _ in range(nqubits - 1):
-        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
-        strings.append(base_strings)
-    strings = strings[::-1]
-
-    targets_and_controls = []
-    for pairs in strings:
-        for pair in pairs:
-            targets, controls, anticontrols = [], [], []
-            for k, bits in enumerate(zip(pair[0], pair[1])):
-                if bits == ("0", "0"):
-                    anticontrols.append(k)
-                elif bits == ("1", "1"):
-                    controls.append(k)
-                elif bits == ("0", "1"):
-                    targets.append(k)
-            targets_and_controls.append([targets, controls, anticontrols])
-
-    circuit = Circuit(nqubits, **kwargs)
-    for targets, controls, anticontrols in targets_and_controls:
-        gate_list = []
-        if len(anticontrols) > 0:
-            gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        gate_list.append(
-            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
-        )
-        if len(anticontrols) > 0:
-            gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        circuit.add(gate_list)
-
-    return circuit
+    return _binary_encoder_hyperspherical(
+        data, nqubits, complex_data=complex_data, **kwargs
+    )
 
 
 def unary_encoder(data, architecture: str = "tree", **kwargs):
@@ -1125,3 +986,145 @@ def _get_phase_gate_correction(last_string, phase: float):
 
     # adding an RZ gate to correct the phase of the last amplitude encoded
     return gates.RZ(last_zero, 2 * phase).controlled_by(*last_controls)
+
+
+def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
+    dims = 2**nqubits
+
+    base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
+    base_strings = np.reshape(base_strings, (-1, 2))
+    strings = [base_strings]
+    for _ in range(nqubits - 1):
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
+        strings.append(base_strings)
+    strings = strings[::-1]
+
+    targets_and_controls = []
+    for pairs in strings:
+        for pair in pairs:
+            targets, controls, anticontrols = [], [], []
+            for k, bits in enumerate(zip(pair[0], pair[1])):
+                if bits == ("0", "0"):
+                    anticontrols.append(k)
+                elif bits == ("1", "1"):
+                    controls.append(k)
+                elif bits == ("0", "1"):
+                    targets.append(k)
+            targets_and_controls.append([targets, controls, anticontrols])
+
+    circuit = Circuit(nqubits, **kwargs)
+    for targets, controls, anticontrols in targets_and_controls:
+        gate_list = []
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        gate_list.append(
+            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
+        )
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        circuit.add(gate_list)
+
+    angles = _generate_rbs_angles(data, dims, "tree")
+    circuit.set_parameters(2 * angles)
+
+    return circuit
+
+
+def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
+    dims = 2**nqubits
+    last_qubit = nqubits - 1
+
+    indexes_to_double, lex_order_global = [0], [0]
+
+    circuit = Circuit(nqubits, **kwargs)
+    if complex_data:
+        circuit.add(gates.U3(last_qubit, 0.0, 0.0, 0.0))
+    else:
+        circuit.add(gates.RY(last_qubit, 0.0))
+
+    cummul_n_k = 0
+    initial_string = np.array([1] + [0] * (nqubits - 1))
+    for weight in range(1, nqubits):
+        n_choose_k = int(binom(nqubits, weight))
+        cummul_n_k += n_choose_k
+        placeholder = np.random.rand(n_choose_k)
+        if complex_data:
+            placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
+
+        circuit += hamming_weight_encoder(
+            placeholder,
+            nqubits,
+            weight,
+            full_hwp=True,
+            optimize_controls=False,
+            phase_correction=False,
+            initial_string=initial_string,
+            **kwargs,
+        )
+
+        # sort data such that the encoding is performed in lexicographical order
+        bitstrings = _ehrlich_algorithm(initial_string, False)
+        initial_string = bitstrings[-1]
+        lex_order = [int(string, 2) for string in bitstrings]
+        lex_order_global.extend(lex_order)
+
+        controls = [item.start() for item in finditer("1", initial_string)]
+        index = (
+            initial_string.find("0")
+            if weight % 2 == 0
+            else last_qubit - initial_string[::-1].find("0")
+        )
+        initial_string = np.array(list(initial_string), dtype=int)
+        initial_string[index] = 1
+        initial_string = initial_string[::-1]
+
+        # phase_index = len(circuit.get_parameters())
+        phase_index = cummul_n_k
+        indexes_to_double.append(phase_index)
+        if complex_data:
+            circuit.add(gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls))
+        else:
+            circuit.add(gates.RY(index, 0.0).controlled_by(*controls))
+
+    # sort data such that the encoding is performed in lexicographical order
+    lex_order_global.append(dims - 1)
+    lex_order_sorted = np.sort(np.copy(lex_order_global))
+    lex_order_global = [
+        np.where(lex_order_sorted == num)[0][0] for num in lex_order_global
+    ]
+    data = data[lex_order_global]
+    del lex_order_global, lex_order_sorted
+
+    _data = np.abs(data) if complex_data else data
+
+    thetas = _generate_rbs_angles(_data, dims, architecture="diagonal")
+    thetas = np.asarray(thetas, dtype=type(thetas[0]))
+
+    if complex_data:
+        phis = np.zeros(len(thetas) + 1)
+        phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
+        for k in range(1, len(phis)):
+            phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+
+    angles = []
+    for k in range(len(thetas)):
+        if k in indexes_to_double:
+            angle = (
+                [2 * thetas[k], 2 * phis[k], 0.0] if complex_data else [2 * thetas[k]]
+            )
+        else:
+            angle = [thetas[k], -phis[k], phis[k]] if complex_data else [thetas[k]]
+
+        angles.extend(angle)
+
+    if complex_data:
+        angles[-2] = 2 * _angle_mod_two_pi(
+            (np.angle(data[-1]) - np.angle(data[-2])) / 2
+        )
+        angles[-1] = 2 * _angle_mod_two_pi(
+            (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
+        )
+
+    circuit.set_parameters(angles)
+
+    return circuit
