@@ -184,10 +184,12 @@ def _gate_tomography(
                 ValueError,
                 f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
             )
-        if gate.__class__.__name__ == "Unitary":
-            gate = gate.__class__(*gate.init_args)
-        else:
-            gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
+
+        ## The following 4 lines could be redundant
+        # if gate.__class__.__name__ == "Unitary":
+        #     gate = gate.__class__(gate.init_args[0], *gate.qubits)
+        # # else:
+        #     gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
@@ -233,8 +235,7 @@ def GST(
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
             GST on.
             E.g. gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX, [np.pi/2, np.pi/3]),
-                             (gates.GPI, [np.pi/7]), gates.CNOT,
-                             (gates.Unitary, (np.array([[1,0],[0,1]])))]
+                             (gates.GPI, [np.pi/7]), gates.CNOT]
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -295,18 +296,13 @@ def GST(
         if gate is not None:
 
             if isinstance(gate, tuple):
-                angles = ["theta", "phi", "lam"]
-                matrix = ["unitary"]
+                angles = ["theta", "phi", "lam", "unitary"]
                 gate, params = gate
-                if isinstance(params, list):
-                    init_args = signature(gate).parameters
-                    valid_angles = [arg for arg in init_args if arg in angles]
-                    angle_values = dict(zip(valid_angles, params))
-                else:
-                    init_args = signature(gate).parameters
-                    valid_angles = [arg for arg in init_args if arg in matrix]
-                    angle_values = dict(zip(valid_angles, [params]))
-
+                if isinstance(params[0], np.ndarray):
+                    params = [params]
+                init_args = signature(gate).parameters
+                valid_angles = [arg for arg in init_args if arg in angles]
+                angle_values = dict(zip(valid_angles, params))
             else:
                 angle_values = {}
                 init_args = signature(gate).parameters
@@ -320,8 +316,9 @@ def GST(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
                 )
+
             if "unitary" in angle_values:
-                gate = gate(angle_values["unitary"], *range(nqubits))
+                gate = gate(angle_values["unitary"][0], *range(nqubits))
             else:
                 gate = gate(*range(nqubits), **angle_values)
 
