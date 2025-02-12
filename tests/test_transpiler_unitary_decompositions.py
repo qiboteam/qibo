@@ -55,7 +55,7 @@ def test_u3_decomposition(backend):
     backend.assert_allclose(u3_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_eigenbasis_entanglement(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
 
@@ -72,7 +72,7 @@ def test_eigenbasis_entanglement(backend, seed):
             backend.assert_allclose(purity(state, backend=backend), 0.5)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_v_decomposition(backend, seed):
     """Check that V_A V_B |psi_k> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -85,7 +85,7 @@ def test_v_decomposition(backend, seed):
         assert_single_qubits(backend, psi, va, vb)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_u_decomposition(backend, seed):
     r"""Check that U_A\dagger U_B\dagger |psi_k tilde> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -103,7 +103,7 @@ def test_u_decomposition(backend, seed):
         assert_single_qubits(backend, psi_tilde, ua_dagger, ub_dagger)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_ud_eigenvalues(backend, seed):
     """Check that U_d is diagonal in the Bell basis."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -126,7 +126,7 @@ def test_ud_eigenvalues(backend, seed):
         backend.assert_allclose(backend.np.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_calculate_h_vector(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
@@ -159,7 +159,7 @@ def test_cnot_decomposition_light(backend):
     backend.assert_allclose(final_matrix, target_matrix, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_two_qubit_decomposition(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:

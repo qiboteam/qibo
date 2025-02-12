@@ -184,7 +184,8 @@ def ZNE(
         1. K. Temme, S. Bravyi et al, *Error mitigation for short-depth quantum circuits*.
            `arXiv:1612.02058 [quant-ph] <https://arxiv.org/abs/1612.02058>`_.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if readout is None:
         readout = {}
@@ -204,7 +205,7 @@ def ZNE(
             nshots,
             readout,
             qubit_map,
-            seed=local_state,
+            seed=seed,
             backend=backend,
         )
         expected_values.append(val)
@@ -244,7 +245,8 @@ def sample_training_circuit_cdr(
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
@@ -281,7 +283,7 @@ def sample_training_circuit_cdr(
     distance = backend.np.vstack(distance)
     prob = backend.np.exp(-(distance**2) / sigma**2)
 
-    index = local_state.choice(
+    index = backend.np.random.choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
@@ -295,7 +297,9 @@ def sample_training_circuit_cdr(
 
     replacement = np.array([replacement[i] for i in index])
     replacement = [
-        replacement[i][local_state.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
+        replacement[i][
+            backend.np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]
+        ]
         for i, p in enumerate(prob)
     ]
     replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
@@ -411,13 +415,14 @@ def CDR(
         1. P. Czarnik, A. Arrasmith et al, *Error mitigation with Clifford quantum-circuit data*.
            `arXiv:2005.10189 [quant-ph] <https://arxiv.org/abs/2005.10189>`_.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if readout is None:
         readout = {}
 
     training_circuits = [
-        sample_training_circuit_cdr(circuit, seed=local_state, backend=backend)
+        sample_training_circuit_cdr(circuit, seed=seed, backend=backend)
         for _ in range(n_training_samples)
     ]
 
@@ -433,7 +438,7 @@ def CDR(
             nshots,
             readout,
             qubit_map,
-            seed=local_state,
+            seed=seed,
             backend=backend,
         )
         train_val["noisy"].append(val)
@@ -441,7 +446,7 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.cast(local_state.random(nparams), backend.precision)
+    params = backend.cast(backend.np.random.uniform(size=nparams), backend.precision)
     optimal_params = _curve_fit(
         backend,
         model,
@@ -457,7 +462,7 @@ def CDR(
         nshots,
         readout,
         qubit_map,
-        seed=local_state,
+        seed=seed,
         backend=backend,
     )
     mit_val = model(val, *optimal_params)
@@ -527,7 +532,8 @@ def vnCDR(
         1. A. Lowe, MH. Gordon et al, *Unified approach to data-driven quantum error mitigation*.
            `arXiv:2011.01157 [quant-ph] <https://arxiv.org/abs/2011.01157>`_.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if model is None:
         model = lambda x, *params: backend.np.sum(x * backend.np.vstack(params), axis=0)
@@ -536,7 +542,7 @@ def vnCDR(
         readout = {}
 
     training_circuits = [
-        sample_training_circuit_cdr(circuit, seed=local_state, backend=backend)
+        sample_training_circuit_cdr(circuit, seed=seed, backend=backend)
         for _ in range(n_training_samples)
     ]
     train_val = {"noise-free": [], "noisy": []}
@@ -554,7 +560,7 @@ def vnCDR(
                 nshots,
                 readout,
                 qubit_map,
-                seed=local_state,
+                seed=seed,
                 backend=backend,
             )
             train_val["noisy"].append(float(val))
@@ -562,7 +568,9 @@ def vnCDR(
     noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
         -1, len(noise_levels)
     )
-    params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
+    params = backend.cast(
+        backend.np.random.uniform(size=len(noise_levels)), backend.precision
+    )
     optimal_params = _curve_fit(
         backend,
         model,
@@ -583,7 +591,7 @@ def vnCDR(
             nshots,
             readout,
             qubit_map,
-            seed=local_state,
+            seed=seed,
             backend=backend,
         )
         val.append(expval)
@@ -763,7 +771,8 @@ def apply_randomized_readout_mitigation(
         random_pauli,
     )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     meas_qubits = circuit.measurements[0].qubits
     nshots_r = int(nshots / ncircuits)
@@ -773,9 +782,7 @@ def apply_randomized_readout_mitigation(
         circuit_c.queue.pop()
         cal_circuit = Circuit(circuit.nqubits, density_matrix=True)
 
-        x_gate = random_pauli(
-            circuit.nqubits, 1, subset=["I", "X"], seed=local_state
-        ).queue
+        x_gate = random_pauli(circuit.nqubits, 1, subset=["I", "X"], seed=seed).queue
 
         error_map = {}
         for j, gate in enumerate(x_gate):
@@ -842,7 +849,8 @@ def get_expectation_val_with_readout_mitigation(
     Returns:
         float: the mitigated expectation value of the observable.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if readout is None:  # pragma: no cover
         readout = {}
@@ -853,7 +861,7 @@ def get_expectation_val_with_readout_mitigation(
             noise_model,
             nshots,
             readout["ncircuits"],
-            seed=local_state,
+            seed=seed,
             backend=backend,
         )
     else:
@@ -897,7 +905,8 @@ def sample_clifford_training_circuit(
         random_clifford,
     )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     non_clifford_gates_indices = [
         i
@@ -915,7 +924,7 @@ def sample_clifford_training_circuit(
             for q in gate.qubits:
                 gate_rand = gates.Unitary(
                     random_clifford(
-                        1, return_circuit=False, seed=local_state, backend=backend
+                        1, return_circuit=False, seed=seed, backend=backend
                     ),
                     q,
                 )
@@ -928,7 +937,7 @@ def sample_clifford_training_circuit(
                     random_clifford(
                         len(gate.qubits),
                         return_circuit=False,
-                        seed=local_state,
+                        seed=seed,
                         backend=backend,
                     ),
                     *gate.qubits,
@@ -970,10 +979,11 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         vectorization,
     )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     sampled_circuit = sample_clifford_training_circuit(
-        circuit, seed=local_state, backend=backend
+        circuit, seed=seed, backend=backend
     )
     unitary_matrix = sampled_circuit.unitary(backend=backend)
     num_qubits = sampled_circuit.nqubits
@@ -1010,7 +1020,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
             backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
         ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
             random_init = random_clifford(
-                1, return_circuit=False, seed=local_state, backend=backend
+                1, return_circuit=False, seed=seed, backend=backend
             )
             observable_i = (
                 backend.np.conj(backend.np.transpose(random_init, (1, 0)))
@@ -1081,7 +1091,8 @@ def ICS(
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if readout is None:
         readout = {}
@@ -1090,9 +1101,7 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, seed=local_state, backend=backend)[
-            0
-        ]
+        error_sensitive_circuit(circuit, observable, seed=seed, backend=backend)[0]
         for _ in range(n_training_samples)
     ]
 
@@ -1110,7 +1119,7 @@ def ICS(
             nshots,
             readout,
             qubit_map,
-            seed=local_state,
+            seed=seed,
             backend=backend,
         )
 
@@ -1129,7 +1138,7 @@ def ICS(
         nshots,
         readout,
         qubit_map,
-        seed=local_state,
+        seed=seed,
         backend=backend,
     )
     one_dep_squared = (1 - dep_param) ** 2
