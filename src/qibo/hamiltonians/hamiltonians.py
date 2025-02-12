@@ -620,7 +620,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self._compose(other, lambda x, y: y - x)
 
     def __mul__(self, other):
-        return self._compose(other, operator.mul)
+        return self._compose(other, lambda x, y: y * x)
 
     def apply_gates(self, state, density_matrix=False):
         """Applies gates corresponding to the Hamiltonian terms.
