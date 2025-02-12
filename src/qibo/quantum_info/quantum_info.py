@@ -222,3 +222,33 @@ def _gamma_delta_matrices(nqubits: int, hadamards: ndarray, permutations: ndarra
                 delta_matrix[k, j] = b
 
     return gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime
+
+
+def _super_op_from_bcsz_measure_preamble(dims: int, rank: int):
+    nqubits = int(np.log2(dims))
+    super_op = _random_gaussian_matrix(
+        dims**2,
+        rank=rank,
+        mean=0,
+        stddev=1,
+    )
+    super_op = super_op @ ENGINE.conj(super_op).T
+    # partial trace implemented with einsum
+    super_op_reduced = ENGINE.einsum("ijik->jk", ENGINE.reshape(super_op, (dims,) * 4))
+    eigenvalues, eigenvectors = ENGINE.linalg.eigh(super_op_reduced)
+    eigenvalues = ENGINE.sqrt(1.0 / eigenvalues)
+    operator = ENGINE.einsum("ij,ik->ijk", eigenvectors, ENGINE.conj(eigenvectors.T))
+    operator = ENGINE.sum(eigenvalues.reshape(len(eigenvalues), 1, 1) * operator)
+    return operator, super_op
+
+
+def _super_op_from_bcsz_measure_row(dims: int, rank: int):
+    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
+    operator = ENGINE.kron(ENGINE.eye(dims, dtype=complex), operator)
+    return operator @ super_op @ operator
+
+
+def _super_op_from_bcsz_measure_column(dims: int, rank: int):
+    operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
+    operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
+    return operator @ super_op @ operator

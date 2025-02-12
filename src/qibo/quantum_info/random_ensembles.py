@@ -1018,40 +1018,13 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    nqubits = int(np.log2(dims))
-
-    super_op = random_gaussian_matrix(
-        dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
-    )
-    super_op = super_op @ backend.np.conj(super_op).T
-
-    # partial trace implemented with einsum
-    super_op_reduced = np.einsum(
-        "ijik->jk", np.reshape(backend.to_numpy(super_op), (dims,) * 4)
-    )
-
-    eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
-
-    eigenvalues = np.sqrt(1.0 / eigenvalues)
-
-    operator = np.zeros((dims, dims), dtype=complex)
-    operator = backend.cast(operator, dtype=operator.dtype)
-    for eigenvalue, eigenvector in zip(
-        backend.cast(eigenvalues), backend.cast(eigenvectors).T
-    ):
-        operator = operator + eigenvalue * backend.np.outer(
-            eigenvector, backend.np.conj(eigenvector)
-        )
+    backend.set_seed(seed)
 
     if order == "row":
-        operator = backend.np.kron(
-            backend.identity_density_matrix(nqubits, normalize=False), operator
+        return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
+    elif order == "column":
+        return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
+    else:
+        raise_error(
+            ValueError, f"Unrecognized {order} order, pick one in ('row', 'column')."
         )
-    if order == "column":
-        operator = backend.np.kron(
-            operator, backend.identity_density_matrix(nqubits, normalize=False)
-        )
-
-    super_op = operator @ super_op @ operator
-
-    return super_op
