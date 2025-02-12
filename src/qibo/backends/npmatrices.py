@@ -15,7 +15,9 @@ class NumpyMatrices:
         self.np = np
 
     def _cast(self, x, dtype):
-        return self.np.array(x, dtype=dtype)
+        if isinstance(x, list):
+            return self.np.array(x, dtype=dtype)
+        return x.astype(dtype)
 
     @cached_property
     def H(self):
