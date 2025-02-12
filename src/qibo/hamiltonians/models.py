@@ -356,22 +356,6 @@ def _multikron(matrix_list, backend):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
-    # TO DO: check whether this scales better on gpu
-    """
-    indices = list(range(2 * len(matrix_list)))
-    even, odd = indices[::2], indices[1::2]
-    lhs = zip(even, odd)
-    rhs = even + odd
-    einsum_args = [item for pair in zip(matrix_list, lhs) for item in pair]
-    dim = 2 ** len(matrix_list)
-    if backend.platform != "tensorflow":
-        h = backend.np.einsum(*einsum_args, rhs)
-    else:
-        h = np.einsum(*einsum_args, rhs)
-    h = backend.np.sum(backend.np.reshape(h, (-1, dim, dim)), axis=0)
-    return h
-    """
-    # reduce appears to be faster especially when matrix_list is long
     return reduce(backend.np.kron, matrix_list)
 
 
@@ -387,45 +371,6 @@ def _build_spin_model(nqubits, matrix, condition, backend):
         )
         for i in range(nqubits)
     )
-    """
-    indices = list(range(2 * nqubits))
-    even, odd = indices[::2], indices[1::2]
-    lhs = zip(
-        nqubits
-        * [
-            len(indices),
-        ],
-        even,
-        odd,
-    )
-    rhs = (
-        [
-            len(indices),
-        ]
-        + even
-        + odd
-    )
-    columns = [
-        backend.np.reshape(
-            backend.np.concatenate(
-                [
-                    matrix if condition(i, j) else backend.matrices.I()
-                    for i in range(nqubits)
-                ],
-                axis=0,
-            ),
-            (nqubits, 2, 2),
-        )
-        for j in range(nqubits)
-    ]
-    einsum_args = [item for pair in zip(columns, lhs) for item in pair]
-    dim = 2**nqubits
-    if backend.platform == "tensorflow":
-        h = np.einsum(*einsum_args, rhs)
-    else:
-        h = backend.np.einsum(*einsum_args, rhs, optimize=True)
-    h = backend.np.sum(backend.np.reshape(h, (nqubits, dim, dim)), axis=0)
-    """
     return h
 
 

@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
-from qibo import gates, symbols
+from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.symbols import I, X, Y, Z
@@ -207,41 +207,6 @@ class SymbolicTerm(HamiltonianTerm):
             Matrix as a ``np.ndarray`` of shape ``(2 ** ntargets, 2 ** ntargets)``
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
-        """
-        # from qibo.hamiltonians.models import _multikron
-
-        """
-        einsum = (
-            self.backend.np.einsum
-            if self.backend.platform != "tensorflow"
-            else np.einsum
-        )
-
-        # find the max number of matrices for each qubit
-        max_len = max(len(v) for v in self.matrix_map.values())
-        nqubits = len(self.matrix_map)
-        # pad each list with identity to max_len
-        matrix = []
-        for qubit, matrices in self.matrix_map.items():
-            matrix.append(
-                self.backend.np.concatenate(
-                    self.matrix_map[qubit]
-                    + (max_len - len(matrices)) * [self.backend.np.eye(2)],
-                    axis=0,
-                )
-            )
-        # separate in `max_len`-column tensors of shape (`nqubits`, 2, 2)
-        matrix = self.backend.np.transpose(
-            self.backend.np.reshape(
-                self.backend.np.concatenate(matrix, axis=0), (nqubits, max_len, 2, 2)
-            ),
-            (1, 0, 2, 3),
-        )
-        indices = list(zip(max_len * [0], range(1, max_len + 1), range(2, max_len + 2)))
-        lhs = zip(matrix, indices)
-        lhs = [el for item in lhs for el in item]
-        matrix = einsum(*lhs, (0, 1, max_len + 1))
-        return self.coefficient * _multikron(matrix, self.backend)
         """
         matrices = [
             reduce(self.backend.np.matmul, self.matrix_map.get(q))
