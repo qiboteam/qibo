@@ -119,18 +119,40 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 
 
 def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
-    """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
+    """Create circuit that encodes :math:`1`-dimensional data`` in all amplitudes of the computational basis.
 
-    ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
-    Resulting circuit parametrizes ``data`` in Hopf coordinates in the
-    :math:`(2^{n} - 1)`-unit sphere.
+    Given data vector :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}`,
+    this function generates a quantum circuit :math:`\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        \\mathrm{Load}(\\mathbf{x}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j=0}^{d-1} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
+    of the integer :math:`j`, :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
+
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``Hopf`` coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array or length :math:`2^{n}`
+        data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binary encoding.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+
+        3. H. S. Cohl, *Fourier, Gegenbauer and Jacobi expansions for a power-law fundamental
+        solution of the polyharmonic equation and polyspherical addition theorems*, `Symmetry,
+        Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
+        <https://arxiv.org/abs/1209.6047>`_.
     """
     dims = len(data)
     nqubits = float(np.log2(dims))
