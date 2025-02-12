@@ -298,33 +298,32 @@ def GST(
                 angles = ["theta", "phi", "lam"]
                 matrix = ["unitary"]
                 gate, params = gate
-                init_args = signature(gate).parameters
-                valid_angles = [arg for arg in init_args if arg in angles]
-                angle_values = dict(zip(valid_angles, params))
+                if isinstance(params, list):
+                    init_args = signature(gate).parameters
+                    valid_angles = [arg for arg in init_args if arg in angles]
+                    angle_values = dict(zip(valid_angles, params))
+                else:
+                    init_args = signature(gate).parameters
+                    valid_angles = [arg for arg in init_args if arg in matrix]
+                    angle_values = dict(zip(valid_angles, [params]))
+
             else:
+                angle_values = {}
                 init_args = signature(gate).parameters
-                valid_angles = [arg for arg in init_args if arg in matrix]
-                angle_values = dict(zip(valid_angles, [params]))
 
-        else:
-            angle_values = {}
-            init_args = signature(gate).parameters
-
-        if "q" in init_args:
-            nqubits = 1
-        elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-            nqubits = 2
-        else:
-            raise_error(
-                RuntimeError,
-                f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
-            )
-        if "unitary" in angle_values:
-            gate = gate(
-                angle_values["unitary"], *range(nqubits)
-            )  # Pass `unitary` explicitly
-        else:
-            gate = gate(*range(nqubits), **angle_values)
+            if "q" in init_args:
+                nqubits = 1
+            elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+                nqubits = 2
+            else:
+                raise_error(
+                    RuntimeError,
+                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
+                )
+            if "unitary" in angle_values:
+                gate = gate(angle_values["unitary"], *range(nqubits))
+            else:
+                gate = gate(*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
