@@ -134,23 +134,20 @@ def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: floa
 
 
 def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, ndarray]:
-    mute_index = list(range(nqubits))
     exponents = ENGINE.arange(nqubits, 0, -1, dtype=ENGINE.int64)
     powers = 4**exponents
     powers[powers == 0] = ENGINE.iinfo(ENGINE.int64).max
     r = ENGINE.random.uniform(0, 1, size=nqubits)
-    indexes = -1 * (ENGINE.ceil(ENGINE.log2(r + (1 - r) / powers)))
-    hadamards = 1 * (indexes < exponents)
+    indexes = (-1) * ENGINE.ceil(ENGINE.log2(r + (1 - r) / powers)).astype(ENGINE.int64)
+    idx_le_exp = indexes < exponents
+    hadamards = idx_le_exp.astype(ENGINE.int64)
+    idx_gt_exp = idx_le_exp ^ True
+    indexes[idx_gt_exp] = 2 * exponents[idx_gt_exp] - indexes[idx_gt_exp] - 1
+    mute_index = list(range(nqubits))
     permutations = ENGINE.zeros(nqubits, dtype=int)
-    # probably equivalent to the loop below, doublecheck!
-    # idx_gt_exp = indexes > exponents
-    # indexes[idx_gt_exp] = 2 * exponents[idx_gt_exp] - indexes[idx_gt_exp] - 1
-    for l, (index, m) in enumerate(zip(indexes, exponents)):
-        k = index if index < m else 2 * m - index - 1
-        k = int(k)
-        permutations[l] = mute_index[k]
-        del mute_index[k]
-
+    for l, index in enumerate(indexes):
+        permutations[l] = mute_index[index]
+        del mute_index[index]
     return hadamards, permutations
 
 
