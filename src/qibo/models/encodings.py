@@ -138,7 +138,10 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
         raise_error(ValueError, "`data` size must be a power of 2.")
     nqubits = int(nqubits)
 
-    complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+    # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+    complex_data = bool(
+        "complex" in str(data.dtype)
+    )  # backend-agnostic way of checking the dtype
 
     if parametrization == "hopf":
         return _binary_encoder_hopf(data, nqubits, complex_data=complex_data, **kwargs)
@@ -620,10 +623,10 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     if architecture == "diagonal":
         engine = _check_engine(data)
         phases = [
-            math.atan2(engine.linalg.norm(data[k + 1 :]), data[k])
+            engine.arctan2(engine.linalg.norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(math.atan2(data[-1], data[-2]))
+        phases.append(engine.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
         j_max = int(nqubits / 2)
@@ -1096,6 +1099,9 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
     del lex_order_global, lex_order_sorted
 
     _data = np.abs(data) if complex_data else data
+    print(complex_data)
+    print(_data.dtype)
+    print(_data)
 
     thetas = _generate_rbs_angles(_data, dims, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
