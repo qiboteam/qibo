@@ -1099,9 +1099,6 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
     del lex_order_global, lex_order_sorted
 
     _data = np.abs(data) if complex_data else data
-    print(complex_data)
-    print(_data.dtype)
-    print(_data)
 
     thetas = _generate_rbs_angles(_data, dims, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
