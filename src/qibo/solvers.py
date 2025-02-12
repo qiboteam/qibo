@@ -44,7 +44,7 @@ class TrotterizedExponential(BaseSolver):
 
     Created automatically from the :class:`qibo.solvers.Exponential` if the
     given Hamiltonian object is a
-    :class:`qibo.hamiltonians.hamiltonians.TrotterHamiltonian`.
+    :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
     """
 
     def __init__(self, dt, hamiltonian):

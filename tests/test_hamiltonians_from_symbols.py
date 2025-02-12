@@ -23,8 +23,7 @@ def test_symbols_pickling(symbol):
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("hamtype", ["symbolic"])
-def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype):
+def test_tfim_hamiltonian_from_symbols(backend, nqubits):
     """Check creating TFIM Hamiltonian using sympy."""
     h = 0.5
     symham = sum(
@@ -38,8 +37,7 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["symbolic"])
-def test_from_symbolic_with_power(backend, hamtype):
+def test_from_symbolic_with_power(backend):
     """Check ``from_symbolic`` when the expression contains powers."""
     npbackend = NumpyBackend()
     matrix = random_hermitian(2, backend=npbackend)
@@ -63,8 +61,7 @@ def test_from_symbolic_with_power(backend, hamtype):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["symbolic"])
-def test_from_symbolic_with_complex_numbers(backend, hamtype):
+def test_from_symbolic_with_complex_numbers(backend):
     """Check ``from_symbolic`` when the expression contains imaginary unit."""
     symham = (
         (1 + 2j) * X(0, backend=backend) * X(1, backend=backend)
@@ -83,8 +80,7 @@ def test_from_symbolic_with_complex_numbers(backend, hamtype):
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("hamtype", ["symbolic"])
-def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype):
+def test_x_hamiltonian_from_symbols(backend, nqubits):
     """Check creating sum(X) Hamiltonian using sympy."""
     symham = -sum(X(i, backend=backend) for i in range(nqubits))
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
@@ -93,8 +89,7 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["symbolic"])
-def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype):
+def test_three_qubit_term_hamiltonian_from_symbols(backend):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
     symham = (
         X(0, backend=backend) * Y(1, backend=backend) * Z(2, backend=backend)
