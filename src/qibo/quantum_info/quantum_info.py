@@ -47,6 +47,15 @@ def _vectorize_sparse_pauli_basis_{order}(
     return _post_sparse_pauli_basis_vectorization(basis, dim)
 """
 
+_pauli_to_comp_basis = """
+def _pauli_to_comp_basis_sparse_{order}(
+        nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+) -> ndarray:
+    unitary = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3).T
+    nonzero = ENGINE.nonzero(unitary)
+    return unitary[nonzero].reshape(unitary.shape[0], -1), nonzero[1]
+"""
+
 _super_op_from_haar_measure = """
 def _super_op_from_haar_measure_{order}(dims: int) -> ndarray:
     super_op = _random_unitary_haar(dims)
@@ -77,8 +86,10 @@ for order in ("row", "column", "system"):
     for func in (
         _vectorize_pauli_basis,
         _vectorize_sparse_pauli_basis,
+        _pauli_to_comp_basis,
         _super_op_from_haar_measure,
         _super_op_from_hermitian_measure,
+        _to_choi,
     ):
         exec(func.format(order=order))
 

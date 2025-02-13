@@ -223,7 +223,12 @@ def pauli_to_comp_basis(
     """
     backend = _check_backend(backend)
 
-    unitary = pauli_basis(
+    if sparse:
+        return getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")(
+            nqubits, *_get_paulis(pauli_order, backend)
+        )
+
+    return pauli_basis(
         nqubits,
         normalize,
         vectorize=True,
@@ -231,19 +236,4 @@ def pauli_to_comp_basis(
         order=order,
         pauli_order=pauli_order,
         backend=backend,
-    )
-    unitary = unitary.T
-
-    if sparse:
-        elements, indexes = [], []
-        for row in unitary:
-            index_list = backend.np.flatnonzero(row)
-            indexes.append(index_list)
-            elements.append(row[index_list])
-
-        elements = backend.cast(elements)
-        indexes = backend.cast(indexes)
-
-        return elements, indexes
-
-    return unitary
+    ).T
