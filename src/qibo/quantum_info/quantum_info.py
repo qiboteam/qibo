@@ -358,10 +358,10 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
 
 
 def _to_liouville_row(channel: ndarray) -> ndarray:
-    channel = _to_choi_row(channel)
+    channel = _to_choi_row(channel)  # pylint: disable=undefined-variable
     return _reshuffling(channel, 1, 2)
 
 
 def _to_liouville_column(channel: ndarray) -> ndarray:
-    channel = _to_choi_column(channel)
+    channel = _to_choi_column(channel)  # pylint: disable=undefined-variable
     return _reshuffling(channel, 0, 3)
