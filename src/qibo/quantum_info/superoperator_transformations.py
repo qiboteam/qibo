@@ -11,6 +11,7 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
+from qibo.quantum_info.basis import _get_paulis, _normalization
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
 
 
@@ -165,10 +166,7 @@ def to_choi(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    channel = vectorization(channel, order=order, backend=backend)
-    channel = backend.np.outer(channel, backend.np.conj(channel))
-
-    return channel
+    return getattr(backend.qinfo, f"_to_choi_{order}")(channel)
 
 
 def to_liouville(channel, order: str = "row", backend=None):
@@ -191,10 +189,7 @@ def to_liouville(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    channel = to_choi(channel, order=order, backend=backend)
-    channel = _reshuffling(channel, order=order, backend=backend)
-
-    return channel
+    return getattr(backend.qinfo, f"_to_liouville_{order}")(channel)
 
 
 def to_pauli_liouville(
@@ -226,21 +221,12 @@ def to_pauli_liouville(
     Returns:
         ndarray: quantum channel in its Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
-
     backend = _check_backend(backend)
 
-    nqubits = int(np.log2(channel.shape[0]))
-
-    channel = to_liouville(channel, order=order, backend=backend)
-
-    unitary = comp_basis_to_pauli(
-        nqubits, normalize, pauli_order=pauli_order, backend=backend
+    normalization = _normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
+    return getattr(backend.qinfo, f"_to_pauli_liouville_{order}")(
+        channel, *_get_paulis(pauli_order, backend), normalization=normalization
     )
-
-    channel = unitary @ channel @ backend.np.conj(unitary).T
-
-    return channel
 
 
 def to_chi(

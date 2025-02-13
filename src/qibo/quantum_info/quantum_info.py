@@ -7,7 +7,12 @@ ENGINE = np
 
 
 def _pauli_basis(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+    nqubits: int,
+    pauli_0: ndarray,
+    pauli_1: ndarray,
+    pauli_2: ndarray,
+    pauli_3: ndarray,
+    normalization: float = 1.0,
 ) -> ndarray:
     basis_single = ENGINE.vstack((pauli_0, pauli_1, pauli_2, pauli_3)).reshape(4, 2, 2)
     dim = 2**nqubits
@@ -15,9 +20,12 @@ def _pauli_basis(
     output_indices = (i for indices in zip(*input_indices) for i in indices)
     operands = [basis_single for _ in range(nqubits)]
     inputs = [item for pair in zip(operands, input_indices) for item in pair]
-    return ENGINE.einsum(  # pylint: disable=too-many-function-args
-        *inputs, output_indices
-    ).reshape(4**nqubits, dim, dim)
+    return (
+        ENGINE.einsum(  # pylint: disable=too-many-function-args
+            *inputs, output_indices
+        ).reshape(dim**2, dim, dim)
+        / normalization
+    )
 
 
 def _post_sparse_pauli_basis_vectorization(
@@ -31,27 +39,27 @@ def _post_sparse_pauli_basis_vectorization(
 
 _vectorize_pauli_basis = """
 def _vectorize_pauli_basis_{order}(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray, normalization: float = 1.
 ) -> ndarray:
     dim = 2**nqubits
-    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3, normalization)
     return _vectorization_{order}(basis, dim)
 """
 
 _vectorize_sparse_pauli_basis = """
 def _vectorize_sparse_pauli_basis_{order}(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray, normalization: float = 1.
 ) -> tuple[ndarray, ndarray]:
     dim = 2**nqubits
-    basis = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    basis = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3, normalization)
     return _post_sparse_pauli_basis_vectorization(basis, dim)
 """
 
 _pauli_to_comp_basis = """
 def _pauli_to_comp_basis_sparse_{order}(
-        nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+        nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray, normalization: float = 1.
 ) -> ndarray:
-    unitary = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3).T
+    unitary = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3, normalization).T
     nonzero = ENGINE.nonzero(unitary)
     return unitary[nonzero].reshape(unitary.shape[0], -1), nonzero[1]
 """
@@ -82,6 +90,23 @@ def _to_liouville_{order}(channel: ndarray) -> ndarray:
     return _reshuffling(channel, {ax1}, {ax2})
 """
 
+exec(_to_liouville.format(order="row", ax1=1, ax2=2))
+exec(_to_liouville.format(order="column", ax1=0, ax2=3))
+
+
+_to_pauli_liouville = """
+def _to_pauli_liouville_{order}(
+        channel: ndarray, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray, normalization: float = 1.
+) -> ndarray:
+    nqubits = int(np.log2(channel.shape[0]))
+    channel = _to_liouville_{order}(channel)
+    unitary = _vectorize_pauli_basis_{order}(
+        nqubits, pauli_0, pauli_1, pauli_2, pauli_3, normalization
+    )
+    return ENGINE.conj(unitary) @ channel @ unitary.T
+"""
+
+
 for order in ("row", "column", "system"):
     for func in (
         _vectorize_pauli_basis,
@@ -90,6 +115,7 @@ for order in ("row", "column", "system"):
         _super_op_from_haar_measure,
         _super_op_from_hermitian_measure,
         _to_choi,
+        _to_pauli_liouville,
     ):
         exec(func.format(order=order))
 

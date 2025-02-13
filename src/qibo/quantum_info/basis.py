@@ -17,6 +17,11 @@ def _get_paulis(order: str, backend: Backend):
     return [pauli_labels[label] for label in order]
 
 
+@cache
+def _normalization(nqubits: int):
+    return np.sqrt(2**nqubits)
+
+
 def pauli_basis(
     nqubits: int,
     normalize: bool = False,
@@ -71,25 +76,19 @@ def pauli_basis(
 
     backend = _check_backend(backend)
     fname = f"_pauli_basis_{order}"
+    normalization = _normalization(nqubits) if normalize else 1.0
 
     if vectorize and sparse:
-        basis, indices = getattr(backend.qinfo, f"_vectorize_sparse{fname}")(
-            nqubits, *_get_paulis(pauli_order, backend)
+        return getattr(backend.qinfo, f"_vectorize_sparse{fname}")(
+            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
         )
     elif vectorize:
-        basis = getattr(backend.qinfo, f"_vectorize{fname}")(
-            nqubits, *_get_paulis(pauli_order, backend)
+        return getattr(backend.qinfo, f"_vectorize{fname}")(
+            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
         )
-    else:
-        basis = backend.qinfo._pauli_basis(nqubits, *_get_paulis(pauli_order, backend))
-
-    if normalize:
-        basis = basis / np.sqrt(2**nqubits)
-
-    if vectorize and sparse:
-        return basis, indices
-
-    return basis
+    return backend.qinfo._pauli_basis(
+        nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
+    )
 
 
 def comp_basis_to_pauli(
@@ -224,8 +223,9 @@ def pauli_to_comp_basis(
     backend = _check_backend(backend)
 
     if sparse:
+        normalization = _normalization(nqubits) if normalize else 1.0
         return getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")(
-            nqubits, *_get_paulis(pauli_order, backend)
+            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
         )
 
     return pauli_basis(
