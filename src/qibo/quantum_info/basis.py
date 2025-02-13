@@ -1,12 +1,20 @@
+from functools import cache
 from itertools import product
 from typing import Optional
 
 import numpy as np
 
-from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.quantum_info.superoperator_transformations import vectorization
+
+
+@cache
+def _get_paulis(order: str, backend: Backend):
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
+    return [pauli_labels[label] for label in order]
 
 
 def pauli_basis(
@@ -62,27 +70,18 @@ def pauli_basis(
         )
 
     backend = _check_backend(backend)
-
-    pauli_labels = {"I": backend.matrices.I()}
-    pauli_labels.update(
-        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
-    )
-    dim = 2**nqubits
-    basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-
-    if nqubits > 1:
-        basis_full = backend.qinfo._pauli_basis(nqubits, dim, basis_single)
-    else:
-        basis_full = basis_single
+    fname = f"_pauli_basis_{order}"
 
     if vectorize and sparse:
-        basis, indices = getattr(
-            backend.qinfo, f"_vectorize_sparse_pauli_basis_{order}"
-        )(basis_full, dim)
-    elif vectorize and not sparse:
-        basis = vectorization(basis_full, order=order, backend=backend)
+        basis, indices = getattr(backend.qinfo, f"_vectorize_sparse{fname}")(
+            nqubits, *_get_paulis(pauli_order, backend)
+        )
+    elif vectorize:
+        basis = getattr(backend.qinfo, f"_vectorize{fname}")(
+            nqubits, *_get_paulis(pauli_order, backend)
+        )
     else:
-        basis = basis_full
+        basis = backend.qinfo._pauli_basis(nqubits, *_get_paulis(pauli_order, backend))
 
     if normalize:
         basis = basis / np.sqrt(2**nqubits)

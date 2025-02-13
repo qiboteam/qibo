@@ -7,10 +7,10 @@ ENGINE = np
 
 
 def _pauli_basis(
-    nqubits: int,
-    dim: int,
-    basis_single: ndarray,
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> ndarray:
+    basis_single = ENGINE.vstack((pauli_0, pauli_1, pauli_2, pauli_3)).reshape(4, 2, 2)
+    dim = 2**nqubits
     input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
     output_indices = (i for indices in zip(*input_indices) for i in indices)
     operands = [basis_single for _ in range(nqubits)]
@@ -29,24 +29,50 @@ def _post_sparse_pauli_basis_vectorization(
     return basis, indices
 
 
+def _vectorize_pauli_basis_row(
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+) -> ndarray:
+    dim = 2**nqubits
+    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    return _vectorization_row(basis, dim)
+
+
 def _vectorize_sparse_pauli_basis_row(
-    basis: ndarray, dim: int
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> tuple[ndarray, ndarray]:
-    basis = _vectorization_row(basis, dim)
+    dim = 2**nqubits
+    basis = _vectorize_pauli_basis_row(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
     return _post_sparse_pauli_basis_vectorization(basis, dim)
+
+
+def _vectorize_pauli_basis_column(
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+) -> ndarray:
+    dim = 2**nqubits
+    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    return _vectorization_column(basis, dim)
 
 
 def _vectorize_sparse_pauli_basis_column(
-    basis: ndarray, dim: int
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> tuple[ndarray, ndarray]:
-    basis = _vectorization_column(basis, dim)
+    dim = 2**nqubits
+    basis = _vectorize_pauli_basis_column(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
     return _post_sparse_pauli_basis_vectorization(basis, dim)
 
 
+def _vectorize_pauli_basis_system(
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
+) -> ndarray:
+    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    return _vectorization_system(basis)
+
+
 def _vectorize_sparse_pauli_basis_system(
-    basis: ndarray, dim: int
+    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> tuple[ndarray, ndarray]:
-    basis = _vectorization_system(basis)
+    dim = 2**nqubits
+    basis = _vectorize_pauli_basis_system(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
     return _post_sparse_pauli_basis_vectorization(basis, dim)
 
 
@@ -323,3 +349,23 @@ def _super_op_from_hermitian_measure_system(dims: int) -> ndarray:
     super_op = _random_unitary(dims)
     super_op = _vectorization_system(super_op)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _to_choi_row(channel: ndarray) -> ndarray:
+    channel = _vectorization_row(channel, channel.shape[-1])
+    return ENGINE.outer(channel, ENGINE.conj(channel))
+
+
+def _to_choi_column(channel: ndarray) -> ndarray:
+    channel = _vectorization_column(channel, channel.shape[-1])
+    return ENGINE.outer(channel, ENGINE.conj(channel))
+
+
+def _to_liouville_row(channel: ndarray) -> ndarray:
+    channel = _to_choi_row(channel)
+    return _reshuffling(channel, 1, 2)
+
+
+def _to_liouville_column(channel: ndarray) -> ndarray:
+    channel = _to_choi_column(channel)
+    return _reshuffling(channel, 0, 3)
