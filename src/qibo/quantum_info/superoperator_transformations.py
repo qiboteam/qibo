@@ -129,14 +129,7 @@ def unvectorization(state, order: str = "row", backend=None):
     dim = int(np.sqrt(state.shape[-1]))
     if len(state.shape) == 1:
         state = state.reshape(1, -1)
-
-    if order in ["row", "column"]:
-        order = "C" if order == "row" else "F"
-        state = backend.cast(
-            np.reshape(backend.to_numpy(state), (state.shape[0], dim, dim), order=order)
-        )
-    else:
-        state = backend.qinfo._unvectorization(state, dim)
+    state = getattr(backend.qinfo, f"_unvectorization_{order}")(state, dim)
     if state.shape[0] == 1:
         state = backend.np.squeeze(state, 0)
     return state
@@ -506,37 +499,14 @@ def choi_to_kraus(
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, coefficients, V = singular_value_decomposition(
-            choi_super_op, backend=backend
+        kraus_ops, coefficients = getattr(backend.qinfo, f"_choi_to_kraus_{order}")(
+            choi_super_op
         )
-        U = U.T
-        coefficients = backend.np.sqrt(coefficients)
-        V = backend.np.conj(V)
-
-        kraus_left, kraus_right = [], []
-        for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
-            kraus_left.append(
-                coeff * unvectorization(eigenvector_left, order=order, backend=backend)
-            )
-            kraus_right.append(
-                coeff * unvectorization(eigenvector_right, order=order, backend=backend)
-            )
-        kraus_left = backend.cast(kraus_left)
-        kraus_right = backend.cast(kraus_right)
-        kraus_ops = backend.cast([kraus_left, kraus_right])
     else:
         # when choi_super_op is CP
-        kraus_ops, coefficients = [], []
-        for eig, kraus in zip(eigenvalues, eigenvectors):
-            if backend.np.abs(eig) > precision_tol:
-                eig = backend.np.sqrt(eig)
-                kraus_ops.append(
-                    eig * unvectorization(kraus, order=order, backend=backend)
-                )
-                coefficients.append(eig)
-
-    kraus_ops = backend.cast(kraus_ops)
-    coefficients = backend.cast(coefficients)
+        kraus_ops, coefficients = getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")(
+            eigenvalues, eigenvectors, precision_tol
+        )
 
     return kraus_ops, coefficients
 

@@ -106,6 +106,33 @@ def _to_pauli_liouville_{order}(
     return ENGINE.conj(unitary) @ channel @ unitary.T
 """
 
+_choi_to_kraus = """
+def _choi_to_kraus_{order}(choi_super_op: ndarray) -> tuple[ndarray, ndarray]:
+    U, coefficients, V = ENGINE.linalg.svd(choi_super_op)
+    U = U.T
+    coefficients = ENGINE.sqrt(coefficients)
+    V = ENGINE.conj(V)
+    dim = int(np.sqrt(U.shape[-1]))
+    coefficients = coefficients.reshape(U.shape[0], 1, 1)
+    kraus_left = coefficients * _unvectorization_{order}(U, dim)
+    kraus_right = coefficients * _unvectorization_{order}(V, dim)
+    kraus_ops = ENGINE.vstack((kraus_left[None,:], kraus_right[None,:]))
+    return kraus_ops, coefficients
+"""
+
+_choi_to_kraus_cp = """
+def _choi_to_kraus_cp_{order}(
+    eigenvalues: ndarray, eigenvectors: ndarray, precision: float
+) -> tuple[ndarray, ndarray]:
+    eigv_gt_tol = ENGINE.abs(eigenvalues) > precision
+    coefficients = ENGINE.sqrt(eigenvalues[eigv_gt_tol])
+    eigenvectors = eigenvectors[eigv_gt_tol]
+    dim = int(np.sqrt(eigenvectors.shape[-1]))
+    kraus_ops = coefficients.reshape(-1, 1, 1) * _unvectorization_{order}(
+        eigenvectors, dim
+    )
+    return kraus_ops, coefficients
+"""
 
 for order in ("row", "column", "system"):
     for func in (
@@ -116,6 +143,8 @@ for order in ("row", "column", "system"):
         _super_op_from_hermitian_measure,
         _to_choi,
         _to_pauli_liouville,
+        _choi_to_kraus,
+        _choi_to_kraus_cp,
     ):
         exec(func.format(order=order))
 
@@ -145,7 +174,15 @@ def _vectorization_system(state: ndarray, dim: int = 0) -> ndarray:
     return ENGINE.reshape(state, (-1, 2 ** (2 * nqubits)))
 
 
-def _unvectorization(state: ndarray, dim: int) -> ndarray:
+def _unvectorization_row(state: ndarray, dim: int) -> ndarray:
+    return ENGINE.reshape(state, (state.shape[0], dim, dim))
+
+
+def _unvectorization_column(state: ndarray, dim: int) -> ndarray:
+    return ENGINE.reshape(state, (state.shape[0], dim, dim), order="F")
+
+
+def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
     nqubits = int(ENGINE.log2(dim))
     axes_old = list(ENGINE.arange(1, 2 * nqubits + 1))
     state = ENGINE.reshape(state, (state.shape[0],) + (2,) * 2 * nqubits)
@@ -355,13 +392,3 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
     return operator @ super_op @ operator
-
-
-def _to_liouville_row(channel: ndarray) -> ndarray:
-    channel = _to_choi_row(channel)  # pylint: disable=undefined-variable
-    return _reshuffling(channel, 1, 2)
-
-
-def _to_liouville_column(channel: ndarray) -> ndarray:
-    channel = _to_choi_column(channel)  # pylint: disable=undefined-variable
-    return _reshuffling(channel, 0, 3)
