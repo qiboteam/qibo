@@ -237,8 +237,11 @@ def _super_op_from_bcsz_measure_preamble(dims: int, rank: int):
     super_op_reduced = ENGINE.einsum("ijik->jk", ENGINE.reshape(super_op, (dims,) * 4))
     eigenvalues, eigenvectors = ENGINE.linalg.eigh(super_op_reduced)
     eigenvalues = ENGINE.sqrt(1.0 / eigenvalues)
-    operator = ENGINE.einsum("ij,ik->ijk", eigenvectors, ENGINE.conj(eigenvectors.T))
-    operator = ENGINE.sum(eigenvalues.reshape(len(eigenvalues), 1, 1) * operator)
+    eigenvectors = eigenvectors.T
+    operator = ENGINE.einsum("ij,ik->ijk", eigenvectors, ENGINE.conj(eigenvectors))
+    operator = ENGINE.sum(
+        eigenvalues.reshape(len(eigenvalues), 1, 1) * operator, axis=0
+    )
     return operator, super_op
 
 

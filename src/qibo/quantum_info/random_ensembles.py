@@ -1020,6 +1020,8 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     """
     backend.set_seed(seed)
 
+    if rank is None:
+        rank = dims
     if order == "row":
         return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
     elif order == "column":
