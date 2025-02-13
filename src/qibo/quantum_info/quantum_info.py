@@ -29,51 +29,58 @@ def _post_sparse_pauli_basis_vectorization(
     return basis, indices
 
 
-def _vectorize_pauli_basis_row(
+_vectorize_pauli_basis = """
+def _vectorize_pauli_basis_{order}(
     nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> ndarray:
     dim = 2**nqubits
     basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
-    return _vectorization_row(basis, dim)
+    return _vectorization_{order}(basis, dim)
+"""
 
-
-def _vectorize_sparse_pauli_basis_row(
+_vectorize_sparse_pauli_basis = """
+def _vectorize_sparse_pauli_basis_{order}(
     nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
 ) -> tuple[ndarray, ndarray]:
     dim = 2**nqubits
-    basis = _vectorize_pauli_basis_row(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
+    basis = _vectorize_pauli_basis_{order}(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
     return _post_sparse_pauli_basis_vectorization(basis, dim)
+"""
 
+_super_op_from_haar_measure = """
+def _super_op_from_haar_measure_{order}(dims: int) -> ndarray:
+    super_op = _random_unitary_haar(dims)
+    super_op = _vectorization_{order}(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+"""
 
-def _vectorize_pauli_basis_column(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
-) -> ndarray:
-    dim = 2**nqubits
-    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
-    return _vectorization_column(basis, dim)
+_super_op_from_hermitian_measure = """
+def _super_op_from_hermitian_measure_{order}(dims: int) -> ndarray:
+    super_op = _random_unitary(dims)
+    super_op = _vectorization_{order}(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+"""
 
+_to_choi = """
+def _to_choi_{order}(channel: ndarray) -> ndarray:
+    channel = _vectorization_{order}(channel, channel.shape[-1])
+    return ENGINE.outer(channel, ENGINE.conj(channel))
+"""
 
-def _vectorize_sparse_pauli_basis_column(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
-) -> tuple[ndarray, ndarray]:
-    dim = 2**nqubits
-    basis = _vectorize_pauli_basis_column(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
-    return _post_sparse_pauli_basis_vectorization(basis, dim)
+_to_liouville = """
+def _to_liouville_{order}(channel: ndarray) -> ndarray:
+    channel = _to_choi_{order}(channel)
+    return _reshuffling(channel, {ax1}, {ax2})
+"""
 
-
-def _vectorize_pauli_basis_system(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
-) -> ndarray:
-    basis = _pauli_basis(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
-    return _vectorization_system(basis)
-
-
-def _vectorize_sparse_pauli_basis_system(
-    nqubits: int, pauli_0: ndarray, pauli_1: ndarray, pauli_2: ndarray, pauli_3: ndarray
-) -> tuple[ndarray, ndarray]:
-    dim = 2**nqubits
-    basis = _vectorize_pauli_basis_system(nqubits, pauli_0, pauli_1, pauli_2, pauli_3)
-    return _post_sparse_pauli_basis_vectorization(basis, dim)
+for order in ("row", "column", "system"):
+    for func in (
+        _vectorize_pauli_basis,
+        _vectorize_sparse_pauli_basis,
+        _super_op_from_haar_measure,
+        _super_op_from_hermitian_measure,
+    ):
+        exec(func.format(order=order))
 
 
 def _vectorization_row(state: ndarray, dim: int) -> ndarray:
@@ -87,7 +94,9 @@ def _vectorization_column(state: ndarray, dim: int) -> ndarray:
     return ENGINE.reshape(state, (-1, dim**2))
 
 
-def _vectorization_system(state: ndarray) -> ndarray:
+# WARNING: dim is not used, but it is useful to uniform
+# the call with the other functions
+def _vectorization_system(state: ndarray, dim: int = 0) -> ndarray:
     nqubits = int(ENGINE.log2(state.shape[-1]))
     new_axis = [
         0,
@@ -309,56 +318,6 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
     return operator @ super_op @ operator
-
-
-# all these function can probably be created dynamically
-# I just need to check whether it causes troubles with numba.njit
-
-
-def _super_op_from_haar_measure_row(dims: int) -> ndarray:
-    super_op = _random_unitary_haar(dims)
-    super_op = _vectorization_row(super_op, dims)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _super_op_from_haar_measure_column(dims: int) -> ndarray:
-    super_op = _random_unitary_haar(dims)
-    super_op = _vectorization_column(super_op, dims)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _super_op_from_haar_measure_system(dims: int) -> ndarray:
-    super_op = _random_unitary_haar(dims)
-    super_op = _vectorization_system(super_op)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _super_op_from_hermitian_measure_row(dims: int) -> ndarray:
-    super_op = _random_unitary(dims)
-    super_op = _vectorization_row(super_op, dims)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _super_op_from_hermitian_measure_column(dims: int) -> ndarray:
-    super_op = _random_unitary(dims)
-    super_op = _vectorization_column(super_op, dims)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _super_op_from_hermitian_measure_system(dims: int) -> ndarray:
-    super_op = _random_unitary(dims)
-    super_op = _vectorization_system(super_op)
-    return ENGINE.outer(super_op, ENGINE.conj(super_op))
-
-
-def _to_choi_row(channel: ndarray) -> ndarray:
-    channel = _vectorization_row(channel, channel.shape[-1])
-    return ENGINE.outer(channel, ENGINE.conj(channel))
-
-
-def _to_choi_column(channel: ndarray) -> ndarray:
-    channel = _vectorization_column(channel, channel.shape[-1])
-    return ENGINE.outer(channel, ENGINE.conj(channel))
 
 
 def _to_liouville_row(channel: ndarray) -> ndarray:
