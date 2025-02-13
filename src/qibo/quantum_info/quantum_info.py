@@ -73,6 +73,21 @@ def _vectorization_system(state: ndarray) -> ndarray:
     return ENGINE.reshape(state, (-1, 2 ** (2 * nqubits)))
 
 
+def _unvectorization(state: ndarray, dim: int) -> ndarray:
+    nqubits = int(ENGINE.log2(dim))
+    axes_old = list(ENGINE.arange(1, 2 * nqubits + 1))
+    state = ENGINE.reshape(state, (state.shape[0],) + (2,) * 2 * nqubits)
+    state = ENGINE.transpose(
+        state,
+        [
+            0,
+        ]
+        + axes_old[1::2]
+        + axes_old[0::2],
+    )
+    return ENGINE.reshape(state, (state.shape[0],) + (2**nqubits,) * 2)
+
+
 def _random_statevector(dims: int):
     state = ENGINE.random.standard_normal(dims)
     state = state + 1.0j * ENGINE.random.standard_normal(dims)
@@ -151,7 +166,9 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
     return hadamards, permutations
 
 
-def _gamma_delta_matrices(nqubits: int, hadamards: ndarray, permutations: ndarray):
+def _gamma_delta_matrices(
+    nqubits: int, hadamards: ndarray, permutations: ndarray
+) -> tuple[ndarray, ndarray, ndarray, ndarray]:
     delta_matrix = ENGINE.eye(nqubits, dtype=int)
     delta_matrix_prime = ENGINE.copy(delta_matrix)
 
@@ -224,7 +241,9 @@ def _gamma_delta_matrices(nqubits: int, hadamards: ndarray, permutations: ndarra
     return gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime
 
 
-def _super_op_from_bcsz_measure_preamble(dims: int, rank: int):
+def _super_op_from_bcsz_measure_preamble(
+    dims: int, rank: int
+) -> tuple[ndarray, ndarray]:
     nqubits = int(np.log2(dims))
     super_op = _random_gaussian_matrix(
         dims**2,
@@ -245,13 +264,13 @@ def _super_op_from_bcsz_measure_preamble(dims: int, rank: int):
     return operator, super_op
 
 
-def _super_op_from_bcsz_measure_row(dims: int, rank: int):
+def _super_op_from_bcsz_measure_row(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(ENGINE.eye(dims, dtype=complex), operator)
     return operator @ super_op @ operator
 
 
-def _super_op_from_bcsz_measure_column(dims: int, rank: int):
+def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
     return operator @ super_op @ operator
@@ -261,37 +280,37 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int):
 # I just need to check whether it causes troubles with numba.njit
 
 
-def _super_op_from_haar_measure_row(dims):
+def _super_op_from_haar_measure_row(dims: int) -> ndarray:
     super_op = _random_unitary_haar(dims)
     super_op = _vectorization_row(super_op, dims)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 
 
-def _super_op_from_haar_measure_column(dims):
+def _super_op_from_haar_measure_column(dims: int) -> ndarray:
     super_op = _random_unitary_haar(dims)
     super_op = _vectorization_column(super_op, dims)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 
 
-def _super_op_from_haar_measure_system(dims):
+def _super_op_from_haar_measure_system(dims: int) -> ndarray:
     super_op = _random_unitary_haar(dims)
     super_op = _vectorization_system(super_op)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 
 
-def _super_op_from_hermitian_measure_row(dims):
+def _super_op_from_hermitian_measure_row(dims: int) -> ndarray:
     super_op = _random_unitary(dims)
     super_op = _vectorization_row(super_op, dims)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 
 
-def _super_op_from_hermitian_measure_column(dims):
+def _super_op_from_hermitian_measure_column(dims: int) -> ndarray:
     super_op = _random_unitary(dims)
     super_op = _vectorization_column(super_op, dims)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 
 
-def _super_op_from_hermitian_measure_system(dims):
+def _super_op_from_hermitian_measure_system(dims: int) -> ndarray:
     super_op = _random_unitary(dims)
     super_op = _vectorization_system(super_op)
     return ENGINE.outer(super_op, ENGINE.conj(super_op))

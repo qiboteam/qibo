@@ -95,8 +95,10 @@ def unvectorization(state, order: str = "row", backend=None):
             &= \\text{unvectorization}(\\text{vectorization}(\\rho)) \\nonumber
         \\end{align}
 
+    If ``state`` has shape (N, k), it is interpreted as a batch of states.
+
     Args:
-        state: quantum state in Liouville representation.
+        state: quantum state or batch of states in the Liouville representation.
         order (str, optional): If ``"row"``, unvectorization is performed
             row-wise. If ``"column"``, unvectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
@@ -109,40 +111,33 @@ def unvectorization(state, order: str = "row", backend=None):
         ndarray: Density matrix of ``state``.
     """
 
-    if len(state.shape) != 1:
+    if len(state.shape) not in (1, 2):
         raise_error(
             TypeError,
-            f"Object must have dims (k,), but have dims {state.shape}.",
+            f"Object must have dims (k,) or (N, k), but have dims {state.shape}.",
         )
 
-    if not isinstance(order, str):
+    if order not in ["row", "column", "system"]:
         raise_error(
-            TypeError, f"order must be type str, but it is type {type(order)} instead."
+            ValueError,
+            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
         )
-    else:
-        if order not in ["row", "column", "system"]:
-            raise_error(
-                ValueError,
-                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
-            )
-
     backend = _check_backend(backend)
     state = backend.cast(state)
 
-    dim = int(np.sqrt(len(state)))
+    dim = int(np.sqrt(state.shape[-1]))
+    if len(state.shape) == 1:
+        state = state.reshape(1, -1)
 
     if order in ["row", "column"]:
         order = "C" if order == "row" else "F"
         state = backend.cast(
-            np.reshape(backend.to_numpy(state), (dim, dim), order=order)
+            np.reshape(backend.to_numpy(state), (state.shape[0], dim, dim), order=order)
         )
     else:
-        nqubits = int(np.log2(dim))
-        axes_old = list(np.arange(0, 2 * nqubits))
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
-        state = backend.np.transpose(state, axes_old[1::2] + axes_old[0::2])
-        state = backend.np.reshape(state, [2**nqubits] * 2)
-
+        state = backend.qinfo._unvectorization(state, dim)
+    if state.shape[0] == 1:
+        state = backend.np.squeeze(state, 0)
     return state
 
 
