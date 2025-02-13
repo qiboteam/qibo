@@ -279,31 +279,20 @@ def random_quantum_channel(
     Returns:
         ndarray: Superoperator representation of a random unitary gate.
     """
-    if not isinstance(representation, str):
-        raise_error(
-            TypeError,
-            f"representation must be type str, but it is type {type(representation)}",
-        )
-
-    if representation not in [
+    if representation not in (
         "chi",
         "choi",
         "kraus",
         "liouville",
         "pauli",
         "stinespring",
-    ]:
+    ):
         if (
             ("chi-" not in representation and "pauli-" not in representation)
             or len(representation.split("-")) != 2
             or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
         ):
             raise_error(ValueError, f"representation {representation} not implemented.")
-
-    if measure == "bcsz" and order not in ["row", "column"]:
-        raise_error(
-            NotImplementedError, f"order {order} not implemented for measure {measure}."
-        )
 
     backend = _check_backend(backend)
     backend.set_seed(seed)
@@ -312,10 +301,17 @@ def random_quantum_channel(
         super_op = _super_op_from_bcsz_measure(
             dims=dims, rank=rank, order=order, seed=seed, backend=backend
         )
+    elif measure == "haar":
+        super_op = getattr(backend.qinfo, f"_super_op_from_haar_measure_{order}")(dims)
+    elif measure is None:
+        super_op = getattr(backend.qinfo, f"_super_op_from_hermitian_measure_{order}")(
+            dims
+        )
     else:
-        super_op = random_unitary(dims, measure, seed, backend)
-        super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = backend.np.outer(super_op, backend.np.conj(super_op))
+        raise_error(
+            ValueError,
+            f"Unrecognized {order} order, pick one in ('row', 'column', 'system').",
+        )
 
     if "chi" in representation:
         pauli_order = "IXYZ"

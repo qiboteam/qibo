@@ -175,7 +175,7 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
         test = random_quantum_channel(4, representation=True, backend=backend)
     with pytest.raises(ValueError):
         test = random_quantum_channel(4, representation="Choi", backend=backend)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError):
         test = random_quantum_channel(4, measure="bcsz", order="system")
 
     # All subroutines are already tested elsewhere,

@@ -255,3 +255,43 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int):
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
     return operator @ super_op @ operator
+
+
+# all these function can probably be created dynamically
+# I just need to check whether it causes troubles with numba.njit
+
+
+def _super_op_from_haar_measure_row(dims):
+    super_op = _random_unitary_haar(dims)
+    super_op = _vectorization_row(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _super_op_from_haar_measure_column(dims):
+    super_op = _random_unitary_haar(dims)
+    super_op = _vectorization_column(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _super_op_from_haar_measure_system(dims):
+    super_op = _random_unitary_haar(dims)
+    super_op = _vectorization_system(super_op)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _super_op_from_hermitian_measure_row(dims):
+    super_op = _random_unitary(dims)
+    super_op = _vectorization_row(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _super_op_from_hermitian_measure_column(dims):
+    super_op = _random_unitary(dims)
+    super_op = _vectorization_column(super_op, dims)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
+
+
+def _super_op_from_hermitian_measure_system(dims):
+    super_op = _random_unitary(dims)
+    super_op = _vectorization_system(super_op)
+    return ENGINE.outer(super_op, ENGINE.conj(super_op))
