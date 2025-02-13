@@ -88,6 +88,15 @@ def _unvectorization(state: ndarray, dim: int) -> ndarray:
     return ENGINE.reshape(state, (state.shape[0],) + (2**nqubits,) * 2)
 
 
+def _reshuffling(super_op: ndarray, ax1: int, ax2: int) -> ndarray:
+    dim = int(ENGINE.sqrt(super_op.shape[0]))
+    super_op = ENGINE.reshape(super_op, (dim,) * 4)
+    axes = ENGINE.arange(len(super_op.shape))
+    axes[[ax1, ax2]] = axes[[ax2, ax1]]
+    super_op = ENGINE.transpose(super_op, axes)
+    return ENGINE.reshape(super_op, [dim**2, dim**2])
+
+
 def _random_statevector(dims: int):
     state = ENGINE.random.standard_normal(dims)
     state = state + 1.0j * ENGINE.random.standard_normal(dims)

@@ -1339,11 +1339,7 @@ def test_kraus_to_unitaries(backend, order):
 def test_reshuffling(backend, order, test_superop):
     from qibo.quantum_info.superoperator_transformations import _reshuffling
 
-    with pytest.raises(TypeError):
-        _reshuffling(test_superop, True, backend=backend)
     with pytest.raises(ValueError):
-        _reshuffling(test_superop, "sustem", backend=backend)
-    with pytest.raises(NotImplementedError):
         _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
         _reshuffling(test_superop[:-1, :-1], order, backend=backend)

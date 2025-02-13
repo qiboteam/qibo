@@ -2175,26 +2175,12 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
-    if not isinstance(order, str):
-        raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
-
-    orders = ["row", "column", "system"]
-    if order not in orders:
+    if order not in ("row", "column"):
         raise_error(
             ValueError,
-            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
+            f"Unsupported {order} order, please pick one in ('row', 'column').",
         )
-    del orders
-
-    if order == "system":
-        raise_error(
-            NotImplementedError, "reshuffling not implemented for system vectorization."
-        )
-
     backend = _check_backend(backend)
-
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
-
     dim = np.sqrt(super_op.shape[0])
 
     if (
@@ -2204,15 +2190,8 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
-    dim = int(dim)
-    super_op = backend.np.reshape(super_op, [dim] * 4)
-
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = backend.np.swapaxes(super_op, *axes)
-
-    super_op = backend.np.reshape(super_op, [dim**2, dim**2])
-
-    return super_op
+    return backend.qinfo._reshuffling(super_op, *axes)
 
 
 def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
