@@ -409,3 +409,16 @@ def _kraus_to_stinespring(
     return ENGINE.einsum("aij,akl->ikjl", kraus_ops, alphas).reshape(
         2 * (kraus_ops.shape[1] * alphas.shape[1],)
     )
+
+
+def _stinespring_to_kraus(
+    stinespring: ndarray, initial_state_env: ndarray, dim: int, dim_env: int
+) -> ndarray:
+    stinespring = ENGINE.reshape(stinespring, (dim, dim_env, dim, dim_env))
+    stinespring = ENGINE.swapaxes(stinespring, 1, 2)
+    alphas = ENGINE.eye(dim_env, dtype=complex)
+    stinespring = (alphas @ stinespring).reshape(dim, dim_env, dim + dim_env)
+    stinespring = ENGINE.vstack(
+        (stinespring[:, :, :dim_env], stinespring[:, :, dim_env:])
+    )
+    return (stinespring @ initial_state_env).reshape(dim, dim_env, dim_env)

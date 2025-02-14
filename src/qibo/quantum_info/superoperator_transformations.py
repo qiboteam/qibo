@@ -1843,24 +1843,8 @@ def stinespring_to_kraus(
     """
     backend = _check_backend(backend)
 
-    if isinstance(dim_env, int) is False:
-        raise_error(
-            TypeError, f"dim_env must be type int, but it is type {type(dim_env)}."
-        )
-
-    if dim_env <= 0:
-        raise_error(ValueError, "dim_env must be a positive integer.")
-
     if initial_state_env is not None and len(initial_state_env.shape) != 1:
         raise_error(ValueError, "initial_state_env must be a statevector.")
-
-    if nqubits is not None:
-        if isinstance(nqubits, int) is False:
-            raise_error(
-                TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
-            )
-        if nqubits <= 0:
-            raise_error(ValueError, "nqubits must be a positive integer.")
 
     dim_stinespring = stinespring.shape[0]
 
@@ -1881,19 +1865,9 @@ def stinespring_to_kraus(
         initial_state_env = backend.cast(
             initial_state_env, dtype=initial_state_env.dtype
         )
-
-    stinespring = backend.np.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = backend.np.swapaxes(stinespring, 1, 2)
-
-    kraus_ops = []
-    for alpha in range(dim_env):
-        vector_alpha = np.zeros(dim_env, dtype=complex)
-        vector_alpha[alpha] = 1.0
-        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        kraus = backend.np.conj(vector_alpha) @ stinespring @ initial_state_env
-        kraus_ops.append(kraus)
-
-    return kraus_ops
+    return backend.qinfo._stinespring_to_kraus(
+        stinespring, initial_state_env, dim, dim_env
+    )
 
 
 def stinespring_to_chi(
