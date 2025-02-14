@@ -448,27 +448,8 @@ def choi_to_kraus(
         with the left- and right-generalized Kraus operators as well as the square root of
         their corresponding singular values.
     """
-
-    if precision_tol is not None and not isinstance(precision_tol, float):
-        raise_error(
-            TypeError,
-            f"precision_tol must be type float, but it is type {type(precision_tol)}",
-        )
-
-    if precision_tol is not None and precision_tol < 0:
-        raise_error(
-            ValueError,
-            f"precision_tol must be a non-negative float, but it is {precision_tol}.",
-        )
-
     if precision_tol is None:  # pragma: no cover
         precision_tol = PRECISION_TOL
-
-    if not isinstance(validate_cp, bool):
-        raise_error(
-            TypeError,
-            f"validate_cp must be type bool, but it is type {type(validate_cp)}.",
-        )
 
     backend = _check_backend(backend)
     choi_super_op = backend.cast(choi_super_op)
@@ -662,19 +643,15 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
-    dim = 2**nqubits
 
-    super_op = np.zeros((dim**2, dim**2), dtype=complex)
-    super_op = backend.cast(super_op, dtype=super_op.dtype)
+    kraus_ops = []
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.matrix(backend)
-        kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
-
-    return super_op
+    kraus_ops = backend.np.vstack(kraus_ops)
+    return getattr(backend.qinfo, f"_kraus_to_choi_{order}")(kraus_ops)
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):

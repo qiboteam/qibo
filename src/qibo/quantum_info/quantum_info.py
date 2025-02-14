@@ -127,11 +127,17 @@ def _choi_to_kraus_cp_{order}(
     eigv_gt_tol = ENGINE.abs(eigenvalues) > precision
     coefficients = ENGINE.sqrt(eigenvalues[eigv_gt_tol])
     eigenvectors = eigenvectors[eigv_gt_tol]
-    dim = int(np.sqrt(eigenvectors.shape[-1]))
+    dim = int(ENGINE.sqrt(eigenvectors.shape[-1]))
     kraus_ops = coefficients.reshape(-1, 1, 1) * _unvectorization_{order}(
         eigenvectors, dim
     )
     return kraus_ops, coefficients
+"""
+
+_kraus_to_choi = """
+def _kraus_to_choi_{order}(kraus_ops: ndarray) -> ndarray:
+    kraus_ops = _vectorization_{order}(kraus_ops, kraus_ops.shape[-1])
+    return ENGINE.einsum("ij,ik", kraus_ops, ENGINE.conj(kraus_ops))
 """
 
 for order in ("row", "column", "system"):
@@ -145,6 +151,7 @@ for order in ("row", "column", "system"):
         _to_pauli_liouville,
         _choi_to_kraus,
         _choi_to_kraus_cp,
+        _kraus_to_choi,
     ):
         exec(func.format(order=order))
 
@@ -362,7 +369,6 @@ def _gamma_delta_matrices(
 def _super_op_from_bcsz_measure_preamble(
     dims: int, rank: int
 ) -> tuple[ndarray, ndarray]:
-    nqubits = int(np.log2(dims))
     super_op = _random_gaussian_matrix(
         dims**2,
         rank=rank,

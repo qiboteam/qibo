@@ -448,13 +448,6 @@ def test_choi_to_kraus(
         np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
     )
 
-    with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, str(PRECISION_TOL), backend=backend)
-    with pytest.raises(ValueError):
-        choi_to_kraus(test_choi, -1.0 * PRECISION_TOL, backend=backend)
-    with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, validate_cp="True", backend=backend)
-
     kraus_ops, _ = choi_to_kraus(
         test_choi, order=order, validate_cp=validate_cp, backend=backend
     )
