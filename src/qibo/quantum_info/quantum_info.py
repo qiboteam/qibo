@@ -314,54 +314,20 @@ def _gamma_delta_matrices(
     triu_indices = ENGINE.triu_indices(nqubits, k=1)
     gamma_matrix_prime[triu_indices] = gamma_matrix_prime[tril_indices]
 
-    # with these you should be able to reconstruct all the conditional branches below
-    # thus lifting the need for the loop, however, due to the very convoluted
-    # conditional checks, it may become quite complicate to follow
-    # I'd rather try to understand first, if we can simplify the branching below
     p_col_gt_row = permutations[triu_indices[1]] > permutations[triu_indices[0]]
+    p_col_neq_row = permutations[triu_indices[1]] != permutations[triu_indices[0]]
     p_col_le_row = p_col_gt_row ^ True
-    h_row_eq_1 = hadamards[triu_indices[0]]
-    h_col_eq_1 = hadamards[triu_indices[1]]
-    h_row_eq_0 = h_row_eq_1 ^ True
-    h_col_eq_0 = h_col_eq_1 ^ True
+    h_row_eq_0 = hadamards[triu_indices[0]] == 0
+    h_col_eq_0 = hadamards[triu_indices[1]] == 0
 
-    # This is quite confusing and convoluted, I have the impression that it may be significantly
-    # simplified
-    # filling off-diagonal elements of gammas and deltas matrices
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            if hadamards[k] == 1 and hadamards[j] == 1:  # pragma: no cover
-                b = ENGINE.random.randint(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-                if permutations[k] > permutations[j]:
-                    b = ENGINE.random.randint(0, 2)
-                    delta_matrix[k, j] = b
+    idx = (h_row_eq_0 * h_col_eq_0 ^ True) * p_col_neq_row
+    elements = ENGINE.random.randint(0, 2, size=len(idx.nonzero()[0]))
+    gamma_matrix[triu_indices[0][idx], triu_indices[1][idx]] = elements
+    gamma_matrix[triu_indices[1][idx], triu_indices[0][idx]] = elements
 
-            if hadamards[k] == 0 and hadamards[j] == 1:
-                b = ENGINE.random.randint(0, 2)
-                delta_matrix[k, j] = b
-                if permutations[k] > permutations[j]:
-                    b = ENGINE.random.randint(0, 2)
-                    gamma_matrix[k, j] = b
-                    gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 1
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = ENGINE.random.randint(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 0
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = ENGINE.random.randint(0, 2)
-                delta_matrix[k, j] = b
+    idx = p_col_gt_row | (p_col_le_row * h_row_eq_0 * h_col_eq_0)
+    elements = ENGINE.random.randint(0, 2, size=len(idx.nonzero()[0]))
+    delta_matrix[triu_indices[1][idx], triu_indices[0][idx]] = elements
 
     return gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime
 

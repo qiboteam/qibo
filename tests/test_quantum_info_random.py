@@ -273,7 +273,7 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
         @ matrices.CZ
         @ np.kron(matrices.X, matrices.S)
         @ np.kron(matrices.H, matrices.X)
-        @ matrices.CZ
+        @ matrices.CNOT
         @ np.kron(matrices.S, matrices.I)
     )
 

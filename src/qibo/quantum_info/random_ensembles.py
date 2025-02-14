@@ -555,6 +555,7 @@ def random_clifford(
             backend=backend,
         ),
     )
+    clifford_circuit.draw()
 
     if return_circuit is False:
         clifford_circuit = clifford_circuit.unitary(backend=backend)
