@@ -6,7 +6,8 @@
 
 import measurements
 import methodsMiFGD_core
-import methodsRGD_core
+#import methodsRGD_core
+import methodsRGD_New
 import numpy as np
 import projectors
 import qutip as qu
@@ -108,38 +109,7 @@ def Test_measurement(labels, data_dict_list):
     return count_dict_list, measurement_list
 
 
-if __name__ == "__main__":
-
-    ############################################################
-    ### Example of creating and running an experiment
-    ############################################################
-
-    # n = 3;    labels = projectors.generate_random_label_list(50, n)
-    n = 4
-    labels = projectors.generate_random_label_list(120, n)
-
-    # labels = ['YXY', 'IXX', 'ZYI', 'XXX', 'YZZ']
-    # labels = ['YZYX', 'ZZIX', 'XXIZ', 'XZIY', 'YXYI', 'ZYYX', 'YXXX', 'IIYY', 'ZIXZ', 'IXXI', 'YZXI', 'ZZYI', 'YZXY', 'XYZI', 'XZXI', 'XZYX', 'YIXI', 'IZYY', 'ZIZX', 'YXXY']
-    # labels = ['IIIX', 'IYIY', 'YYXI', 'ZZYY', 'ZYIX', 'XIII', 'XXZI', 'YXZI', 'IZXX', 'YYIZ', 'XXIY', 'XXZY', 'ZZIY', 'YIYX', 'YYZZ', 'YZXZ', 'YZYZ', 'ZXYY', 'IXIZ', 'XZII']
-    # labels = Generate_All_labels(n)
-
-    num_labels = len(labels)
-
-    circuit_Choice = 1
-    if circuit_Choice == 1:  #  generate from circuit
-        Nr = 1
-
-        state = GHZState(n)
-        # state   = HadamardState(n)
-        # state = RandomState(n)
-
-        stateGHZ = ghz_state(n)
-        target_state_GHZ = stateGHZ.execute().state()
-
-        target_density_matrix = state.get_state_matrix()
-        target_state = state.get_state_vector()
-        # print(state.get_state_vector())
-
+def from_shot_to_measurement_list(state, labels):
         #
         # DO the shot measurement
         #
@@ -165,7 +135,91 @@ if __name__ == "__main__":
             measurement_list4.append(coef)
 
         print(np.allclose(np.array(measurement_list4), np.array(measurement_list)))
-        raise
+
+        return measurement_list
+
+
+def qibochem_measure_expectation(circuit, lab_list, num_shots):
+    """ Use qibochem.measurement package to get the expecation values 
+        of given list of Pauli terms for a particular given circuit 
+
+    Args:
+        circuit (circuit): the circuit generating the state
+        lab_list (list): list of list, each list element of which is 
+                a list referring the Pauli [I, X, Y, Z] in qubit order
+        
+            (eg) lab_list = [[2,1,2], [0,1,1], [3,2,0], [1,1,1], [2,3,3]]
+                means Pauli terms  ["YXY", "IXX", "ZYI", "XXX", "YZZ"]
+        num_shots (int): number of shot measurements
+                
+    Returns:
+        list (coef_Pauli_exact): list of exact expectation value of Pauli Terms
+        list (coef_Pauli_shots): list of Pauli expectation from shot measurements
+    """
+    from functools import reduce
+    from qibo.hamiltonians import SymbolicHamiltonian
+    from qibo.symbols import I, X, Y, Z
+    from qibochem.measurement import expectation, expectation_from_samples
+
+    Ps = [I, X, Y, Z]
+
+    _circuit = circuit.copy()
+    coef_Pauli_exact = []       # list of exact expectation value of Pauli Terms
+    coef_Pauli_shots = []       # list of Pauli expectation from shot measurements
+    for PauliID in lab_list:
+        PauliQwise = [Ps[idx](ii) for ii, idx in enumerate(PauliID)]
+        PauliTerm  = SymbolicHamiltonian(reduce(lambda x, y: x*y, PauliQwise))
+
+        coef_Pauli_exact.append(expectation(_circuit, PauliTerm))   
+        coef_Pauli_shots.append(expectation_from_samples(_circuit, PauliTerm, n_shots=num_shots))
+
+    return coef_Pauli_exact, coef_Pauli_shots
+
+
+
+if __name__ == "__main__":
+
+    ############################################################
+    ### Example of creating and running an experiment
+    ############################################################
+
+    n = 3;    labels = projectors.generate_random_label_list(50, n)
+    #n = 4
+    #labels = projectors.generate_random_label_list(120, n)
+
+    lab_list = [[2,1,2], [0,1,1], [3,2,0], [1,1,1], [2,3,3]]
+    labels = ['YXY', 'IXX', 'ZYI', 'XXX', 'YZZ']
+    # labels = ['YZYX', 'ZZIX', 'XXIZ', 'XZIY', 'YXYI', 'ZYYX', 'YXXX', 'IIYY', 'ZIXZ', 'IXXI', 'YZXI', 'ZZYI', 'YZXY', 'XYZI', 'XZXI', 'XZYX', 'YIXI', 'IZYY', 'ZIZX', 'YXXY']
+    # labels = ['IIIX', 'IYIY', 'YYXI', 'ZZYY', 'ZYIX', 'XIII', 'XXZI', 'YXZI', 'IZXX', 'YYIZ', 'XXIY', 'XXZY', 'ZZIY', 'YIYX', 'YYZZ', 'YZXZ', 'YZYZ', 'ZXYY', 'IXIZ', 'XZII']
+    # labels = Generate_All_labels(n)
+
+    num_labels = len(labels)
+
+    circuit_Choice = 1
+    if circuit_Choice == 1:  #  generate from circuit
+        Nr = 1
+
+        state   = GHZState(n)
+        # state   = HadamardState(n)
+        #state = RandomState(n)
+
+        stateGHZ = ghz_state(n)
+        target_state_GHZ = stateGHZ.execute().state()
+
+        target_density_matrix = state.get_state_matrix()
+        target_state = state.get_state_vector()
+        # print(state.get_state_vector())
+
+
+        measurement_list = from_shot_to_measurement_list(state, labels)
+
+
+        num_shots = 200
+        coef_Pauli_exact, coef_Pauli_shots = qibochem_measure_expectation(stateGHZ, lab_list, num_shots)
+        print(coef_Pauli_exact)
+        print(coef_Pauli_shots)
+
+
 
     elif circuit_Choice == 2:  # directly generate density matrix via qutip
         Nr = 1
@@ -201,9 +255,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------- #
 
     projector_list = [projector_dict[label] for label in labels]
-    yProj_Exact = methodsRGD_core.Amea(
-        projector_list, target_density_matrix, num_labels, 1
-    )  # argv[-1] = coef
+
+    #yProj_Exact = methodsRGD_core.Amea(
+    yProj_Exact = methodsRGD_New.Amea(
+        projector_list, target_density_matrix)
 
     if circuit_Choice == 1:  #  generated from circuit
         #
@@ -289,7 +344,8 @@ if __name__ == "__main__":
     # exec(open('RGD_optRun.py').read())
     # Frec_RGD, wc, RunTime = Run_RGD(params_dict, Rpm)
 
-    worker = methodsRGD_core.BasicWorkerRGD(params_dict)
+    #worker = methodsRGD_core.BasicWorkerRGD(params_dict)
+    worker = methodsRGD_New.BasicWorkerRGD(params_dict)
     # worker.computeRGD(InitX_RGD, Ch_svd, Md_tr, Md_alp, Md_sig)
     worker.computeRGD(InitX_RGD, Ch_svd)
 
