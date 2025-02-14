@@ -398,3 +398,14 @@ def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
     operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
     return operator @ super_op @ operator
+
+
+def _kraus_to_stinespring(
+    kraus_ops: ndarray, initial_state_env: ndarray, dim_env: int
+) -> ndarray:
+    alphas = ENGINE.zeros((dim_env, dim_env, dim_env), dtype=complex)
+    alphas[range(dim_env), range(dim_env)] = initial_state_env
+    # batched kron product
+    return ENGINE.einsum("aij,akl->ikjl", kraus_ops, alphas).reshape(
+        2 * (kraus_ops.shape[1] * alphas.shape[1],)
+    )

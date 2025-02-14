@@ -861,15 +861,10 @@ def kraus_to_stinespring(
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_ops.append(kraus_op.matrix(backend)[None, :])
+        kraus_ops.append(kraus_op.matrix(backend)[None,:])
         del kraus_op
     kraus_ops = backend.np.vstack(kraus_ops)
-    alphas = backend.np.zeros((dim_env, dim_env, dim_env), dtype=complex)
-    alphas[range(dim_env), range(dim_env)] = initial_state_env
-    # batched kron product
-    return backend.np.einsum("aij,akl->ikjl", kraus_ops, alphas).reshape(
-        2 * (kraus_ops.shape[1] * alphas.shape[1],)
-    )
+    return backend.qinfo._kraus_to_stinespring(kraus_ops, initial_state_env, dim_env)
 
 
 def liouville_to_choi(super_op, order: str = "row", backend=None):
