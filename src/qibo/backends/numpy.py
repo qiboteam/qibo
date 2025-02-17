@@ -199,7 +199,12 @@ class NumpyBackend(Backend):
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            # opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            opstring = (
+                "abc,defabc"
+                if gate.__class__.__name__ == "GeneralizedRBS"
+                else einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            )
             state = self.np.einsum(opstring, state, matrix)
         return self.np.reshape(state, (2**nqubits,))
 
