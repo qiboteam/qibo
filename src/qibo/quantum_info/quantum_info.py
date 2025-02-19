@@ -17,7 +17,7 @@ def _pauli_basis(
     basis_single = ENGINE.vstack((pauli_0, pauli_1, pauli_2, pauli_3)).reshape(4, 2, 2)
     dim = 2**nqubits
     input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
-    output_indices = (i for indices in zip(*input_indices) for i in indices)
+    output_indices = [i for indices in zip(*input_indices) for i in indices]
     operands = [basis_single for _ in range(nqubits)]
     inputs = [item for pair in zip(operands, input_indices) for item in pair]
     return (
@@ -161,8 +161,8 @@ def _vectorization_row(state: ndarray, dim: int) -> ndarray:
 
 
 def _vectorization_column(state: ndarray, dim: int) -> ndarray:
-    indices = list(range(len(state.shape)))
-    indices[-2:] = reversed(indices[-2:])
+    indices = ENGINE.arange(state.ndim)
+    indices[-2:] = indices[-2:][::-1]
     state = ENGINE.transpose(state, indices)
     return ENGINE.reshape(state, (-1, dim**2))
 
@@ -186,6 +186,8 @@ def _unvectorization_row(state: ndarray, dim: int) -> ndarray:
 
 
 def _unvectorization_column(state: ndarray, dim: int) -> ndarray:
+    # this should be equivalent and more broadly supported (e.g. by numba)
+    # return ENGINE.reshape(state.T, (dim, dim, state.shape[0])).T
     return ENGINE.reshape(state, (state.shape[0], dim, dim), order="F")
 
 
