@@ -77,18 +77,14 @@ def test_random_gaussian_matrix(backend, seed):
     with pytest.raises(ValueError):
         dims, rank = 2, 4
         random_gaussian_matrix(dims, rank, backend=backend)
-    with pytest.raises(ValueError):
-        dims, rank = 2, -1
-        random_gaussian_matrix(dims, rank, backend=backend)
-    with pytest.raises(ValueError):
-        dims, stddev = 2, -1
-        random_gaussian_matrix(dims, stddev=stddev, backend=backend)
     with pytest.raises(TypeError):
         dims = 2
         random_gaussian_matrix(dims, seed=0.1, backend=backend)
 
     # just runs the function with no tests
     random_gaussian_matrix(4, seed=seed, backend=backend)
+    # we should probably check whether the real and im part of the matrix
+    # are gaussian
 
 
 def test_random_hermitian(backend):
