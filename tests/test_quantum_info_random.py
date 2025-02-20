@@ -147,7 +147,7 @@ def test_random_unitary(backend, measure):
         else np.linalg.inv(matrix)
     )
     norm = float(backend.calculate_matrix_norm(matrix_inv - matrix_dagger, order=2))
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -261,6 +261,8 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
+
+    backend.set_seed(seed)
 
     result_single = matrices.X @ matrices.H @ matrices.S
 

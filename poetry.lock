@@ -2790,15 +2790,15 @@ files = [
 
 [[package]]
 name = "mistune"
-version = "3.1.1"
+version = "3.1.2"
 description = "A sane and fast Markdown parser with useful plugins and renderers"
 optional = false
 python-versions = ">=3.8"
 groups = ["docs", "tests"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "mistune-3.1.1-py3-none-any.whl", hash = "sha256:02106ac2aa4f66e769debbfa028509a275069dcffce0dfa578edd7b991ee700a"},
-    {file = "mistune-3.1.1.tar.gz", hash = "sha256:e0740d635f515119f7d1feb6f9b192ee60f0cc649f80a8f944f905706a21654c"},
+    {file = "mistune-3.1.2-py3-none-any.whl", hash = "sha256:4b47731332315cdca99e0ded46fc0004001c1299ff773dfb48fbe1fd226de319"},
+    {file = "mistune-3.1.2.tar.gz", hash = "sha256:733bf018ba007e8b5f2d3a9eb624034f6ee26c4ea769a98ec533ee111d504dff"},
 ]
 
 [package.dependencies]
@@ -3356,24 +3356,24 @@ files = [
 
 [[package]]
 name = "openqasm3"
-version = "1.0.0"
+version = "1.0.1"
 description = "Reference OpenQASM AST in Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "openqasm3-1.0.0-py3-none-any.whl", hash = "sha256:d4371737b4a49b0d56248ed3d30766a94000bccfb43303ec9c7ead351a1b6cc3"},
-    {file = "openqasm3-1.0.0.tar.gz", hash = "sha256:3f2bb1cca855cff114e046bac22d59adbf9b754cac6398961aa6d22588fb688e"},
+    {file = "openqasm3-1.0.1-py3-none-any.whl", hash = "sha256:0d3a1ebe3465e3ea619bcaa369858bba8944cbb0c49604b24f94662d3ec41d41"},
+    {file = "openqasm3-1.0.1.tar.gz", hash = "sha256:c589dc05d4ced50ca24167d14e0f2c916e717499ba0442e0ff2a3030ef312d0a"},
 ]
 
 [package.dependencies]
-antlr4-python3-runtime = {version = ">=4.7,<4.14", optional = true, markers = "extra == \"parser\""}
-importlib-metadata = {version = "*", optional = true, markers = "python_version < \"3.10\" and extra == \"parser\""}
+antlr4_python3_runtime = {version = ">=4.7,<4.14", optional = true, markers = "extra == \"parser\""}
+importlib_metadata = {version = "*", optional = true, markers = "python_version < \"3.10\" and extra == \"parser\""}
 
 [package.extras]
-all = ["antlr4-python3-runtime (>=4.7,<4.14)", "importlib-metadata", "pytest (>=6.0)", "pyyaml"]
-parser = ["antlr4-python3-runtime (>=4.7,<4.14)", "importlib-metadata"]
+all = ["antlr4_python3_runtime (>=4.7,<4.14)", "importlib_metadata", "pytest (>=6.0)", "pyyaml"]
+parser = ["antlr4_python3_runtime (>=4.7,<4.14)", "importlib_metadata"]
 tests = ["pytest (>=6.0)", "pyyaml"]
 
 [[package]]
@@ -4580,14 +4580,14 @@ develop = false
 [package.dependencies]
 numba = ">=0.59.0"
 psutil = "^5.9.5"
-qibo = "^0.2.14"
+qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
 scipy = "^1.10.1"
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "qinfo_jit"
-resolved_reference = "98ab92b3b590be2a7d7b125de6f0b4c1a2b21de8"
+resolved_reference = "1c3afdc3c006aed9855b4b6372660aca026aa3a5"
 
 [[package]]
 name = "qiboml"
@@ -4614,7 +4614,7 @@ resolved_reference = "96f7c471286192ef0e43295e811878c57d3acafe"
 
 [[package]]
 name = "qibotn"
-version = "0.0.3"
+version = "0.0.4"
 description = "A tensor-network translation module for Qibo"
 optional = false
 python-versions = "^3.9,<3.13"
@@ -4629,12 +4629,13 @@ quimb = {version = "^1.6.0", extras = ["tensor"]}
 
 [package.extras]
 cuda = ["cupy-cuda11x (>=11.6.0,<12.0.0)", "cuquantum-python-cu11 (>=23.3.0,<24.0.0)", "mpi4py (>=3.1.5,<4.0.0)"]
+qmatchatea = ["qmatchatea (>=1.1.4,<2.0.0)"]
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibotn.git"
 reference = "HEAD"
-resolved_reference = "83a8de53f5a8e3a8f7b6bb64a9f014ce77e5f160"
+resolved_reference = "9a60bf4acb0939383dbcc334fedd55038c066b6b"
 
 [[package]]
 name = "quimb"
