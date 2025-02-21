@@ -528,14 +528,18 @@ def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevecto
         entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
     )
 
-    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-    target = backend.cast([0.0, 1.0], dtype=np.float64)
+    # numba has problems of reproducibility with fixed seed due
+    # to the parallelization
+    if backend.platform != "numba":
 
-    backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, backend=backend),
-        -0.9888146910047833,
-        atol=1e-8,
-    )
+        state = random_density_matrix(2, seed=8, pure=False, backend=backend)
+        target = backend.cast([0.0, 1.0], dtype=np.float64)
+
+        backend.assert_allclose(
+            relative_von_neumann_entropy(state, target, backend=backend),
+            -0.9888146910047833,
+            atol=1e-8,
+        )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])

@@ -85,6 +85,10 @@ class CliffordBackend(NumpyBackend):
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
+    def set_seed(self, seed):
+        super().set_seed(seed)
+        self.engine.set_seed(seed)
+
     def calculate_frequencies(self, samples):
         res, counts = self.engine.np.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends

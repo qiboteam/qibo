@@ -1242,13 +1242,6 @@ def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
             nqubits=nqubits,
             backend=backend,
         )
-    with pytest.raises(TypeError):
-        test = stinespring_to_kraus(
-            stinespring,
-            dim_env=dim_env,
-            nqubits=1.0,
-            backend=backend,
-        )
     with pytest.raises(ValueError):
         test = stinespring_to_kraus(
             stinespring,

@@ -137,7 +137,7 @@ def _choi_to_kraus_cp_{order}(
 _kraus_to_choi = """
 def _kraus_to_choi_{order}(kraus_ops: ndarray) -> ndarray:
     kraus_ops = _vectorization_{order}(kraus_ops, kraus_ops.shape[-1])
-    return ENGINE.einsum("ij,ik", kraus_ops, ENGINE.conj(kraus_ops))
+    return kraus_ops.T @ ENGINE.conj(kraus_ops)
 """
 
 for order in ("row", "column", "system"):

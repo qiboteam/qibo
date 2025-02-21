@@ -534,3 +534,7 @@ def identity_density_matrix(nqubits, normalize: bool = True):
     if normalize is True:  # pragma: no cover
         state /= 2**nqubits
     return state
+
+
+def set_seed(seed):
+    np.random.seed(seed)
