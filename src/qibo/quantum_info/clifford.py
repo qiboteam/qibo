@@ -1,7 +1,6 @@
 """Module definig the Clifford object, which allows phase-space representation of Clifford circuits and stabilizer states."""
 
 from dataclasses import dataclass, field
-from functools import reduce
 from itertools import product
 from typing import Optional, Union
 
@@ -418,10 +417,17 @@ class Clifford:
                 self.nqubits, normalize=False
             )
             operators = self._backend.cast([(g, identity) for g in operators])
-
-            return self._backend.cast(
-                [reduce(self.engine.np.matmul, ops) for ops in product(*operators)]
+            operators = self._backend.np.transpose(
+                self._backend.np.vstack(tuple(zip(product(*operators)))), (1, 0, 2, 3)
             )
+            idx = [
+                (0,) + i
+                for i in zip(
+                    range(1, operators.shape[0] + 1), range(2, operators.shape[0] + 2)
+                )
+            ]
+            lhs = (item for pair in zip(operators, idx) for item in pair)
+            return self._backend.np.einsum(*lhs, (0, 1, operators.shape[0] + 1))
 
         operators = list(np.copy(generators))
         for i in (phases == -1).nonzero()[0]:

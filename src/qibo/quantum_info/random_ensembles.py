@@ -531,6 +531,11 @@ def random_clifford(
         backend.qinfo._gamma_delta_matrices(nqubits, hadamards, permutations)
     )
 
+    gamma_matrix = backend.to_numpy(gamma_matrix)
+    delta_matrix = backend.to_numpy(delta_matrix)
+    gamma_matrix_prime = backend.to_numpy(gamma_matrix_prime)
+    delta_matrix_prime = backend.to_numpy(delta_matrix_prime)
+
     # get first element of the Borel group
     clifford_circuit = _operator_from_hadamard_free_group(
         gamma_matrix, delta_matrix, density_matrix

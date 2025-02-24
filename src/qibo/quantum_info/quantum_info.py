@@ -161,7 +161,7 @@ def _vectorization_row(state: ndarray, dim: int) -> ndarray:
 
 
 def _vectorization_column(state: ndarray, dim: int) -> ndarray:
-    indices = ENGINE.arange(state.ndim)
+    indices = list(range(state.ndim))
     indices[-2:] = indices[-2:][::-1]
     state = ENGINE.transpose(state, indices)
     return ENGINE.reshape(state, (-1, dim**2))
@@ -209,8 +209,10 @@ def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
 def _reshuffling(super_op: ndarray, ax1: int, ax2: int) -> ndarray:
     dim = int(ENGINE.sqrt(super_op.shape[0]))
     super_op = ENGINE.reshape(super_op, (dim,) * 4)
-    axes = ENGINE.arange(len(super_op.shape))
-    axes[[ax1, ax2]] = axes[[ax2, ax1]]
+    axes = list(range(len(super_op.shape)))
+    tmp = axes[ax1]
+    axes[ax1] = axes[ax2]
+    axes[ax2] = tmp
     super_op = ENGINE.transpose(super_op, axes)
     return ENGINE.reshape(super_op, [dim**2, dim**2])
 
@@ -287,7 +289,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
     indexes[idx_gt_exp] = 2 * exponents[idx_gt_exp] - indexes[idx_gt_exp] - 1
     mute_index = list(range(nqubits))
     permutations = ENGINE.zeros(nqubits, dtype=int)
-    for l, index in enumerate(indexes):
+    for l, index in enumerate(indexes.tolist()):
         permutations[l] = mute_index[index]
         del mute_index[index]
     return hadamards, permutations
