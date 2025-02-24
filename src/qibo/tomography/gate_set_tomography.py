@@ -185,11 +185,11 @@ def _gate_tomography(
                 f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
             )
 
-        ## The following 4 lines could be redundant
-        # if gate.__class__.__name__ == "Unitary":
-        #     gate = gate.__class__(gate.init_args[0], *gate.qubits)
-        # # else:
-        #     gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
+        # The following 4 lines could be redundant
+        if gate.__class__.__name__ == "Unitary":
+            gate = gate.__class__(gate.init_args[0], *gate.qubits)
+        else:
+            gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
