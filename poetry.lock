@@ -5388,7 +5388,7 @@ qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "qinfo_jit"
-resolved_reference = "462d897aed95179514162ea7ef53f8fea618575c"
+resolved_reference = "4b67b029ddcf62a86bd72c27b3c82c4b1211563b"
 
 [[package]]
 name = "qibotn"
