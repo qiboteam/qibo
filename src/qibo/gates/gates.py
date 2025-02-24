@@ -2596,11 +2596,7 @@ class Unitary(ParametrizedGate):
 
         if check_unitary:
             engine = _check_engine(unitary)
-            conj_unitary = engine.conj(unitary)
-            if conj_unitary.ndim == 1:
-                conj_unitary = conj_unitary.unsqueeze(0)
-            product = engine.transpose(conj_unitary, (1, 0)) @ unitary
-            # product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
+            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
             diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
             off_diagonals = bool(
                 engine.all(
