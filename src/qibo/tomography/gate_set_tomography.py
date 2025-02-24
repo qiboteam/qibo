@@ -300,6 +300,8 @@ def GST(
                 gate, params = gate
                 if isinstance(params[0], np.ndarray):
                     params = [params]
+                elif isinstance(params[0], list):
+                    params = [[np.array(params[0])]]
                 init_args = signature(gate).parameters
                 valid_angles = [arg for arg in init_args if arg in angles]
                 angle_values = dict(zip(valid_angles, params))
