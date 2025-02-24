@@ -5366,7 +5366,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "qinfo_jit"
-resolved_reference = "eac2ed741774efd9e4127886e427ac849b51ed85"
+resolved_reference = "5818b6dbde5b269b59ef62ec855a6e9540113a86"
 
 [[package]]
 name = "qiboml"
@@ -5382,13 +5382,13 @@ develop = false
 jax = "^0.4.25"
 jaxlib = "^0.4.25"
 numpy = "^1.26.4"
-qibo = {git = "https://github.com/qiboteam/qibo"}
+qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
-reference = "HEAD"
-resolved_reference = "6497e112f055ec997afcba8708cf71be08784c6f"
+reference = "qinfo_jit"
+resolved_reference = "462d897aed95179514162ea7ef53f8fea618575c"
 
 [[package]]
 name = "qibotn"
@@ -7039,4 +7039,4 @@ torch = ["torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.13"
-content-hash = "b825e8b52ce82154169e7506bdff6bfe0980334dc479379b4ba6352cf72c32ef"
+content-hash = "07ba6da610f4bdc1d9f7cacf130ad2e9eabddcc40036747b04ebaeaa3017eb38"

@@ -27,7 +27,7 @@ BACKENDS = [
     "qibojit-cupy",
     "qibojit-cuquantum",
     # "qiboml-tensorflow",
-    # "qiboml-pytorch",
+    "qiboml-pytorch",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
