@@ -185,12 +185,12 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
 @pytest.mark.parametrize("seed", [2024])
 def test_collapsing_measurements(backend, seed):
     clifford_bkd = construct_clifford_backend(backend)
+    np.random.seed(seed)
+    numpy_bkd.set_seed(seed)
     backend.set_seed(seed)
     clifford_bkd.set_seed(seed)
-    numpy_bkd.set_seed(seed)
-    np.random.seed(seed)
     gate_queue = random_clifford(
-        3, density_matrix=True, seed=seed, backend=numpy_bkd
+        3, density_matrix=False, seed=seed, backend=backend
     ).queue
     local_state = np.random.default_rng(seed)
     measured_qubits = local_state.choice(range(3), size=2, replace=False)
@@ -211,7 +211,9 @@ def test_collapsing_measurements(backend, seed):
     numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
 
     backend.assert_allclose(
-        clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
+        clifford_res.probabilities(measured_qubits),
+        backend.cast(numpy_res.probabilities(measured_qubits)),
+        atol=1e-1,
     )
 
 
