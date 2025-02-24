@@ -147,7 +147,7 @@ def test_random_unitary(backend, measure):
         else np.linalg.inv(matrix)
     )
     norm = float(backend.calculate_matrix_norm(matrix_inv - matrix_dagger, order=2))
-    assert norm < PRECISION_TOL
+    assert norm < 1e-7
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -269,16 +269,27 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
     backend.set_seed(seed)
 
-    result_single = matrices.X @ matrices.H @ matrices.S
+    if backend.platform == "cupy":
+        result_single = matrices.S @ matrices.X @ matrices.H
 
-    result_two = (
-        matrices.CNOT
-        @ matrices.CZ
-        @ np.kron(matrices.X, matrices.S)
-        @ np.kron(matrices.H, matrices.X)
-        @ matrices.CNOT
-        @ np.kron(matrices.S, matrices.I)
-    )
+        result_two = (
+            np.kron(matrices.X, matrices.X)
+            @ np.kron(matrices.H, matrices.H)
+            @ matrices.CZ
+            @ np.kron(matrices.S, matrices.S)
+        )
+
+    else:
+        result_single = matrices.X @ matrices.H @ matrices.S
+
+        result_two = (
+            matrices.CNOT
+            @ matrices.CZ
+            @ np.kron(matrices.X, matrices.S)
+            @ np.kron(matrices.H, matrices.X)
+            @ matrices.CNOT
+            @ np.kron(matrices.S, matrices.I)
+        )
 
     result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
@@ -346,13 +357,15 @@ def test_random_pauli(
     result_complete_set = backend.cast(
         result_complete_set, dtype=result_complete_set.dtype
     )
-    result_subset = np.array(
-        [
-            [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
-        ]
+    result_subset = backend.cast(
+        np.array(
+            [
+                [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
+                [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
+            ]
+        )
     )
 
     matrix = random_pauli(

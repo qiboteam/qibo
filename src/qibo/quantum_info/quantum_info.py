@@ -170,7 +170,7 @@ def _vectorization_column(state: ndarray, dim: int) -> ndarray:
 # WARNING: dim is not used, but it is useful to uniform
 # the call with the other functions
 def _vectorization_system(state: ndarray, dim: int = 0) -> ndarray:
-    nqubits = int(ENGINE.log2(state.shape[-1]))
+    nqubits = int(np.log2(state.shape[-1]))
     new_axis = [
         0,
     ]
@@ -192,7 +192,7 @@ def _unvectorization_column(state: ndarray, dim: int) -> ndarray:
 
 
 def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
-    nqubits = int(ENGINE.log2(dim))
+    nqubits = int(np.log2(dim))
     axes_old = list(range(1, 2 * nqubits + 1))
     state = ENGINE.reshape(state, (state.shape[0],) + (2,) * 2 * nqubits)
     state = ENGINE.transpose(
@@ -266,7 +266,7 @@ def _random_unitary_haar(dims: int):
 
 
 def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: float):
-    nqubits = int(ENGINE.log2(dims))
+    nqubits = int(np.log2(dims))
     state = ENGINE.eye(dims, dtype=complex)
     state += _random_unitary(dims)
     state = ENGINE.matmul(
@@ -282,7 +282,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
     powers = 4**exponents
     powers[powers == 0] = ENGINE.iinfo(ENGINE.int64).max
     r = ENGINE.random.uniform(0, 1, size=nqubits)
-    indexes = (-1) * ENGINE.ceil(ENGINE.log2(r + (1 - r) / powers)).astype(ENGINE.int64)
+    indexes = (-1) * ENGINE.ceil(np.log2(r + (1 - r) / powers)).astype(ENGINE.int64)
     idx_le_exp = indexes < exponents
     hadamards = idx_le_exp.astype(ENGINE.int64)
     idx_gt_exp = idx_le_exp ^ True

@@ -5366,7 +5366,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "qinfo_jit"
-resolved_reference = "2be96c357197d1e457edad043f5856d5ee9da330"
+resolved_reference = "eac2ed741774efd9e4127886e427ac849b51ed85"
 
 [[package]]
 name = "qiboml"

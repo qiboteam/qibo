@@ -207,10 +207,8 @@ def test_unvectorization(backend, nqubits, order):
         )
     dim = 2**nqubits
     matrix_test = random_density_matrix(dim, backend=backend)
-
     matrix = vectorization(matrix_test, order, backend)
     matrix = unvectorization(matrix, order, backend)
-
     backend.assert_allclose(matrix_test, matrix, atol=PRECISION_TOL)
 
     matrix_test_2d = backend.np.vstack([matrix_test, matrix_test]).reshape(2, dim, dim)
