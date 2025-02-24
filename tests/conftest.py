@@ -25,7 +25,7 @@ BACKENDS = [
     "numpy",
     "qibojit-numba",
     "qibojit-cupy",
-    # "qibojit-cuquantum",
+    "qibojit-cuquantum",
     # "qiboml-tensorflow",
     # "qiboml-pytorch",
 ]
