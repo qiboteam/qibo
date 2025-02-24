@@ -193,7 +193,7 @@ def _unvectorization_column(state: ndarray, dim: int) -> ndarray:
 
 def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
     nqubits = int(ENGINE.log2(dim))
-    axes_old = list(ENGINE.arange(1, 2 * nqubits + 1))
+    axes_old = list(range(1, 2 * nqubits + 1))
     state = ENGINE.reshape(state, (state.shape[0],) + (2,) * 2 * nqubits)
     state = ENGINE.transpose(
         state,

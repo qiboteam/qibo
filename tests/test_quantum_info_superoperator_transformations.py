@@ -205,7 +205,6 @@ def test_unvectorization(backend, nqubits, order):
         unvectorization(
             random_statevector(4**2, backend=backend), order="1", backend=backend
         )
-
     dim = 2**nqubits
     matrix_test = random_density_matrix(dim, backend=backend)
 
