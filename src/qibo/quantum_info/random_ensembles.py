@@ -89,8 +89,8 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
 def random_gaussian_matrix(
     dims: int,
     rank: Optional[int] = None,
-    mean: float = 0,
-    stddev: float = 1,
+    mean: float = 0.0,
+    stddev: float = 1.0,
     seed=None,
     backend=None,
 ):
@@ -670,7 +670,10 @@ def random_pauli(
                     gate_grid.add(subset[column_item](qubit))
     else:
         gate_grid = backend.cast(
-            [[subset[column_item] for column_item in row] for row in indexes]
+            [
+                backend.cast([subset[column_item] for column_item in row])
+                for row in indexes
+            ]
         )
 
     return gate_grid

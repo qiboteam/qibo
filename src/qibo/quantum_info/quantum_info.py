@@ -1,6 +1,5 @@
 import numpy as np
-from numpy import index_exp, ndarray
-from numpy.random import permutation
+from numpy import ndarray
 from scipy.linalg import expm
 
 ENGINE = np
@@ -67,20 +66,20 @@ def _pauli_to_comp_basis_sparse_{order}(
 _super_op_from_haar_measure = """
 def _super_op_from_haar_measure_{order}(dims: int) -> ndarray:
     super_op = _random_unitary_haar(dims)
-    super_op = _vectorization_{order}(super_op, dims)
+    super_op = _vectorization_{order}(super_op, dims).ravel()
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 """
 
 _super_op_from_hermitian_measure = """
 def _super_op_from_hermitian_measure_{order}(dims: int) -> ndarray:
     super_op = _random_unitary(dims)
-    super_op = _vectorization_{order}(super_op, dims)
+    super_op = _vectorization_{order}(super_op, dims).ravel()
     return ENGINE.outer(super_op, ENGINE.conj(super_op))
 """
 
 _to_choi = """
 def _to_choi_{order}(channel: ndarray) -> ndarray:
-    channel = _vectorization_{order}(channel, channel.shape[-1])
+    channel = _vectorization_{order}(channel, channel.shape[-1]).ravel()
     return ENGINE.outer(channel, ENGINE.conj(channel))
 """
 
@@ -267,7 +266,7 @@ def _random_unitary_haar(dims: int):
 
 def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: float):
     nqubits = int(np.log2(dims))
-    state = ENGINE.eye(dims, dtype=complex)
+    state = ENGINE.eye(dims, dtype=ENGINE.complex128)
     state += _random_unitary(dims)
     state = ENGINE.matmul(
         state,
@@ -342,8 +341,8 @@ def _super_op_from_bcsz_measure_preamble(
     super_op = _random_gaussian_matrix(
         dims**2,
         rank=rank,
-        mean=0,
-        stddev=1,
+        mean=0.0,
+        stddev=1.0,
     )
     super_op = super_op @ ENGINE.conj(super_op).T
     # partial trace implemented with einsum
@@ -360,20 +359,20 @@ def _super_op_from_bcsz_measure_preamble(
 
 def _super_op_from_bcsz_measure_row(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
-    operator = ENGINE.kron(ENGINE.eye(dims, dtype=complex), operator)
+    operator = ENGINE.kron(ENGINE.eye(dims, dtype=operator.dtype), operator)
     return operator @ super_op @ operator
 
 
 def _super_op_from_bcsz_measure_column(dims: int, rank: int) -> ndarray:
     operator, super_op = _super_op_from_bcsz_measure_preamble(dims, rank)
-    operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=complex))
+    operator = ENGINE.kron(operator, ENGINE.eye(dims, dtype=operator.dtype))
     return operator @ super_op @ operator
 
 
 def _kraus_to_stinespring(
     kraus_ops: ndarray, initial_state_env: ndarray, dim_env: int
 ) -> ndarray:
-    alphas = ENGINE.zeros((dim_env, dim_env, dim_env), dtype=complex)
+    alphas = ENGINE.zeros((dim_env, dim_env, dim_env), dtype=kraus_ops.dtype)
     alphas[range(dim_env), range(dim_env)] = initial_state_env
     # batched kron product
     return ENGINE.einsum("aij,akl->ikjl", kraus_ops, alphas).reshape(
@@ -386,7 +385,7 @@ def _stinespring_to_kraus(
 ) -> ndarray:
     stinespring = ENGINE.reshape(stinespring, (dim, dim_env, dim, dim_env))
     stinespring = ENGINE.swapaxes(stinespring, 1, 2)
-    alphas = ENGINE.eye(dim_env, dtype=complex)
+    alphas = ENGINE.eye(dim_env, dtype=stinespring.dtype)
     stinespring = (alphas @ stinespring).reshape(dim, dim_env, dim + dim_env)
     stinespring = ENGINE.vstack(
         (stinespring[:, :, :dim_env], stinespring[:, :, dim_env:])

@@ -634,7 +634,9 @@ def test_liouville_to_pauli(backend, normalize, order, pauli_order, test_superop
 @pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_liouville_to_kraus(backend, order, test_a0, test_a1):
-    kraus_ops, _ = liouville_to_kraus(test_superop, order=order, backend=backend)
+    kraus_ops, _ = liouville_to_kraus(
+        backend.cast(test_superop), order=order, backend=backend
+    )
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
@@ -692,6 +694,7 @@ def test_liouville_to_stinespring(
     test_a0,
     test_a1,
 ):
+    test_superop = backend.cast(test_superop)
     test_stinespring = backend.cast(test_stinespring, dtype=test_stinespring.dtype)
     test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
     test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
@@ -1326,6 +1329,8 @@ def test_reshuffling(backend, order, test_superop):
         _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
         _reshuffling(test_superop[:-1, :-1], order, backend=backend)
+
+    test_superop = backend.cast(test_superop)
 
     reshuffled = _reshuffling(test_superop, order, backend=backend)
     reshuffled = _reshuffling(reshuffled, order, backend=backend)

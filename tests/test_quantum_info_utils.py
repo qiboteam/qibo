@@ -280,7 +280,7 @@ def test_haar_integral(backend, nqubits, power_t):
 
     haar_int_sampled = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
-    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=2e-1)
+    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-1)
 
 
 def test_pqc_integral(backend):

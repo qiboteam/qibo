@@ -999,14 +999,14 @@ test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist"
 
 [[package]]
 name = "cotengra"
-version = "0.7.0"
+version = "0.7.1"
 description = "Hyper optimized contraction trees for large tensor networks and einsums."
 optional = false
 python-versions = ">=3.8"
 groups = ["cuda11", "cuda12", "tests"]
 files = [
-    {file = "cotengra-0.7.0-py3-none-any.whl", hash = "sha256:ca1c75fec462fb75130a3a826db2d4565bbbf0641d5ce0a617e643211cd98307"},
-    {file = "cotengra-0.7.0.tar.gz", hash = "sha256:8ad9fabee899ac2f7b72359ace79a5496f15fd89b19049656082ef7773ca2b69"},
+    {file = "cotengra-0.7.1-py3-none-any.whl", hash = "sha256:18b0c7f2993be86f8c51a2a41563bc6615225896929be0e207bd3a581260c405"},
+    {file = "cotengra-0.7.1.tar.gz", hash = "sha256:5649af42a2a5e836bb2bf3f96a4ce71d66324b96507a0a2efc1b64718ac404f6"},
 ]
 
 [package.dependencies]
@@ -5388,7 +5388,7 @@ qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "qinfo_jit"
-resolved_reference = "4b67b029ddcf62a86bd72c27b3c82c4b1211563b"
+resolved_reference = "282d10da8b1ad9b5b23ef0158cccceb9ad5fc357"
 
 [[package]]
 name = "qibotn"

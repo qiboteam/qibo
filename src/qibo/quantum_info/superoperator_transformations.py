@@ -847,7 +847,7 @@ def kraus_to_stinespring(
     dim_env = len(kraus_ops)
 
     if initial_state_env is None:
-        initial_state_env = backend.np.zeros(dim_env, dtype=complex)
+        initial_state_env = backend.np.zeros(dim_env, dtype=backend.np.complex128)
         initial_state_env[0] = 1.0
         initial_state_env = backend.cast(
             initial_state_env, dtype=initial_state_env.dtype

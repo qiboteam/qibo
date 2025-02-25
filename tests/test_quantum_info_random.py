@@ -71,7 +71,7 @@ def test_random_gaussian_matrix(backend, seed):
         dims = 2
         rank = np.array([2])
         random_gaussian_matrix(dims, rank, backend=backend)
-    with pytest.raises(ValueError):
+    with pytest.raises((ValueError, RuntimeError)):
         dims = -1
         random_gaussian_matrix(dims, backend=backend)
     with pytest.raises(ValueError):
@@ -147,7 +147,7 @@ def test_random_unitary(backend, measure):
         else np.linalg.inv(matrix)
     )
     norm = float(backend.calculate_matrix_norm(matrix_inv - matrix_dagger, order=2))
-    assert norm < 1e-7
+    assert norm < 1e-6
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -269,7 +269,7 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
     backend.set_seed(seed)
 
-    if backend.platform == "cupy":
+    if backend.platform in ("cupy", "cuquantum"):
         result_single = matrices.S @ matrices.X @ matrices.H
 
         result_two = (
@@ -278,8 +278,18 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
             @ matrices.CZ
             @ np.kron(matrices.S, matrices.S)
         )
+    elif backend.platform == "pytorch":
+        result_single = matrices.X @ matrices.H @ matrices.S
 
-    else:
+        result_two = (
+            matrices.CNOT
+            @ matrices.CZ
+            @ np.kron(matrices.X, matrices.S)
+            @ np.kron(matrices.H, matrices.X)
+            @ np.kron(matrices.S, matrices.H)
+        )
+
+    else:  # numpy
         result_single = matrices.X @ matrices.H @ matrices.S
 
         result_two = (

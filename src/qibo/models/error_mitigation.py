@@ -283,7 +283,7 @@ def sample_training_circuit_cdr(
     distance = backend.np.vstack(distance)
     prob = backend.np.exp(-(distance**2) / sigma**2)
 
-    index = backend.np.random.choice(
+    index = np.random.choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
@@ -297,9 +297,7 @@ def sample_training_circuit_cdr(
 
     replacement = np.array([replacement[i] for i in index])
     replacement = [
-        replacement[i][
-            backend.np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]
-        ]
+        replacement[i][np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
         for i, p in enumerate(prob)
     ]
     replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
@@ -446,7 +444,9 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.cast(backend.np.random.uniform(size=nparams), backend.precision)
+    params = backend.cast(
+        backend.np.random.uniform(low=0.0, high=1.0, size=nparams), backend.precision
+    )
     optimal_params = _curve_fit(
         backend,
         model,
@@ -569,7 +569,8 @@ def vnCDR(
         -1, len(noise_levels)
     )
     params = backend.cast(
-        backend.np.random.uniform(size=len(noise_levels)), backend.precision
+        backend.np.random.uniform(low=0.0, high=1.0, size=len(noise_levels)),
+        backend.precision,
     )
     optimal_params = _curve_fit(
         backend,
