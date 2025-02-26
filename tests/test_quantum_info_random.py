@@ -262,7 +262,7 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
 
-    if backend.platform == "numba" and nqubits == 2:
+    if backend.platform == "numba":
         pytest.skip(
             "Numba has reproducibility problems with fixed seed due to parallelization."
         )
