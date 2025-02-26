@@ -997,12 +997,13 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     adjustment_gates = []
     for i in range(num_qubits):
-        if observable_pauli[i] == "X" or observable_pauli[i] == "Y":
+        if observable_pauli[i] in ["X", "Y"]:
             adjustment_gate = gates.M(i, basis=observable_pauli[i]).basis[0]
+            if observable_pauli[i] == "Y":
+                adjustment_gate.clifford = True
         else:
             adjustment_gate = gates.I(i)
 
-        adjustment_gate.clifford = True
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
