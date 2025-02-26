@@ -126,7 +126,7 @@ def _choi_to_kraus_cp_{order}(
     eigv_gt_tol = ENGINE.abs(eigenvalues) > precision
     coefficients = ENGINE.sqrt(eigenvalues[eigv_gt_tol])
     eigenvectors = eigenvectors[eigv_gt_tol]
-    dim = int(ENGINE.sqrt(eigenvectors.shape[-1]))
+    dim = int(np.sqrt(eigenvectors.shape[-1]))
     kraus_ops = coefficients.reshape(-1, 1, 1) * _unvectorization_{order}(
         eigenvectors, dim
     )
@@ -206,7 +206,7 @@ def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
 
 
 def _reshuffling(super_op: ndarray, ax1: int, ax2: int) -> ndarray:
-    dim = int(ENGINE.sqrt(super_op.shape[0]))
+    dim = int(np.sqrt(super_op.shape[0]))
     super_op = ENGINE.reshape(super_op, (dim,) * 4)
     axes = list(range(len(super_op.shape)))
     tmp = axes[ax1]
