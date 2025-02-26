@@ -31,7 +31,7 @@ The `FALQON` class behaves similarly to the `QAOA` one. It admits the following 
 - `accelerators`: Dictionary of devices to use for distributed
             execution. See `qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a `qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+            is a `qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
 - `memory_device`: Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
