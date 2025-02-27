@@ -1362,6 +1362,30 @@ def test_generalized_rbs(backend):
     assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).unitary
 
 
+@pytest.mark.parametrize("seed", [10])
+def test_generalized_rbs_apply(backend, seed):
+    rng = np.random.default_rng(seed)
+
+    nqubits = 4
+    dims = 2**nqubits
+    theta, phi = 2 * np.pi * rng.random(2)
+
+    qubit_ids = rng.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
+    qubits_in, qubits_out = qubit_ids[:1], qubit_ids[1:]
+
+    gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
+    matrix = Circuit(nqubits)
+    matrix.add(gate)
+    matrix = matrix.unitary(backend=backend)
+
+    state = random_statevector(dims, seed=rng, backend=backend)
+    target = matrix @ state
+
+    state = gate.apply(backend, state, nqubits)
+
+    backend.assert_allclose(state, target)
+
+
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_unitary(backend, nqubits):
     initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
