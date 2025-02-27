@@ -259,19 +259,18 @@ def test_bitflip_noise(backend, seed):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_noise_channels(backend, seed):
-    backend.set_seed(seed)
-    np.random.seed(seed)
     numpy_bkd.set_seed(seed)
+    backend.set_seed(seed)
 
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
     nqubits = 3
 
-    c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
+    c = random_clifford(nqubits, density_matrix=False, seed=seed, backend=backend)
 
     noise = NoiseModel()
-    noisy_gates = np.random.choice(c.queue, size=1, replace=False)
+    noisy_gates = [c.queue[0]]
     noise.add(PauliError([("X", 0.3)]), gates.H)
     noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
 
