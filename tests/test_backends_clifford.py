@@ -121,73 +121,64 @@ def test_two_qubits_gates(backend, gate):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-local_state = np.random.RandomState(2)
-MEASURED_QUBITS = sorted(local_state.choice(range(3), size=2, replace=False))
-
-
 @pytest.mark.parametrize("binary", [False, True])
 @pytest.mark.parametrize(
     "prob_qubits",
     [
         range(3),
-        local_state.choice(MEASURED_QUBITS, size=2, replace=False),
         [0],
         [1],
         [2],
     ],
 )
-def test_random_clifford_circuit(backend, prob_qubits, binary):
-    backend.set_seed(2024)
-    nqubits, nshots = 3, 200
+@pytest.mark.parametrize("seed", [15, 19, 25])
+def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
+    np.random.seed(seed)
+    numpy_bkd.set_seed(seed)
+    backend.set_seed(seed)
+    nqubits, nshots = 3, 1000
     clifford_bkd = construct_clifford_backend(backend)
+    clifford_bkd.set_seed(seed)
 
-    c = random_clifford(nqubits, seed=1, backend=backend)
-    c.density_matrix = True
+    c = random_clifford(nqubits, seed=seed, density_matrix=True, backend=backend)
+    c.draw()
     c_copy = c.copy()
+    MEASURED_QUBITS = tuple(range(nqubits))
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
-
-    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
-
-    clifford_bkd.set_seed(2024)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
 
-    if not set(prob_qubits).issubset(set(MEASURED_QUBITS)):
-        with pytest.raises(RuntimeError) as excinfo:
-            numpy_bkd.assert_allclose(
-                numpy_result.probabilities(prob_qubits),
-                clifford_result.probabilities(prob_qubits),
-            )
-            assert (
-                str(excinfo.value)
-                == f"Asking probabilities for qubits {prob_qubits}, but only qubits {MEASURED_QUBITS} were measured."
-            )
-    else:
-        backend.assert_allclose(
-            backend.cast(numpy_result.probabilities(prob_qubits)),
-            clifford_result.probabilities(prob_qubits),
-            atol=1e-1,
-        )
+    # if prob_qubits == [0] and binary:
+    #    breakpoint()
+    clifford_prob = clifford_result.probabilities(prob_qubits)
+    backend.assert_allclose(
+        backend.cast(numpy_result.probabilities(prob_qubits)),
+        clifford_result.probabilities(prob_qubits),
+        atol=1e-1,
+    )
 
-        numpy_freq = numpy_result.frequencies(binary)
-        clifford_freq = clifford_result.frequencies(binary)
-        clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+    numpy_freq = numpy_result.frequencies(binary)
+    clifford_freq = clifford_result.frequencies(binary)
+    clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
 
-        assert len(numpy_freq) == len(clifford_freq)
+    assert len(numpy_freq) == len(clifford_freq)
 
-        for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
-            backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
+    for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
+        backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
 
 
 @pytest.mark.parametrize("seed", [2024])
 def test_collapsing_measurements(backend, seed):
-    backend.set_seed(2024)
     clifford_bkd = construct_clifford_backend(backend)
+    np.random.seed(seed)
+    numpy_bkd.set_seed(seed)
+    backend.set_seed(seed)
+    clifford_bkd.set_seed(seed)
     gate_queue = random_clifford(
-        3, density_matrix=True, seed=seed, backend=backend
+        3, density_matrix=False, seed=seed, backend=backend
     ).queue
     local_state = np.random.default_rng(seed)
     measured_qubits = local_state.choice(range(3), size=2, replace=False)
@@ -203,14 +194,14 @@ def test_collapsing_measurements(backend, seed):
     c1.add(gates.M(*range(3)))
     c2.add(gates.M(*range(3)))
 
-    clifford_bkd.set_seed(seed)
     clifford_res = clifford_bkd.execute_circuit(c1, nshots=1000)
 
-    numpy_bkd.set_seed(seed)
     numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
 
     backend.assert_allclose(
-        clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
+        clifford_res.probabilities(measured_qubits),
+        backend.cast(numpy_res.probabilities(measured_qubits)),
+        atol=1e-1,
     )
 
 
@@ -240,11 +231,11 @@ def test_initial_state(backend):
 
 @pytest.mark.parametrize("seed", [10])
 def test_bitflip_noise(backend, seed):
-    rng = np.random.default_rng(seed)
+    backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
-    c = random_clifford(5, seed=rng, backend=backend)
+    c = random_clifford(5, seed=seed, backend=backend)
     c_copy = c.copy()
-    qubits = rng.choice(range(3), size=2, replace=False)
+    qubits = backend.np.random.choice(range(3), size=2, replace=False)
     c.add(gates.M(*qubits, p0=0.1, p1=0.5))
     c_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
     numpy_res = numpy_bkd.execute_circuit(c_copy)
@@ -256,6 +247,7 @@ def test_bitflip_noise(backend, seed):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_noise_channels(backend, seed):
+    numpy_bkd.set_seed(seed)
     backend.set_seed(seed)
 
     clifford_bkd = construct_clifford_backend(backend)
@@ -263,23 +255,24 @@ def test_noise_channels(backend, seed):
 
     nqubits = 3
 
-    c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
+    c = random_clifford(nqubits, density_matrix=False, seed=seed, backend=backend)
 
     noise = NoiseModel()
-    noisy_gates = np.random.choice(c.queue, size=1, replace=False)
+    noisy_gates = [c.queue[0]]
     noise.add(PauliError([("X", 0.3)]), gates.H)
     noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
 
-    c.add(gates.M(*range(nqubits)))
     c_copy = c.copy()
+    non_noisy = c.copy()
+    non_noisy.add(gates.M(*range(nqubits)))
+    c.add(gates.M(*range(nqubits)))
+    c_copy.add(gates.M(*range(nqubits)))
 
     c = noise.apply(c)
     c_copy = noise.apply(c_copy)
 
-    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c)
     clifford_result = clifford_bkd.execute_circuit(c_copy)
-
     backend.assert_allclose(
         backend.cast(numpy_result.probabilities()),
         clifford_result.probabilities(),

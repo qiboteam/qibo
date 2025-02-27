@@ -470,7 +470,7 @@ def _unpack_for_measurements(state, nqubits):
 
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
-        return _unpackbits(state, axis=0, count=_dim_xz(nqubits))[: _dim(nqubits)]
+        return _unpackbits(state, axis=0, count=_dim(nqubits))  # [: _dim(nqubits)]
     else:
         return state.copy()
 
@@ -534,3 +534,7 @@ def identity_density_matrix(nqubits, normalize: bool = True):
     if normalize is True:  # pragma: no cover
         state /= 2**nqubits
     return state
+
+
+def set_seed(seed):
+    np.random.seed(seed)
