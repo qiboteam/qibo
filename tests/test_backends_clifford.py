@@ -121,36 +121,31 @@ def test_two_qubits_gates(backend, gate):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-local_state = np.random.RandomState(2)
-MEASURED_QUBITS = sorted(local_state.choice(range(3), size=2, replace=False))
-
-
 @pytest.mark.parametrize("binary", [False, True])
 @pytest.mark.parametrize(
     "prob_qubits",
     [
         range(3),
-        local_state.choice(MEASURED_QUBITS, size=2, replace=False),
         [0],
         [1],
         [2],
     ],
 )
-def test_random_clifford_circuit(backend, prob_qubits, binary):
-    backend.set_seed(2024)
-    nqubits, nshots = 3, 200
+@pytest.mark.parametrize("seed", [2024])
+def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
+    np.random.seed(seed)
+    numpy_bkd.set_seed(seed)
+    backend.set_seed(seed)
+    nqubits, nshots = 3, 1000
     clifford_bkd = construct_clifford_backend(backend)
+    clifford_bkd.set_seed(seed)
 
-    c = random_clifford(nqubits, seed=1, backend=backend)
-    c.density_matrix = True
+    c = random_clifford(nqubits, seed=seed, density_matrix=True, backend=backend)
     c_copy = c.copy()
+    MEASURED_QUBITS = sorted(np.random.choice(range(nqubits), size=2, replace=False))
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
-
-    numpy_bkd.set_seed(2024)
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
-
-    clifford_bkd.set_seed(2024)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
