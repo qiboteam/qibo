@@ -5382,13 +5382,13 @@ develop = false
 jax = "^0.4.25"
 jaxlib = "^0.4.25"
 numpy = "^1.26.4"
-qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
+qibo = {git = "https://github.com/qiboteam/qibo"}
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "qinfo_jit"
-resolved_reference = "49f21156924f4acad920babbc70ca4d0fdf03a0a"
+resolved_reference = "028beb190629a952f348ce7e4559084fae2bb752"
 
 [[package]]
 name = "qibotn"

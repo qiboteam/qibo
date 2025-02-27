@@ -26,7 +26,7 @@ BACKENDS = [
     "qibojit-numba",
     "qibojit-cupy",
     "qibojit-cuquantum",
-    # "qiboml-tensorflow",
+    "qiboml-tensorflow",
     "qiboml-pytorch",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
