@@ -339,8 +339,6 @@ def test_ics(backend, nqubits, noise, full_output, readout):
     else:
         backend.set_threads(1)
     """Test that ICS reduces the noise."""
-    if backend.platform == "pytorch":
-        pytest.skip("pytorch gets stucked in the while loop.")
     # Define the circuit
     c = get_circuit(nqubits, nqubits - 1)
     # Define the observable
