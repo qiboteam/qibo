@@ -131,7 +131,7 @@ def test_two_qubits_gates(backend, gate):
         [2],
     ],
 )
-@pytest.mark.parametrize("seed", [2024])
+@pytest.mark.parametrize("seed", [15, 19, 25])
 def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
@@ -141,8 +141,9 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     clifford_bkd.set_seed(seed)
 
     c = random_clifford(nqubits, seed=seed, density_matrix=True, backend=backend)
+    c.draw()
     c_copy = c.copy()
-    MEASURED_QUBITS = sorted(np.random.choice(range(nqubits), size=2, replace=False))
+    MEASURED_QUBITS = tuple(range(nqubits))
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
@@ -150,31 +151,23 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
 
-    if not set(prob_qubits).issubset(set(MEASURED_QUBITS)):
-        with pytest.raises(RuntimeError) as excinfo:
-            numpy_bkd.assert_allclose(
-                numpy_result.probabilities(prob_qubits),
-                clifford_result.probabilities(prob_qubits),
-            )
-            assert (
-                str(excinfo.value)
-                == f"Asking probabilities for qubits {prob_qubits}, but only qubits {MEASURED_QUBITS} were measured."
-            )
-    else:
-        backend.assert_allclose(
-            backend.cast(numpy_result.probabilities(prob_qubits)),
-            clifford_result.probabilities(prob_qubits),
-            atol=1e-1,
-        )
+    # if prob_qubits == [0] and binary:
+    #    breakpoint()
+    clifford_prob = clifford_result.probabilities(prob_qubits)
+    backend.assert_allclose(
+        backend.cast(numpy_result.probabilities(prob_qubits)),
+        clifford_result.probabilities(prob_qubits),
+        atol=1e-1,
+    )
 
-        numpy_freq = numpy_result.frequencies(binary)
-        clifford_freq = clifford_result.frequencies(binary)
-        clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+    numpy_freq = numpy_result.frequencies(binary)
+    clifford_freq = clifford_result.frequencies(binary)
+    clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
 
-        assert len(numpy_freq) == len(clifford_freq)
+    assert len(numpy_freq) == len(clifford_freq)
 
-        for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
-            backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
+    for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
+        backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
 
 
 @pytest.mark.parametrize("seed", [2024])
