@@ -37,7 +37,7 @@ class MetaBackend:
             raise_error(
                 ValueError,
                 f"Backend {backend} is not available. "
-                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight")}",
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford', 'hamming_weight')}",
             )
 
         if backend in ["clifford", "hamming_weight"]:
