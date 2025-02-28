@@ -368,6 +368,7 @@ def hamming_weight_encoder(
     """
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
+    # get list of bitstrings from the Gray code
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
