@@ -204,3 +204,62 @@ class HammingWeightBackend(NumpyBackend):
         state[indexes_out] = new_amplitudes_out
 
         return state
+
+    def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
+        from qibo.models.encodings import _ehrlich_algorithm
+
+        qubits = list(gate.target_qubits)
+        gate_qubits = len(qubits)
+        controls = list(gate.control_qubits)
+        ncontrols = len(controls)
+        other_qubits = list(set(qubits + controls) ^ set(list(range(nqubits))))
+        map = qubits + controls + other_qubits
+
+        gate_matrix = gate.matrix(backend=self.engine)
+
+        initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+        strings = _ehrlich_algorithm(np.array(initial_string), False)
+        indexes = [int(string, base=2) for string in strings]
+        sorted_pairs = sorted(zip(indexes, strings))
+        indexes, strings = zip(*sorted_pairs)
+        indexes = list(indexes)
+        strings = list(strings)
+
+        dim = len(indexes)
+        matrix = np.zeros((dim, dim), dtype=complex)
+        for i, index_i in enumerate(indexes):
+            for j, index_j in enumerate(indexes):
+                if index_i % 2 ** (
+                    nqubits - gate_qubits - ncontrols
+                ) == index_j % 2 ** (nqubits - gate_qubits - ncontrols):
+                    if (
+                        bin(index_j // 2 ** (nqubits - gate_qubits - ncontrols))[
+                            2 + gate_qubits :
+                        ].count("1")
+                        == ncontrols
+                    ):
+                        matrix[i, j] = gate_matrix[
+                            index_i // 2 ** (nqubits - gate_qubits - ncontrols),
+                            index_j // 2 ** (nqubits - gate_qubits - ncontrols),
+                        ]
+                    else:
+                        matrix[i, j] = 1 if i == j else 0
+
+        new_matrix = np.zeros((dim, dim), dtype=complex)
+        for i, string_i in enumerate(strings):
+            new_string_i = [""] * len(string_i)
+            for k in range(nqubits):
+                new_string_i[map[k]] = string_i[k]
+            new_string_i = "".join(new_string_i)
+            new_index_i = strings.index(new_string_i)
+
+            for j, string_j in enumerate(strings):
+                new_string_j = [""] * len(string_j)
+                for k in range(nqubits):
+                    new_string_j[map[k]] = string_j[k]
+                new_string_j = "".join(new_string_j)
+                new_index_j = strings.index(new_string_j)
+
+                new_matrix[new_index_i, new_index_j] = matrix[i, j]
+
+        return new_matrix
