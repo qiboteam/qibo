@@ -37,8 +37,10 @@ class HammingWeightBackend(NumpyBackend):
     def apply_gate(self, gate, state, nqubits, weight):
         if len(gate.target_qubits) == 1:
             return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+        elif len(gate.target_qubits) == 2:
+            return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
-        return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+        return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
         nqubits = circuit.nqubits
