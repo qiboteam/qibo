@@ -126,7 +126,7 @@ def test_two_qubits_gates(backend, gate):
 @pytest.mark.parametrize(
     "seed",
     [
-        21,
+        2024,
     ],
 )
 def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
