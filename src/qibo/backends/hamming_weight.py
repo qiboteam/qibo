@@ -30,7 +30,7 @@ class HammingWeightBackend(NumpyBackend):
 
         # map to translate the order of bitstrings from the Gray code
         # to the lexicographical (i.e. ascending) order
-        self._lexicographical_order = None
+        self._dict_indexes = None
 
         self.name = "hamming_weight"
 
@@ -52,7 +52,12 @@ class HammingWeightBackend(NumpyBackend):
             "".join(item.astype(str)) for item in lexicographical_order
         ]
         lexicographical_order.sort()
-        self._dict_indexes = dict(zip(lexicographical_order, indexes))
+        lexicographical_order_int = [
+            int(item, base=2) for item in lexicographical_order
+        ]
+        self._dict_indexes = dict(
+            zip(lexicographical_order, zip(indexes, lexicographical_order_int))
+        )
         del lexicographical_order, indexes
 
         if initial_state is None:
@@ -140,7 +145,7 @@ class HammingWeightBackend(NumpyBackend):
             if len(controls) > 0:
                 indexes_zero[:, controls] = "1"
             indexes_zero = np.array(
-                [self._dict_indexes["".join(elem)] for elem in indexes_zero]
+                [self._dict_indexes["".join(elem)][0] for elem in indexes_zero]
             )
 
             state[indexes_zero] *= matrix_00
@@ -152,7 +157,7 @@ class HammingWeightBackend(NumpyBackend):
 
             indexes_one[:, qubits] = ["1"]
             indexes_one = np.array(
-                [self._dict_indexes["".join(elem)] for elem in indexes_one]
+                [self._dict_indexes["".join(elem)][0] for elem in indexes_one]
             )
 
             state[indexes_one] *= matrix_11
@@ -191,10 +196,10 @@ class HammingWeightBackend(NumpyBackend):
         indexes_out[:, qubits] = ["0", "1"]
 
         indexes_in = np.array(
-            [self._dict_indexes["".join(elem)] for elem in indexes_in]
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
         )
         indexes_out = np.array(
-            [self._dict_indexes["".join(elem)] for elem in indexes_out]
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
         )
 
         old_in, old_out = state[indexes_in], state[indexes_out]
@@ -219,13 +224,20 @@ class HammingWeightBackend(NumpyBackend):
 
         gate_matrix = gate.matrix(backend=self.engine)
 
-        initial_string = np.array([1] * weight + [0] * (nqubits - weight))
-        strings = _ehrlich_algorithm(np.array(initial_string), False)
-        indexes = [int(string, base=2) for string in strings]
-        sorted_pairs = sorted(zip(indexes, strings))
-        indexes, strings = zip(*sorted_pairs)
-        indexes = list(indexes)
-        strings = list(strings)
+        if (
+            self._dict_indexes is not None
+            and list(self._dict_indexes.keys())[0].count("1") == weight
+        ):
+            strings = list(self._dict_indexes.keys())
+            indexes = [index[1] for index in self._dict_indexes.values()]
+        else:
+            initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+            strings = _ehrlich_algorithm(np.array(initial_string), False)
+            indexes = [int(string, base=2) for string in strings]
+            sorted_pairs = sorted(zip(indexes, strings))
+            indexes, strings = zip(*sorted_pairs)
+            indexes = list(indexes)
+            strings = list(strings)
 
         dim = len(indexes)
         matrix = np.zeros((dim, dim), dtype=complex)
@@ -235,14 +247,12 @@ class HammingWeightBackend(NumpyBackend):
                     nqubits - gate_qubits - ncontrols
                 ) == index_j % 2 ** (nqubits - gate_qubits - ncontrols):
                     if (
-                        bin(index_j // 2 ** (nqubits - gate_qubits - ncontrols))[
-                            2 + gate_qubits :
-                        ].count("1")
+                        strings[j][gate_qubits : gate_qubits + ncontrols].count("1")
                         == ncontrols
                     ):
                         matrix[i, j] = gate_matrix[
-                            index_i // 2 ** (nqubits - gate_qubits - ncontrols),
-                            index_j // 2 ** (nqubits - gate_qubits - ncontrols),
+                            index_i // 2 ** (nqubits - gate_qubits),
+                            index_j // 2 ** (nqubits - gate_qubits),
                         ]
                     else:
                         matrix[i, j] = 1 if i == j else 0
