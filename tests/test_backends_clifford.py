@@ -153,18 +153,16 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
-    # breakpoint()
     clifford_prob = clifford_result.probabilities(prob_qubits)
     numpy_prob = backend.cast(numpy_result.probabilities(prob_qubits))
-    # backend.assert_allclose(
-    #    backend.cast(numpy_result.probabilities(prob_qubits)),
-    #    clifford_result.probabilities(prob_qubits),
-    #    atol=1e-1,
-    # )
+    backend.assert_allclose(
+        numpy_prob,
+        clifford_prob,
+        atol=1e-1,
+    )
 
     numpy_freq = numpy_result.frequencies(binary)
     clifford_freq = clifford_result.frequencies(binary)
-    # breakpoint()
     clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
 
     assert len(numpy_freq) == len(clifford_freq)
