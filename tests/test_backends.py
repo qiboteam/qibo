@@ -127,7 +127,7 @@ def test_list_available_backends():
         },
         "qibolab": False,
         "qibo-cloud-backends": False,
-        "qibotn": {"cutensornet": False, "qutensornet": True},
+        "qibotn": {"cutensornet": False, "qmatchatea": False, "qutensornet": True},
         "qiboml": {"tensorflow": False, "pytorch": True},
     }
     assert available_backends == list_available_backends(

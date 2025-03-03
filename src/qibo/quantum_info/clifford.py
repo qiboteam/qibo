@@ -418,7 +418,6 @@ class Clifford:
                 self.nqubits, normalize=False
             )
             operators = self._backend.cast([(g, identity) for g in operators])
-
             return self._backend.cast(
                 [reduce(self.engine.np.matmul, ops) for ops in product(*operators)]
             )
