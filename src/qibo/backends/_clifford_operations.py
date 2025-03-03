@@ -462,8 +462,6 @@ def _pack_for_measurements(state, nqubits):
 
 def _unpack_for_measurements(state, nqubits):
     """Unpacks the symplectc matrix that was packed for measurements."""
-    # xz = _unpackbits(state[:, :-1], axis=1, count=_dim_xz(nqubits))
-    # x, z = xz[:, :nqubits], xz[:, nqubits:]
     x = _unpackbits(state[:, : _packed_size(nqubits)], axis=1, count=nqubits)
     z = _unpackbits(state[:, _packed_size(nqubits) : -1], axis=1, count=nqubits)
     return np.hstack((x, z, state[:, -1][:, None]))
@@ -488,7 +486,7 @@ def M(state, qubits, nqubits, collapse=False):
             state, outcome = _random_outcome(state, p, q, nqubits)
         # determined outcome, state unchanged
         else:
-            state, outcome = _determined_outcome(state, q, nqubits)
+            _, outcome = _determined_outcome(state, q, nqubits)
         sample.append(outcome)
     if collapse:
         state = _packbits(state, axis=0)
