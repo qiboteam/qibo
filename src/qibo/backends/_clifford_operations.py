@@ -404,10 +404,9 @@ def _determined_outcome(state, q, nqubits):
 
 def _random_outcome(state, p, q, nqubits):
     p = p[0] + nqubits
-    tmp = state[p, q].copy()
     state[p, q] = 0
     h = state[:-1, q].nonzero()[0]
-    state[p, q] = tmp
+    state[p, q] = 1
     if h.shape[0] > 0:
         state = _pack_for_measurements(state, nqubits)
         state = _rowsum(
@@ -463,14 +462,16 @@ def _pack_for_measurements(state, nqubits):
 
 def _unpack_for_measurements(state, nqubits):
     """Unpacks the symplectc matrix that was packed for measurements."""
-    xz = _unpackbits(state[:, :-1], axis=1, count=_dim_xz(nqubits))
-    x, z = xz[:, :nqubits], xz[:, nqubits:]
+    # xz = _unpackbits(state[:, :-1], axis=1, count=_dim_xz(nqubits))
+    # x, z = xz[:, :nqubits], xz[:, nqubits:]
+    x = _unpackbits(state[:, : _packed_size(nqubits)], axis=1, count=nqubits)
+    z = _unpackbits(state[:, _packed_size(nqubits) : -1], axis=1, count=nqubits)
     return np.hstack((x, z, state[:, -1][:, None]))
 
 
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
-        return _unpackbits(state, axis=0, count=_dim(nqubits))  # [: _dim(nqubits)]
+        return _unpackbits(state, axis=0, count=_dim(nqubits))
     else:
         return state.copy()
 
@@ -479,6 +480,7 @@ def _init_state_for_measurements(state, nqubits, collapse):
 def M(state, qubits, nqubits, collapse=False):
     sample = []
     state = _init_state_for_measurements(state, nqubits, collapse)
+    # TODO: parallelize this and get rid of the loop
     for q in qubits:
         p = state[nqubits:-1, q].nonzero()[0]
         # random outcome, affects the state
