@@ -307,11 +307,6 @@ def random_quantum_channel(
         super_op = getattr(backend.qinfo, f"_super_op_from_hermitian_measure_{order}")(
             dims
         )
-    else:
-        raise_error(
-            ValueError,
-            f"Unrecognized {order} order, pick one in ('row', 'column', 'system').",
-        )
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -1029,7 +1024,7 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     if order == "row":
         return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
     elif order == "column":
-        return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
+        return backend.qinfo._super_op_from_bcsz_measure_column(dims, rank)
     else:
         raise_error(
             ValueError, f"Unrecognized {order} order, pick one in ('row', 'column')."
