@@ -209,11 +209,11 @@ def test_gate_tomography_noise_model(backend):
             gates.SX(0),
             gates.RX(0, np.pi / 4),
             gates.PRX(0, np.pi, np.pi / 2),
-            gates.Unitary(np.array([[1, 0], [0, 1]]), 0),
-            # gates.Unitary([[1, 0], [0, 1]], 0),
-            # gates.CY(0, 1),
+            # gates.Unitary(np.array([[1, 0], [0, 1]]), 0),
+            gates.Unitary([[1, 0], [0, 1]], 0),
+            gates.CY(0, 1),
         ],
-        # [gates.TOFFOLI(0, 1, 2)],
+        [gates.TOFFOLI(0, 1, 2)],
     ],
 )
 @pytest.mark.parametrize("pauli_liouville", [False, True])
@@ -233,7 +233,7 @@ def test_GST(backend, target_gates, pauli_liouville):
         for g in target_gates
     ]
 
-    if len(target_gates) == 4:
+    if len(target_gates) == 5:
         empty_1q, empty_2q, *approx_gates = GST(
             gate_set=gate_set,
             nshots=int(1e4),
