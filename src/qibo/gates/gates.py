@@ -200,7 +200,9 @@ class Y(Gate):
         from qibo import matrices  # pylint: disable=C0415
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
-        return Unitary(matrix, self.target_qubits[0], trainable=False)
+        gate = Unitary(matrix, self.target_qubits[0], trainable=False)
+        gate.clifford = True
+        return gate
 
 
 class Z(Gate):
@@ -2533,8 +2535,11 @@ class GeneralizedRBS(ParametrizedGate):
         super().__init__(trainable)
         self.name = "grbs"
         self.draw_label = "gRBS"
-        self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
         self.unitary = True
+
+        target_qubits = list(qubits_in) + list(qubits_out)
+        target_qubits.sort()
+        self.target_qubits = tuple(target_qubits)
 
         self.parameter_names = "theta"
         self.parameters = theta, phi
