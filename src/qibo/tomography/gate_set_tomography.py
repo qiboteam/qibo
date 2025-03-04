@@ -184,7 +184,12 @@ def _gate_tomography(
                 ValueError,
                 f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
             )
-        gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
+
+        # # The following 4 lines could be redundant
+        # if gate.__class__.__name__ == "Unitary":
+        #     gate = gate.__class__(gate.init_args[0], *gate.qubits)
+        # else:
+        #     gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
@@ -291,8 +296,12 @@ def GST(
         if gate is not None:
 
             if isinstance(gate, tuple):
-                angles = ["theta", "phi", "lam"]
+                angles = ["theta", "phi", "lam", "unitary"]
                 gate, params = gate
+                if isinstance(params[0], np.ndarray):
+                    params = [params]
+                elif isinstance(params[0], list):
+                    params = [[np.array(params[0])]]
                 init_args = signature(gate).parameters
                 valid_angles = [arg for arg in init_args if arg in angles]
                 angle_values = dict(zip(valid_angles, params))
@@ -309,7 +318,11 @@ def GST(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
                 )
-            gate = gate(*range(nqubits), **angle_values)
+
+            if "unitary" in angle_values:
+                gate = gate(angle_values["unitary"][0], *range(nqubits))
+            else:
+                gate = gate(*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
