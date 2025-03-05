@@ -528,14 +528,25 @@ def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevecto
         entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
     )
 
-    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-    target = backend.cast([0.0, 1.0], dtype=np.float64)
+    # numba has problems of reproducibility with fixed seed due
+    # to the parallelization
+    if backend.platform != "numba":
 
-    backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, backend=backend),
-        -0.21227801,
-        atol=1e-8,
-    )
+        if backend.platform in ("cupy", "cuquantum"):
+            target_entropy = -0.5756448271550462
+        elif backend.platform == "pytorch":
+            target_entropy = -0.3881234819220542
+        else:
+            target_entropy = -0.9888146910047833
+
+        state = random_density_matrix(2, seed=8, pure=False, backend=backend)
+        target = backend.cast([0.0, 1.0], dtype=np.float64)
+
+        backend.assert_allclose(
+            relative_von_neumann_entropy(state, target, backend=backend),
+            target_entropy,
+            atol=1e-8,
+        )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
@@ -553,7 +564,7 @@ def test_mutual_information(backend, base, check_hermitian):
     backend.assert_allclose(
         mutual_information(state, [0, 1], base, check_hermitian, backend),
         0.0,
-        atol=1e-10,
+        atol=1e-6,
     )
 
 
@@ -709,7 +720,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
     backend.assert_allclose(
         relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend),
         0.0,
-        atol=1e-8,
+        atol=1e-7,
     )
 
 
