@@ -117,6 +117,104 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     return circuit
 
 
+def sparse_encoder(data, nqubits: int = None, **kwargs):
+    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+        hamming_distance,
+        hamming_weight,
+    )
+
+    if isinstance(data, zip):
+        data = list(data)
+
+    if isinstance(data[0][0], int) and nqubits is None:
+        raise_error(
+            ValueError,
+            "``nqubits`` must be specified when computational basis states are "
+            + "indidated by integers.",
+        )
+    elif isinstance(data[0][0], str) and nqubits is None:
+        nqubits = len(data[0][0])
+
+    complex_data = bool("complex" in str(type(data[0][1])))
+
+    bitstrings, _data = [], []
+    for bitstring, elem in data:
+        if isinstance(bitstring, int):
+            bitstring = f"{bitstring:0{nqubits}b}"
+        bitstrings.append(bitstring)
+        _data.append(elem)
+
+    _data = list(zip(bitstrings, _data))
+    _data.sort()
+
+    data_sorted, bitstrings_sorted = [], []
+    for string, elem in _data:
+        bitstrings_sorted.append(np.array(list(string)).astype(int))
+        data_sorted.append(elem)
+    del _data, bitstrings
+
+    _data_sorted = np.abs(data_sorted) if complex_data else data_sorted
+    thetas = _generate_rbs_angles(
+        _data_sorted, len(_data_sorted), architecture="diagonal"
+    )
+    phis = np.zeros(len(thetas))
+    if complex_data:
+        phis[0] = _angle_mod_two_pi(-np.angle(data_sorted[0]))
+        for k in range(1, len(phis)):
+            phis[k] = _angle_mod_two_pi(-np.angle(data_sorted[k]) + np.sum(phis[:k]))
+
+    touched_qubits = []
+    circuit = comp_basis_encoder(list(bitstrings_sorted[0]), nqubits=nqubits, **kwargs)
+    for qubit, bit in enumerate(bitstrings_sorted[0]):
+        if bit == 1:
+            touched_qubits.append(qubit)
+
+    for b_1, b_0, theta, phi in zip(
+        bitstrings_sorted[1:], bitstrings_sorted[:-1], thetas, phis
+    ):
+        hw_0, hw_1 = hamming_weight(b_0), hamming_weight(b_1)
+        distance = hamming_distance("".join(b_1.astype(str)), "".join(b_0.astype(str)))
+        difference = b_1 - b_0
+
+        ones, new_ones = np.argsort(b_0)[-hw_0:], np.argsort(b_1)[-hw_1:]
+        controls = (set(ones) & set(new_ones)) & set(touched_qubits)
+
+        if distance == 1:
+            qubit = np.where(difference == 1)[0][0]
+            if qubit not in touched_qubits:
+                touched_qubits.append(qubit)
+            gate = (
+                gates.U3(qubit, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
+                if complex_data
+                else gates.RY(qubit, 2 * theta).controlled_by(*controls)
+            )
+        elif distance == 2:
+            qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
+            for qubit in qubits:
+                if qubit not in touched_qubits:
+                    touched_qubits.append(qubit)
+            gate = _get_gate(
+                [qubits[0]],
+                [qubits[1]],
+                controls,
+                theta,
+                phi,
+                complex_data,
+            )
+        else:
+            qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
+            for row in qubits:
+                for qubit in row:
+                    if qubit not in touched_qubits:
+                        touched_qubits.append(qubit)
+            gate = gates.GeneralizedRBS(qubits[0], qubits[1], theta, phi).controlled_by(
+                *controls
+            )
+        circuit.add(gate)
+
+    return circuit
+
+
 def binary_encoder(data, **kwargs):
     """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
 
@@ -366,7 +464,8 @@ def hamming_weight_encoder(
         *Quantum encoder for fixed Hamming-weight subspaces*
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
-    complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+    # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
+    complex_data = bool("complex" in str(data.dtype))
 
     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
