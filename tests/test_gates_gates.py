@@ -1322,7 +1322,7 @@ def test_deutsch(backend):
 
 def test_generalized_rbs(backend):
     theta, phi = 0.1234, 0.4321
-    qubits_in, qubits_out = [0, 1], [2, 3]
+    qubits_in, qubits_out = [0, 3], [1, 2]
     nqubits = len(qubits_in + qubits_out)
     integer_in = "".join(["1" if k in qubits_in else "0" for k in range(nqubits)])
     integer_out = "".join(["1" if k in qubits_out else "0" for k in range(nqubits)])
