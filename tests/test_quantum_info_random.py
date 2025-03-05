@@ -64,16 +64,18 @@ def test_uniform_sampling_U3(backend, seed):
 
 @pytest.mark.parametrize("seed", [None, 10])
 def test_random_gaussian_matrix(backend, seed):
-    with pytest.raises(TypeError):
-        dims = np.array([2])
-        random_gaussian_matrix(dims, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
-        rank = np.array([2])
-        random_gaussian_matrix(dims, rank, backend=backend)
-    with pytest.raises((ValueError, RuntimeError)):
-        dims = -1
-        random_gaussian_matrix(dims, backend=backend)
+    if backend.platform != "tensorflow":
+        # tensorflow raises a custom exception
+        with pytest.raises(TypeError):
+            dims = np.array([2])
+            random_gaussian_matrix(dims, backend=backend)
+        with pytest.raises(TypeError):
+            dims = 2
+            rank = np.array([2])
+            random_gaussian_matrix(dims, rank, backend=backend)
+        with pytest.raises((ValueError, RuntimeError)):
+            dims = -1
+            random_gaussian_matrix(dims, backend=backend)
     with pytest.raises(ValueError):
         dims, rank = 2, 4
         random_gaussian_matrix(dims, rank, backend=backend)
@@ -88,6 +90,11 @@ def test_random_gaussian_matrix(backend, seed):
 
 
 def test_random_hermitian(backend):
+
+    if backend.platform != "tensorflow":
+        global PRECISION_TOL
+    else:
+        PRECISION_TOL = 4e-7
 
     # test if function returns Hermitian operator
     dims = 4

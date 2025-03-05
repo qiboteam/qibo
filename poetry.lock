@@ -14,23 +14,23 @@ files = [
 
 [[package]]
 name = "alembic"
-version = "1.14.1"
+version = "1.15.1"
 description = "A database migration tool for SQLAlchemy."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "alembic-1.14.1-py3-none-any.whl", hash = "sha256:1acdd7a3a478e208b0503cd73614d5e4c6efafa4e73518bb60e4f2846a37b1c5"},
-    {file = "alembic-1.14.1.tar.gz", hash = "sha256:496e888245a53adf1498fcab31713a469c65836f8de76e01399aa1c3e90dd213"},
+    {file = "alembic-1.15.1-py3-none-any.whl", hash = "sha256:197de710da4b3e91cf66a826a5b31b5d59a127ab41bd0fc42863e2902ce2bbbe"},
+    {file = "alembic-1.15.1.tar.gz", hash = "sha256:e1a1c738577bca1f27e68728c910cd389b9a92152ff91d902da649c192e30c49"},
 ]
 
 [package.dependencies]
 Mako = "*"
-SQLAlchemy = ">=1.3.0"
-typing-extensions = ">=4"
+SQLAlchemy = ">=1.4.0"
+typing-extensions = ">=4.12"
 
 [package.extras]
-tz = ["backports.zoneinfo ; python_version < \"3.9\"", "tzdata"]
+tz = ["tzdata"]
 
 [[package]]
 name = "antlr4-python3-runtime"
@@ -1419,38 +1419,38 @@ cython = ["cython"]
 
 [[package]]
 name = "debugpy"
-version = "1.8.12"
+version = "1.8.13"
 description = "An implementation of the Debug Adapter Protocol for Python"
 optional = false
 python-versions = ">=3.8"
 groups = ["docs"]
 files = [
-    {file = "debugpy-1.8.12-cp310-cp310-macosx_14_0_x86_64.whl", hash = "sha256:a2ba7ffe58efeae5b8fad1165357edfe01464f9aef25e814e891ec690e7dd82a"},
-    {file = "debugpy-1.8.12-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cbbd4149c4fc5e7d508ece083e78c17442ee13b0e69bfa6bd63003e486770f45"},
-    {file = "debugpy-1.8.12-cp310-cp310-win32.whl", hash = "sha256:b202f591204023b3ce62ff9a47baa555dc00bb092219abf5caf0e3718ac20e7c"},
-    {file = "debugpy-1.8.12-cp310-cp310-win_amd64.whl", hash = "sha256:9649eced17a98ce816756ce50433b2dd85dfa7bc92ceb60579d68c053f98dff9"},
-    {file = "debugpy-1.8.12-cp311-cp311-macosx_14_0_universal2.whl", hash = "sha256:36f4829839ef0afdfdd208bb54f4c3d0eea86106d719811681a8627ae2e53dd5"},
-    {file = "debugpy-1.8.12-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a28ed481d530e3138553be60991d2d61103ce6da254e51547b79549675f539b7"},
-    {file = "debugpy-1.8.12-cp311-cp311-win32.whl", hash = "sha256:4ad9a94d8f5c9b954e0e3b137cc64ef3f579d0df3c3698fe9c3734ee397e4abb"},
-    {file = "debugpy-1.8.12-cp311-cp311-win_amd64.whl", hash = "sha256:4703575b78dd697b294f8c65588dc86874ed787b7348c65da70cfc885efdf1e1"},
-    {file = "debugpy-1.8.12-cp312-cp312-macosx_14_0_universal2.whl", hash = "sha256:7e94b643b19e8feb5215fa508aee531387494bf668b2eca27fa769ea11d9f498"},
-    {file = "debugpy-1.8.12-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:086b32e233e89a2740c1615c2f775c34ae951508b28b308681dbbb87bba97d06"},
-    {file = "debugpy-1.8.12-cp312-cp312-win32.whl", hash = "sha256:2ae5df899732a6051b49ea2632a9ea67f929604fd2b036613a9f12bc3163b92d"},
-    {file = "debugpy-1.8.12-cp312-cp312-win_amd64.whl", hash = "sha256:39dfbb6fa09f12fae32639e3286112fc35ae976114f1f3d37375f3130a820969"},
-    {file = "debugpy-1.8.12-cp313-cp313-macosx_14_0_universal2.whl", hash = "sha256:696d8ae4dff4cbd06bf6b10d671e088b66669f110c7c4e18a44c43cf75ce966f"},
-    {file = "debugpy-1.8.12-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:898fba72b81a654e74412a67c7e0a81e89723cfe2a3ea6fcd3feaa3395138ca9"},
-    {file = "debugpy-1.8.12-cp313-cp313-win32.whl", hash = "sha256:22a11c493c70413a01ed03f01c3c3a2fc4478fc6ee186e340487b2edcd6f4180"},
-    {file = "debugpy-1.8.12-cp313-cp313-win_amd64.whl", hash = "sha256:fdb3c6d342825ea10b90e43d7f20f01535a72b3a1997850c0c3cefa5c27a4a2c"},
-    {file = "debugpy-1.8.12-cp38-cp38-macosx_14_0_x86_64.whl", hash = "sha256:b0232cd42506d0c94f9328aaf0d1d0785f90f87ae72d9759df7e5051be039738"},
-    {file = "debugpy-1.8.12-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9af40506a59450f1315168d47a970db1a65aaab5df3833ac389d2899a5d63b3f"},
-    {file = "debugpy-1.8.12-cp38-cp38-win32.whl", hash = "sha256:5cc45235fefac57f52680902b7d197fb2f3650112379a6fa9aa1b1c1d3ed3f02"},
-    {file = "debugpy-1.8.12-cp38-cp38-win_amd64.whl", hash = "sha256:557cc55b51ab2f3371e238804ffc8510b6ef087673303890f57a24195d096e61"},
-    {file = "debugpy-1.8.12-cp39-cp39-macosx_14_0_x86_64.whl", hash = "sha256:b5c6c967d02fee30e157ab5227706f965d5c37679c687b1e7bbc5d9e7128bd41"},
-    {file = "debugpy-1.8.12-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:88a77f422f31f170c4b7e9ca58eae2a6c8e04da54121900651dfa8e66c29901a"},
-    {file = "debugpy-1.8.12-cp39-cp39-win32.whl", hash = "sha256:a4042edef80364239f5b7b5764e55fd3ffd40c32cf6753da9bda4ff0ac466018"},
-    {file = "debugpy-1.8.12-cp39-cp39-win_amd64.whl", hash = "sha256:f30b03b0f27608a0b26c75f0bb8a880c752c0e0b01090551b9d87c7d783e2069"},
-    {file = "debugpy-1.8.12-py2.py3-none-any.whl", hash = "sha256:274b6a2040349b5c9864e475284bce5bb062e63dce368a394b8cc865ae3b00c6"},
-    {file = "debugpy-1.8.12.tar.gz", hash = "sha256:646530b04f45c830ceae8e491ca1c9320a2d2f0efea3141487c82130aba70dce"},
+    {file = "debugpy-1.8.13-cp310-cp310-macosx_14_0_x86_64.whl", hash = "sha256:06859f68e817966723ffe046b896b1bd75c665996a77313370336ee9e1de3e90"},
+    {file = "debugpy-1.8.13-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cb56c2db69fb8df3168bc857d7b7d2494fed295dfdbde9a45f27b4b152f37520"},
+    {file = "debugpy-1.8.13-cp310-cp310-win32.whl", hash = "sha256:46abe0b821cad751fc1fb9f860fb2e68d75e2c5d360986d0136cd1db8cad4428"},
+    {file = "debugpy-1.8.13-cp310-cp310-win_amd64.whl", hash = "sha256:dc7b77f5d32674686a5f06955e4b18c0e41fb5a605f5b33cf225790f114cfeec"},
+    {file = "debugpy-1.8.13-cp311-cp311-macosx_14_0_universal2.whl", hash = "sha256:eee02b2ed52a563126c97bf04194af48f2fe1f68bb522a312b05935798e922ff"},
+    {file = "debugpy-1.8.13-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4caca674206e97c85c034c1efab4483f33971d4e02e73081265ecb612af65377"},
+    {file = "debugpy-1.8.13-cp311-cp311-win32.whl", hash = "sha256:7d9a05efc6973b5aaf076d779cf3a6bbb1199e059a17738a2aa9d27a53bcc888"},
+    {file = "debugpy-1.8.13-cp311-cp311-win_amd64.whl", hash = "sha256:62f9b4a861c256f37e163ada8cf5a81f4c8d5148fc17ee31fb46813bd658cdcc"},
+    {file = "debugpy-1.8.13-cp312-cp312-macosx_14_0_universal2.whl", hash = "sha256:2b8de94c5c78aa0d0ed79023eb27c7c56a64c68217d881bee2ffbcb13951d0c1"},
+    {file = "debugpy-1.8.13-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:887d54276cefbe7290a754424b077e41efa405a3e07122d8897de54709dbe522"},
+    {file = "debugpy-1.8.13-cp312-cp312-win32.whl", hash = "sha256:3872ce5453b17837ef47fb9f3edc25085ff998ce63543f45ba7af41e7f7d370f"},
+    {file = "debugpy-1.8.13-cp312-cp312-win_amd64.whl", hash = "sha256:63ca7670563c320503fea26ac688988d9d6b9c6a12abc8a8cf2e7dd8e5f6b6ea"},
+    {file = "debugpy-1.8.13-cp313-cp313-macosx_14_0_universal2.whl", hash = "sha256:31abc9618be4edad0b3e3a85277bc9ab51a2d9f708ead0d99ffb5bb750e18503"},
+    {file = "debugpy-1.8.13-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a0bd87557f97bced5513a74088af0b84982b6ccb2e254b9312e29e8a5c4270eb"},
+    {file = "debugpy-1.8.13-cp313-cp313-win32.whl", hash = "sha256:5268ae7fdca75f526d04465931cb0bd24577477ff50e8bb03dab90983f4ebd02"},
+    {file = "debugpy-1.8.13-cp313-cp313-win_amd64.whl", hash = "sha256:79ce4ed40966c4c1631d0131606b055a5a2f8e430e3f7bf8fd3744b09943e8e8"},
+    {file = "debugpy-1.8.13-cp38-cp38-macosx_14_0_x86_64.whl", hash = "sha256:acf39a6e98630959763f9669feddee540745dfc45ad28dbc9bd1f9cd60639391"},
+    {file = "debugpy-1.8.13-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:924464d87e7d905eb0d79fb70846558910e906d9ee309b60c4fe597a2e802590"},
+    {file = "debugpy-1.8.13-cp38-cp38-win32.whl", hash = "sha256:3dae443739c6b604802da9f3e09b0f45ddf1cf23c99161f3a1a8039f61a8bb89"},
+    {file = "debugpy-1.8.13-cp38-cp38-win_amd64.whl", hash = "sha256:ed93c3155fc1f888ab2b43626182174e457fc31b7781cd1845629303790b8ad1"},
+    {file = "debugpy-1.8.13-cp39-cp39-macosx_14_0_x86_64.whl", hash = "sha256:6fab771639332bd8ceb769aacf454a30d14d7a964f2012bf9c4e04c60f16e85b"},
+    {file = "debugpy-1.8.13-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:32b6857f8263a969ce2ca098f228e5cc0604d277447ec05911a8c46cf3e7e307"},
+    {file = "debugpy-1.8.13-cp39-cp39-win32.whl", hash = "sha256:f14d2c4efa1809da125ca62df41050d9c7cd9cb9e380a2685d1e453c4d450ccb"},
+    {file = "debugpy-1.8.13-cp39-cp39-win_amd64.whl", hash = "sha256:ea869fe405880327497e6945c09365922c79d2a1eed4c3ae04d77ac7ae34b2b5"},
+    {file = "debugpy-1.8.13-py2.py3-none-any.whl", hash = "sha256:d4ba115cdd0e3a70942bd562adba9ec8c651fe69ddde2298a1be296fc331906f"},
+    {file = "debugpy-1.8.13.tar.gz", hash = "sha256:837e7bef95bdefba426ae38b9a94821ebdc5bea55627879cd48165c90b9e50ce"},
 ]
 
 [[package]]
@@ -5303,43 +5303,16 @@ dev = ["furo (>=2024.5.6)", "grpcio-testing (>=1.63.0)", "maturin (>=1.5.1)", "m
 
 [[package]]
 name = "qcs-sdk-python"
-version = "0.21.12"
+version = "0.21.13"
 description = "Python interface for the QCS Rust SDK"
 optional = false
 python-versions = "*"
 groups = ["tests"]
 markers = "python_version >= \"3.10\""
 files = [
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:fa8979121afbe53309d08c820c380a5a8e3c0157565d4852a7df391591953e7f"},
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:64976b4e8387b8b3954b37b403a124584bcb9ca639449d2ca639f8d54f091205"},
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:860ed09ce16c0a23c92be093f4a2c277da2bd0633be2bed1e7e5672c86caa4d1"},
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-manylinux_2_28_ppc64le.whl", hash = "sha256:25aa794bc0d2231134b8a841dd89de7a97de422b291376374e1d70584380cc02"},
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:a5e799867a367df11e5e35714b59dee40e6f824868bb40f7fd5c6e8ee2de3c0b"},
-    {file = "qcs_sdk_python-0.21.12-cp310-cp310-win_amd64.whl", hash = "sha256:4b225452d82996d8fc4d2491cb7394174af3378adb21d883180252d0b8cbe822"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:37945906d391ae2eb392240e1642d1da137ec6bf6b2b26db58590b0bfc64d77c"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4656dbdcd5d04461fc384fc60022bac54b8cef5019130b124e3896a4fc36399e"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:0754c1a6524465da00e1c2b01e985e85c78bc3dd3daf9a7ae9f1c7ef62f93fcf"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-manylinux_2_28_ppc64le.whl", hash = "sha256:d86ab08b07811bd93236b572394a88953abf0d1a078c35ac2d1713326b8d303c"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:8c20faf0e081047eb45c754cc5ce8e4f17e29d305432dc9466762f01ef8a7d49"},
-    {file = "qcs_sdk_python-0.21.12-cp311-cp311-win_amd64.whl", hash = "sha256:bbe2276b456a638ec534aece2276601d76da1172b596585b83414cb4aca88c37"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:d08d3f624fecaa9f6bf5e8893f92b101dc3be9f112b3b860b15262c84bd3a5b3"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:8a2e5a8d5d9b88af855bc6a5c25416ec57ca3b7ba1757aad5705388e31ebc802"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:0637416fa009a4adc5dbf74bd620f5c1ed12e4607b3d042dd4bd5dc72f6845b4"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-manylinux_2_28_ppc64le.whl", hash = "sha256:ff3249db1af20cacc1179f764740ce161754b666a50f861ce9b595f69313f489"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:54047baddf0ac1af727bd1865d2a3b9a45636f3e5f7d630a93bae2e2e9a4eecc"},
-    {file = "qcs_sdk_python-0.21.12-cp312-cp312-win_amd64.whl", hash = "sha256:8ce43ef80d11d70a396c629523f8be62daa5c9a0296907ca737f0caf8569054e"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-macosx_10_12_x86_64.whl", hash = "sha256:34bac1ab6b40d06183d633db25e3cc14a9e0b8b8a19f74f95cda46526da060cf"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:87f355fba5055c0dcdf4ebc9b3d5626edd91800c49ea6a77bcdf97d5fd44eebd"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:eeb648264a848b56fe2f84ac83ef8da9a8c8c0acf6a09294a683ccbd31ab3732"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-manylinux_2_28_ppc64le.whl", hash = "sha256:e32cb94c850e7c96a90536f50668f3aaedc5d9f2a6bd33df4c7c3178f91eedf8"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:0083bd702522621db16edfbdb8b7426f189536ae81a560b3d9ab439bd978024d"},
-    {file = "qcs_sdk_python-0.21.12-cp38-cp38-win_amd64.whl", hash = "sha256:5897ca4806eb9831c6fca8c269638d9ec1a9de17e444e266b2aaf65551900e29"},
-    {file = "qcs_sdk_python-0.21.12-cp39-cp39-macosx_10_12_x86_64.whl", hash = "sha256:fe1bd306f2aa9f27a597d79764094f865f7b5297f5e53fb5fc48918cab96f3b4"},
-    {file = "qcs_sdk_python-0.21.12-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:dd30ba533384f06512fc2dfba1acb851e5840b65c3c52d36fceceb696cc5e9d7"},
-    {file = "qcs_sdk_python-0.21.12-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:b10219d0c6887e0be436b946613c2a98e40fcb6a75803682f9c6dfbb755dc978"},
-    {file = "qcs_sdk_python-0.21.12-cp39-cp39-manylinux_2_28_ppc64le.whl", hash = "sha256:2df766b9ec7059b4f8274e5521fc4b1a26d6ac4ef66f7ca914de3ce9a4d85c36"},
-    {file = "qcs_sdk_python-0.21.12-cp39-cp39-win_amd64.whl", hash = "sha256:e5aa1097210c63203d72aabe291a890d9de9df7c935f196960e4495da712c9f4"},
-    {file = "qcs_sdk_python-0.21.12.tar.gz", hash = "sha256:d2fcaa5b90798bee974f8aa5a2d366de369bd866e34a5a55cce5918c70eddd64"},
+    {file = "qcs_sdk_python-0.21.13-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:ed9140cf7563a5951d2cf7e655e621e249e35022a9f6e71edadceedc4ccafbac"},
+    {file = "qcs_sdk_python-0.21.13-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6209f55f2975eed2d1165fd430382ae57bb83f71b28c2fbb90317b9e74ff363d"},
+    {file = "qcs_sdk_python-0.21.13-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:2f089813b61fbef072f15677005c6f9f38c57ac76b9f3ce80c0e201a74cc8ab9"},
 ]
 
 [package.dependencies]
@@ -5347,7 +5320,7 @@ qcs-api-client-common = ">=0.11.8"
 quil = ">=0.15.2"
 
 [package.extras]
-dev = ["black (>=24.8.0)", "maturin (==1.5.1)", "mypy (>=1.14.1)", "numpy (>=1.24.1)", "opentelemetry-sdk (==1.25.0)", "pdoc (>=14.6.1)", "pytest (>=8.1.1)", "pytest-asyncio (>=0.23.6)", "pytest-clarity (>=1.0.1)", "pytest-mock (>=3.14.0)", "pytest-sugar (>=1.0.0)", "ruff (>=0.3.5)", "syrupy (>=4.0.0)"]
+dev = ["black (>=24.8.0)", "maturin (==1.7.0)", "mypy (>=1.14.1)", "numpy (>=1.24.1)", "opentelemetry-sdk (==1.25.0)", "pdoc (>=14.6.1)", "pytest (>=8.1.1)", "pytest-asyncio (>=0.23.6)", "pytest-clarity (>=1.0.1)", "pytest-mock (>=3.14.0)", "pytest-sugar (>=1.0.0)", "ruff (>=0.3.5)", "syrupy (>=4.0.0)"]
 pyquil = ["pyquil (==4.14.2)"]
 
 [[package]]
@@ -5366,11 +5339,15 @@ psutil = "^5.9.5"
 qibo = {git = "https://github.com/qiboteam/qibo", branch = "qinfo_jit"}
 scipy = "^1.10.1"
 
+[package.extras]
+cupy = ["cupy-cuda12x (>=13.1.0,<14.0.0)"]
+cuquantum = ["cuquantum-python-cu12 (>=23.10.0,<24.0.0)"]
+
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "qinfo_jit"
-resolved_reference = "5818b6dbde5b269b59ef62ec855a6e9540113a86"
+resolved_reference = "8113c44c0a1091621b61c7ae51684247ca8b4f14"
 
 [[package]]
 name = "qiboml"
@@ -5386,13 +5363,13 @@ develop = false
 jax = "^0.4.25"
 jaxlib = "^0.4.25"
 numpy = "^1.26.4"
-qibo = "^0.2.16"
+qibo = {git = "https://github.com/qiboteam/qibo/", branch = "qinfo_jit"}
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qiboml.git"
 reference = "qinfo_jit"
-resolved_reference = "5fe3b263920be7b24cebded74930b066c5d1e004"
+resolved_reference = "26edd906a8cbe259474af2048641eca935966367"
 
 [[package]]
 name = "qibotn"
