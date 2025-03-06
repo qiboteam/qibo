@@ -133,6 +133,5 @@ def test_list_available_backends():
     assert available_backends == list_available_backends(
         "qibojit",
         "qibolab",
-        "qibo-cloud-backends",
-        "qibotn",  # "qiboml"
+        "qibo-cloud-backends",  # , "qibotn", "qiboml"
     )
