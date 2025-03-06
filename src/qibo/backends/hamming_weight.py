@@ -3,7 +3,10 @@
 import numpy as np
 from scipy.special import binom
 
+from qibo import gates
 from qibo.backends.numpy import NumpyBackend
+from qibo.config import raise_error
+from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class HammingWeightBackend(NumpyBackend):
@@ -35,7 +38,9 @@ class HammingWeightBackend(NumpyBackend):
         self.name = "hamming_weight"
 
     def apply_gate(self, gate, state, nqubits, weight):
-        if len(gate.target_qubits) == 1:
+        if isinstance(gate, gates.M):
+            return gate.apply_hamming_weight(self, state, weight, nqubits)
+        elif len(gate.target_qubits) == 1:
             return self._apply_gate_single_qubit(gate, state, nqubits, weight)
         elif len(gate.target_qubits) == 2:
             return self._apply_gate_two_qubit(gate, state, nqubits, weight)
@@ -43,32 +48,82 @@ class HammingWeightBackend(NumpyBackend):
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
-        nqubits = circuit.nqubits
-        n_choose_k = int(binom(nqubits, weight))
-        indexes = list(range(n_choose_k))
 
-        lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
-        lexicographical_order = [
-            "".join(item.astype(str)) for item in lexicographical_order
-        ]
-        lexicographical_order.sort()
-        lexicographical_order_int = [
-            int(item, base=2) for item in lexicographical_order
-        ]
-        self._dict_indexes = dict(
-            zip(lexicographical_order, zip(indexes, lexicographical_order_int))
+        from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
+            HammingWeightResult,
         )
-        del lexicographical_order, indexes
 
-        if initial_state is None:
-            initial_state = self.engine.cast(self.np.zeros(n_choose_k))
-            initial_state[0] = 1
+        if circuit.density_matrix:
+            raise_error(RuntimeError, "Density matrix simulation is not supported.")
 
-        state = initial_state
         for gate in circuit.queue:
-            state = self.apply_gate(gate, state, nqubits, weight)
+            if isinstance(gate, gates.Channel):
+                raise_error(RuntimeError, "Circuit must not contain channels.")
 
-        return state
+        nqubits = circuit.nqubits
+
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        if circuit.repeated_execution and nshots != 1:
+            return self.execute_circuit_repeated(circuit, nshots, initial_state)
+
+        try:
+            if initial_state is None:
+                n_choose_k = int(binom(nqubits, weight))
+                initial_state = self.engine.cast(self.np.zeros(n_choose_k))
+                initial_state[0] = 1
+
+            state = initial_state
+            for gate in circuit.queue:
+                state = self.apply_gate(gate, state, nqubits, weight)
+
+            result = HammingWeightResult(
+                state,
+                weight,
+                nqubits,
+                measurements=circuit.measurements,
+                nshots=nshots,
+                backend=self,
+            )
+
+            return result
+
+        except self.oom_error:  # pragma: no cover
+            raise_error(
+                RuntimeError,
+                f"State does not fit in {self.device} memory."
+                "Please switch the execution device to a "
+                "different one using ``qibo.set_device``.",
+            )
+
+    def execute_circuit_repeated(
+        self, circuit, weight, nshots: int = 1000, initial_state=None
+    ):
+        """ """
+        from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
+            HammingWeightResult,
+        )
+
+        circuit_copy = circuit.copy()
+        samples = []
+        for _ in range(nshots):
+            res = self.execute_circuit(circuit_copy, weight, initial_state, nshots=1)
+            for measurement in circuit_copy.measurements:
+                measurement.result.reset()
+            samples.append(res.samples())
+        samples = self.np.vstack(samples)
+
+        for meas in circuit.measurements:
+            meas.result.register_samples(samples[:, meas.target_qubits])
+
+        result = HammingWeightResult(
+            self.zero_state(circuit.nqubits),
+            measurements=circuit.measurements,
+            nshots=nshots,
+            _backend=self,
+        )
+
+        return result
 
     def _gray_code(self, initial_string):
         from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
@@ -104,6 +159,24 @@ class HammingWeightBackend(NumpyBackend):
             strings = [strings_0, strings_1]
 
         return strings
+
+    def _get_lexicographical_order(self, nqubits, weight):
+        n_choose_k = int(binom(nqubits, weight))
+        indexes = list(range(n_choose_k))
+
+        lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
+        lexicographical_order = [
+            "".join(item.astype(str)) for item in lexicographical_order
+        ]
+        lexicographical_order.sort()
+        lexicographical_order_int = [
+            int(item, base=2) for item in lexicographical_order
+        ]
+        _dict_indexes = dict(
+            zip(lexicographical_order, zip(indexes, lexicographical_order_int))
+        )
+
+        return _dict_indexes
 
     def _get_single_qubit_matrix(self, gate):
         matrix = gate.matrix(backend=self.engine)
@@ -224,20 +297,29 @@ class HammingWeightBackend(NumpyBackend):
 
         gate_matrix = gate.matrix(backend=self.engine)
 
+        # if (
+        #     self._dict_indexes is not None
+        #     and list(self._dict_indexes.keys())[0].count("1") == weight
+        # ):
+        #     strings = list(self._dict_indexes.keys())
+        #     indexes = [index[1] for index in self._dict_indexes.values()]
+        # else:
+        #     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+        #     strings = _ehrlich_algorithm(np.array(initial_string), False)
+        #     indexes = [int(string, base=2) for string in strings]
+        #     sorted_pairs = sorted(zip(indexes, strings))
+        #     indexes, strings = zip(*sorted_pairs)
+        #     indexes = list(indexes)
+        #     strings = list(strings)
+
         if (
-            self._dict_indexes is not None
-            and list(self._dict_indexes.keys())[0].count("1") == weight
+            self._dict_indexes is None
+            or list(self._dict_indexes.keys())[0].count("1") != weight
         ):
-            strings = list(self._dict_indexes.keys())
-            indexes = [index[1] for index in self._dict_indexes.values()]
-        else:
-            initial_string = np.array([1] * weight + [0] * (nqubits - weight))
-            strings = _ehrlich_algorithm(np.array(initial_string), False)
-            indexes = [int(string, base=2) for string in strings]
-            sorted_pairs = sorted(zip(indexes, strings))
-            indexes, strings = zip(*sorted_pairs)
-            indexes = list(indexes)
-            strings = list(strings)
+            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        strings = list(self._dict_indexes.keys())
+        indexes = [index[1] for index in self._dict_indexes.values()]
 
         dim = len(indexes)
         matrix = np.zeros((dim, dim), dtype=complex)
@@ -274,4 +356,137 @@ class HammingWeightBackend(NumpyBackend):
 
                 new_matrix[new_index_i, new_index_j] = matrix[i, j]
 
-        return new_matrix
+        state = new_matrix @ state
+
+        return state
+
+    def calculate_symbolic(
+        self, state, nqubits, weight, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        state = self.to_numpy(state)
+        terms = []
+
+        if (
+            self._dict_indexes is None
+            or list(self._dict_indexes.keys())[0].count("1") != weight
+        ):
+            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        strings = list(self._dict_indexes.keys())
+
+        for i in np.nonzero(state)[0]:
+            b = strings[i]
+            if np.abs(state[i]) >= cutoff:
+                x = np.round(state[i], decimals)
+                terms.append(f"{x}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    # def calculate_probabilities(self, state, qubits, weight, nqubits):
+    #     rtype = self.np.real(state).dtype
+    #     num_measured_qubits = len(qubits)
+
+    #     if self._dict_indexes is None or list(self._dict_indexes.keys())[0].count("1") != weight:
+    #         self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+    #     strings = list(self._dict_indexes.keys())
+    #     indexes = [index[0] for index in self._dict_indexes.values()]
+
+    #     # measured_indexes = self._get_lexicographical_order(len(qubits), weight)
+    #     # measured_strings = list(measured_indexes.keys())
+
+    #     probs = []
+    #     for k in range(2**num_measured_qubits):
+    #         bit_string = bin(k)[2:].zfill(num_measured_qubits)
+    #         prob = sum(
+    #             state[index]**2
+    #             for string, index in zip(strings, indexes)
+    #             if bit_string == ''.join(string[q] for q in qubits)
+    #         )
+    #         probs.append(prob)
+
+    #     probs = self.cast(probs, dtype=rtype)
+
+    #     return probs
+
+    def calculate_probabilities(self, state, qubits, weight, nqubits):
+        rtype = self.np.real(state).dtype
+
+        if (
+            self._dict_indexes is None
+            or list(self._dict_indexes.keys())[0].count("1") != weight
+        ):
+            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        strings = list(self._dict_indexes.keys())
+        indexes = [index[0] for index in self._dict_indexes.values()]
+
+        measured_strings = {}
+
+        for string, index in zip(strings, indexes):
+            measured_string = "".join(string[q] for q in qubits)
+            measured_strings[measured_string] = (
+                measured_strings.get(measured_string, 0) + state[index] ** 2
+            )
+
+        strings = list(measured_strings.keys())
+        indexes = [int(string, 2) for string in strings]
+        probs = np.zeros(2 ** len(qubits), dtype=rtype)
+        for index, string in zip(indexes, strings):
+            probs[index] = measured_strings[string]
+
+        probs = self.cast(probs, dtype=rtype)
+
+        return probs
+
+    def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
+        state = self.cast(state)
+
+        if (
+            self._dict_indexes is None
+            or list(self._dict_indexes.keys())[0].count("1") != weight
+        ):
+            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        strings = list(self._dict_indexes.keys())
+        indexes = [index[0] for index in self._dict_indexes.values()]
+        binshot = self.samples_to_binary(shot, len(qubits))[0]
+        # new_state = np.zeros(len(state), dtype=state.dtype)
+        for string, index in zip(strings, indexes):
+            if "".join(str(s) for s in binshot) != "".join(string[q] for q in qubits):
+                state[index] = 0
+
+        if normalize:
+            norm = self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))
+            state = state / norm
+        state = self.cast(state)
+        return state
+
+    def sample_shots(self, probabilities, nshots):
+        return self.np.random.choice(
+            range(len(probabilities)), size=nshots, p=probabilities
+        )
+
+    def aggregate_shots(self, shots):
+        return self.cast(shots, dtype=shots[0].dtype)
+
+    # def samples_to_binary(self, samples, weight, nqubits):
+    #     if self._dict_indexes is None or list(self._dict_indexes.keys())[0].count("1") != weight:
+    #         self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+    #     strings = list(self._dict_indexes.keys())
+    #     bin_samples = np.array([[int(bit) for bit in strings[sample]] for sample in samples])
+    #     return np.array(bin_samples)
+
+    def samples_to_binary(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
+        return np.mod(np.right_shift(samples[:, None], qrange), 2)
+
+    def samples_to_decimal(self, samples, nqubits):
+        ### This is faster just staying @ NumPy.
+        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
+        qrange = (2**qrange)[:, None]
+        samples = np.asarray(samples.tolist())
+        return np.matmul(samples, qrange)[:, 0]
