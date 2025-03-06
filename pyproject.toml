@@ -55,7 +55,7 @@ ipython = "^8.10.0"
 qulacs = { version = "^0.6.4", markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
-# qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
 
 [tool.poetry.group.tests]
 optional = true
@@ -67,7 +67,7 @@ scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"
-# qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 # qiboml = { git  = "https://github.com/qiboteam/qiboml.git", branch="numpy_dep" }
 stim = "^1.12.0"
@@ -88,7 +88,7 @@ optional = true
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^13.1.0"
 cuquantum-python-cu11 = "^24.1.0"
-# qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 
@@ -98,7 +98,7 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^13.1.0"
 cuquantum-python-cu12 = "^24.1.0"
-# qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]

@@ -121,10 +121,10 @@ def test_list_available_backends():
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,
-        # "qibojit": {
-        #     platform: any(platform in backend for backend in AVAILABLE_BACKENDS)
-        #     for platform in ["numba", "cupy", "cuquantum"]
-        # },
+        "qibojit": {
+            platform: any(platform in backend for backend in AVAILABLE_BACKENDS)
+            for platform in ["numba", "cupy", "cuquantum"]
+        },
         "qibolab": False,
         "qibo-cloud-backends": False,
         # "qibotn": {"cutensornet": False, "qmatchatea": False, "qutensornet": True},
