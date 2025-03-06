@@ -1,7 +1,11 @@
+from functools import cached_property, reduce
+from typing import Optional
+
 import numpy as np
 import sympy
 
-from qibo import gates, symbols
+from qibo import gates
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.symbols import I, X, Y, Z
 
@@ -21,14 +25,15 @@ class HamiltonianTerm:
         q (list): List of target qubit ids.
     """
 
-    def __init__(self, matrix, *q):
+    def __init__(self, matrix, *q, backend: Optional[Backend] = None):
+        self.backend = _check_backend(backend)
         for qi in q:
             if qi < 0:
                 raise_error(
                     ValueError,
                     f"Invalid qubit id {qi} < 0 was given in Hamiltonian term.",
                 )
-        if not isinstance(matrix, np.ndarray):
+        if not isinstance(matrix, self.backend.tensor_types):
             raise_error(TypeError, f"Invalid type {type(matrix)} of symbol matrix.")
         dim = int(matrix.shape[0])
         if 2 ** len(q) != dim:
@@ -41,7 +46,7 @@ class HamiltonianTerm:
         self.target_qubits = tuple(q)
         self._gate = None
         self.hamiltonian = None
-        self._matrix = matrix
+        self._matrix = self.backend.cast(matrix)
 
     @property
     def matrix(self):
@@ -57,9 +62,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        from scipy.linalg import expm
-
-        return expm(-1j * x * self.matrix)
+        return self.backend.calculate_matrix_exp(x, self.matrix)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -78,8 +81,10 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
-        matrix = np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.np.kron(
+            term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
+        )
+        matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -89,15 +94,19 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = np.transpose(matrix, order)
-        matrix = np.reshape(matrix, 2 * (2 ** len(self),))
-        return HamiltonianTerm(self.matrix + matrix, *self.target_qubits)
+        matrix = self.backend.np.transpose(matrix, order)
+        matrix = self.backend.np.reshape(matrix, 2 * (2 ** len(self),))
+        return HamiltonianTerm(
+            self.matrix + matrix, *self.target_qubits, backend=self.backend
+        )
 
     def __len__(self):
         return len(self.target_qubits)
 
     def __mul__(self, x):
-        return HamiltonianTerm(x * self.matrix, *self.target_qubits)
+        return HamiltonianTerm(
+            x * self.matrix, *self.target_qubits, backend=self.backend
+        )
 
     def __rmul__(self, x):
         return self.__mul__(x)
@@ -128,18 +137,13 @@ class SymbolicTerm(HamiltonianTerm):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (sympy.Expr): Sympy expression for the underlying term.
-        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
-            expression to tuples of (target qubit id, matrix).
-            This is required only if the expression is not created using Qibo
-            symbols and to keep compatibility with older versions where Qibo
-            symbols were not available.
     """
 
-    def __init__(self, coefficient, factors=1, symbol_map={}):
-        self.coefficient = complex(coefficient)
-        self._matrix = None
+    def __init__(self, coefficient, factors=1, backend: Optional[Backend] = None):
         self._gate = None
         self.hamiltonian = None
+        self.backend = _check_backend(backend)
+        self.coefficient = complex(coefficient)
 
         # List of :class:`qibo.symbols.Symbol` that represent the term factors
         self.factors = []
@@ -166,16 +170,12 @@ class SymbolicTerm(HamiltonianTerm):
                 else:
                     pow = 1
 
-                # if the user is using ``symbol_map`` instead of qibo symbols,
-                # create the corresponding symbols
-                if factor in symbol_map:
-                    from qibo.symbols import Symbol
-
-                    q, matrix = symbol_map.get(factor)
-                    factor = Symbol(q, matrix, name=factor.name)
-
                 if isinstance(factor, sympy.Symbol):
-                    if isinstance(factor.matrix, np.ndarray):
+                    # forces the backend of the factor
+                    # this way it is not necessary to explicitely define the
+                    # backend of a symbol, i.e. Z(q, backend=backend)
+                    factor.backend = self.backend
+                    if isinstance(factor.matrix, self.backend.tensor_types):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple
@@ -199,7 +199,7 @@ class SymbolicTerm(HamiltonianTerm):
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
-    @property
+    @cached_property
     def matrix(self):
         """Calculates the full matrix corresponding to this term.
 
@@ -208,27 +208,11 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        if self._matrix is None:
-
-            def matrices_product(matrices):
-                """Product of matrices that act on the same tuple of qubits.
-
-                Args:
-                    matrices (list): List of matrices to multiply, as exists in
-                        the values of ``SymbolicTerm.matrix_map``.
-                """
-                if len(matrices) == 1:
-                    return matrices[0]
-                matrix = np.copy(matrices[0])
-                for m in matrices[1:]:
-                    matrix = matrix @ m
-                return matrix
-
-            self._matrix = self.coefficient
-            for q in self.target_qubits:
-                matrix = matrices_product(self.matrix_map.get(q))
-                self._matrix = np.kron(self._matrix, matrix)
-        return self._matrix
+        matrices = [
+            reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            for q in self.target_qubits
+        ]
+        return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
@@ -236,14 +220,13 @@ class SymbolicTerm(HamiltonianTerm):
         new.factors = self.factors
         new.matrix_map = self.matrix_map
         new.target_qubits = self.target_qubits
+        new.backend = self.backend
         return new
 
     def __mul__(self, x):
         """Multiplication of scalar to the Hamiltonian term."""
         new = self.copy()
         new.coefficient *= x
-        if self._matrix is not None:
-            new._matrix = x * self._matrix
         return new
 
     def __call__(self, backend, state, nqubits, density_matrix=False):

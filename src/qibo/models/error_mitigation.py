@@ -995,31 +995,13 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
 
-    pauli_gates = {
-        "I": backend.cast(matrices.I, dtype=matrices.I.dtype),
-        "X": backend.cast(matrices.X, dtype=matrices.X.dtype),
-        "Y": backend.cast(matrices.Y, dtype=matrices.Y.dtype),
-        "Z": backend.cast(matrices.Z, dtype=matrices.Z.dtype),
-    }
-
     adjustment_gates = []
     for i in range(num_qubits):
-        observable_i = pauli_gates[observable_pauli[i]]
-        random_init = pauli_gates["I"]
-        while backend.np.any(
-            backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
-        ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
-            random_init = random_clifford(
-                1, return_circuit=False, seed=local_state, backend=backend
-            )
-            observable_i = (
-                backend.np.conj(backend.np.transpose(random_init, (1, 0)))
-                @ pauli_gates[observable_pauli[i]]
-                @ random_init
-            )
+        if observable_pauli[i] in ["X", "Y"]:
+            adjustment_gate = gates.M(i, basis=observable_pauli[i]).basis[0]
+        else:
+            adjustment_gate = gates.I(i)
 
-        adjustment_gate = gates.Unitary(random_init, i)
-        adjustment_gate.clifford = True
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
