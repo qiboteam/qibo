@@ -106,7 +106,7 @@ qinfo = ["stim"]
 qulacs = ["qulacs"]
 
 [tool.pylint.main]
-ignored-modules = ["cvxpy"]
+ignored-modules = ["cvxpy", "torch"]
 
 [tool.pylint.reports]
 output-format = "colorized"
