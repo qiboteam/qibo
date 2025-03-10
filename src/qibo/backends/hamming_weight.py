@@ -47,7 +47,7 @@ class HammingWeightBackend(NumpyBackend):
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
-    def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=1000):
+    def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=None):
 
         from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
             HammingWeightResult,
@@ -63,9 +63,6 @@ class HammingWeightBackend(NumpyBackend):
         nqubits = circuit.nqubits
 
         self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
-
-        if circuit.repeated_execution and nshots != 1:
-            return self.execute_circuit_repeated(circuit, nshots, initial_state)
 
         try:
             if initial_state is None:
@@ -95,35 +92,6 @@ class HammingWeightBackend(NumpyBackend):
                 "Please switch the execution device to a "
                 "different one using ``qibo.set_device``.",
             )
-
-    def execute_circuit_repeated(
-        self, circuit, weight, nshots: int = 1000, initial_state=None
-    ):
-        """ """
-        from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
-            HammingWeightResult,
-        )
-
-        circuit_copy = circuit.copy()
-        samples = []
-        for _ in range(nshots):
-            res = self.execute_circuit(circuit_copy, weight, initial_state, nshots=1)
-            for measurement in circuit_copy.measurements:
-                measurement.result.reset()
-            samples.append(res.samples())
-        samples = self.np.vstack(samples)
-
-        for meas in circuit.measurements:
-            meas.result.register_samples(samples[:, meas.target_qubits])
-
-        result = HammingWeightResult(
-            self.zero_state(circuit.nqubits),
-            measurements=circuit.measurements,
-            nshots=nshots,
-            _backend=self,
-        )
-
-        return result
 
     def _gray_code(self, initial_string):
         from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
@@ -424,12 +392,11 @@ class HammingWeightBackend(NumpyBackend):
         indexes = [index[0] for index in self._dict_indexes.values()]
 
         measured_strings = {}
-
         for string, index in zip(strings, indexes):
             measured_string = "".join(string[q] for q in qubits)
-            measured_strings[measured_string] = (
-                measured_strings.get(measured_string, 0) + state[index] ** 2
-            )
+            measured_strings[measured_string] = measured_strings.get(
+                measured_string, 0
+            ) + np.real(state[index] ** 2)
 
         strings = list(measured_strings.keys())
         indexes = [int(string, 2) for string in strings]
@@ -463,30 +430,3 @@ class HammingWeightBackend(NumpyBackend):
             state = state / norm
         state = self.cast(state)
         return state
-
-    def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
-
-    def aggregate_shots(self, shots):
-        return self.cast(shots, dtype=shots[0].dtype)
-
-    # def samples_to_binary(self, samples, weight, nqubits):
-    #     if self._dict_indexes is None or list(self._dict_indexes.keys())[0].count("1") != weight:
-    #         self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
-
-    #     strings = list(self._dict_indexes.keys())
-    #     bin_samples = np.array([[int(bit) for bit in strings[sample]] for sample in samples])
-    #     return np.array(bin_samples)
-
-    def samples_to_binary(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        return np.mod(np.right_shift(samples[:, None], qrange), 2)
-
-    def samples_to_decimal(self, samples, nqubits):
-        ### This is faster just staying @ NumPy.
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        qrange = (2**qrange)[:, None]
-        samples = np.asarray(samples.tolist())
-        return np.matmul(samples, qrange)[:, 0]
