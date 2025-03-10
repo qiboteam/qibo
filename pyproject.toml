@@ -21,24 +21,24 @@ packages = [{ include = "qibo", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-scipy = "^1.10.1"
-sympy = "^1.11.1"
-cma = "^3.3.0"
-joblib = "^1.2.0"
-optuna = "^4.0.0"
-tabulate = "^0.9.0"
-openqasm3 = { version = ">=0.5.0", extras = ["parser"] }
+python = ">=3.10,<3.14"
 numpy = "^2.0.0"
+scipy = "^1.15.2"
+sympy = "^1.13.3"
 networkx = "^3.2.1"
-qulacs = { version = "^0.6.4", optional = true, markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
+cma = "^3.4.0"
+joblib = "^1.4.2"
+optuna = "^4.2.1"
+tabulate = "^0.9.0"
+openqasm3 = { version = "^1.0.1", extras = ["parser"] }
+qulacs = { version = "^0.6.4", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 pdbpp = "^0.10.3"
-ipython = "^8.12.0"
+ipython = "^8.34.0"
 
 [tool.poetry.group.docs]
 optional = true
@@ -51,8 +51,7 @@ sphinxcontrib-bibtex = "^2.5.0"
 sphinx-markdown-tables = "^0.0.17"
 sphinx-copybutton = "^0.5.2"
 nbsphinx = "^0.8.12"
-ipython = "^8.10.0"
-qulacs = { version = "^0.6.4", markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
+qulacs = { version = "^0.6.4" }
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
@@ -62,8 +61,8 @@ optional = true
 
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.1"
-ply = "^3.11"
 scikit-learn = "^1.2.1"
+cirq = "^1.4.1"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"
@@ -71,7 +70,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch = "py3.13" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 # qiboml = { git  = "https://github.com/qiboteam/qiboml.git", branch="numpy_dep" }
 stim = "^1.12.0"
-qulacs = { version = "^0.6.4", markers = "(sys_platform == 'darwin' and python_version > '3.9') or sys_platform != 'darwin'" }
+qulacs = { version = "^0.6.4" }
 
 [tool.poe.tasks]
 test = "pytest"
