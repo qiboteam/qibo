@@ -289,7 +289,7 @@ def test_clifford_samples_frequencies(backend, binary):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
-    c = random_clifford(5)
+    c = random_clifford(5, backend=backend)
     c.add(gates.M(3, register_name="3"))
     c.add(gates.M(0, 1, register_name="01"))
     obj = Clifford.from_circuit(c, nshots=50, engine=_get_engine_name(backend))
