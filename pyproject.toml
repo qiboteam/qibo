@@ -64,6 +64,10 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.1"
 cirq = "^1.2.0"
+# this package appears to be brought by cirq
+# however releases from 0.21.4 on were having problems
+# thus the need to manually limit the version
+qcs-sdk-python = "<=0.21.3"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 pytest-cov = "^4.0.0"
