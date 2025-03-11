@@ -322,7 +322,7 @@ class CliffordBackend(NumpyBackend):
         bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}
 
         nqubits = int((symplectic_matrix.shape[1] - 1) / 2)
-        phases = (-1) ** symplectic_matrix[:-1, -1]
+        phases = (-1) ** symplectic_matrix[:-1, -1].astype(np.int16)
         tmp = 1 * symplectic_matrix[:-1, :-1]
         X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []

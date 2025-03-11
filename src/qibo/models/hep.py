@@ -38,6 +38,7 @@ class qPDF:
             raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
 
         # load ansatz
+        # pylint: disable-next=E0606
         self.circuit, self.rotation, self.nparams = ansatz_function(layers, nqubits)
 
         # load backend
@@ -128,12 +129,12 @@ def qpdf_hamiltonian(nqubits, z_qubit=0, backend=None):
 
 
 def map_to(x):
-    """Auxiliary function"""
+    """Auxiliary function."""
     return 2 * np.pi * x
 
 
 def maplog_to(x):
-    """Auxiliary function"""
+    """Auxiliary function."""
     return -np.pi * np.log10(x)
 
 

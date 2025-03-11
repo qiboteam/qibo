@@ -78,7 +78,7 @@ class NumpyBackend(Backend):
             return x.astype(dtype, copy=copy)
         elif self.is_sparse(x):
             return x.astype(dtype, copy=copy)
-        return np.array(x, dtype=dtype, copy=copy)
+        return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
         from scipy import sparse
@@ -393,7 +393,6 @@ class NumpyBackend(Backend):
         return state
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
-
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
