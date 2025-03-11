@@ -119,7 +119,7 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 
 
 def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
-    """Create circuit that encodes :math:`1`-dimensional data`` in all amplitudes of the computational basis.
+    """Create circuit that encodes :math:`1`-dimensional data in all amplitudes of the computational basis.
 
     Given data vector :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}`,
     this function generates a quantum circuit :math:`\\mathrm{Load}` that encodes
