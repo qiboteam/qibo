@@ -1026,7 +1026,9 @@ def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
     base_strings = np.reshape(base_strings, (-1, 2))
-    strings = [base_strings] + (nqubits - 1) * [np.reshape(base_strings[:, 0], (-1, 2)),]
+    strings = [base_strings] + (nqubits - 1) * [
+        np.reshape(base_strings[:, 0], (-1, 2)),
+    ]
     strings = strings[::-1]
 
     targets_and_controls = []
