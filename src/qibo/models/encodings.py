@@ -674,6 +674,8 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
 
+    phases = [float(phase) for phase in phases]
+
     return phases
 
 
