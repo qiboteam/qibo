@@ -79,16 +79,13 @@ def pauli_basis(
     normalization = _normalization(nqubits) if normalize else 1.0
 
     if vectorize and sparse:
-        return getattr(backend.qinfo, f"_vectorize_sparse{fname}")(
-            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
-        )
+        func = getattr(backend.qinfo, f"_vectorize_sparse{fname}")
     elif vectorize:
-        return getattr(backend.qinfo, f"_vectorize{fname}")(
-            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
-        )
-    return backend.qinfo._pauli_basis(
-        nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
-    )
+        func = getattr(backend.qinfo, f"_vectorize{fname}")
+    else:
+        func = backend.qinfo._pauli_basis
+    
+    return func(nqubits, *_get_paulis(pauli_order, backend), normalization=normalization)
 
 
 def comp_basis_to_pauli(

@@ -470,8 +470,8 @@ def _unpack_for_measurements(state, nqubits):
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
         return _unpackbits(state, axis=0, count=_dim(nqubits))
-    else:
-        return state.copy()
+
+    return state.copy()
 
 
 # valid for a standard basis measurement only

@@ -465,11 +465,6 @@ def haar_integral(
         )
 
         for state in rho:
-            # haar_state = backend.np.reshape(
-            #    random_statevector(dim, backend=backend), (-1, 1)
-            # )
-
-            # rho = haar_state @ backend.np.conj(haar_state).T
 
             rand_unit_density = rand_unit_density + reduce(
                 backend.np.kron, [state] * power_t

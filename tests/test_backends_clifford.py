@@ -140,14 +140,14 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
-    c = random_clifford(nqubits, seed=seed, density_matrix=True, backend=backend)
-    c_copy = c.copy()
+    circuit = random_clifford(nqubits, seed=seed, density_matrix=True, backend=backend)
+    circuit_copy = circuit.copy()
     MEASURED_QUBITS = np.random.choice(list(range(nqubits)), size=2, replace=False)
     prob_qubits = np.random.choice(MEASURED_QUBITS, size=prob_qubits, replace=False)
-    c.add(gates.M(*MEASURED_QUBITS))
-    c_copy.add(gates.M(*MEASURED_QUBITS))
-    numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
-    clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
+    circuit.add(gates.M(*MEASURED_QUBITS))
+    circuit_copy.add(gates.M(*MEASURED_QUBITS))
+    numpy_result = numpy_bkd.execute_circuit(circuit, nshots=nshots)
+    clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=nshots)
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
     clifford_prob = clifford_result.probabilities(prob_qubits)
     numpy_prob = backend.cast(numpy_result.probabilities(prob_qubits))
@@ -230,12 +230,12 @@ def test_initial_state(backend):
 def test_bitflip_noise(backend, seed):
     backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
-    c = random_clifford(5, seed=seed, backend=backend)
-    c_copy = c.copy()
+    circuit = random_clifford(5, seed=seed, backend=backend)
+    circuit_copy = circuit.copy()
     qubits = backend.np.random.choice(range(3), size=2, replace=False)
-    c.add(gates.M(*qubits, p0=0.1, p1=0.5))
-    c_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
-    numpy_res = numpy_bkd.execute_circuit(c_copy)
+    circuit.add(gates.M(*qubits, p0=0.1, p1=0.5))
+    circuit_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
+    numpy_res = numpy_bkd.execute_circuit(circuit_copy)
     clifford_res = clifford_bkd.execute_circuit(c)
     backend.assert_allclose(
         clifford_res.probabilities(qubits), numpy_res.probabilities(qubits), atol=1e-1
@@ -252,24 +252,24 @@ def test_noise_channels(backend, seed):
 
     nqubits = 3
 
-    c = random_clifford(nqubits, density_matrix=False, seed=seed, backend=backend)
+    circuit = random_clifford(nqubits, density_matrix=False, seed=seed, backend=backend)
 
     noise = NoiseModel()
-    noisy_gates = [c.queue[0]]
+    noisy_gates = [circuit.queue[0]]
     noise.add(PauliError([("X", 0.3)]), gates.H)
     noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
 
-    c_copy = c.copy()
-    non_noisy = c.copy()
+    circuit_copy = circuit.copy()
+    non_noisy = circuit.copy()
     non_noisy.add(gates.M(*range(nqubits)))
-    c.add(gates.M(*range(nqubits)))
-    c_copy.add(gates.M(*range(nqubits)))
+    circuit.add(gates.M(*range(nqubits)))
+    circuit_copy.add(gates.M(*range(nqubits)))
 
-    c = noise.apply(c)
-    c_copy = noise.apply(c_copy)
+    circuit = noise.apply(circuit)
+    circuit_copy = noise.apply(circuit_copy)
 
-    numpy_result = numpy_bkd.execute_circuit(c)
-    clifford_result = clifford_bkd.execute_circuit(c_copy)
+    numpy_result = numpy_bkd.execute_circuit(circuit)
+    clifford_result = clifford_bkd.execute_circuit(circuit_copy)
     backend.assert_allclose(
         backend.cast(numpy_result.probabilities()),
         clifford_result.probabilities(),
