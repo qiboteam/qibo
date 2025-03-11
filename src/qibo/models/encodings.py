@@ -1150,6 +1150,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
         )
 
+angles = [float(angle) for angle in angles]
     circuit.set_parameters(angles)
 
     return circuit
