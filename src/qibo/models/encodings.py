@@ -221,7 +221,7 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, nqubits, architecture)
+    phases = _generate_rbs_angles(data, architecture, nqubits)
     circuit.set_parameters(phases)
 
     return circuit
@@ -380,7 +380,7 @@ def hamming_weight_encoder(
 
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
-    thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
+    thetas = _generate_rbs_angles(_data, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
     phis = np.zeros(len(thetas) + 1)
     if complex_data:
@@ -628,16 +628,16 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     return circuit, pairs_rbs
 
 
-def _generate_rbs_angles(data, nqubits: int, architecture: str):
+def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
         data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
-        nqubits (int): number of qubits.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        nqubits (int): Number of qubits. To be used then ``architecture="tree"``.
 
     Returns:
         list: List of phases for RBS gates.
@@ -651,6 +651,12 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         phases.append(engine.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
+        if nqubits is None:
+            raise_error(
+                TypeError,
+                '``nqubits`` must be specified when ``architecture=="tree"``.',
+            )
+
         j_max = int(nqubits / 2)
 
         r_array = np.zeros(nqubits - 1, dtype=float)
@@ -1049,7 +1055,7 @@ def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
 
-    angles = _generate_rbs_angles(data, dims, "tree")
+    angles = _generate_rbs_angles(data, "tree", dims)
     circuit.set_parameters(2 * angles)
 
     return circuit
@@ -1122,7 +1128,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
 
     _data = np.abs(data) if complex_data else data
 
-    thetas = _generate_rbs_angles(_data, dims, architecture="diagonal")
+    thetas = _generate_rbs_angles(_data, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
 
     if complex_data:
@@ -1150,7 +1156,9 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
         )
 
-angles = [float(angle) for angle in angles]
+    # necessary for GPU backends
+    angles = [float(angle) for angle in angles]
+
     circuit.set_parameters(angles)
 
     return circuit
