@@ -236,7 +236,7 @@ def test_bitflip_noise(backend, seed):
     circuit.add(gates.M(*qubits, p0=0.1, p1=0.5))
     circuit_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
     numpy_res = numpy_bkd.execute_circuit(circuit_copy)
-    clifford_res = clifford_bkd.execute_circuit(c)
+    clifford_res = clifford_bkd.execute_circuit(circuit)
     backend.assert_allclose(
         clifford_res.probabilities(qubits), numpy_res.probabilities(qubits), atol=1e-1
     )
