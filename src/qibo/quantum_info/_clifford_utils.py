@@ -53,7 +53,9 @@ def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
     elif n_i == 3:
         i = "i"
         sign = "-" if sign == "" else ""
-    return "".join([sign, i, prod.replace("i", "").replace("-", "")])
+    return "".join(
+        [sign, i, prod.replace("i", "").replace("-", "")]  # pylint: disable=E0606
+    )
 
 
 def _string_product(operators: list):

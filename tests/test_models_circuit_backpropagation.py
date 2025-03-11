@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import MissingBackend
 
 
 def construct_tensorflow_backend():
@@ -11,7 +12,7 @@ def construct_tensorflow_backend():
         from qibo.backends import construct_backend
 
         backend = construct_backend(backend="qiboml", platform="tensorflow")
-    except ModuleNotFoundError:  # pragma: no cover
+    except MissingBackend:
         pytest.skip(
             "Skipping backpropagation test because tensorflow is not available."
         )
