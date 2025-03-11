@@ -386,6 +386,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
 
 
 def _determined_outcome(state, q, nqubits):
+    """Extracts the outcome for a measurement in case it is determined."""
     state[-1, :] = 0
     idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
     if len(idx) == 0:
@@ -403,6 +404,7 @@ def _determined_outcome(state, q, nqubits):
 
 
 def _random_outcome(state, p, q, nqubits):
+    """Extracts the outcome for a measurement in case it is random."""
     p = p[0] + nqubits
     state[p, q] = 0
     h = state[:-1, q].nonzero()[0]
@@ -470,7 +472,6 @@ def _unpack_for_measurements(state, nqubits):
 def _init_state_for_measurements(state, nqubits, collapse):
     if collapse:
         return _unpackbits(state, axis=0, count=_dim(nqubits))
-
     return state.copy()
 
 
