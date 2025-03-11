@@ -1,17 +1,10 @@
-from itertools import product
 from typing import Optional, Union
 
 import numpy as np
 from scipy.special import binom
 
-from qibo import Circuit, gates
-from qibo.backends import CliffordBackend
 from qibo.config import raise_error
-from qibo.gates import M
-from qibo.measurements import frequencies_to_binary
 from qibo.result import MeasurementOutcomes, QuantumState
-
-from ._clifford_utils import _decomposition_AG04, _decomposition_BM20, _string_product
 
 
 class HammingWeightResult(QuantumState, MeasurementOutcomes):

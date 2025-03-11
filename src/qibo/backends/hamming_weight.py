@@ -6,7 +6,6 @@ from scipy.special import binom
 from qibo import gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
-from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class HammingWeightBackend(NumpyBackend):
@@ -44,10 +43,7 @@ class HammingWeightBackend(NumpyBackend):
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
         elif len(gate.target_qubits) == 1:
             return self._apply_gate_single_qubit(gate, state, nqubits, weight)
-        elif isinstance(
-            gate,
-            (gates.RBS, gates.GIVENS, gates.SWAP, gates.iSWAP, gates.SiSWAP, gates.RZZ),
-        ):
+        elif len(gate.target_qubits) == 2:
             return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
@@ -64,6 +60,15 @@ class HammingWeightBackend(NumpyBackend):
         for gate in circuit.queue:
             if isinstance(gate, gates.Channel):
                 raise_error(RuntimeError, "Circuit must not contain channels.")
+            if (
+                not gate.hamming_weight
+                and not gate.__class__.__name__ == "M"
+                and not gate.__class__.__name__ == "Unitary"
+            ):
+                raise_error(
+                    RuntimeError,
+                    "Circuit contains non-Hammming weight preserving  gates.",
+                )
 
         nqubits = circuit.nqubits
 
