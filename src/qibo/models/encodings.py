@@ -651,7 +651,7 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
         phases.append(engine.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
-        if nqubits is None:
+        if nqubits is None:  # pragma: no cover
             raise_error(
                 TypeError,
                 '``nqubits`` must be specified when ``architecture=="tree"``.',
