@@ -40,9 +40,14 @@ class HammingWeightBackend(NumpyBackend):
     def apply_gate(self, gate, state, nqubits, weight):
         if isinstance(gate, gates.M):
             return gate.apply_hamming_weight(self, state, weight, nqubits)
+        elif isinstance(gate, gates.CCZ):
+            return self._apply_gate_CCZ(gate, state, nqubits, weight)
         elif len(gate.target_qubits) == 1:
             return self._apply_gate_single_qubit(gate, state, nqubits, weight)
-        elif len(gate.target_qubits) == 2:
+        elif isinstance(
+            gate,
+            (gates.RBS, gates.GIVENS, gates.SWAP, gates.iSWAP, gates.SiSWAP, gates.RZZ),
+        ):
             return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
@@ -253,9 +258,26 @@ class HammingWeightBackend(NumpyBackend):
 
         return state
 
-    def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
-        from qibo.models.encodings import _ehrlich_algorithm
+    def _apply_gate_CCZ(self, gate, state, nqubits, weight):
+        qubits = list(gate.qubits)
+        gate_qubits = len(qubits)
 
+        if (
+            self._dict_indexes is None
+            or list(self._dict_indexes.keys())[0].count("1") != weight
+        ):
+            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        strings = list(self._dict_indexes.keys())
+
+        for i in range(len(strings)):
+            gate_string = [strings[i][q] for q in qubits]
+            if gate_string.count("1") == gate_qubits:
+                state[i] *= -1
+
+        return state
+
+    def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
         qubits = list(gate.target_qubits)
         gate_qubits = len(qubits)
         controls = list(gate.control_qubits)
@@ -264,21 +286,6 @@ class HammingWeightBackend(NumpyBackend):
         map = qubits + controls + other_qubits
 
         gate_matrix = gate.matrix(backend=self.engine)
-
-        # if (
-        #     self._dict_indexes is not None
-        #     and list(self._dict_indexes.keys())[0].count("1") == weight
-        # ):
-        #     strings = list(self._dict_indexes.keys())
-        #     indexes = [index[1] for index in self._dict_indexes.values()]
-        # else:
-        #     initial_string = np.array([1] * weight + [0] * (nqubits - weight))
-        #     strings = _ehrlich_algorithm(np.array(initial_string), False)
-        #     indexes = [int(string, base=2) for string in strings]
-        #     sorted_pairs = sorted(zip(indexes, strings))
-        #     indexes, strings = zip(*sorted_pairs)
-        #     indexes = list(indexes)
-        #     strings = list(strings)
 
         if (
             self._dict_indexes is None
@@ -352,33 +359,6 @@ class HammingWeightBackend(NumpyBackend):
                 return terms
         return terms
 
-    # def calculate_probabilities(self, state, qubits, weight, nqubits):
-    #     rtype = self.np.real(state).dtype
-    #     num_measured_qubits = len(qubits)
-
-    #     if self._dict_indexes is None or list(self._dict_indexes.keys())[0].count("1") != weight:
-    #         self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
-
-    #     strings = list(self._dict_indexes.keys())
-    #     indexes = [index[0] for index in self._dict_indexes.values()]
-
-    #     # measured_indexes = self._get_lexicographical_order(len(qubits), weight)
-    #     # measured_strings = list(measured_indexes.keys())
-
-    #     probs = []
-    #     for k in range(2**num_measured_qubits):
-    #         bit_string = bin(k)[2:].zfill(num_measured_qubits)
-    #         prob = sum(
-    #             state[index]**2
-    #             for string, index in zip(strings, indexes)
-    #             if bit_string == ''.join(string[q] for q in qubits)
-    #         )
-    #         probs.append(prob)
-
-    #     probs = self.cast(probs, dtype=rtype)
-
-    #     return probs
-
     def calculate_probabilities(self, state, qubits, weight, nqubits):
         rtype = self.np.real(state).dtype
 
@@ -420,7 +400,7 @@ class HammingWeightBackend(NumpyBackend):
         strings = list(self._dict_indexes.keys())
         indexes = [index[0] for index in self._dict_indexes.values()]
         binshot = self.samples_to_binary(shot, len(qubits))[0]
-        # new_state = np.zeros(len(state), dtype=state.dtype)
+
         for string, index in zip(strings, indexes):
             if "".join(str(s) for s in binshot) != "".join(string[q] for q in qubits):
                 state[index] = 0
