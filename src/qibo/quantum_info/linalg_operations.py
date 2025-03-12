@@ -3,7 +3,7 @@
 import math
 from typing import List, Tuple, Union
 
-from qibo.backends import _check_backend
+from qibo.backends import _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 
 
@@ -384,15 +384,21 @@ def schmidt_decomposition(
     return singular_value_decomposition(tensor, backend=backend)
 
 
-def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None):
+def lanczos(
+    matrix, steps: int = None, precision_tol: float = 1e-8, seed=None, backend=None
+):
     """Lanczos iteractive method to tridiagonalize a Hermitian matrix.
 
     Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m`,
     the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
     :math:`m \\times m` tridiagonal real symmetric matrix :math:`T = U^{\\dagger} \\, H \\, U`.
     If :math:`m = N`, then :math:`U` is an unitary matrix.
-    The eigenvalues and eigenvectors of :math:`T` and :math:`H` coincide, reducing the problem
-    of diagonalization of :math:`H` to diagonalizing :math:`T`.
+    The eigenvalues of :math:`T` and :math:`H` coincide, while :math:`U \\ket{\\mathbf{x}}`
+    are the eigenvectors of :math:`H`, with :math:`\\ket{\\mathbf{x}}` being the
+    eigenvectors of :math:`T`.
+
+    This reduces the problem of diagonalization of :math:`H` to constructing
+    the matrix :math:`U` and diagonalizing :math:`T`.
 
     With :math:`\\|\\cdot\\|_{2}` being the Euclidean norm, the algorithm goes as follows:
 
@@ -415,6 +421,10 @@ def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None
             defaults to the size of ``matrix``. Defaults to ``None``.
         precision_tol (float, optional): precision threshold such that for :math:`\\beta_{j}`
             smaller than ``precision_tol``, it is considered to be zero.
+        seed (int or :class:`numpy.random.Generator`, optional): Seed for the initial random vector
+            :math:`\\ket{v_{1}}` Either a generator of random numbers or a fixed seed to initialize
+            a generator. If ``None``, initializes a generator with a random seed.
+            Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -432,7 +442,7 @@ def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None
         random_statevector,
     )
 
-    backend = _check_backend(backend)
+    backend, local_state = _check_backend_and_local_state(seed, backend)
 
     dims = matrix.shape[0]
 
@@ -440,7 +450,7 @@ def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None
         steps = dims
 
     krylov_vectors = []
-    vector = random_statevector(dims, backend=backend)
+    vector = random_statevector(dims, seed=local_state, backend=backend)
     krylov_vectors.append(vector)
 
     omega_prime = matrix @ vector
@@ -459,6 +469,6 @@ def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None
         omega = omega_prime - alpha * vector - norm * krylov_vectors[-2]
 
     krylov_vectors = backend.cast(krylov_vectors).T
-    triadiagonal = backend.conj(krylov_vectors.T) @ matrix @ krylov_vectors
+    triadiagonal = backend.np.conj(krylov_vectors.T) @ matrix @ krylov_vectors
 
     return triadiagonal, krylov_vectors

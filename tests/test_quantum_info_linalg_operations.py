@@ -6,14 +6,19 @@ from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
+    lanczos,
     matrix_power,
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
     singular_value_decomposition,
 )
-from qibo.quantum_info.metrics import purity
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.metrics import infidelity, purity
+from qibo.quantum_info.random_ensembles import (
+    random_density_matrix,
+    random_hermitian,
+    random_statevector,
+)
 
 
 def test_commutator(backend):
@@ -292,3 +297,32 @@ def test_schmidt_decomposition(backend):
     entropy = -backend.np.sum(coeffs * entropy)
 
     backend.assert_allclose(entropy, 0.0, atol=1e-14)
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_lanczos(backend, nqubits, seed):
+    dims = 2**nqubits
+    hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
+
+    eigvals_target, eigvectors_target = backend.np.linalg.eigh(hamiltonian)
+
+    tridiag, ortho_matrix = lanczos(hamiltonian, seed=seed, backend=backend)
+
+    backend.assert_allclose(
+        tridiag, backend.np.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
+    )
+
+    eigvals, eigvectors = backend.np.linalg.eigh(tridiag)
+    eigs = list(zip(eigvals, eigvectors.T))
+    eigs.sort()
+    eigs = backend.cast(eigs, dtype=object)
+    eigvectors = eigs[:, 1]
+    eigvals = [float(eig) for eig in eigs[:, 0]]
+    infidelities = [
+        infidelity(ortho_matrix @ eigvec, eigvec_target)
+        for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
+    ]
+
+    backend.assert_allclose(eigvals, eigvals_target)
+    backend.assert_allclose(all(inf < 1e-5 for inf in infidelities), True)
