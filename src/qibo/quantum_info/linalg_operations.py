@@ -487,7 +487,7 @@ def _vector_projection(vector, directions, backend):
             directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.s
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray or list: Either one vector projection or a list of several projections.
@@ -511,16 +511,18 @@ def _gram_schmidt_process(vector, directions, backend):
     """Return an array that is orthogonal to the ``directions`` array(s).
 
     Args:
-        vector (_type_): _description_
-        directions (_type_): _description_
-        backend (_type_): _description_
+        vector (ndarray): vector to be orthogonalized.
+        directions (_type_): either one or a list of directional
+            array to project ``vector`` onto.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.s
 
     Returns:
-        _type_: _description_
+        ndarray: _description_
     """
     projections = _vector_projection(vector, directions)
+    if len(directions.shape) > 1:
+        projections = backend.np.sum(directions, axis=0)
 
-    if len(directions.shape) == 1:
-        return vector - projections
-
-    return vector - backend.np.sum(directions, axis=0)
+    return vector - projections
