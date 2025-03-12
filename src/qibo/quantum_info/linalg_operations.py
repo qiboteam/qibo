@@ -389,7 +389,7 @@ def lanczos(
 ):
     """Lanczos iteractive method to tridiagonalize a Hermitian matrix.
 
-    Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m`,
+    Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m \\leq N`,
     the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
     :math:`m \\times m` tridiagonal real symmetric matrix :math:`T = U^{\\dagger} \\, H \\, U`.
     If :math:`m = N`, then :math:`U` is an unitary matrix.
