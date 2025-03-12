@@ -449,9 +449,9 @@ def lanczos(
     if steps is None:
         steps = dims
 
-    krylov_vectors = []
+    lanczos_vectors = []
     vector = random_statevector(dims, seed=local_state, backend=backend)
-    krylov_vectors.append(vector)
+    lanczos_vectors.append(vector)
 
     omega_prime = matrix @ vector
     alpha = backend.np.conj(omega_prime.T) @ vector
@@ -461,14 +461,66 @@ def lanczos(
         norm = backend.calculate_vector_norm(omega)
         if norm > precision_tol:
             vector = omega / norm
+        else:
+            vector = random_statevector(dims, seed=local_state, backend=backend)
+            vector = _gram_schmidt_process(vector, backend.cast(lanczos_vectors).T)
 
-        krylov_vectors.append(vector)
+        lanczos_vectors.append(vector)
 
         omega_prime = matrix @ vector
         alpha = backend.np.conj(omega_prime.T) @ vector
-        omega = omega_prime - alpha * vector - norm * krylov_vectors[-2]
+        omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
 
-    krylov_vectors = backend.cast(krylov_vectors).T
-    triadiagonal = backend.np.conj(krylov_vectors.T) @ matrix @ krylov_vectors
+    lanczos_vectors = backend.cast(lanczos_vectors).T
+    triadiagonal = backend.np.conj(lanczos_vectors.T) @ matrix @ lanczos_vectors
 
-    return triadiagonal, krylov_vectors
+    return triadiagonal, lanczos_vectors
+
+
+def _vector_projection(vector, directions, backend):
+    """Return projection(s) of ``vector`` in the direction of vectors in ``directions``.
+
+    Args:
+        vector (ndarray): vector to be projected.
+        directions (ndarray): either an :math:`1`-dimensional array corresponding to the
+            direction of projection or an array of arrays corresponding to several
+            directions.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.s
+
+    Returns:
+        ndarray or list: Either one vector projection or a list of several projections.
+    """
+    if len(directions.shape) == 1:
+        return (
+            backend.np.dot(vector, directions)
+            * directions
+            / backend.calculate_matrix_norm(directions) ** 2
+        )
+
+    return [
+        backend.np.dot(vector, direction)
+        * directions
+        / backend.calculate_matrix_norm(direction) ** 2
+        for direction in directions
+    ]
+
+
+def _gram_schmidt_process(vector, directions, backend):
+    """Return an array that is orthogonal to the ``directions`` array(s).
+
+    Args:
+        vector (_type_): _description_
+        directions (_type_): _description_
+        backend (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    projections = _vector_projection(vector, directions)
+
+    if len(directions.shape) == 1:
+        return vector - projections
+
+    return vector - backend.np.sum(directions, axis=0)
