@@ -463,7 +463,7 @@ def lanczos(
             vector = omega / norm
         else:
             vector = random_statevector(dims, seed=local_state, backend=backend)
-            vector = _gram_schmidt_process(vector, backend.cast(lanczos_vectors).T)
+            vector = _gram_schmidt_process(vector, backend.cast(lanczos_vectors).T, backend=backend)
 
         lanczos_vectors.append(vector)
 
@@ -522,7 +522,7 @@ def _gram_schmidt_process(vector, directions, backend):
     Returns:
         ndarray: Array orthogonalized with respect to ``directions``.
     """
-    projections = _vector_projection(vector, directions)
+    projections = _vector_projection(vector, directions, backend=backend)
     if len(directions.shape) > 1:
         projections = backend.np.sum(directions, axis=0)
 
