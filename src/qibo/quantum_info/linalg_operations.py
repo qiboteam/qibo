@@ -512,8 +512,9 @@ def _gram_schmidt_process(vector, directions, backend):
 
     Args:
         vector (ndarray): vector to be orthogonalized.
-        directions (_type_): either one or a list of directional
-            array to project ``vector`` onto.
+        directions (ndarray): either an :math:`1`-dimensional array corresponding to the
+            direction of projection or an array of arrays corresponding to several
+            directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
