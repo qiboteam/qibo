@@ -39,13 +39,18 @@ def visualize_state(
             to `n_most_relevant_components`. Default is 20.
     """
 
+    # Collect amplitude
     amplitudes = execution_outcome.state()
-    bitstrings = generate_bitstring_combinations(int(np.log2(len(amplitudes))))
+    nqubits = int(np.log2(len(amplitudes)))
+
+    bitstrings = generate_bitstring_combinations(nqubits)
 
     num_bitstrings = len(bitstrings)
 
-    fig_width = max(10, num_bitstrings // 4)
-    _, ax = plt.subplots(figsize=(fig_width, 5))
+    fig_width = max(6, nqubits * 1.5)
+    fig_height = 5
+
+    _, ax = plt.subplots(figsize=(fig_width, fig_height))
 
     x = np.arange(num_bitstrings)
 
