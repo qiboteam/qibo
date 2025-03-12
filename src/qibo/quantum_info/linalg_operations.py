@@ -516,10 +516,10 @@ def _gram_schmidt_process(vector, directions, backend):
             array to project ``vector`` onto.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.s
+            the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray: _description_
+        ndarray: Array orthogonalized with respect to ``directions``.
     """
     projections = _vector_projection(vector, directions)
     if len(directions.shape) > 1:
