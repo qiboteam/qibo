@@ -9,7 +9,7 @@ import pytest
 
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
-from qibo.ui.drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
+from qibo.ui.drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
 from qibo.ui.mpldrawer import (
     _make_cluster_gates,
     _plot_params,
