@@ -391,6 +391,8 @@ def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None
     the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
     :math:`m \\times m` tridiagonal real symmetric matrix :math:`T = U^{\\dagger} \\, H \\, U`.
     If :math:`m = N`, then :math:`U` is an unitary matrix.
+    The eigenvalues and eigenvectors of :math:`T` and :math:`H` coincide, reducing the problem
+    of diagonalization of :math:`H` to diagonalizing :math:`T`.
 
     With :math:`\\|\\cdot\\|_{2}` being the Euclidean norm, the algorithm goes as follows:
 
