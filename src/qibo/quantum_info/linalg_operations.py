@@ -382,3 +382,81 @@ def schmidt_decomposition(
     tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
+
+
+def lanczos(matrix, steps: int = None, precision_tol: float = 1e-8, backend=None):
+    """Lanczos iteractive method to tridiagonalize a Hermitian matrix.
+
+    Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m`,
+    the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
+    :math:`m \\times m` tridiagonal real symmetric matrix :math:`T = U^{\\dagger} \\, H \\, U`.
+    If :math:`m = N`, then :math:`U` is an unitary matrix.
+
+    With :math:`\\|\\cdot\\|_{2}` being the Euclidean norm, the algorithm goes as follows:
+
+    1. Generate random :math:`\\ket{v_{1}} \\in \\mathbb{C}^{N}` such that :math:`\\|\\ket{v_{1}}\\|_{2} = 1`
+    2. :math:`\\ket{\\omega_{1}^{\\prime}} = H \\ket{v_{1}}`
+    3. :math:`\\alpha_{1} = \\braket{\\omega_{1}^{\\prime} | v_{1}}`
+    4. :math:`\\ket{\\omega_{1}} = H \\ket{v_{1}}`
+    5. For :math:`j = 2, \\dots, m - 1`:
+        1. :math:`\\beta_{j} = \\|\\omega_{j-1}\\|_{2}`
+        2. :math:`\\ket{v_{j}} = \\ket{\\omega_{j-1}} \\, / \\, \\beta_{j}` If :math:`\\beta_{j} \\neq 0` else generate random :math:`\\ket{v_{j}}` such that :math:`\\ket{v_{j}} \\perp \\{\\ket{v_{j^{\\prime}}}\\}_{j^{\\prime} \\in [1, j-1]}`
+        3. :math:`\\ket{\\omega_{j}^{\\prime}} = H \\ket{v_{j}}`
+        4. :math:`\\alpha_{j} = \\braket{\\omega_{j}^{\\prime} | v_{j}}`
+        5. :math:`\\ket{\\omega_{j}} = \\ket{\\omega_{j}^{\\prime}} - \\alpha_{j} \\ket{v_{j}} - \\beta_{j} \\ket{v_{j-1}}`
+
+    The columns of the orthogonal matrix :math:`U` are the *Lanczos vectors* :math:`\\{\\ket{v_{j}}\\}_{j\\in[1, m]}`.
+
+    Args:
+        matrix (ndarray): square Hermitian matrix to be tridiagonalized.
+        steps (int, optional): number of iterations :math:`m`. If ``None``,
+            defaults to the size of ``matrix``. Defaults to ``None``.
+        precision_tol (float, optional): precision threshold such that for :math:`\\beta_{j}`
+            smaller than ``precision_tol``, it is considered to be zero.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        (ndarray, ndarray): Tridiagonal matrix and the orthogonal matrix
+        of Lanczos vectors, respectively.
+
+    References:
+        1.  Lanczos, C. *An iteration method for the solution of the eigenvalue problem of linear
+        differential and integral operators*, Journal of Research of the National Bureau of
+        Standards. 45 (4): 255–282 (1950).
+    """
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        random_statevector,
+    )
+
+    backend = _check_backend(backend)
+
+    dims = matrix.shape[0]
+
+    if steps is None:
+        steps = dims
+
+    krylov_vectors = []
+    vector = random_statevector(dims, backend=backend)
+    krylov_vectors.append(vector)
+
+    omega_prime = matrix @ vector
+    alpha = backend.np.conj(omega_prime.T) @ vector
+    omega = omega_prime - alpha * vector
+
+    for _ in range(steps - 1):
+        norm = backend.calculate_vector_norm(omega)
+        if norm > precision_tol:
+            vector = omega / norm
+
+        krylov_vectors.append(vector)
+
+        omega_prime = matrix @ vector
+        alpha = backend.np.conj(omega_prime.T) @ vector
+        omega = omega_prime - alpha * vector - norm * krylov_vectors[-2]
+
+    krylov_vectors = backend.cast(krylov_vectors).T
+    triadiagonal = backend.conj(krylov_vectors.T) @ matrix @ krylov_vectors
+
+    return triadiagonal, krylov_vectors
