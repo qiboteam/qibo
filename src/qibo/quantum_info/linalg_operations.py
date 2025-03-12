@@ -463,7 +463,9 @@ def lanczos(
             vector = omega / norm
         else:
             vector = random_statevector(dims, seed=local_state, backend=backend)
-            vector = _gram_schmidt_process(vector, backend.cast(lanczos_vectors).T, backend=backend)
+            vector = _gram_schmidt_process(
+                vector, backend.cast(lanczos_vectors).T, backend=backend
+            )
 
         lanczos_vectors.append(vector)
 
