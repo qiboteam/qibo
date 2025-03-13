@@ -202,7 +202,7 @@ def partial_transpose(
     if not nqubits.is_integer():
         raise_error(
             ValueError,
-            f"dimensions of ``state`` (or states in a batch) must be a power of 2.",
+            "dimensions of ``state`` (or states in a batch) must be a power of 2.",
         )
 
     if (len(shape) > 3) or (nstates == 0) or (len(shape) == 2 and nstates != dims):
@@ -372,7 +372,7 @@ def schmidt_decomposition(
 
     nqubits = math.log2(state.shape[-1])
     if not nqubits.is_integer():
-        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+        raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
