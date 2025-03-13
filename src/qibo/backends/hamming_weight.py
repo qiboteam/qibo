@@ -23,7 +23,17 @@ class HammingWeightBackend(NumpyBackend):
             engine = _get_engine_name(_check_backend(engine))
 
         self.platform = engine
-        self.engine = construct_backend(self.platform)
+        if engine == "numpy":
+            self.engine = construct_backend(self.platform)
+        elif engine == "numba":
+            self.engine = construct_backend("qibojit", platform=self.platform)
+        elif engine == "cupy":
+            self.engine = construct_backend("qibojit", platform=self.platform)
+        else:
+            raise_error(
+                NotImplementedError,
+                f"Backend `{engine}` is not supported for Hamming weight preserving circuit simulation.",
+            )
         self.np = self.engine.np
 
         # cached order of operations for single- and two-qubit gates
@@ -35,6 +45,16 @@ class HammingWeightBackend(NumpyBackend):
         self._dict_indexes = None
 
         self.name = "hamming_weight"
+
+    def cast(self, x, dtype=None, copy: bool = False):
+        """Cast an object as the array type of the current backend.
+
+        Args:
+            x: Object to cast to array.
+            copy (bool, optional): If ``True`` a copy of the object is created in memory.
+                Defaults to ``False``.
+        """
+        return self.engine.cast(x, dtype=dtype, copy=copy)
 
     def apply_gate(self, gate, state, nqubits, weight):
         if isinstance(gate, gates.M):
@@ -60,11 +80,7 @@ class HammingWeightBackend(NumpyBackend):
         for gate in circuit.queue:
             if isinstance(gate, gates.Channel):
                 raise_error(RuntimeError, "Circuit must not contain channels.")
-            if (
-                not gate.hamming_weight
-                and not gate.__class__.__name__ == "M"
-                and not gate.__class__.__name__ == "Unitary"
-            ):
+            if not gate.hamming_weight and not isinstance(gate, gates.M):
                 raise_error(
                     RuntimeError,
                     "Circuit contains non-Hammming weight preserving  gates.",
@@ -108,7 +124,7 @@ class HammingWeightBackend(NumpyBackend):
 
         strings = _ehrlich_algorithm(initial_string, False)
         strings = [list(string) for string in strings]
-        strings = np.asarray(strings, dtype=int)
+        strings = self.np.asarray(strings, dtype=int)
 
         return strings
 
@@ -116,19 +132,19 @@ class HammingWeightBackend(NumpyBackend):
         self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
     ):
         if two_qubit_gate:
-            initial_string = np.array(
+            initial_string = self.np.array(
                 [1] * (weight - 1 - ncontrols)
                 + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
             )
             strings = self._gray_code(initial_string)
         else:
-            initial_string = np.array(
+            initial_string = self.np.array(
                 [1] * (weight - ncontrols)
                 + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols))
             )
             strings_0 = self._gray_code(initial_string)
 
-            initial_string = np.array(
+            initial_string = self.np.array(
                 [1] * (weight - 1 - ncontrols)
                 + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols)))
             )
@@ -187,15 +203,15 @@ class HammingWeightBackend(NumpyBackend):
         matrix = self._get_single_qubit_matrix(gate)
         matrix_00, matrix_11 = self.np.diag(matrix)
 
-        indexes_one = np.zeros((len(strings_1), nqubits), dtype=str)
+        indexes_one = self.np.zeros((len(strings_1), nqubits), dtype=str)
 
         if matrix_00 != 1.0:
-            indexes_zero = np.zeros((len(strings_0), nqubits), dtype=str)
+            indexes_zero = self.np.zeros((len(strings_0), nqubits), dtype=str)
             indexes_zero[:, other_qubits] = strings_0
             indexes_zero[:, qubits] = ["0"]
             if len(controls) > 0:
                 indexes_zero[:, controls] = "1"
-            indexes_zero = np.array(
+            indexes_zero = self.np.array(
                 [self._dict_indexes["".join(elem)][0] for elem in indexes_zero]
             )
 
@@ -207,7 +223,7 @@ class HammingWeightBackend(NumpyBackend):
                 indexes_one[:, controls] = "1"
 
             indexes_one[:, qubits] = ["1"]
-            indexes_one = np.array(
+            indexes_one = self.np.array(
                 [self._dict_indexes["".join(elem)][0] for elem in indexes_one]
             )
 
@@ -238,18 +254,18 @@ class HammingWeightBackend(NumpyBackend):
         matrix_1001 = matrix[2, 1]
         matrix_1010 = matrix[2, 2]
 
-        indexes_in = np.zeros((len(strings), nqubits), dtype=str)
+        indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
         indexes_in[:, other_qubits] = strings
         if len(controls) > 0:
             indexes_in[:, controls] = "1"
         indexes_in[:, qubits] = ["1", "0"]
-        indexes_out = np.copy(indexes_in)
+        indexes_out = self.np.copy(indexes_in)
         indexes_out[:, qubits] = ["0", "1"]
 
-        indexes_in = np.array(
+        indexes_in = self.np.array(
             [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
         )
-        indexes_out = np.array(
+        indexes_out = self.np.array(
             [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
         )
 
@@ -302,7 +318,7 @@ class HammingWeightBackend(NumpyBackend):
         indexes = [index[1] for index in self._dict_indexes.values()]
 
         dim = len(indexes)
-        matrix = np.zeros((dim, dim), dtype=complex)
+        matrix = self.np.zeros((dim, dim), dtype=complex)
         for i, index_i in enumerate(indexes):
             for j, index_j in enumerate(indexes):
                 if index_i % 2 ** (
@@ -319,7 +335,7 @@ class HammingWeightBackend(NumpyBackend):
                     else:
                         matrix[i, j] = 1 if i == j else 0
 
-        new_matrix = np.zeros((dim, dim), dtype=complex)
+        new_matrix = self.np.zeros((dim, dim), dtype=complex)
         for i, string_i in enumerate(strings):
             new_string_i = [""] * len(string_i)
             for k in range(nqubits):
@@ -336,8 +352,8 @@ class HammingWeightBackend(NumpyBackend):
 
                 new_matrix[new_index_i, new_index_j] = matrix[i, j]
 
-        state = new_matrix @ state
-
+        new_matrix = self.cast(new_matrix)
+        state = self.np.matmul(new_matrix, state)
         return state
 
     def calculate_symbolic(
@@ -354,10 +370,10 @@ class HammingWeightBackend(NumpyBackend):
 
         strings = list(self._dict_indexes.keys())
 
-        for i in np.nonzero(state)[0]:
+        for i in self.np.nonzero(state)[0]:
             b = strings[i]
-            if np.abs(state[i]) >= cutoff:
-                x = np.round(state[i], decimals)
+            if self.np.abs(state[i]) >= cutoff:
+                x = self.np.round(state[i], decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -381,11 +397,11 @@ class HammingWeightBackend(NumpyBackend):
             measured_string = "".join(string[q] for q in qubits)
             measured_strings[measured_string] = measured_strings.get(
                 measured_string, 0
-            ) + np.real(state[index] ** 2)
+            ) + self.np.real(state[index] ** 2)
 
         strings = list(measured_strings.keys())
         indexes = [int(string, 2) for string in strings]
-        probs = np.zeros(2 ** len(qubits), dtype=rtype)
+        probs = self.np.zeros(2 ** len(qubits), dtype=rtype)
         for index, string in zip(indexes, strings):
             probs[index] = measured_strings[string]
 
