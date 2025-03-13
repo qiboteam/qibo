@@ -33,6 +33,7 @@ def test_visualize_state(mode, nqubits):
     # Fixing seed for reproducibility
     backend = construct_backend("numpy")
     backend.set_seed(42)
+    np.random.seed(42)
 
     circuit = build_circuit(nqubits)
     outcome = backend.execute_circuit(circuit, nshots=1000)
