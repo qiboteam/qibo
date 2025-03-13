@@ -1094,28 +1094,17 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             **kwargs,
         )
 
-        # sort data such that the encoding is performed in lexicographical order
-        bitstrings = _ehrlich_algorithm(initial_string, False)
-        initial_string = bitstrings[-1]
-        lex_order = [int(string, 2) for string in bitstrings]
-        lex_order_global.extend(lex_order)
-
-        controls = [item.start() for item in finditer("1", initial_string)]
-        index = (
-            initial_string.find("0")
-            if weight % 2 == 0
-            else last_qubit - initial_string[::-1].find("0")
+        # add gate to be place between blocks of Hamming-weight encoders
+        circuit.add(
+            _intermediate_gate(
+                lex_order_global,
+                weight,
+                last_qubit,
+                cummul_n_k,
+                indexes_to_double,
+                complex_data,
+            )
         )
-        initial_string = np.array(list(initial_string), dtype=int)
-        initial_string[index] = 1
-        initial_string = initial_string[::-1]
-
-        phase_index = cummul_n_k
-        indexes_to_double.append(phase_index)
-        if complex_data:
-            circuit.add(gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls))
-        else:
-            circuit.add(gates.RY(index, 0.0).controlled_by(*controls))
 
     # sort data such that the encoding is performed in lexicographical order
     lex_order_global.append(dims - 1)
@@ -1162,3 +1151,33 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
     circuit.set_parameters(angles)
 
     return circuit
+
+
+def _intermediate_gate(
+    lex_order_global, weight, last_qubit, cummul_n_k, indexes_to_double, complex_data
+):
+    # sort data such that the encoding is performed in lexicographical order
+    bitstrings = _ehrlich_algorithm(initial_string, False)
+    initial_string = bitstrings[-1]
+    lex_order = [int(string, 2) for string in bitstrings]
+    lex_order_global.extend(lex_order)
+
+    controls = [item.start() for item in finditer("1", initial_string)]
+    index = (
+        initial_string.find("0")
+        if weight % 2 == 0
+        else last_qubit - initial_string[::-1].find("0")
+    )
+    initial_string = np.array(list(initial_string), dtype=int)
+    initial_string[index] = 1
+    initial_string = initial_string[::-1]
+
+    phase_index = cummul_n_k
+    indexes_to_double.append(phase_index)
+    gate = (
+        gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls)
+        if complex_data
+        else gates.RY(index, 0.0).controlled_by(*controls)
+    )
+
+    return gate
