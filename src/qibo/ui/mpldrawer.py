@@ -12,7 +12,7 @@ import numpy as np
 
 from qibo import gates
 
-from .drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
+from .drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
 
 UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
