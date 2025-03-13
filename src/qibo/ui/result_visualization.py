@@ -1,6 +1,6 @@
 """Plotscripts to visualize circuit execution's result."""
 
-from typing import Optional, Union
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +17,6 @@ from qibo.ui.drawing_utils import (
 def visualize_state(
     execution_outcome: Union[QuantumState, MeasurementOutcomes, CircuitResult],
     mode: str = "probabilities",
-    save_as: Optional[str] = None,
     n_most_relevant_components=20,
 ):
     """
@@ -116,5 +115,4 @@ def visualize_state(
 
     plt.tight_layout()
 
-    if save_as is not None:
-        plt.savefig(f"{save_as}.pdf", bbox_inches="tight")
+    return ax, ax.figure

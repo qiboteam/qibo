@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
+from utils import match_figure_image
 
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
@@ -22,19 +23,6 @@ from qibo.ui.mpldrawer import (
 matplotlib.use("agg")
 
 BASEPATH = str(Path(__file__).parent / "test_ui_array_images")
-
-
-# convert image file to numpy array
-def fig2array(fig):
-    fig.canvas.draw()
-    data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-    return data
-
-
-# match a matplotlib figure with a image file
-def match_figure_image(fig, arr_path):
-    return np.all(fig2array(fig) == np.load(arr_path))
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
