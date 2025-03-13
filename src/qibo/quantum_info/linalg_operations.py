@@ -461,7 +461,8 @@ def lanczos(
         norm = backend.calculate_vector_norm(omega)
         if norm > precision_tol:
             vector = omega / norm
-        else:
+        else:  # pragma: no cover
+            # this part is tested separatedly
             vector = random_statevector(dims, seed=local_state, backend=backend)
             vector = _gram_schmidt_process(
                 vector, backend.cast(lanczos_vectors).T, backend=backend
@@ -484,7 +485,7 @@ def _vector_projection(vector, directions, backend):
 
     Args:
         vector (ndarray): vector to be projected.
-        directions (ndarray): either an :math:`1`-dimensional array corresponding to the
+        directions (ndarray or list): either an :math:`1`-dimensional array corresponding to the
             direction of projection or an array of arrays corresponding to several
             directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -494,17 +495,20 @@ def _vector_projection(vector, directions, backend):
     Returns:
         ndarray or list: Either one vector projection or a list of several projections.
     """
+    if isinstance(directions, list):
+        directions = backend.cast(directions, dtype=directions[0].dtype)
+
     if len(directions.shape) == 1:
         return (
             backend.np.dot(vector, directions)
             * directions
-            / backend.calculate_matrix_norm(directions) ** 2
+            / backend.calculate_vector_norm(directions) ** 2
         )
 
     return [
         backend.np.dot(vector, direction)
-        * directions
-        / backend.calculate_matrix_norm(direction) ** 2
+        * direction
+        / backend.calculate_vector_norm(direction) ** 2
         for direction in directions
     ]
 
@@ -514,7 +518,7 @@ def _gram_schmidt_process(vector, directions, backend):
 
     Args:
         vector (ndarray): vector to be orthogonalized.
-        directions (ndarray): either an :math:`1`-dimensional array corresponding to the
+        directions (ndarray or list): either an :math:`1`-dimensional array corresponding to the
             direction of projection or an array of arrays corresponding to several
             directions.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -524,8 +528,12 @@ def _gram_schmidt_process(vector, directions, backend):
     Returns:
         ndarray: Array orthogonalized with respect to ``directions``.
     """
+    if isinstance(directions, list):
+        directions = backend.cast(directions, dtype=directions[0].dtype)
+
     projections = _vector_projection(vector, directions, backend=backend)
+
     if len(directions.shape) > 1:
-        projections = backend.np.sum(directions, axis=0)
+        projections = backend.np.sum(projections, axis=0)
 
     return vector - projections

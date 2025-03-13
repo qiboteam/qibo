@@ -4,6 +4,8 @@ from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
+    _gram_schmidt_process,
+    _vector_projection,
     anticommutator,
     commutator,
     lanczos,
@@ -326,3 +328,37 @@ def test_lanczos(backend, nqubits, seed):
 
     backend.assert_allclose(eigvals, eigvals_target, atol=1e-5, rtol=1e-5)
     backend.assert_allclose(all(inf < 1e-5 for inf in infidelities), True)
+
+
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
+    dims = 2**nqubits
+    state = random_statevector(dims, seed=seed, backend=backend)
+    directions = [
+        random_statevector(dims, seed=seed + k, backend=backend)
+        for k in range(1, 5 + 1)
+    ]
+
+    # testing several projections
+    target = backend.cast(
+        [backend.np.dot(state, direction) * direction for direction in directions]
+    )
+    projection = _vector_projection(state, directions, backend=backend)
+    backend.assert_allclose(projection, target)
+
+    # test gram-schmidt
+    target_gs = backend.cast(state, copy=True)
+    for direction in target:
+        target_gs -= direction
+    vector = _gram_schmidt_process(state, directions, backend=backend)
+    backend.assert_allclose(vector, target_gs)
+
+    # testing one projection
+    projection = _vector_projection(state, directions[0], backend=backend)
+    backend.assert_allclose(projection, target[0])
+
+    # test gram-schmidt
+    target_gs = state - target[0]
+    vector = _gram_schmidt_process(state, directions[0], backend=backend)
+    backend.assert_allclose(vector, target_gs)
