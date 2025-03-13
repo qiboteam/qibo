@@ -1097,6 +1097,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
         # add gate to be place between blocks of Hamming-weight encoders
         circuit.add(
             _intermediate_gate(
+                initial_string,
                 lex_order_global,
                 weight,
                 last_qubit,
@@ -1154,8 +1155,16 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
 
 
 def _intermediate_gate(
-    lex_order_global, weight, last_qubit, cummul_n_k, indexes_to_double, complex_data
+    initial_string,
+    lex_order_global,
+    weight,
+    last_qubit,
+    cummul_n_k,
+    indexes_to_double,
+    complex_data,
 ):
+    """Calculate where to place the intermediate gate by finding the last string
+    of the previous Hamming-weight block that was encoded"""
     # sort data such that the encoding is performed in lexicographical order
     bitstrings = _ehrlich_algorithm(initial_string, False)
     initial_string = bitstrings[-1]
