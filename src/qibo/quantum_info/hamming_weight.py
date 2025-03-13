@@ -13,6 +13,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         from qibo.backends import _check_backend
 
         self.backend = _check_backend(backend)
+        self.engine = self.backend.engine
         self.measurements = measurements
         self.nqubits = nqubits
         self.nshots = nshots
@@ -32,6 +33,22 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
         )
         return " + ".join(terms)
+
+    def full_state(self):
+        if (
+            self.backend._dict_indexes is None
+            or list(self.backend._dict_indexes.keys())[0].count("1") != self.weight
+        ):
+            self.backend._dict_indexes = self.backend._get_lexicographical_order(
+                self.nqubits, self.weight
+            )
+
+        state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
+        for i, j in self.backend._dict_indexes.values():
+            state[j] = self._state[i]
+
+        state = self.engine.cast(state)
+        return state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
         if self.nshots is None:
