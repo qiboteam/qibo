@@ -302,14 +302,20 @@ def test_schmidt_decomposition(backend):
 
 
 @pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("initial_vector", [None, True])
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_lanczos(backend, nqubits, seed):
+def test_lanczos(backend, nqubits, initial_vector, seed):
     dims = 2**nqubits
     hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
 
     eigvals_target, eigvectors_target = backend.np.linalg.eigh(hamiltonian)
 
-    tridiag, ortho_matrix = lanczos(hamiltonian, seed=seed, backend=backend)
+    if initial_vector:
+        initial_vector = random_statevector(dims, seed=20, backend=backend)
+
+    tridiag, ortho_matrix = lanczos(
+        hamiltonian, initial_vector=initial_vector, seed=seed, backend=backend
+    )
 
     backend.assert_allclose(
         tridiag, backend.np.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix

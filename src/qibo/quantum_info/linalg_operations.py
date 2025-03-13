@@ -385,7 +385,12 @@ def schmidt_decomposition(
 
 
 def lanczos(
-    matrix, steps: int = None, precision_tol: float = 1e-8, seed=None, backend=None
+    matrix,
+    steps: int = None,
+    initial_vector=None,
+    precision_tol: float = 1e-8,
+    seed=None,
+    backend=None,
 ):
     """Lanczos iteractive method to tridiagonalize a Hermitian matrix.
 
@@ -419,6 +424,9 @@ def lanczos(
         matrix (ndarray): square Hermitian matrix to be tridiagonalized.
         steps (int, optional): number of iterations :math:`m`. If ``None``,
             defaults to the size of ``matrix``. Defaults to ``None``.
+        initial_vector (ndarray, optional): vector to be used as the initial Lanczos vector
+            :math:`\\ket{v_{1}}`. If ``None``, array is uniformly sampled.
+            Defaults to ``None``.
         precision_tol (float, optional): precision threshold such that for :math:`\\beta_{j}`
             smaller than ``precision_tol``, it is considered to be zero.
         seed (int or :class:`numpy.random.Generator`, optional): Seed for the initial random vector
@@ -449,14 +457,17 @@ def lanczos(
     if steps is None:
         steps = dims
 
-    lanczos_vectors = []
-    vector = random_statevector(dims, seed=local_state, backend=backend)
-    lanczos_vectors.append(vector)
+    vector = (
+        random_statevector(dims, seed=local_state, backend=backend)
+        if initial_vector is None
+        else initial_vector
+    )
 
     omega_prime = matrix @ vector
     alpha = backend.np.conj(omega_prime.T) @ vector
     omega = omega_prime - alpha * vector
 
+    lanczos_vectors = [vector]
     for _ in range(steps - 1):
         norm = backend.calculate_vector_norm(omega)
         if norm > precision_tol:
