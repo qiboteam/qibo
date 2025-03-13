@@ -2295,7 +2295,7 @@ class MS(ParametrizedGate):
 
     @property
     def hamming_weight(self):
-        return _is_hamming_weight_given_angle(self.parameters[0])
+        return _is_hamming_weight_given_angle(self.parameters[2])
 
     @property
     def qasm_label(self):
@@ -2721,8 +2721,6 @@ class Unitary(ParametrizedGate):
     Args:
         unitary: Unitary matrix as a tensor supported by the backend.
         *q (int): Qubit id numbers that the gate acts on.
-        hamming_weight (bool): whether the gate is Hamming weight preserving.
-            Defaults to ``False``.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
@@ -2738,7 +2736,6 @@ class Unitary(ParametrizedGate):
         self,
         unitary,
         *q,
-        hamming_weight: bool = False,
         trainable=True,
         name: str = None,
         check_unitary: bool = True,
@@ -2747,7 +2744,7 @@ class Unitary(ParametrizedGate):
         self.name = "Unitary" if name is None else name
         self.draw_label = "U"
         self.target_qubits = tuple(q)
-        self.hamming_weight = hamming_weight
+        self._hamming_weight = False
         self._clifford = False
 
         # TODO: Check that given ``unitary`` has proper shape?
@@ -2794,6 +2791,14 @@ class Unitary(ParametrizedGate):
     @clifford.setter
     def clifford(self, value):
         self._clifford = value
+
+    @property
+    def hamming_weight(self):
+        return self._hamming_weight
+
+    @hamming_weight.setter
+    def hamming_weight(self, value):
+        self._hamming_weight = value
 
     def on_qubits(self, qubit_map):
         args = [self.init_args[0]]
