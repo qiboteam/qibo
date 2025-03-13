@@ -35,7 +35,7 @@ def test_visualize_state(mode, nqubits):
     backend.set_seed(42)
 
     circuit = build_circuit(nqubits)
-    outcome = circuit(nshots=1000)
+    outcome = backend.execute_circuit(circuit, nshots=1000)
 
     _, fig = visualize_state(
         outcome,
