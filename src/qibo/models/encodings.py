@@ -1022,6 +1022,7 @@ def _get_phase_gate_correction(last_string, phase: float):
 
 
 def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
+    # TODO: generalize to complex-valued data
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
@@ -1057,6 +1058,11 @@ def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
         circuit.add(gate_list)
 
     angles = _generate_rbs_angles(data, "tree", dims)
+
+    print()
+    circuit.draw()
+    print()
+
     circuit.set_parameters(2 * angles)
 
     return circuit

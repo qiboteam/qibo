@@ -109,7 +109,7 @@ def test_phase_encoder(backend, rotation, kind):
 
 
 @pytest.mark.parametrize("complex_data", [False, True])
-@pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
+@pytest.mark.parametrize("parametrization", ["hyperspherical", "hopf"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_binary_encoder(backend, nqubits, parametrization, complex_data):
     if parametrization == "hopf" and complex_data:
