@@ -6,7 +6,6 @@ import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
-from utils import match_figure_image
 
 from qibo import Circuit, callbacks, gates
 from qibo.models import QFT
@@ -19,6 +18,8 @@ from qibo.ui.mpldrawer import (
     _render_label,
     plot_circuit,
 )
+
+from .utils import match_figure_image
 
 matplotlib.use("agg")
 
