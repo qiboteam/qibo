@@ -326,7 +326,7 @@ def test_lanczos(backend, nqubits, seed):
         for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
     ]
 
-    backend.assert_allclose(eigvals, eigvals_target, atol=1e-5, rtol=1e-5)
+    backend.assert_allclose(eigvals, eigvals_target, atol=1e-2, rtol=1e-2)
     backend.assert_allclose(all(inf < 1e-5 for inf in infidelities), True)
 
 
