@@ -1110,7 +1110,6 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
         initial_string[index] = 1
         initial_string = initial_string[::-1]
 
-        # phase_index = len(circuit.get_parameters())
         phase_index = cummul_n_k
         indexes_to_double.append(phase_index)
         if complex_data:
