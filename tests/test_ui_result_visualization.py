@@ -7,7 +7,7 @@ import matplotlib.pyplot
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates, get_backend
+from qibo import Circuit, construct_backend, gates
 from qibo.ui.result_visualization import visualize_state
 
 from .utils import match_figure_image
@@ -31,7 +31,7 @@ def build_circuit(nqubits):
 @pytest.mark.parametrize("nqubits", [2, 4])
 def test_visualize_state(mode, nqubits):
     # Fixing seed for reproducibility
-    backend = get_backend()
+    backend = construct_backend("numpy")
     backend.set_seed(42)
 
     circuit = build_circuit(nqubits)
