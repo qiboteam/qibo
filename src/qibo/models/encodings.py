@@ -160,7 +160,6 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
         raise_error(ValueError, "`data` size must be a power of 2.")
     nqubits = int(nqubits)
 
-    # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
     complex_data = bool(
         "complex" in str(data.dtype)
     )  # backend-agnostic way of checking the dtype
@@ -970,7 +969,6 @@ def _get_gate(
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
     if len(qubits_in) == 0 and len(qubits_out) == 1:  # pragma: no cover
-        # Important for future binary encoder
         gate_list = (
             gates.U3(*qubits_out, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
             if complex_data
@@ -1007,7 +1005,7 @@ def _get_phase_gate_correction(last_string, phase: float):
     """Return final gate of HW-k circuits that encode complex data."""
 
     # to avoid circular import error
-    from qibo.quantum_info.utils import hamming_weight
+    from qibo.quantum_info.utils import hamming_weight  # pylint: disable=C0415
 
     if isinstance(last_string, str):
         last_string = np.asarray(list(last_string), dtype=int)
@@ -1097,17 +1095,16 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
         )
 
         # add gate to be place between blocks of Hamming-weight encoders
-        circuit.add(
-            _intermediate_gate(
-                initial_string,
-                lex_order_global,
-                weight,
-                last_qubit,
-                cummul_n_k,
-                indexes_to_double,
-                complex_data,
-            )
+        gate, lex_order, initial_string, phase_index = _intermediate_gate(
+            initial_string,
+            weight,
+            last_qubit,
+            cummul_n_k,
+            complex_data,
         )
+        circuit.add(gate)
+        lex_order_global.extend(lex_order)
+        indexes_to_double.append(phase_index)
 
     # sort data such that the encoding is performed in lexicographical order
     lex_order_global.append(dims - 1)
@@ -1158,20 +1155,18 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
 
 def _intermediate_gate(
     initial_string,
-    lex_order_global,
     weight,
     last_qubit,
     cummul_n_k,
-    indexes_to_double,
     complex_data,
 ):
     """Calculate where to place the intermediate gate by finding the last string
     of the previous Hamming-weight block that was encoded"""
+
     # sort data such that the encoding is performed in lexicographical order
     bitstrings = _ehrlich_algorithm(initial_string, False)
     initial_string = bitstrings[-1]
     lex_order = [int(string, 2) for string in bitstrings]
-    lex_order_global.extend(lex_order)
 
     controls = [item.start() for item in finditer("1", initial_string)]
     index = (
@@ -1184,11 +1179,10 @@ def _intermediate_gate(
     initial_string = initial_string[::-1]
 
     phase_index = cummul_n_k
-    indexes_to_double.append(phase_index)
     gate = (
         gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls)
         if complex_data
         else gates.RY(index, 0.0).controlled_by(*controls)
     )
 
-    return gate
+    return gate, lex_order, initial_string, phase_index
