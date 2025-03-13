@@ -91,8 +91,12 @@ def test_state_probabilities(backend, density_matrix):
 def test_expectation_from_samples(backend):
     # fix seed to use the same samples in every execution
     np.random.seed(123)
-    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
-    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
+    obs0 = 2 * Z(0, backend=backend) * Z(1, backend=backend) + Z(
+        0, backend=backend
+    ) * Z(2, backend=backend)
+    obs1 = 2 * Z(0, backend=backend) * Z(1, backend=backend) + Z(
+        0, backend=backend
+    ) * Z(2, backend=backend) * I(3, backend=backend)
     h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
     h_dense = hamiltonians.Hamiltonian(3, h_sym.matrix, backend=backend)
     h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
