@@ -2,6 +2,7 @@
 
 import math
 from inspect import signature
+from re import finditer
 from typing import List, Optional, Union
 
 import numpy as np
@@ -117,19 +118,41 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     return circuit
 
 
-def binary_encoder(data, **kwargs):
-    """Create circuit that encodes real-valued ``data`` in all amplitudes of the computational basis.
+def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in all amplitudes of the computational basis.
 
-    ``data`` has to be normalized with respect to the Hilbert-Schmidt norm.
-    Resulting circuit parametrizes ``data`` in Hopf coordinates in the
-    :math:`(2^{n} - 1)`-unit sphere.
+    Given data vector :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}`,
+    this function generates a quantum circuit :math:`\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        \\mathrm{Load}(\\mathbf{x}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j=0}^{d-1} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
+    of the integer :math:`j`, :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
+
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``Hopf`` coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array or length :math:`2^{n}`
+        data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in binary encoding.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+
+        3. H. S. Cohl, *Fourier, Gegenbauer and Jacobi expansions for a power-law fundamental
+        solution of the polyharmonic equation and polyspherical addition theorems*, `Symmetry,
+        Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
+        <https://arxiv.org/abs/1209.6047>`_.
     """
     dims = len(data)
     nqubits = float(np.log2(dims))
@@ -137,43 +160,16 @@ def binary_encoder(data, **kwargs):
         raise_error(ValueError, "`data` size must be a power of 2.")
     nqubits = int(nqubits)
 
-    base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = np.reshape(base_strings, (-1, 2))
-    strings = [base_strings]
-    for _ in range(nqubits - 1):
-        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
-        strings.append(base_strings)
-    strings = strings[::-1]
+    complex_data = bool(
+        "complex" in str(data.dtype)
+    )  # backend-agnostic way of checking the dtype
 
-    targets_and_controls = []
-    for pairs in strings:
-        for pair in pairs:
-            targets, controls, anticontrols = [], [], []
-            for k, bits in enumerate(zip(pair[0], pair[1])):
-                if bits == ("0", "0"):
-                    anticontrols.append(k)
-                elif bits == ("1", "1"):
-                    controls.append(k)
-                elif bits == ("0", "1"):
-                    targets.append(k)
-            targets_and_controls.append([targets, controls, anticontrols])
+    if parametrization == "hopf":
+        return _binary_encoder_hopf(data, nqubits, complex_data=complex_data, **kwargs)
 
-    circuit = Circuit(nqubits, **kwargs)
-    for targets, controls, anticontrols in targets_and_controls:
-        gate_list = []
-        if len(anticontrols) > 0:
-            gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        gate_list.append(
-            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
-        )
-        if len(anticontrols) > 0:
-            gate_list.append(gates.X(qubit) for qubit in anticontrols)
-        circuit.add(gate_list)
-
-    angles = _generate_rbs_angles(data, dims, "tree")
-    circuit.set_parameters(2 * angles)
-
-    return circuit
+    return _binary_encoder_hyperspherical(
+        data, nqubits, complex_data=complex_data, **kwargs
+    )
 
 
 def unary_encoder(data, architecture: str = "tree", **kwargs):
@@ -224,7 +220,7 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, nqubits, architecture)
+    phases = _generate_rbs_angles(data, architecture, nqubits)
     circuit.set_parameters(phases)
 
     return circuit
@@ -330,6 +326,8 @@ def hamming_weight_encoder(
     weight: int,
     full_hwp: bool = False,
     optimize_controls: bool = True,
+    phase_correction: bool = True,
+    initial_string=None,
     **kwargs,
 ):
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
@@ -368,7 +366,8 @@ def hamming_weight_encoder(
     """
     complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
 
-    initial_string = np.array([1] * weight + [0] * (nqubits - weight))
+    if initial_string is None:
+        initial_string = np.array([1] * weight + [0] * (nqubits - weight))
     bitstrings, targets_and_controls = _ehrlich_algorithm(initial_string)
 
     # sort data such that the encoding is performed in lexicographical order
@@ -380,7 +379,7 @@ def hamming_weight_encoder(
 
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = np.abs(data) if complex_data else data
-    thetas = _generate_rbs_angles(_data, nqubits, architecture="diagonal")
+    thetas = _generate_rbs_angles(_data, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
     phis = np.zeros(len(thetas) + 1)
     if complex_data:
@@ -421,7 +420,7 @@ def hamming_weight_encoder(
         )
         circuit.add(gate)
 
-    if complex_data:
+    if complex_data and phase_correction:
         circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
 
     return circuit
@@ -628,16 +627,16 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     return circuit, pairs_rbs
 
 
-def _generate_rbs_angles(data, nqubits: int, architecture: str):
+def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
         data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
-        nqubits (int): number of qubits.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
             Defaults to ``tree``.
+        nqubits (int): Number of qubits. To be used then ``architecture="tree"``.
 
     Returns:
         list: List of phases for RBS gates.
@@ -645,12 +644,18 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
     if architecture == "diagonal":
         engine = _check_engine(data)
         phases = [
-            math.atan2(engine.linalg.norm(data[k + 1 :]), data[k])
+            engine.arctan2(engine.linalg.norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(math.atan2(data[-1], data[-2]))
+        phases.append(engine.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
+        if nqubits is None:  # pragma: no cover
+            raise_error(
+                TypeError,
+                '``nqubits`` must be specified when ``architecture=="tree"``.',
+            )
+
         j_max = int(nqubits / 2)
 
         r_array = np.zeros(nqubits - 1, dtype=float)
@@ -667,6 +672,8 @@ def _generate_rbs_angles(data, nqubits: int, architecture: str):
         for j in range(j_max - 1, 0, -1):
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
+
+    phases = np.array([float(phase) for phase in phases])
 
     return phases
 
@@ -962,7 +969,6 @@ def _get_gate(
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
     if len(qubits_in) == 0 and len(qubits_out) == 1:  # pragma: no cover
-        # Important for future binary encoder
         gate_list = (
             gates.U3(*qubits_out, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
             if complex_data
@@ -999,7 +1005,7 @@ def _get_phase_gate_correction(last_string, phase: float):
     """Return final gate of HW-k circuits that encode complex data."""
 
     # to avoid circular import error
-    from qibo.quantum_info.utils import hamming_weight
+    from qibo.quantum_info.utils import hamming_weight  # pylint: disable=C0415
 
     if isinstance(last_string, str):
         last_string = np.asarray(list(last_string), dtype=int)
@@ -1011,3 +1017,172 @@ def _get_phase_gate_correction(last_string, phase: float):
 
     # adding an RZ gate to correct the phase of the last amplitude encoded
     return gates.RZ(last_zero, 2 * phase).controlled_by(*last_controls)
+
+
+def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
+    # TODO: generalize to complex-valued data
+    dims = 2**nqubits
+
+    base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
+    base_strings = np.reshape(base_strings, (-1, 2))
+    strings = [base_strings]
+    for _ in range(nqubits - 1):
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
+        strings.append(base_strings)
+    strings = strings[::-1]
+
+    targets_and_controls = []
+    for pairs in strings:
+        for pair in pairs:
+            targets, controls, anticontrols = [], [], []
+            for k, bits in enumerate(zip(pair[0], pair[1])):
+                if bits == ("0", "0"):
+                    anticontrols.append(k)
+                elif bits == ("1", "1"):
+                    controls.append(k)
+                elif bits == ("0", "1"):
+                    targets.append(k)
+            targets_and_controls.append([targets, controls, anticontrols])
+
+    circuit = Circuit(nqubits, **kwargs)
+    for targets, controls, anticontrols in targets_and_controls:
+        gate_list = []
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        gate_list.append(
+            gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
+        )
+        if len(anticontrols) > 0:
+            gate_list.append(gates.X(qubit) for qubit in anticontrols)
+        circuit.add(gate_list)
+
+    angles = _generate_rbs_angles(data, "tree", dims)
+    circuit.set_parameters(2 * angles)
+
+    return circuit
+
+
+def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
+    dims = 2**nqubits
+    last_qubit = nqubits - 1
+
+    indexes_to_double, lex_order_global = [0], [0]
+
+    circuit = Circuit(nqubits, **kwargs)
+    if complex_data:
+        circuit.add(gates.U3(last_qubit, 0.0, 0.0, 0.0))
+    else:
+        circuit.add(gates.RY(last_qubit, 0.0))
+
+    cummul_n_k = 0
+    initial_string = np.array([1] + [0] * (nqubits - 1))
+    for weight in range(1, nqubits):
+        n_choose_k = int(binom(nqubits, weight))
+        cummul_n_k += n_choose_k
+        placeholder = np.random.rand(n_choose_k)
+        if complex_data:
+            placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
+
+        circuit += hamming_weight_encoder(
+            placeholder,
+            nqubits,
+            weight,
+            full_hwp=True,
+            optimize_controls=False,
+            phase_correction=False,
+            initial_string=initial_string,
+            **kwargs,
+        )
+
+        # add gate to be place between blocks of Hamming-weight encoders
+        gate, lex_order, initial_string, phase_index = _intermediate_gate(
+            initial_string,
+            weight,
+            last_qubit,
+            cummul_n_k,
+            complex_data,
+        )
+        circuit.add(gate)
+        lex_order_global.extend(lex_order)
+        indexes_to_double.append(phase_index)
+
+    # sort data such that the encoding is performed in lexicographical order
+    lex_order_global.append(dims - 1)
+    lex_order_sorted = np.sort(np.copy(lex_order_global))
+    lex_order_global = [
+        np.where(lex_order_sorted == num)[0][0] for num in lex_order_global
+    ]
+    data = data[lex_order_global]
+    del lex_order_global, lex_order_sorted
+
+    _data = np.abs(data) if complex_data else data
+
+    thetas = _generate_rbs_angles(_data, architecture="diagonal")
+    thetas = np.asarray(thetas, dtype=type(thetas[0]))
+
+    if complex_data:
+        phis = np.zeros(len(thetas) + 1)
+        phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
+        for k in range(1, len(phis)):
+            phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+
+    angles = []
+    for k in range(len(thetas)):
+        if k in indexes_to_double:
+            angle = (
+                [2 * thetas[k], 2 * phis[k], 0.0] if complex_data else [2 * thetas[k]]
+            )
+        else:
+            angle = [thetas[k], -phis[k], phis[k]] if complex_data else [thetas[k]]
+
+        angles.extend(angle)
+
+    if complex_data:
+        angles[-2] = 2 * _angle_mod_two_pi(
+            (np.angle(data[-1]) - np.angle(data[-2])) / 2
+        )
+        angles[-1] = 2 * _angle_mod_two_pi(
+            (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
+        )
+
+    # necessary for GPU backends
+    angles = [float(angle) for angle in angles]
+
+    circuit.set_parameters(angles)
+
+    return circuit
+
+
+def _intermediate_gate(
+    initial_string,
+    weight,
+    last_qubit,
+    cummul_n_k,
+    complex_data,
+):
+    """Calculate where to place the intermediate gate by finding the last string
+    of the previous Hamming-weight block that was encoded"""
+
+    # sort data such that the encoding is performed in lexicographical order
+    bitstrings = _ehrlich_algorithm(initial_string, False)
+    initial_string = bitstrings[-1]
+    lex_order = [int(string, 2) for string in bitstrings]
+
+    controls = [item.start() for item in finditer("1", initial_string)]
+    index = (
+        initial_string.find("0")
+        if weight % 2 == 0
+        else last_qubit - initial_string[::-1].find("0")
+    )
+    initial_string = np.array(list(initial_string), dtype=int)
+    initial_string[index] = 1
+    initial_string = initial_string[::-1]
+
+    phase_index = cummul_n_k
+    gate = (
+        gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls)
+        if complex_data
+        else gates.RY(index, 0.0).controlled_by(*controls)
+    )
+
+    return gate, lex_order, initial_string, phase_index
