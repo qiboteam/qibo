@@ -59,11 +59,14 @@ class HammingWeightBackend(NumpyBackend):
     def apply_gate(self, gate, state, nqubits, weight):
         if isinstance(gate, gates.M):
             return gate.apply_hamming_weight(self, state, weight, nqubits)
-        elif isinstance(gate, gates.CCZ):
+
+        if isinstance(gate, gates.CCZ):
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
-        elif len(gate.target_qubits) == 1:
+
+        if len(gate.target_qubits) == 1:
             return self._apply_gate_single_qubit(gate, state, nqubits, weight)
-        elif len(gate.target_qubits) == 2:
+
+        if len(gate.target_qubits) == 2:
             return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
@@ -122,7 +125,7 @@ class HammingWeightBackend(NumpyBackend):
     def _gray_code(self, initial_string):
         from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
 
-        strings = _ehrlich_algorithm(initial_string, False)
+        strings = _ehrlich_algorithm(initial_string, return_indices=False)
         strings = [list(string) for string in strings]
         strings = self.np.asarray(strings, dtype=int)
 
@@ -249,6 +252,8 @@ class HammingWeightBackend(NumpyBackend):
         strings = self._dict_cached_strings_two[key]
 
         matrix = gate.matrix(backend=self.engine)
+        matrix_0000 = matrix[0, 0]
+        matrix_1111 = matrix[3, 3]
         matrix_0101 = matrix[1, 1]
         matrix_0110 = matrix[1, 2]
         matrix_1001 = matrix[2, 1]
@@ -276,6 +281,30 @@ class HammingWeightBackend(NumpyBackend):
 
         state[indexes_in] = new_amplitudes_in
         state[indexes_out] = new_amplitudes_out
+
+        # update the |...00...> elements if necessary
+        if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
+            indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+            indexes_in[:, other_qubits] = strings
+            if len(controls) > 0:
+                indexes_in[:, controls] = "1"
+            indexes_in[:, qubits] = ["0", "0"]
+            indexes_in = self.np.array(
+                [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+            )
+            state[indexes_in] *= matrix_0000
+
+        # update the |...11...> elements if necessary
+        if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
+            indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+            indexes_in[:, other_qubits] = strings
+            if len(controls) > 0:
+                indexes_in[:, controls] = "1"
+            indexes_in[:, qubits] = ["1", "1"]
+            indexes_in = self.np.array(
+                [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+            )
+            state[indexes_in] *= matrix_1111
 
         return state
 
