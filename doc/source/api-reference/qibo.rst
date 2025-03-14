@@ -2033,6 +2033,12 @@ Schmidt decomposition
 .. autofunction:: qibo.quantum_info.schmidt_decomposition
 
 
+Lanczos algorithm
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.lanczos
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 

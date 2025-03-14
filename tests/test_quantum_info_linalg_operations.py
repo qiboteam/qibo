@@ -4,16 +4,23 @@ from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
+    _gram_schmidt_process,
+    _vector_projection,
     anticommutator,
     commutator,
+    lanczos,
     matrix_power,
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
     singular_value_decomposition,
 )
-from qibo.quantum_info.metrics import purity
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.metrics import infidelity, purity
+from qibo.quantum_info.random_ensembles import (
+    random_density_matrix,
+    random_hermitian,
+    random_statevector,
+)
 
 
 def test_commutator(backend):
@@ -292,3 +299,72 @@ def test_schmidt_decomposition(backend):
     entropy = -backend.np.sum(coeffs * entropy)
 
     backend.assert_allclose(entropy, 0.0, atol=1e-14)
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("initial_vector", [None, True])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_lanczos(backend, nqubits, initial_vector, seed):
+    dims = 2**nqubits
+    hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
+
+    eigvals_target, eigvectors_target = backend.np.linalg.eigh(hamiltonian)
+
+    if initial_vector:
+        initial_vector = random_statevector(dims, seed=20, backend=backend)
+
+    tridiag, ortho_matrix = lanczos(
+        hamiltonian, initial_vector=initial_vector, seed=seed, backend=backend
+    )
+
+    backend.assert_allclose(
+        tridiag, backend.np.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
+    )
+
+    eigvals, eigvectors = backend.np.linalg.eigh(tridiag)
+    eigs = list(zip(eigvals, eigvectors.T))
+    eigs.sort()
+    eigs = backend.cast(eigs, dtype=object)
+    eigvectors = eigs[:, 1]
+    eigvals = [float(eig) for eig in eigs[:, 0]]
+    infidelities = [
+        infidelity(ortho_matrix @ eigvec, eigvec_target)
+        for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
+    ]
+
+    backend.assert_allclose(eigvals, eigvals_target, atol=1e-2, rtol=1e-2)
+    backend.assert_allclose(all(inf < 1e-3 for inf in infidelities), True)
+
+
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
+    dims = 2**nqubits
+    state = random_statevector(dims, seed=seed, backend=backend)
+    directions = [
+        random_statevector(dims, seed=seed + k, backend=backend)
+        for k in range(1, 5 + 1)
+    ]
+
+    # testing several projections
+    target = backend.cast(
+        [backend.np.dot(state, direction) * direction for direction in directions]
+    )
+    projection = _vector_projection(state, directions, backend=backend)
+    backend.assert_allclose(projection, target)
+
+    # test gram-schmidt
+    target_gs = backend.cast(state, copy=True)
+    for direction in target:
+        target_gs -= direction
+    vector = _gram_schmidt_process(state, directions, backend=backend)
+    backend.assert_allclose(vector, target_gs)
+
+    # testing one projection
+    projection = _vector_projection(state, directions[0], backend=backend)
+    backend.assert_allclose(projection, target[0])
+
+    # test gram-schmidt
+    target_gs = state - target[0]
+    vector = _gram_schmidt_process(state, directions[0], backend=backend)
+    backend.assert_allclose(vector, target_gs)
