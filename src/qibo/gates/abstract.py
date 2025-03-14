@@ -76,7 +76,7 @@ class Gate:
 
     @property
     def hamming_weight(self):
-        """Return boolean value representing if a Gate is Hamming weight preserving or not."""
+        """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
         return False
 
     @property
