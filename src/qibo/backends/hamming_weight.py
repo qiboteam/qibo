@@ -282,7 +282,7 @@ class HammingWeightBackend(NumpyBackend):
         state[indexes_in] = new_amplitudes_in
         state[indexes_out] = new_amplitudes_out
 
-        # update the |...00...> elements if necessary
+        # update the |...00...> amplitudes if necessary
         if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
             indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
             indexes_in[:, other_qubits] = strings
@@ -294,7 +294,7 @@ class HammingWeightBackend(NumpyBackend):
             )
             state[indexes_in] *= matrix_0000
 
-        # update the |...11...> elements if necessary
+        # update the |...11...> amplitudes if necessary
         if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
             indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
             indexes_in[:, other_qubits] = strings
