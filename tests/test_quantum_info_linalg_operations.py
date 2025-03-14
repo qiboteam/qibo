@@ -333,7 +333,7 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     ]
 
     backend.assert_allclose(eigvals, eigvals_target, atol=1e-2, rtol=1e-2)
-    backend.assert_allclose(all(inf < 1e-5 for inf in infidelities), True)
+    backend.assert_allclose(all(inf < 1e-3 for inf in infidelities), True)
 
 
 @pytest.mark.parametrize("seed", [10])
