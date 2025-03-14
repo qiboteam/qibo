@@ -63,11 +63,11 @@ class HammingWeightBackend(NumpyBackend):
         if isinstance(gate, gates.CCZ):
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
 
-        if len(gate.target_qubits) == 1:
-            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+        # if len(gate.target_qubits) == 1:
+        #     return self._apply_gate_single_qubit(gate, state, nqubits, weight)
 
-        if len(gate.target_qubits) == 2:
-            return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+        # if len(gate.target_qubits) == 2:
+        #     return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
@@ -328,13 +328,20 @@ class HammingWeightBackend(NumpyBackend):
         return state
 
     def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
+        gate_matrix = gate.matrix(backend=self.engine)
         qubits = list(gate.target_qubits)
         gate_qubits = len(qubits)
-        controls = list(gate.control_qubits)
-        ncontrols = len(controls)
+        if 2 ** (gate_qubits) != gate_matrix.shape[0]:
+            qubits = list(gate.qubits)
+            gate_qubits = len(qubits)
+            controls = []
+            ncontrols = 0
+        else:
+            controls = list(gate.control_qubits)
+            ncontrols = len(controls)
+
         other_qubits = list(set(qubits + controls) ^ set(list(range(nqubits))))
         map = qubits + controls + other_qubits
-
         gate_matrix = gate.matrix(backend=self.engine)
 
         if (
@@ -345,7 +352,6 @@ class HammingWeightBackend(NumpyBackend):
 
         strings = list(self._dict_indexes.keys())
         indexes = [index[1] for index in self._dict_indexes.values()]
-
         dim = len(indexes)
         matrix = self.np.zeros((dim, dim), dtype=complex)
         for i, index_i in enumerate(indexes):
