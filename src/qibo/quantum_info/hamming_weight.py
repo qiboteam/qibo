@@ -3,6 +3,7 @@ from typing import Optional, Union
 import numpy as np
 from scipy.special import binom
 
+from qibo import gates
 from qibo.config import raise_error
 from qibo.result import MeasurementOutcomes, QuantumState
 
@@ -26,6 +27,8 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         self._frequencies = None
         self._measurement_gate = None
         self._repeated_execution_frequencies = None
+
+        self._measurement_gate = self.measurement_gate
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
 
@@ -105,7 +108,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
     def frequencies(self, binary: bool = True, registers: bool = False):
         if not self.has_samples():
-            self._probs = self.exact_probabilities()
+            self._probs = self.exact_probabilities(self._measurement_gate.qubits)
         return super().frequencies(binary=binary, registers=registers)
 
     def probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
@@ -117,7 +120,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         nqubits = len(self.measurement_gate.qubits)
 
         if qubits is None:
-            qubits = tuple(range(self.nqubits))
+            qubits = self.measurement_gate.qubits
         else:
             if not set(qubits).issubset(self.measurement_gate.qubits):
                 raise_error(
