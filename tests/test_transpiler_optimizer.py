@@ -3,8 +3,14 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler.optimizer import Preprocessing, Rearrange
-from qibo.transpiler.optimizer import InverseCancellation, RotationGateFusion, U3GateFusion
+from qibo.transpiler.optimizer import (
+    InverseCancellation,
+    Preprocessing,
+    Rearrange,
+    RotationGateFusion,
+    U3GateFusion,
+)
+
 
 def test_preprocessing_error(star_connectivity):
     circ = Circuit(7)
@@ -95,8 +101,8 @@ def test_inversecancellation_gatesH():
 
 def test_inversecancellation_gatesCNOT():
     circ = Circuit(2)
-    circ.add(gates.CNOT(0,1))
-    circ.add(gates.CNOT(0,1))
+    circ.add(gates.CNOT(0, 1))
+    circ.add(gates.CNOT(0, 1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
     assert new_circuit.ngates == 0
@@ -105,9 +111,9 @@ def test_inversecancellation_gatesCNOT():
 
 def test_inversecancellation_gatesCNOTXq1():
     circ = Circuit(2)
-    circ.add(gates.CNOT(0,1))
+    circ.add(gates.CNOT(0, 1))
     circ.add(gates.X(1))
-    circ.add(gates.CNOT(0,1))
+    circ.add(gates.CNOT(0, 1))
     circ.add(gates.X(1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -117,9 +123,9 @@ def test_inversecancellation_gatesCNOTXq1():
 
 def test_inversecancellation_gatesCNOTXq0():
     circ = Circuit(2)
-    circ.add(gates.CNOT(0,1))
+    circ.add(gates.CNOT(0, 1))
     circ.add(gates.X(0))
-    circ.add(gates.CNOT(0,1))
+    circ.add(gates.CNOT(0, 1))
     circ.add(gates.X(0))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -129,8 +135,8 @@ def test_inversecancellation_gatesCNOTXq0():
 
 def test_inversecancellation_gatesCZ():
     circ = Circuit(2)
-    circ.add(gates.CZ(0,1))
-    circ.add(gates.CZ(0,1))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
     assert new_circuit.ngates == 0
@@ -139,9 +145,9 @@ def test_inversecancellation_gatesCZ():
 
 def test_inversecancellation_gatesCZXq0():
     circ = Circuit(2)
-    circ.add(gates.CZ(0,1))
+    circ.add(gates.CZ(0, 1))
     circ.add(gates.X(0))
-    circ.add(gates.CZ(0,1))
+    circ.add(gates.CZ(0, 1))
     circ.add(gates.X(0))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -151,9 +157,9 @@ def test_inversecancellation_gatesCZXq0():
 
 def test_inversecancellation_gatesCZXq1():
     circ = Circuit(2)
-    circ.add(gates.CZ(0,1))
+    circ.add(gates.CZ(0, 1))
     circ.add(gates.X(1))
-    circ.add(gates.CZ(0,1))
+    circ.add(gates.CZ(0, 1))
     circ.add(gates.X(1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -163,8 +169,8 @@ def test_inversecancellation_gatesCZXq1():
 
 def test_inversecancellation_gatesSWAP():
     circ = Circuit(2)
-    circ.add(gates.SWAP(0,1))
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
+    circ.add(gates.SWAP(0, 1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
     assert new_circuit.ngates == 0
@@ -173,9 +179,9 @@ def test_inversecancellation_gatesSWAP():
 
 def test_inversecancellation_gatesSWAPXq0():
     circ = Circuit(2)
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
     circ.add(gates.X(0))
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
     circ.add(gates.X(0))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -185,9 +191,9 @@ def test_inversecancellation_gatesSWAPXq0():
 
 def test_inversecancellation_gatesSWAPXq1():
     circ = Circuit(2)
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
     circ.add(gates.X(1))
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
     circ.add(gates.X(1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -197,9 +203,9 @@ def test_inversecancellation_gatesSWAPXq1():
 
 def test_inversecancellation_gatesVarious():
     circ = Circuit(3)
-    circ.add(gates.SWAP(0,1))
-    circ.add(gates.TOFFOLI(0,1,2))
-    circ.add(gates.SWAP(0,1))
+    circ.add(gates.SWAP(0, 1))
+    circ.add(gates.TOFFOLI(0, 1, 2))
+    circ.add(gates.SWAP(0, 1))
     circ.add(gates.X(1))
     inverse_cancellation = InverseCancellation()
     new_circuit = inverse_cancellation(circuit=circ)
@@ -290,7 +296,7 @@ def test_rotationgatefusion_RXsSWAPs():
 def test_rotationgatefusion_RXsTOFFOLI():
     circ = Circuit(3)
     circ.add(gates.RX(0, 3.15))
-    circ.add(gates.TOFFOLI(0,1,2))
+    circ.add(gates.TOFFOLI(0, 1, 2))
     circ.add(gates.RX(0, 3.15))
     rotation_gate_fusion = RotationGateFusion()
     new_circuit = rotation_gate_fusion(circuit=circ)
@@ -301,7 +307,7 @@ def test_rotationgatefusion_RXsTOFFOLI():
 
 def test_rotationgatefusion_1RXTOFFOLI():
     circ = Circuit(3)
-    circ.add(gates.TOFFOLI(0,1,2))
+    circ.add(gates.TOFFOLI(0, 1, 2))
     circ.add(gates.RX(0, 3.15))
     circ.add(gates.RX(0, 3.15))
     rotation_gate_fusion = RotationGateFusion()
@@ -318,18 +324,20 @@ def test_u3gatefusion_1U3():
     new_circuit = u3_gate_fusion(circuit=circ)
     assert new_circuit.ngates == 1
     assert new_circuit.nqubits == 1
-    assert new_circuit.get_parameters() == [(0.5,0.2,0.3)]
+    assert new_circuit.get_parameters() == [(0.5, 0.2, 0.3)]
 
 
 def test_u3gatefusion_2U3():
     circ = Circuit(1)
     circ.add(gates.U3(0, 0.5, 0.2, 0.3))
-    circ.add(gates.U3(0,1.0, 0.4, 0.6))
+    circ.add(gates.U3(0, 1.0, 0.4, 0.6))
     u3_gate_fusion = U3GateFusion()
     new_circuit = u3_gate_fusion(circuit=circ)
     assert new_circuit.ngates == 1
     assert new_circuit.nqubits == 1
-    assert new_circuit.get_parameters() == [(1.3764832408758527, 0.7581212965158095, 0.9626552310874916)]
+    assert new_circuit.get_parameters() == [
+        (1.3764832408758527, 0.7581212965158095, 0.9626552310874916)
+    ]
 
 
 def test_u3gatefusion_2U3():
@@ -351,7 +359,7 @@ def test_u3gatefusion_2U3dif():
     new_circuit = u3_gate_fusion(circuit=circ)
     assert new_circuit.ngates == 2
     assert new_circuit.nqubits == 2
-    assert new_circuit.get_parameters() == [(0.5,0.2,0.3), (0.5,0.2,0.3)]
+    assert new_circuit.get_parameters() == [(0.5, 0.2, 0.3), (0.5, 0.2, 0.3)]
 
 
 def test_u3gatefusion_2U3diffCNOT():
@@ -363,7 +371,7 @@ def test_u3gatefusion_2U3diffCNOT():
     new_circuit = u3_gate_fusion(circuit=circ)
     assert new_circuit.ngates == 3
     assert new_circuit.nqubits == 2
-    assert new_circuit.get_parameters() == [(0.5,0.2,0.3), (0.5,0.2,0.3)]
+    assert new_circuit.get_parameters() == [(0.5, 0.2, 0.3), (0.5, 0.2, 0.3)]
 
 
 def test_u3gatefusion_2U3CNOT():
@@ -375,7 +383,7 @@ def test_u3gatefusion_2U3CNOT():
     new_circuit = u3_gate_fusion(circuit=circ)
     assert new_circuit.ngates == 3
     assert new_circuit.nqubits == 2
-    assert new_circuit.get_parameters() == [(0.5,0.2,0.3), (0.5,0.2,0.3)]
+    assert new_circuit.get_parameters() == [(0.5, 0.2, 0.3), (0.5, 0.2, 0.3)]
 
 
 def test_u3gatefusion_U3VariousGates():
