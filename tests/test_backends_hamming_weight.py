@@ -43,47 +43,6 @@ def test_global_backend(backend):
     assert hamming_bkd.platform == target
 
 
-# THETAS_1Q = [
-#     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
-# ]
-
-# AXES = ["RX", "RY", "RZ"]
-
-
-# @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
-# def test_rotations_1q(backend, theta, axis):
-#     clifford_bkd = construct_clifford_backend(backend)
-#     c = Circuit(3, density_matrix=True)
-#     qubits = np.random.randint(3, size=2)
-#     H_qubits = np.random.choice(range(3), size=2, replace=False)
-#     c.add(gates.H(q) for q in H_qubits)
-#     c.add(getattr(gates, axis)(qubits[0], theta=theta))
-#     c.add(getattr(gates, axis)(qubits[1], theta=theta))
-#     clifford_state = clifford_bkd.execute_circuit(c).state()
-#     numpy_state = numpy_bkd.execute_circuit(c).state()
-#     numpy_state = backend.cast(numpy_state)
-#     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
-
-
-# THETAS_2Q = [i * np.pi for i in range(4)]
-
-
-# @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_2Q)))
-# def test_rotations_2q(backend, theta, axis):
-#     clifford_bkd = construct_clifford_backend(backend)
-#     c = Circuit(3, density_matrix=True)
-#     qubits_0 = np.random.choice(range(3), size=2, replace=False)
-#     qubits_1 = np.random.choice(range(3), size=2, replace=False)
-#     H_qubits = np.random.choice(range(3), size=2, replace=False)
-#     c.add(gates.H(q) for q in H_qubits)
-#     c.add(getattr(gates, f"C{axis}")(*qubits_0, theta=theta))
-#     c.add(getattr(gates, f"C{axis}")(*qubits_1, theta=theta))
-#     clifford_state = clifford_bkd.execute_circuit(c).state()
-#     numpy_state = numpy_bkd.execute_circuit(c).state()
-#     numpy_state = backend.cast(numpy_state)
-#     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
-
-
 def get_full_initial_state(state, weight, nqubits, backend):
     if (
         backend._dict_indexes is None
@@ -129,10 +88,12 @@ def test_single_qubit_gates(backend, gate, weight):
         initial_state_copy, weight, 3, hamming_bkd
     )
     initial_state_full = numpy_bkd.cast(initial_state_full)
-    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state_full).state()
+    numpy_result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+    numpy_state = numpy_result.state()
     numpy_state = backend.cast(numpy_state)
 
     backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+    assert numpy_result.symbolic() == hamming_result.symbolic()
 
     c = Circuit(3, density_matrix=False)
     c.add(gate1.controlled_by(1))
@@ -147,10 +108,12 @@ def test_single_qubit_gates(backend, gate, weight):
         initial_state_copy, weight, 3, hamming_bkd
     )
     initial_state_full = numpy_bkd.cast(initial_state_full)
-    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state_full).state()
+    numpy_result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+    numpy_state = numpy_result.state()
     numpy_state = backend.cast(numpy_state)
 
     backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+    assert numpy_result.symbolic() == hamming_result.symbolic()
 
 
 TWO_QUBIT_GATES = ["CZ", "SWAP", "iSWAP", "SiSWAP", "SiSWAPDG", "FSWAP", "SYC"]
@@ -183,9 +146,12 @@ def test_two_qubit_gates(backend, gate, weight):
         initial_state_copy, weight, 3, hamming_bkd
     )
     initial_state_full = numpy_bkd.cast(initial_state_full)
-    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state_full).state()
+    numpy_result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+    numpy_state = numpy_result.state()
     numpy_state = backend.cast(numpy_state)
+
     backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+    assert numpy_result.symbolic() == hamming_result.symbolic()
 
     if len(gate1.control_qubits) == 0:
         c = Circuit(3, density_matrix=False)
@@ -201,12 +167,12 @@ def test_two_qubit_gates(backend, gate, weight):
             initial_state_copy, weight, 3, hamming_bkd
         )
         initial_state_full = numpy_bkd.cast(initial_state_full)
-        numpy_state = numpy_bkd.execute_circuit(
-            c, initial_state=initial_state_full
-        ).state()
+        numpy_result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+        numpy_state = numpy_result.state()
         numpy_state = backend.cast(numpy_state)
 
         backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+        assert numpy_result.symbolic() == hamming_result.symbolic()
 
 
 @pytest.mark.parametrize("weight", [1, 2, 3])
@@ -235,6 +201,13 @@ def test_ccz(backend, weight):
         initial_state_copy, weight, 3, hamming_bkd
     )
     initial_state_full = numpy_bkd.cast(initial_state_full)
-    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state_full).state()
+    numpy_result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+    numpy_state = numpy_result.state()
     numpy_state = backend.cast(numpy_state)
+
     backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+
+
+# @pytest.mark.parametrize("weight", [1, 2, 3])
+# @pytest.mark.parametrize("collapse", [False, True])
+# def test_measurement(backend, weight, collapse):

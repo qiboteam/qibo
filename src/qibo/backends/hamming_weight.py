@@ -406,6 +406,7 @@ class HammingWeightBackend(NumpyBackend):
         strings = list(self._dict_indexes.keys())
 
         for i in self.np.nonzero(state)[0]:
+            i = int(i)
             b = strings[i]
             if self.np.abs(state[i]) >= cutoff:
                 x = self.np.round(state[i], decimals)

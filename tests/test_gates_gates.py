@@ -1523,6 +1523,8 @@ def test_unitary_initialization(backend):
 
     assert not gates.Unitary(matrix, 0, 1).clifford
     assert not gates.Unitary(matrix, 0, 1).hamming_weight
+    gate.hamming_weight = True
+    assert gate.hamming_weight
     assert not gates.Unitary(matrix, 0, 1, check_unitary=False).unitary
     assert gates.Unitary(random_unitary(2, backend=backend), 0).unitary
 
