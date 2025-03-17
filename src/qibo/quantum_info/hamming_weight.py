@@ -133,8 +133,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         Returns:
             The array containing the probabilities of the measured qubits.
         """
-        nqubits = len(self.measurement_gate.qubits)
-
         if qubits is None:
             qubits = self.measurement_gate.qubits
         else:
@@ -143,8 +141,9 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
                     RuntimeError,
                     f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
                 )
-            qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
+        qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
 
+        nqubits = len(self.measurement_gate.qubits)
         probs = [0 for _ in range(2**nqubits)]
         for state, freq in self.frequencies(binary=False).items():
             probs[state] = freq / self.nshots
@@ -155,4 +154,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         if nqubits != self.nqubits:
             self.backend._dict_indexes = None
 
-        return probs
+        return super(self.backend.__class__, self.backend).calculate_probabilities(
+            self.engine.np.sqrt(probs), qubits, nqubits
+        )

@@ -8,7 +8,6 @@ from scipy.special import binom
 
 from qibo import Circuit, gates, get_backend, set_backend
 from qibo.backends import HammingWeightBackend, NumpyBackend, _get_engine_name
-from qibo.noise import DepolarizingError
 
 numpy_bkd = NumpyBackend()
 
@@ -54,7 +53,6 @@ def get_full_initial_state(state, weight, nqubits, backend):
     for i, j in backend._dict_indexes.values():
         full_state[j] = state[i]
 
-    # full_state = backend.engine.cast(full_state)
     return full_state
 
 
@@ -344,6 +342,25 @@ def test_measurement(backend, weight, collapse, nshots):
             )
 
 
+@pytest.mark.parametrize("weight", [1, 2, 3])
+def test_probabilities_from_samples(backend, weight):
+    backend.set_seed(2024)
+    hamming_bkd = construct_hamming_weight_backend(backend)
+
+    c = Circuit(3)
+    c.add(gates.SWAP(0, 1))
+    c.add(gates.M(0, 2))
+    result = hamming_bkd.execute_circuit(c, weight=weight, nshots=10)
+    probs_1 = result.probabilities(qubits=[0])
+    c = Circuit(3)
+    c.add(gates.SWAP(0, 1))
+    c.add(gates.M(0))
+    result = hamming_bkd.execute_circuit(c, weight=weight, nshots=10)
+    probs_2 = result.probabilities()
+
+    backend.assert_allclose(probs_1, probs_2)
+
+
 def test_errors(backend):
     hamming_bkd = construct_hamming_weight_backend(backend)
 
@@ -368,5 +385,10 @@ def test_errors(backend):
 
     c.density_matrix = False
     c.add(gates.DepolarizingChannel(0, 0.1))
+    with pytest.raises(RuntimeError):
+        hamming_bkd.execute_circuit(c, weight=1)
+
+    c = Circuit(3)
+    c.add(gates.X(0))
     with pytest.raises(RuntimeError):
         hamming_bkd.execute_circuit(c, weight=1)
