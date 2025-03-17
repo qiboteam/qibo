@@ -4,6 +4,7 @@ import numpy as np
 from scipy.special import binom
 
 from qibo import gates
+from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.result import MeasurementOutcomes, QuantumState
 
@@ -54,7 +55,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
-        if self.nshots is None:
+        if self.nshots is None or len(self.measurements) == 0:
             return self.exact_probabilities(qubits)
         else:
             return self.probabilities_from_samples(qubits)
@@ -103,12 +104,27 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
                 a single tensor is returned which contains samples from all the
                 measured qubits, independently of their registers.
         """
+
+        if len(self.measurements) == 0:
+            raise_error(
+                RuntimeError,
+                "No measurements were performed. Cannot return samples.",
+            )
+
         self._probs = self.exact_probabilities()
         return super().samples(binary=binary, registers=registers)
 
     def frequencies(self, binary: bool = True, registers: bool = False):
+
+        if len(self.measurements) == 0:
+            raise_error(
+                RuntimeError,
+                "No measurements were performed. Cannot return frequencies.",
+            )
+
         if not self.has_samples():
             self._probs = self.exact_probabilities(self._measurement_gate.qubits)
+        self._probs = [float(p) for p in self._probs]
         return super().frequencies(binary=binary, registers=registers)
 
     def probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
