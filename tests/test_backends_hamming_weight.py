@@ -208,6 +208,80 @@ def test_ccz(backend, weight):
     backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
 
 
+@pytest.mark.parametrize("weight", [1, 2, 3, 4])
+def test_n_qubit_gates(backend, weight):
+    hamming_bkd = construct_hamming_weight_backend(backend)
+    dim = int(binom(4, weight))
+    initial_state = np.random.rand(dim)
+    initial_state /= np.linalg.norm(initial_state)
+    initial_state = backend.cast(initial_state)
+    initial_state_copy = initial_state.copy()
+
+    gate = gates.fSim(0, 1, 0.1, 0.3)
+    id = gates.I(0).matrix(numpy_bkd)
+    gate_matrix = gate.matrix(numpy_bkd)
+    gate1_matrix = np.kron(id, gate_matrix)
+    gate2_matrix = np.kron(gate_matrix, id)
+    gate1 = gates.Unitary(backend.cast(gate1_matrix), 0, 1, 2)
+    gate2 = gates.Unitary(backend.cast(gate2_matrix), 0, 1, 2)
+    gate1_numpy = gates.Unitary(gate1_matrix, 0, 1, 2)
+    gate2_numpy = gates.Unitary(gate2_matrix, 0, 1, 2)
+    gate1.hamming_weight = True
+    gate2.hamming_weight = True
+
+    c = Circuit(4, density_matrix=False)
+    c.add(gate1)
+    c.add(gate2)
+    hamming_result = hamming_bkd.execute_circuit(
+        c, weight=weight, initial_state=initial_state
+    )
+    hamming_state = hamming_result.state()
+    hamming_full_state = hamming_result.full_state()
+    initial_state_full = get_full_initial_state(
+        initial_state_copy, weight, 4, hamming_bkd
+    )
+
+    c_numpy = Circuit(4, density_matrix=False)
+    c_numpy.add(gate1_numpy)
+    c_numpy.add(gate2_numpy)
+
+    initial_state_full = numpy_bkd.cast(initial_state_full)
+    numpy_result = numpy_bkd.execute_circuit(c_numpy, initial_state=initial_state_full)
+    numpy_state = numpy_result.state()
+    numpy_state = backend.cast(numpy_state)
+
+    backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+    assert numpy_result.symbolic() == hamming_result.symbolic()
+
+    if len(gate1.control_qubits) == 0:
+        c = Circuit(4, density_matrix=False)
+        c.add(gate1.controlled_by(3))
+        c.add(gate2.controlled_by(3))
+
+        hamming_result = hamming_bkd.execute_circuit(
+            c, weight=weight, initial_state=initial_state
+        )
+        hamming_state = hamming_result.state()
+        hamming_full_state = hamming_result.full_state()
+        initial_state_full = get_full_initial_state(
+            initial_state_copy, weight, 4, hamming_bkd
+        )
+
+        c_numpy = Circuit(4, density_matrix=False)
+        c_numpy.add(gate1_numpy.controlled_by(3))
+        c_numpy.add(gate2_numpy.controlled_by(3))
+
+        initial_state_full = numpy_bkd.cast(initial_state_full)
+        numpy_result = numpy_bkd.execute_circuit(
+            c_numpy, initial_state=initial_state_full
+        )
+        numpy_state = numpy_result.state()
+        numpy_state = backend.cast(numpy_state)
+
+        backend.assert_allclose(hamming_full_state, numpy_state, atol=1e-8)
+        assert numpy_result.symbolic() == hamming_result.symbolic()
+
+
 @pytest.mark.parametrize("weight", [1, 2, 3])
 @pytest.mark.parametrize("collapse", [False, True])
 @pytest.mark.parametrize("nshots", [None, 100])
