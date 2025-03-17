@@ -1,6 +1,7 @@
 import collections
 import copy
 import sys
+from collections.abc import Iterable
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -407,7 +408,8 @@ class Circuit:
         return new_circuit
 
     def copy(self, deep: bool = False):
-        """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
+        """Creates a copy of the current ``circuit`` as a new ``Circuit``
+        model.
 
         Args:
             deep (bool): If ``True`` copies of the  gate objects will be created
@@ -602,7 +604,7 @@ class Circuit:
             If the circuit contains measurement gates with ``collapse=True``
             a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
-        if isinstance(gate, collections.abc.Iterable):
+        if isinstance(gate, Iterable):
             for g in gate:
                 self.add(g)
 
@@ -702,7 +704,8 @@ class Circuit:
 
     @property
     def gate_types(self) -> collections.Counter:
-        """``collections.Counter`` with the number of appearances of each gate type."""
+        """``collections.Counter`` with the number of appearances of each gate
+        type."""
         gatecounter = collections.Counter()
         for gate in self.queue:
             gatecounter[gate.__class__] += 1
@@ -710,7 +713,8 @@ class Circuit:
 
     @property
     def gate_names(self) -> collections.Counter:
-        """``collections.Counter`` with the number of appearances of each gate name."""
+        """``collections.Counter`` with the number of appearances of each gate
+        name."""
         gatecounter = collections.Counter()
         for gate in self.queue:
             gatecounter[gate.name] += 1
@@ -807,8 +811,6 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 circuit.set_parameters(params)
         """
-        from collections.abc import Iterable
-
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
@@ -871,7 +873,7 @@ class Circuit:
                             yield x
 
                     params.extend(traverse(gparams))
-                elif isinstance(gparams, collections.abc.Iterable):
+                elif isinstance(gparams, Iterable):
                     params.extend(gparams)
                 else:
                     params.append(gparams)
@@ -1382,7 +1384,8 @@ class Circuit:
 
 
 def _resolve_qubits(qubits, wire_names):
-    """Parse the input arguments for defining a circuit. Allows the user to initialize the circuit as follows:
+    """Parse the input arguments for defining a circuit. Allows the user to
+    initialize the circuit as follows:
 
     Example:
         .. code-block:: python
