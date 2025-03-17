@@ -124,7 +124,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         if not self.has_samples():
             self._probs = self.exact_probabilities(self._measurement_gate.qubits)
-        self._probs = [float(p) for p in self._probs]
+            self._probs = [float(p) for p in self._probs]
         return super().frequencies(binary=binary, registers=registers)
 
     def probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):

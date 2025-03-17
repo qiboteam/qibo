@@ -1046,6 +1046,7 @@ def test_rzz(backend):
 
     assert gates.RZZ(0, 1, theta=theta).qasm_label == "rzz"
     assert not gates.RZZ(0, 1, theta).clifford
+    assert gates.RZZ(0, 1, theta).hamming_weight
     assert gates.RZZ(0, 1, theta).unitary
 
 

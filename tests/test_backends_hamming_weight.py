@@ -209,7 +209,7 @@ def test_ccz(backend, weight):
 
 
 @pytest.mark.parametrize("weight", [1, 2, 3])
-@pytest.mark.parametrize("collapse", [False, False])
+@pytest.mark.parametrize("collapse", [False, True])
 @pytest.mark.parametrize("nshots", [None, 100])
 def test_measurement(backend, weight, collapse, nshots):
     backend.set_seed(2024)
@@ -224,7 +224,9 @@ def test_measurement(backend, weight, collapse, nshots):
 
     c = Circuit(3)
     c.add(gates.SWAP(0, 1))
-    c.add(gates.M(0, 2, collapse=collapse))
+    if collapse and nshots is not None:
+        c.add(gates.M(1, collapse=collapse))
+    c.add(gates.M(0, 2))
 
     hamming_result = hamming_bkd.execute_circuit(
         c, weight=weight, initial_state=initial_state, nshots=nshots
@@ -243,16 +245,25 @@ def test_measurement(backend, weight, collapse, nshots):
     if nshots is None:
         backend.assert_allclose(hamming_probabilities, numpy_probabilities, atol=1e-8)
     else:
-        hamming_freq = hamming_result.frequencies()
-        numpy_freq = numpy_result.frequencies()
+        if collapse:
+            hamming_samples = hamming_result.samples()
+            numpy_samples = numpy_result.samples()
+            backend.assert_allclose(hamming_samples, numpy_samples)
+        else:
+            hamming_freq = hamming_result.frequencies()
+            numpy_freq = numpy_result.frequencies()
 
-        numpy_probabilities = np.zeros(4)
-        for key, value in numpy_freq.items():
-            numpy_probabilities[int(key, 2)] = value / nshots
+            numpy_probabilities = np.zeros(4)
+            for key, value in numpy_freq.items():
+                numpy_probabilities[int(key, 2)] = value / nshots
 
-        hamming_freq_probs = np.zeros(4)
-        for key, value in hamming_freq.items():
-            hamming_freq_probs[int(key, 2)] = value / nshots
+            hamming_freq_probs = np.zeros(4)
+            for key, value in hamming_freq.items():
+                hamming_freq_probs[int(key, 2)] = value / nshots
 
-        backend.assert_allclose(hamming_probabilities, numpy_probabilities, atol=1e-1)
-        backend.assert_allclose(hamming_freq_probs, hamming_probabilities, atol=1e-8)
+            backend.assert_allclose(
+                hamming_probabilities, numpy_probabilities, atol=1e-1
+            )
+            backend.assert_allclose(
+                hamming_freq_probs, hamming_probabilities, atol=1e-8
+            )
