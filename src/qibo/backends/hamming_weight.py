@@ -27,7 +27,7 @@ class HammingWeightBackend(NumpyBackend):
             self.engine = construct_backend(self.platform)
         elif engine == "numba":
             self.engine = construct_backend("qibojit", platform=self.platform)
-        elif engine == "cupy":
+        elif engine == "cupy":  # pragma: no cover
             self.engine = construct_backend("qibojit", platform=self.platform)
         else:
             raise_error(

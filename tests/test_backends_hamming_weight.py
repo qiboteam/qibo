@@ -102,6 +102,7 @@ def test_single_qubit_gates(backend, gate, weight):
     hamming_result = hamming_bkd.execute_circuit(
         c, weight=weight, initial_state=initial_state
     )
+    hamming_result.backend._dict_indexes = None
     hamming_state = hamming_result.state()
     hamming_full_state = hamming_result.full_state()
     initial_state_full = get_full_initial_state(
@@ -341,3 +342,31 @@ def test_measurement(backend, weight, collapse, nshots):
             backend.assert_allclose(
                 hamming_freq_probs, hamming_probabilities, atol=1e-8
             )
+
+
+def test_errors(backend):
+    hamming_bkd = construct_hamming_weight_backend(backend)
+
+    c = Circuit(3)
+    c.add(gates.Z(0))
+    result = hamming_bkd.execute_circuit(c, weight=1)
+    with pytest.raises(RuntimeError):
+        result.samples()
+    with pytest.raises(RuntimeError):
+        result.frequencies()
+
+    c.add(gates.M(1))
+    result = hamming_bkd.execute_circuit(c, weight=1, nshots=10)
+    with pytest.raises(RuntimeError):
+        result.probabilities(qubits=[0, 1])
+
+    c = Circuit(3)
+    c.add(gates.Z(0))
+    c.density_matrix = True
+    with pytest.raises(RuntimeError):
+        hamming_bkd.execute_circuit(c, weight=1)
+
+    c.density_matrix = False
+    c.add(gates.DepolarizingChannel(0, 0.1))
+    with pytest.raises(RuntimeError):
+        hamming_bkd.execute_circuit(c, weight=1)
