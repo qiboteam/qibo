@@ -14,8 +14,11 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
     def __init__(self, state, weight, nqubits, measurements, nshots, backend=None):
         from qibo.backends import _check_backend
 
-        self.backend = _check_backend(backend)
-        self.engine = self.backend.engine
+        backend = _check_backend(backend)
+        QuantumState.__init__(self, state, backend.engine)
+        MeasurementOutcomes.__init__(self, measurements, backend.engine)
+        self._backend = backend
+        self.engine = self._backend.engine
         self.measurements = measurements
         self.nqubits = nqubits
         self.nshots = nshots
@@ -33,22 +36,22 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
 
-        terms = self.backend.calculate_symbolic(
+        terms = self._backend.calculate_symbolic(
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
         )
         return " + ".join(terms)
 
     def full_state(self):
         if (
-            self.backend._dict_indexes is None
-            or list(self.backend._dict_indexes.keys())[0].count("1") != self.weight
+            self._backend._dict_indexes is None
+            or list(self._backend._dict_indexes.keys())[0].count("1") != self.weight
         ):
-            self.backend._dict_indexes = self.backend._get_lexicographical_order(
+            self._backend._dict_indexes = self._backend._get_lexicographical_order(
                 self.nqubits, self.weight
             )
 
         state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
-        for i, j in self.backend._dict_indexes.values():
+        for i, j in self._backend._dict_indexes.values():
             state[j] = self._state[i]
 
         state = self.engine.cast(state)
@@ -57,8 +60,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
         if self.nshots is None or len(self.measurements) == 0:
             return self.exact_probabilities(qubits)
-        else:
-            return self.probabilities_from_samples(qubits)
+        return self.probabilities_from_samples(qubits)
 
     def exact_probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculates measurement probabilities by tracing out qubits.
@@ -79,7 +81,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         if qubits is None:
             qubits = tuple(range(self.nqubits))
 
-        return self.backend.calculate_probabilities(
+        return self._backend.calculate_probabilities(
             self._state, qubits, self.weight, self.nqubits
         )
 
@@ -124,7 +126,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         if not self.has_samples():
             self._probs = self.exact_probabilities(self._measurement_gate.qubits)
-            self._probs = [float(p) for p in self._probs]
+
         return super().frequencies(binary=binary, registers=registers)
 
     def probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
@@ -152,8 +154,8 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         self._probs = probs
 
         if nqubits != self.nqubits:
-            self.backend._dict_indexes = None
+            self._backend._dict_indexes = None
 
-        return super(self.backend.__class__, self.backend).calculate_probabilities(
+        return self.backend.calculate_probabilities(
             self.engine.np.sqrt(probs), qubits, nqubits
         )

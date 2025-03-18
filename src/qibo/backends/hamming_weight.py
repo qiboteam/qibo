@@ -29,6 +29,12 @@ class HammingWeightBackend(NumpyBackend):
             self.engine = construct_backend("qibojit", platform=self.platform)
         elif engine == "cupy":  # pragma: no cover
             self.engine = construct_backend("qibojit", platform=self.platform)
+        elif engine == "cuquantum":  # pragma: no cover
+            self.engine = construct_backend("qibojit", platform=self.platform)
+        # elif engine == "tensorflow":  # pragma: no cover
+        #     self.engine = construct_backend("qiboml", platform=self.platform)
+        # elif engine == "torch":
+        #     self.engine = construct_backend("qiboml", platform=self.platform)
         else:
             raise_error(
                 NotImplementedError,
@@ -63,11 +69,11 @@ class HammingWeightBackend(NumpyBackend):
         if isinstance(gate, gates.CCZ):
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
 
-        # if len(gate.target_qubits) == 1:
-        #     return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+        if len(gate.target_qubits) == 1:
+            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
 
-        # if len(gate.target_qubits) == 2:
-        #     return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+        if len(gate.target_qubits) == 2:
+            return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
@@ -238,6 +244,7 @@ class HammingWeightBackend(NumpyBackend):
         # Right now, it works only with two-qubit Givens rotations,
         # e.g. gates.RBS, gates.GIVENS, gates.SWAP, gates.iSWAP,
         # gates.SiSWAP, and gates.RZZ (up to global phase).
+        # state = self.cast(state_1,copy=True)
         qubits = list(gate.target_qubits)
         controls = list(gate.control_qubits)
         ncontrols = len(controls)
@@ -259,52 +266,54 @@ class HammingWeightBackend(NumpyBackend):
         matrix_1001 = matrix[2, 1]
         matrix_1010 = matrix[2, 2]
 
-        indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
-        indexes_in[:, other_qubits] = strings
-        if len(controls) > 0:
-            indexes_in[:, controls] = "1"
-        indexes_in[:, qubits] = ["1", "0"]
-        indexes_out = self.np.copy(indexes_in)
-        indexes_out[:, qubits] = ["0", "1"]
-
-        indexes_in = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
-        )
-        indexes_out = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
-        )
-
-        old_in, old_out = state[indexes_in], state[indexes_out]
-
-        new_amplitudes_in = matrix_1010 * old_in + matrix_1001 * old_out
-        new_amplitudes_out = matrix_0101 * old_out + matrix_0110 * old_in
-
-        state[indexes_in] = new_amplitudes_in
-        state[indexes_out] = new_amplitudes_out
-
-        # update the |...00...> amplitudes if necessary
-        if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
+        if weight - ncontrols > 0 and weight not in [0, nqubits]:
             indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
             indexes_in[:, other_qubits] = strings
             if len(controls) > 0:
                 indexes_in[:, controls] = "1"
-            indexes_in[:, qubits] = ["0", "0"]
+            indexes_in[:, qubits] = ["1", "0"]
+            indexes_out = self.np.copy(indexes_in)
+            indexes_out[:, qubits] = ["0", "1"]
             indexes_in = self.np.array(
                 [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
             )
-            state[indexes_in] *= matrix_0000
+            indexes_out = self.np.array(
+                [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
+            )
 
-        # update the |...11...> amplitudes if necessary
-        if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
-            indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
-            indexes_in[:, other_qubits] = strings
-            if len(controls) > 0:
-                indexes_in[:, controls] = "1"
-            indexes_in[:, qubits] = ["1", "1"]
-            indexes_in = self.np.array(
-                [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
-            )
-            state[indexes_in] *= matrix_1111
+            old_in, old_out = state[indexes_in], state[indexes_out]
+            new_amplitudes_in = matrix_1010 * old_in + matrix_1001 * old_out
+            new_amplitudes_out = matrix_0101 * old_out + matrix_0110 * old_in
+
+            state[indexes_in] = new_amplitudes_in
+            state[indexes_out] = new_amplitudes_out
+
+        if weight - ncontrols >= 0:
+            # update the |...00...> amplitudes if necessary
+            if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
+                indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+                indexes_in[:, other_qubits] = strings
+                if len(controls) > 0:
+                    indexes_in[:, controls] = "1"
+                indexes_in[:, qubits] = ["0", "0"]
+                indexes_in = self.np.array(
+                    [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+                )
+                state[indexes_in] *= matrix_0000
+
+        if weight - ncontrols > 1:
+            strings = self._get_cached_strings(nqubits, weight - 1, ncontrols)
+            # update the |...11...> amplitudes if necessary
+            if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
+                indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+                indexes_in[:, other_qubits] = strings
+                if len(controls) > 0:
+                    indexes_in[:, controls] = "1"
+                indexes_in[:, qubits] = ["1", "1"]
+                indexes_in = self.np.array(
+                    [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+                )
+                state[indexes_in] *= matrix_1111
 
         return state
 
@@ -404,7 +413,6 @@ class HammingWeightBackend(NumpyBackend):
             self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = list(self._dict_indexes.keys())
-
         for i in self.np.nonzero(state)[0]:
             i = int(i)
             b = strings[i]
@@ -433,7 +441,7 @@ class HammingWeightBackend(NumpyBackend):
             measured_string = "".join(string[q] for q in qubits)
             measured_strings[measured_string] = measured_strings.get(
                 measured_string, 0
-            ) + self.np.real(state[index] ** 2)
+            ) + self.np.real(self.np.abs(state[index]) ** 2)
 
         strings = list(measured_strings.keys())
         indexes = [int(string, 2) for string in strings]
@@ -447,7 +455,6 @@ class HammingWeightBackend(NumpyBackend):
 
     def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
         state = self.cast(state)
-
         if (
             self._dict_indexes is None
             or list(self._dict_indexes.keys())[0].count("1") != weight
@@ -457,7 +464,6 @@ class HammingWeightBackend(NumpyBackend):
         strings = list(self._dict_indexes.keys())
         indexes = [index[0] for index in self._dict_indexes.values()]
         binshot = self.samples_to_binary(shot, len(qubits))[0]
-
         for string, index in zip(strings, indexes):
             if "".join(str(s) for s in binshot) != "".join(string[q] for q in qubits):
                 state[index] = 0
