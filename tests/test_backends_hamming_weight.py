@@ -14,13 +14,6 @@ numpy_bkd = NumpyBackend()
 
 
 def construct_hamming_weight_backend(backend):
-    if backend.__class__.__name__ in (
-        "TensorflowBackend",
-        "PyTorchBackend",
-    ):
-        with pytest.raises(NotImplementedError):
-            hamming_backend = HammingWeightBackend(backend.name)
-
     return HammingWeightBackend(_get_engine_name(backend))
 
 
@@ -55,7 +48,7 @@ def get_full_initial_state(state, weight, nqubits, backend):
     return full_state
 
 
-SINGLE_QUBIT_GATES = ["Z", "S", "SDG", "T", "TDG", "I"]
+SINGLE_QUBIT_GATES = ["Z", "S", "SDG", "T", "TDG", "I", "RZ"]
 
 
 @pytest.mark.parametrize("gate", SINGLE_QUBIT_GATES)
@@ -67,8 +60,13 @@ def test_single_qubit_gates(backend, gate, weight):
     initial_state_full = get_full_initial_state(initial_state, weight, 3, hamming_bkd)
 
     qubits = [0, 2]
-    gate1 = getattr(gates, gate)(qubits[0])
-    gate2 = getattr(gates, gate)(qubits[1])
+    if gate == "RZ":
+        theta = 0.123
+        gate1 = gates.RZ(qubits[0], theta)
+        gate2 = gates.RZ(qubits[1], theta)
+    else:
+        gate1 = getattr(gates, gate)(qubits[0])
+        gate2 = getattr(gates, gate)(qubits[1])
 
     c = Circuit(3, density_matrix=False)
     c.add(gate1)
@@ -86,11 +84,19 @@ def test_single_qubit_gates(backend, gate, weight):
 
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
 
-    hamming_result.backend._dict_indexes = None
+    hamming_result._backend._dict_indexes = None
     assert result.symbolic() == hamming_result.symbolic()
 
     # with controls
     c = Circuit(3, density_matrix=False)
+    if gate == "RZ":
+        theta = 0.123
+        gate1 = gates.RZ(qubits[0], theta)
+        gate2 = gates.RZ(qubits[1], theta)
+    else:
+        gate1 = getattr(gates, gate)(qubits[0])
+        gate2 = getattr(gates, gate)(qubits[1])
+
     c.add(gate1.controlled_by(1))
     c.add(gate2.controlled_by(0))
 
@@ -101,8 +107,8 @@ def test_single_qubit_gates(backend, gate, weight):
     hamming_result = hamming_bkd.execute_circuit(
         c, weight=weight, initial_state=initial_state
     )
-    hamming_result.backend._dict_indexes = None
     hamming_state = hamming_result.state()
+    hamming_result._backend._dict_indexes = None
     hamming_full_state = hamming_result.full_state()
 
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
@@ -143,7 +149,7 @@ def test_two_qubit_gates(backend, gate, weight):
 
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
 
-    hamming_result.backend._dict_indexes = None
+    hamming_result._backend._dict_indexes = None
     assert result.symbolic() == hamming_result.symbolic()
 
     if len(gate1.control_qubits) == 0:
@@ -202,6 +208,30 @@ def test_ccz(backend, weight):
 
 
 @pytest.mark.parametrize("weight", [1, 2, 3, 4])
+def test_apply_gate_n_qubit_single(backend, weight):
+    hamming_bkd = construct_hamming_weight_backend(backend)
+    nqubits = 4
+    dim = int(binom(nqubits, weight))
+    initial_state = random_statevector(dim, backend=backend, seed=1237)
+    initial_state_full = get_full_initial_state(
+        initial_state, weight, nqubits, hamming_bkd
+    )
+
+    gate = gates.Z(0).controlled_by(1)
+
+    state = backend.apply_gate(gate, initial_state_full, nqubits)
+    hamming_state = hamming_bkd._apply_gate_n_qubit(
+        gate, initial_state, nqubits, weight
+    )
+
+    hamming_full_state = get_full_initial_state(
+        hamming_state, weight, nqubits, hamming_bkd
+    )
+
+    backend.assert_allclose(hamming_full_state, state, atol=1e-8)
+
+
+@pytest.mark.parametrize("weight", [1, 2, 3, 4])
 def test_n_qubit_gates(backend, weight):
     hamming_bkd = construct_hamming_weight_backend(backend)
     dim = int(binom(4, weight))
@@ -238,7 +268,7 @@ def test_n_qubit_gates(backend, weight):
     state = hamming_bkd._apply_gate_n_qubit(gate2, state, 4, weight)
     backend.assert_allclose(hamming_state, state, atol=1e-8)
 
-    hamming_result.backend._dict_indexes = None
+    hamming_result._backend._dict_indexes = None
     assert result.symbolic() == hamming_result.symbolic()
 
     if len(gate1.control_qubits) == 0:
@@ -288,7 +318,7 @@ def test_measurement(backend, weight, collapse, nshots):
     hamming_result = hamming_bkd.execute_circuit(
         c, weight=weight, initial_state=initial_state, nshots=nshots
     )
-    hamming_result.backend._dict_indexes = None
+    hamming_result._backend._dict_indexes = None
     hamming_probabilities = hamming_result.probabilities()
 
     if nshots is None:

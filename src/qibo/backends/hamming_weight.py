@@ -31,11 +31,11 @@ class HammingWeightBackend(NumpyBackend):
             self.engine = construct_backend("qibojit", platform=self.platform)
         elif engine == "cuquantum":  # pragma: no cover
             self.engine = construct_backend("qibojit", platform=self.platform)
-        # elif engine == "tensorflow":  # pragma: no cover
-        #     self.engine = construct_backend("qiboml", platform=self.platform)
-        # elif engine == "torch":
-        #     self.engine = construct_backend("qiboml", platform=self.platform)
-        else:
+        elif engine == "tensorflow":  # pragma: no cover
+            self.engine = construct_backend("qiboml", platform=self.platform)
+        elif engine == "torch":  # pragma: no cover
+            self.engine = construct_backend("qiboml", platform=self.platform)
+        else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
                 f"Backend `{engine}` is not supported for Hamming weight preserving circuit simulation.",
@@ -214,7 +214,7 @@ class HammingWeightBackend(NumpyBackend):
 
         indexes_one = self.np.zeros((len(strings_1), nqubits), dtype=str)
 
-        if matrix_00 != 1.0:
+        if matrix_00 != 1.0 and nqubits - weight > 0:
             indexes_zero = self.np.zeros((len(strings_0), nqubits), dtype=str)
             indexes_zero[:, other_qubits] = strings_0
             indexes_zero[:, qubits] = ["0"]
