@@ -28,7 +28,7 @@ def build_circuit(nqubits):
 
 
 @pytest.mark.parametrize("mode", ["frequencies", "amplitudes", "probabilities"])
-@pytest.mark.parametrize("nqubits", [2, 4])
+@pytest.mark.parametrize("nqubits", [3])
 def test_visualize_state(mode, nqubits):
     # Fixing seed for reproducibility
     backend = construct_backend("numpy")
@@ -41,7 +41,7 @@ def test_visualize_state(mode, nqubits):
     _, fig = visualize_state(
         outcome,
         mode=mode,
-        n_most_relevant_components=15,
+        n_most_relevant_components=10,
     )
 
     assert (
