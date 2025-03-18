@@ -86,6 +86,7 @@ def test_single_qubit_gates(backend, gate, weight):
 
     hamming_result._backend._dict_indexes = None
     assert result.symbolic() == hamming_result.symbolic()
+    assert result.symbolic(max_terms=1) == hamming_result.symbolic(max_terms=1)
 
     # with controls
     c = Circuit(3, density_matrix=False)
@@ -336,10 +337,20 @@ def test_measurement(backend, weight, collapse, nshots):
             initial_state[0] = 1 / np.sqrt(2)
             initial_state[1] = 1 / np.sqrt(2)
             initial_state = backend.cast(initial_state)
+
             hamming_bkd._dict_indexes = None
-            state = gates.M(0, collapse=True).apply_hamming_weight(
-                hamming_bkd, initial_state, weight, nqubits
+            measure_gate = gates.M(0, collapse=True)
+            measure_gate.result.backend = backend
+            qubits = sorted(measure_gate.target_qubits)
+            probs = hamming_bkd.calculate_probabilities(
+                initial_state, qubits, weight, nqubits
             )
+            shot = measure_gate.result.add_shot(probs, backend=hamming_bkd.engine)
+            hamming_bkd._dict_indexes = None
+            state = hamming_bkd.collapse_state(
+                initial_state, qubits, shot, weight, nqubits
+            )
+
             backend.assert_allclose(state, initial_state, atol=1e-8)
 
         else:
