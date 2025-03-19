@@ -219,7 +219,7 @@ class M(Gate):
         self.result.add_shot_from_sample(sample[0])
         return state
 
-    def apply_hamming_weight(self, backend, state, weight, nqubits):
+    def apply_hamming_weight(self, backend, state, nqubits, weight):
         self.result.backend = backend
         if not self.collapse:
             return state

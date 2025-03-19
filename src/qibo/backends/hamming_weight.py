@@ -64,7 +64,7 @@ class HammingWeightBackend(NumpyBackend):
 
     def apply_gate(self, gate, state, nqubits, weight):
         if isinstance(gate, gates.M):
-            return gate.apply_hamming_weight(self, state, weight, nqubits)
+            return gate.apply_hamming_weight(self, state, nqubits, weight)
 
         if isinstance(gate, gates.CCZ):
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
@@ -240,11 +240,32 @@ class HammingWeightBackend(NumpyBackend):
 
         return state
 
+    def _update_amplitudes(
+        self,
+        state,
+        qubits,
+        controls,
+        other_qubits,
+        nqubits,
+        ncontrols,
+        weight,
+        matrix_element,
+        bitlist,
+        k,
+    ):
+        strings = self._get_cached_strings(nqubits, weight + k, ncontrols)
+        indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+        indexes_in[:, other_qubits] = strings
+        if len(controls) > 0:
+            indexes_in[:, controls] = "1"
+        indexes_in[:, qubits] = bitlist
+        indexes_in = self.np.array(
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+        )
+        state[indexes_in] *= matrix_element
+        return state
+
     def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
-        # Right now, it works only with two-qubit Givens rotations,
-        # e.g. gates.RBS, gates.GIVENS, gates.SWAP, gates.iSWAP,
-        # gates.SiSWAP, and gates.RZZ (up to global phase).
-        # state = self.cast(state_1,copy=True)
         qubits = list(gate.target_qubits)
         controls = list(gate.control_qubits)
         ncontrols = len(controls)
@@ -288,33 +309,41 @@ class HammingWeightBackend(NumpyBackend):
             state[indexes_in] = new_amplitudes_in
             state[indexes_out] = new_amplitudes_out
 
-        if weight - ncontrols >= 0 and nqubits - weight > 1:
+        if (
+            weight - ncontrols >= 0
+            and nqubits - weight > 1
+            and (matrix_0000.real != 1 or abs(matrix_0000.imag) > 0)
+        ):
             # update the |...00...> amplitudes if necessary
-            if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
-                strings = self._get_cached_strings(nqubits, weight + 1, ncontrols)
-                indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
-                indexes_in[:, other_qubits] = strings
-                if len(controls) > 0:
-                    indexes_in[:, controls] = "1"
-                indexes_in[:, qubits] = ["0", "0"]
-                indexes_in = self.np.array(
-                    [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
-                )
-                state[indexes_in] *= matrix_0000
+            state = self._update_amplitudes(
+                state,
+                qubits,
+                controls,
+                other_qubits,
+                nqubits,
+                ncontrols,
+                weight,
+                matrix_0000,
+                ["0", "0"],
+                1,
+            )
 
-        if weight - ncontrols > 1:
+        if weight - ncontrols > 1 and (
+            matrix_1111.real != 1 or abs(matrix_1111.imag) > 0
+        ):
             # update the |...11...> amplitudes if necessary
-            if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
-                strings = self._get_cached_strings(nqubits, weight - 1, ncontrols)
-                indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
-                indexes_in[:, other_qubits] = strings
-                if len(controls) > 0:
-                    indexes_in[:, controls] = "1"
-                indexes_in[:, qubits] = ["1", "1"]
-                indexes_in = self.np.array(
-                    [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
-                )
-                state[indexes_in] *= matrix_1111
+            state = self._update_amplitudes(
+                state,
+                qubits,
+                controls,
+                other_qubits,
+                nqubits,
+                ncontrols,
+                weight,
+                matrix_1111,
+                ["1", "1"],
+                -1,
+            )
 
         return state
 

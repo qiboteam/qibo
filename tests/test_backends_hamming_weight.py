@@ -68,18 +68,17 @@ def test_single_qubit_gates(backend, gate, weight):
         gate1 = getattr(gates, gate)(qubits[0])
         gate2 = getattr(gates, gate)(qubits[1])
 
-    c = Circuit(3, density_matrix=False)
-    c.add(gate1)
-    c.add(gate2)
+    circuit = Circuit(3, density_matrix=False)
+    circuit.add(gate1)
+    circuit.add(gate2)
 
-    result = backend.execute_circuit(c, initial_state=initial_state_full)
+    result = backend.execute_circuit(circuit, initial_state=initial_state_full)
     state = result.state()
 
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state
+        circuit, weight=weight, initial_state=initial_state
     )
 
-    hamming_state = hamming_result.state()
     hamming_full_state = hamming_result.full_state()
 
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
@@ -89,7 +88,7 @@ def test_single_qubit_gates(backend, gate, weight):
     assert result.symbolic(max_terms=1) == hamming_result.symbolic(max_terms=1)
 
     # with controls
-    c = Circuit(3, density_matrix=False)
+    circuit = Circuit(3, density_matrix=False)
     if gate == "RZ":
         theta = 0.123
         gate1 = gates.RZ(qubits[0], theta)
@@ -98,17 +97,16 @@ def test_single_qubit_gates(backend, gate, weight):
         gate1 = getattr(gates, gate)(qubits[0])
         gate2 = getattr(gates, gate)(qubits[1])
 
-    c.add(gate1.controlled_by(1))
-    c.add(gate2.controlled_by(0))
+    circuit.add(gate1.controlled_by(1))
+    circuit.add(gate2.controlled_by(0))
 
     initial_state_full = get_full_initial_state(initial_state, weight, 3, hamming_bkd)
-    result = backend.execute_circuit(c, initial_state=initial_state_full)
+    result = backend.execute_circuit(circuit, initial_state=initial_state_full)
     state = result.state()
 
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state
+        circuit, weight=weight, initial_state=initial_state
     )
-    hamming_state = hamming_result.state()
     hamming_result._backend._dict_indexes = None
     hamming_full_state = hamming_result.full_state()
 
@@ -119,7 +117,7 @@ def test_single_qubit_gates(backend, gate, weight):
 TWO_QUBIT_GATES = ["CZ", "SWAP", "iSWAP", "SiSWAP", "SiSWAPDG", "FSWAP", "SYC", "RZZ"]
 
 
-@pytest.mark.parametrize("weight", [1, 2, 3, 4])
+@pytest.mark.parametrize("weight", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("gate", TWO_QUBIT_GATES)
 def test_two_qubit_gates(backend, gate, weight):
     nqubits = 5
@@ -140,17 +138,16 @@ def test_two_qubit_gates(backend, gate, weight):
         gate1 = getattr(gates, gate)(*qubits1)
         gate2 = getattr(gates, gate)(*qubits2)
 
-    c = Circuit(nqubits, density_matrix=False)
-    c.add(gate1)
-    c.add(gate2)
+    circuit = Circuit(nqubits, density_matrix=False)
+    circuit.add(gate1)
+    circuit.add(gate2)
 
-    result = backend.execute_circuit(c, initial_state=initial_state_full)
+    result = backend.execute_circuit(circuit, initial_state=initial_state_full)
     state = result.state()
 
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state
+        circuit, weight=weight, initial_state=initial_state
     )
-    hamming_state = hamming_result.state()
     hamming_full_state = hamming_result.full_state()
 
     backend.assert_allclose(hamming_full_state, state, atol=1e-8)
@@ -159,21 +156,20 @@ def test_two_qubit_gates(backend, gate, weight):
     assert result.symbolic() == hamming_result.symbolic()
 
     if len(gate1.control_qubits) == 0:
-        c = Circuit(nqubits, density_matrix=False)
-        c.add(gate1.controlled_by(2))
-        c.add(gate2.controlled_by(0))
+        circuit = Circuit(nqubits, density_matrix=False)
+        circuit.add(gate1.controlled_by(2))
+        circuit.add(gate2.controlled_by(0))
 
         initial_state_full = get_full_initial_state(
             initial_state, weight, nqubits, hamming_bkd
         )
-        result = numpy_bkd.execute_circuit(c, initial_state=initial_state_full)
+        result = numpy_bkd.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
         state = backend.cast(state)
 
         hamming_result = hamming_bkd.execute_circuit(
-            c, weight=weight, initial_state=initial_state
+            circuit, weight=weight, initial_state=initial_state
         )
-        hamming_state = hamming_result.state()
         hamming_full_state = hamming_result.full_state()
 
         backend.assert_allclose(hamming_full_state, state, atol=1e-8)
@@ -192,16 +188,16 @@ def test_ccz(backend, weight):
     gate1 = gates.CCZ(*qubits1)
     gate2 = gates.CCZ(*qubits2)
 
-    c = Circuit(3, density_matrix=False)
-    c.add(gate1)
-    c.add(gate2)
+    circuit = Circuit(3, density_matrix=False)
+    circuit.add(gate1)
+    circuit.add(gate2)
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state
+        circuit, weight=weight, initial_state=initial_state
     )
     hamming_state = hamming_result.state()
     hamming_full_state = hamming_result.full_state()
     initial_state_full = get_full_initial_state(initial_state, weight, 3, hamming_bkd)
-    result = backend.execute_circuit(c, initial_state=initial_state_full)
+    result = backend.execute_circuit(circuit, initial_state=initial_state_full)
     state = result.state()
     state = backend.cast(state)
 
@@ -253,17 +249,17 @@ def test_n_qubit_gates(backend, weight):
     gate1.hamming_weight = True
     gate2.hamming_weight = True
 
-    c = Circuit(4, density_matrix=False)
-    c.add(gate1)
-    c.add(gate2)
+    circuit = Circuit(4, density_matrix=False)
+    circuit.add(gate1)
+    circuit.add(gate2)
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state
+        circuit, weight=weight, initial_state=initial_state
     )
     hamming_state = hamming_result.state()
     hamming_full_state = hamming_result.full_state()
     initial_state_full = get_full_initial_state(initial_state, weight, 4, hamming_bkd)
 
-    result = backend.execute_circuit(c, initial_state=initial_state_full)
+    result = backend.execute_circuit(circuit, initial_state=initial_state_full)
     state = result.state()
     state = backend.cast(state)
 
@@ -278,12 +274,12 @@ def test_n_qubit_gates(backend, weight):
     assert result.symbolic() == hamming_result.symbolic()
 
     if len(gate1.control_qubits) == 0:
-        c = Circuit(4, density_matrix=False)
-        c.add(gate1.controlled_by(3))
-        c.add(gate2.controlled_by(3))
+        circuit = Circuit(4, density_matrix=False)
+        circuit.add(gate1.controlled_by(3))
+        circuit.add(gate2.controlled_by(3))
 
         hamming_result = hamming_bkd.execute_circuit(
-            c, weight=weight, initial_state=initial_state
+            circuit, weight=weight, initial_state=initial_state
         )
         hamming_state = hamming_result.state()
         hamming_full_state = hamming_result.full_state()
@@ -292,7 +288,7 @@ def test_n_qubit_gates(backend, weight):
         )
 
         initial_state_full = numpy_bkd.cast(initial_state_full)
-        result = backend.execute_circuit(c, initial_state=initial_state_full)
+        result = backend.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
         state = backend.cast(state)
 
@@ -312,17 +308,19 @@ def test_measurement(backend, weight, collapse, nshots):
     initial_state = random_statevector(dim, backend=backend)
     initial_state_full = get_full_initial_state(initial_state, weight, 3, hamming_bkd)
 
-    c = Circuit(3)
-    c.add(gates.SWAP(0, 1))
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1))
     if collapse and nshots is not None:
-        c.add(gates.M(1, collapse=collapse))
-    c.add(gates.M(0, 2))
+        circuit.add(gates.M(1, collapse=collapse))
+    circuit.add(gates.M(0, 2))
 
-    result = backend.execute_circuit(c, initial_state=initial_state_full, nshots=nshots)
+    result = backend.execute_circuit(
+        circuit, initial_state=initial_state_full, nshots=nshots
+    )
     probabilities = result.probabilities()
 
     hamming_result = hamming_bkd.execute_circuit(
-        c, weight=weight, initial_state=initial_state, nshots=nshots
+        circuit, weight=weight, initial_state=initial_state, nshots=nshots
     )
     hamming_result._backend._dict_indexes = None
     hamming_probabilities = hamming_result.probabilities()
@@ -381,15 +379,15 @@ def test_probabilities_from_samples(backend, weight):
     backend.set_seed(2024)
     hamming_bkd = construct_hamming_weight_backend(backend)
 
-    c = Circuit(3)
-    c.add(gates.SWAP(0, 1))
-    c.add(gates.M(0, 2))
-    result = hamming_bkd.execute_circuit(c, weight=weight, nshots=10)
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0, 2))
+    result = hamming_bkd.execute_circuit(circuit, weight=weight, nshots=10)
     probs_1 = result.probabilities(qubits=[0])
-    c = Circuit(3)
-    c.add(gates.SWAP(0, 1))
-    c.add(gates.M(0))
-    result = hamming_bkd.execute_circuit(c, weight=weight, nshots=10)
+    circuit = Circuit(3)
+    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.M(0))
+    result = hamming_bkd.execute_circuit(circuit, weight=weight, nshots=10)
     probs_2 = result.probabilities()
 
     backend.assert_allclose(probs_1, probs_2)
@@ -398,31 +396,31 @@ def test_probabilities_from_samples(backend, weight):
 def test_errors(backend):
     hamming_bkd = construct_hamming_weight_backend(backend)
 
-    c = Circuit(3)
-    c.add(gates.Z(0))
-    result = hamming_bkd.execute_circuit(c, weight=1)
+    circuit = Circuit(3)
+    circuit.add(gates.Z(0))
+    result = hamming_bkd.execute_circuit(circuit, weight=1)
     with pytest.raises(RuntimeError):
         result.samples()
     with pytest.raises(RuntimeError):
         result.frequencies()
 
-    c.add(gates.M(1))
-    result = hamming_bkd.execute_circuit(c, weight=1, nshots=10)
+    circuit.add(gates.M(1))
+    result = hamming_bkd.execute_circuit(circuit, weight=1, nshots=10)
     with pytest.raises(RuntimeError):
         result.probabilities(qubits=[0, 1])
 
-    c = Circuit(3)
-    c.add(gates.Z(0))
-    c.density_matrix = True
+    circuit = Circuit(3)
+    circuit.add(gates.Z(0))
+    circuit.density_matrix = True
     with pytest.raises(RuntimeError):
-        hamming_bkd.execute_circuit(c, weight=1)
+        hamming_bkd.execute_circuit(circuit, weight=1)
 
-    c.density_matrix = False
-    c.add(gates.DepolarizingChannel(0, 0.1))
+    circuit.density_matrix = False
+    circuit.add(gates.DepolarizingChannel(0, 0.1))
     with pytest.raises(RuntimeError):
-        hamming_bkd.execute_circuit(c, weight=1)
+        hamming_bkd.execute_circuit(circuit, weight=1)
 
-    c = Circuit(3)
-    c.add(gates.X(0))
+    circuit = Circuit(3)
+    circuit.add(gates.X(0))
     with pytest.raises(RuntimeError):
-        hamming_bkd.execute_circuit(c, weight=1)
+        hamming_bkd.execute_circuit(circuit, weight=1)
