@@ -3,20 +3,38 @@ from typing import Optional, Union
 import numpy as np
 from scipy.special import binom
 
-from qibo import gates
-from qibo.backends import NumpyBackend
-from qibo.config import raise_error
+from qibo.backends import HammingWeightBackend
+from qibo.config import log, raise_error
 from qibo.result import MeasurementOutcomes, QuantumState
 
 
 class HammingWeightResult(QuantumState, MeasurementOutcomes):
+    """Object storing the results of a circuit execution with the :class:`qibo.backends.hamming_weight.HammingWeightBackend`.
 
-    def __init__(self, state, weight, nqubits, measurements, nshots, backend=None):
-        from qibo.backends import _check_backend
+    Args:
+        state (ndarray): statevector with a fixed Hamming weight. The dimension of the state is :math:`d = \\binom{n}{k}`, where
+            :math:`n` is the number of qubits and :math:`k` is the Hamming weight. The components of the state are ordered in lexicographical order.
+        weight (int): Hamming weight of the state.
+        nqubits (int): number of qubits of the state.
+        measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
+            Defaults to ``None``.
+        nshots (int, optional): number of shots used for sampling the measurements.
+            Defaults to :math:`1000`.
+        engine (str, optional): engine to use in the execution of the
+            :class:`qibo.backends.HammingWeightBackend`. It accepts ``"numpy"``, ``"numba"``,
+            ``"cupy"``, and ``"cuquantum"``.
+            If ``None``, defaults to the corresponding engine
+            from the current backend. Defaults to ``None``.
+    """
 
-        backend = _check_backend(backend)
+    def __init__(
+        self, state, weight, nqubits, measurements=None, nshots=1000, engine=None
+    ):
+
+        backend = HammingWeightBackend(engine)
         QuantumState.__init__(self, state, backend.engine)
         MeasurementOutcomes.__init__(self, measurements, backend.engine)
+
         self._backend = backend
         self.engine = self._backend.engine
         self.measurements = measurements
@@ -31,17 +49,54 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         self._frequencies = None
         self._measurement_gate = None
         self._repeated_execution_frequencies = None
-
         self._measurement_gate = self.measurement_gate
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
+        """Dirac notation representation of the state in the computational basis.
 
+        Args:
+            decimals (int, optional): Number of decimals for the amplitudes.
+                Defaults to :math:`5`.
+            cutoff (float, optional): Amplitudes with absolute value smaller than the
+                cutoff are ignored from the representation. Defaults to  ``1e-10``.
+            max_terms (int, optional): Maximum number of terms to print. If the state
+                contains more terms they will be ignored. Defaults to :math:`20`.
+
+        Returns:
+            (str): A string representing the state in the computational basis.
+        """
         terms = self._backend.calculate_symbolic(
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
         )
         return " + ".join(terms)
 
+    def state(self, numpy: bool = False):
+        """State's tensor representation as a backend tensor in the subspace with fixed Hamming weight.
+
+        Args:
+            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
+                otherwise it will follow the backend tensor type.
+                Defaults to ``False``.
+
+        Returns:
+            The state in the computational basis of the subspace with fixed Hamming weight ordered in lexicographical order.
+        """
+        return super().state(numpy=numpy)
+
     def full_state(self):
+        """State's tensor representation as a backend tensor.
+
+        Args:
+            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
+                otherwise it will follow the backend tensor type.
+                Defaults to ``False``.
+
+        .. note::
+            This method is inefficient in runtime and memory for a large number of qubits.
+
+        Returns:
+            The state in the computational basis.
+        """
         if (
             self._backend._dict_indexes is None
             or list(self._backend._dict_indexes.keys())[0].count("1") != self.weight
@@ -58,17 +113,25 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
+        """Calculates the probabilities of the measured qubits.
+            If the number of shots is :math:`0` or no measurements were performed, the probabilities are calculated
+            from the statevector. Otherwise, the probabilities are calculated from the samples.
+
+        Args:
+            qubits (list or set, optional): Set of qubits that are measured.
+                If ``None``, ``qubits`` equates the total number of qubits.
+                Defauts to ``None``.
+        Returns:
+            (np.ndarray): Probabilities over the input qubits.
+        """
+
         if self.nshots is None or len(self.measurements) == 0:
-            return self.exact_probabilities(qubits)
-        return self.probabilities_from_samples(qubits)
+            return self._exact_probabilities(qubits)
 
-    def exact_probabilities(self, qubits: Optional[Union[list, set]] = None):
+        return self._probabilities_from_samples(qubits)
+
+    def _exact_probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculates measurement probabilities by tracing out qubits.
-
-        When noisy model is applied to a circuit and `circuit.density_matrix=False`,
-        this method returns the average probability resulting from
-        repeated execution. This probability distribution approximates the
-        exact probability distribution obtained when `circuit.density_matrix=True`.
 
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
@@ -83,6 +146,37 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         return self._backend.calculate_probabilities(
             self._state, qubits, self.weight, self.nqubits
+        )
+
+    def _probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
+        """Calculate the probabilities as frequencies / nshots
+
+        Returns:
+            The array containing the probabilities of the measured qubits.
+        """
+        if qubits is None:
+            qubits = self.measurement_gate.qubits
+        else:
+            if not set(qubits).issubset(self.measurement_gate.qubits):
+                raise_error(
+                    RuntimeError,
+                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
+                )
+        qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
+
+        nqubits = len(self.measurement_gate.qubits)
+        probs = [0 for _ in range(2**nqubits)]
+        for state, freq in self.frequencies(binary=False).items():
+            probs[state] = freq / self.nshots
+        rtype = self.backend.np.real(probs).dtype
+        probs = self.backend.cast(probs, dtype=rtype)
+        self._probs = probs
+
+        if nqubits != self.nqubits:
+            self._backend._dict_indexes = None
+
+        return self.backend.calculate_probabilities(
+            self.engine.np.sqrt(probs), qubits, nqubits
         )
 
     def samples(self, binary: bool = True, registers: bool = False):
@@ -113,11 +207,35 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
                 "No measurements were performed. Cannot return samples.",
             )
 
-        self._probs = self.exact_probabilities()
+        self._probs = self._exact_probabilities()
         return super().samples(binary=binary, registers=registers)
 
     def frequencies(self, binary: bool = True, registers: bool = False):
+        """Returns the frequencies of measured samples.
 
+        Args:
+            binary (bool, optional): If ``True``, returns frequency keys in binary form.
+                If ``False``, returns them in decimal form. Defaults to ``True``.
+            registers (bool, optional): Group frequencies according to registers.
+                Defaults to ``False``.
+
+        Returns:
+            A :class:`collections.Counter` where the keys are the observed values
+            and the values the corresponding frequencies, that is the number
+            of times each measured value/bitstring appears.
+
+            If ``binary`` is ``True``
+                the keys of the :class:`collections.Counter` are in binary form,
+                as strings of :math:`0` and :math`1`.
+            If ``binary`` is ``False``
+                the keys of the :class:`collections.Counter` are integers.
+            If ``registers`` is ``True``
+                a `dict` of :class:`collections.Counter` is returned where keys are
+                the name of each register.
+            If ``registers`` is ``False``
+                a single :class:`collections.Counter` is returned which contains samples
+                from all the measured qubits, independently of their registers.
+        """
         if len(self.measurements) == 0:
             raise_error(
                 RuntimeError,
@@ -125,37 +243,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             )
 
         if not self.has_samples():
-            self._probs = self.exact_probabilities(self._measurement_gate.qubits)
+            self._probs = self._exact_probabilities(self._measurement_gate.qubits)
 
         return super().frequencies(binary=binary, registers=registers)
-
-    def probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
-        """Calculate the probabilities as frequencies / nshots
-
-        Returns:
-            The array containing the probabilities of the measured qubits.
-        """
-        if qubits is None:
-            qubits = self.measurement_gate.qubits
-        else:
-            if not set(qubits).issubset(self.measurement_gate.qubits):
-                raise_error(
-                    RuntimeError,
-                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
-                )
-        qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
-
-        nqubits = len(self.measurement_gate.qubits)
-        probs = [0 for _ in range(2**nqubits)]
-        for state, freq in self.frequencies(binary=False).items():
-            probs[state] = freq / self.nshots
-        rtype = self.backend.np.real(probs).dtype
-        probs = self.backend.cast(probs, dtype=rtype)
-        self._probs = probs
-
-        if nqubits != self.nqubits:
-            self._backend._dict_indexes = None
-
-        return self.backend.calculate_probabilities(
-            self.engine.np.sqrt(probs), qubits, nqubits
-        )

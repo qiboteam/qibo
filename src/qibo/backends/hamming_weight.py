@@ -78,7 +78,6 @@ class HammingWeightBackend(NumpyBackend):
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=None):
-
         from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
             HammingWeightResult,
         )
@@ -115,7 +114,7 @@ class HammingWeightBackend(NumpyBackend):
                 nqubits,
                 measurements=circuit.measurements,
                 nshots=nshots,
-                backend=self,
+                engine=self.platform,
             )
 
             return result
@@ -134,7 +133,6 @@ class HammingWeightBackend(NumpyBackend):
         strings = _ehrlich_algorithm(initial_string, return_indices=False)
         strings = [list(string) for string in strings]
         strings = self.np.asarray(strings, dtype=int)
-
         return strings
 
     def _get_cached_strings(
@@ -480,7 +478,6 @@ class HammingWeightBackend(NumpyBackend):
             probs[index] = measured_strings[string]
 
         probs = self.cast(probs, dtype=rtype)
-
         return probs
 
     def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
