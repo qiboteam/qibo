@@ -413,7 +413,7 @@ def _random_outcome(state, p, q, nqubits):
         state = _rowsum(
             state,
             h.astype(np.uint),
-            p * np.ones(h.shape[0], dtype=np.uint),
+            np.uint(p) * np.ones(h.shape[0], dtype=np.uint),
             _packed_size(nqubits),
             False,
         )
@@ -500,7 +500,7 @@ def cast(x, dtype=None, copy=False):
         return x.astype(dtype, copy=copy)
     elif sparse.issparse(x):  # pragma: no cover
         return x.astype(dtype, copy=copy)
-    return np.array(x, dtype=dtype, copy=copy)
+    return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
 
 def _clifford_pre_execution_reshape(state):
