@@ -42,7 +42,6 @@ def test_visualize_state(mode):
     _, fig = visualize_state(
         execution_outcome=outcome,
         mode=mode,
-        n_most_relevant_components=10,
     )
 
     assert (
