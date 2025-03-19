@@ -510,7 +510,7 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def Unitary(self, u):
-        return self.np.array(u, dtype=self.dtype, copy=False)
+        return self.np.asarray(u, dtype=self.dtype)
 
     def CallbackGate(self):  # pragma: no cover
         raise_error(NotImplementedError)

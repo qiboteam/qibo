@@ -191,7 +191,9 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 f"Hamiltonian addition to {type(other)} not implemented.",
             )
-        return self.__class__(self.nqubits, new_matrix, backend=self.backend)
+        return self.__class__(
+            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+        )
 
     def __sub__(self, other):
         if isinstance(other, self.__class__):
@@ -208,7 +210,9 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 f"Hamiltonian subtraction to {type(other)} not implemented.",
             )
-        return self.__class__(self.nqubits, new_matrix, backend=self.backend)
+        return self.__class__(
+            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+        )
 
     def __rsub__(self, other):
         if isinstance(other, self.__class__):  # pragma: no cover
@@ -226,7 +230,9 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 f"Hamiltonian subtraction to {type(other)} not implemented.",
             )
-        return self.__class__(self.nqubits, new_matrix, backend=self.backend)
+        return self.__class__(
+            self.nqubits, new_matrix, backend=self.backend  # pylint: disable=E0606
+        )
 
     def __mul__(self, other):
         if isinstance(other, self.backend.tensor_types):
@@ -281,7 +287,7 @@ def _calculate_nqubits_from_form(form):
                 RuntimeError,
                 f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, you can define a custom symbol for {symbol} by subclassing ``qibo.symbols.Symbol``.",
             )
-        if q > nqubits:
+        if q > nqubits:  # pylint: disable=E0606
             nqubits = q
     return nqubits + 1
 
@@ -455,7 +461,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 f"Cannot calculate matrix for symbolic term of type {type(term)}.",
             )
 
-        return result
+        return result  # pylint: disable=E0606
 
     def _calculate_dense_from_form(self) -> Hamiltonian:
         """Calculates equivalent Hamiltonian using symbolic form.
