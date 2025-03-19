@@ -17,7 +17,7 @@ from qibo.ui.drawing_utils import (
 def visualize_state(
     execution_outcome: Union[QuantumState, MeasurementOutcomes, CircuitResult],
     mode: str = "probabilities",
-    n_most_relevant_components=20,
+    n_most_relevant_components=None,
 ):
     """
     Plot circuit execution's result data according to the chosen ``mode``.
@@ -35,7 +35,7 @@ def visualize_state(
         n_most_relevant_components (int): in case the system is big (more than a few
             qubits), it can be helpful to reduce the number of ticks in the x-axis.
             To do so, this argument can be set, reducing the number of plotted ticks
-            to `n_most_relevant_components`. Default is 20.
+            to `n_most_relevant_components`. Default is None.
     """
 
     # Collect amplitude
