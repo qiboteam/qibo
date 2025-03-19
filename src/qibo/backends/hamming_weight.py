@@ -288,9 +288,10 @@ class HammingWeightBackend(NumpyBackend):
             state[indexes_in] = new_amplitudes_in
             state[indexes_out] = new_amplitudes_out
 
-        if weight - ncontrols >= 0:
+        if weight - ncontrols >= 0 and nqubits - weight > 1:
             # update the |...00...> amplitudes if necessary
             if matrix_0000.real != 1 or abs(matrix_0000.imag) > 0:
+                strings = self._get_cached_strings(nqubits, weight + 1, ncontrols)
                 indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
                 indexes_in[:, other_qubits] = strings
                 if len(controls) > 0:
@@ -302,9 +303,9 @@ class HammingWeightBackend(NumpyBackend):
                 state[indexes_in] *= matrix_0000
 
         if weight - ncontrols > 1:
-            strings = self._get_cached_strings(nqubits, weight - 1, ncontrols)
             # update the |...11...> amplitudes if necessary
             if matrix_1111.real != 1 or abs(matrix_1111.imag) > 0:
+                strings = self._get_cached_strings(nqubits, weight - 1, ncontrols)
                 indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
                 indexes_in[:, other_qubits] = strings
                 if len(controls) > 0:
