@@ -305,6 +305,8 @@ def test_schmidt_decomposition(backend):
 @pytest.mark.parametrize("initial_vector", [None, True])
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_lanczos(backend, nqubits, initial_vector, seed):
+    # Since Lanczos is designed for extremal eigenvalues,
+    # only the first 5 eigenvalues and eigenvectors are tested.
     dims = 2**nqubits
     hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
 
@@ -332,8 +334,8 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
         for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
     ]
 
-    backend.assert_allclose(eigvals, eigvals_target, atol=1e-2, rtol=1e-2)
-    backend.assert_allclose(all(inf < 1e-3 for inf in infidelities), True)
+    backend.assert_allclose(eigvals[:5], eigvals_target[:5], atol=1e-2, rtol=1e-2)
+    backend.assert_allclose(all(inf < 1e-3 for inf in infidelities[:5]), True)
 
 
 @pytest.mark.parametrize("seed", [10])
