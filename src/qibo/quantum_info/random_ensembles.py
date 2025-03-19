@@ -201,12 +201,13 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
     backend = _check_backend(backend)
     backend.set_seed(seed)
 
+    if measure is not None and measure != "haar":
+        raise_error(ValueError, f"measure {measure} not implemented.")
+
     if measure == "haar":
         return backend.qinfo._random_unitary_haar(dims)
-    elif measure is None:
-        return backend.qinfo._random_unitary(dims)
-    else:
-        raise_error(ValueError, f"measure {measure} not implemented.")
+
+    return backend.qinfo._random_unitary(dims)
 
 
 def random_quantum_channel(
