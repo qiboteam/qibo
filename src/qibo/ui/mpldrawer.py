@@ -702,7 +702,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
             fgates = None
 
-            if cluster_gates:
+            if cluster_gates and circuit.nqubits > 1:
                 fgates = _make_cluster_gates(
                     _process_gates(gate.gates, circuit.nqubits)
                 )
@@ -725,7 +725,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
 
-    if cluster_gates and len(gates_plot) > 0:
+    if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
         return ax, ax.figure
