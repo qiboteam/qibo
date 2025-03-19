@@ -415,7 +415,9 @@ def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
     nq = len(labels)
     xdata = (gate_grid[0] - scale, gate_grid[-1] + scale)
     if "wire_names" in plot_params:
-        labels = plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
+        labels = (
+            plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
+        )
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         _text(
@@ -726,7 +728,11 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             all_gates.append(gate)
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
-    params['wire_names'] = circuit.init_kwargs['wire_names'] if circuit.init_kwargs['wire_names'] is not None else []
+    params["wire_names"] = (
+        circuit.init_kwargs["wire_names"]
+        if circuit.init_kwargs["wire_names"] is not None
+        else []
+    )
     if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
