@@ -62,3 +62,30 @@ def test_error_raises(mode):
             execution_outcome=outcome,
             mode=mode,
         )
+
+
+def test_n_most_relevant_components():
+    """
+    Testing the plotting function when the number of relevant components is
+    less than 2**nqubits.
+    """
+
+    backend = construct_backend("numpy")
+    backend.set_seed(42)
+    np.random.seed(42)
+
+    circuit = build_circuit(nqubits=3)
+    outcome = backend.execute_circuit(circuit, nshots=1000)
+
+    _, fig = visualize_state(
+        execution_outcome=outcome,
+        mode="probabilities",
+        n_most_relevant_components=4,
+    )
+
+    assert (
+        match_figure_image(
+            fig, f"{BASEPATH}/state_visualization_probabilities_3q_lim.npy"
+        )
+        == True
+    )
