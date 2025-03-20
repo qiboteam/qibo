@@ -501,39 +501,28 @@ def _make_cluster_gates(gates_items):
     """
 
     temp_gates = []
-    temp_mgates = []
     cluster_gates = []
 
     for item in gates_items:
         if len(item) == 2:  # single qubit gates
-            if item[0] == "MEASURE":
-                temp_mgates.append(item)
-            else:
-                if len(temp_gates) > 0:
-                    if item[1] in [tup[1] for tup in temp_gates]:
-                        cluster_gates.append(temp_gates)
-                        temp_gates = []
-                        temp_gates.append(item)
-                    else:
-                        temp_gates.append(item)
+            if len(temp_gates) > 0:
+                if item[1] in [tup[1] for tup in temp_gates]:
+                    cluster_gates.append(temp_gates)
+                    temp_gates = []
+                    temp_gates.append(item)
                 else:
                     temp_gates.append(item)
+            else:
+                temp_gates.append(item)
         else:
             if len(temp_gates) > 0:
                 cluster_gates.append(temp_gates)
                 temp_gates = []
 
-            if len(temp_mgates) > 0:
-                cluster_gates.append(temp_mgates)
-                temp_mgates = []
-
             cluster_gates.append([item])
 
     if len(temp_gates) > 0:
         cluster_gates.append(temp_gates)
-
-    if len(temp_mgates) > 0:
-        cluster_gates.append(temp_mgates)
 
     return cluster_gates
 
