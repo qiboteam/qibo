@@ -2724,8 +2724,9 @@ As for the other backends, the Hamming-weight backend can be set with
 
 .. testcode::  python
 
-    import qibo
-    qibo.set_backend("hamming_weight", platform="numpy")
+    from qibo import set_backend
+
+    set_backend("hamming_weight", platform="numpy")
 
 by specifying the engine used for calculation, if not provided the current backend is used
 
