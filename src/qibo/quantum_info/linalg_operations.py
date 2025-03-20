@@ -410,7 +410,7 @@ def lanczos(
     1. Generate random :math:`\\ket{v_{1}} \\in \\mathbb{C}^{N}` such that :math:`\\|\\ket{v_{1}}\\|_{2} = 1`
     2. :math:`\\ket{\\omega_{1}^{\\prime}} = H \\ket{v_{1}}`
     3. :math:`\\alpha_{1} = \\braket{\\omega_{1}^{\\prime} | v_{1}}`
-    4. :math:`\\ket{\\omega_{1}} = H \\ket{v_{1}}`
+    4. :math:`\\ket{\\omega_{1}} = H \\ket{v_{1}} - \\alpha_{1} \\ket{v_{1}}`
     5. For :math:`j = 2, \\dots, m - 1`:
         1. :math:`\\beta_{j} = \\|\\omega_{j-1}\\|_{2}`
         2. :math:`\\ket{v_{j}} = \\ket{\\omega_{j-1}} \\, / \\, \\beta_{j}` If :math:`\\beta_{j} \\neq 0` else generate random :math:`\\ket{v_{j}}` such that :math:`\\ket{v_{j}} \\perp \\{\\ket{v_{j^{\\prime}}}\\}_{j^{\\prime} \\in [1, j-1]}`
