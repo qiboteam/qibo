@@ -858,25 +858,7 @@ class Circuit:
         elif format == "dict":
             params = {gate: gate.parameters for gate in parametrized_gates}
         elif format == "flatlist":
-            params = []
-            for gate in parametrized_gates:
-                gparams = gate.parameters
-                if len(gparams) == 1:
-                    gparams = gparams[0]
-                if isinstance(gparams, np.ndarray):
-
-                    def traverse(x):
-                        if isinstance(x, np.ndarray):
-                            for v1 in x:
-                                yield from traverse(v1)
-                        else:
-                            yield x
-
-                    params.extend(traverse(gparams))
-                elif isinstance(gparams, Iterable):
-                    params.extend(gparams)
-                else:
-                    params.append(gparams)
+            params = _get_parameters_flatlist(parametrized_gates)
         else:
             raise_error(
                 ValueError,
@@ -1411,3 +1393,30 @@ def _resolve_qubits(qubits, wire_names):
         ValueError,
         "Invalid input arguments for defining a circuit.",
     )
+
+
+def _get_parameters_flatlist(parametrized_gates):
+    params = []
+    for gate in parametrized_gates:
+        gparams = gate.parameters
+        if len(gparams) == 1:
+            gparams = gparams[0]
+        if isinstance(gparams, np.ndarray):
+
+            def traverse(x):
+                if isinstance(x, np.ndarray):
+                    for v1 in x:
+                        yield from traverse(v1)
+                else:
+                    yield x
+
+            params.extend(traverse(gparams))
+        elif isinstance(gparams, Iterable):
+            if len(gparams.shape) == 0:
+                # necessary for 0-dimensional tensors
+                gparams = [gparams]
+            params.extend(gparams)
+        else:
+            params.append(gparams)
+
+    return params
