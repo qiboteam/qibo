@@ -2736,7 +2736,7 @@ by specifying the engine used for calculation, if not provided the current backe
 
     # setting numpy as the global backend
     set_backend("numpy")
-    # the clifford backend will use the numpy backend as engine
+    # the Hamming-weight backend will use the numpy backend as engine
     backend = HammingWeightBackend()
 
 .. autoclass:: qibo.backends.hamming_weight.HammingWeightBackend
