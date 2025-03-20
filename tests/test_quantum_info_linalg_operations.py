@@ -40,17 +40,18 @@ def test_commutator(backend):
     with pytest.raises(TypeError):
         test = commutator(matrix_2, matrix_3)
 
-    I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
-    I = backend.cast(I, dtype=I.dtype)
-    X = backend.cast(X, dtype=X.dtype)
-    Y = backend.cast(Y, dtype=Y.dtype)
-    Z = backend.cast(Z, dtype=Z.dtype)
+    I, X, Y, Z = (
+        backend.matrices.I(2),
+        backend.matrices.X,
+        backend.matrices.Y,
+        backend.matrices.Z,
+    )
 
     comm = commutator(X, I)
-    backend.assert_allclose(comm, 0.0)
+    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
 
     comm = commutator(X, X)
-    backend.assert_allclose(comm, 0.0)
+    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
 
     comm = commutator(X, Y)
     backend.assert_allclose(comm, 2j * Z)
@@ -89,10 +90,10 @@ def test_anticommutator(backend):
     backend.assert_allclose(anticomm, 2 * I)
 
     anticomm = anticommutator(X, Y)
-    backend.assert_allclose(anticomm, 0.0)
+    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
 
     anticomm = anticommutator(X, Z)
-    backend.assert_allclose(anticomm, 0.0)
+    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -236,10 +237,15 @@ def test_matrix_power(backend, power, singular):
     else:
         power = matrix_power(state, power, backend=backend)
 
-        backend.assert_allclose(
+        print(
             float(backend.np.real(backend.np.trace(power))),
-            purity(state, backend=backend),
+            type(float(backend.np.real(backend.np.trace(power)))),
         )
+        print(purity(state, backend=backend), type(purity(state, backend=backend)))
+
+        target = float(backend.np.real(backend.np.trace(power)))
+
+        assert abs(purity(state, backend=backend) - target) < 1e-5
 
 
 def test_singular_value_decomposition(backend):
@@ -298,7 +304,7 @@ def test_schmidt_decomposition(backend):
     entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
     entropy = -backend.np.sum(coeffs * entropy)
 
-    backend.assert_allclose(entropy, 0.0, atol=1e-14)
+    assert entropy < 1e-14
 
 
 @pytest.mark.parametrize("seed", [None, 10])

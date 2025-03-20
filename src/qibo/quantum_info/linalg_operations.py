@@ -516,12 +516,14 @@ def _vector_projection(vector, directions, backend):
             / backend.calculate_vector_norm(directions) ** 2
         )
 
-    return [
-        backend.np.dot(vector, direction)
-        * direction
-        / backend.calculate_vector_norm(direction) ** 2
-        for direction in directions
-    ]
+    return backend.cast(
+        [
+            backend.np.dot(vector, direction)
+            * direction
+            / backend.calculate_vector_norm(direction) ** 2
+            for direction in directions
+        ]
+    )
 
 
 def _gram_schmidt_process(vector, directions, backend):
