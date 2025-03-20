@@ -67,12 +67,12 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             decimals (int, optional): Number of decimals for the amplitudes.
                 Defaults to :math:`5`.
             cutoff (float, optional): Amplitudes with absolute value smaller than the
-                cutoff are ignored from the representation. Defaults to  ``1e-10``.
+                cutoff are ignored from the representation. Defaults to  :math:`1e-10`.
             max_terms (int, optional): Maximum number of terms to print. If the state
                 contains more terms they will be ignored. Defaults to :math:`20`.
 
         Returns:
-            (str): A string representing the state in the computational basis.
+            str: String representing the state in the computational basis.
         """
         terms = self._backend.calculate_symbolic(
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
@@ -95,18 +95,18 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return super().state(numpy=numpy)
 
     def full_state(self):
-        """State's tensor representation as a backend tensor.
+        """Tensor representation of ``state`` in the entire computational basis.
+
+        .. note::
+            This method is inefficient in runtime and memory for a large number of qubits.
 
         Args:
             numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
                 otherwise it will follow the backend tensor type.
                 Defaults to ``False``.
 
-        .. note::
-            This method is inefficient in runtime and memory for a large number of qubits.
-
         Returns:
-            The state in the computational basis.
+            ndarray: State in the complete computational basis.
         """
         if (
             self._backend._dict_indexes is None
@@ -121,11 +121,11 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             state[j] = self._state[i]
 
         state = self.engine.cast(state)
+
         return state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculate the probabilities of the measured qubits.
-
 
         If the number of shots is :math:`0` or no measurements were performed,
         the probabilities are calculated from the statevector.
@@ -145,14 +145,15 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return self._probabilities_from_samples(qubits)
 
     def _exact_probabilities(self, qubits: Optional[Union[list, set]] = None):
-        """Calculates measurement probabilities by tracing out qubits.
+        """Calculate measurement probabilities by tracing out qubits.
 
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
                 Defauts to ``None``.
+
         Returns:
-            (np.ndarray): Probabilities over the input qubits.
+            ndarray: Probabilities over the input qubits.
         """
 
         if qubits is None:
@@ -163,10 +164,10 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         )
 
     def _probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
-        """Calculate the probabilities as frequencies / nshots
+        """Calculate the probabilities as ``frequencies / nshots``.
 
         Returns:
-            The array containing the probabilities of the measured qubits.
+            ndarray: Array containing the probabilities of the measured qubits.
         """
         if qubits is None:
             qubits = self.measurement_gate.qubits
@@ -226,7 +227,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return super().samples(binary=binary, registers=registers)
 
     def frequencies(self, binary: bool = True, registers: bool = False):
-        """Returns the frequencies of measured samples.
+        """Return the frequencies of measured samples.
 
         Args:
             binary (bool, optional): If ``True``, returns frequency keys in binary form.
