@@ -1428,17 +1428,8 @@ def _get_parameters_flatlist(parametrized_gates):
         gparams = gate.parameters
         if len(gparams) == 1:
             gparams = gparams[0]
-        if isinstance(gparams, np.ndarray):
 
-            def traverse(x):
-                if isinstance(x, np.ndarray):
-                    for v1 in x:
-                        yield from traverse(v1)
-                else:
-                    yield x
-
-            params.extend(traverse(gparams))
-        elif isinstance(gparams, Iterable):
+        if isinstance(gparams, Iterable):
             if not isinstance(gparams, (list, tuple)) and len(gparams.shape) == 0:
                 # necessary for 0-dimensional tensors
                 gparams = [gparams]
