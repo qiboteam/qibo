@@ -1430,10 +1430,13 @@ def _get_parameters_flatlist(parametrized_gates):
             gparams = gparams[0]
 
         if isinstance(gparams, Iterable):
-            if not isinstance(gparams, (list, tuple)) and len(gparams.shape) == 0:
-                # necessary for 0-dimensional tensors
-                gparams = [gparams]
-            params.extend(gparams)
+            if not isinstance(gparams, (list, tuple)):
+                if len(gparams.shape) == 0:
+                    # necessary for 0-dimensional tensors
+                    gparams = [gparams]
+                else:
+                    gparams = gparams.flatten()
+            params.extend(list(gparams))
         else:
             params.append(gparams)
 
