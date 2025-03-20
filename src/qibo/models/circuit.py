@@ -1393,7 +1393,7 @@ def _resolve_qubits(qubits, wire_names):
             circuit = Circuit(wire_names=["q0", "q1", "q2"])
     """
     condition_1 = bool(qubits is None and wire_names is not None)
-    condition_2 = bool(qubits is None and wire_names is None)
+    condition_2 = bool(qubits is not None and wire_names is None)
     condition_3 = bool(qubits is not None and wire_names is not None)
 
     if not condition_1 and not condition_2 and not condition_3:
@@ -1413,6 +1413,11 @@ def _resolve_qubits(qubits, wire_names):
         if isinstance(qubits, int) and isinstance(wire_names, list):
             if qubits == len(wire_names):
                 return qubits, wire_names
+
+        raise_error(
+            ValueError,
+            "Invalid input arguments for defining a circuit.",
+        )
 
     return len(wire_names), wire_names
 
@@ -1434,7 +1439,7 @@ def _get_parameters_flatlist(parametrized_gates):
 
             params.extend(traverse(gparams))
         elif isinstance(gparams, Iterable):
-            if len(gparams.shape) == 0:
+            if not isinstance(gparams, (list, tuple)) and len(gparams.shape) == 0:
                 # necessary for 0-dimensional tensors
                 gparams = [gparams]
             params.extend(gparams)
