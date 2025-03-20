@@ -833,37 +833,38 @@ class Circuit:
             raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
     def get_parameters(
-        self, format: str = "list", include_not_trainable: bool = False
+        self, output_format: str = "list", include_not_trainable: bool = False
     ) -> Union[List, Dict]:  # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.models.circuit.Circuit.set_parameters`.
 
         Args:
-            format (str): How to return the variational parameters.
-                Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
+            output_format (str): Format to return the variational parameters.
+                Available formats are ``"list"``, ``"dict"`` and ``"flatlist"``.
                 See :meth:`qibo.models.circuit.Circuit.set_parameters`
-                for more details on each format. Default is ``'list'``.
+                for more details on each format. Default is ``"list"``.
             include_not_trainable (bool): If ``True`` it includes the parameters
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
         """
-        if include_not_trainable:
-            parametrized_gates = self.parametrized_gates
-        else:
-            parametrized_gates = self.trainable_gates
+        parametrized_gates = (
+            self.parametrized_gates if include_not_trainable else self.trainable_gates
+        )
 
-        if format == "list":
-            params = [gate.parameters for gate in parametrized_gates]
-        elif format == "dict":
-            params = {gate: gate.parameters for gate in parametrized_gates}
-        elif format == "flatlist":
-            params = _get_parameters_flatlist(parametrized_gates)
-        else:
+        if output_format not in ["list", "dict", "flatlist"]:
             raise_error(
                 ValueError,
-                f"Unknown format {format} given in ``get_parameters``.",
+                f"Unknown format {output_format} given in ``get_parameters``.",
             )
+
+        if output_format == "list":
+            params = [gate.parameters for gate in parametrized_gates]
+        elif output_format == "dict":
+            params = {gate: gate.parameters for gate in parametrized_gates}
+        else:
+            params = _get_parameters_flatlist(parametrized_gates)
+
         return params
 
     def associate_gates_with_parameters(self):
