@@ -25,21 +25,16 @@ class HammingWeightBackend(NumpyBackend):
         self.platform = engine
         if engine == "numpy":
             self.engine = construct_backend(self.platform)
-        elif engine == "numba":
+        elif engine in ["numba", "cupy", "cuquantum"]:
             self.engine = construct_backend("qibojit", platform=self.platform)
-        elif engine == "cupy":  # pragma: no cover
-            self.engine = construct_backend("qibojit", platform=self.platform)
-        elif engine == "cuquantum":  # pragma: no cover
-            self.engine = construct_backend("qibojit", platform=self.platform)
-        elif engine == "tensorflow":  # pragma: no cover
-            self.engine = construct_backend("qiboml", platform=self.platform)
-        elif engine == "torch":  # pragma: no cover
+        elif engine in ["tensorflow", "pytorch"]:  # pragma: no cover
             self.engine = construct_backend("qiboml", platform=self.platform)
         else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                f"Backend `{engine}` is not supported for Hamming weight preserving circuit simulation.",
+                f"Backend `{engine}` is not supported for Hamming-weight-preserving circuit simulation.",
             )
+
         self.np = self.engine.np
 
         # cached order of operations for single- and two-qubit gates
@@ -53,10 +48,12 @@ class HammingWeightBackend(NumpyBackend):
         self.name = "hamming_weight"
 
     def cast(self, x, dtype=None, copy: bool = False):
-        """Cast an object as the array type of the current backend.
+        """Cast an object as the array or tensor type of the current backend.
 
         Args:
-            x: Object to cast to array.
+            x: Object to cast to array or tensor.
+            dtype (optional): data type of the array or tensor. If ``None``, defaults
+                to the default data type of the current backend. Defaults to ``None``.
             copy (bool, optional): If ``True`` a copy of the object is created in memory.
                 Defaults to ``False``.
         """
@@ -378,7 +375,7 @@ class HammingWeightBackend(NumpyBackend):
             ncontrols = len(controls)
 
         other_qubits = list(set(qubits + controls) ^ set(list(range(nqubits))))
-        map = qubits + controls + other_qubits
+        map_ = qubits + controls + other_qubits
         gate_matrix = gate.matrix(backend=self.engine)
 
         if (
@@ -411,14 +408,14 @@ class HammingWeightBackend(NumpyBackend):
         for i, string_i in enumerate(strings):
             new_string_i = [""] * len(string_i)
             for k in range(nqubits):
-                new_string_i[map[k]] = string_i[k]
+                new_string_i[map_[k]] = string_i[k]
             new_string_i = "".join(new_string_i)
             new_index_i = strings.index(new_string_i)
 
             for j, string_j in enumerate(strings):
                 new_string_j = [""] * len(string_j)
                 for k in range(nqubits):
-                    new_string_j[map[k]] = string_j[k]
+                    new_string_j[map_[k]] = string_j[k]
                 new_string_j = "".join(new_string_j)
                 new_index_j = strings.index(new_string_j)
 

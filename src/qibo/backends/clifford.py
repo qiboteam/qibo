@@ -79,6 +79,8 @@ class CliffordBackend(NumpyBackend):
 
         Args:
             x: Object to cast to array.
+            dtype (optional): data type of the array or tensor. If ``None``, defaults
+                to the default data type of the current backend. Defaults to ``None``.
             copy (bool, optional): If ``True`` a copy of the object is created in memory.
                 Defaults to ``False``.
         """

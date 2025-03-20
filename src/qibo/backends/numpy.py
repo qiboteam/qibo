@@ -71,7 +71,7 @@ class NumpyBackend(Backend):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x, dtype=None, copy=False):
+    def cast(self, x, dtype=None, copy: bool = False):
         if dtype is None:
             dtype = self.dtype
         if isinstance(x, self.tensor_types):
