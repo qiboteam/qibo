@@ -326,16 +326,19 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     eigvals, eigvectors = backend.np.linalg.eigh(tridiag)
     eigs = list(zip(eigvals, eigvectors.T))
     eigs.sort()
-    eigs = backend.cast(eigs, dtype=object)
-    eigvectors = eigs[:, 1]
-    eigvals = [float(eig) for eig in eigs[:, 0]]
-    infidelities = [
-        infidelity(ortho_matrix @ eigvec, eigvec_target)
-        for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
-    ]
+    eigvectors = [row[1] for row in eigs]
+    eigvals = [float(row[0]) for row in eigs]
+
+    eigvals = backend.cast(eigvals)
+    eigvectors = backend.cast(eigvectors)
 
     backend.assert_allclose(eigvals[:5], eigvals_target[:5], atol=1e-2, rtol=1e-2)
-    backend.assert_allclose(all(inf < 1e-3 for inf in infidelities[:5]), True)
+
+    infidelities = [
+        float(infidelity(ortho_matrix @ eigvec, eigvec_target, backend=backend))
+        for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
+    ]
+    assert all(inf < 1e-3 for inf in infidelities[:5])
 
 
 @pytest.mark.parametrize("seed", [10])
