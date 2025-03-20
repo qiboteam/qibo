@@ -1,3 +1,5 @@
+"""Module for the Circuit class."""
+
 import collections
 import copy
 import sys
@@ -5,9 +7,9 @@ from collections.abc import Iterable
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from tabulate import tabulate
 
-import qibo
-from qibo import gates
+from qibo import __version__, gates
 from qibo.backends import _Global
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
@@ -242,6 +244,8 @@ class Circuit:
                 times each device will be used.
                 The total number of logical devices must be a power of 2.
         """
+        from qibo.models.distcircuit import DistributedQueues  # pylint: disable=C0415
+
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(np.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
@@ -252,8 +256,6 @@ class Circuit:
             )
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
-
-        from qibo.models.distcircuit import DistributedQueues
 
         self.queues = DistributedQueues(self)
 
@@ -355,7 +357,7 @@ class Circuit:
                 "Cannot use distributed circuit as a subroutine after it was executed.",
             )
 
-        qubit_map = {i: q for i, q in enumerate(qubits)}
+        qubit_map = dict(enumerate(qubits))
         for gate in self.queue:
             yield gate.on_qubits(qubit_map)
 
@@ -450,13 +452,14 @@ class Circuit:
         Inversion is obtained by taking the dagger of all gates in reverse order.
         If the original circuit contains parametrized gates, dagger will change
         their parameters. This action is not persistent, so if the parameters
-        are updated afterwards, for example using :meth:`qibo.models.circuit.Circuit.set_parameters`,
-        the action of dagger will be overwritten.
-        If the original circuit contains measurement gates, these are included
-        in the inverted circuit.
+        are updated afterwards, for example using
+        :meth:`qibo.models.circuit.Circuit.set_parameters`, the action of dagger
+        will be overwritten. If the original circuit contains measurement gates,
+        these are included in the inverted circuit.
 
         Returns:
-            The circuit inverse.
+            :class:`qibo.models.Circuit`: Circuit corresponding to the inverse of
+            the original ``circuit``.
         """
         from qibo.gates import ParametrizedGate
 
@@ -579,7 +582,7 @@ class Circuit:
             noise_gates.append([])
             if not isinstance(gate, gates.M):
                 for q in gate.qubits:
-                    if q in noise_map and sum([row[1] for row in noise_map[q]]) > 0:
+                    if q in noise_map and sum(row[1] for row in noise_map[q]) > 0:
                         noise_gates[-1].append(gates.PauliNoiseChannel(q, noise_map[q]))
 
         # Create new circuit with noise gates inside
@@ -644,8 +647,8 @@ class Circuit:
             if isinstance(gate, gates.M):
                 # The following loop is useful when two circuits are added together:
                 # all the gates in the basis of the measure gates should not
-                # be added to the new circuit, otherwise once the measure gate is added in the circuit
-                # there will be two of the same.
+                # be added to the new circuit, otherwise once the measure gate
+                # is added in the circuit there will be two of the same.
 
                 for base in gate.basis:
                     if base not in self.queue:
@@ -669,15 +672,15 @@ class Circuit:
                     self.has_collapse = True
                 else:
                     self.measurements.append(gate)
+
                 return gate.result
 
-            else:
-                self.queue.append(gate)
-                for measurement in list(self.measurements):
-                    if set(measurement.qubits) & set(gate.qubits):
-                        measurement.collapse = True
-                        self.has_collapse = True
-                        self.measurements.remove(measurement)
+            self.queue.append(gate)
+            for measurement in list(self.measurements):
+                if set(measurement.qubits) & set(gate.qubits):
+                    measurement.collapse = True
+                    self.has_collapse = True
+                    self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
                 self.has_unitary_channel = True
@@ -688,7 +691,7 @@ class Circuit:
 
     @property
     def measurement_tuples(self):
-        # used for testing only
+        """used for testing only"""
         return {m.register_name: m.target_qubits for m in self.measurements}
 
     @property
@@ -735,11 +738,16 @@ class Circuit:
                 The list contains tuples ``(k, g)`` where ``k`` is the index of the gate
                 ``g`` in the circuit's gate queue.
         """
-        if isinstance(gate, str):
+        condition_1 = bool(isinstance(gate, str))
+        condition_2 = bool(isinstance(gate, type) and issubclass(gate, gates.Gate))
+
+        if not condition_1 and not condition_2:
+            raise_error(TypeError, f"Gate identifier {gate} not recognized.")
+
+        if condition_1:
             return [(i, g) for i, g in enumerate(self.queue) if g.name == gate]
-        if isinstance(gate, type) and issubclass(gate, gates.Gate):
-            return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
-        raise_error(TypeError, f"Gate identifier {gate} not recognized.")
+
+        return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
 
     def _set_parameters_list(self, parameters, n):
         """Helper method for ``set_parameters`` when a list is given.
@@ -992,7 +1000,9 @@ class Circuit:
         multiplying all circuit gates, where :math:`n` is ``nqubits``.
         """
 
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
         backend = _check_backend(backend)
 
@@ -1029,8 +1039,10 @@ class Circuit:
 
         if self.compiled:
             raise_error(RuntimeError, "Circuit is already compiled.")
+
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
+
         for gate in self.queue:
             if isinstance(gate, gates.CallbackGate):  # pragma: no cover
                 raise_error(
@@ -1038,11 +1050,15 @@ class Circuit:
                     "Circuit compilation is not available with callbacks.",
                 )
 
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
+        from qibo.result import (  # pylint: disable=import-outside-toplevel
+            CircuitResult,
+            QuantumState,
+        )
 
         backend = _check_backend(backend)
-
-        from qibo.result import CircuitResult, QuantumState
 
         executor = lambda state, nshots: backend.execute_circuit(
             self, state, nshots
@@ -1101,7 +1117,7 @@ class Circuit:
             "nqubits": self.nqubits,
             "density_matrix": self.density_matrix,
             "wire_names": self.wire_names,
-            "qibo_version": qibo.__version__,
+            "qibo_version": __version__,
         }
 
     @classmethod
@@ -1122,15 +1138,13 @@ class Circuit:
         return circ
 
     def to_qasm(self):
-        """Convert circuit to QASM.
+        """Convert circuit to a QASM string.
 
         .. note::
-            This method does not support multi-controlled gates and gates with ``torch.Tensor`` as parameters.
-
-        Args:
-            filename (str): The filename where the code is saved.
+            This method does not support multi-controlled gates
+            and gates with ``torch.Tensor`` as parameters.
         """
-        from qibo import __version__
+        # from qibo import __version__  # pylint: disable=import-outside-toplevel
 
         code = [f"// Generated by QIBO {__version__}"]
         code += ["OPENQASM 2.0;"]
@@ -1292,8 +1306,6 @@ class Circuit:
 
         # legend
         if legend:
-            from tabulate import tabulate
-
             legend_rows = {
                 (i.name, i.draw_label)
                 for i in self.queue
@@ -1367,33 +1379,42 @@ class Circuit:
 
 
 def _resolve_qubits(qubits, wire_names):
-    """Parse the input arguments for defining a circuit. Allows the user to
-    initialize the circuit as follows:
+    """Parse the input arguments for defining a circuit.
+
+    Allows the user to initialize the circuit as follows:
 
     Example:
         .. code-block:: python
             from qibo import Circuit
-            c = Circuit(3)
-            c = Circuit(3, wire_names=["q0", "q1", "q2"])
-            c = Circuit(["q0", "q1", "q2"])
-            c = Circuit(wire_names=["q0", "q1", "q2"])
+
+            circuit = Circuit(3)
+            circuit = Circuit(3, wire_names=["q0", "q1", "q2"])
+            circuit = Circuit(["q0", "q1", "q2"])
+            circuit = Circuit(wire_names=["q0", "q1", "q2"])
     """
-    if qubits is None and wire_names is not None:
-        return len(wire_names), wire_names
-    if qubits is not None and wire_names is None:
+    condition_1 = bool(qubits is None and wire_names is not None)
+    condition_2 = bool(qubits is None and wire_names is None)
+    condition_3 = bool(qubits is not None and wire_names is not None)
+
+    if not condition_1 and not condition_2 and not condition_3:
+        raise_error(
+            ValueError,
+            "Invalid input arguments for defining a circuit.",
+        )
+
+    if condition_2:
         if isinstance(qubits, int) and qubits > 0:
             return qubits, None
+
         if isinstance(qubits, list):
             return len(qubits), qubits
-    if qubits is not None and wire_names is not None:
+
+    if condition_3:
         if isinstance(qubits, int) and isinstance(wire_names, list):
             if qubits == len(wire_names):
                 return qubits, wire_names
 
-    raise_error(
-        ValueError,
-        "Invalid input arguments for defining a circuit.",
-    )
+    return len(wire_names), wire_names
 
 
 def _get_parameters_flatlist(parametrized_gates):
