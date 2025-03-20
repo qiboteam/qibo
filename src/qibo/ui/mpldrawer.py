@@ -257,7 +257,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 "RBS",
                 "ECR",
                 "MS",
-                'UNITARY'
+                "UNITARY",
             ]:
 
                 symbol = SYMBOLS.get(name, name)
