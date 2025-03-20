@@ -1,35 +1,44 @@
+"Module with the object that stores results from circuit execution using the HammingWeightBackend."
+
 from typing import Optional, Union
 
-import numpy as np
 from scipy.special import binom
 
 from qibo.backends import HammingWeightBackend
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.result import MeasurementOutcomes, QuantumState
 
 
 class HammingWeightResult(QuantumState, MeasurementOutcomes):
-    """Object storing the results of a circuit execution with the :class:`qibo.backends.hamming_weight.HammingWeightBackend`.
+    """Object storing the results of a circuit execution with the
+    :class:`qibo.backends.hamming_weight.HammingWeightBackend`.
 
     Args:
-        state (ndarray): statevector with a fixed Hamming weight. The dimension of the state is :math:`d = \\binom{n}{k}`, where
-            :math:`n` is the number of qubits and :math:`k` is the Hamming weight. The components of the state are ordered in lexicographical order.
-        weight (int): Hamming weight of the state.
-        nqubits (int): number of qubits of the state.
+        state (ndarray): statevector with a fixed Hamming weight.
+            The dimension of the state is :math:`d = \\binom{n}{k}`, where
+            :math:`n` is the number of qubits and :math:`k` is the Hamming weight.
+            The components of the state are ordered in lexicographical order.
+        weight (int): Hamming weight of ``state``.
+        nqubits (int): number of qubits of ``state``.
         measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
         engine (str, optional): engine to use in the execution of the
             :class:`qibo.backends.HammingWeightBackend`. It accepts ``"numpy"``, ``"numba"``,
-            ``"cupy"``, and ``"cuquantum"``.
-            If ``None``, defaults to the corresponding engine
+            ``"cupy"``, and ``"cuquantum"``. If ``None``, defaults to the corresponding engine
             from the current backend. Defaults to ``None``.
     """
 
     def __init__(
-        self, state, weight, nqubits, measurements=None, nshots=1000, engine=None
-    ):
+        self,
+        state,
+        weight: int,
+        nqubits: int,
+        measurements=None,
+        nshots: int = 1000,
+        engine=None,
+    ):  # pylint: disable=too-many-arguments
 
         backend = HammingWeightBackend(engine)
         QuantumState.__init__(self, state, backend.engine)
@@ -71,7 +80,8 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return " + ".join(terms)
 
     def state(self, numpy: bool = False):
-        """State's tensor representation as a backend tensor in the subspace with fixed Hamming weight.
+        """Tensor representation of ``state`` as a backend tensor in the subspace
+        of fixed Hamming weight.
 
         Args:
             numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
@@ -79,7 +89,8 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
                 Defaults to ``False``.
 
         Returns:
-            The state in the computational basis of the subspace with fixed Hamming weight ordered in lexicographical order.
+            ndarray: State in the computational basis of the subspace
+            with fixed Hamming weight ordered in lexicographical order.
         """
         return super().state(numpy=numpy)
 
@@ -113,16 +124,19 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         return state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
-        """Calculates the probabilities of the measured qubits.
-            If the number of shots is :math:`0` or no measurements were performed, the probabilities are calculated
-            from the statevector. Otherwise, the probabilities are calculated from the samples.
+        """Calculate the probabilities of the measured qubits.
+
+
+        If the number of shots is :math:`0` or no measurements were performed,
+        the probabilities are calculated from the statevector.
+        Otherwise, the probabilities are calculated from the samples.
 
         Args:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
                 Defauts to ``None``.
         Returns:
-            (np.ndarray): Probabilities over the input qubits.
+            ndarray: Probabilities over the input qubits.
         """
 
         if self.nshots is None or len(self.measurements) == 0:
@@ -160,7 +174,8 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             if not set(qubits).issubset(self.measurement_gate.qubits):
                 raise_error(
                     RuntimeError,
-                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
+                    f"Asking probabilities for qubits {qubits}, "
+                    + f"but only qubits {self.measurement_gate.qubits} were measured.",
                 )
         qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
 
