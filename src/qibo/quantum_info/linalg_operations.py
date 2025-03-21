@@ -515,7 +515,7 @@ def _vector_projection(vector, directions, backend):
         return (
             backend.np.dot(vector, directions)
             * directions
-            / backend.calculate_vector_norm(directions) ** 2
+            / backend.np.dot(directions, directions) 
         )
 
     return backend.cast(
