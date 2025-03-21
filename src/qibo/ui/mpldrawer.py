@@ -228,8 +228,12 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[min_wire],
             wire_grid[max_wire],
             plot_params,
+            linestyle=(
+                "dashed" if name == "UNITARY" and target.count("_") > 1 else "solid"
+            ),
         )
 
+        cci = 0
         for ci in control_indices:
             x = gate_grid[i]
             y = wire_grid[ci]
@@ -257,12 +261,20 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 "RBS",
                 "ECR",
                 "MS",
+                "UNITARY",
             ]:
 
                 symbol = SYMBOLS.get(name, name)
 
                 if is_dagger:
                     symbol += r"$\rm{^{\dagger}}$"
+
+                if name == "UNITARY" and target.count("_") > 1:
+                    u_gate_single_hash = controls[cci].split("_")[2]
+                    subindex = plot_params["hash_unitary_gates"][u_gate_single_hash]
+                    symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+                    symbol += r"$\rm_{{{}}}$".format(i)
+                    cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
 
@@ -296,13 +308,24 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     else:
         if name == "ALIGN":
             symbol = "A({})".format(target[2:])
+
+        if name == "UNITARY" and target.count("_") > 1:
+            hash = target.split("_")[2]
+            subindex = plot_params["hash_unitary_gates"][hash]
+            symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+            symbol += r"$\rm_{{{}}}$".format(i)
+
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
-def _line(ax, x1, x2, y1, y2, plot_params):
+def _line(ax, x1, x2, y1, y2, plot_params, linestyle="solid"):
     Line2D = matplotlib.lines.Line2D
     line = Line2D(
-        (x1, x2), (y1, y2), color=plot_params["linecolor"], lw=plot_params["linewidth"]
+        (x1, x2),
+        (y1, y2),
+        color=plot_params["linecolor"],
+        lw=plot_params["linewidth"],
+        ls=linestyle,
     )
     ax.add_line(line)
 
@@ -448,6 +471,10 @@ def _get_min_max_qbits(gates):
 
 
 def _get_flipped_index(target, labels):
+    if isinstance(target, str) and target.count("_") > 1:
+        end_index = target.find("_" + target.split("_")[2])
+        target = target[:end_index]
+
     nq = len(labels)
     i = labels.index(target)
     return nq - i - 1
@@ -531,6 +558,35 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
+def _build_unitary_gates_register(gate, dict_register):
+    """
+    Given a gate, this function builds a dictionary to register the unitary gates and their parameters to identify them uniquely.
+
+    Args:
+        gate (gates.Unitary): Unitary gate to register.
+        dict_register (dict): Dictionary to store the unitary gates and their parameters.
+    """
+    if isinstance(gate, gates.Unitary) and len(gate._target_qubits) > 1:
+        i = 0
+        for qbit in gate._target_qubits:
+            final_hash = _u_hash(gate, qbit)
+            dict_register[final_hash] = str(i)
+            i += 1
+
+
+def _u_hash(gate: gates.Unitary, param_index: int):
+    """
+    Given a unitary gate and a qubit, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+
+     Args:
+        gate (gates.Unitary): Unitary gate.
+        param_index (int): Parameter index applied.
+    """
+    hash_result = str(abs(hash(gate._parameters[0][param_index].data.tobytes())))
+    hash_result = hash_result[:3] + hash_result[-3:]
+    return hash_result
+
+
 def _process_gates(array_gates, nqubits):
     """
     Transforms the list of gates given by the Qibo circuit into a list of gates with a suitable structre to print on screen with matplotlib.
@@ -592,7 +648,17 @@ def _process_gates(array_gates, nqubits):
                 if type(qbit) is tuple:
                     item += ("q_" + str(qbit[0]),)
                 else:
-                    item += ("q_" + str(qbit),)
+
+                    u_param_hash = ""
+                    if isinstance(gate, gates.Unitary):
+                        if len(gate._target_qubits) > 1:
+                            u_param_hash = _u_hash(gate, qbit)
+
+                    item += (
+                        "q_"
+                        + str(qbit)
+                        + ("" if u_param_hash == "" else ("_" + u_param_hash)),
+                    )
 
             for qbit in gate._control_qubits:
                 if type(qbit) is tuple:
@@ -688,8 +754,12 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     for i in range(circuit.nqubits):
         labels.append("q_" + str(i))
 
+    hash_unitary_gates = {}
     all_gates = []
     for gate in circuit.queue:
+
+        _build_unitary_gates_register(gate, hash_unitary_gates)
+
         if isinstance(gate, gates.FusedGate):
             min_q, max_q = _get_min_max_qbits(gate)
 
@@ -717,11 +787,16 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             all_gates.append(gate)
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
+
+    if hash_unitary_gates:
+        params["hash_unitary_gates"] = hash_unitary_gates
+
     params["wire_names"] = (
         circuit.init_kwargs["wire_names"]
         if circuit.init_kwargs["wire_names"] is not None
         else []
     )
+
     if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
