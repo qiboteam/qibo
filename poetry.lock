@@ -603,26 +603,26 @@ cutensor-cu12 = ">=2.0.2,<3"
 
 [[package]]
 name = "cupy-cuda11x"
-version = "13.4.0"
+version = "13.4.1"
 description = "CuPy: NumPy & SciPy for GPU"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "cupy_cuda11x-13.4.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:b0f9cebe3cc2616cf93e3ed489f0f35323e242edba0d35e3737a1629aa921d11"},
-    {file = "cupy_cuda11x-13.4.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:8a8d6090c1dfb29a7ed643cc263adfde75a5df6eacee0e1536d19fb8a92d96fe"},
-    {file = "cupy_cuda11x-13.4.0-cp310-cp310-win_amd64.whl", hash = "sha256:e4b41b627cb8df86402728b7ea6b2e68b1a29b71b7384335273713461e7e9756"},
-    {file = "cupy_cuda11x-13.4.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:ee8880ddd084b71e3931d1a386559dc5e8aaa934ebfb88ebf4fde6a891dd4907"},
-    {file = "cupy_cuda11x-13.4.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:c1c20fc3ca02cc32d09bc5fbf17728b2eeb4571b345c5a7cc8dfd394ed075e82"},
-    {file = "cupy_cuda11x-13.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:e6286820ca2805d6962c9996f453406b2a8f85a57bf635edfb3f8000a61a4775"},
-    {file = "cupy_cuda11x-13.4.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:c65e450149d9bd1775c0cf503ecc79f156961c8e5c7b73e917d4674fc90212f5"},
-    {file = "cupy_cuda11x-13.4.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:5a4b72e62aee09f0f9896d18e418e9c6b3328f33f638db62ce8518c60d760dc5"},
-    {file = "cupy_cuda11x-13.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:b32edbc3e6b4ec562bb7889a2a2034cfdcb8968707633809852d3d09889ee1fc"},
-    {file = "cupy_cuda11x-13.4.0-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:35b1a3f8b4f0216b96e1d7ace0e938eec20fd71d72857e2e54c4613cc5229604"},
-    {file = "cupy_cuda11x-13.4.0-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:a4f4cea9478b0d2aed618599bcbae932f9c2f73a0a9bb9a7f7f1543cad24daca"},
-    {file = "cupy_cuda11x-13.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:4a47b3f9f419ae26c2dfde585fbba54e2c78b27026fd1f72bbe099bc8ed5d11a"},
-    {file = "cupy_cuda11x-13.4.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:c0292c3a09c363e5fac966e0a8ee97b06ddd35526089f04ba9a8cc364cefd4a2"},
-    {file = "cupy_cuda11x-13.4.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:20377a5b66126e1a35c2743cb95fea53da3b0260ed5e5520864226328f476c25"},
-    {file = "cupy_cuda11x-13.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:ce99d580700660ea99398d7957a113636d972353f001a978e3f32956b97de3a1"},
+    {file = "cupy_cuda11x-13.4.1-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:6f5055ee7a93986e6a8f11260425f6170b236d81d7b13ad4222c490aeded4233"},
+    {file = "cupy_cuda11x-13.4.1-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:a19502c66a22d78456c4f8b79454ccdeadb3b29a7ab704231d8b56f4bf2b38c2"},
+    {file = "cupy_cuda11x-13.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:8fcb5fd3374f8a79c1bba8cf67b8cde1426033c19fcce841a8084796aa8a71ba"},
+    {file = "cupy_cuda11x-13.4.1-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:d82fb8adb9cdb3f6175b465b71fd6f2b95f805b803242c10a9bf56775cc9f200"},
+    {file = "cupy_cuda11x-13.4.1-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:c4773960d8fc1419a7d29c915af09cd5bf212bcd0d3275e674e1d712882ac9e7"},
+    {file = "cupy_cuda11x-13.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:f2a0486b1e91a0e0610aa61687a9e76a7869ec29c199f8cf8776933c288ce7e0"},
+    {file = "cupy_cuda11x-13.4.1-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:4da6f5e3b62a1f8497b845785631829079b0c4406bb962f59f0d08ea021baeb5"},
+    {file = "cupy_cuda11x-13.4.1-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:5eb13d1f4c28358bf4c25d3361670d3d4753b1028aabe66c3ed9d6b01dba028c"},
+    {file = "cupy_cuda11x-13.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:06aad9ad035b275fbc689f9329f6aea05561bd8e6a59991be3d7bc3cd0f455d2"},
+    {file = "cupy_cuda11x-13.4.1-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:07f35c18c15654709e0f04b51e62f64bd9e60e8a8b0ed4f158ff1356216b6fbf"},
+    {file = "cupy_cuda11x-13.4.1-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:bcd02fa1c536c3412987002a183a5c1556fef764f6a6ed544b74891373666257"},
+    {file = "cupy_cuda11x-13.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:e779d4c70bd0b709cb8ed98233a9f4c6ab6c0c83492a140c3fab71073b78ef26"},
+    {file = "cupy_cuda11x-13.4.1-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:b66e9f21d2d8562ed7558fa801e3e2ec1a0c22a1b400d4f58f371b3f1a65cfea"},
+    {file = "cupy_cuda11x-13.4.1-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:fb4ec1adcf9a762dde26c233f6446639062ca3c85a4dde2a87bf411066374005"},
+    {file = "cupy_cuda11x-13.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:cb8b2bc1b3fe3ca969db587a6f1855588b645fb7d341d195cfe1232819bae387"},
 ]
 
 [package.dependencies]
@@ -635,26 +635,26 @@ test = ["hypothesis (>=6.37.2,<6.55.0)", "mpmath", "packaging", "pytest (>=7.2)"
 
 [[package]]
 name = "cupy-cuda12x"
-version = "13.4.0"
+version = "13.4.1"
 description = "CuPy: NumPy & SciPy for GPU"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "cupy_cuda12x-13.4.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:bbcaba04ca075d5a6a4b0611bfc930eeb054eaa6337c4a556c359f4bd5c2f5eb"},
-    {file = "cupy_cuda12x-13.4.0-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:c5f8b89f4ea0267e8814656a0ef4b62c02a263083c5dd667ccd2b9e7b8aa04b9"},
-    {file = "cupy_cuda12x-13.4.0-cp310-cp310-win_amd64.whl", hash = "sha256:f1c5c0de613872cc8f5f7637a80a35750f10a1b8ad881518a8261236d539f331"},
-    {file = "cupy_cuda12x-13.4.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:f2f796969bfbf4042245060c35cac9503375ba21d884d136e3738ddba620041b"},
-    {file = "cupy_cuda12x-13.4.0-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:6be34823b0de6cbce5ed9fc518f6dc252e37043d4a8e65de8eb1165a41e8e99e"},
-    {file = "cupy_cuda12x-13.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:4c75cd875d18f0f054a537e4948cde3d4e5a7abb9bb442160317c2df794ad7e6"},
-    {file = "cupy_cuda12x-13.4.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:bfb0e59d22cf1281bed59628593ebd307de2a53e53c5a53f2c044f2afe99de15"},
-    {file = "cupy_cuda12x-13.4.0-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:d67efa80c107adf28e4301a87410ef6ed57b1b286943c4101eee902b30330c58"},
-    {file = "cupy_cuda12x-13.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:061ee28b06cb0216ac914b78bc839e99706f930db4f65f6962d004860126f181"},
-    {file = "cupy_cuda12x-13.4.0-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:11435c5eebafdceb9227fb0136cd3fc63952b974be043148656246e84930d406"},
-    {file = "cupy_cuda12x-13.4.0-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:f72a9e102f56c42ea157154928e5acc0fca2dc5fa60acc2588f9d95164691008"},
-    {file = "cupy_cuda12x-13.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:1ba5d159fda49d46384df92e47c0ca8064ae5ca0ad996fc7ad62cdb2f614a505"},
-    {file = "cupy_cuda12x-13.4.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:1928d84ec59b30e63970247807603b6a361c63927c04e637685844d1b9332d3a"},
-    {file = "cupy_cuda12x-13.4.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:9b09a0c619468c00e3585f559a27bf4ad0555f7b1a1557bf8ca434be61332da9"},
-    {file = "cupy_cuda12x-13.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:b3ab0fee2caf0826d3c33a93eea95a424de1c368cbe85e2fa3e26f92c64f5676"},
+    {file = "cupy_cuda12x-13.4.1-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:113a4f6b5e89d8e3f0cb150708fa8586fde5f682d2d5bf4703ad8dde66063a5e"},
+    {file = "cupy_cuda12x-13.4.1-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:5ecb45b8fc5816214390267a0e0c989b8c7a9ffa8ff5712958aa9b066334abfc"},
+    {file = "cupy_cuda12x-13.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:829bdb8fc72c107e1df2b045a1c7dcc892e40e59f3dac60c8b0cffd9b60376ff"},
+    {file = "cupy_cuda12x-13.4.1-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:aaa81533a0367fd42fa5af30ba60e604d9f0bed5f75ae388df0ff6b906627ab1"},
+    {file = "cupy_cuda12x-13.4.1-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:081f543178a118d08f00e7f9caea77839e37912cbfc6542ecc4245fe6580c4ce"},
+    {file = "cupy_cuda12x-13.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:fabe024270f1d0b3f3db48a58d8def81bf4bd108e211354571a65546183a8085"},
+    {file = "cupy_cuda12x-13.4.1-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:a714db3dae534b9d869951366ae2431f3e72036b07827927ffccd24076507ca8"},
+    {file = "cupy_cuda12x-13.4.1-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:06103dd2dc2ff7f36c67d2d01cb658befd68da350fae78a0e113fbab6895755f"},
+    {file = "cupy_cuda12x-13.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:7d73a32b3b49311cf384f2dd9c686cc9244435b2288d628568af6a77262964ad"},
+    {file = "cupy_cuda12x-13.4.1-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:43f97bedd6e2385f61b939ee37faadff0e1fa701d35f2a328cdc13d5b1b74b48"},
+    {file = "cupy_cuda12x-13.4.1-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:d0d153ac5b24ad183a7bcbe83693a6df06840355bf94b30c1606c519added468"},
+    {file = "cupy_cuda12x-13.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:4ca400146ab1c5f65dad180bc2562b58b91e239b322d33689fafed7b6399e229"},
+    {file = "cupy_cuda12x-13.4.1-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:02c68c237cc92f1255879a54049e701f0b04020b6e3606397afda8945bd2efb6"},
+    {file = "cupy_cuda12x-13.4.1-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:238bd20bc1b33e170949f5541795a2617c10f6deb39a758fd5c71c186774df0f"},
+    {file = "cupy_cuda12x-13.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:73d40816d0c6a3b4b10314b98c87972c655200e7368c3b5b2d8cc9444ea9541e"},
 ]
 
 [package.dependencies]
