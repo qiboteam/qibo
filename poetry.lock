@@ -2938,8 +2938,13 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
+<<<<<<< HEAD
 reference = "py3.13"
 resolved_reference = "89c6338fce240696d201d281aa591339a23c05b8"
+=======
+reference = "HEAD"
+resolved_reference = "e7eaa313c987a7e61ba4025821fee30eaa45d8fa"
+>>>>>>> master
 
 [[package]]
 name = "qulacs"
@@ -3897,4 +3902,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "7ed66c6a694f40096b70ac6d9ffe6be9965f094e43c533ef9cb42c13987804eb"
+content-hash = "1ecd50f54b2cd2691ab20144c43352e25763425ca479d1c46612344648e444ff"
