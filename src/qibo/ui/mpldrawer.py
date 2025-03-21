@@ -269,7 +269,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 if name == "UNITARY" and target.count("_") > 1:
                     u_gate_single_hash = controls[cci].split("_")[2]
                     subindex = plot_params["hash_unitary_gates"][u_gate_single_hash]
-                    symbol += r"$\rm_{0}$".format(subindex)
+                    symbol += r"$\rm_{}$".format(subindex)
                     cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
@@ -308,7 +308,7 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         if name == "UNITARY" and target.count("_") > 1:
             hash = target.split("_")[2]
             subindex = plot_params["hash_unitary_gates"][hash]
-            symbol += r"$\rm_{0}$".format(subindex)
+            symbol += r"$\rm_{}$".format(subindex)
 
         _text(ax, x, y, symbol, plot_params, box=True)
 
