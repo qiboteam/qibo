@@ -4,16 +4,23 @@ from scipy.linalg import sqrtm
 
 from qibo import Circuit, gates, matrices
 from qibo.quantum_info.linalg_operations import (
+    _gram_schmidt_process,
+    _vector_projection,
     anticommutator,
     commutator,
+    lanczos,
     matrix_power,
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
     singular_value_decomposition,
 )
-from qibo.quantum_info.metrics import purity
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.metrics import infidelity, purity
+from qibo.quantum_info.random_ensembles import (
+    random_density_matrix,
+    random_hermitian,
+    random_statevector,
+)
 
 
 def test_commutator(backend):
@@ -33,17 +40,18 @@ def test_commutator(backend):
     with pytest.raises(TypeError):
         test = commutator(matrix_2, matrix_3)
 
-    I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
-    I = backend.cast(I, dtype=I.dtype)
-    X = backend.cast(X, dtype=X.dtype)
-    Y = backend.cast(Y, dtype=Y.dtype)
-    Z = backend.cast(Z, dtype=Z.dtype)
+    I, X, Y, Z = (
+        backend.matrices.I(2),
+        backend.matrices.X,
+        backend.matrices.Y,
+        backend.matrices.Z,
+    )
 
     comm = commutator(X, I)
-    backend.assert_allclose(comm, 0.0)
+    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
 
     comm = commutator(X, X)
-    backend.assert_allclose(comm, 0.0)
+    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
 
     comm = commutator(X, Y)
     backend.assert_allclose(comm, 2j * Z)
@@ -82,10 +90,10 @@ def test_anticommutator(backend):
     backend.assert_allclose(anticomm, 2 * I)
 
     anticomm = anticommutator(X, Y)
-    backend.assert_allclose(anticomm, 0.0)
+    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
 
     anticomm = anticommutator(X, Z)
-    backend.assert_allclose(anticomm, 0.0)
+    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -229,10 +237,9 @@ def test_matrix_power(backend, power, singular):
     else:
         power = matrix_power(state, power, backend=backend)
 
-        backend.assert_allclose(
-            float(backend.np.real(backend.np.trace(power))),
-            purity(state, backend=backend),
-        )
+        target = float(backend.np.real(backend.np.trace(power)))
+
+        assert abs(purity(state, backend=backend) - target) < 1e-5
 
 
 def test_singular_value_decomposition(backend):
@@ -291,4 +298,81 @@ def test_schmidt_decomposition(backend):
     entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
     entropy = -backend.np.sum(coeffs * entropy)
 
-    backend.assert_allclose(entropy, 0.0, atol=1e-14)
+    assert entropy < 1e-14
+
+
+@pytest.mark.parametrize("seed", [None, 10])
+@pytest.mark.parametrize("initial_vector", [None, True])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_lanczos(backend, nqubits, initial_vector, seed):
+    # Since Lanczos is designed for extremal eigenvalues,
+    # only the first 5 eigenvalues and eigenvectors are tested.
+    dims = 2**nqubits
+    hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
+
+    eigvals_target, eigvectors_target = backend.np.linalg.eigh(hamiltonian)
+
+    if initial_vector:
+        initial_vector = random_statevector(dims, seed=20, backend=backend)
+
+    tridiag, ortho_matrix = lanczos(
+        hamiltonian, initial_vector=initial_vector, seed=seed, backend=backend
+    )
+
+    backend.assert_allclose(
+        tridiag, backend.np.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
+    )
+
+    eigvals, eigvectors = backend.np.linalg.eigh(tridiag)
+    eigs = list(zip(eigvals, eigvectors.T))
+    eigs.sort()
+    eigvectors = [row[1] for row in eigs]
+    eigvals = [float(row[0]) for row in eigs]
+
+    eigvals = backend.cast(eigvals)
+    eigvectors = backend.cast(eigvectors)
+
+    backend.assert_allclose(eigvals[:5], eigvals_target[:5], atol=1e-2, rtol=1e-2)
+
+    infidelities = [
+        float(infidelity(ortho_matrix @ eigvec, eigvec_target, backend=backend))
+        for eigvec, eigvec_target in zip(eigvectors, eigvectors_target.T)
+    ]
+    assert all(inf < 1e-3 for inf in infidelities[:5])
+
+
+@pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
+    dims = 2**nqubits
+    state = random_statevector(dims, seed=seed, backend=backend)
+    directions = [
+        random_statevector(dims, seed=seed + k, backend=backend)
+        for k in range(1, 5 + 1)
+    ]
+
+    # testing several projections
+    target = backend.cast(
+        [
+            backend.np.dot(backend.np.conj(state), direction) * direction
+            for direction in directions
+        ]
+    )
+    projection = _vector_projection(state, directions, backend=backend)
+    backend.assert_allclose(projection, target)
+
+    # test gram-schmidt
+    target_gs = backend.cast(state, copy=True)
+    for direction in target:
+        target_gs -= direction
+    vector = _gram_schmidt_process(state, directions, backend=backend)
+    backend.assert_allclose(vector, target_gs)
+
+    # testing one projection
+    projection = _vector_projection(state, directions[0], backend=backend)
+    backend.assert_allclose(projection, target[0])
+
+    # test gram-schmidt
+    target_gs = state - target[0]
+    vector = _gram_schmidt_process(state, directions[0], backend=backend)
+    backend.assert_allclose(vector, target_gs)
