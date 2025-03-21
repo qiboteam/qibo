@@ -245,6 +245,18 @@ def test_fuse_cluster():
     assert match_figure_image(fig, BASEPATH + "/test_fuse_cluster.npy") == True
 
 
+def test_plot_unitaries():
+    """Test for plotting unitaries"""
+    c = Circuit(6)
+    c.add(gates.Unitary(np.random.random((8, 8)), 1, 2, 3))
+    c.add(gates.Unitary(np.random.random((8, 8)), 0, 2, 4))
+    c.add(gates.Unitary(np.random.random((2, 2)), 2))
+    c.add(gates.Unitary(np.random.random((2, 2)), 4))
+    c.add(gates.Unitary(np.random.random((8, 8)), 0, 2, 5))
+    _, fig = plot_circuit(c)
+    assert match_figure_image(fig, BASEPATH + "/test_plot_unitaries.npy") == True
+
+
 def test_plot_circuit_internal():
     """Test for circuit plotting"""
     gates_plot = [
