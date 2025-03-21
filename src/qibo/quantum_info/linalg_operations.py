@@ -485,8 +485,10 @@ def lanczos(
         alpha = backend.np.conj(omega_prime.T) @ vector
         omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
 
-    lanczos_vectors = backend.cast(lanczos_vectors).T
-    triadiagonal = backend.np.conj(lanczos_vectors.T) @ matrix @ lanczos_vectors
+    lanczos_vectors = backend.cast(lanczos_vectors)
+    triadiagonal = backend.np.conj(lanczos_vectors) @ matrix
+    lanczos_vectors = lanczos_vectors.T
+    triadiagonal = triadiagonal @ lanczos_vectors
 
     return triadiagonal, lanczos_vectors
 
