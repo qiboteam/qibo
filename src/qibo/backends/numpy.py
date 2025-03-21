@@ -671,8 +671,10 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        return np.mod(np.right_shift(samples[:, None], qrange), 2)
+        qrange = self.cast(
+            np.arange(nqubits - 1, -1, -1, dtype=np.int32), dtype=self.np.int32
+        )
+        return self.np.mod(self.np.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         ### This is faster just staying @ NumPy.
