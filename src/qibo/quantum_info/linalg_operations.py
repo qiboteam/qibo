@@ -515,14 +515,14 @@ def _vector_projection(vector, directions, backend):
         return (
             backend.np.dot(vector, directions)
             * directions
-            / backend.np.dot(directions, directions)
+            / backend.np.dot(backend.np.conj(directions.T), directions)
         )
 
     return backend.cast(
         [
             backend.np.dot(vector, direction)
             * direction
-            / backend.calculate_vector_norm(direction) ** 2
+            / backend.np.dot(backend.np.conj(direction.T), direction)
             for direction in directions
         ]
     )
