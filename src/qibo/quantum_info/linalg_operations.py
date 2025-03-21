@@ -513,19 +513,17 @@ def _vector_projection(vector, directions, backend):
 
     if len(directions.shape) == 1:
         return (
-            backend.np.dot(vector, directions)
+            backend.np.dot(backend.np.conj(vector), directions)
             * directions
-            / backend.np.dot(backend.np.conj(directions.T), directions)
+            / backend.np.dot(backend.np.conj(directions), directions)
         )
 
-    return backend.cast(
-        [
-            backend.np.dot(vector, direction)
-            * direction
-            / backend.np.dot(backend.np.conj(direction.T), direction)
-            for direction in directions
-        ]
+    dot_products = backend.np.einsum("j,kj", backend.np.conj(vector), directions)
+    inner_prods = backend.np.diag(
+        backend.np.einsum("jk,lk", backend.np.conj(directions), directions)
     )
+
+    return (dot_products / inner_prods).reshape(-1, 1) * directions
 
 
 def _gram_schmidt_process(vector, directions, backend):

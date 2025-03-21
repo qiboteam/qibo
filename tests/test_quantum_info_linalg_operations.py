@@ -353,7 +353,10 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
 
     # testing several projections
     target = backend.cast(
-        [backend.np.dot(state, direction) * direction for direction in directions]
+        [
+            backend.np.dot(backend.np.conj(state), direction) * direction
+            for direction in directions
+        ]
     )
     projection = _vector_projection(state, directions, backend=backend)
     backend.assert_allclose(projection, target)
