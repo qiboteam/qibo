@@ -392,7 +392,7 @@ def lanczos(
     seed=None,
     backend=None,
 ):
-    """Lanczos iteractive method to tridiagonalize a Hermitian matrix.
+    """Lanczos iterative method to tridiagonalize a Hermitian matrix.
 
     Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m \\leq N`,
     the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
