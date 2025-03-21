@@ -2834,8 +2834,8 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "to_numpy"
-resolved_reference = "6217e93ff8740758fe6e6e45833875bfc32ee177"
+reference = "HEAD"
+resolved_reference = "e7eaa313c987a7e61ba4025821fee30eaa45d8fa"
 
 [[package]]
 name = "qulacs"
@@ -3752,4 +3752,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.14"
-content-hash = "e5c890421279015bbb9179f2cbc059311ca2a2520b4ff93f02a75edd2483e7f3"
+content-hash = "1ecd50f54b2cd2691ab20144c43352e25763425ca479d1c46612344648e444ff"
