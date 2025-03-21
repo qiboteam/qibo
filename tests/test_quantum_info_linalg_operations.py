@@ -237,12 +237,6 @@ def test_matrix_power(backend, power, singular):
     else:
         power = matrix_power(state, power, backend=backend)
 
-        print(
-            float(backend.np.real(backend.np.trace(power))),
-            type(float(backend.np.real(backend.np.trace(power)))),
-        )
-        print(purity(state, backend=backend), type(purity(state, backend=backend)))
-
         target = float(backend.np.real(backend.np.trace(power)))
 
         assert abs(purity(state, backend=backend) - target) < 1e-5
