@@ -228,6 +228,9 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[min_wire],
             wire_grid[max_wire],
             plot_params,
+            linestyle=(
+                "dashed" if name == "UNITARY" and target.count("_") > 1 else "solid"
+            ),
         )
 
         cci = 0
@@ -269,7 +272,8 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 if name == "UNITARY" and target.count("_") > 1:
                     u_gate_single_hash = controls[cci].split("_")[2]
                     subindex = plot_params["hash_unitary_gates"][u_gate_single_hash]
-                    symbol += r"$\rm_{}$".format(subindex)
+                    symbol = r"$\rm_{}$".format(subindex) + symbol
+                    symbol += r"$\rm_{}$".format(i)
                     cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
@@ -308,15 +312,20 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
         if name == "UNITARY" and target.count("_") > 1:
             hash = target.split("_")[2]
             subindex = plot_params["hash_unitary_gates"][hash]
-            symbol += r"$\rm_{}$".format(subindex)
+            symbol = r"$\rm_{}$".format(subindex) + symbol
+            symbol += r"$\rm_{}$".format(i)
 
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
-def _line(ax, x1, x2, y1, y2, plot_params):
+def _line(ax, x1, x2, y1, y2, plot_params, linestyle="solid"):
     Line2D = matplotlib.lines.Line2D
     line = Line2D(
-        (x1, x2), (y1, y2), color=plot_params["linecolor"], lw=plot_params["linewidth"]
+        (x1, x2),
+        (y1, y2),
+        color=plot_params["linecolor"],
+        lw=plot_params["linewidth"],
+        ls=linestyle,
     )
     ax.add_line(line)
 
