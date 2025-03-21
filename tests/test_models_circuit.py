@@ -561,24 +561,27 @@ def test_circuit_with_pauli_noise(measurements, noise_map):
 
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize("include_not_trainable", [True, False])
-@pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
-def test_get_parameters(trainable, include_not_trainable, format):
+@pytest.mark.parametrize("output_format", ["list", "dict", "flatlist"])
+def test_get_parameters(trainable, include_not_trainable, output_format):
     matrix = np.random.random((2, 2))
-    c = Circuit(3)
-    c.add(gates.RX(0, theta=0.123))
-    c.add(gates.RY(1, theta=0.456, trainable=trainable))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.Unitary(matrix, 2))
-    c.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
-    c.add(gates.H(2))
-    params = c.get_parameters(format, include_not_trainable)
+
+    circuit = Circuit(3)
+    circuit.add(gates.RX(0, theta=0.123))
+    circuit.add(gates.RY(1, theta=0.456, trainable=trainable))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.Unitary(matrix, 2))
+    circuit.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
+    circuit.add(gates.H(2))
+
+    params = circuit.get_parameters(output_format, include_not_trainable)
+
     if trainable or include_not_trainable:
         target_params = {
             "list": [(0.123,), (0.456,), (0.789, 0.987)],
             "dict": {
-                c.queue[0]: (0.123,),
-                c.queue[1]: (0.456,),
-                c.queue[4]: (0.789, 0.987),
+                circuit.queue[0]: (0.123,),
+                circuit.queue[1]: (0.456,),
+                circuit.queue[4]: (0.789, 0.987),
             },
             "flatlist": [0.123, 0.456],
         }
@@ -587,18 +590,28 @@ def test_get_parameters(trainable, include_not_trainable, format):
     else:
         target_params = {
             "list": [(0.123,)],
-            "dict": {c.queue[0]: (0.123,)},
+            "dict": {circuit.queue[0]: (0.123,)},
             "flatlist": [0.123],
         }
         target_params["flatlist"].extend(list(matrix.ravel()))
-    if format == "list":
+
+    if output_format == "list":
         i = len(target_params["list"]) // 2 + 1
         np.testing.assert_allclose(params.pop(i)[0], matrix)
-    elif format == "dict":
-        np.testing.assert_allclose(params.pop(c.queue[3])[0], matrix)
-    assert params == target_params[format]
+    elif output_format == "dict":
+        np.testing.assert_allclose(params.pop(circuit.queue[3])[0], matrix)
+
+    assert params == target_params[output_format]
+
     with pytest.raises(ValueError):
-        c.get_parameters("test")
+        circuit.get_parameters("test")
+
+
+def test_get_parameters_0_dimensional_tensor():
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 0))
+    circuit.set_parameters([np.array(1)])
+    assert circuit.get_parameters(output_format="flatlist") == [np.array(1)]
 
 
 @pytest.mark.parametrize("trainable", [True, False])
