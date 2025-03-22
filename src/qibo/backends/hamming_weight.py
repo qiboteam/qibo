@@ -32,7 +32,8 @@ class HammingWeightBackend(NumpyBackend):
         else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                f"Backend `{engine}` is not supported for Hamming-weight-preserving circuit simulation.",
+                f"Backend `{engine}` is not supported for "
+                + "Hamming-weight-preserving circuit simulation.",
             )
 
         self.np = self.engine.np
@@ -125,11 +126,23 @@ class HammingWeightBackend(NumpyBackend):
             )
 
     def _gray_code(self, initial_string):
+        """Return all bitstrings of a fixed Hamming weight.
+
+        Uses the ``ehrlich_algorithm`` with an ``initial_string``.
+
+        Args:
+            initial_string (ndarray): Array of bits representing the input 
+                of the Ehrlich algorithm.
+
+        Returns:
+            ndarray: All bitstrings with the same Hamming weight as ``initial_string``.
+        """
         from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
 
         strings = _ehrlich_algorithm(initial_string, return_indices=False)
         strings = [list(string) for string in strings]
         strings = self.np.asarray(strings, dtype=int)
+
         return strings
 
     def _get_cached_strings(
@@ -258,6 +271,7 @@ class HammingWeightBackend(NumpyBackend):
             [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
         )
         state[indexes_in] *= matrix_element
+
         return state
 
     def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
@@ -423,6 +437,7 @@ class HammingWeightBackend(NumpyBackend):
 
         new_matrix = self.cast(new_matrix)
         state = self.np.matmul(new_matrix, state)
+
         return state
 
     def calculate_symbolic(
@@ -478,7 +493,7 @@ class HammingWeightBackend(NumpyBackend):
         return probs
 
     def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
-        state = self.cast(state)
+        state = self.cast(state, dtype=state.dtype)
         if (
             self._dict_indexes is None
             or list(self._dict_indexes.keys())[0].count("1") != weight
@@ -495,5 +510,5 @@ class HammingWeightBackend(NumpyBackend):
         if normalize:
             norm = self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))
             state = state / norm
-        state = self.cast(state)
+
         return state
