@@ -1,3 +1,5 @@
+"""Module defining the Numpy backend."""
+
 import collections
 import math
 from typing import Union
@@ -69,17 +71,20 @@ class NumpyBackend(Backend):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x, dtype=None, copy=False):
+    def cast(self, x, dtype=None, copy: bool = False):
         if dtype is None:
             dtype = self.dtype
+
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
-        elif self.is_sparse(x):
+
+        if self.is_sparse(x):
             return x.astype(dtype, copy=copy)
+
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
-        from scipy import sparse
+        from scipy import sparse  # pylint: disable=C0415
 
         return sparse.issparse(x)
 
