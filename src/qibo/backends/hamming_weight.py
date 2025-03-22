@@ -131,7 +131,7 @@ class HammingWeightBackend(NumpyBackend):
         Uses the ``ehrlich_algorithm`` with an ``initial_string``.
 
         Args:
-            initial_string (ndarray): Array of bits representing the input 
+            initial_string (ndarray): Array of bits representing the input
                 of the Ehrlich algorithm.
 
         Returns:
