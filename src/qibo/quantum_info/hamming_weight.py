@@ -2,6 +2,7 @@
 
 from typing import Optional, Union
 
+import numpy as np
 from scipy.special import binom
 
 from qibo.backends import HammingWeightBackend
@@ -99,14 +100,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         .. note::
             This method is inefficient in runtime and memory for a large number of qubits.
-
-        Args:
-            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
-                otherwise it will follow the backend tensor type.
-                Defaults to ``False``.
-
-        Returns:
-            ndarray: State in the complete computational basis.
         """
         if (
             self._backend._dict_indexes is None
@@ -117,10 +110,10 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             )
 
         state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
-        for i, j in self._backend._dict_indexes.values():
-            state[j] = self._state[i]
-
-        state = self.engine.cast(state)
+        indices = list(self._backend._dict_indexes.values())
+        indices.sort()
+        indices = np.asarray(indices)
+        state[list(indices[:, 1])] = self._state[list(indices[:, 0])]
 
         return state
 
@@ -166,6 +159,11 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
     def _probabilities_from_samples(self, qubits: Optional[Union[list, set]] = None):
         """Calculate the probabilities as ``frequencies / nshots``.
 
+        Args:
+            qubits (list or set, optional): Set of qubits that are measured.
+                If ``None``, ``qubits`` equates the total number of qubits.
+                Defauts to ``None``.
+
         Returns:
             ndarray: Array containing the probabilities of the measured qubits.
         """
@@ -200,7 +198,9 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         Args:
             binary (bool, optional): Return samples in binary or decimal form.
+                Defaults to ``True``.
             registers (bool, optional): Group samples according to registers.
+                Defaults to ``False``.
 
         Returns:
             If ``binary`` is ``True``
