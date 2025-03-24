@@ -403,7 +403,8 @@ class NumpyBackend(Backend):
                     f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
                       initial state for circuit with density_matrix {circuit.density_matrix}.""",
                 )
-            elif (
+
+            if (
                 not initial_state.accelerators == circuit.accelerators
             ):  # pragma: no cover
                 raise_error(
@@ -411,8 +412,7 @@ class NumpyBackend(Backend):
                     f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
                       initial state for circuit with accelerators {circuit.density_matrix}.""",
                 )
-            else:
-                return self.execute_circuit(initial_state + circuit, None, nshots)
+            return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
             initial_state = self.cast(initial_state)
             valid_shape = (
@@ -430,14 +430,14 @@ class NumpyBackend(Backend):
         if circuit.repeated_execution:
             if circuit.measurements or circuit.has_collapse:
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
-            else:
-                raise_error(
-                    RuntimeError,
-                    "Attempting to perform noisy simulation with `density_matrix=False` "
-                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
-                    + "statistics of the outcomes please include measurements in the circuit, "
-                    + "otherwise set `density_matrix=True` to recover the final state.",
-                )
+
+            raise_error(
+                RuntimeError,
+                "Attempting to perform noisy simulation with `density_matrix=False` "
+                + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                + "statistics of the outcomes please include measurements in the circuit, "
+                + "otherwise set `density_matrix=True` to recover the final state.",
+            )
 
         if circuit.accelerators:  # pragma: no cover
             return self.execute_distributed_circuit(circuit, initial_state, nshots)
@@ -471,19 +471,18 @@ class NumpyBackend(Backend):
                         state, circuit.measurements, backend=self, nshots=nshots
                     )
                     return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
 
-            else:
-                if circuit.measurements:
-                    circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
-                    )
-                    return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
+                circuit._final_state = QuantumState(state, backend=self)
+                return circuit._final_state
+
+            if circuit.measurements:
+                circuit._final_state = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=nshots
+                )
+                return circuit._final_state
+
+            circuit._final_state = QuantumState(state, backend=self)
+            return circuit._final_state
 
         except self.oom_error:
             raise_error(
