@@ -234,7 +234,8 @@ def GST(
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
             GST on. For instance, ``gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX,
-            [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), gates.CNOT]``.
+            [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), (gates.Unitary,
+            [np.array([[1, 0], [0, 1]])]), gates.CNOT]``.
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -297,11 +298,7 @@ def GST(
             if isinstance(gate, tuple):
                 angles = ["theta", "phi", "lam", "unitary"]
                 gate, params = gate
-                # if isinstance(params[0], np.ndarray):
-                # params = [params]
                 params = [params] if isinstance(params[0], np.ndarray) else params
-                # elif isinstance(params[0], list):
-                #     params = [[np.array(params[0])]]
                 init_args = signature(gate).parameters
                 valid_angles = [arg for arg in init_args if arg in angles]
                 angle_values = dict(zip(valid_angles, params))

@@ -210,7 +210,6 @@ def test_gate_tomography_noise_model(backend):
             gates.RX(0, np.pi / 4),
             gates.PRX(0, np.pi, np.pi / 2),
             gates.Unitary(np.array([[1, 0], [0, 1]]), 0),
-            # gates.Unitary([[0, 1], [1, 0], 0]),
             gates.CY(0, 1),
         ],
         [gates.TOFFOLI(0, 1, 2)],
