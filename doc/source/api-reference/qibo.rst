@@ -2708,25 +2708,17 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 Simulation of Hamming-weight-preserving circuits
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A special backend in qibo supports the simulation of Hamming-weight-preserving circuits.
-This :class:`qibo.backends.hamming_weight.HammingWeightBackend` backend uses the state representation
-in the computational basis of a subspace with fixed Hamming weight.
-The dimension of this subspace is :math:`d = \binom{n}{k}`, where :math:`n` is the number of qubits and :math:`k` is the Hamming weight of the input state.
-The execution of a circuit through this backend creates a
-:class:`qibo.quantum_info.hamming_weight.HammingWeightResult` object that gives access to the final state
-through the :meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.state` method.
-The probabilities are computed by the :meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.probabilities` method.
-If there are no measurements in the circuit or the number of shots is :math:`0`, they are calculated from the statevector.
-Otherwise, they are calculated from the samples.
+This specialised backend in ``qibo`` supports the fast simulation of
+Hamming-weight-preserving circuits.
+Given a quantum state that only contains non-zero amplitudes associated with computational basis
+states of Hamming weight :math:`k`, the :class:`qibo.backends.hamming_weight.HammingWeightBackend`
+a compressed representation of quantum states that is restricted to the subspace of
+with fixed Hamming weight :math:`k`.
+The dimension of this subspace is :math:`d = \binom{n}{k}`,
+where :math:`n` is the total number of qubits.
 
-The final measured samples and frequencies are accessible through the :meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.samples` method, and through the :meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.frequencies` method, respectively.
-
-It is also possible to recover the standard state representation with the
-:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.full_state` method.
-Note, however, that this process is inefficient as it involves the construction of
-a statevector with size exponential in the number of qubits.
-
-As for the other backends, the Hamming-weight backend can be set with
+As for the other backends, the Hamming-weight backend can be set
+by specifying the engine used for calculation, *i.e.*
 
 .. testcode::  python
 
@@ -2734,7 +2726,7 @@ As for the other backends, the Hamming-weight backend can be set with
 
     set_backend("hamming_weight", platform="numpy")
 
-by specifying the engine used for calculation, if not provided the current backend is used
+If not provided, the current global backend is used:
 
 .. testcode::  python
 
@@ -2746,13 +2738,34 @@ by specifying the engine used for calculation, if not provided the current backe
     # the Hamming-weight backend will use the numpy backend as engine
     backend = HammingWeightBackend()
 
+
 .. autoclass:: qibo.backends.hamming_weight.HammingWeightBackend
     :members:
     :member-order: bysource
 
+
+The results of execution of a circuit through this backend creates a
+:class:`qibo.quantum_info.hamming_weight.HammingWeightResult`
+object that gives access to the final state through the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.state` method.
+The probabilities are computed by the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.probabilities` method.
+If there are no measurements in the circuit or the number of shots is :math:`0`,
+they are calculated from the statevector.
+Otherwise, they are calculated from the samples.
+The final measured samples and frequencies are accessible, respectively, through the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.samples` and the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.frequencies` methods.
+
+It is also possible to recover the standard state representation with the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.full_state` method.
+Note, however, that this process is inefficient as it involves the construction of
+a statevector with size exponential in the number of qubits.
+
 .. autoclass:: qibo.quantum_info.hamming_weight.HammingWeightResult
     :members:
     :member-order: bysource
+
 
 Cloud Backends
 ^^^^^^^^^^^^^^
