@@ -67,7 +67,7 @@ class HammingWeightBackend(NumpyBackend):
         """Apply ``gate`` to ``state``.
 
         Args:
-            gate (:class:`qibo.gates.Gate`): gate to apply to ``state``.
+            gate (:class:`qibo.gates.abstract.Gate`): gate to apply to ``state``.
             state (ndarray): state to apply ``gate`` to.
             nqubits (int): total number of qubits in ``state``.
             weight (int): fixed Hamming weight of ``state``.
@@ -92,7 +92,27 @@ class HammingWeightBackend(NumpyBackend):
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
-    def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=None):
+    def execute_circuit(
+        self, circuit, weight: int, initial_state=None, nshots: int = 1000
+    ):
+        """Execute ``circuit`` by applying the queue of gates to the ``initial_state``.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): Hamming-weight-preserving circuit
+                to be executed.
+            weight (int): fixed Hamming weight of the ``initial_state``.
+            initial_state (ndarray, optional): initial state that ``circuit`` acts on.
+                If ``None``, defaults to :math:`\\ket{0^{n-k} \\, 1^{k}}`,
+                with :math:`n` being the total number of qubits in the circuit,
+                and :math:`k` being the Hamming ``weight``. Defaults to ``None``.
+            nshots (int, optional): total number of shots to simulate when ``circuit``
+                contains measurement gates (:class:`qibo.gates.M`). Defaults to :math:`1000`.
+
+        Returns:
+            :class:`qibo.quantum_info.hamming_weight.HammingWeightResult`: Object
+            containing the results of circuit execution of a Hamming-weight-preserving
+            circuit.
+        """
         from qibo.quantum_info.hamming_weight import (  # pylint: disable=import-outside-toplevel
             HammingWeightResult,
         )
@@ -165,6 +185,28 @@ class HammingWeightBackend(NumpyBackend):
     def _get_cached_strings(
         self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
     ):
+        """Generate list of strings necessary for the custom ``apply_gate`` method.
+
+        Given the total number of qubits ``nqubits``, the Hamming ``weight`` to be
+        preserved, and the number of controls ``ncontrols`` in the gate, returns a
+        sequence of bitstrings for the custom ``apply_gate`` method.
+
+        The sequence is generated for the first gate with a unique combination of ``nqubits``,
+        ``weight`` and ``ncontrols``, and then cached to be resued for similar gates.
+
+        Args:
+            nqubits (int): total number of qubits in the quantum system.
+            weight (int): Hamming weight of the state that gates are acting on.
+            ncontrols (int, optional): number of controls in the gate that is being
+                applied to the state. Defaults to :math:`0`.
+            two_qubit_gate (bool, optional): if ``True``, generate strings assuming the
+                gate is a two-qubit gate. If ``False``, it assumes the gate is a single-qubit
+                gate. Defaults to ``True``.
+
+        Returns:
+            ndarray or list: ndarray of bitstrings for two-qubit gates or a list of two ndarrays
+            of bitstrings for single-qubit gates.
+        """
         if two_qubit_gate:
             initial_string = self.np.array(
                 [1] * (weight - 1 - ncontrols)
@@ -373,7 +415,19 @@ class HammingWeightBackend(NumpyBackend):
 
         return state
 
-    def _apply_gate_CCZ(self, gate, state, nqubits, weight):
+    def _apply_gate_CCZ(self, gate, state, nqubits: int, weight: int):
+        """Custom ``apply_gate`` method for the :class:`qibo.gates.CCZ` gate.
+
+        Args:
+            gate (:class:`qibo.gates.CCZ`): :math:`2`-controlled :math:`Z` gate
+                to be applied to ``state``.
+            state (ndarray): state to suffer the action of ``gate``.
+            nqubits (int): total number of qubits in the circuit.
+            weight (int): Hamming-weight of ``state``.
+
+        Returns:
+            ndarray: ``state`` after the action of the :class:`qibo.gates.CCZ` gate.
+        """
         qubits = list(gate.qubits)
         gate_qubits = len(qubits)
 
@@ -385,10 +439,10 @@ class HammingWeightBackend(NumpyBackend):
 
         strings = list(self._dict_indexes.keys())
 
-        for i in range(len(strings)):
-            gate_string = [strings[i][q] for q in qubits]
+        for j in range(len(strings)):
+            gate_string = [strings[j][q] for q in qubits]
             if gate_string.count("1") == gate_qubits:
-                state[i] *= -1
+                state[j] *= -1
 
         return state
 
