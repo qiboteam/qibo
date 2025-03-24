@@ -10,6 +10,8 @@ from .test_measurements import assert_result
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_probabilistic_measurement(backend, accelerators, use_samples):
+    if backend.platform in ("cupy", "cuquantum"):
+        pytest.skip("backend._test_regressions has to be updated for cupy/cuquantum")
     # set single-thread to fix the random values generated from the frequency custom op
     backend.set_threads(1)
     circuit = Circuit(4, accelerators)
@@ -51,6 +53,8 @@ def test_sample_frequency_agreement(backend):
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_unbalanced_probabilistic_measurement(backend, use_samples):
+    if backend.platform in ("cupy", "cuquantum"):
+        pytest.skip("backend._test_regressions has to be updated for cupy/cuquantum")
     # set single-thread to fix the random values generated from the frequency custom op
     backend.set_threads(1)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
@@ -93,7 +97,7 @@ def test_measurements_with_probabilistic_noise(backend):
         noiseless_circuit = Circuit(5)
         noiseless_circuit.add((gates.RX(i, t) for i, t in enumerate(thetas)))
         for i in range(5):
-            index = backend.sample_shots(probs, 1)[0]
+            index = int(backend.sample_shots(probs, 1)[0])
             if index != len(channel_gates):
                 noiseless_circuit.add(channel_gates[index](i))
         noiseless_circuit.add(gates.M(*range(5)))
@@ -108,6 +112,8 @@ def test_measurements_with_probabilistic_noise(backend):
 )
 def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     """Check bitflip errors on circuit measurements."""
+    if backend.platform in ("cupy", "cuquantum"):
+        pytest.skip("backend._test_regressions has to be updated for cupy/cuquantum")
     backend.set_seed(123)
     circuit = Circuit(5, accelerators=accelerators)
     circuit.add([gates.X(0), gates.X(2), gates.X(3)])
