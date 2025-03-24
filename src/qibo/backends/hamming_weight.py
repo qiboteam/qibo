@@ -57,14 +57,31 @@ class HammingWeightBackend(NumpyBackend):
                 to the default data type of the current backend. Defaults to ``None``.
             copy (bool, optional): If ``True`` a copy of the object is created in memory.
                 Defaults to ``False``.
+
+        Returns:
+            ndarray: Original object as an array or tensor type of the current backend.
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
-    def apply_gate(self, gate, state, nqubits, weight):
+    def apply_gate(self, gate: gates.Gate, state, nqubits: int, weight: int):
+        """Apply ``gate`` to ``state``.
+
+        Args:
+            gate (:class:`qibo.gates.Gate`): gate to apply to ``state``.
+            state (ndarray): state to apply ``gate`` to.
+            nqubits (int): total number of qubits in ``state``.
+            weight (int): fixed Hamming weight of ``state``.
+
+        Returns:
+            ndarray: ``state`` after the action of ``gate``.
+        """
         if isinstance(gate, gates.M):
             return gate.apply_hamming_weight(self, state, nqubits, weight)
 
         if isinstance(gate, gates.CCZ):
+            # CCZ has a custom apply method because currently it is the only
+            # 3-qubit gate that is also Hamming-weight-preserving
+            # and this custom method is faster than the n-qubit method
             return self._apply_gate_CCZ(gate, state, nqubits, weight)
 
         if len(gate.target_qubits) == 1:
@@ -76,7 +93,7 @@ class HammingWeightBackend(NumpyBackend):
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
     def execute_circuit(self, circuit, weight: int, initial_state=None, nshots=None):
-        from qibo.quantum_info.hamming_weight import (  # pylint: disable=C0415
+        from qibo.quantum_info.hamming_weight import (  # pylint: disable=import-outside-toplevel
             HammingWeightResult,
         )
 
