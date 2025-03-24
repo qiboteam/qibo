@@ -91,6 +91,14 @@ class NumpyBackend(Backend):
     def compile(self, func):
         return func
 
+    def zeros(self, shape, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        return self.np.zeros(shape, dtype=dtype)
+
+    def random_choice(self, a, **kwargs):
+        return self.np.random.choice(a, **kwargs)
+
     def zero_state(self, nqubits):
         state = self.np.zeros(2**nqubits, dtype=self.dtype)
         state[0] = 1
@@ -271,7 +279,7 @@ class NumpyBackend(Backend):
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
-        index = self.sample_shots(probabilities, 1)[0]
+        index = int(self.sample_shots(probabilities, 1)[0])
         if index != len(channel.gates):
             gate = channel.gates[index]
             state = self.apply_gate(gate, state, nqubits)
@@ -663,7 +671,7 @@ class NumpyBackend(Backend):
         self.np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(
+        return self.random_choice(
             range(len(probabilities)), size=nshots, p=probabilities
         )
 
@@ -700,7 +708,7 @@ class NumpyBackend(Backend):
         from qibo.config import SHOT_BATCH_SIZE
 
         nprobs = probabilities / self.np.sum(probabilities)
-        frequencies = self.np.zeros(len(nprobs), dtype=self.np.int64)
+        frequencies = self.zeros(len(nprobs), dtype=self.np.int64)
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
         frequencies = self.update_frequencies(

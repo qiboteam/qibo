@@ -338,6 +338,7 @@ class MeasurementOutcomes:
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     np.random.shuffle(samples)
+                    samples = self.backend.cast(samples, dtype=self.backend.np.int64)
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)
