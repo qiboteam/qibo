@@ -299,7 +299,7 @@ def GST(
                 gate, params = gate
                 # if isinstance(params[0], np.ndarray):
                 # params = [params]
-                params = [params] if isinstance(params[0], nd.array) else params
+                params = [params] if isinstance(params[0], np.ndarray) else params
                 # elif isinstance(params[0], list):
                 #     params = [[np.array(params[0])]]
                 init_args = signature(gate).parameters
