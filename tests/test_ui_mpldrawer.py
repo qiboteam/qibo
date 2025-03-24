@@ -254,11 +254,11 @@ def test_plot_unitaries():
     np.random.seed(42)
 
     circuit = Circuit(6)
-    circuit.add(gates.Unitary(random_unitary(8, backend=backend), 1, 2, 3))
-    circuit.add(gates.Unitary(random_unitary(8, backend=backend), 0, 2, 4))
-    circuit.add(gates.Unitary(random_unitary(2, backend=backend), 2))
-    circuit.add(gates.Unitary(random_unitary(2, backend=backend), 4))
-    circuit.add(gates.Unitary(random_unitary(8, backend=backend), 0, 2, 5))
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 1, 2, 3))
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 2, 4))
+    circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=42), 2))
+    circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=42), 4))
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 2, 5))
     _, fig = plot_circuit(circuit)
     assert match_figure_image(fig, BASEPATH + "/test_plot_unitaries.npy") == True
 
