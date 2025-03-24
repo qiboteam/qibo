@@ -119,7 +119,7 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 
 
 def sparse_encoder(data, nqubits: int = None, **kwargs):
-    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_distance,
         hamming_weight,
     )
@@ -155,9 +155,7 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
     del _data, bitstrings
 
     _data_sorted = np.abs(data_sorted) if complex_data else data_sorted
-    thetas = _generate_rbs_angles(
-        _data_sorted, len(_data_sorted), architecture="diagonal"
-    )
+    thetas = _generate_rbs_angles(_data_sorted, architecture="diagonal")
     phis = np.zeros(len(thetas))
     if complex_data:
         phis[0] = _angle_mod_two_pi(-np.angle(data_sorted[0]))
