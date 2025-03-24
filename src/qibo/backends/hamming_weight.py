@@ -1,5 +1,7 @@
 """Module defining the Hamming-weight-preserving backend."""
 
+from typing import List, Union
+
 import numpy as np
 from scipy.special import binom
 
@@ -231,6 +233,20 @@ class HammingWeightBackend(NumpyBackend):
         return strings
 
     def _get_lexicographical_order(self, nqubits, weight):
+        """Sort bistrings generated from ``self._get_cached_strings`` in lexicographical order.
+
+        Bitstrings are sorted in lexicographical (ascending) order.
+        Moreover, they are also converted to integers and both representations are cached,
+        creating a map between the full statevector representation and the condensed
+        Hamming-weight-preserving representation.
+
+        Args:
+            nqubits (int): total number of qubits.
+            weight (int): Hamming weight of the state.
+
+        Returns:
+            dict: Dictionary with the cached bitstrings and the aforementioned map.
+        """
         n_choose_k = int(binom(nqubits, weight))
         indexes = list(range(n_choose_k))
 
@@ -249,14 +265,40 @@ class HammingWeightBackend(NumpyBackend):
         return _dict_indexes
 
     def _get_single_qubit_matrix(self, gate):
+        """Return non-zero elements of the matrix representation of
+        Hamming-weight-preserving single-qubit gates.
+
+        Args:
+            gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
+                single-qubit gate.
+
+        Returns:
+            tuple(complex, complex): Non-zero elements of a Hamming-weight-preserving ``gate``.
+        """
         matrix = gate.matrix(backend=self.engine)
 
         if gate.name in ["cz", "crz", "cu1"]:
             matrix = matrix[2:, 2:]
 
-        return matrix
+        return self.np.diag(matrix)
 
     def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
+        """Custom ``apply_gate`` method for Hamming-weight-preserving single-qubit gates.
+
+        Instead of relying on matrix multiplication, this method applies
+        Hamming-weight-preserving single-qubit gates by directly multiplying
+        the amplitudes of interest elementwise by the necessary phase(s).
+
+        Args:
+            gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
+                single-qubit gate to be applied to ``state``
+            state (ndarray): state to suffer the action of ``gate``.
+            nqubits (int): total number of qubits in the circuit.
+            weight (int): Hamming weight of ``state``.
+
+        Returns:
+            ndarray: ``state`` after the action of ``gate``.
+        """
         qubits = list(gate.target_qubits)
         controls = list(gate.control_qubits)
         ncontrols = len(controls)
@@ -276,8 +318,7 @@ class HammingWeightBackend(NumpyBackend):
             strings_0 = self._dict_cached_strings_one[key_0]
             strings_1 = self._dict_cached_strings_one[key_1]
 
-        matrix = self._get_single_qubit_matrix(gate)
-        matrix_00, matrix_11 = self.np.diag(matrix)
+        matrix_00, matrix_11 = self._get_single_qubit_matrix(gate)
 
         indexes_one = self.np.zeros((len(strings_1), nqubits), dtype=str)
 
@@ -310,20 +351,36 @@ class HammingWeightBackend(NumpyBackend):
     def _update_amplitudes(
         self,
         state,
-        qubits,
-        controls,
-        other_qubits,
-        nqubits,
-        ncontrols,
-        weight,
-        matrix_element,
-        bitlist,
-        k,
+        qubits: List[int],
+        controls: List[int],
+        other_qubits: List[int],
+        weight: int,
+        matrix_element: Union[complex, float],
+        bitlist: List[str],
+        shift: int,
     ):
-        strings = self._get_cached_strings(nqubits, weight + k, ncontrols)
+        """Update in-place the amplitudes changed by a two-qubit Hamming-weight-preserving gate.
+
+        Args:
+            state (ndarray): state that the two-qubit gate acts on.
+            qubits (list): target qubits of the gate.
+            controls (list): _description_
+            other_qubits (list): _description_
+            weight (int): _description_
+            matrix_element (complex or float): _description_
+            bitlist (list): _description_
+            shift (int): _description_
+
+        Returns:
+            ndarray: ``state`` after the action of two-qubit Hamming-weight-preserving gate.
+        """
+        ncontrols = len(controls)
+        nqubits = len(qubits) + ncontrols + len(other_qubits)
+
+        strings = self._get_cached_strings(nqubits, weight + shift, ncontrols)
         indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
         indexes_in[:, other_qubits] = strings
-        if len(controls) > 0:
+        if ncontrols > 0:
             indexes_in[:, controls] = "1"
         indexes_in[:, qubits] = bitlist
         indexes_in = self.np.array(
@@ -388,12 +445,10 @@ class HammingWeightBackend(NumpyBackend):
                 qubits,
                 controls,
                 other_qubits,
-                nqubits,
-                ncontrols,
                 weight,
                 matrix_0000,
                 ["0", "0"],
-                1,
+                shift=1,
             )
 
         if weight - ncontrols > 1 and (
@@ -405,12 +460,10 @@ class HammingWeightBackend(NumpyBackend):
                 qubits,
                 controls,
                 other_qubits,
-                nqubits,
-                ncontrols,
                 weight,
                 matrix_1111,
                 ["1", "1"],
-                -1,
+                shift=-1,
             )
 
         return state
