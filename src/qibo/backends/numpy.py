@@ -446,19 +446,21 @@ class NumpyBackend(Backend):
             nqubits = circuit.nqubits
 
             if circuit.density_matrix:
-                if initial_state is None:
-                    state = self.zero_density_matrix(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_density_matrix(nqubits)
+                    if initial_state is None
+                    else self.cast(initial_state)
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
-                if initial_state is None:
-                    state = self.zero_state(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_state(nqubits)
+                    if initial_state is None
+                    else self.cast(initial_state)
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
@@ -482,6 +484,7 @@ class NumpyBackend(Backend):
                 return circuit._final_state
 
             circuit._final_state = QuantumState(state, backend=self)
+
             return circuit._final_state
 
         except self.oom_error:

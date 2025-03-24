@@ -63,7 +63,7 @@ class HammingWeightBackend(NumpyBackend):
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
-    def apply_gate(self, gate: gates.Gate, state, nqubits: int, weight: int):
+    def apply_gate(self, gate, state, nqubits: int, weight: int):
         """Apply ``gate`` to ``state``.
 
         Args:
