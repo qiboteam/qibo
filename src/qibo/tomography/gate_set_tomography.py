@@ -297,10 +297,11 @@ def GST(
             if isinstance(gate, tuple):
                 angles = ["theta", "phi", "lam", "unitary"]
                 gate, params = gate
-                if isinstance(params[0], np.ndarray):
-                    params = [params]
-                elif isinstance(params[0], list):
-                    params = [[np.array(params[0])]]
+                # if isinstance(params[0], np.ndarray):
+                # params = [params]
+                params = [params] if isinstance(params[0], nd.array) else params
+                # elif isinstance(params[0], list):
+                #     params = [[np.array(params[0])]]
                 init_args = signature(gate).parameters
                 valid_angles = [arg for arg in init_args if arg in angles]
                 angle_values = dict(zip(valid_angles, params))
