@@ -233,9 +233,8 @@ def GST(
 
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
-            GST on.
-            E.g. gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX, [np.pi/2, np.pi/3]),
-                             (gates.GPI, [np.pi/7]), gates.CNOT]
+            GST on. For instance, ``gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX,
+            [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), gates.CNOT]``.
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
