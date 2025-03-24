@@ -364,12 +364,20 @@ class HammingWeightBackend(NumpyBackend):
         Args:
             state (ndarray): state that the two-qubit gate acts on.
             qubits (list): target qubits of the gate.
-            controls (list): _description_
-            other_qubits (list): _description_
-            weight (int): _description_
-            matrix_element (complex or float): _description_
-            bitlist (list): _description_
-            shift (int): _description_
+            controls (list): control qubits of the gate.
+            other_qubits (list): remaining qubits in the circuit.
+            weight (int): Hamming weight of ``state``.
+            matrix_element (complex or float): non-zero element of the gate that
+                multiplies the amplitudes of ``state``.
+            bitlist (list): If the amplitude being updated is associated to the computational basis
+                state :math:`\\ket{\\dots00\\dots}`, then ``bitlist=["0", "0"]``.
+                If the amplitude is associated to :math:`\\ket{\\dots11\\dots}`,
+                then ``bitlist=["1", "1"]``.
+            shift (int): shift in the Hamming weight necessary to generate bitstrings.
+                If the amplitude being updated is associated to the computational basis
+                state :math:`\\ket{\\dots00\\dots}`, then ``shift`` is :math:`1`.
+                If the amplitude is associated to :math:`\\ket{\\dots11\\dots}`,
+                then ``shift`` is :math:`-1`.
 
         Returns:
             ndarray: ``state`` after the action of two-qubit Hamming-weight-preserving gate.
@@ -405,12 +413,9 @@ class HammingWeightBackend(NumpyBackend):
         strings = self._dict_cached_strings_two[key]
 
         matrix = gate.matrix(backend=self.engine)
-        matrix_0000 = matrix[0, 0]
-        matrix_1111 = matrix[3, 3]
-        matrix_0101 = matrix[1, 1]
-        matrix_0110 = matrix[1, 2]
-        matrix_1001 = matrix[2, 1]
-        matrix_1010 = matrix[2, 2]
+        matrix_0000, matrix_1111 = matrix[0, 0], matrix[3, 3]
+        matrix_0101, matrix_0110 = matrix[1, 1], matrix[1, 2]
+        matrix_1001, matrix_1010 = matrix[2, 1], matrix[2, 2]
 
         if weight - ncontrols > 0 and weight not in [0, nqubits]:
             indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
