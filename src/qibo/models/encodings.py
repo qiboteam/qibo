@@ -48,13 +48,14 @@ def comp_basis_encoder(
 
     if nqubits is not None and not isinstance(nqubits, int):
         raise_error(
-            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+            TypeError, f"``nqubits`` must be type int, but it is type {type(nqubits)}."
         )
 
     if nqubits is None:
         if isinstance(basis_element, int):
             raise_error(
-                ValueError, f"nqubits must be specified when basis_element is type int."
+                ValueError,
+                "``nqubits`` must be specified when ``basis_element`` is type int.",
             )
         else:
             nqubits = len(basis_element)
@@ -215,7 +216,8 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
 
 
 def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
-    """Create circuit that encodes :math:`1`-dimensional data in all amplitudes of the computational basis.
+    """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
+    of the computational basis.
 
     Given data vector :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}`,
     this function generates a quantum circuit :math:`\\mathrm{Load}` that encodes
@@ -327,8 +329,9 @@ def unary_encoder_random_gaussian(
 ):
     """Create a circuit that performs the unary encoding of a random Gaussian state.
 
-    At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
-    gates :math:`RBS(\\theta_{k})` are sampled from the following probability density function:
+    At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k}
+    \\in [0, 2\\pi]` of the the gates :math:`RBS(\\theta_{k})` are sampled from
+    the following probability density function:
 
     .. math::
         p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})} \\,
@@ -349,7 +352,8 @@ def unary_encoder_random_gaussian(
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: Circuit that loads a random Gaussian array in unary representation.
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads a random Gaussian
+        array in unary representation.
 
     References:
         1. A. Bouland, A. Dandapani, and A. Prakash, *A quantum spectral method for simulating
@@ -375,7 +379,7 @@ def unary_encoder_random_gaussian(
     if architecture != "tree":
         raise_error(
             NotImplementedError,
-            f"Currently, this function only accepts ``architecture=='tree'``.",
+            "Currently, this function only accepts ``architecture=='tree'``.",
         )
 
     if not math.log2(nqubits).is_integer():
@@ -622,7 +626,7 @@ def entangling_layer(
 
         if "q2" in parameters:
             raise_error(
-                NotImplementedError, f"This function does not accept three-qubit gates."
+                NotImplementedError, "This function does not accept three-qubit gates."
             )
 
         # If gate is parametrized, sets all angles to 0.0
@@ -694,8 +698,8 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        (:class:`qibo.models.circuit.Circuit`, list): Circuit composed of :class:`qibo.gates.gates.RBS`
-        and list of indexes of target qubits per depth.
+        (:class:`qibo.models.circuit.Circuit`, list): Circuit composed of
+        :class:`qibo.gates.gates.RBS` and list of indexes of target qubits per depth.
     """
 
     if architecture == "diagonal":
@@ -1116,7 +1120,9 @@ def _get_phase_gate_correction(last_string, phase: float):
     return gates.RZ(last_zero, 2 * phase).controlled_by(*last_controls)
 
 
-def _binary_encoder_hopf(data, nqubits, complex_data, **kwargs):
+def _binary_encoder_hopf(
+    data, nqubits, complex_data, **kwargs
+):  # pylint: disable=unused-argument
     # TODO: generalize to complex-valued data
     dims = 2**nqubits
 
@@ -1224,7 +1230,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
 
     angles = []
-    for k in range(len(thetas)):
+    for k in range(len(thetas)):  # pylint: disable=consider-using-enumerate
         if k in indexes_to_double:
             angle = (
                 [2 * thetas[k], 2 * phis[k], 0.0] if complex_data else [2 * thetas[k]]
