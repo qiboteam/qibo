@@ -531,7 +531,7 @@ class HammingWeightBackend(NumpyBackend):
 
         Args:
             gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
-                n-qubit gate to be applied to ``state``
+                :math:`n`-qubit gate to be applied to ``state``
             state (ndarray): state to suffer the action of ``gate``.
             nqubits (int): total number of qubits in the circuit.
             weight (int): Hamming weight of ``state``.
