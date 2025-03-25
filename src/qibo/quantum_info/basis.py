@@ -84,8 +84,10 @@ def pauli_basis(
         func = getattr(backend.qinfo, f"_vectorize{fname}")
     else:
         func = backend.qinfo._pauli_basis
-    
-    return func(nqubits, *_get_paulis(pauli_order, backend), normalization=normalization)
+
+    return func(
+        nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
+    )
 
 
 def comp_basis_to_pauli(
