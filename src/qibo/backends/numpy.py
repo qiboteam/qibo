@@ -851,25 +851,6 @@ class NumpyBackend(Backend):
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
-    def _test_regressions(self, name):
-        if name == "test_measurementresult_apply_bitflips":
-            return [
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
-            ]
-        elif name == "test_probabilistic_measurement":
-            return {0: 249, 1: 231, 2: 253, 3: 267}
-        elif name == "test_unbalanced_probabilistic_measurement":
-            return {0: 171, 1: 148, 2: 161, 3: 520}
-        elif name == "test_post_measurement_bitflips_on_circuit":
-            return [
-                {5: 30},
-                {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
-                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
-            ]
-
 
 def _calculate_negative_power_singular_matrix(
     matrix, power: Union[float, int], precision_singularity: float, engine, backend
