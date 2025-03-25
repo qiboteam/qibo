@@ -399,6 +399,22 @@ class HammingWeightBackend(NumpyBackend):
         return state
 
     def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
+        """Custom ``apply_gate`` method for Hamming-weight-preserving two-qubit gates.
+
+        Instead of relying on matrix multiplication, this method applies
+        Hamming-weight-preserving two-qubit gates by directly multiplying
+        the amplitudes of interest elementwise by the necessary phase(s).
+
+        Args:
+            gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
+                two-qubit gate to be applied to ``state``
+            state (ndarray): state to suffer the action of ``gate``.
+            nqubits (int): total number of qubits in the circuit.
+            weight (int): Hamming weight of ``state``.
+
+        Returns:
+            ndarray: ``state`` after the action of ``gate``.
+        """
         qubits = list(gate.target_qubits)
         controls = list(gate.control_qubits)
         ncontrols = len(controls)
@@ -505,6 +521,24 @@ class HammingWeightBackend(NumpyBackend):
         return state
 
     def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
+        """Custom ``apply_gate`` method for Hamming-weight-preserving n-qubit gates.
+
+        This method performs matrix multiplication directly in the subspace with Hamming-weight
+        ``weight`` without the need to calculate the full matrix representation of the gate.
+
+        .. note::
+            The attribute ``gate.hamming_weight`` must be set to ``True`` for this method to work.
+
+        Args:
+            gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
+                n-qubit gate to be applied to ``state``
+            state (ndarray): state to suffer the action of ``gate``.
+            nqubits (int): total number of qubits in the circuit.
+            weight (int): Hamming weight of ``state``.
+
+        Returns:
+            ndarray: ``state`` after the action of ``gate``.
+        """
         gate_matrix = gate.matrix(backend=self.engine)
         qubits = list(gate.target_qubits)
         gate_qubits = len(qubits)
@@ -572,6 +606,22 @@ class HammingWeightBackend(NumpyBackend):
     def calculate_symbolic(
         self, state, nqubits, weight, decimals=5, cutoff=1e-10, max_terms=20
     ):
+        """Dirac notation representation of the state in the computational basis.
+
+        Args:
+            state (ndarray): state to suffer the action of ``gate``.
+            nqubits (int): total number of qubits in the circuit.
+            weight (int): Hamming-weight of ``state``.
+            decimals (int, optional): Number of decimals for the amplitudes.
+                Defaults to :math:`5`.
+            cutoff (float, optional): Amplitudes with absolute value smaller than the
+                cutoff are ignored from the representation. Defaults to  :math:`1e-10`.
+            max_terms (int, optional): Maximum number of terms to print. If the state
+                contains more terms they will be ignored. Defaults to :math:`20`.
+
+        Returns:
+            str: String representing the state in the computational basis.
+        """
         state = self.to_numpy(state)
         terms = []
 
@@ -594,6 +644,17 @@ class HammingWeightBackend(NumpyBackend):
         return terms
 
     def calculate_probabilities(self, state, qubits, weight, nqubits):
+        """Calculate the probabilities of the measured qubits from the statevector.
+
+        Args:
+            state (ndarray): state to suffer the action of ``gate``.
+            qubits (list or set, optional): Set of qubits that are measured.
+            weight (int): Hamming-weight of ``state``.
+            nqubits (int): total number of qubits in the circuit.
+
+        Returns:
+            ndarray: Probabilities over the input qubits.
+        """
         rtype = self.np.real(state).dtype
 
         if (
@@ -622,6 +683,18 @@ class HammingWeightBackend(NumpyBackend):
         return probs
 
     def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
+        """Collapse state vector according to measurement shot.
+
+        Args:
+            state (ndarray): state to suffer the action of ``gate``.
+            qubits (list or set, optional): Set of qubits that are measured.
+            shot (list): Decimal value of the bitstring measured.
+            weight (int): Hamming-weight of ``state``.
+            nqubits (int): total number of qubits in the circuit.
+
+        Returns:
+            ndarray: collapsed ``state``.
+        """
         state = self.cast(state, dtype=state.dtype)
         if (
             self._dict_indexes is None
