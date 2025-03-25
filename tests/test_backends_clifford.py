@@ -169,6 +169,10 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_collapsing_measurements(backend, seed):
+    if backend.platform == "numba":
+        pytest.skip(
+            "Can't fix the seed of numba backend, thus triggering bug qibo#1598."
+        )
     clifford_bkd = construct_clifford_backend(backend)
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
