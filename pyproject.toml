@@ -65,7 +65,6 @@ pytest = "^7.2.1"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"
-torch = "^2.1.1,<2.4"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git", branch="qinfo_jit"}
 #qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 #qiboml = { git  = "https://github.com/qiboteam/qiboml.git", branch="qinfo_jit"}
