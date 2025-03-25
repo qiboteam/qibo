@@ -527,7 +527,7 @@ class HammingWeightBackend(NumpyBackend):
         ``weight`` without the need to calculate the full matrix representation of the gate.
 
         .. note::
-            The attribute ``gate.hamming_weight`` must be set to ``True`` for this method to work.
+            The attribute ``gate.hamming_weight`` must be manually set to ``True`` for this method to work.
 
         Args:
             gate (:class:`qibo.gates.abstract.Gate`): Hamming-weight-preserving
