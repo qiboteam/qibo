@@ -81,7 +81,7 @@ class NumpyBackend(Backend):
             return x.astype(dtype, copy=copy)
         elif self.is_sparse(x):
             return x.astype(dtype, copy=copy)
-        return np.array(x, dtype=dtype, copy=copy)
+        return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
         from scipy import sparse
@@ -396,7 +396,6 @@ class NumpyBackend(Backend):
         return state
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
-
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -677,8 +676,10 @@ class NumpyBackend(Backend):
         return self.cast(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
-        return np.mod(np.right_shift(samples[:, None], qrange), 2)
+        qrange = self.cast(
+            np.arange(nqubits - 1, -1, -1, dtype=np.int32), dtype=self.np.int32
+        )
+        return self.np.mod(self.np.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         ### This is faster just staying @ NumPy.

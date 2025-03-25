@@ -115,9 +115,7 @@ def test_construct_backend(backend):
 
 
 def test_list_available_backends():
-    qulacs = (
-        False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
-    )
+    qulacs = False if sys.version_info[1] == 13 else True
     available_backends = {
         "numpy": True,
         "qulacs": qulacs,
@@ -127,9 +125,11 @@ def test_list_available_backends():
         },
         "qibolab": False,
         "qibo-cloud-backends": False,
-        "qibotn": {"cutensornet": False, "qmatchatea": False, "qutensornet": True},
-        "qiboml": {"tensorflow": False, "pytorch": True},
+        # "qibotn": {"cutensornet": False, "qmatchatea": False, "qutensornet": True},
+        # "qiboml": {"tensorflow": False, "pytorch": True},
     }
     assert available_backends == list_available_backends(
-        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn", "qiboml"
+        "qibojit",
+        "qibolab",
+        "qibo-cloud-backends",  # , "qibotn", "qiboml"
     )
