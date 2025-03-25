@@ -92,7 +92,7 @@ class NumpyBackend(Backend):
         return func
 
     def zeros(self, shape, dtype=None):
-        if dtype is None:
+        if dtype is None:  # pragma: no cover
             dtype = self.dtype
         return self.np.zeros(shape, dtype=dtype)
 
