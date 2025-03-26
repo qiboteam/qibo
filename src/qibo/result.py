@@ -350,7 +350,7 @@ class MeasurementOutcomes:
                             [p0.get(q) for q in qubits],
                             [p1.get(q) for q in qubits],
                         ],
-                        dtype=getattr(self.backend.np, "float64"),
+                        dtype=self.backend.np.float64,
                     )
                     samples = self.backend.apply_bitflips(
                         samples, bitflip_probabilities

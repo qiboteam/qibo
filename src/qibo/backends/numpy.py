@@ -719,11 +719,13 @@ class NumpyBackend(Backend):
         )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        # fprobs = bitflip_probabilities.astype(float)
-        fprobs = bitflip_probabilities
         sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
-        flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        flip_0 = self.cast(
+            sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
+        )
+        flip_1 = self.cast(
+            sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
+        )
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
