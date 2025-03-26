@@ -134,7 +134,8 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
             "``nqubits`` must be specified when computational basis states are "
             + "indidated by integers.",
         )
-    elif isinstance(data[0][0], str) and nqubits is None:
+
+    if isinstance(data[0][0], str) and nqubits is None:
         nqubits = len(data[0][0])
 
     complex_data = bool("complex" in str(type(data[0][1])))
@@ -147,7 +148,7 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         _data.append(elem)
 
     _data = list(zip(bitstrings, _data))
-    _data.sort()
+    _data = sorted(_data, key=_sort_by_weight)
 
     data_sorted, bitstrings_sorted = [], []
     for string, elem in _data:
@@ -1289,3 +1290,12 @@ def _intermediate_gate(
     )
 
     return gate, lex_order, initial_string, phase_index
+
+
+def _sort_by_weight(tup: tuple):
+    """Helper function to sort sparse data by Hamming weight of the associated bitstring."""
+    from qibo.quantum_info.utils import (  # pylint: disbale=import-outside-toplevel
+        hamming_weight,
+    )
+
+    return hamming_weight(tup[0])
