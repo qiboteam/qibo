@@ -141,20 +141,7 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
     complex_data = bool("complex" in str(type(data[0][1])))
 
     # sort data by HW of the bitstrings
-    bitstrings, _data = [], []
-    for bitstring, elem in data:
-        if isinstance(bitstring, int):
-            bitstring = f"{bitstring:0{nqubits}b}"
-        bitstrings.append(bitstring)
-        _data.append(elem)
-    _data = list(zip(bitstrings, _data))
-    _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
-
-    data_sorted, bitstrings_sorted = [], []
-    for string, elem in _data:
-        bitstrings_sorted.append(np.array(list(string)).astype(int))
-        data_sorted.append(elem)
-    del _data, bitstrings
+    data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits)
 
     # calculate phases
     _data_sorted = np.abs(data_sorted) if complex_data else data_sorted
@@ -1298,6 +1285,28 @@ def _intermediate_gate(
     )
 
     return gate, lex_order, initial_string, phase_index
+
+
+def _sort_data_sparse(data, nqubits):
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_weight,
+    )
+
+    bitstrings, _data = [], []
+    for bitstring, elem in data:
+        if isinstance(bitstring, int):
+            bitstring = f"{bitstring:0{nqubits}b}"
+        bitstrings.append(bitstring)
+        _data.append(elem)
+    _data = list(zip(bitstrings, _data))
+    _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
+
+    data_sorted, bitstrings_sorted = [], []
+    for string, elem in _data:
+        bitstrings_sorted.append(np.array(list(string)).astype(int))
+        data_sorted.append(elem)
+
+    return data_sorted, bitstrings_sorted
 
 
 def _get_gate_sparse(
