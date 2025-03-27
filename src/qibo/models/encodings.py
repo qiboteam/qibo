@@ -120,6 +120,45 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
 
 
 def sparse_encoder(data, nqubits: int = None, **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
+    of the computational basis.
+
+    Consider a sparse-access model, where for a data vector
+    :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}` and
+    :math:`s` non-zero amplitudes, one has access to the data vector
+    :math:`\\mathbf{y}` of the form
+
+    .. math::
+        \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
+
+
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` is the non-zero components of :math:`\\mathbf{x}`
+    and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
+    Then, this function generates a quantum circuit  :math:`s-\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        s-\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
+
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+
+    Args:
+        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+            The addresses :math:`b_{j}` can be either integers or in bitstring
+            format of size :math:`n`.
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+    """
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_distance,
         hamming_weight,
