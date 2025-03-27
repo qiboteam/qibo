@@ -1425,7 +1425,6 @@ def _get_phase_gate_correction_sparse(
 
     if hw_1 == nqubits:
         first_one = np.argsort(second_to_last_string)[0]
-        print(first_one, type(first_one))
         other_ones = list(set(list(range(nqubits))) ^ {first_one})
         gate = gates.RZ(first_one, 2 * phis[-1]).controlled_by(*other_ones)
     else:
