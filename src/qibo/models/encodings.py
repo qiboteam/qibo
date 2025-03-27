@@ -140,15 +140,15 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
 
     complex_data = bool("complex" in str(type(data[0][1])))
 
+    # sort data by HW of the bitstrings
     bitstrings, _data = [], []
     for bitstring, elem in data:
         if isinstance(bitstring, int):
             bitstring = f"{bitstring:0{nqubits}b}"
         bitstrings.append(bitstring)
         _data.append(elem)
-
     _data = list(zip(bitstrings, _data))
-    _data = sorted(_data, key=_sort_by_weight)
+    _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
 
     data_sorted, bitstrings_sorted = [], []
     for string, elem in _data:
@@ -156,14 +156,16 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         data_sorted.append(elem)
     del _data, bitstrings
 
+    # calculate phases
     _data_sorted = np.abs(data_sorted) if complex_data else data_sorted
     thetas = _generate_rbs_angles(_data_sorted, architecture="diagonal")
-    phis = np.zeros(len(thetas))
+    phis = np.zeros(len(thetas) + 1)
     if complex_data:
         phis[0] = _angle_mod_two_pi(-np.angle(data_sorted[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(-np.angle(data_sorted[k]) + np.sum(phis[:k]))
 
+    # marking qubits that have suffered the action of a gate
     touched_qubits = []
     circuit = comp_basis_encoder(list(bitstrings_sorted[0]), nqubits=nqubits, **kwargs)
     for qubit, bit in enumerate(bitstrings_sorted[0]):
@@ -180,38 +182,44 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         ones, new_ones = np.argsort(b_0)[-hw_0:], np.argsort(b_1)[-hw_1:]
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
 
-        if distance == 1:
-            qubit = np.where(difference == 1)[0][0]
-            if qubit not in touched_qubits:
-                touched_qubits.append(qubit)
-            gate = (
-                gates.U3(qubit, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
-                if complex_data
-                else gates.RY(qubit, 2 * theta).controlled_by(*controls)
-            )
-        elif distance == 2:
-            qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
-            for qubit in qubits:
-                if qubit not in touched_qubits:
-                    touched_qubits.append(qubit)
-            gate = _get_gate(
-                [qubits[0]],
-                [qubits[1]],
-                controls,
-                theta,
-                phi,
-                complex_data,
+        gate = _get_gate_sparse(
+            distance,
+            difference,
+            touched_qubits,
+            complex_data,
+            controls,
+            hw_0,
+            hw_1,
+            theta,
+            phi,
+        )
+
+        circuit.add(gate)
+
+    if complex_data:
+        hw_0 = hamming_weight(bitstrings_sorted[-2])
+        hw_1 = hamming_weight(bitstrings_sorted[-1])
+        if hw_1 == nqubits and hw_0 == nqubits - 1:
+            circuit.queue = _get_phase_gate_correction_sparse(
+                bitstrings_sorted[-1],
+                bitstrings_sorted[-2],
+                nqubits,
+                data_sorted[-1],
+                data_sorted[-2],
+                circuit,
+                phis,
             )
         else:
-            qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
-            for row in qubits:
-                for qubit in row:
-                    if qubit not in touched_qubits:
-                        touched_qubits.append(qubit)
-            gate = gates.GeneralizedRBS(qubits[0], qubits[1], theta, phi).controlled_by(
-                *controls
+            gate = _get_phase_gate_correction_sparse(
+                bitstrings_sorted[-1],
+                bitstrings_sorted[-2],
+                nqubits,
+                data_sorted[-1],
+                data_sorted[-2],
+                circuit,
+                phis,
             )
-        circuit.add(gate)
+            circuit.add(gate)
 
     return circuit
 
@@ -1107,7 +1115,9 @@ def _get_phase_gate_correction(last_string, phase: float):
     """Return final gate of HW-k circuits that encode complex data."""
 
     # to avoid circular import error
-    from qibo.quantum_info.utils import hamming_weight  # pylint: disable=C0415
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_weight,
+    )
 
     if isinstance(last_string, str):
         last_string = np.asarray(list(last_string), dtype=int)
@@ -1231,13 +1241,11 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
 
     angles = []
-    for k in range(len(thetas)):  # pylint: disable=consider-using-enumerate
+    for theta, phi in zip(thetas, phis):
         if k in indexes_to_double:
-            angle = (
-                [2 * thetas[k], 2 * phis[k], 0.0] if complex_data else [2 * thetas[k]]
-            )
+            angle = [2 * theta, 2 * phi, 0.0] if complex_data else [2 * theta]
         else:
-            angle = [thetas[k], -phis[k], phis[k]] if complex_data else [thetas[k]]
+            angle = [theta, -phi, phi] if complex_data else [theta]
 
         angles.extend(angle)
 
@@ -1292,10 +1300,79 @@ def _intermediate_gate(
     return gate, lex_order, initial_string, phase_index
 
 
-def _sort_by_weight(tup: tuple):
-    """Helper function to sort sparse data by Hamming weight of the associated bitstring."""
-    from qibo.quantum_info.utils import (  # pylint: disbale=import-outside-toplevel
+def _get_gate_sparse(
+    distance, difference, touched_qubits, complex_data, controls, hw_0, hw_1, theta, phi
+):
+    if distance == 1:
+        qubit = np.where(difference == 1)[0][0]
+        if qubit not in touched_qubits:
+            touched_qubits.append(qubit)
+        gate = (
+            gates.U3(qubit, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
+            if complex_data
+            else gates.RY(qubit, 2 * theta).controlled_by(*controls)
+        )
+    elif distance == 2 and hw_0 == hw_1:
+        qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
+        for qubit in qubits:
+            if qubit not in touched_qubits:
+                touched_qubits.append(qubit)
+        gate = _get_gate(
+            [qubits[0]],
+            [qubits[1]],
+            controls,
+            theta,
+            phi,
+            complex_data,
+        )
+    else:
+        qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
+        for row in qubits:
+            for qubit in row:
+                if qubit not in touched_qubits:
+                    touched_qubits.append(qubit)
+        gate = gates.GeneralizedRBS(qubits[0], qubits[1], theta, -phi).controlled_by(
+            *controls
+        )
+
+    return gate
+
+
+def _get_phase_gate_correction_sparse(
+    last_string,
+    second_to_last_string,
+    nqubits,
+    last_data,
+    second_to_last_data,
+    circuit,
+    phis,
+):
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_weight,
     )
 
-    return hamming_weight(tup[0])
+    hw_0 = hamming_weight(second_to_last_string)
+    hw_1 = hamming_weight(last_string)
+    if hw_1 == nqubits and hw_0 == nqubits - 1:
+        phi = _angle_mod_two_pi(np.angle(last_data) - np.angle(second_to_last_data))
+        lamb = _angle_mod_two_pi(
+            -(np.angle(second_to_last_data) + np.angle(last_data))
+            + 2 * np.sum(phis[:-2])
+        )
+        _gate = circuit.queue[-1]
+        gate = gates.U3(
+            *_gate.target_qubits, _gate.init_kwargs["theta"], phi, lamb
+        ).controlled_by(*gate.control_qubits)
+
+        new_queue = circuit.queue[:-1] + [gate]
+
+        return new_queue
+
+    if hw_1 == nqubits:
+        first_one = np.argsort(second_to_last_string)[0]
+        other_ones = list(set(list(range(nqubits))) ^ set(first_one))
+        gate = gates.RZ(first_one, 2 * phis[-1]).controlled_by(*other_ones)
+    else:
+        gate = _get_phase_gate_correction(last_string, phis[-1])
+
+    return gate
