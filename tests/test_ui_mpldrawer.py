@@ -250,8 +250,6 @@ def test_fuse_cluster():
 def test_plot_unitaries():
     """Test for plotting unitaries"""
     backend = construct_backend("numpy")
-    backend.set_seed(42)
-    np.random.seed(42)
 
     circuit = Circuit(6)
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 1, 2, 3))
@@ -266,8 +264,6 @@ def test_plot_unitaries():
 def test_plot_unitaries_same_init():
     """Test for plotting unitaries with same initial parameters"""
     backend = construct_backend("numpy")
-    backend.set_seed(42)
-    np.random.seed(42)
 
     circuit = Circuit(4)
 
@@ -285,13 +281,11 @@ def test_plot_unitaries_same_init():
 def test_plot_unitaries_different_init():
     """Test for plotting unitaries with different initial parameters"""
     backend = construct_backend("numpy")
-    backend.set_seed(42)
-    np.random.seed(42)
 
     circuit = Circuit(4)
 
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 1, 3))
-    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 2, 1, 3))
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=44), 2, 1, 3))
 
     _, fig = plot_circuit(circuit)
     assert (
