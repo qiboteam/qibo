@@ -1221,14 +1221,14 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
     thetas = _generate_rbs_angles(_data, architecture="diagonal")
     thetas = np.asarray(thetas, dtype=type(thetas[0]))
 
+    phis = np.zeros(len(thetas) + 1)
     if complex_data:
-        phis = np.zeros(len(thetas) + 1)
         phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
 
     angles = []
-    for theta, phi in zip(thetas, phis):
+    for k, (theta, phi) in enumerate(zip(thetas, phis)):
         if k in indexes_to_double:
             angle = [2 * theta, 2 * phi, 0.0] if complex_data else [2 * theta]
         else:
