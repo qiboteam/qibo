@@ -128,7 +128,7 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
     if isinstance(data, zip):
         data = list(data)
 
-    if isinstance(data[0][0], int) and nqubits is None:
+    if "int" in str(type(data[0][0])) and nqubits is None:
         raise_error(
             ValueError,
             "``nqubits`` must be specified when computational basis states are "
@@ -1294,7 +1294,7 @@ def _sort_data_sparse(data, nqubits):
 
     bitstrings, _data = [], []
     for bitstring, elem in data:
-        if isinstance(bitstring, int):
+        if isinstance(bitstring, int) or "int" in str(type(bitstring)):
             bitstring = f"{bitstring:0{nqubits}b}"
         bitstrings.append(bitstring)
         _data.append(elem)
@@ -1379,7 +1379,8 @@ def _get_phase_gate_correction_sparse(
 
     if hw_1 == nqubits:
         first_one = np.argsort(second_to_last_string)[0]
-        other_ones = list(set(list(range(nqubits))) ^ set(first_one))
+        print(first_one, type(first_one))
+        other_ones = list(set(list(range(nqubits))) ^ {first_one})
         gate = gates.RZ(first_one, 2 * phis[-1]).controlled_by(*other_ones)
     else:
         gate = _get_phase_gate_correction(last_string, phis[-1])
