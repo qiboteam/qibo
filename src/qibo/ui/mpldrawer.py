@@ -280,8 +280,6 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                     symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
                     symbol += r"$\rm_{{{}}}$".format(
                         plot_params["hash_global_unitary_gates"][global_hash]
-                        if global_hash in plot_params["hash_global_unitary_gates"]
-                        else global_hash
                     )
                     cci += 1
 
@@ -329,8 +327,6 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
             symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
             symbol += r"$\rm_{{{}}}$".format(
                 plot_params["hash_global_unitary_gates"][global_hash]
-                if global_hash in plot_params["hash_global_unitary_gates"]
-                else global_hash
             )
 
         _text(ax, x, y, symbol, plot_params, box=True)
