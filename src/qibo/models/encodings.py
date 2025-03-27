@@ -9,8 +9,8 @@ import numpy as np
 from scipy.special import binom
 
 from qibo import gates
+from qibo.backends import _check_backend
 from qibo.config import raise_error
-from qibo.gates.gates import _check_engine
 from qibo.models.circuit import Circuit
 
 
@@ -76,7 +76,7 @@ def comp_basis_encoder(
     return circuit
 
 
-def phase_encoder(data, rotation: str = "RY", **kwargs):
+def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     """Create circuit that performs the phase encoding of ``data``.
 
     Args:
@@ -91,8 +91,11 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in phase encoding.
     """
+
+    backend = _check_backend(backend)
+
     if isinstance(data, list):
-        data = np.array(data)
+        data = backend.cast(data, dtype=type(data[0]))
 
     if len(data.shape) != 1:
         raise_error(
@@ -119,7 +122,7 @@ def phase_encoder(data, rotation: str = "RY", **kwargs):
     return circuit
 
 
-def sparse_encoder(data, nqubits: int = None, **kwargs):
+def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -171,6 +174,8 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         hamming_weight,
     )
 
+    backend = _check_backend(backend)
+
     if isinstance(data, zip):
         data = list(data)
 
@@ -184,35 +189,51 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
     if isinstance(data[0][0], str) and nqubits is None:
         nqubits = len(data[0][0])
 
-    complex_data = bool("complex" in str(type(data[0][1])))
+    _data_test = data[0][1]
+    _data_test = (
+        _data_test.dtype if "array" in str(type(_data_test)) else type(_data_test)
+    )
+
+    complex_data = bool("complex" in str(_data_test))
 
     # sort data by HW of the bitstrings
-    data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits)
+    data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
 
     # calculate phases
-    _data_sorted = np.abs(data_sorted) if complex_data else data_sorted
-    thetas = _generate_rbs_angles(_data_sorted, architecture="diagonal")
-    phis = np.zeros(len(thetas) + 1)
+    _data_sorted = backend.np.abs(data_sorted) if complex_data else data_sorted
+    thetas = _generate_rbs_angles(
+        _data_sorted, architecture="diagonal", backend=backend
+    )
+    phis = backend.np.zeros(len(thetas) + 1)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-np.angle(data_sorted[0]))
+        phis[0] = _angle_mod_two_pi(-backend.np.angle(data_sorted[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(-np.angle(data_sorted[k]) + np.sum(phis[:k]))
+            phis[k] = _angle_mod_two_pi(
+                -backend.np.angle(data_sorted[k]) + backend.np.sum(phis[:k])
+            )
 
     # marking qubits that have suffered the action of a gate
     touched_qubits = []
-    circuit = comp_basis_encoder(list(bitstrings_sorted[0]), nqubits=nqubits, **kwargs)
+    circuit = comp_basis_encoder(
+        [int(bit) for bit in bitstrings_sorted[0]], nqubits=nqubits, **kwargs
+    )
     for qubit, bit in enumerate(bitstrings_sorted[0]):
         if bit == 1:
-            touched_qubits.append(qubit)
+            touched_qubits.append(int(qubit))
 
     for b_1, b_0, theta, phi in zip(
         bitstrings_sorted[1:], bitstrings_sorted[:-1], thetas, phis
     ):
         hw_0, hw_1 = hamming_weight(b_0), hamming_weight(b_1)
-        distance = hamming_distance("".join(b_1.astype(str)), "".join(b_0.astype(str)))
+        # distance = hamming_distance("".join(b_1.astype(str)), "".join(b_0.astype(str)))
+        distance = hamming_distance(b_1, b_0)
         difference = b_1 - b_0
 
-        ones, new_ones = np.argsort(b_0)[-hw_0:], np.argsort(b_1)[-hw_1:]
+        ones, new_ones = (
+            list(backend.np.argsort(b_0)[-hw_0:]),
+            list(backend.np.argsort(b_1)[-hw_1:]),
+        )
+        ones, new_ones = {int(elem) for elem in ones}, {int(elem) for elem in new_ones}
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
 
         gate, touched_qubits = _get_gate_sparse(
@@ -770,7 +791,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     return circuit, pairs_rbs
 
 
-def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
+def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=None):
     """Generate list of angles for RBS gates based on ``architecture``.
 
     Args:
@@ -784,13 +805,14 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None):
     Returns:
         list: List of phases for RBS gates.
     """
+    backend = _check_backend(backend)
+
     if architecture == "diagonal":
-        engine = _check_engine(data)
         phases = [
-            engine.arctan2(engine.linalg.norm(data[k + 1 :]), data[k])
+            backend.np.arctan2(backend.calculate_vector_norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(engine.arctan2(data[-1], data[-2]))
+        phases.append(backend.np.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
         if nqubits is None:  # pragma: no cover
@@ -1157,8 +1179,8 @@ def _get_phase_gate_correction(last_string, phase: float):
 
     last_weight = hamming_weight(last_string)
     last_ones = np.argsort(last_string)
-    last_zero = last_ones[0]
-    last_controls = last_ones[-last_weight:]
+    last_zero = int(last_ones[0])
+    last_controls = [int(qubit) for qubit in last_ones[-last_weight:]]
 
     # adding an RZ gate to correct the phase of the last amplitude encoded
     return gates.RZ(last_zero, 2 * phase).controlled_by(*last_controls)
@@ -1333,7 +1355,7 @@ def _intermediate_gate(
     return gate, lex_order, initial_string, phase_index
 
 
-def _sort_data_sparse(data, nqubits):
+def _sort_data_sparse(data, nqubits, backend):
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_weight,
     )
@@ -1349,32 +1371,50 @@ def _sort_data_sparse(data, nqubits):
 
     data_sorted, bitstrings_sorted = [], []
     for string, elem in _data:
-        bitstrings_sorted.append(np.array(list(string)).astype(int))
+        string = backend.cast([int(bit) for bit in string], dtype=int)
+        bitstrings_sorted.append(string)
         data_sorted.append(elem)
+
+    data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     return data_sorted, bitstrings_sorted
 
 
 def _get_gate_sparse(
-    distance, difference, touched_qubits, complex_data, controls, hw_0, hw_1, theta, phi
+    distance,
+    difference,
+    touched_qubits,
+    complex_data,
+    controls,
+    hw_0,
+    hw_1,
+    theta,
+    phi,
+    backend=None,
 ):
+    backend = _check_backend(backend)
     if distance == 1:
-        qubit = np.where(difference == 1)[0][0]
+        qubit = int(backend.np.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
-            touched_qubits.append(qubit)
+            touched_qubits.append(int(qubit))
         gate = (
             gates.U3(qubit, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
             if complex_data
             else gates.RY(qubit, 2 * theta).controlled_by(*controls)
         )
     elif distance == 2 and hw_0 == hw_1:
-        qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
+        qubits = [
+            backend.np.where(difference == -1)[0][0],
+            backend.np.where(difference == 1)[0][0],
+        ]
         for qubit in qubits:
             if qubit not in touched_qubits:
-                touched_qubits.append(qubit)
+                touched_qubits.append(int(qubit))
+        qubits_in = [int(qubits[0])]
+        qubits_out = [int(qubits[1])]
         gate = _get_gate(
-            [qubits[0]],
-            [qubits[1]],
+            qubits_in,
+            qubits_out,
             controls,
             theta,
             phi,
@@ -1385,8 +1425,10 @@ def _get_gate_sparse(
         for row in qubits:
             for qubit in row:
                 if qubit not in touched_qubits:
-                    touched_qubits.append(qubit)
-        gate = gates.GeneralizedRBS(qubits[0], qubits[1], theta, -phi).controlled_by(
+                    touched_qubits.append(int(qubit))
+        qubits_in = [int(qubit) for qubit in qubits[0]]
+        qubits_out = [int(qubit) for qubit in qubits[1]]
+        gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, -phi).controlled_by(
             *controls
         )
 
