@@ -283,7 +283,7 @@ def test_plot_unitaries_same_init():
 
 
 def test_plot_unitaries_different_init():
-    """Test for plotting unitaries with same initial parameters"""
+    """Test for plotting unitaries with different initial parameters"""
     backend = construct_backend("numpy")
     backend.set_seed(42)
     np.random.seed(42)
