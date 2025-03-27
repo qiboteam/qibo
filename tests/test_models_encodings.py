@@ -303,7 +303,8 @@ def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
         with pytest.raises(ValueError):
             circuit = sparse_encoder(data, nqubits=None)
 
-    circuit = sparse_encoder(data, nqubits)
+    _nqubits = nqubits if integers else None
+    circuit = sparse_encoder(data, _nqubits)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
