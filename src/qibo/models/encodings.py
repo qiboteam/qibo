@@ -134,16 +134,16 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
 
     where :math:`\\{x_{j}\\}_{j\\in[s]}` is the non-zero components of :math:`\\mathbf{x}`
     and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
-    Then, this function generates a quantum circuit  :math:`s-\\mathrm{Load}` that encodes
+    Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
     :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
 
     .. math::
-        s-\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+        s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
             \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
 
     where :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
 
-    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` coordinates
+    Resulting circuit parametrizes ``data`` in hyperspherical coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
 
 
@@ -158,6 +158,13 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed Hamming-weight subspaces*
+        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_distance,
