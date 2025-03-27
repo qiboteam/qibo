@@ -1371,7 +1371,7 @@ def _get_phase_gate_correction_sparse(
         _gate = circuit.queue[-1]
         gate = gates.U3(
             *_gate.target_qubits, _gate.init_kwargs["theta"], phi, lamb
-        ).controlled_by(*gate.control_qubits)
+        ).controlled_by(*_gate.control_qubits)
 
         new_queue = circuit.queue[:-1] + [gate]
 

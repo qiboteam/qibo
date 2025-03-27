@@ -18,6 +18,7 @@ from qibo.models.encodings import (
     ghz_state,
     hamming_weight_encoder,
     phase_encoder,
+    sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
@@ -273,6 +274,28 @@ def test_hamming_weight_encoder(
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("nqubits", [4, 7])
+def test_sparse_encoder(backend, nqubits):
+    dims = 2**nqubits
+    sparsity = nqubits
+
+    data = random_statevector(sparsity, seed=10, backend=backend)
+    indices = backend.np.random.choice(range(dims), size=sparsity, replace=False)
+
+    target = backend.np.zeros(dims)
+    target = backend.cast(target)  # to complex dtype
+
+    target[indices] = data
+
+    indices = [f"{elem:0{nqubits}b}" for elem in indices]
+    data = zip(indices, data)
+
+    circuit = sparse_encoder(data, nqubits)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target)
 
 
 def test_entangling_layer_errors():
