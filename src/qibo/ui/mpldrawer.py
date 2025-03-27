@@ -616,7 +616,7 @@ def _global_gate_hash(gate: gates.Unitary):
     """
     Given a unitary gate, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
 
-     Args:
+    Args:
         gate (gates.Unitary): Unitary gate.
     """
     if isinstance(gate, gates.Unitary) and len(gate._target_qubits) > 1:
@@ -630,7 +630,7 @@ def _u_hash(gate: gates.Unitary, param_index: int):
     """
     Given a unitary gate and a qubit, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
 
-     Args:
+    Args:
         gate (gates.Unitary): Unitary gate.
         param_index (int): Parameter index applied.
     """
