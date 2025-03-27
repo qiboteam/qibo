@@ -270,10 +270,19 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                     symbol += r"$\rm{^{\dagger}}$"
 
                 if name == "UNITARY" and target.count("_") > 1:
-                    u_gate_single_hash = controls[cci].split("_")[2]
-                    subindex = plot_params["hash_unitary_gates"][u_gate_single_hash]
+                    hash_split = controls[cci].split("_")
+                    u_gate_single_hash = hash_split[2]
+                    global_hash = hash_split[3] if len(hash_split) > 3 else ""
+                    subindex = plot_params["hash_unitary_gates"][
+                        u_gate_single_hash
+                        + ("-" + global_hash if global_hash != "" else "")
+                    ]
                     symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-                    symbol += r"$\rm_{{{}}}$".format(i)
+                    symbol += r"$\rm_{{{}}}$".format(
+                        plot_params["hash_global_unitary_gates"][global_hash]
+                        if plot_params["hash_global_unitary_gates"][global_hash] != ""
+                        else i
+                    )
                     cci += 1
 
                 _text(ax, x, y, symbol, plot_params, box=True)
@@ -310,10 +319,18 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
             symbol = "A({})".format(target[2:])
 
         if name == "UNITARY" and target.count("_") > 1:
-            hash = target.split("_")[2]
-            subindex = plot_params["hash_unitary_gates"][hash]
+            hash_split = target.split("_")
+            hash = hash_split[2]
+            global_hash = hash_split[3] if len(hash_split) > 3 else ""
+            subindex = plot_params["hash_unitary_gates"][
+                hash + ("-" + global_hash if global_hash != "" else "")
+            ]
             symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
-            symbol += r"$\rm_{{{}}}$".format(i)
+            symbol += r"$\rm_{{{}}}$".format(
+                plot_params["hash_global_unitary_gates"][global_hash]
+                if plot_params["hash_global_unitary_gates"][global_hash] != ""
+                else i
+            )
 
         _text(ax, x, y, symbol, plot_params, box=True)
 
@@ -558,9 +575,27 @@ def _make_cluster_gates(gates_items):
     return cluster_gates
 
 
+def _build_hash_init_unitary_gates_register(gates_circ, dict_init_param):
+    """
+    Given a list of gates, this function builds a dictionary to registera unique hash for each unitary gate.
+
+    Args:
+        gates_circ (list): List of gates provided by the Qibo circuit.
+        dict_init_param (dict): Dictionary to store the hash from unitary gates.
+    """
+    i = 0
+    for gate in gates_circ:
+        final_hash = _global_gate_hash(gate)
+        if final_hash != "" and final_hash not in dict_init_param:
+            dict_init_param[final_hash] = str(i)
+            i += 1
+
+    return dict_init_param
+
+
 def _build_unitary_gates_register(gate, dict_register):
     """
-    Given a gate, this function builds a dictionary to register the unitary gates and their parameters to identify them uniquely.
+    Given a gate, this function builds a dictionary to register the unitary gates and their parameters to identify them uniquely. Only for Unitary gates.
 
     Args:
         gate (gates.Unitary): Unitary gate to register.
@@ -570,8 +605,23 @@ def _build_unitary_gates_register(gate, dict_register):
         i = 0
         for qbit in gate._target_qubits:
             final_hash = _u_hash(gate, qbit)
-            dict_register[final_hash] = str(i)
+            param_init_hash = _global_gate_hash(gate)
+            dict_register[final_hash + "-" + param_init_hash] = str(i)
             i += 1
+
+
+def _global_gate_hash(gate: gates.Unitary):
+    """
+    Given a unitary gate, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+
+     Args:
+        gate (gates.Unitary): Unitary gate.
+    """
+    if isinstance(gate, gates.Unitary) and len(gate._target_qubits) > 1:
+        hash_result = str(abs(hash(gate._parameters[0].data.tobytes())))
+        hash_result = hash_result[:3] + hash_result[-3:]
+        return hash_result
+    return ""
 
 
 def _u_hash(gate: gates.Unitary, param_index: int):
@@ -650,14 +700,17 @@ def _process_gates(array_gates, nqubits):
                 else:
 
                     u_param_hash = ""
+                    u_global_hash = ""
                     if isinstance(gate, gates.Unitary):
                         if len(gate._target_qubits) > 1:
                             u_param_hash = _u_hash(gate, qbit)
+                            u_global_hash = _global_gate_hash(gate)
 
                     item += (
                         "q_"
                         + str(qbit)
-                        + ("" if u_param_hash == "" else ("_" + u_param_hash)),
+                        + ("" if u_param_hash == "" else ("_" + u_param_hash))
+                        + ("" if u_global_hash == "" else ("_" + u_global_hash)),
                     )
 
             for qbit in gate._control_qubits:
@@ -790,6 +843,12 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     if hash_unitary_gates:
         params["hash_unitary_gates"] = hash_unitary_gates
+
+    hash_global_unitary_gates = {}
+    _build_hash_init_unitary_gates_register(circuit.queue, hash_global_unitary_gates)
+
+    if hash_global_unitary_gates:
+        params["hash_global_unitary_gates"] = hash_global_unitary_gates
 
     params["wire_names"] = (
         circuit.init_kwargs["wire_names"]

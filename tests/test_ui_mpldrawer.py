@@ -225,6 +225,7 @@ def test_layered_circuit():
 
 
 def test_fused_gates():
+    """Test for gates fusion"""
     circuit = Circuit(3)
     circuit.add(gates.H(0))
     circuit.add(gates.X(0))
@@ -248,7 +249,6 @@ def test_fuse_cluster():
 
 def test_plot_unitaries():
     """Test for plotting unitaries"""
-
     backend = construct_backend("numpy")
     backend.set_seed(42)
     np.random.seed(42)
@@ -261,6 +261,43 @@ def test_plot_unitaries():
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 2, 5))
     _, fig = plot_circuit(circuit)
     assert match_figure_image(fig, BASEPATH + "/test_plot_unitaries.npy") == True
+
+
+def test_plot_unitaries_same_init():
+    """Test for plotting unitaries with same initial parameters"""
+    backend = construct_backend("numpy")
+    backend.set_seed(42)
+    np.random.seed(42)
+
+    circuit = Circuit(4)
+
+    array = random_unitary(8, backend=backend, seed=42)
+
+    circuit.add(gates.Unitary(array, 0, 1, 3))
+    circuit.add(gates.Unitary(array, 2, 1, 3))
+
+    _, fig = plot_circuit(circuit)
+    assert (
+        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_same_init.npy") == True
+    )
+
+
+def test_plot_unitaries_different_init():
+    """Test for plotting unitaries with same initial parameters"""
+    backend = construct_backend("numpy")
+    backend.set_seed(42)
+    np.random.seed(42)
+
+    circuit = Circuit(4)
+
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 1, 3))
+    circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 2, 1, 3))
+
+    _, fig = plot_circuit(circuit)
+    assert (
+        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_different_init.npy")
+        == True
+    )
 
 
 def test_plot_circuit_internal():
@@ -305,6 +342,7 @@ def test_plot_circuit_internal():
         "textcolor": "#f0e442",
         "gatecolor": "#d55e00",
         "controlcolor": "#f0e442",
+        "dpi": 200,
     }
 
     labels = ["q_0", "q_1", "q_2", "q_3", "q_4"]
