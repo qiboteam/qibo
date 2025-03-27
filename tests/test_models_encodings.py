@@ -276,15 +276,16 @@ def test_hamming_weight_encoder(
     backend.assert_allclose(state, target, atol=1e-7)
 
 
+@pytest.mark.parametrize("seed", [10, 20])
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
-def test_sparse_encoder(backend, nqubits, integers, zip_input):
+def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
     data = random_statevector(sparsity, seed=10, backend=backend)
-    np.random.seed(10)
+    np.random.seed(seed)
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
