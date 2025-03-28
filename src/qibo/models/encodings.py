@@ -506,7 +506,6 @@ def hamming_weight_encoder(
         *Quantum encoder for fixed Hamming-weight subspaces*
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
-    # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
     complex_data = bool("complex" in str(data.dtype))
 
     if initial_string is None:
