@@ -1,7 +1,7 @@
 """Tests for qibo.models.encodings"""
 
 import math
-from itertools import product
+from functools import reduce
 
 import numpy as np
 import pytest
@@ -67,12 +67,7 @@ def test_phase_encoder(backend, rotation, kind):
     sampler = np.random.default_rng(1)
 
     nqubits = 3
-    dims = 2**nqubits
 
-    with pytest.raises(TypeError):
-        data = sampler.random((nqubits, nqubits))
-        data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation=rotation)
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
@@ -82,28 +77,19 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = np.random.rand(nqubits)
+    phases = backend.np.random.rand(nqubits)
 
-    if rotation in ["RX", "RY"]:
-        functions = list(product([np.cos, np.sin], repeat=nqubits))
-        target = []
-        for row in functions:
-            elem = 1.0
-            for phase, func in zip(phases, row):
-                elem *= func(phase / 2)
-                if rotation == "RX" and func.__name__ == "sin":
-                    elem *= -1.0j
-            target.append(elem)
-    else:
-        target = [np.exp(-0.5j * sum(phases))] + [0.0] * (dims - 1)
-
-    target = np.array(target, dtype=complex)
-    target = backend.cast(target, dtype=target.dtype)
+    gate = getattr(gates, rotation)
+    target = reduce(
+        backend.np.kron,
+        [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
+    )[:, 0]
 
     if kind is not None:
         phases = kind(phases)
 
-    state = phase_encoder(phases, rotation=rotation)
+    state = phase_encoder(phases, rotation=rotation, backend=backend)
+    state.draw()
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)

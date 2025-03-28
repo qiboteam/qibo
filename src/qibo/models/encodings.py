@@ -94,15 +94,6 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
 
     backend = _check_backend(backend)
 
-    if isinstance(data, list):
-        data = backend.cast(data, dtype=type(data[0]))
-
-    if len(data.shape) != 1:
-        raise_error(
-            TypeError,
-            f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
-        )
-
     if not isinstance(rotation, str):
         raise_error(
             TypeError,
