@@ -324,7 +324,7 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
     )
 
 
-def unary_encoder(data, architecture: str = "tree", **kwargs):
+def unary_encoder(data, architecture: str = "tree", backend=None, **kwargs):
     """Create circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
@@ -339,14 +339,10 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in unary representation.
     """
-    if isinstance(data, list):
-        data = np.array(data)
+    backend = _check_backend(backend)
 
-    if len(data.shape) != 1:
-        raise_error(
-            TypeError,
-            f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
-        )
+    if isinstance(data, list):
+        data = backend.cast(data, dtype=type(data[0]))
 
     if not isinstance(architecture, str):
         raise_error(
@@ -372,14 +368,14 @@ def unary_encoder(data, architecture: str = "tree", **kwargs):
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
-    phases = _generate_rbs_angles(data, architecture, nqubits)
+    phases = _generate_rbs_angles(data, architecture, nqubits, backend=backend)
     circuit.set_parameters(phases)
 
     return circuit
 
 
 def unary_encoder_random_gaussian(
-    nqubits: int, architecture: str = "tree", seed=None, **kwargs
+    nqubits: int, architecture: str = "tree", seed=None, backend=None, **kwargs
 ):
     """Create a circuit that performs the unary encoding of a random Gaussian state.
 
@@ -414,6 +410,8 @@ def unary_encoder_random_gaussian(
         stochastic processes, with applications to Monte Carlo*.
         `arXiv:2303.06719v1 [quant-ph] <https://arxiv.org/abs/2303.06719>`_
     """
+    backend = _check_backend(backend)
+
     if not isinstance(nqubits, int):
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
@@ -469,6 +467,8 @@ def unary_encoder_random_gaussian(
     for depth, row in enumerate(pairs_rbs, 1):
         phases.extend(sampler.rvs(depth=depth, size=len(row)))
 
+    phases = backend.cast(phases, dtype=type(phases[0]))
+
     circuit.set_parameters(phases)
 
     return circuit
@@ -482,6 +482,7 @@ def hamming_weight_encoder(
     optimize_controls: bool = True,
     phase_correction: bool = True,
     initial_string=None,
+    backend=None,
     **kwargs,
 ):
     """Create circuit that encodes ``data`` in the Hamming-weight-:math:`k` basis of ``nqubits``.
@@ -518,6 +519,8 @@ def hamming_weight_encoder(
         *Quantum encoder for fixed Hamming-weight subspaces*
         `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
     """
+    backend = _check_backend(backend)
+
     # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
     complex_data = bool("complex" in str(data.dtype))
 
@@ -533,14 +536,15 @@ def hamming_weight_encoder(
     del lex_order, lex_order_sorted
 
     # Calculate all gate phases necessary to encode the amplitudes.
-    _data = np.abs(data) if complex_data else data
-    thetas = _generate_rbs_angles(_data, architecture="diagonal")
-    thetas = np.asarray(thetas, dtype=type(thetas[0]))
-    phis = np.zeros(len(thetas) + 1)
+    _data = backend.np.abs(data) if complex_data else data
+    thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
+    phis = backend.np.zeros(len(thetas) + 1)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+            phis[k] = _angle_mod_two_pi(
+                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
+            )
 
     last_qubit = nqubits - 1
 
