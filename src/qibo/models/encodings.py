@@ -189,7 +189,6 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
 
     # sort data by HW of the bitstrings
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
-
     # calculate phases
     _data_sorted = backend.np.abs(data_sorted) if complex_data else data_sorted
     thetas = _generate_rbs_angles(
@@ -202,6 +201,7 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
             phis[k] = _angle_mod_two_pi(
                 -backend.np.angle(data_sorted[k]) + backend.np.sum(phis[:k])
             )
+    phis = backend.cast(phis, dtype=phis[0].dtype)
 
     # marking qubits that have suffered the action of a gate
     touched_qubits = []
@@ -216,7 +216,6 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
         bitstrings_sorted[1:], bitstrings_sorted[:-1], thetas, phis
     ):
         hw_0, hw_1 = hamming_weight(b_0), hamming_weight(b_1)
-        # distance = hamming_distance("".join(b_1.astype(str)), "".join(b_0.astype(str)))
         distance = hamming_distance(b_1, b_0)
         difference = b_1 - b_0
 
@@ -238,7 +237,6 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
             theta,
             phi,
         )
-
         circuit.add(gate)
 
     if complex_data:
@@ -265,6 +263,8 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
                 phis,
             )
             circuit.add(gate)
+
+    print(type(circuit.get_parameters()[0][0]))
 
     return circuit
 
@@ -833,7 +833,7 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=N
             r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
             phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
 
-    phases = np.array([float(phase) for phase in phases])
+    phases = backend.cast(phases, dtype=phases[0].dtype)
 
     return phases
 
@@ -1182,16 +1182,18 @@ def _get_phase_gate_correction(last_string, phase: float):
 
 
 def _binary_encoder_hopf(
-    data, nqubits, complex_data, **kwargs
+    data, nqubits, complex_data, backend=None, **kwargs
 ):  # pylint: disable=unused-argument
     # TODO: generalize to complex-valued data
+    backend = _check_backend(backend)
+
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = np.reshape(base_strings, (-1, 2))
+    base_strings = backend.np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
+        base_strings = backend.np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 
@@ -1220,13 +1222,15 @@ def _binary_encoder_hopf(
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
 
-    angles = _generate_rbs_angles(data, "tree", dims)
+    angles = _generate_rbs_angles(data, "tree", dims, backend=backend)
     circuit.set_parameters(2 * angles)
 
     return circuit
 
 
-def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
+def _binary_encoder_hyperspherical(
+    data, nqubits, complex_data: bool, backend=None, **kwargs
+):
     dims = 2**nqubits
     last_qubit = nqubits - 1
 
@@ -1246,6 +1250,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
         placeholder = np.random.rand(n_choose_k)
         if complex_data:
             placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
+        placeholder = backend.cast(placeholder, dtype=placeholder[0].dtype)
 
         circuit += hamming_weight_encoder(
             placeholder,
@@ -1255,6 +1260,7 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
             optimize_controls=False,
             phase_correction=False,
             initial_string=initial_string,
+            backend=backend,
             **kwargs,
         )
 
@@ -1279,16 +1285,16 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
     data = data[lex_order_global]
     del lex_order_global, lex_order_sorted
 
-    _data = np.abs(data) if complex_data else data
+    _data = backend.np.abs(data) if complex_data else data
 
-    thetas = _generate_rbs_angles(_data, architecture="diagonal")
-    thetas = np.asarray(thetas, dtype=type(thetas[0]))
+    thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
 
-    phis = np.zeros(len(thetas) + 1)
+    phis = backend.np.zeros(len(thetas) + 1)
     if complex_data:
         phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+    phis = backend.cast(phis, dtype=phis[0].dtype)
 
     angles = []
     for k, (theta, phi) in enumerate(zip(thetas, phis)):
@@ -1308,8 +1314,8 @@ def _binary_encoder_hyperspherical(data, nqubits, complex_data: bool, **kwargs):
         )
 
     # necessary for GPU backends
-    angles = [float(angle) for angle in angles]
-
+    angles = backend.cast(angles, dtype=angles[0].dtype)
+    print(angles)
     circuit.set_parameters(angles)
 
     return circuit
