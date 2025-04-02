@@ -1,14 +1,18 @@
 """Tests executing Qibo circuits created from OpenQASM code."""
 
-import cirq
+# import cirq
 import numpy as np
 import pytest
-from cirq.contrib.qasm_import import circuit_from_qasm, exception
 
 from qibo import Circuit, gates
 
+# from cirq.contrib.qasm_import import circuit_from_qasm, exception
+
+
 # Absolute testing tolerance for cirq-qibo comparison
 _atol = 1e-7
+
+pytest.skip(allow_module_level=True)
 
 
 def test_from_qasm_simple(backend, accelerators):

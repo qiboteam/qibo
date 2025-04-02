@@ -12,7 +12,7 @@ import numpy as np
 
 from qibo import gates
 
-from .drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
+from .drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
 
 UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
@@ -414,6 +414,10 @@ def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
     fontsize = plot_params["fontsize"]
     nq = len(labels)
     xdata = (gate_grid[0] - scale, gate_grid[-1] + scale)
+    if "wire_names" in plot_params:
+        labels = (
+            plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
+        )
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         _text(
@@ -501,39 +505,28 @@ def _make_cluster_gates(gates_items):
     """
 
     temp_gates = []
-    temp_mgates = []
     cluster_gates = []
 
     for item in gates_items:
         if len(item) == 2:  # single qubit gates
-            if item[0] == "MEASURE":
-                temp_mgates.append(item)
-            else:
-                if len(temp_gates) > 0:
-                    if item[1] in [tup[1] for tup in temp_gates]:
-                        cluster_gates.append(temp_gates)
-                        temp_gates = []
-                        temp_gates.append(item)
-                    else:
-                        temp_gates.append(item)
+            if len(temp_gates) > 0:
+                if item[1] in [tup[1] for tup in temp_gates]:
+                    cluster_gates.append(temp_gates)
+                    temp_gates = []
+                    temp_gates.append(item)
                 else:
                     temp_gates.append(item)
+            else:
+                temp_gates.append(item)
         else:
             if len(temp_gates) > 0:
                 cluster_gates.append(temp_gates)
                 temp_gates = []
 
-            if len(temp_mgates) > 0:
-                cluster_gates.append(temp_mgates)
-                temp_mgates = []
-
             cluster_gates.append([item])
 
     if len(temp_gates) > 0:
         cluster_gates.append(temp_gates)
-
-    if len(temp_mgates) > 0:
-        cluster_gates.append(temp_mgates)
 
     return cluster_gates
 
@@ -584,12 +577,14 @@ def _process_gates(array_gates, nqubits):
         ]:
             for qbit in gate._target_qubits:
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
             for qbit in list(range(nqubits)):
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         else:
             item = ()
@@ -597,15 +592,19 @@ def _process_gates(array_gates, nqubits):
 
             for qbit in gate._target_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             for qbit in gate._control_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             gates_plot.append(item)
 
@@ -702,7 +701,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
             fgates = None
 
-            if cluster_gates:
+            if cluster_gates and circuit.nqubits > 1:
                 fgates = _make_cluster_gates(
                     _process_gates(gate.gates, circuit.nqubits)
                 )
@@ -725,7 +724,12 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
 
-    if cluster_gates and len(gates_plot) > 0:
+    params["wire_names"] = (
+        circuit.init_kwargs["wire_names"]
+        if circuit.init_kwargs["wire_names"] is not None
+        else []
+    )
+    if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
         return ax, ax.figure
