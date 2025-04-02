@@ -1022,11 +1022,13 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
 
     if rank is None:
         rank = dims
-    if order == "row":
-        return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
-    elif order == "column":
-        return backend.qinfo._super_op_from_bcsz_measure_column(dims, rank)
-    else:
+
+    if order not in ("row", "column"):
         raise_error(
             ValueError, f"Unrecognized {order} order, pick one in ('row', 'column')."
         )
+
+    if order == "column":
+        return backend.qinfo._super_op_from_bcsz_measure_column(dims, rank)
+
+    return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
