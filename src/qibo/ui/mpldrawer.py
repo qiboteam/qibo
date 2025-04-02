@@ -681,12 +681,14 @@ def _process_gates(array_gates, nqubits):
         ]:
             for qbit in gate._target_qubits:
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
             for qbit in list(range(nqubits)):
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         else:
             item = ()
@@ -694,18 +696,20 @@ def _process_gates(array_gates, nqubits):
 
             for qbit in gate._target_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
                     u_param_hash = ""
                     u_global_hash = ""
                     if isinstance(gate, gates.Unitary):
                         if len(gate._target_qubits) > 1:
-                            u_param_hash = _u_hash(gate, qbit)
+                            u_param_hash = _u_hash(gate, qbit_item)
                             u_global_hash = _global_gate_hash(gate)
 
                     item += (
                         "q_"
-                        + str(qbit)
+                        + str(qbit_item)
                         + ("" if u_param_hash == "" else ("_" + u_param_hash))
                         + ("" if u_global_hash == "" else ("_" + u_global_hash))
                         + (
@@ -722,9 +726,11 @@ def _process_gates(array_gates, nqubits):
 
             for qbit in gate._control_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             gates_plot.append(item)
 

@@ -3,7 +3,7 @@
 import math
 from typing import List, Tuple, Union
 
-from qibo.backends import _check_backend
+from qibo.backends import _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
 
 
@@ -202,7 +202,7 @@ def partial_transpose(
     if not nqubits.is_integer():
         raise_error(
             ValueError,
-            f"dimensions of ``state`` (or states in a batch) must be a power of 2.",
+            "dimensions of ``state`` (or states in a batch) must be a power of 2.",
         )
 
     if (len(shape) > 3) or (nstates == 0) or (len(shape) == 2 and nstates != dims):
@@ -372,7 +372,7 @@ def schmidt_decomposition(
 
     nqubits = math.log2(state.shape[-1])
     if not nqubits.is_integer():
-        raise_error(ValueError, f"dimensions of ``state`` must be a power of 2.")
+        raise_error(ValueError, "dimensions of ``state`` must be a power of 2.")
 
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
@@ -382,3 +382,171 @@ def schmidt_decomposition(
     tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
+
+
+def lanczos(
+    matrix,
+    steps: int = None,
+    initial_vector=None,
+    precision_tol: float = 1e-8,
+    seed=None,
+    backend=None,
+):
+    """Lanczos iterative method to tridiagonalize a Hermitian matrix.
+
+    Given a :math:`N \\times N` Hermitian matrix :math:`H` and a number of iterations :math:`m \\leq N`,
+    the Lanczos algorithm outputs a :math:`N \\times m` orthonormal matrix :math:`U` and a
+    :math:`m \\times m` tridiagonal real symmetric matrix :math:`T = U^{\\dagger} \\, H \\, U`.
+    If :math:`m = N`, then :math:`U` is an unitary matrix.
+    The eigenvalues of :math:`T` and :math:`H` coincide, while :math:`U \\ket{\\mathbf{x}}`
+    are the eigenvectors of :math:`H`, with :math:`\\ket{\\mathbf{x}}` being the
+    eigenvectors of :math:`T`.
+
+    This reduces the problem of diagonalization of :math:`H` to constructing
+    the matrix :math:`U` and diagonalizing :math:`T`.
+
+    With :math:`\\|\\cdot\\|_{2}` being the Euclidean norm, the algorithm goes as follows:
+
+    1. Generate random :math:`\\ket{v_{1}} \\in \\mathbb{C}^{N}` such that :math:`\\|\\ket{v_{1}}\\|_{2} = 1`
+    2. :math:`\\ket{\\omega_{1}^{\\prime}} = H \\ket{v_{1}}`
+    3. :math:`\\alpha_{1} = \\braket{\\omega_{1}^{\\prime} | v_{1}}`
+    4. :math:`\\ket{\\omega_{1}} = H \\ket{v_{1}} - \\alpha_{1} \\ket{v_{1}}`
+    5. For :math:`j = 2, \\dots, m - 1`:
+        1. :math:`\\beta_{j} = \\|\\omega_{j-1}\\|_{2}`
+        2. :math:`\\ket{v_{j}} = \\ket{\\omega_{j-1}} \\, / \\, \\beta_{j}` If :math:`\\beta_{j} \\neq 0` else generate random :math:`\\ket{v_{j}}` such that :math:`\\ket{v_{j}} \\perp \\{\\ket{v_{j^{\\prime}}}\\}_{j^{\\prime} \\in [1, j-1]}`
+        3. :math:`\\ket{\\omega_{j}^{\\prime}} = H \\ket{v_{j}}`
+        4. :math:`\\alpha_{j} = \\braket{\\omega_{j}^{\\prime} | v_{j}}`
+        5. :math:`\\ket{\\omega_{j}} = \\ket{\\omega_{j}^{\\prime}} - \\alpha_{j} \\ket{v_{j}} - \\beta_{j} \\ket{v_{j-1}}`
+
+    The columns of the orthogonal matrix :math:`U` are the *Lanczos vectors* :math:`\\{\\ket{v_{j}}\\}_{j\\in[1, m]}`.
+
+    Args:
+        matrix (ndarray): square Hermitian matrix to be tridiagonalized.
+        steps (int, optional): number of iterations :math:`m`. If ``None``,
+            defaults to the size of ``matrix``. Defaults to ``None``.
+        initial_vector (ndarray, optional): vector to be used as the initial Lanczos vector
+            :math:`\\ket{v_{1}}`. If ``None``, array is uniformly sampled.
+            Defaults to ``None``.
+        precision_tol (float, optional): precision threshold such that for :math:`\\beta_{j}`
+            smaller than ``precision_tol``, it is considered to be zero.
+        seed (int or :class:`numpy.random.Generator`, optional): Seed for the initial random vector
+            :math:`\\ket{v_{1}}` Either a generator of random numbers or a fixed seed to initialize
+            a generator. If ``None``, initializes a generator with a random seed.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        (ndarray, ndarray): Tridiagonal matrix and the orthogonal matrix
+        of Lanczos vectors, respectively.
+
+    References:
+        1.  Lanczos, C. *An iteration method for the solution of the eigenvalue problem of linear
+        differential and integral operators*, Journal of Research of the National Bureau of
+        Standards. 45 (4): 255–282 (1950).
+    """
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        random_statevector,
+    )
+
+    backend, local_state = _check_backend_and_local_state(seed, backend)
+
+    dims = matrix.shape[0]
+
+    if steps is None:
+        steps = dims
+
+    vector = (
+        random_statevector(dims, seed=local_state, backend=backend)
+        if initial_vector is None
+        else initial_vector
+    )
+
+    omega_prime = matrix @ vector
+    alpha = backend.np.conj(omega_prime.T) @ vector
+    omega = omega_prime - alpha * vector
+
+    lanczos_vectors = [vector]
+    for _ in range(steps - 1):
+        norm = backend.calculate_vector_norm(omega)
+        if norm > precision_tol:
+            vector = omega / norm
+        else:  # pragma: no cover
+            # this part is tested separatedly
+            vector = random_statevector(dims, seed=local_state, backend=backend)
+            vector = _gram_schmidt_process(
+                vector, backend.cast(lanczos_vectors).T, backend=backend
+            )
+
+        lanczos_vectors.append(vector)
+
+        omega_prime = matrix @ vector
+        alpha = backend.np.conj(omega_prime.T) @ vector
+        omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
+
+    lanczos_vectors = backend.cast(lanczos_vectors)
+    triadiagonal = backend.np.conj(lanczos_vectors) @ matrix
+    lanczos_vectors = lanczos_vectors.T
+    triadiagonal = triadiagonal @ lanczos_vectors
+
+    return triadiagonal, lanczos_vectors
+
+
+def _vector_projection(vector, directions, backend):
+    """Return projection(s) of ``vector`` in the direction of vectors in ``directions``.
+
+    Args:
+        vector (ndarray): vector to be projected.
+        directions (ndarray or list): either an :math:`1`-dimensional array corresponding to the
+            direction of projection or an array of arrays corresponding to several
+            directions.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray or list: Either one vector projection or a list of several projections.
+    """
+    if isinstance(directions, list):
+        directions = backend.cast(directions, dtype=directions[0].dtype)
+
+    if len(directions.shape) == 1:
+        return (
+            backend.np.dot(backend.np.conj(vector), directions)
+            * directions
+            / backend.np.dot(backend.np.conj(directions), directions)
+        )
+
+    dot_products = backend.np.einsum("j,kj", backend.np.conj(vector), directions)
+    inner_prods = backend.np.diag(
+        backend.np.einsum("jk,lk", backend.np.conj(directions), directions)
+    )
+
+    return (dot_products / inner_prods).reshape(-1, 1) * directions
+
+
+def _gram_schmidt_process(vector, directions, backend):
+    """Return an array that is orthogonal to the ``directions`` array(s).
+
+    Args:
+        vector (ndarray): vector to be orthogonalized.
+        directions (ndarray or list): either an :math:`1`-dimensional array corresponding to the
+            direction of projection or an array of arrays corresponding to several
+            directions.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Array orthogonalized with respect to ``directions``.
+    """
+    if isinstance(directions, list):
+        directions = backend.cast(directions, dtype=directions[0].dtype)
+
+    projections = _vector_projection(vector, directions, backend=backend)
+
+    if len(directions.shape) > 1:
+        projections = backend.np.sum(projections, axis=0)
+
+    return vector - projections
