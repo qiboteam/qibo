@@ -148,6 +148,7 @@ def _gate_tomography(
     noise_model=None,
     backend=None,
     transpiler=None,
+    ancilla=False,
 ):
     """Runs gate tomography for a 1 or 2 qubit gate.
 
@@ -168,6 +169,9 @@ def _gate_tomography(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
+        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
+            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
+            Defaults to ``False``.
 
     Returns:
         ndarray: matrix approximating the input gate.
@@ -195,7 +199,8 @@ def _gate_tomography(
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
-        circ.add(_prepare_state(k, nqubits))
+        if not ancilla:  # pragma: no cover
+            circ.add(_prepare_state(k, nqubits))
 
         if gate is not None:
             circ.add(gate)
@@ -228,6 +233,7 @@ def GST(
     gauge_matrix=None,
     backend=None,
     transpiler=None,
+    ancilla=False,
 ):
     """Run Gate Set Tomography on the input ``gate_set``.
 
@@ -259,6 +265,9 @@ def GST(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
+        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
+            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
+            Defaults to ``False``.
 
 
     Returns:
@@ -289,6 +298,7 @@ def GST(
                 noise_model=noise_model,
                 backend=backend,
                 transpiler=transpiler,
+                ancilla=ancilla,
             )
             empty_matrices.append(empty_matrix)
 
@@ -329,6 +339,7 @@ def GST(
                 noise_model=noise_model,
                 backend=backend,
                 transpiler=transpiler,
+                ancilla=ancilla,
             )
         )
 
