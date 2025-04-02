@@ -577,12 +577,14 @@ def _process_gates(array_gates, nqubits):
         ]:
             for qbit in gate._target_qubits:
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
             for qbit in list(range(nqubits)):
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         else:
             item = ()
@@ -590,15 +592,19 @@ def _process_gates(array_gates, nqubits):
 
             for qbit in gate._target_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             for qbit in gate._control_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             gates_plot.append(item)
 
@@ -717,6 +723,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             all_gates.append(gate)
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
+
     params["wire_names"] = (
         circuit.init_kwargs["wire_names"]
         if circuit.init_kwargs["wire_names"] is not None
