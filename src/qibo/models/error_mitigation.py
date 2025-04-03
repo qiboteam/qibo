@@ -570,12 +570,12 @@ def vnCDR(
             train_val["noisy"].append(float(val))
 
     train_val_noisy = train_val["noisy"]
-    noisy_array = backend.cast(train_val_noisy, dtype=train_val_noisy[0].dtype)
-    noisy_array = backend.reshape(noisy_array, (-1, len(noise_levels)))
+    noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
+    noisy_array = backend.np.reshape(noisy_array, (-1, len(noise_levels)))
     params = local_state.random(len(noise_levels))
     params = backend.cast(params, dtype=params.dtype)
     train_val_noiseless = train_val["noise-free"]
-    train_val_noiseless = backend.cast(train_val_noiseless, dtype=train_val_noiseless[0].dtype)
+    train_val_noiseless = backend.cast(train_val_noiseless, dtype=type(train_val_noiseless[0]))
     optimal_params = _curve_fit(
         backend,
         model,
@@ -602,7 +602,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, dtype=val.dtype).reshape(-1, 1),
+        backend.cast(val, dtype=type(val)).reshape(-1, 1),
         *optimal_params,
     )[0]
 
