@@ -45,7 +45,7 @@ class MetaBackend:
 
             return CliffordBackend(**kwargs)
 
-        precision = kwargs.pop("precision", "single")
+        precision = kwargs.pop("precision", "double")
 
         if backend == "qulacs":
             from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
