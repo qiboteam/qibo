@@ -301,11 +301,11 @@ def random_quantum_channel(
             dims=dims, rank=rank, order=order, seed=seed, backend=backend
         )
     elif measure == "haar":
-        super_op = getattr(backend.qinfo, f"_super_op_from_haar_measure_{order}")(dims)
+        func_order = getattr(backend.qinfo, f"_super_op_from_haar_measure_{order}")
+        super_op = func_order(dims)
     elif measure is None:
-        super_op = getattr(backend.qinfo, f"_super_op_from_hermitian_measure_{order}")(
-            dims
-        )
+        func_order = getattr(backend.qinfo, f"_super_op_from_hermitian_measure_{order}")
+        super_op = func_order(dims)
 
     if "chi" in representation:
         pauli_order = "IXYZ"
