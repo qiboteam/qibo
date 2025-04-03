@@ -209,10 +209,10 @@ def ZNE(
         )
         expected_values.append(val)
 
-    gamma = backend.cast(
-        get_gammas(noise_levels, analytical=solve_for_gammas), dtype=backend.dtype
-    )
-    expected_values = backend.cast(expected_values, dtype=backend.dtype)
+    expected_values = backend.cast(expected_values, dtype=expected_values[0].dtype)
+
+    gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
+    gamma = backend.cast(gamma, dtype=gamma.dtype)
 
     return backend.np.sum(gamma * expected_values)
 
@@ -265,18 +265,15 @@ def sample_training_circuit_cdr(
         )
 
         replacement.append(rep_gates)
-        distance.append(
-            backend.np.real(
-                backend.np.linalg.norm(
-                    gate.matrix(backend)
-                    - backend.cast(
-                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
-                    ),
-                    ord="fro",
-                    axis=(1, 2),
-                )
-            )
+
+        gate_matrix = gate.matrix(backend)
+        rep_gate_matrix = [rep_gate.matrix(backend) for rep_gate in rep_gates]
+        rep_gate_matrix = backend.cast(rep_gate_matrix, dtype=rep_gate_matrix[0].dtype)
+        matrix_norm = backend.np.linalg.norm(
+            gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
         )
+
+        distance.append(backend.np.real(matrix_norm))
 
     distance = backend.np.vstack(distance)
     prob = backend.np.exp(-(distance**2) / sigma**2)
@@ -347,12 +344,15 @@ def _curve_fit(
         optimizer.step(closure)
         return params
 
-    if backend.platform in ["cupy", "cuquantum"]:  # pragma: no cover
+    if backend.platform in ("cupy", "cuquantum"):  # pragma: no cover
         # Currrently, ``cupy`` does not have compatibility with ``scipy.optimize``.
         xdata = backend.to_numpy(xdata)
         ydata = backend.to_numpy(ydata)
         params = backend.to_numpy(params)
 
+    print(xdata.dtype)
+    print(ydata.dtype)
+    print(params.dtype)
     optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
 
     return backend.cast(optimal_params, dtype=optimal_params.dtype)
@@ -441,13 +441,23 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.cast(local_state.random(nparams), dtype=backend.dtype)
+    params = local_state.random(nparams)
+    params = backend.cast(params, dtype=params.dtype)
+
+    train_val_noisy = train_val["noisy"]
+    train_val_noisy = backend.cast(train_val_noisy, dtype=train_val_noisy[0].dtype)
+
+    train_val_noiseless = train_val["noise-free"]
+    train_val_noiseless = backend.cast(
+        train_val_noiseless, dtype=train_val_noiseless[0].dtype
+    )
+
     optimal_params = _curve_fit(
         backend,
         model,
         params,
-        backend.cast(train_val["noisy"], dtype=backend.dtype),
-        backend.cast(train_val["noise-free"], dtype=backend.dtype),
+        train_val_noisy,
+        train_val_noiseless,
     )
 
     val = get_expectation_val_with_readout_mitigation(
@@ -559,16 +569,19 @@ def vnCDR(
             )
             train_val["noisy"].append(float(val))
 
-    noisy_array = backend.cast(train_val["noisy"], dtype=backend.dtype).reshape(
-        -1, len(noise_levels)
-    )
-    params = backend.cast(local_state.random(len(noise_levels)), dtype=backend.dtype)
+    train_val_noisy = train_val["noisy"]
+    noisy_array = backend.cast(train_val_noisy, dtype=train_val_noisy[0].dtype)
+    noisy_array = backend.reshape(noisy_array, (-1, len(noise_levels)))
+    params = local_state.random(len(noise_levels))
+    params = backend.cast(params, dtype=params.dtype)
+    train_val_noiseless = train_val["noise-free"]
+    train_val_noiseless = backend.cast(train_val_noiseless, dtype=train_val_noiseless[0].dtype)
     optimal_params = _curve_fit(
         backend,
         model,
         params,
         noisy_array.T,
-        backend.cast(train_val["noise-free"], dtype=backend.dtype),
+        train_val_noiseless,
         lr=1,
         tolerance_grad=1e-7,
     )
@@ -589,7 +602,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, dtype=backend.dtype).reshape(-1, 1),
+        backend.cast(val, dtype=val.dtype).reshape(-1, 1),
         *optimal_params,
     )[0]
 
@@ -1100,7 +1113,7 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    lambda_list = backend.cast(lambda_list, dtype=backend.dtype)
+    lambda_list = backend.cast(lambda_list, dtype=lambda_list[0].dtype)
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 
