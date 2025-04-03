@@ -51,10 +51,17 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def set_precision(self, precision):  # pragma: no cover
-        """Set complex number precision.
+        """Set data type ``precision``.
+
+        .. note::
+            The data types ``float32`` and ``float64`` are intended to be used when the circuits
+            to be simulated only contain gates with real-valued matrix representations.
+            Using one of the aforementioned precisions with circuits that contain complex-valued
+            matrices will raise a casting error.
 
         Args:
-            precision (str): 'single' or 'double'.
+            precision (str): the options are the following: ``complex256``, ``complex128``,
+                ``float64``, and ``float32``.
         """
         raise_error(NotImplementedError)
 
