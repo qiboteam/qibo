@@ -488,7 +488,7 @@ def choi_to_kraus(
         kraus_ops, coefficients = func_order(choi_super_op)
     else:
         # when choi_super_op is CP
-        func_order =  getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")
+        func_order = getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")
         kraus_ops, coefficients = func_order(eigenvalues, eigenvectors, precision_tol)
 
     return kraus_ops, coefficients

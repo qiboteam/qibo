@@ -224,7 +224,9 @@ def pauli_to_comp_basis(
     if sparse:
         normalization = _normalization(nqubits) if normalize else 1.0
         func = getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")
-        return func(nqubits, *_get_paulis(pauli_order, backend), normalization=normalization)
+        return func(
+            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
+        )
 
     return pauli_basis(
         nqubits,
