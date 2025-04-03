@@ -55,7 +55,7 @@ class Backend(abc.ABC):
         .. note::
             The data types ``float32`` and ``float64`` are intended to be used when the circuits
             to be simulated only contain gates with real-valued matrix representations.
-            Using one of the aforementioned precisions with circuits that contain complex-valued
+            Using one of the aforementioned data types with circuits that contain complex-valued
             matrices will raise a casting error.
 
         .. note::
@@ -77,7 +77,7 @@ class Backend(abc.ABC):
             :class:`qibo.gates.RZX`, and :class:`qibo.gates.GeneralizedRBS`.
 
         Args:
-            precision (str): the options are the following: ``complex256``, ``complex128``,
+            dtype (str): the options are the following: ``complex256``, ``complex128``,
                 ``float64``, and ``float32``.
         """
         raise_error(NotImplementedError)
