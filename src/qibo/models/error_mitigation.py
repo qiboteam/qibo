@@ -575,7 +575,9 @@ def vnCDR(
     params = local_state.random(len(noise_levels))
     params = backend.cast(params, dtype=params.dtype)
     train_val_noiseless = train_val["noise-free"]
-    train_val_noiseless = backend.cast(train_val_noiseless, dtype=type(train_val_noiseless[0]))
+    train_val_noiseless = backend.cast(
+        train_val_noiseless, dtype=type(train_val_noiseless[0])
+    )
     optimal_params = _curve_fit(
         backend,
         model,
