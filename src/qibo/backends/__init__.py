@@ -45,7 +45,7 @@ class MetaBackend:
 
             return CliffordBackend(**kwargs)
 
-        dtype = kwargs.pop("dtype", "double")
+        dtype = kwargs.pop("dtype", "complex128")
 
         if backend == "qulacs":
             from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
@@ -78,7 +78,6 @@ class _Global:
     _transpiler = None
     # TODO: resolve circular import with qibo.transpiler.pipeline.Passes
 
-    _dtypes = {"double": "complex128", "single": "complex64"}
     _default_order = [
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},

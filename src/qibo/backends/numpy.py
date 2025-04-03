@@ -32,6 +32,7 @@ class NumpyBackend(Backend):
             np.float64,
             np.complex64,
             np.complex128,
+            np.complex256,
         )
 
     @property
@@ -47,7 +48,7 @@ class NumpyBackend(Backend):
         return None
 
     def set_dtype(self, dtype):
-        if dtype not in ("complex128", "complex64", "float64", "float32"):
+        if dtype not in ("complex256", "complex128", "complex64", "float64", "float32"):
             raise_error(
                 ValueError,
                 f"Unknown ``dtype`` ``{dtype}``."
