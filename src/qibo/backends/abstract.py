@@ -77,7 +77,7 @@ class Backend(abc.ABC):
             :class:`qibo.gates.RZX`, and :class:`qibo.gates.GeneralizedRBS`.
 
         Args:
-            dtype (str): the options are the following: ``complex256``, ``complex128``,
+            dtype (str): the options are the following: ``complex128``, ``complex64``,
                 ``float64``, and ``float32``.
         """
         raise_error(NotImplementedError)
