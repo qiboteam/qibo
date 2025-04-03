@@ -9,12 +9,10 @@ import numpy as np
 from numpy.random import permutation
 from scipy.stats import rv_continuous
 
-from qibo import Circuit, gates, matrices
+from qibo import Circuit, gates
 from qibo.backends import (
-    NumpyBackend,
     _check_backend,
     _check_backend_and_local_state,
-    clifford,
 )
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli

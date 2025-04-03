@@ -129,7 +129,8 @@ def unvectorization(state, order: str = "row", backend=None):
     dim = int(np.sqrt(state.shape[-1]))
     if len(state.shape) == 1:
         state = state.reshape(1, -1)
-    state = getattr(backend.qinfo, f"_unvectorization_{order}")(state, dim)
+    func = getattr(backend.qinfo, f"_unvectorization_{order}")
+    state = func(state, dim)
     if state.shape[0] == 1:
         state = backend.np.squeeze(state, 0)
     return state
@@ -159,7 +160,8 @@ def to_choi(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    return getattr(backend.qinfo, f"_to_choi_{order}")(channel)
+    func_order = getattr(backend.qinfo, f"_to_choi_{order}")
+    return func_order(channel)
 
 
 def to_liouville(channel, order: str = "row", backend=None):
@@ -182,7 +184,8 @@ def to_liouville(channel, order: str = "row", backend=None):
     """
     backend = _check_backend(backend)
 
-    return getattr(backend.qinfo, f"_to_liouville_{order}")(channel)
+    func_order = getattr(backend.qinfo, f"_to_liouville_{order}")
+    return func_order(channel)
 
 
 def to_pauli_liouville(
@@ -217,7 +220,8 @@ def to_pauli_liouville(
     backend = _check_backend(backend)
 
     normalization = _normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
-    return getattr(backend.qinfo, f"_to_pauli_liouville_{order}")(
+    func_order = getattr(backend.qinfo, f"_to_pauli_liouville_{order}")
+    return func_order(
         channel, *_get_paulis(pauli_order, backend), normalization=normalization
     )
 
@@ -480,14 +484,12 @@ def choi_to_kraus(
         warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        kraus_ops, coefficients = getattr(backend.qinfo, f"_choi_to_kraus_{order}")(
-            choi_super_op
-        )
+        func_order = getattr(backend.qinfo, f"_choi_to_kraus_{order}")
+        kraus_ops, coefficients = func_order(choi_super_op)
     else:
         # when choi_super_op is CP
-        kraus_ops, coefficients = getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")(
-            eigenvalues, eigenvectors, precision_tol
-        )
+        func_order =  getattr(backend.qinfo, f"_choi_to_kraus_cp_{order}")
+        kraus_ops, coefficients = func_order(eigenvalues, eigenvectors, precision_tol)
 
     return kraus_ops, coefficients
 
@@ -651,7 +653,8 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
     kraus_ops = backend.np.vstack(kraus_ops)
-    return getattr(backend.qinfo, f"_kraus_to_choi_{order}")(kraus_ops)
+    func_order = getattr(backend.qinfo, f"_kraus_to_choi_{order}")
+    return func_order(kraus_ops)
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):

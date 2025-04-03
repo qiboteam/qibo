@@ -19,7 +19,7 @@ def _get_paulis(order: str, backend: Backend):
 
 @cache
 def _normalization(nqubits: int):
-    return np.sqrt(2**nqubits)
+    return float(np.sqrt(2**nqubits))
 
 
 def pauli_basis(
@@ -223,9 +223,8 @@ def pauli_to_comp_basis(
 
     if sparse:
         normalization = _normalization(nqubits) if normalize else 1.0
-        return getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")(
-            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
-        )
+        func = getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")
+        return func(nqubits, *_get_paulis(pauli_order, backend), normalization=normalization)
 
     return pauli_basis(
         nqubits,
