@@ -45,18 +45,18 @@ class MetaBackend:
 
             return CliffordBackend(**kwargs)
 
-        precision = kwargs.pop("precision", "double")
+        dtype = kwargs.pop("dtype", "double")
 
         if backend == "qulacs":
             from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
 
             backend_obj = QulacsBackend()
-            backend_obj.set_precision(precision=precision)
+            backend_obj.set_dtype(dtype=dtype)
 
             return backend_obj
 
         backend_obj = NumpyBackend()
-        backend_obj.set_precision(precision=precision)
+        backend_obj.set_dtype(dtype=dtype)
 
         return backend_obj
 
@@ -235,18 +235,19 @@ def set_transpiler(transpiler):
     _Global.set_transpiler(transpiler)
 
 
-def get_precision():
-    """Get the precision of the backend."""
-    return get_backend().precision
+def get_dtype():
+    """Get the data type of the backend."""
+    return get_backend().dtype
 
 
-def set_precision(precision):
-    """Set the precision of the backend.
+def set_dtype(dtype):
+    """Set the data type of the backend.
 
     Args:
-        precision (str): Precision to use.
+        dtype (str): data type to use. Options are the following: ``"complex128"``,
+            ``"complex64"``, ``"float64"``, and ``"float32"``.
     """
-    get_backend().set_precision(precision)
+    get_backend().set_dtype(dtype)
     matrices.create(get_backend().dtype)
 
 
