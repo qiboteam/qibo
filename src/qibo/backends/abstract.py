@@ -10,7 +10,6 @@ class Backend(abc.ABC):
         self.name = "backend"
         self.platform = None
 
-        self.precision = "double"
         self.dtype = "complex128"
         self.matrices = None
 
@@ -26,8 +25,8 @@ class Backend(abc.ABC):
     def __repr__(self):
         if self.platform is None:
             return self.name
-        else:
-            return f"{self.name} ({self.platform})"
+
+        return f"{self.name} ({self.platform})"
 
     @property
     @abc.abstractmethod
@@ -50,14 +49,32 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def set_precision(self, precision):  # pragma: no cover
-        """Set data type ``precision``.
+    def set_dtype(self, dtype):  # pragma: no cover
+        """Set data type of arrays created using the backend.
 
         .. note::
             The data types ``float32`` and ``float64`` are intended to be used when the circuits
             to be simulated only contain gates with real-valued matrix representations.
             Using one of the aforementioned precisions with circuits that contain complex-valued
             matrices will raise a casting error.
+
+        .. note::
+            List of gates that have a real-valued matrix representation:
+            :class:`qibo.gates.I`, :class:`qibo.gates.X`, :class:`qibo.gates.Z`,
+            :class:`qibo.gates.H`, :class:`qibo.gates.Align`, :class:`qibo.gates.RY`,
+            :class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.CRY`,
+            :class:`qibo.gates.SWAP`, :class:`qibo.gates.FSWAP`, :class:`qibo.gates.GIVENS`,
+            :class:`qibo.gates.RBS`, :class:`qibo.gates.TOFFOLI`, and :class:`qibo.gates.CCZ`.
+
+        .. note::
+            The following parametrized gates can have real-valued matrix representations
+            depending on the values of their parameters:
+            :class:`qibo.gates.RX`, :class:`qibo.gates.RZ`, :class:`qibo.gates.U1`,
+            :class:`qibo.gates.U2`, :class:`qibo.gates.U3`, :class:`qibo.gates.CRX`,
+            :class:`qibo.gates.CRZ`, :class:`qibo.gates.CU1`, :class:`qibo.gates.CU2`,
+            :class:`qibo.gates.CU3`, :class:`qibo.gates.fSim`, :class:`qibo.gates.GeneralizedfSim`,
+            :class:`qibo.gates.RXX`, :class:`qibo.gates.RYY`, :class:`qibo.gates.RZZ`,
+            :class:`qibo.gates.RZX`, and :class:`qibo.gates.GeneralizedRBS`.
 
         Args:
             precision (str): the options are the following: ``complex256``, ``complex128``,
