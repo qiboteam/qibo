@@ -350,9 +350,6 @@ def _curve_fit(
         ydata = backend.to_numpy(ydata)
         params = backend.to_numpy(params)
 
-    print(xdata.dtype)
-    print(ydata.dtype)
-    print(params.dtype)
     optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
 
     return backend.cast(optimal_params, dtype=optimal_params.dtype)
