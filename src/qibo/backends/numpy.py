@@ -54,8 +54,20 @@ class NumpyBackend(Backend):
             elif precision == "double":
                 self.precision = precision
                 self.dtype = "complex128"
+            elif precision == "float-single":
+                self.precision = precision
+                self.dtype = "float32"
+            elif precision == "float-double":
+                self.precision = precision
+                self.dtype = "float64"
             else:
-                raise_error(ValueError, f"Unknown precision {precision}.")
+                raise_error(
+                    ValueError,
+                    f"Unknown precision ``{precision}``."
+                    + "``precision`` must be one of the following options: 'single', 'double',"
+                    + "'float-single', 'float-double'",
+                )
+
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
 
@@ -72,14 +84,17 @@ class NumpyBackend(Backend):
     def cast(self, x, dtype=None, copy=False):
         if dtype is None:
             dtype = self.dtype
+
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
-        elif self.is_sparse(x):
+
+        if self.is_sparse(x):
             return x.astype(dtype, copy=copy)
+
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
-        from scipy import sparse
+        from scipy import sparse  # pylint: disable=import-outside-toplevel
 
         return sparse.issparse(x)
 
@@ -409,7 +424,7 @@ class NumpyBackend(Backend):
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
-            initial_state = self.cast(initial_state)
+            initial_state = self.cast(initial_state, dtype=initial_state.dtype)
             valid_shape = (
                 2 * (2**circuit.nqubits,)
                 if circuit.density_matrix
@@ -441,19 +456,19 @@ class NumpyBackend(Backend):
             nqubits = circuit.nqubits
 
             if circuit.density_matrix:
-                if initial_state is None:
-                    state = self.zero_density_matrix(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_density_matrix(nqubits)
+                    if initial_state is None
+                    else initial_state
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
-                if initial_state is None:
-                    state = self.zero_state(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_state(nqubits) if initial_state is None else initial_state
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
