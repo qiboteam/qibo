@@ -45,12 +45,20 @@ class MetaBackend:
 
             return CliffordBackend(**kwargs)
 
+        precision = kwargs.pop("precision", "single")
+
         if backend == "qulacs":
             from qibo.backends.qulacs import QulacsBackend  # pylint: disable=C0415
 
-            return QulacsBackend()
+            backend_obj = QulacsBackend()
+            backend_obj.set_precision(precision=precision)
 
-        return NumpyBackend()
+            return backend_obj
+
+        backend_obj = NumpyBackend()
+        backend_obj.set_precision(precision=precision)
+
+        return backend_obj
 
     def list_available(self) -> dict:
         """Lists all the available native qibo backends."""
@@ -311,22 +319,22 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
     """
-    if backend in QIBO_NATIVE_BACKENDS + ("clifford",):
-        return MetaBackend.load(backend, **kwargs)
+    if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
+        provider = backend.replace("-", "_")
+        try:
+            module = import_module(provider)
+            return getattr(module, "MetaBackend").load(**kwargs)
+        except ImportError as e:
+            # pylint: disable=unsupported-membership-test
+            if provider not in e.msg:
+                raise e
+            raise MissingBackend(
+                f"The '{backend}' backends' provider is not available. Check that a Python "
+                + f"package named '{provider}' is installed, and it is exposing valid Qibo "
+                + "backends.",
+            )
 
-    provider = backend.replace("-", "_")
-    try:
-        module = import_module(provider)
-        return getattr(module, "MetaBackend").load(**kwargs)
-    except ImportError as e:
-        # pylint: disable=unsupported-membership-test
-        if provider not in e.msg:
-            raise e
-        raise MissingBackend(
-            f"The '{backend}' backends' provider is not available. Check that a Python "
-            + f"package named '{provider}' is installed, and it is exposing valid Qibo "
-            + "backends.",
-        )
+    return MetaBackend.load(backend, **kwargs)
 
 
 def _check_backend_and_local_state(seed, backend):
