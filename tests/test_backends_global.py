@@ -22,12 +22,23 @@ def test_set_precision():
     import numpy as np
 
     assert qibo.get_precision() == "double"
+
     qibo.set_precision("single")
     assert matrices.I.dtype == np.complex64
     assert qibo.get_precision() == "single"
+
     qibo.set_precision("double")
     assert matrices.I.dtype == np.complex128
     assert qibo.get_precision() == "double"
+
+    qibo.set_precision("float-single")
+    assert matrices.I.dtype == np.float32
+    assert qibo.get_precision() == "float-single"
+
+    qibo.set_precision("float-double")
+    assert matrices.I.dtype == np.float64
+    assert qibo.get_precision() == "float-double"
+
     with pytest.raises(ValueError):
         qibo.set_precision("test")
 
