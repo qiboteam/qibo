@@ -210,9 +210,9 @@ def ZNE(
         expected_values.append(val)
 
     gamma = backend.cast(
-        get_gammas(noise_levels, analytical=solve_for_gammas), backend.precision
+        get_gammas(noise_levels, analytical=solve_for_gammas), dtype=backend.dtype
     )
-    expected_values = backend.cast(expected_values, backend.precision)
+    expected_values = backend.cast(expected_values, dtype=backend.dtype)
 
     return backend.np.sum(gamma * expected_values)
 
@@ -441,13 +441,13 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.cast(local_state.random(nparams), backend.precision)
+    params = backend.cast(local_state.random(nparams), dtype=backend.dtype)
     optimal_params = _curve_fit(
         backend,
         model,
         params,
-        backend.cast(train_val["noisy"], backend.precision),
-        backend.cast(train_val["noise-free"], backend.precision),
+        backend.cast(train_val["noisy"], dtype=backend.dtype),
+        backend.cast(train_val["noise-free"], dtype=backend.dtype),
     )
 
     val = get_expectation_val_with_readout_mitigation(
@@ -559,16 +559,16 @@ def vnCDR(
             )
             train_val["noisy"].append(float(val))
 
-    noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
+    noisy_array = backend.cast(train_val["noisy"], dtype=backend.dtype).reshape(
         -1, len(noise_levels)
     )
-    params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
+    params = backend.cast(local_state.random(len(noise_levels)), dtype=backend.dtype)
     optimal_params = _curve_fit(
         backend,
         model,
         params,
         noisy_array.T,
-        backend.cast(train_val["noise-free"], backend.precision),
+        backend.cast(train_val["noise-free"], dtype=backend.dtype),
         lr=1,
         tolerance_grad=1e-7,
     )
@@ -589,7 +589,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, backend.precision).reshape(-1, 1),
+        backend.cast(val, dtype=backend.dtype).reshape(-1, 1),
         *optimal_params,
     )[0]
 
@@ -1100,7 +1100,7 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    lambda_list = backend.cast(lambda_list, backend.precision)
+    lambda_list = backend.cast(lambda_list, dtype=backend.dtype)
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 
