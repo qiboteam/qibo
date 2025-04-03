@@ -1,6 +1,6 @@
 """Utility functions for the Quantum Information module."""
 
-from functools import reduce
+from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
@@ -9,8 +9,22 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+
+
+@cache
+def _get_paulis(order: str, backend: Backend):
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
+    return [pauli_labels[label] for label in order]
+
+
+@cache
+def _normalization(nqubits: int):
+    return float(np.sqrt(2**nqubits))
 
 
 def hamming_weight(

@@ -1,25 +1,8 @@
-from functools import cache
-from itertools import product
 from typing import Optional
-
-import numpy as np
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-
-
-@cache
-def _get_paulis(order: str, backend: Backend):
-    pauli_labels = {"I": backend.matrices.I()}
-    pauli_labels.update(
-        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
-    )
-    return [pauli_labels[label] for label in order]
-
-
-@cache
-def _normalization(nqubits: int):
-    return float(np.sqrt(2**nqubits))
+from qibo.quantum_info.utils import _get_paulis, _normalization
 
 
 def pauli_basis(
@@ -29,7 +12,7 @@ def pauli_basis(
     sparse: bool = False,
     order: Optional[str] = None,
     pauli_order: str = "IXYZ",
-    backend=None,
+    backend: Optional[Backend] = None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 

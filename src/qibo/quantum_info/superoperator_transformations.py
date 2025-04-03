@@ -11,8 +11,8 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
-from qibo.quantum_info.basis import _get_paulis, _normalization
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
+from qibo.quantum_info.utils import _get_paulis, _normalization
 
 
 def vectorization(state, order: str = "row", backend=None):
