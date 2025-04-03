@@ -165,27 +165,29 @@ class QiboMatrices:
         self.matrices = NumpyMatrices(dtype)
         self.I = self.matrices.I(2)
         self.X = self.matrices.X
-        self.Y = self.matrices.Y
         self.Z = self.matrices.Z
-        self.SX = self.matrices.SX
         self.H = self.matrices.H
-        self.S = self.matrices.S
-        self.T = self.matrices.T
-        self.SDG = self.matrices.SDG
         self.CNOT = self.matrices.CNOT
-        self.CY = self.matrices.CY
         self.CZ = self.matrices.CZ
-        self.CSX = self.matrices.CSX
-        self.CSXDG = self.matrices.CSXDG
         self.SWAP = self.matrices.SWAP
-        self.iSWAP = self.matrices.iSWAP
-        self.SiSWAP = self.matrices.SiSWAP
-        self.SiSWAPDG = self.matrices.SiSWAPDG
         self.FSWAP = self.matrices.FSWAP
-        self.ECR = self.matrices.ECR
-        self.SYC = self.matrices.SYC
         self.TOFFOLI = self.matrices.TOFFOLI
         self.CCZ = self.matrices.CCZ
+
+        if dtype in ["complex64", "complex128"]:
+            self.Y = self.matrices.Y
+            self.SX = self.matrices.SX
+            self.S = self.matrices.S
+            self.T = self.matrices.T
+            self.SDG = self.matrices.SDG
+            self.CY = self.matrices.CY
+            self.CSX = self.matrices.CSX
+            self.CSXDG = self.matrices.CSXDG
+            self.iSWAP = self.matrices.iSWAP
+            self.SiSWAP = self.matrices.SiSWAP
+            self.SiSWAPDG = self.matrices.SiSWAPDG
+            self.SYC = self.matrices.SYC
+            self.ECR = self.matrices.ECR
 
 
 matrices = QiboMatrices()
