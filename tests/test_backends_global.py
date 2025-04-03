@@ -21,23 +21,23 @@ def test_set_get_backend():
 def test_set_precision():
     import numpy as np
 
-    assert qibo.get_precision() == "double"
+    assert qibo.get_precision() == "complex128"
 
-    qibo.set_precision("single")
+    qibo.set_precision("complex64")
     assert matrices.I.dtype == np.complex64
-    assert qibo.get_precision() == "single"
+    assert qibo.get_precision() == "complex64"
 
-    qibo.set_precision("double")
+    qibo.set_precision("complex128")
     assert matrices.I.dtype == np.complex128
-    assert qibo.get_precision() == "double"
+    assert qibo.get_precision() == "complex128"
 
-    qibo.set_precision("float-single")
+    qibo.set_precision("float32")
     assert matrices.I.dtype == np.float32
-    assert qibo.get_precision() == "float-single"
+    assert qibo.get_precision() == "float32"
 
-    qibo.set_precision("float-double")
+    qibo.set_precision("float64")
     assert matrices.I.dtype == np.float64
-    assert qibo.get_precision() == "float-double"
+    assert qibo.get_precision() == "float64"
 
     with pytest.raises(ValueError):
         qibo.set_precision("test")
