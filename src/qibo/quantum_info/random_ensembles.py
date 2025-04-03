@@ -436,7 +436,9 @@ def random_statevector(dims: int, seed=None, backend=None):
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    state = backend.cast(local_state.standard_normal(dims).astype(complex))
+    state = backend.cast(
+        local_state.standard_normal(dims).astype(complex), dtype=backend.np.complex128
+    )
     state = state + 1.0j * backend.cast(local_state.standard_normal(dims))
     state = state / backend.np.linalg.norm(state)
 
