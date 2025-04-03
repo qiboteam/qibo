@@ -338,7 +338,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     @cached_property
-    def dense(self) -> "MatrixHamiltonian":   # type: ignore
+    def dense(self) -> "MatrixHamiltonian":  # type: ignore
         """Creates the equivalent Hamiltonian matrix."""
         return self.calculate_dense()
 
@@ -483,7 +483,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float: # type: ignore
+    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
