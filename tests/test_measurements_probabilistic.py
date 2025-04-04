@@ -25,7 +25,11 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    decimal_frequencies = backend._test_regressions("test_probabilistic_measurement")
+    decimal_frequencies = (
+        {2: 269, 0: 264, 1: 235, 3: 232}
+        if backend.platform in ("cupy", "cuquantum")
+        else {0: 249, 1: 231, 2: 253, 3: 267}
+    )
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
@@ -64,10 +68,11 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    decimal_frequencies = backend._test_regressions(
-        "test_unbalanced_probabilistic_measurement"
+    decimal_frequencies = (
+        {3: 509, 0: 170, 2: 167, 1: 154}
+        if backend.platform in ("cupy", "cuquantum")
+        else {0: 171, 1: 148, 2: 161, 3: 520}
     )
-
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
@@ -93,7 +98,7 @@ def test_measurements_with_probabilistic_noise(backend):
         noiseless_circuit = Circuit(5)
         noiseless_circuit.add((gates.RX(i, t) for i, t in enumerate(thetas)))
         for i in range(5):
-            index = backend.sample_shots(probs, 1)[0]
+            index = int(backend.sample_shots(probs, 1)[0])
             if index != len(channel_gates):
                 noiseless_circuit.add(channel_gates[index](i))
         noiseless_circuit.add(gates.M(*range(5)))
@@ -115,7 +120,19 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     circuit.add(gates.M(3, p0=probs[2]))
     result = backend.execute_circuit(circuit, nshots=30)
     freqs = result.frequencies(binary=False)
-    targets = backend._test_regressions("test_post_measurement_bitflips_on_circuit")
+    targets = (
+        [
+            {5: 30},
+            {5: 17, 4: 5, 7: 4, 1: 2, 6: 2},
+            {4: 9, 2: 5, 5: 5, 3: 4, 6: 4, 0: 1, 1: 1, 7: 1},
+        ]
+        if backend.platform in ("cupy", "cuquantum")
+        else [
+            {5: 30},
+            {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+            {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
+        ]
+    )
     assert freqs == targets[i]
 
 
@@ -153,6 +170,11 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result._samples = backend.cast(np.zeros((10, 3)), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)
-    targets = backend._test_regressions("test_measurementresult_apply_bitflips")
+    targets = [
+        [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+        [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
+    ]
     noisy_samples = backend.samples_to_decimal(noisy_samples, 3)
     backend.assert_allclose(noisy_samples, targets[i])

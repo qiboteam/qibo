@@ -338,16 +338,20 @@ class MeasurementOutcomes:
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     np.random.shuffle(samples)
+                    samples = self.backend.cast(samples, dtype=self.backend.np.int64)
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)
                 samples = self.backend.samples_to_binary(samples, len(qubits))
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map
-                    bitflip_probabilities = [
-                        [p0.get(q) for q in qubits],
-                        [p1.get(q) for q in qubits],
-                    ]
+                    bitflip_probabilities = self.backend.cast(
+                        [
+                            [p0.get(q) for q in qubits],
+                            [p1.get(q) for q in qubits],
+                        ],
+                        dtype=self.backend.np.float64,
+                    )
                     samples = self.backend.apply_bitflips(
                         samples, bitflip_probabilities
                     )

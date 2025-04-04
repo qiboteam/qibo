@@ -448,11 +448,3 @@ class Backend(abc.ABC):
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
-
-    @abc.abstractmethod
-    def _test_regressions(self, name):  # pragma: no cover
-        """Correct outcomes for tests that involve random numbers.
-
-        The outcomes of such tests depend on the backend.
-        """
-        raise_error(NotImplementedError)
