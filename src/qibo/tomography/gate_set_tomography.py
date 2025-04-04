@@ -148,6 +148,7 @@ def _gate_tomography(
     noise_model=None,
     backend=None,
     transpiler=None,
+    ancilla=False,
 ):
     """Runs gate tomography for a 1 or 2 qubit gate.
 
@@ -168,6 +169,9 @@ def _gate_tomography(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
+        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
+            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
+            Defaults to ``False``.
 
     Returns:
         ndarray: matrix approximating the input gate.
@@ -184,13 +188,19 @@ def _gate_tomography(
                 ValueError,
                 f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
             )
-        gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
+
+        # # The following 4 lines could be redundant
+        # if gate.__class__.__name__ == "Unitary":
+        #     gate = gate.__class__(gate.init_args[0], *gate.qubits)
+        # else:
+        #     gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
         circ = Circuit(nqubits, density_matrix=True)
-        circ.add(_prepare_state(k, nqubits))
+        if not ancilla:  # pragma: no cover
+            circ.add(_prepare_state(k, nqubits))
 
         if gate is not None:
             circ.add(gate)
@@ -223,13 +233,15 @@ def GST(
     gauge_matrix=None,
     backend=None,
     transpiler=None,
+    ancilla=False,
 ):
     """Run Gate Set Tomography on the input ``gate_set``.
 
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
             GST on. For instance, ``gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX,
-            [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), gates.CNOT]``.
+            [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), (gates.Unitary,
+            [np.array([[1, 0], [0, 1]])]), gates.CNOT]``.
         nshots (int, optional): number of shots used in Gate Set Tomography per gate.
             Defaults to :math:`10^{4}`.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -253,6 +265,9 @@ def GST(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
+        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
+            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
+            Defaults to ``False``.
 
 
     Returns:
@@ -283,6 +298,7 @@ def GST(
                 noise_model=noise_model,
                 backend=backend,
                 transpiler=transpiler,
+                ancilla=ancilla,
             )
             empty_matrices.append(empty_matrix)
 
@@ -290,8 +306,9 @@ def GST(
         if gate is not None:
 
             if isinstance(gate, tuple):
-                angles = ["theta", "phi", "lam"]
+                angles = ["theta", "phi", "lam", "unitary"]
                 gate, params = gate
+                params = [params] if isinstance(params[0], np.ndarray) else params
                 init_args = signature(gate).parameters
                 valid_angles = [arg for arg in init_args if arg in angles]
                 angle_values = dict(zip(valid_angles, params))
@@ -308,7 +325,11 @@ def GST(
                     RuntimeError,
                     f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
                 )
-            gate = gate(*range(nqubits), **angle_values)
+
+            if "unitary" in angle_values:
+                gate = gate(angle_values["unitary"][0], *range(nqubits))
+            else:
+                gate = gate(*range(nqubits), **angle_values)
 
         matrices.append(
             _gate_tomography(
@@ -318,6 +339,7 @@ def GST(
                 noise_model=noise_model,
                 backend=backend,
                 transpiler=transpiler,
+                ancilla=ancilla,
             )
         )
 
