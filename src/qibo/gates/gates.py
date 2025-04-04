@@ -2538,6 +2538,7 @@ class GeneralizedRBS(ParametrizedGate):
         self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
         self.unitary = True
 
+        self.parameter_names = "theta"
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
         self.nparams = 2
@@ -2653,5 +2654,5 @@ def _check_engine(array):
         import torch  # pylint: disable=C0415
 
         return torch
-    else:
-        return np
+
+    return np

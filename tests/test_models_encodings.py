@@ -1,7 +1,7 @@
 """Tests for qibo.models.encodings"""
 
 import math
-from itertools import product
+from functools import reduce
 
 import numpy as np
 import pytest
@@ -18,6 +18,7 @@ from qibo.models.encodings import (
     ghz_state,
     hamming_weight_encoder,
     phase_encoder,
+    sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
@@ -66,12 +67,7 @@ def test_phase_encoder(backend, rotation, kind):
     sampler = np.random.default_rng(1)
 
     nqubits = 3
-    dims = 2**nqubits
 
-    with pytest.raises(TypeError):
-        data = sampler.random((nqubits, nqubits))
-        data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation=rotation)
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
@@ -81,28 +77,19 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = np.random.rand(nqubits)
+    phases = backend.np.random.rand(nqubits)
 
-    if rotation in ["RX", "RY"]:
-        functions = list(product([np.cos, np.sin], repeat=nqubits))
-        target = []
-        for row in functions:
-            elem = 1.0
-            for phase, func in zip(phases, row):
-                elem *= func(phase / 2)
-                if rotation == "RX" and func.__name__ == "sin":
-                    elem *= -1.0j
-            target.append(elem)
-    else:
-        target = [np.exp(-0.5j * sum(phases))] + [0.0] * (dims - 1)
-
-    target = np.array(target, dtype=complex)
-    target = backend.cast(target, dtype=target.dtype)
+    gate = getattr(gates, rotation)
+    target = reduce(
+        backend.np.kron,
+        [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
+    )[:, 0]
 
     if kind is not None:
         phases = kind(phases)
 
-    state = phase_encoder(phases, rotation=rotation)
+    state = phase_encoder(phases, rotation=rotation, backend=backend)
+    state.draw()
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)
@@ -128,9 +115,9 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
     target = random_statevector(dims, backend=backend)
     if not complex_data:
         target = backend.np.real(target)
-        target /= np.linalg.norm(target)
+        target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization)
+    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
@@ -273,6 +260,40 @@ def test_hamming_weight_encoder(
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("seed", [10, 20])
+@pytest.mark.parametrize("zip_input", [False, True])
+@pytest.mark.parametrize("integers", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 7])
+def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
+    dims = 2**nqubits
+    sparsity = nqubits
+
+    data = random_statevector(sparsity, seed=10, backend=backend)
+    np.random.seed(seed)
+    indices = np.random.choice(range(dims), size=sparsity, replace=False)
+    indices = backend.cast(indices, dtype=int)
+
+    target = backend.cast(backend.np.zeros(dims))
+    target[indices] = data
+
+    if not integers:
+        indices = [f"{elem:0{nqubits}b}" for elem in indices]
+
+    data = zip(indices, data)
+    if not zip_input:
+        data = list(data)
+
+    if integers and not zip_input:
+        with pytest.raises(ValueError):
+            circuit = sparse_encoder(data, nqubits=None)
+
+    _nqubits = nqubits if integers else None
+    circuit = sparse_encoder(data, _nqubits, backend=backend)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target)
 
 
 def test_entangling_layer_errors():

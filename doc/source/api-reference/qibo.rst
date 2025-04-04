@@ -288,6 +288,12 @@ For instance, the following two circuit generations are equivalent:
 .. autofunction:: qibo.models.encodings.phase_encoder
 
 
+Sparse encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.sparse_encoder
+
+
 Binary encoder
 """"""""""""""
 
