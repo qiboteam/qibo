@@ -18,18 +18,29 @@ def test_set_get_backend():
     assert qibo.get_backend().name == "numpy"
 
 
-def test_set_precision():
+def test_set_dtype():
     import numpy as np
 
-    assert qibo.get_precision() == "double"
-    qibo.set_precision("single")
+    assert qibo.get_dtype() == "complex128"
+
+    qibo.set_dtype("float32")
+    assert matrices.I.dtype == np.float32
+    assert qibo.get_dtype() == "float32"
+
+    qibo.set_dtype("float64")
+    assert matrices.I.dtype == np.float64
+    assert qibo.get_dtype() == "float64"
+
+    qibo.set_dtype("complex64")
     assert matrices.I.dtype == np.complex64
-    assert qibo.get_precision() == "single"
-    qibo.set_precision("double")
+    assert qibo.get_dtype() == "complex64"
+
+    qibo.set_dtype("complex128")
     assert matrices.I.dtype == np.complex128
-    assert qibo.get_precision() == "double"
+    assert qibo.get_dtype() == "complex128"
+
     with pytest.raises(ValueError):
-        qibo.set_precision("test")
+        qibo.set_dtype("test")
 
 
 def test_set_device():

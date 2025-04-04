@@ -155,8 +155,7 @@ def parameter_shift(
 
     circuit.set_parameters(original)
 
-    # float() necessary to not return a 0-dim ndarray
-    result = float(generator_eigenval * (forward - backward) * scale_factor)
+    result = (generator_eigenval * (forward - backward) * scale_factor).real
 
     return result
 
