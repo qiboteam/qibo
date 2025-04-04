@@ -572,9 +572,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         keys = list(freq.keys())
         counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(
-            freq.values()
-        )
+        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(freq.values())
         expvals = []
         for term in self.terms:
             qubits = {
