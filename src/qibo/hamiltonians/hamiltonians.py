@@ -564,14 +564,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             for factor in term.factors:
                 if not isinstance(factor, Z):
                     raise_error(
-                        NotImplementedError, "Observable is not a Z Pauli string."
+                        NotImplementedError, "Observable is not a Pauli-Z string."
                     )
 
         if qubit_map is None:
             qubit_map = list(range(self.nqubits))
 
         keys = list(freq.keys())
-        counts = self.backend.cast(list(freq.values()), dtype=self.backend.dtype) / sum(
+        counts = list(freq.values())
+        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(
             freq.values()
         )
         expvals = []
@@ -589,7 +590,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
+        return self.backend.np.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form
@@ -598,7 +599,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be composed.",
+                    "Only Hamiltonians with the same number of qubits can be composed.",
                 )
 
             if other._form is not None:

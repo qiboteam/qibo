@@ -209,7 +209,7 @@ def ZNE(
         )
         expected_values.append(val)
 
-    expected_values = backend.cast(expected_values, dtype=expected_values[0].dtype)
+    expected_values = backend.cast(expected_values, dtype=type(expected_values[0]))
 
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
     gamma = backend.cast(gamma, dtype=gamma.dtype)
@@ -442,7 +442,7 @@ def CDR(
     params = backend.cast(params, dtype=params.dtype)
 
     train_val_noisy = train_val["noisy"]
-    train_val_noisy = backend.cast(train_val_noisy, dtype=train_val_noisy[0].dtype)
+    train_val_noisy = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
 
     train_val_noiseless = train_val["noise-free"]
     train_val_noiseless = backend.cast(
@@ -551,7 +551,7 @@ def vnCDR(
     for circ in training_circuits:
         result = backend.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(float(val))
+        train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
             val = get_expectation_val_with_readout_mitigation(
@@ -564,7 +564,7 @@ def vnCDR(
                 seed=local_state,
                 backend=backend,
             )
-            train_val["noisy"].append(float(val))
+            train_val["noisy"].append(float(val.real))
 
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
@@ -601,7 +601,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, dtype=type(val)).reshape(-1, 1),
+        backend.cast(val, dtype=type(val[0])).reshape(-1, 1),
         *optimal_params,
     )[0]
 
@@ -724,7 +724,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
         ) * np.sum(frequencies)
 
     for i, value in enumerate(mitigated_frequencies):
-        state._frequencies[i] = float(value)
+        state._frequencies[i] = float(value.real)
 
     return state
 
@@ -882,8 +882,9 @@ def get_expectation_val_with_readout_mitigation(
     exp_val = circuit_result.expectation_from_samples(observable)
 
     if "ncircuits" in readout:
-        return exp_val / circuit_result_cal.expectation_from_samples(observable)
-    return exp_val
+        return float(exp_val / circuit_result_cal.expectation_from_samples(observable))
+
+    return float(exp_val)
 
 
 def sample_clifford_training_circuit(
