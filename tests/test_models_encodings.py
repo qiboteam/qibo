@@ -18,6 +18,7 @@ from qibo.models.encodings import (
     ghz_state,
     hamming_weight_encoder,
     phase_encoder,
+    sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
@@ -273,6 +274,40 @@ def test_hamming_weight_encoder(
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("seed", [10, 20])
+@pytest.mark.parametrize("zip_input", [False, True])
+@pytest.mark.parametrize("integers", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 7])
+def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
+    dims = 2**nqubits
+    sparsity = nqubits
+
+    data = random_statevector(sparsity, seed=10, backend=backend)
+    np.random.seed(seed)
+    indices = np.random.choice(range(dims), size=sparsity, replace=False)
+    indices = backend.cast(indices, dtype=int)
+
+    target = backend.cast(backend.np.zeros(dims))
+    target[indices] = data
+
+    if not integers:
+        indices = [f"{elem:0{nqubits}b}" for elem in indices]
+
+    data = zip(indices, data)
+    if not zip_input:
+        data = list(data)
+
+    if integers and not zip_input:
+        with pytest.raises(ValueError):
+            circuit = sparse_encoder(data, nqubits=None)
+
+    _nqubits = nqubits if integers else None
+    circuit = sparse_encoder(data, _nqubits)
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target)
 
 
 def test_entangling_layer_errors():

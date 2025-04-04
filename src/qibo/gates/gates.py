@@ -2653,5 +2653,5 @@ def _check_engine(array):
         import torch  # pylint: disable=C0415
 
         return torch
-    else:
-        return np
+
+    return np

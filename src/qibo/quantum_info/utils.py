@@ -35,14 +35,16 @@ def hamming_weight(
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
-    if not isinstance(bitstring, (int, str, list, tuple, np.ndarray)):
+    if not isinstance(
+        bitstring, (int, str, list, tuple, np.ndarray)
+    ) and "int" not in str(type(bitstring)):
         raise_error(
             TypeError,
             "bitstring must be either type int, list, tuple, or numpy.ndarray. "
             f"However, it is type {type(bitstring)}.",
         )
 
-    if isinstance(bitstring, int):
+    if isinstance(bitstring, int) or "int" in str(type(bitstring)):
         bitstring = f"{bitstring:b}"
     elif isinstance(bitstring, (list, tuple, np.ndarray)):
         bitstring = "".join([str(bit) for bit in bitstring])
