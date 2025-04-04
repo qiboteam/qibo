@@ -1,123 +1,124 @@
 import networkx as nx
 import pytest
 
-from qibo import Circuit, matrices, set_backend, get_backend, set_dtype, get_dtype, set_device, get_device, set
-from backends import _Global, get_backend
-from backends.numpy import NumpyBackend
-from transpiler.optimizer import Preprocessing
-from transpiler.pipeline import Passes
-from transpiler.placer import Random
-from transpiler.router import Sabre
-from transpiler.unroller import NativeGates, Unroller
+import qibo
+from qibo import Circuit, matrices
+from qibo.backends import _Global, get_backend
+from qibo.backends.numpy import NumpyBackend
+from qibo.transpiler.optimizer import Preprocessing
+from qibo.transpiler.pipeline import Passes
+from qibo.transpiler.placer import Random
+from qibo.transpiler.router import Sabre
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def test_set_get_backend():
-    set_backend("numpy")
-    assert str(get_backend()) == "numpy"
-    assert get_backend().name == "numpy"
+    qibo.set_backend("numpy")
+    assert str(qibo.get_backend()) == "numpy"
+    assert qibo.get_backend().name == "numpy"
 
 
 def test_set_dtype():
     import numpy as np
 
-    assert get_dtype() == "complex128"
+    assert qibo.get_dtype() == "complex128"
 
-    set_dtype("float32")
+    qibo.set_dtype("float32")
     assert matrices.I.dtype == np.float32
-    assert get_dtype() == "float32"
+    assert qibo.get_dtype() == "float32"
 
-    set_dtype("float64")
+    qibo.set_dtype("float64")
     assert matrices.I.dtype == np.float64
-    assert get_dtype() == "float64"
+    assert qibo.get_dtype() == "float64"
 
-    set_dtype("complex64")
+    qibo.set_dtype("complex64")
     assert matrices.I.dtype == np.complex64
-    assert get_dtype() == "complex64"
+    assert qibo.get_dtype() == "complex64"
 
-    set_dtype("complex128")
+    qibo.set_dtype("complex128")
     assert matrices.I.dtype == np.complex128
-    assert get_dtype() == "complex128"
+    assert qibo.get_dtype() == "complex128"
 
     with pytest.raises(ValueError):
-        set_dtype("test")
+        qibo.set_dtype("test")
 
 
 def test_set_device():
-    set_backend("numpy")
-    set_device("/CPU:0")
-    assert get_device() == "/CPU:0"
+    qibo.set_backend("numpy")
+    qibo.set_device("/CPU:0")
+    assert qibo.get_device() == "/CPU:0"
     with pytest.raises(ValueError):
-        set_device("test")
+        qibo.set_device("test")
     with pytest.raises(ValueError):
-        set_device("/GPU:0")
+        qibo.set_device("/GPU:0")
 
 
 def test_set_threads():
     with pytest.raises(ValueError):
-        set_threads(-2)
+        qibo.set_threads(-2)
     with pytest.raises(TypeError):
-        set_threads("test")
+        qibo.set_threads("test")
 
-    set_backend("numpy")
-    assert get_threads() == 1
+    qibo.set_backend("numpy")
+    assert qibo.get_threads() == 1
     with pytest.raises(ValueError):
-        set_threads(10)
+        qibo.set_threads(10)
 
 
 def test_set_shot_batch_size():
-    original_batch_size = get_batch_size()
-    set_batch_size(1024)
-    assert get_batch_size() == 1024
-    from config import SHOT_BATCH_SIZE
+    original_batch_size = qibo.get_batch_size()
+    qibo.set_batch_size(1024)
+    assert qibo.get_batch_size() == 1024
+    from qibo.config import SHOT_BATCH_SIZE
 
     assert SHOT_BATCH_SIZE == 1024
     with pytest.raises(TypeError):
-        set_batch_size("test")
+        qibo.set_batch_size("test")
     with pytest.raises(ValueError):
-        set_batch_size(-10)
+        qibo.set_batch_size(-10)
     with pytest.raises(ValueError):
-        set_batch_size(2**35)
-    set_batch_size(original_batch_size)
+        qibo.set_batch_size(2**35)
+    qibo.set_batch_size(original_batch_size)
 
 
 def test_set_metropolis_threshold():
-    original_threshold = get_metropolis_threshold()
-    set_metropolis_threshold(100)
-    assert get_metropolis_threshold() == 100
-    from config import SHOT_METROPOLIS_THRESHOLD
+    original_threshold = qibo.get_metropolis_threshold()
+    qibo.set_metropolis_threshold(100)
+    assert qibo.get_metropolis_threshold() == 100
+    from qibo.config import SHOT_METROPOLIS_THRESHOLD
 
     assert SHOT_METROPOLIS_THRESHOLD == 100
     with pytest.raises(TypeError):
-        set_metropolis_threshold("test")
+        qibo.set_metropolis_threshold("test")
     with pytest.raises(ValueError):
-        set_metropolis_threshold(-10)
-    set_metropolis_threshold(original_threshold)
+        qibo.set_metropolis_threshold(-10)
+    qibo.set_metropolis_threshold(original_threshold)
 
 
 def test_circuit_execution():
-    set_backend("numpy")
+    qibo.set_backend("numpy")
     circuit = Circuit(2)
-    circuit.add(gates.H(0))
+    circuit.add(qibo.gates.H(0))
     circuit()
     circuit.unitary()
 
 
 def test_gate_matrix():
-    set_backend("numpy")
-    gate = gates.H(0)
+    qibo.set_backend("numpy")
+    gate = qibo.gates.H(0)
     gate.matrix
 
 
 def test_check_backend(backend):
     # testing when backend is not None
-    test = backends._check_backend(backend)
+    test = qibo.backends._check_backend(backend)
 
     assert test.name == backend.name
     assert test.__class__ == backend.__class__
 
     # testing when backend is None
     test = None
-    test = backends._check_backend(test)
+    test = qibo.backends._check_backend(test)
     target = get_backend()
 
     assert test.name == target.name
@@ -145,9 +146,9 @@ def test_set_get_transpiler():
         ],
     )
 
-    set_transpiler(transpiler)
-    assert get_transpiler() == transpiler
-    assert get_transpiler_name() == str(transpiler)
+    qibo.set_transpiler(transpiler)
+    assert qibo.get_transpiler() == transpiler
+    assert qibo.get_transpiler_name() == str(transpiler)
 
 
 def test_default_transpiler_sim():
