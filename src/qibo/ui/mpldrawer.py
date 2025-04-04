@@ -8,8 +8,8 @@ from typing import Union
 
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.transforms import Bbox
 import numpy as np
+from matplotlib.transforms import Bbox
 
 from qibo import gates
 
