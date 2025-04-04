@@ -1,7 +1,5 @@
 import networkx as nx
 import pytest
-
-from qibo import Circuit, matrices, set_backend, get_backend, set_dtype, get_dtype, set_device, get_device, set
 from backends import _Global, get_backend
 from backends.numpy import NumpyBackend
 from transpiler.optimizer import Preprocessing
@@ -9,6 +7,18 @@ from transpiler.pipeline import Passes
 from transpiler.placer import Random
 from transpiler.router import Sabre
 from transpiler.unroller import NativeGates, Unroller
+
+from qibo import (
+    Circuit,
+    get_backend,
+    get_device,
+    get_dtype,
+    matrices,
+    set,
+    set_backend,
+    set_device,
+    set_dtype,
+)
 
 
 def test_set_get_backend():
