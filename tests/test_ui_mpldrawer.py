@@ -294,6 +294,49 @@ def test_plot_unitaries_different_init():
     )
 
 
+def test_plot_global_unitaries_as_circuit():
+    """Test for plotting global unitaries built from circuit"""
+    backend = construct_backend("numpy")
+
+    rnd_arr1 = random_unitary(8, backend=backend, seed=42)
+    rnd_arr2 = random_unitary(8, backend=backend, seed=24)
+
+    def U(n, a):
+        a_bin = format(a, "0" + str(n) + "b")
+        circuit = Circuit(n + 1)
+        for qubit in range(n):
+            if a_bin[qubit] == "1":
+                circuit.add(gates.CNOT(qubit + 1, 0))
+        return gates.Unitary(
+            (circuit.fuse()).unitary(backend), *range(n + 1), name="U_a"
+        )
+
+    def qfgate(qbits, name):
+        circuit = QFT(qbits)
+        return gates.Unitary(circuit.unitary(backend), *range(qbits + 1), name=name)
+
+    circuit = Circuit(5)
+    circuit.add(U(4, 7))
+    circuit.add(qfgate(2, "U_{fft}"))
+    circuit.add(gates.Unitary(QFT(2).unitary(backend), *range(2), name=""))
+    circuit.add(gates.Unitary(QFT(3).unitary(backend), 2, 3, 4, name="U_{FT}"))
+    circuit.add(gates.Unitary(QFT(2).unitary(backend), 1, 2, name="U_K"))
+    circuit.add(gates.X(1))
+    circuit.add(gates.Unitary(rnd_arr1, 1, 0, 4, name=None))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.Unitary(rnd_arr1, 2, 0, 3))
+    circuit.add(gates.Y(1))
+    circuit.add(gates.Unitary(rnd_arr2, 3, 0, 4))
+    circuit.add(gates.Y(0))
+    circuit.wire_names = ["q_a", "q_b", "q_c", "q_d", "q_e"]
+
+    _, fig = plot_circuit(circuit)
+    assert (
+        match_figure_image(fig, BASEPATH + "/test_plot_global_unitaries_as_circuit.npy")
+        == True
+    )
+
+
 def test_plot_circuit_internal():
     """Test for circuit plotting"""
     gates_plot = [
