@@ -95,17 +95,28 @@ def test_finite_differences(backend, step_size):
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = finite_differences(circuit=circuit, hamiltonian=circuit, parameter_index=0)
+        grad_0 = finite_differences(
+            circuit=circuit, hamiltonian=circuit, parameter_index=0
+        )
 
     # executing all the procedure
     grad_0 = finite_differences(
-        circuit=circuit, hamiltonian=test_hamiltonian, parameter_index=0, step_size=step_size
+        circuit=circuit,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        step_size=step_size,
     )
     grad_1 = finite_differences(
-        circuit=circuit, hamiltonian=test_hamiltonian, parameter_index=1, step_size=step_size
+        circuit=circuit,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        step_size=step_size,
     )
     grad_2 = finite_differences(
-        circuit=circuit, hamiltonian=test_hamiltonian, parameter_index=2, step_size=step_size
+        circuit=circuit,
+        hamiltonian=test_hamiltonian,
+        parameter_index=2,
+        step_size=step_size,
     )
 
     # check of known values
