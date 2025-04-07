@@ -70,9 +70,6 @@ def test_hamming_distance(bitstring_1, bitstring_2):
     with pytest.raises(TypeError):
         test = hamming_distance("1010", 2.3)
 
-    if isinstance(bitstring_1, int):
-        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
-
     distance = hamming_distance(bitstring_1, bitstring_2)
     indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
 
