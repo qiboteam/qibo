@@ -1329,19 +1329,17 @@ def _sort_data_sparse(data, nqubits):
         hamming_weight,
     )
 
-    bitstrings, _data = [], []
-    for bitstring, elem in data:
-        if isinstance(bitstring, int) or "int" in str(type(bitstring)):
-            bitstring = f"{bitstring:0{nqubits}b}"
-        bitstrings.append(bitstring)
-        _data.append(elem)
-    _data = list(zip(bitstrings, _data))
+    _data = (
+        [(f"{row[0]:0{nqubits}b}", row[1]) for row in data]
+        if isinstance(data[0][0], int) or "int" in str(type(data[0][0]))
+        else data
+    )
     _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
 
-    data_sorted, bitstrings_sorted = [], []
-    for string, elem in _data:
-        bitstrings_sorted.append(np.array(list(string)).astype(int))
-        data_sorted.append(elem)
+    bitstrings_sorted, data_sorted = zip(*_data)
+    bitstrings_sorted = [
+        np.array(list(string)).astype(int) for string in bitstrings_sorted
+    ]
 
     return data_sorted, bitstrings_sorted
 
