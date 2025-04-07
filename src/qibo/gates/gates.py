@@ -2538,7 +2538,6 @@ class GeneralizedRBS(ParametrizedGate):
         self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
         self.unitary = True
 
-        self.parameter_names = "theta"
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
         self.nparams = 2

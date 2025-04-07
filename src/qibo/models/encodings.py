@@ -521,7 +521,6 @@ def hamming_weight_encoder(
     """
     backend = _check_backend(backend)
 
-    # complex_data = bool(data.dtype in [complex, np.dtype("complex128")])
     complex_data = bool("complex" in str(data.dtype))
 
     if initial_string is None:
