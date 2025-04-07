@@ -226,7 +226,7 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
         ones, new_ones = {int(elem) for elem in ones}, {int(elem) for elem in new_ones}
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
 
-        gate, touched_qubits = _get_gate_sparse(
+        gate = _get_gate_sparse(
             distance,
             difference,
             touched_qubits,
@@ -242,27 +242,19 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     if complex_data:
         hw_0 = hamming_weight(bitstrings_sorted[-2])
         hw_1 = hamming_weight(bitstrings_sorted[-1])
+        correction = _get_phase_gate_correction_sparse(
+            bitstrings_sorted[-1],
+            bitstrings_sorted[-2],
+            nqubits,
+            data_sorted[-1],
+            data_sorted[-2],
+            circuit,
+            phis,
+        )
         if hw_1 == nqubits and hw_0 == nqubits - 1:
-            circuit.queue = _get_phase_gate_correction_sparse(
-                bitstrings_sorted[-1],
-                bitstrings_sorted[-2],
-                nqubits,
-                data_sorted[-1],
-                data_sorted[-2],
-                circuit,
-                phis,
-            )
+            circuit.queue = correction
         else:
-            gate = _get_phase_gate_correction_sparse(
-                bitstrings_sorted[-1],
-                bitstrings_sorted[-2],
-                nqubits,
-                data_sorted[-1],
-                data_sorted[-2],
-                circuit,
-                phis,
-            )
-            circuit.add(gate)
+            circuit.add(correction)
 
     print(type(circuit.get_parameters()[0][0]))
 
@@ -1367,21 +1359,19 @@ def _sort_data_sparse(data, nqubits, backend):
         hamming_weight,
     )
 
-    bitstrings, _data = [], []
-    for bitstring, elem in data:
-        if isinstance(bitstring, int) or "int" in str(type(bitstring)):
-            bitstring = f"{bitstring:0{nqubits}b}"
-        bitstrings.append(bitstring)
-        _data.append(elem)
-    _data = list(zip(bitstrings, _data))
+    _data = (
+        [(f"{row[0]:0{nqubits}b}", row[1]) for row in data]
+        if isinstance(data[0][0], int) or "int" in str(type(data[0][0]))
+        else data
+    )
     _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
 
-    data_sorted, bitstrings_sorted = [], []
-    for string, elem in _data:
-        string = backend.cast([int(bit) for bit in string], dtype=int)
-        bitstrings_sorted.append(string)
-        data_sorted.append(elem)
+    bitstrings_sorted, data_sorted = zip(*_data)
+    bitstrings_sorted = [
+        np.array(list(string)).astype(int) for string in bitstrings_sorted
+    ]
 
+    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.np.int8)
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     return data_sorted, bitstrings_sorted
@@ -1414,11 +1404,11 @@ def _get_gate_sparse(
             backend.np.where(difference == -1)[0][0],
             backend.np.where(difference == 1)[0][0],
         ]
-        for qubit in qubits:
-            if qubit not in touched_qubits:
-                touched_qubits.append(int(qubit))
+        touched_qubits += list(set(qubits) - set(touched_qubits))
         qubits_in = [int(qubits[0])]
         qubits_out = [int(qubits[1])]
+        qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
+
         gate = _get_gate(
             qubits_in,
             qubits_out,
@@ -1430,16 +1420,14 @@ def _get_gate_sparse(
     else:
         qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
         for row in qubits:
-            for qubit in row:
-                if qubit not in touched_qubits:
-                    touched_qubits.append(int(qubit))
+            touched_qubits += list(set(row) - set(touched_qubits))
         qubits_in = [int(qubit) for qubit in qubits[0]]
         qubits_out = [int(qubit) for qubit in qubits[1]]
         gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, -phi).controlled_by(
             *controls
         )
 
-    return gate, touched_qubits
+    return gate
 
 
 def _get_phase_gate_correction_sparse(
@@ -1474,7 +1462,7 @@ def _get_phase_gate_correction_sparse(
 
     if hw_1 == nqubits:  # pragma: no cover
         first_one = np.argsort(second_to_last_string)[0]
-        other_ones = list(set(list(range(nqubits))) ^ {first_one})
+        other_ones = list(set(range(nqubits)) ^ {first_one})
         gate = gates.RZ(first_one, 2 * phis[-1]).controlled_by(*other_ones)
     else:
         gate = _get_phase_gate_correction(last_string, phis[-1])
