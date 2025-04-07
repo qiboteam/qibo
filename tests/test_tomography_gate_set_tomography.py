@@ -245,7 +245,7 @@ def test_gate_tomography_noise_model(backend):
     )
 
 
-def test_gate_tomography_gate_list(backend):
+def test_gate_tomography_gate_list_error(backend):
     nqubits = 2
     gate_list = [gates.T(0), gates.TDG(0), gates.S(0)]
     with pytest.raises(ValueError):
@@ -337,6 +337,33 @@ def test_GST(backend, target_gates, pauli_liouville):
                 pauli_liouville=pauli_liouville,
                 backend=backend,
             )
+
+
+def test_GST_2qb_basis_op_diff_registers(backend):
+    gate_set = [gates.T, gates.TDG, gates.S]
+    with pytest.raises(RuntimeError):
+        if len(gate_set) > 2:
+            matrices = GST(
+                gate_set=gate_set,
+                two_qubit_basis_op_diff_registers=True,
+                include_empty=False,
+            )
+
+
+@pytest.mark.parametrize(
+    "gate_set",
+    [
+        [gates.T, gates.CNOT],
+        [gates.CNOT, gates.CNOT],
+    ],
+)
+def test_GST_2qb_basis_op_diff_registers_wrong_gates(backend, gate_set):
+    with pytest.raises(RuntimeError):
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
 
 
 def test_GST_invertible_matrix():

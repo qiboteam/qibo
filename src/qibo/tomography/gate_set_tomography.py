@@ -1,3 +1,4 @@
+from functools import cache
 from inspect import signature
 from itertools import product
 from typing import List, Union
@@ -27,7 +28,7 @@ def _check_nqubits(nqubits):
         )
 
 
-# @cache
+@cache
 def _gates(nqubits) -> List:
     """Gates implementing all the GST state preparations.
 
@@ -44,7 +45,7 @@ def _gates(nqubits) -> List:
     )
 
 
-# @cache
+@cache
 def _measurements(nqubits: int) -> List:
     """Measurement gates implementing all the GST measurement bases.
 
@@ -57,7 +58,7 @@ def _measurements(nqubits: int) -> List:
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _observables(nqubits: int) -> List:
     """All the observables measured in the GST protocol.
 
@@ -71,7 +72,7 @@ def _observables(nqubits: int) -> List:
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _get_observable(j: int, nqubits: int):
     """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
@@ -96,7 +97,7 @@ def _get_observable(j: int, nqubits: int):
     return SymbolicHamiltonian(observable, nqubits=nqubits)
 
 
-# @cache
+@cache
 def _prepare_state(k, nqubits):
     """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
     Using base-4 indexing for :math:`k`,
@@ -118,7 +119,7 @@ def _prepare_state(k, nqubits):
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
-# @cache
+@cache
 def _measurement_basis(j, nqubits):
     """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
     Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
@@ -283,7 +284,7 @@ def _extract_gate(gate, idx=None):
             f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
         )
 
-    if idx:
+    if idx:  # pragma: no cover
         if "unitary" in angle_values:
             gate = gate(angle_values["unitary"][0], idx)
         else:
@@ -400,6 +401,8 @@ def GST(
                 gate_set_nqubits.append(nqubits)
             if 2 in gate_set_nqubits:
                 raise_error(RuntimeError, f"Requires two single-qubit gates")
+        else:
+            raise_error(RuntimeError, f"Requires two single-qubit gates")
 
         gate_list = []
         for idx in range(len(gate_set)):
