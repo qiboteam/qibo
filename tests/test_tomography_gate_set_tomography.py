@@ -1,4 +1,5 @@
 from functools import reduce
+from inspect import signature
 from itertools import repeat
 
 import numpy as np
@@ -11,6 +12,7 @@ from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
+    _extract_gate,
     _gate_tomography,
     _get_observable,
     _measurement_basis,
@@ -160,6 +162,47 @@ def test__get_observable(j, nqubits):
         prepared_observable = _get_observable(j, nqubits).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        (gates.T),
+        ((gates.RX, [np.pi / 2])),
+        ((gates.Unitary, [np.eye(2)])),
+    ],
+)
+def test__extract_gate(gate):
+    gate_class, _ = _extract_gate(gate)
+
+    if isinstance(gate, tuple):
+        angles = ["theta", "phi", "lam", "unitary"]
+        gate, params = gate
+        params = [params] if isinstance(params[0], np.ndarray) else params
+        init_args = signature(gate).parameters
+        valid_angles = [arg for arg in init_args if arg in angles]
+        angle_values = dict(zip(valid_angles, params))
+    else:
+        angle_values = {}
+        init_args = signature(gate).parameters
+
+    if "q" in init_args:
+        nqubits = 1
+    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+        nqubits = 2
+
+    if "unitary" in angle_values:
+        gate = gate(angle_values["unitary"][0], *range(nqubits))
+    else:
+        gate = gate(*range(nqubits), **angle_values)
+
+    assert type(gate_class) == type(gate)
+
+
+def test__extract_gate_error():
+    input_gate = gates.TOFFOLI
+    with pytest.raises(RuntimeError):
+        gate_class, nqubits = _extract_gate(input_gate)
 
 
 @pytest.mark.parametrize(
