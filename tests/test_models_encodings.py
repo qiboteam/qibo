@@ -126,10 +126,10 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
 
     dims = 2**nqubits
 
-    target = random_statevector(dims, backend=backend)
+    target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
         target = backend.np.real(target)
-        target /= np.linalg.norm(target)
+        target /= backend.np.linalg.norm(target)
 
     circuit = binary_encoder(target, parametrization=parametrization)
     state = backend.execute_circuit(circuit).state()

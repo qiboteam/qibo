@@ -215,7 +215,7 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         ones, new_ones = np.argsort(b_0)[-hw_0:], np.argsort(b_1)[-hw_1:]
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
 
-        gate, touched_qubits = _get_gate_sparse(
+        gate = _get_gate_sparse(
             distance,
             difference,
             touched_qubits,
@@ -1375,7 +1375,7 @@ def _get_gate_sparse(
             *controls
         )
 
-    return gate, touched_qubits
+    return gate
 
 
 def _get_phase_gate_correction_sparse(
