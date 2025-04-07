@@ -1370,9 +1370,7 @@ def _get_gate_sparse(
     else:
         qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
         for row in qubits:
-            for qubit in row:
-                if qubit not in touched_qubits:
-                    touched_qubits.append(qubit)
+            touched_qubits += list(set(row) - set(touched_qubits))
         gate = gates.GeneralizedRBS(qubits[0], qubits[1], theta, -phi).controlled_by(
             *controls
         )
