@@ -115,7 +115,7 @@ def test__measurement_basis(j, nqubits):
 
 
 @pytest.mark.parametrize(
-    "j,nqubits",
+    "j, nqubits",
     INDEX_NQUBITS,
 )
 def test__get_observable(j, nqubits):
@@ -173,7 +173,7 @@ def test_gate_tomography_value_error(backend, nqubits, gate):
     with pytest.raises(ValueError):
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
-            gate=gate,
+            gate_list=[gate],
             nshots=int(1e4),
             noise_model=None,
             backend=backend,
@@ -189,7 +189,7 @@ def test_gate_tomography_noise_model(backend):
     # return noise_model
     target = _gate_tomography(
         nqubits=nqubits,
-        gate=gate,
+        gate_list=[gate],
         nshots=int(1e4),
         noise_model=noise_model,
         backend=backend,
@@ -200,6 +200,39 @@ def test_gate_tomography_noise_model(backend):
         exact_matrix,
         atol=1e-1,
     )
+
+
+def test_gate_tomography_gate_list(backend):
+    nqubits = 2
+    gate_list = [gates.T(0), gates.TDG(0), gates.S(0)]
+    with pytest.raises(ValueError):
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate_list=gate_list,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+        )
+
+
+@pytest.mark.parametrize(
+    "ancilla",
+    [
+        (3),
+    ],
+)
+def test_gate_tomography_gate_list(backend, ancilla):
+    nqubits = 2
+    gate_list = [gates.T(0), gates.TDG(0)]
+    with pytest.raises(ValueError):
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate_list=gate_list,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+            ancilla=ancilla,
+        )
 
 
 @pytest.mark.parametrize(

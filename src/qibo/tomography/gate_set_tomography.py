@@ -143,12 +143,12 @@ def _measurement_basis(j, nqubits):
 
 def _gate_tomography(
     nqubits: int,
-    gate: gates.Gate = None,
+    gate_list=None,
     nshots: int = int(1e4),
     noise_model=None,
     backend=None,
     transpiler=None,
-    ancilla=False,
+    ancilla=None,
 ):
     """Runs gate tomography for a 1 or 2 qubit gate.
 
@@ -160,8 +160,12 @@ def _gate_tomography(
 
     Args:
         nqubits (int): number of qubits of the gate.
-        gate (:class:`qibo.gates.Gate`, optional): gate to perform gate tomography on.
-            If ``None``, then gate tomography will be performed for an empty circuit.
+        gate_list (list of :class:`qibo.gates.Gate`, optional):
+            Gate to perform gate tomography on. Supported configurations are:
+                - A single single-qubit gate.
+                - A single two-qubit gate.
+                - Two single-qubit gates, one applied to each qubit register.
+            If ``None``, gate set tomography will be performed on an empty circuit.
             Defaults to ``None``.
         nshots (int, optional): number of shots used.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model applied to simulate
@@ -169,9 +173,13 @@ def _gate_tomography(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
-        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
-            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
-            Defaults to ``False``.
+        ancilla (int, optional): Controls whether SWAP gates are applied to replace qubits 0
+            and/or 1 with fresh ancilla qubits.
+            - If `ancilla = 0`, a single SWAP gate is applied on qubit0 and an ancilla qubit
+            - If `ancilla = 1`, a single SWAP gate is applied on qubit1 and an ancilla qubit
+            - If `ancilla = 2`, SWAP gates are applied between qubit 0 and one ancilla qubit,
+              and between qubit 1 and another ancilla qubit
+            - If `ancilla = None`, no SWAP gates are used. Defaults to ``None``.
 
     Returns:
         ndarray: matrix approximating the input gate.
@@ -182,28 +190,47 @@ def _gate_tomography(
 
     backend = _check_backend(backend)
 
-    if gate is not None:
-        if nqubits != len(gate.qubits):
+    if ancilla is not None:
+        if ancilla >= 3:
             raise_error(
                 ValueError,
-                f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
+                f"Unexpected ancilla value (ancilla={ancilla}).\n"
+                f"    Permitted inputs ancilla=None;\n"
+                f"                     ancilla=0 to apply SWAP to qubit0 (simulating reset of qubit0);\n"
+                f"                     ancilla=1 to apply SWAP to qubit1 (simulating reset of qubit1);\n"
+                f"                     ancilla=2 to apply SWAP to qubit0 and qubit1 (simulating reset of qubit0 and qubit1).",
             )
-
-        # # The following 4 lines could be redundant
-        # if gate.__class__.__name__ == "Unitary":
-        #     gate = gate.__class__(gate.init_args[0], *gate.qubits)
-        # else:
-        #     gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
+    if gate_list is not None:
+        if len(gate_list) == 1:
+            gate = gate_list[0]
+            if nqubits != len(gate.qubits):
+                raise_error(
+                    ValueError,
+                    f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
+                )
+        elif len(gate_list) > 2:
+            raise_error(
+                ValueError,
+                f"Mismatched inputs: number of gates in gate_list = {len(gate_list)}. Supported configurations for gates in gate_list are (1) single 1-qubit gate, (2) single 2-qubit gate, (3) two 1-qubit gates applied to each qubit register.",
+            )
 
     # GST for empty circuit or with gates
     matrix_jk = 1j * np.zeros((4**nqubits, 4**nqubits))
     for k in range(4**nqubits):
-        circ = Circuit(nqubits, density_matrix=True)
-        if not ancilla:  # pragma: no cover
-            circ.add(_prepare_state(k, nqubits))
 
-        if gate is not None:
-            circ.add(gate)
+        additional_qubits = 0 if ancilla is None else (1 if ancilla in (0, 1) else 2)
+        circ = Circuit(nqubits + additional_qubits, density_matrix=True)
+
+        circ.add(_prepare_state(k, nqubits))
+
+        if ancilla is not None:  # pragma: no cover
+            swap_pairs = [(ancilla, 2)] if ancilla < 2 else [(0, 2), (1, 3)]
+            for q1, q2 in swap_pairs:
+                circ.add(gates.SWAP(q1, q2))
+
+        if gate_list is not None:
+            for gate in gate_list:
+                circ.add(gate)
 
         for j in range(4**nqubits):
             if j == 0:
@@ -212,6 +239,7 @@ def _gate_tomography(
                 new_circ = circ.copy()
                 measurements = _measurement_basis(j, nqubits)
                 new_circ.add(measurements)
+                print(new_circ)
                 observable = _get_observable(j, nqubits)
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
@@ -233,7 +261,8 @@ def GST(
     gauge_matrix=None,
     backend=None,
     transpiler=None,
-    ancilla=False,
+    two_qubit_basis_op_diff_registers=False,
+    ancilla=None,
 ):
     """Run Gate Set Tomography on the input ``gate_set``.
 
@@ -265,17 +294,71 @@ def GST(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
-        ancilla (:bool, optional): if ``True``, simulate application of fresh ancilla after
-            state preparation by disabling the line `circ.add(_prepare_state(k, nqubits))`.
-            Defaults to ``False``.
-
+        two_qubit_basis_op_diff_registers (bool, optional): If ``True``, the input `gate_set` must
+            contain exactly two :math:`1`-qubit gates, one for each qubit, and gate set tomography
+            will be performed simultaneously on a :math:`2`-qubit circuit. If ``False``, gate set
+            tomography will be performed separately for each gate in `gate_set`. 'Defaults to
+            ``False``. (Not to be confused with single two-qubit basis operation i.e. single
+            :math:`2`-qubit gate.)
+        ancilla (int, optional): Controls whether SWAP gates are applied to replace qubits 0
+            and/or 1 with fresh ancilla qubits.
+            - If `ancilla = 0`, a single SWAP gate is applied on qubit0 and an ancilla qubit
+            - If `ancilla = 1`, a single SWAP gate is applied on qubit1 and an ancilla qubit
+            - If `ancilla = 2`, SWAP gates are applied between qubit 0 and one ancilla qubit,
+              and between qubit 1 and another ancilla qubit
+            - If `ancilla = None`, no SWAP gates are used. Defaults to ``None``.
 
     Returns:
         List(ndarray): input ``gate_set`` represented by matrices estimaded via GST.
     """
 
-    backend = _check_backend(backend)
+    def extract_gate(gate, idx=None):
+        """
+        Args:
+            gate (:class:`qibo.gates.Gate` and parameters): For instance, gate = gates.Z
+            or gate = (gates.RX, [np.pi/3]).
+            idx (int): The specific qubit index to apply the gate to. Defaults to ``None``.
+        Returns:
+            gate (:class:`qibo.gates.Gate`): Gate that can be applied directly to the circuit.
+            nqubits (int): The number of qubits that the gate acts on.
+        """
 
+        if isinstance(gate, tuple):
+            angles = ["theta", "phi", "lam", "unitary"]
+            gate, params = gate
+            params = [params] if isinstance(params[0], np.ndarray) else params
+            init_args = signature(gate).parameters
+            valid_angles = [arg for arg in init_args if arg in angles]
+            angle_values = dict(zip(valid_angles, params))
+        else:
+            angle_values = {}
+            init_args = signature(gate).parameters
+
+        if "q" in init_args:
+            nqubits = 1
+        elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+            nqubits = 2
+        else:
+            raise_error(
+                RuntimeError,
+                f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
+            )
+
+        if idx:
+            if "unitary" in angle_values:
+                gate = gate(angle_values["unitary"][0], idx)
+            else:
+                gate = gate(idx, **angle_values)
+
+        else:
+            if "unitary" in angle_values:
+                gate = gate(angle_values["unitary"][0], *range(nqubits))
+            else:
+                gate = gate(*range(nqubits), **angle_values)
+
+        return gate, nqubits
+
+    backend = _check_backend(backend)
     if backend.name == "qibolab" and transpiler is None:  # pragma: no cover
         transpiler = Passes(
             connectivity=backend.platform.topology,
@@ -293,7 +376,7 @@ def GST(
         for nqubits in SUPPORTED_NQUBITS:
             empty_matrix = _gate_tomography(
                 nqubits=nqubits,
-                gate=None,
+                gate_list=None,
                 nshots=nshots,
                 noise_model=noise_model,
                 backend=backend,
@@ -302,39 +385,33 @@ def GST(
             )
             empty_matrices.append(empty_matrix)
 
-    for gate in gate_set:
-        if gate is not None:
-
-            if isinstance(gate, tuple):
-                angles = ["theta", "phi", "lam", "unitary"]
-                gate, params = gate
-                params = [params] if isinstance(params[0], np.ndarray) else params
+    if two_qubit_basis_op_diff_registers:
+        if len(gate_set) == 2:
+            gate_set_nqubits = []
+            for gate in gate_set:
+                if isinstance(gate, tuple):
+                    angles = ["theta", "phi", "lam", "unitary"]
+                    gate, params = gate
                 init_args = signature(gate).parameters
-                valid_angles = [arg for arg in init_args if arg in angles]
-                angle_values = dict(zip(valid_angles, params))
-            else:
-                angle_values = {}
-                init_args = signature(gate).parameters
+                if "q" in init_args:
+                    nqubits = 1
+                elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+                    nqubits = 2
+                gate_set_nqubits.append(nqubits)
+            if 2 in gate_set_nqubits:
+                raise_error(RuntimeError, f"Requires two single-qubit gates")
 
-            if "q" in init_args:
-                nqubits = 1
-            elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-                nqubits = 2
-            else:
-                raise_error(
-                    RuntimeError,
-                    f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
-                )
+        gate_list = []
+        for idx in range(len(gate_set)):
+            gate = gate_set[idx]
+            gate, _ = extract_gate(gate, idx)
 
-            if "unitary" in angle_values:
-                gate = gate(angle_values["unitary"][0], *range(nqubits))
-            else:
-                gate = gate(*range(nqubits), **angle_values)
+            gate_list.append(gate)
 
         matrices.append(
             _gate_tomography(
-                nqubits=nqubits,
-                gate=gate,
+                nqubits=2,
+                gate_list=gate_list,
                 nshots=nshots,
                 noise_model=noise_model,
                 backend=backend,
@@ -342,6 +419,23 @@ def GST(
                 ancilla=ancilla,
             )
         )
+
+    else:
+        for gate in gate_set:
+            if gate is not None:
+                gate, nqubits = extract_gate(gate)
+                gate = [gate]
+            matrices.append(
+                _gate_tomography(
+                    nqubits=nqubits,
+                    gate_list=gate,
+                    nshots=nshots,
+                    noise_model=noise_model,
+                    backend=backend,
+                    transpiler=transpiler,
+                    ancilla=None,
+                )
+            )
 
     if pauli_liouville:
         if gauge_matrix is not None:
