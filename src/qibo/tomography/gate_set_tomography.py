@@ -262,6 +262,7 @@ def _extract_gate(gate, idx=None):
         nqubits (int): The number of qubits that the gate acts on.
     """
 
+    nqubits = None
     if isinstance(gate, tuple):
         angles = ["theta", "phi", "lam", "unitary"]
         gate, params = gate
