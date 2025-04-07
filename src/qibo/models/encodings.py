@@ -1360,9 +1360,7 @@ def _get_gate_sparse(
         )
     elif distance == 2 and hw_0 == hw_1:
         qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
-        for qubit in qubits:
-            if qubit not in touched_qubits:
-                touched_qubits.append(qubit)
+        touched_qubits += list(set(qubits) - set(touched_qubits))
         gate = _get_gate(
             [qubits[0]],
             [qubits[1]],
