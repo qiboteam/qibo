@@ -238,7 +238,6 @@ def _gate_tomography(
                 new_circ = circ.copy()
                 measurements = _measurement_basis(j, nqubits)
                 new_circ.add(measurements)
-                print(new_circ)
                 observable = _get_observable(j, nqubits)
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
