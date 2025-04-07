@@ -269,7 +269,9 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     return circuit
 
 
-def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
+def binary_encoder(
+    data, parametrization: str = "hyperspherical", backend=None, **kwargs
+):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
     of the computational basis.
 
@@ -306,6 +308,8 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
         Integrability and Geometry: Methods and Applications 10.3842/sigma.2013.042 (2013)
         <https://arxiv.org/abs/1209.6047>`_.
     """
+    backend = _check_backend(backend)
+
     dims = len(data)
     nqubits = float(np.log2(dims))
     if not nqubits.is_integer():
@@ -317,10 +321,12 @@ def binary_encoder(data, parametrization: str = "hyperspherical", **kwargs):
     )  # backend-agnostic way of checking the dtype
 
     if parametrization == "hopf":
-        return _binary_encoder_hopf(data, nqubits, complex_data=complex_data, **kwargs)
+        return _binary_encoder_hopf(
+            data, nqubits, complex_data=complex_data, backend=backend, **kwargs
+        )
 
     return _binary_encoder_hyperspherical(
-        data, nqubits, complex_data=complex_data, **kwargs
+        data, nqubits, complex_data=complex_data, backend=backend, **kwargs
     )
 
 
@@ -1230,6 +1236,8 @@ def _binary_encoder_hopf(
 def _binary_encoder_hyperspherical(
     data, nqubits, complex_data: bool, backend=None, **kwargs
 ):
+    backend = _check_backend(backend)
+
     dims = 2**nqubits
     last_qubit = nqubits - 1
 
@@ -1314,9 +1322,7 @@ def _binary_encoder_hyperspherical(
 
     # necessary for GPU backends
     angles = backend.cast(angles, dtype=angles[0].dtype)
-    print(angles % np.pi)
     circuit.set_parameters(angles)
-    circuit.draw()
 
     return circuit
 
