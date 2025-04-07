@@ -1314,8 +1314,9 @@ def _binary_encoder_hyperspherical(
 
     # necessary for GPU backends
     angles = backend.cast(angles, dtype=angles[0].dtype)
-    print(angles)
+    print(angles % np.pi)
     circuit.set_parameters(angles)
+    circuit.draw()
 
     return circuit
 

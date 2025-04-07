@@ -112,7 +112,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
 
     dims = 2**nqubits
 
-    target = random_statevector(dims, backend=backend)
+    target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
@@ -152,7 +152,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     data = 2 * sampler.random(nqubits) - 1
     data = kind(data) if kind is not None else backend.cast(data, dtype=data.dtype)
 
-    circuit = unary_encoder(data, architecture=architecture)
+    circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
     state = backend.np.real(state[indexes])
@@ -189,7 +189,9 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
 
     amplitudes = []
     for _ in range(samples):
-        circuit = unary_encoder_random_gaussian(nqubits, seed=local_state)
+        circuit = unary_encoder_random_gaussian(
+            nqubits, seed=local_state, backend=backend
+        )
         state = backend.execute_circuit(circuit).state()
         indexes = np.flatnonzero(backend.to_numpy(state))
         state = np.real(state[indexes])
@@ -252,6 +254,7 @@ def test_hamming_weight_encoder(
         weight=weight,
         full_hwp=full_hwp,
         optimize_controls=optimize_controls,
+        backend=backend,
     )
     if full_hwp:
         circuit.queue = [
@@ -412,7 +415,7 @@ def _helper_entangling_test(gate, qubit_0, qubit_1=None):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_circuit_kwargs(density_matrix):
+def test_circuit_kwargs(backend, density_matrix):
     test = comp_basis_encoder(5, 7, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
@@ -420,13 +423,17 @@ def test_circuit_kwargs(density_matrix):
     assert test.density_matrix is density_matrix
 
     data = np.random.rand(5)
-    test = phase_encoder(data, density_matrix=density_matrix)
+    test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
-    test = unary_encoder(data, "diagonal", density_matrix=density_matrix)
+    test = unary_encoder(
+        data, "diagonal", density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
-    test = unary_encoder_random_gaussian(4, density_matrix=density_matrix)
+    test = unary_encoder_random_gaussian(
+        4, density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
 
