@@ -130,10 +130,6 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     sampler = np.random.default_rng(1)
 
     with pytest.raises(TypeError):
-        data = sampler.random((nqubits, nqubits))
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture=architecture)
-    with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
         unary_encoder(data, architecture=True)

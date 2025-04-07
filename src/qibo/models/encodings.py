@@ -256,8 +256,6 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
         else:
             circuit.add(correction)
 
-    print(type(circuit.get_parameters()[0][0]))
-
     return circuit
 
 
