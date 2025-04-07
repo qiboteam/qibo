@@ -551,7 +551,7 @@ class HammingWeightBackend(NumpyBackend):
             controls = list(gate.control_qubits)
             ncontrols = len(controls)
 
-        other_qubits = list(set(qubits + controls) ^ set(list(range(nqubits))))
+        other_qubits = list(set(qubits + controls) ^ set(range(nqubits)))
         map_ = qubits + controls + other_qubits
         gate_matrix = gate.matrix(backend=self.engine)
 
