@@ -183,7 +183,7 @@ def _gate_tomography(
     Returns:
         ndarray: matrix approximating the input gate.
     """
-    print(">>>>>", gate_list)
+
     # Check if gate is 1 or 2 qubit gate.
     _check_nqubits(nqubits)
 
