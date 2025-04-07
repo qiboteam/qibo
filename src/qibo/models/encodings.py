@@ -233,14 +233,14 @@ def sparse_encoder(data, nqubits: int = None, **kwargs):
         hw_0 = hamming_weight(bitstrings_sorted[-2])
         hw_1 = hamming_weight(bitstrings_sorted[-1])
         correction = _get_phase_gate_correction_sparse(
-                bitstrings_sorted[-1],
-                bitstrings_sorted[-2],
-                nqubits,
-                data_sorted[-1],
-                data_sorted[-2],
-                circuit,
-                phis,
-            )
+            bitstrings_sorted[-1],
+            bitstrings_sorted[-2],
+            nqubits,
+            data_sorted[-1],
+            data_sorted[-2],
+            circuit,
+            phis,
+        )
         if hw_1 == nqubits and hw_0 == nqubits - 1:
             circuit.queue = correction
         else:
