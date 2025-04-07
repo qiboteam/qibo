@@ -302,7 +302,7 @@ class HammingWeightBackend(NumpyBackend):
         qubits = list(gate.target_qubits)
         controls = list(gate.control_qubits)
         ncontrols = len(controls)
-        other_qubits = list(set(list(range(nqubits))) ^ set(qubits + controls))
+        other_qubits = list(set(range(nqubits)) ^ set(qubits + controls))
 
         key_0, key_1 = f"{ncontrols}_0", f"{ncontrols}_1"
         if (
