@@ -386,6 +386,9 @@ def GST(
             )
             empty_matrices.append(empty_matrix)
 
+    # Check that gate_set has two single-qubit gates if two_qubit_basis_op_diff_registers=True.
+    # Then, if gate_set has two single-qubit gates, then extract its :class:`qibo.gates.Gate` and
+    # append to gate_list for _gate_tomography.
     if two_qubit_basis_op_diff_registers:
         if len(gate_set) == 2:
             gate_set_nqubits = []
