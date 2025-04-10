@@ -84,8 +84,6 @@ class NumpyBackend(Backend):
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
-        from scipy import sparse  # pylint: disable=import-outside-toplevel
-
         return sparse.issparse(x)
 
     def to_numpy(self, x):
