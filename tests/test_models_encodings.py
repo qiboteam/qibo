@@ -244,6 +244,8 @@ def test_hamming_weight_encoder(
     target[indices_lex] = data
     target = backend.cast(target, dtype=target.dtype)
 
+    data = backend.cast(data, dtype=data.dtype)
+
     circuit = hamming_weight_encoder(
         data,
         nqubits=nqubits,
@@ -418,7 +420,7 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = np.random.rand(5)
+    data = backend.cast(np.random.rand(5), dtype=backend.np.float64)
     test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
