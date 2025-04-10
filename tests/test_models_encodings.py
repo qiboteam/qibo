@@ -1,7 +1,7 @@
 """Tests for qibo.models.encodings"""
 
 import math
-from itertools import product
+from functools import reduce
 
 import numpy as np
 import pytest
@@ -67,12 +67,7 @@ def test_phase_encoder(backend, rotation, kind):
     sampler = np.random.default_rng(1)
 
     nqubits = 3
-    dims = 2**nqubits
 
-    with pytest.raises(TypeError):
-        data = sampler.random((nqubits, nqubits))
-        data = backend.cast(data, dtype=data.dtype)
-        phase_encoder(data, rotation=rotation)
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
@@ -82,28 +77,19 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = np.random.rand(nqubits)
+    phases = backend.np.random.rand(nqubits)
 
-    if rotation in ["RX", "RY"]:
-        functions = list(product([np.cos, np.sin], repeat=nqubits))
-        target = []
-        for row in functions:
-            elem = 1.0
-            for phase, func in zip(phases, row):
-                elem *= func(phase / 2)
-                if rotation == "RX" and func.__name__ == "sin":
-                    elem *= -1.0j
-            target.append(elem)
-    else:
-        target = [np.exp(-0.5j * sum(phases))] + [0.0] * (dims - 1)
-
-    target = np.array(target, dtype=complex)
-    target = backend.cast(target, dtype=target.dtype)
+    gate = getattr(gates, rotation)
+    target = reduce(
+        backend.np.kron,
+        [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
+    )[:, 0]
 
     if kind is not None:
         phases = kind(phases)
 
-    state = phase_encoder(phases, rotation=rotation)
+    state = phase_encoder(phases, rotation=rotation, backend=backend)
+    state.draw()
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)
@@ -131,7 +117,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization)
+    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
@@ -143,10 +129,6 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
 def test_unary_encoder(backend, nqubits, architecture, kind):
     sampler = np.random.default_rng(1)
 
-    with pytest.raises(TypeError):
-        data = sampler.random((nqubits, nqubits))
-        data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data, architecture=architecture)
     with pytest.raises(TypeError):
         data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
@@ -166,7 +148,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     data = 2 * sampler.random(nqubits) - 1
     data = kind(data) if kind is not None else backend.cast(data, dtype=data.dtype)
 
-    circuit = unary_encoder(data, architecture=architecture)
+    circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
     state = backend.np.real(state[indexes])
@@ -203,7 +185,9 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
 
     amplitudes = []
     for _ in range(samples):
-        circuit = unary_encoder_random_gaussian(nqubits, seed=local_state)
+        circuit = unary_encoder_random_gaussian(
+            nqubits, seed=local_state, backend=backend
+        )
         state = backend.execute_circuit(circuit).state()
         indexes = np.flatnonzero(backend.to_numpy(state))
         state = np.real(state[indexes])
@@ -266,6 +250,7 @@ def test_hamming_weight_encoder(
         weight=weight,
         full_hwp=full_hwp,
         optimize_controls=optimize_controls,
+        backend=backend,
     )
     if full_hwp:
         circuit.queue = [
@@ -304,7 +289,7 @@ def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
             circuit = sparse_encoder(data, nqubits=None)
 
     _nqubits = nqubits if integers else None
-    circuit = sparse_encoder(data, _nqubits)
+    circuit = sparse_encoder(data, _nqubits, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
@@ -426,7 +411,7 @@ def _helper_entangling_test(gate, qubit_0, qubit_1=None):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_circuit_kwargs(density_matrix):
+def test_circuit_kwargs(backend, density_matrix):
     test = comp_basis_encoder(5, 7, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
@@ -434,13 +419,17 @@ def test_circuit_kwargs(density_matrix):
     assert test.density_matrix is density_matrix
 
     data = np.random.rand(5)
-    test = phase_encoder(data, density_matrix=density_matrix)
+    test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
-    test = unary_encoder(data, "diagonal", density_matrix=density_matrix)
+    test = unary_encoder(
+        data, "diagonal", density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
-    test = unary_encoder_random_gaussian(4, density_matrix=density_matrix)
+    test = unary_encoder_random_gaussian(
+        4, density_matrix=density_matrix, backend=backend
+    )
     assert test.density_matrix is density_matrix
 
 

@@ -27,7 +27,7 @@ def hamming_weight(
             non-zero elements. Defaults to ``False``.
 
     Returns:
-        (int or list): Hamming weight of bitstring or list of indexes of non-zero elements.
+        int or list: Hamming weight of bitstring or list of indexes of non-zero elements.
     """
     if not isinstance(return_indexes, bool):
         raise_error(
@@ -35,19 +35,11 @@ def hamming_weight(
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
-    if not isinstance(
-        bitstring, (int, str, list, tuple, np.ndarray)
-    ) and "int" not in str(type(bitstring)):
-        raise_error(
-            TypeError,
-            "bitstring must be either type int, list, tuple, or numpy.ndarray. "
-            f"However, it is type {type(bitstring)}.",
-        )
-
-    if isinstance(bitstring, int) or "int" in str(type(bitstring)):
-        bitstring = f"{bitstring:b}"
-    elif isinstance(bitstring, (list, tuple, np.ndarray)):
-        bitstring = "".join([str(bit) for bit in bitstring])
+    bitstring = (
+        "".join([str(bit) for bit in list(bitstring)])
+        if not isinstance(bitstring, int)
+        else f"{bitstring:b}"
+    )
 
     indexes = [item.start() for item in finditer("1", bitstring)]
 
@@ -82,25 +74,17 @@ def hamming_distance(
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
-    if not isinstance(bitstring_1, (int, str, list, tuple)):
-        raise_error(
-            TypeError,
-            "bitstring_1 must be either type int, list, tuple, or numpy.ndarray. "
-            f"However, it is type {type(bitstring_1)}.",
-        )
+    if isinstance(bitstring_1, int):
+        bitstring_1 = f"{bitstring_1:b}"
 
-    if not isinstance(bitstring_2, (int, str, list, tuple)):
-        raise_error(
-            TypeError,
-            "bitstring_2 must be either type int, list, tuple, or numpy.ndarray. "
-            f"However, it is type {type(bitstring_2)}.",
-        )
+    if isinstance(bitstring_2, int):
+        bitstring_2 = f"{bitstring_2:b}"
 
-    if isinstance(bitstring_1, (list, tuple)):
-        bitstring_1 = "".join(bitstring_1)
+    if not isinstance(bitstring_1, str):
+        bitstring_1 = "".join([str(bit) for bit in bitstring_1])
 
-    if isinstance(bitstring_2, (list, tuple)):
-        bitstring_2 = "".join(bitstring_2)
+    if not isinstance(bitstring_2, str):
+        bitstring_2 = "".join([str(bit) for bit in bitstring_2])
 
     nbits = max(len(bitstring_1), len(bitstring_2))
 
