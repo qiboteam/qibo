@@ -1374,7 +1374,7 @@ def _sort_data_sparse(data, nqubits, backend):
         test_dtype = bool("int" in str(type(data[0][0])))
 
     _data = [(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data
-    print(_data)
+
     _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
 
     bitstrings_sorted, data_sorted = zip(*_data)
