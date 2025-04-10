@@ -170,7 +170,13 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     if isinstance(data, zip):
         data = list(data)
 
-    if "int" in str(type(data[0][0])) and nqubits is None:
+    # TODO: Fix this mess with qibo native dtypes
+    try:
+        type_test = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        type_test = bool("int" in str(type(data[0][0])))
+
+    if type_test and nqubits is None:
         raise_error(
             ValueError,
             "``nqubits`` must be specified when computational basis states are "
@@ -1288,15 +1294,20 @@ def _binary_encoder_hyperspherical(
 
     phis = backend.np.zeros(len(thetas) + 1)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-np.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(-np.angle(data[k]) + np.sum(phis[:k]))
+            phis[k] = _angle_mod_two_pi(
+                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
+            )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
     angles = []
     for k, (theta, phi) in enumerate(zip(thetas, phis)):
         if k in indexes_to_double:
-            angle = [2 * theta, 2 * phi, 0.0] if complex_data else [2 * theta]
+            zero_casted = backend.cast(
+                0.0, dtype=backend.np.float64
+            )  # because of GPU backends
+            angle = [2 * theta, 2 * phi, zero_casted] if complex_data else [2 * theta]
         else:
             angle = [theta, -phi, phi] if complex_data else [theta]
 
@@ -1304,14 +1315,13 @@ def _binary_encoder_hyperspherical(
 
     if complex_data:
         angles[-2] = 2 * _angle_mod_two_pi(
-            (np.angle(data[-1]) - np.angle(data[-2])) / 2
+            (backend.np.angle(data[-1]) - backend.np.angle(data[-2])) / 2
         )
         angles[-1] = 2 * _angle_mod_two_pi(
-            (-1 / 2) * (np.angle(data[-2]) + np.angle(data[-1])) + np.sum(phis[:-2])
+            (-1 / 2) * (backend.np.angle(data[-2]) + backend.np.angle(data[-1]))
+            + backend.np.sum(phis[:-2])
         )
 
-    # necessary for GPU backends
-    angles = backend.cast(angles, dtype=angles[0].dtype)
     circuit.set_parameters(angles)
 
     return circuit
@@ -1357,11 +1367,14 @@ def _sort_data_sparse(data, nqubits, backend):
         hamming_weight,
     )
 
-    _data = (
-        [(f"{row[0]:0{nqubits}b}", row[1]) for row in data]
-        if isinstance(data[0][0], int) or "int" in str(type(data[0][0]))
-        else data
-    )
+    # TODO: Fix this mess with qibo native data types
+    try:
+        test_dtype = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        test_dtype = bool("int" in str(type(data[0][0])))
+
+    _data = [(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data
+    print(_data)
     _data = sorted(_data, key=lambda x: hamming_weight(x[0]))
 
     bitstrings_sorted, data_sorted = zip(*_data)
@@ -1399,8 +1412,8 @@ def _get_gate_sparse(
         )
     elif distance == 2 and hw_0 == hw_1:
         qubits = [
-            backend.np.where(difference == -1)[0][0],
-            backend.np.where(difference == 1)[0][0],
+            int(np.where(difference == -1)[0][0]),
+            int(np.where(difference == 1)[0][0]),
         ]
         touched_qubits += list(set(qubits) - set(touched_qubits))
         qubits_in = [int(qubits[0])]
@@ -1418,6 +1431,7 @@ def _get_gate_sparse(
     else:
         qubits = [np.where(difference == -1)[0], np.where(difference == 1)[0]]
         for row in qubits:
+            row = [int(elem) for elem in row]
             touched_qubits += list(set(row) - set(touched_qubits))
         qubits_in = [int(qubit) for qubit in qubits[0]]
         qubits_out = [int(qubit) for qubit in qubits[1]]
