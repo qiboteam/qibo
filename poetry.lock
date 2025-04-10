@@ -2939,7 +2939,7 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "sparse_encoder"
-resolved_reference = "282639115dee3c9550800186c16d4de3ee36f78d"
+resolved_reference = "f94116a2897536b371fa6eb8fb07fe0ceddcf16a"
 
 [[package]]
 name = "qulacs"
