@@ -91,6 +91,11 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in phase encoding.
     """
+    if not isinstance(rotation, str):
+        raise_error(
+            TypeError,
+            f"``rotation`` must be type str, but it is type {type(rotation)}.",
+        )
 
     backend = _check_backend(backend)
 
@@ -102,12 +107,6 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
             type_test = type(data[0])
 
         data = backend.cast(data, dtype=type_test)
-
-    if not isinstance(rotation, str):
-        raise_error(
-            TypeError,
-            f"``rotation`` must be type str, but it is type {type(rotation)}.",
-        )
 
     if rotation not in ["RX", "RY", "RZ"]:
         raise_error(ValueError, f"``rotation`` {rotation} not found.")
