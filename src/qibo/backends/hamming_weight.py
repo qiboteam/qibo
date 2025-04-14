@@ -705,8 +705,9 @@ class HammingWeightBackend(NumpyBackend):
         strings = list(self._dict_indexes.keys())
         indexes = [index[0] for index in self._dict_indexes.values()]
         binshot = self.samples_to_binary(shot, len(qubits))[0]
+        binshot = "".join(str(s) for s in binshot)
         for string, index in zip(strings, indexes):
-            if "".join(str(s) for s in binshot) != "".join(string[q] for q in qubits):
+            if "".join(string[q] for q in qubits) != binshot:
                 state[index] = 0
 
         if normalize:
