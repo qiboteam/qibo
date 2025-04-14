@@ -110,6 +110,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             )
 
         state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
+        state = self.engine.cast(state, dtype=state.dtype)
         indices = list(self._backend._dict_indexes.values())
         indices.sort()
         indices = np.asarray(indices)
