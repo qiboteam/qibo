@@ -564,7 +564,9 @@ class HammingWeightBackend(NumpyBackend):
         strings = list(self._dict_indexes.keys())
         indexes = [index[1] for index in self._dict_indexes.values()]
         dim = len(indexes)
-        matrix = self.np.zeros((dim, dim), dtype=complex)
+
+        matrix = self.np.zeros((dim, dim))
+        matrix = self.cast(matrix, dtype=self.dtype)
         for i, index_i in enumerate(indexes):
             for j, index_j in enumerate(indexes):
                 if index_i % 2 ** (
@@ -581,7 +583,8 @@ class HammingWeightBackend(NumpyBackend):
                     else:
                         matrix[i, j] = 1 if i == j else 0
 
-        new_matrix = self.np.zeros((dim, dim), dtype=complex)
+        new_matrix = self.np.zeros((dim, dim))
+        new_matrix = self.cast(new_matrix, dtype=self.dtype)
         for i, string_i in enumerate(strings):
             new_string_i = [""] * len(string_i)
             for k in range(nqubits):
@@ -599,7 +602,7 @@ class HammingWeightBackend(NumpyBackend):
                 new_matrix[new_index_i, new_index_j] = matrix[i, j]
 
         new_matrix = self.cast(new_matrix)
-        state = self.np.matmul(new_matrix, state)
+        state = new_matrix @ state
 
         return state
 
