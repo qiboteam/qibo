@@ -94,6 +94,15 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
 
     backend = _check_backend(backend)
 
+    if isinstance(data, list):
+        # TODO: Fix this mess with qibo native dtypes
+        try:
+            type_test = data[0].dtype
+        except AttributeError:
+            type_test = type(data[0])
+
+        data = backend.cast(data, dtype=type_test)
+
     if not isinstance(rotation, str):
         raise_error(
             TypeError,
