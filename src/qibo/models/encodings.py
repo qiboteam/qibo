@@ -103,7 +103,7 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
         # TODO: Fix this mess with qibo native dtypes
         try:
             type_test = data[0].dtype
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             type_test = type(data[0])
 
         data = backend.cast(data, dtype=type_test)
