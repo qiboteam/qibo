@@ -2928,7 +2928,7 @@ develop = false
 [package.dependencies]
 numba = "^0.61.0"
 psutil = "^5.9.5"
-qibo = {git = "https://github.com/qiboteam/qibo", branch = "gpu_only_tests_fix"}
+qibo = {git = "https://github.com/qiboteam/qibo", branch = "set_precision"}
 scipy = "^1.10.1"
 
 [package.extras]
@@ -2938,8 +2938,8 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "HEAD"
-resolved_reference = "63c700d1732030c7647f653a9c76f0f52f871a91"
+reference = "set_precision"
+resolved_reference = "fe707ce2f78f7102c07509ce6f1f854fe6d8bd17"
 
 [[package]]
 name = "qulacs"
