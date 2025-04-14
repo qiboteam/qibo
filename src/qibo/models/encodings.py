@@ -1301,12 +1301,11 @@ def _binary_encoder_hyperspherical(
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
+    zero_casted = backend.cast(0.0, dtype=backend.np.float64)  # because of GPU backends
+
     angles = []
     for k, (theta, phi) in enumerate(zip(thetas, phis)):
         if k in indexes_to_double:
-            zero_casted = backend.cast(
-                0.0, dtype=backend.np.float64
-            )  # because of GPU backends
             angle = [2 * theta, 2 * phi, zero_casted] if complex_data else [2 * theta]
         else:
             angle = [theta, -phi, phi] if complex_data else [theta]
