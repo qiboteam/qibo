@@ -2938,8 +2938,8 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "sparse_encoder"
-resolved_reference = "bcdd7c07ec1ff183d2a3d00d6aefb56b66da569b"
+reference = "HEAD"
+resolved_reference = "0eb7f485a774562295b310c73a500a41e617bd9d"
 
 [[package]]
 name = "qulacs"
@@ -3908,4 +3908,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "478d338e53347a1fc950f9297b59b71e3bab74d589f89eaa7c25d8a1276c3ad5"
+content-hash = "1ecd50f54b2cd2691ab20144c43352e25763425ca479d1c46612344648e444ff"
