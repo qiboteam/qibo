@@ -138,8 +138,9 @@ class HammingWeightBackend(NumpyBackend):
         try:
             if initial_state is None:
                 n_choose_k = int(binom(nqubits, weight))
-                initial_state = self.engine.cast(self.np.zeros(n_choose_k))
+                initial_state = self.np.zeros(n_choose_k)
                 initial_state[0] = 1
+                initial_state = self.engine.cast(initial_state, dtype=self.dtype)
 
             state = initial_state
             for gate in circuit.queue:
