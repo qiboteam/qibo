@@ -1318,7 +1318,7 @@ def _binary_encoder_hyperspherical(
             (backend.np.angle(data[-1]) - backend.np.angle(data[-2])) / 2
         )
         angles[-1] = 2 * _angle_mod_two_pi(
-            (-1 / 2) * (backend.np.angle(data[-2]) + backend.np.angle(data[-1]))
+            (-0.5) * (backend.np.angle(data[-2]) + backend.np.angle(data[-1]))
             + backend.np.sum(phis[:-2])
         )
 
