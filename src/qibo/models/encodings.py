@@ -218,13 +218,9 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
     # marking qubits that have suffered the action of a gate
-    touched_qubits = []
-    circuit = comp_basis_encoder(
-        [int(bit) for bit in bitstrings_sorted[0]], nqubits=nqubits, **kwargs
-    )
-    for qubit, bit in enumerate(bitstrings_sorted[0]):
-        if bit == 1:
-            touched_qubits.append(int(qubit))
+    initial_string = [int(bit) for bit in bitstrings_sorted[0]]
+    circuit = comp_basis_encoder(initial_string, nqubits=nqubits, **kwargs)
+    touched_qubits = list(np.nonzero(initial_string)[0])
 
     for b_1, b_0, theta, phi in zip(
         bitstrings_sorted[1:], bitstrings_sorted[:-1], thetas, phis
@@ -1411,7 +1407,7 @@ def _get_gate_sparse(
     if distance == 1:
         qubit = int(backend.np.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
-            touched_qubits.append(int(qubit))
+            touched_qubits.append(qubit)
         gate = (
             gates.U3(qubit, 2 * theta, 2 * phi, 0.0).controlled_by(*controls)
             if complex_data
