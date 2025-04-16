@@ -163,8 +163,8 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+        *Quantum encoder for fixed-Hamming-weight subspaces*,
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
@@ -302,8 +302,8 @@ def binary_encoder(
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
 
@@ -526,8 +526,8 @@ def hamming_weight_encoder(
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
     """
     backend = _check_backend(backend)
 
@@ -1080,8 +1080,8 @@ def _ehrlich_algorithm(initial_string, return_indices: bool = True):
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
     """
     k = np.unique(initial_string, return_counts=True)
     if len(k[1]) == 1:  # pragma: no cover
@@ -1134,8 +1134,8 @@ def _get_gate(
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_.
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
     """
     if len(qubits_in) == 0 and len(qubits_out) == 1:  # pragma: no cover
         gate_list = (
