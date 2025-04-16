@@ -1392,11 +1392,13 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 
 .. testcode::
 
+   from qibo import set_dtype
    from qibo.symbols import Z
    from qibo.hamiltonians import SymbolicHamiltonian
 
+   set_dtype("complex128")
+
    backend = qibo.get_backend()
-   backend.set_dtype("complex128")
 
    # Define the observable
    obs = np.prod([Z(i) for i in range(nqubits)])
