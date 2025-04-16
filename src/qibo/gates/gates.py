@@ -2511,8 +2511,8 @@ class GeneralizedRBS(ParametrizedGate):
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*.
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_
+        *Quantum encoder for fixed-Hamming-weight subspaces*,
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_
 
     Args:
         qubits_in (tuple or list): ids of "input" qubits.
@@ -2653,5 +2653,5 @@ def _check_engine(array):
         import torch  # pylint: disable=C0415
 
         return torch
-    else:
-        return np
+
+    return np
