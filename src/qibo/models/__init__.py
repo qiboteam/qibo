@@ -7,6 +7,7 @@ from qibo.models.encodings import (
     ghz_state,
     hamming_weight_encoder,
     phase_encoder,
+    sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
 )
