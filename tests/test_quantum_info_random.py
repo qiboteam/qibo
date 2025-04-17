@@ -218,7 +218,10 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
-def test_random_statevector(backend, seed):
+@pytest.mark.parametrize(
+    "dtype", [None, "complex128", "complex64", "float64", "float32"]
+)
+def test_random_statevector(backend, dtype, seed):
     with pytest.raises(TypeError):
         dims = "10"
         random_statevector(dims, backend=backend)
@@ -231,10 +234,17 @@ def test_random_statevector(backend, seed):
 
     # tests if random statevector is a pure state
     dims = 4
-    state = random_statevector(dims, seed=seed, backend=backend)
+    state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
     backend.assert_allclose(
         abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL, True
     )
+
+    if dtype is not None:
+        dtype = getattr(backend.np, dtype)
+        state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
+        backend.assert_allclose(
+            abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL, True
+        )
 
 
 @pytest.mark.parametrize("normalize", [False, True])
