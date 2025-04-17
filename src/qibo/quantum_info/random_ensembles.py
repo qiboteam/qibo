@@ -409,6 +409,11 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
 
+    .. note::
+        If ``dtype`` if ``"float64"``, ``"float32"``, or an equivalent type,
+        then :math:`\\ket{\\psi} \\in \\mathbb{R}^{\\text{dims}}`. Otherwise,
+        :math:`\\ket{\\psi} \\in \\mathbb{C}^{\\text{dims}}`.
+
     Args:
         dims (int): dimension of the matrix.
         dtype (str or type, optional): data type for the random statevector.
