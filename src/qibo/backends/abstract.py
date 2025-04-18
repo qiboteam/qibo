@@ -101,12 +101,17 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def cast(self, x, copy=False):  # pragma: no cover
+    def cast(self, x, dtype=None, copy=False):  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
         Args:
             x: Object to cast to array.
-            copy (bool): If ``True`` a copy of the object is created in memory.
+            dtype (str or type, optional): data type of ``x`` after casting.
+                Options are ``"complex128"``, ``"complex64"``, ``"float64"``,
+                or ``"float32"``. If ``None``, defaults to ``Backend.dtype``.
+                Defaults to ``None``.
+            copy (bool, optional): If ``True`` a copy of the object is created in memory.
+                Defaults to ``False``.
         """
         raise_error(NotImplementedError)
 
