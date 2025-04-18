@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import Circuit, gates, matrices
+from qibo import Circuit, matrices
 from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.models.encodings import entangling_layer
@@ -46,7 +46,7 @@ def test_dtype_execution(backend, nqubits, dtype):
     state_reference = (
         random_statevector(2**nqubits, dtype="float64", seed=8, backend=backend) + 0j
     )
-    initial_state = backend.cast(state_reference, dtype=dtype)
+    initial_state = backend.cast(state_reference.real, dtype=dtype)
 
     assert initial_state.dtype == backend.dtype
 
@@ -63,6 +63,7 @@ def test_dtype_execution(backend, nqubits, dtype):
 
     target = cnot_layer @ state_reference
 
+    # float32 needs more precision tolerance
     backend.assert_allclose(state, target, rtol=1e-6, atol=1e-6)
 
 
