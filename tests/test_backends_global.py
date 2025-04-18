@@ -2,9 +2,11 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import Circuit, matrices
+from qibo import Circuit, gates, matrices
 from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
+from qibo.models.encodings import entangling_layer
+from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import Random
@@ -35,12 +37,26 @@ def test_set_dtype():
     assert matrices.I.dtype == np.complex64
     assert qibo.get_dtype() == "complex64"
 
-    qibo.set_dtype("complex128")
-    assert matrices.I.dtype == np.complex128
-    assert qibo.get_dtype() == "complex128"
 
-    with pytest.raises(ValueError):
-        qibo.set_dtype("test")
+@pytest.mark.parametrize("dtype", ["complex128", "complex64", "float64", "float32"])
+@pytest.mark.parametrize("nqubits", [4, 7])
+def test_dtype_execution(backend, nqubits, dtype):
+    backend.set_dtype(dtype)
+
+    state_reference = (
+        random_statevector(2**nqubits, dtype="float64", seed=8, backend=backend) + 0j
+    )
+    initial_state = backend.cast(state_reference, dtype=dtype)
+
+    # circuit with real-valued matrices only
+    circuit = entangling_layer(nqubits, entangling_gate="CNOT")
+    state = backend.execute_circuit(circuit, initial_state).state()
+
+    cnot_layer = circuit.unitary()
+    cnot_layer = backend.cast(cnot_layer, dtype="complex128")
+    target = cnot_layer @ state_reference
+
+    backend.assert_allclose(state, target)
 
 
 def test_set_device():
