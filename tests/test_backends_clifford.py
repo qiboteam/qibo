@@ -6,8 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, get_backend, set_backend
-from qibo.backends import CliffordBackend, NumpyBackend
-from qibo.backends.clifford import _get_engine_name
+from qibo.backends import CliffordBackend, NumpyBackend, _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
