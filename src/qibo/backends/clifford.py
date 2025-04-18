@@ -85,6 +85,10 @@ class CliffordBackend(NumpyBackend):
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
+    def set_seed(self, seed):
+        super().set_seed(seed)
+        self.engine.set_seed(seed)
+
     def calculate_frequencies(self, samples):
         res, counts = self.engine.np.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -147,7 +151,7 @@ class CliffordBackend(NumpyBackend):
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
     def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - self.np.sum(channel.coefficients),)
         index = self.np.random.choice(
             range(len(probabilities)), size=1, p=probabilities
         )[0]
