@@ -48,12 +48,19 @@ def test_dtype_execution(backend, nqubits, dtype):
     )
     initial_state = backend.cast(state_reference, dtype=dtype)
 
+    assert initial_state.dtype == backend.dtype
+
     # circuit with real-valued matrices only
     circuit = entangling_layer(nqubits, entangling_gate="CNOT")
     state = backend.execute_circuit(circuit, initial_state).state()
 
-    cnot_layer = circuit.unitary()
+    assert state.dtype == backend.dtype
+
+    cnot_layer = circuit.unitary(backend=backend)
+    assert cnot_layer.dtype == backend.dtype
+
     cnot_layer = backend.cast(cnot_layer, dtype="complex128")
+
     target = cnot_layer @ state_reference
 
     backend.assert_allclose(state, target)
