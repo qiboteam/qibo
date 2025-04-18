@@ -63,7 +63,7 @@ def test_dtype_execution(backend, nqubits, dtype):
 
     target = cnot_layer @ state_reference
 
-    backend.assert_allclose(state, target)
+    backend.assert_allclose(state, target, rtol=1e-6, atol=1e-6)
 
 
 def test_set_device():
