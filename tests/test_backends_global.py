@@ -43,10 +43,9 @@ def test_set_dtype():
 def test_dtype_execution(backend, nqubits, dtype):
     backend.set_dtype(dtype)
 
-    state_reference = (
-        random_statevector(2**nqubits, dtype="float64", seed=8, backend=backend) + 0j
-    )
-    initial_state = backend.cast(state_reference.real, dtype=dtype)
+    initial_state = random_statevector(2**nqubits, dtype="float32", seed=8, backend=backend)
+    state_reference = backend.cast(initial_state, dtype="complex128")
+    initial_state = backend.cast(initial_state, dtype=dtype)
 
     assert initial_state.dtype == backend.dtype
 
@@ -62,6 +61,13 @@ def test_dtype_execution(backend, nqubits, dtype):
     cnot_layer = backend.cast(cnot_layer, dtype="complex128")
 
     target = cnot_layer @ state_reference
+
+    print(
+        state.dtype,
+        target.dtype,
+        cnot_layer.dtype,
+        initial_state.dtype
+    )
 
     # float32 needs more precision tolerance
     backend.assert_allclose(state, target, rtol=1e-6, atol=1e-6)
