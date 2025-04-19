@@ -349,12 +349,12 @@ def test_trotter_hamiltonian_operation_errors(backend):
 
 
 def test_symbolic_hamiltonian_with_constant(backend):
-    c = Circuit(1)
-    c.add(gates.H(0))
-    c.add(gates.M(0))
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
     h = SymbolicHamiltonian(1e6 - Z(0), backend=backend)
 
-    result = c.execute(nshots=10000)
-    assert float(result.expectation_from_samples(h)) == pytest.approx(
-        1e6, rel=1e-5, abs=0.0
-    )
+    result = backend.execute_circuit(circuit, nshots=10000)
+    result = result.expectation_from_samples(h).real
+    print(result, type(result))
+    backend.assert_allclose(result, 1e6, rtol=1e-5, atol=0.0)

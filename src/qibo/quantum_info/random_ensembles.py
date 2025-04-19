@@ -399,7 +399,7 @@ def random_quantum_channel(
     return super_op
 
 
-def random_statevector(dims: int, seed=None, backend=None):
+def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -409,8 +409,18 @@ def random_statevector(dims: int, seed=None, backend=None):
     where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
 
+    .. note::
+        If ``dtype`` if ``"float64"``, ``"float32"``, or an equivalent type,
+        then :math:`\\ket{\\psi} \\in \\mathbb{R}^{\\text{dims}}`. Otherwise,
+        :math:`\\ket{\\psi} \\in \\mathbb{C}^{\\text{dims}}`.
+
     Args:
         dims (int): dimension of the matrix.
+        dtype (str or type, optional): data type for the random statevector.
+            Options are ``"complex128``, ``"complex64"``, ``"float64"``, or ``"float32"``.
+            It also accepts the equivalent data types of ``backend``'s engines, *e.g.*
+            ``numpy.complex128`` or ``cupy.float64``. If ``None``, defaults to
+            ``backend.dtype``. Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -436,9 +446,17 @@ def random_statevector(dims: int, seed=None, backend=None):
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
-    state = backend.cast(local_state.standard_normal(dims).astype(complex))
-    state = state + 1.0j * backend.cast(local_state.standard_normal(dims))
-    state = state / backend.np.linalg.norm(state)
+    if dtype is None:
+        dtype = backend.dtype
+
+    state = local_state.standard_normal(dims)
+    state = backend.cast(state, dtype=dtype)
+    if "complex" in str(dtype):
+        state += 0j
+        state = state + 1.0j * backend.cast(
+            local_state.standard_normal(dims), dtype=dtype
+        )
+    state = state / backend.calculate_vector_norm(state)
 
     return state
 

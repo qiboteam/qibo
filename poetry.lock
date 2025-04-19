@@ -2151,14 +2151,14 @@ test = ["coverage", "fakeredis[lua]", "grpcio", "kaleido (<0.4)", "moto", "proto
 
 [[package]]
 name = "packaging"
-version = "24.2"
+version = "25.0"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "docs", "tests"]
 files = [
-    {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
-    {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
+    {file = "packaging-25.0-py3-none-any.whl", hash = "sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484"},
+    {file = "packaging-25.0.tar.gz", hash = "sha256:d443872c98d677bf60f6a1f2f8c1cb748e8fe762d2bf9d3148b5599295b0fc4f"},
 ]
 
 [[package]]
@@ -2938,7 +2938,7 @@ develop = false
 [package.dependencies]
 numba = "^0.61.0"
 psutil = "^5.9.5"
-qibo = {git = "https://github.com/qiboteam/qibo"}
+qibo = {git = "https://github.com/qiboteam/qibo", branch = "set_precision"}
 scipy = "^1.10.1"
 
 [package.extras]
@@ -2948,8 +2948,8 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
-reference = "HEAD"
-resolved_reference = "0eb7f485a774562295b310c73a500a41e617bd9d"
+reference = "set_precision"
+resolved_reference = "f8955fcbf68b6079337cdef4c8ebae08b6e54bdc"
 
 [[package]]
 name = "qulacs"
@@ -3918,4 +3918,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "e39333e4ad4fc8af726007482076119422a55d208949bffd71971ce1aa013163"
+content-hash = "d9cb7057e3aa1cde6a9a75bbad32778283bab24c1671c4f1af63317e11c12239"

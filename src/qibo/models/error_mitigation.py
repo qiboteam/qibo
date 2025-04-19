@@ -209,10 +209,10 @@ def ZNE(
         )
         expected_values.append(val)
 
-    gamma = backend.cast(
-        get_gammas(noise_levels, analytical=solve_for_gammas), backend.precision
-    )
-    expected_values = backend.cast(expected_values, backend.precision)
+    expected_values = backend.cast(expected_values, dtype=type(expected_values[0]))
+
+    gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
+    gamma = backend.cast(gamma, dtype=gamma.dtype)
 
     return backend.np.sum(gamma * expected_values)
 
@@ -265,18 +265,15 @@ def sample_training_circuit_cdr(
         )
 
         replacement.append(rep_gates)
-        distance.append(
-            backend.np.real(
-                backend.np.linalg.norm(
-                    gate.matrix(backend)
-                    - backend.cast(
-                        [rep_gate.matrix(backend) for rep_gate in rep_gates]
-                    ),
-                    ord="fro",
-                    axis=(1, 2),
-                )
-            )
+
+        gate_matrix = gate.matrix(backend)
+        rep_gate_matrix = [rep_gate.matrix(backend) for rep_gate in rep_gates]
+        rep_gate_matrix = backend.cast(rep_gate_matrix, dtype=rep_gate_matrix[0].dtype)
+        matrix_norm = backend.np.linalg.norm(
+            gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
         )
+
+        distance.append(backend.np.real(matrix_norm))
 
     distance = backend.np.vstack(distance)
     prob = backend.np.exp(-(distance**2) / sigma**2)
@@ -347,7 +344,7 @@ def _curve_fit(
         optimizer.step(closure)
         return params
 
-    if backend.platform in ["cupy", "cuquantum"]:  # pragma: no cover
+    if backend.platform in ("cupy", "cuquantum"):  # pragma: no cover
         # Currrently, ``cupy`` does not have compatibility with ``scipy.optimize``.
         xdata = backend.to_numpy(xdata)
         ydata = backend.to_numpy(ydata)
@@ -441,13 +438,23 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.cast(local_state.random(nparams), backend.precision)
+    params = local_state.random(nparams)
+    params = backend.cast(params, dtype=params.dtype)
+
+    train_val_noisy = train_val["noisy"]
+    train_val_noisy = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
+
+    train_val_noiseless = train_val["noise-free"]
+    train_val_noiseless = backend.cast(
+        train_val_noiseless, dtype=train_val_noiseless[0].dtype
+    )
+
     optimal_params = _curve_fit(
         backend,
         model,
         params,
-        backend.cast(train_val["noisy"], backend.precision),
-        backend.cast(train_val["noise-free"], backend.precision),
+        train_val_noisy,
+        train_val_noiseless,
     )
 
     val = get_expectation_val_with_readout_mitigation(
@@ -544,7 +551,7 @@ def vnCDR(
     for circ in training_circuits:
         result = backend.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(float(val))
+        train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
             val = get_expectation_val_with_readout_mitigation(
@@ -557,18 +564,23 @@ def vnCDR(
                 seed=local_state,
                 backend=backend,
             )
-            train_val["noisy"].append(float(val))
+            train_val["noisy"].append(float(val.real))
 
-    noisy_array = backend.cast(train_val["noisy"], backend.precision).reshape(
-        -1, len(noise_levels)
+    train_val_noisy = train_val["noisy"]
+    noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
+    noisy_array = backend.np.reshape(noisy_array, (-1, len(noise_levels)))
+    params = local_state.random(len(noise_levels))
+    params = backend.cast(params, dtype=params.dtype)
+    train_val_noiseless = train_val["noise-free"]
+    train_val_noiseless = backend.cast(
+        train_val_noiseless, dtype=type(train_val_noiseless[0])
     )
-    params = backend.cast(local_state.random(len(noise_levels)), backend.precision)
     optimal_params = _curve_fit(
         backend,
         model,
         params,
         noisy_array.T,
-        backend.cast(train_val["noise-free"], backend.precision),
+        train_val_noiseless,
         lr=1,
         tolerance_grad=1e-7,
     )
@@ -589,7 +601,7 @@ def vnCDR(
         val.append(expval)
 
     mit_val = model(
-        backend.cast(val, backend.precision).reshape(-1, 1),
+        backend.cast(val, dtype=type(val[0])).reshape(-1, 1),
         *optimal_params,
     )[0]
 
@@ -712,7 +724,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
         ) * np.sum(frequencies)
 
     for i, value in enumerate(mitigated_frequencies):
-        state._frequencies[i] = float(value)
+        state._frequencies[i] = float(value[0].real)
 
     return state
 
@@ -870,8 +882,9 @@ def get_expectation_val_with_readout_mitigation(
     exp_val = circuit_result.expectation_from_samples(observable)
 
     if "ncircuits" in readout:
-        return exp_val / circuit_result_cal.expectation_from_samples(observable)
-    return exp_val
+        return float(exp_val / circuit_result_cal.expectation_from_samples(observable))
+
+    return float(exp_val)
 
 
 def sample_clifford_training_circuit(
@@ -1100,7 +1113,7 @@ def ICS(
         data["noisy"].append(noisy_expectation)
         lambda_list.append(1 - noisy_expectation / expectation)
 
-    lambda_list = backend.cast(lambda_list, backend.precision)
+    lambda_list = backend.cast(lambda_list, dtype=lambda_list[0].dtype)
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 
