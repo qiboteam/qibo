@@ -333,6 +333,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     ],
 )
 def test_ics(backend, nqubits, noise, full_output, readout):
+    backend.dtype("complex128")
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
         backend.tf.config.threading.set_intra_op_parallelism_threads = 1
