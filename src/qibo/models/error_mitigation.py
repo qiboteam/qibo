@@ -724,7 +724,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
         ) * np.sum(frequencies)
 
     for i, value in enumerate(mitigated_frequencies):
-        state._frequencies[i] = float(value.real)
+        state._frequencies[i] = float(value[0].real)
 
     return state
 
