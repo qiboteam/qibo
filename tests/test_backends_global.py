@@ -62,13 +62,6 @@ def test_dtype_execution(backend, nqubits, dtype):
 
     target = cnot_layer @ state_reference
 
-    print(
-        state.dtype,
-        target.dtype,
-        cnot_layer.dtype,
-        initial_state.dtype
-    )
-
     # float32 needs more precision tolerance
     backend.assert_allclose(state, target, rtol=1e-6, atol=1e-6)
 
