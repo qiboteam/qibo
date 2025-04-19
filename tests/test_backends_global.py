@@ -43,7 +43,9 @@ def test_set_dtype():
 def test_dtype_execution(backend, nqubits, dtype):
     backend.set_dtype(dtype)
 
-    initial_state = random_statevector(2**nqubits, dtype="float32", seed=8, backend=backend)
+    initial_state = random_statevector(
+        2**nqubits, dtype="float32", seed=8, backend=backend
+    )
     state_reference = backend.cast(initial_state, dtype="complex128")
     initial_state = backend.cast(initial_state, dtype=dtype)
 
