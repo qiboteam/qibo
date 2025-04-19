@@ -3918,4 +3918,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "df7460dc5f693fe2fdf13ff83083c21156c7bd159cb27564423ab29963d59ace"
+content-hash = "d9cb7057e3aa1cde6a9a75bbad32778283bab24c1671c4f1af63317e11c12239"
