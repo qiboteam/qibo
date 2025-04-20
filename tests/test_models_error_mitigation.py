@@ -333,11 +333,15 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     ],
 )
 def test_ics(backend, nqubits, noise, full_output, readout):
+    np.random.seed(10)
+    backend.set_seed(10)
+
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
         backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
+
     """Test that ICS reduces the noise."""
     # Define the circuit
     circuit = get_circuit(nqubits, nqubits - 1)

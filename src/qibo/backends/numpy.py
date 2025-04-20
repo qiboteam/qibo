@@ -674,7 +674,6 @@ class NumpyBackend(Backend):
         self.np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        print(probabilities)
         return self.random_choice(
             range(len(probabilities)), size=nshots, p=probabilities
         )
