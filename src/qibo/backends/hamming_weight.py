@@ -80,17 +80,17 @@ class HammingWeightBackend(NumpyBackend):
         if isinstance(gate, gates.M):
             return gate.apply_hamming_weight(self, state, nqubits, weight)
 
-        # if isinstance(gate, gates.CCZ):
-        #     # CCZ has a custom apply method because currently it is the only
-        #     # 3-qubit gate that is also Hamming-weight-preserving
-        #     # and this custom method is faster than the n-qubit method
-        #     return self._apply_gate_CCZ(gate, state, nqubits, weight)
+        if isinstance(gate, gates.CCZ):
+            # CCZ has a custom apply method because currently it is the only
+            # 3-qubit gate that is also Hamming-weight-preserving
+            # and this custom method is faster than the n-qubit method
+            return self._apply_gate_CCZ(gate, state, nqubits, weight)
 
-        # if len(gate.target_qubits) == 1:
-        #     return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+        if len(gate.target_qubits) == 1:
+            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
 
-        # if len(gate.target_qubits) == 2:
-        #     return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+        if len(gate.target_qubits) == 2:
+            return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
@@ -590,20 +590,15 @@ class HammingWeightBackend(NumpyBackend):
         new_matrix = self.np.zeros((dim, dim))
         new_matrix = self.cast(new_matrix, dtype=self.dtype)
 
-        for i, string_i in enumerate(strings):
-            new_string_i = [""] * len(string_i)
-            for k in range(nqubits):
-                new_string_i[map_[k]] = string_i[k]
-            new_string_i = "".join(new_string_i)
-            new_index_i = self.np.where(strings == new_string_i)[0][0]
-            for j, string_j in enumerate(strings):
-                new_string_j = [""] * len(string_j)
-                for k in range(nqubits):
-                    new_string_j[map_[k]] = string_j[k]
-                new_string_j = "".join(new_string_j)
-                new_index_j = self.np.where(strings == new_string_j)[0][0]
+        strings_array = self.np.array([list(s) for s in strings])
+        reordered_strings_array = strings_array[:, map_]
 
-                new_matrix[new_index_i, new_index_j] = matrix[i, j]
+        reordered_strings = self.np.array(["".join(s) for s in reordered_strings_array])
+        reordered_indexes = [
+            self.np.where(strings == new_string_i)[0][0]
+            for new_string_i in reordered_strings
+        ]
+        new_matrix = matrix[reordered_indexes][:, reordered_indexes]
 
         new_matrix = self.cast(new_matrix)
         state = new_matrix @ state
