@@ -80,17 +80,17 @@ class HammingWeightBackend(NumpyBackend):
         if isinstance(gate, gates.M):
             return gate.apply_hamming_weight(self, state, nqubits, weight)
 
-        if isinstance(gate, gates.CCZ):
-            # CCZ has a custom apply method because currently it is the only
-            # 3-qubit gate that is also Hamming-weight-preserving
-            # and this custom method is faster than the n-qubit method
-            return self._apply_gate_CCZ(gate, state, nqubits, weight)
+        # if isinstance(gate, gates.CCZ):
+        #     # CCZ has a custom apply method because currently it is the only
+        #     # 3-qubit gate that is also Hamming-weight-preserving
+        #     # and this custom method is faster than the n-qubit method
+        #     return self._apply_gate_CCZ(gate, state, nqubits, weight)
 
-        if len(gate.target_qubits) == 1:
-            return self._apply_gate_single_qubit(gate, state, nqubits, weight)
+        # if len(gate.target_qubits) == 1:
+        #     return self._apply_gate_single_qubit(gate, state, nqubits, weight)
 
-        if len(gate.target_qubits) == 2:
-            return self._apply_gate_two_qubit(gate, state, nqubits, weight)
+        # if len(gate.target_qubits) == 2:
+        #     return self._apply_gate_two_qubit(gate, state, nqubits, weight)
 
         return self._apply_gate_n_qubit(gate, state, nqubits, weight)
 
@@ -562,43 +562,46 @@ class HammingWeightBackend(NumpyBackend):
         ):
             self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
-        strings = list(self._dict_indexes.keys())
-        indexes = [index[1] for index in self._dict_indexes.values()]
+        strings = self.np.array(list(self._dict_indexes.keys()))
+        indexes = self.np.array([index[1] for index in self._dict_indexes.values()])
         dim = len(indexes)
 
         matrix = self.np.zeros((dim, dim))
         matrix = self.cast(matrix, dtype=self.dtype)
-        for i, index_i in enumerate(indexes):
-            for j, index_j in enumerate(indexes):
-                if index_i % 2 ** (
-                    nqubits - gate_qubits - ncontrols
-                ) == index_j % 2 ** (nqubits - gate_qubits - ncontrols):
-                    if (
-                        strings[j][gate_qubits : gate_qubits + ncontrols].count("1")
-                        == ncontrols
-                    ):
-                        matrix[i, j] = gate_matrix[
-                            index_i // 2 ** (nqubits - gate_qubits),
-                            index_j // 2 ** (nqubits - gate_qubits),
-                        ]
-                    else:
-                        matrix[i, j] = 1 if i == j else 0
+        mod_condition = indexes[:, None] % 2 ** (
+            nqubits - gate_qubits - ncontrols
+        ) == indexes[None, :] % 2 ** (nqubits - gate_qubits - ncontrols)
+
+        control_substrings = self.np.array(
+            [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings]
+        )
+        control_condition = control_substrings[:, None] == ncontrols
+
+        row_indices = indexes[:, None] // 2 ** (nqubits - gate_qubits)
+        col_indices = indexes[None, :] // 2 ** (nqubits - gate_qubits)
+
+        matrix[mod_condition & control_condition] = gate_matrix[
+            row_indices, col_indices
+        ][mod_condition & control_condition]
+
+        diagonal_indices = self.np.eye(dim, dtype=bool)
+        matrix[mod_condition & ~control_condition & diagonal_indices] = 1
 
         new_matrix = self.np.zeros((dim, dim))
         new_matrix = self.cast(new_matrix, dtype=self.dtype)
+
         for i, string_i in enumerate(strings):
             new_string_i = [""] * len(string_i)
             for k in range(nqubits):
                 new_string_i[map_[k]] = string_i[k]
             new_string_i = "".join(new_string_i)
-            new_index_i = strings.index(new_string_i)
-
+            new_index_i = self.np.where(strings == new_string_i)[0][0]
             for j, string_j in enumerate(strings):
                 new_string_j = [""] * len(string_j)
                 for k in range(nqubits):
                     new_string_j[map_[k]] = string_j[k]
                 new_string_j = "".join(new_string_j)
-                new_index_j = strings.index(new_string_j)
+                new_index_j = self.np.where(strings == new_string_j)[0][0]
 
                 new_matrix[new_index_i, new_index_j] = matrix[i, j]
 
