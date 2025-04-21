@@ -1,10 +1,9 @@
-
-
 import time
+
 import numpy as np
 from numpy import linalg as LA
-
 from scipy.sparse.linalg import svds
+
 
 class BasicParameterInfo:
     def __init__(self, params_dict):
@@ -19,8 +18,8 @@ class BasicParameterInfo:
 
         label_list = params_dict.get("labels")
         measurement_list = params_dict.get("measurement_list")
-        #projector_list = params_dict.get("projector_list")
-        #symProj_list   = params_dict.get("symProj_list")
+        # projector_list = params_dict.get("projector_list")
+        # symProj_list   = params_dict.get("symProj_list")
 
         num_iterations = params_dict.get("num_iterations")
         convergence_check_period = params_dict.get("convergence_check_period", 10)
@@ -42,8 +41,8 @@ class BasicParameterInfo:
 
         self.num_labels = len(label_list)
         self.measurement_list = measurement_list
-        #self.projector_list = projector_list
-        #self.symProj_list = symProj_list
+        # self.projector_list = projector_list
+        # self.symProj_list = symProj_list
 
         #
         # 	numerical book keeping
@@ -71,36 +70,36 @@ class BasicParameterInfo:
         self.convergence_iteration = 0
 
 
-class Pauli_Op():
+class Pauli_Op:
     def __init__(self, symProj_list):
 
         self.symProj_list = symProj_list
 
     def Amea(self, Xmatrix):
 
-        yM = [np.trace( Proj @ Xmatrix).real for Proj in self.symProj_list]
+        yM = [np.trace(Proj @ Xmatrix).real for Proj in self.symProj_list]
         return np.array(yM)
 
     def A_dagger(self, yMea):
-        """ implements A_dagger(yMea) = \sum_j  yMea_j * (Pauli operator)_j
+        r"""implements A_dagger(yMea) = \sum_j  yMea_j * (Pauli operator)_j
 
             self.symProj_list (list): list of Pauli operators in the form of SymbolicHamiltonian
 
         Args:
             yMea (ndarray): the input vector as the coefficient array for the Pauli matrices
-        
+
         Returns:
             Adag (SymbolicHamiltonian): calculated matrix A_dagger(yMea)
         """
-        #from functools import reduce
-        #xx = [yP*Proj for yP, Proj in zip(yMea, self.symProj_list)]
-        #yy = reduce(lambda x, y: x+y, xx)
-        Adag = sum(map(lambda a, b: a*b, yMea, self.symProj_list))
+        # from functools import reduce
+        # xx = [yP*Proj for yP, Proj in zip(yMea, self.symProj_list)]
+        # yy = reduce(lambda x, y: x+y, xx)
+        Adag = sum(map(lambda a, b: a * b, yMea, self.symProj_list))
 
         return Adag
 
     def A_dagger_ym_vec(self, yMea, vec):
-        """ to obtain A^+(yMea) @ vec
+        """to obtain A^+(yMea) @ vec
 
             self.symProj_list (list): list of Pauli operators in the form of SymbolicHamiltonian
 
@@ -123,7 +122,7 @@ class Pauli_Op():
         # Ad_vec = reduce(lambda x, y: x+y, yy)
 
         xx = [Proj.matrix @ vec for Proj in self.symProj_list]
-        Ad_vec = sum(map(lambda a, b: a*b, yMea, xx))
+        Ad_vec = sum(map(lambda a, b: a * b, yMea, xx))
 
         return Ad_vec
 
@@ -141,12 +140,9 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         #
 
         BasicParameterInfo.__init__(self, params_dict)
-        
 
-        symProj_list   = params_dict.get("symProj_list")
+        symProj_list = params_dict.get("symProj_list")
         Pauli_Op.__init__(self, symProj_list)
-
-
 
     def initialize_RndSt(self):
         """
@@ -204,7 +200,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         self.Xk = X0
 
         self.check_Hermitian_x_y(self.uk, self.vk)
-
 
     def initialize_yAd(self):
         """initialize the initial density matrix for the algorithm"""
@@ -268,7 +263,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         self.vkh = vkh
         self.sDiag = sDiag
 
-
     def rSVD(self, k, s=3, p=12, matrixM_Hermitian=1):
         """randomized SVD
 
@@ -316,7 +310,7 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
 
         if matrixM_Hermitian == 0:
             # B = Q.T.conj() @ M
-            #B = self.A_dagger_vec(Q).T.conj()
+            # B = self.A_dagger_vec(Q).T.conj()
             B = self.A_dagger_ym_vec(self.yIni, Q).T.conj() * self.coef
 
             uB, s, vh = LA.svd(B)
@@ -326,7 +320,7 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
 
         elif matrixM_Hermitian == 1:
             # B = Q.T.conj() @ M @  Q
-            #B = Q.T.conj() @ self.A_dagger_vec(Q)
+            # B = Q.T.conj() @ self.A_dagger_vec(Q)
             B = Q.T.conj() @ self.A_dagger_ym_vec(self.yIni, Q) * self.coef
 
             uB, s, vh = LA.svd(B, hermitian=True)
@@ -336,8 +330,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
             vh = vh[:k, :] @ Q.T.conj()  #  k = Nr
 
         return u, np.diag(s), vh
-    
-
 
     def check_Hermitian_x_y(self, x, y, Hermitian_criteria=1e-13):
         """to check wheter x and y are the same,
@@ -371,21 +363,18 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         self.EigV_pm_List.append(self.EigV_positive)
         self.Hermitian_List.append(self.Remain_Hermitian)
 
-        #print(
+        # print(
         #    "            Hermitian ?    Remain_Hermiain = {},    EigV_postive = {}".format(
         #        self.Remain_Hermitian, self.EigV_positive
         #    )
-        #)
+        # )
 
     def Get_measured_y(self):
-        """to get the coefficients of all sampled Pauli operators for the A^+ operator
-
-        """
+        """to get the coefficients of all sampled Pauli operators for the A^+ operator"""
 
         coef = np.sqrt(self.num_elements / self.num_labels)
         self.yIni = np.array(self.measurement_list) * coef
         self.coef = coef
-
 
     def computeRGD(self, InitX, Ch_svd=0):
         """Basic workflow of gradient descent iteration.
@@ -455,7 +444,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         if self.convergence_iteration == 0:
             self.convergence_iteration = self.iteration
 
-
     def stepRGD(self):
         """each iteration step of the RGD algorithm"""
 
@@ -501,7 +489,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         print("      stepRGD            -->  time = {}\n".format(tt8 - tt1))
 
         self.step_Time[self.iteration] = tt8 - tt1
-
 
     def convergence_check(self):
         """
@@ -561,7 +548,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
                 if Fro_diff > 1e2:
                     raise ValueError("  Target_Err_Xk  too big !!!  Stop and check  \n")
 
-
     def calc_PtG_2_uG_Gv(self):
         """to project Gk onto the tangnet space and
                 calculate the related objects
@@ -578,7 +564,9 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
             uGv = self.ukh @ self.Gu
 
             self.PtGk = (
-                self.uk @ self.Gu.T.conj() + self.Gu @ self.ukh - self.uk @ uGv @ self.ukh
+                self.uk @ self.Gu.T.conj()
+                + self.Gu @ self.ukh
+                - self.uk @ uGv @ self.ukh
             )
 
         else:  #  U  !=  V
@@ -604,8 +592,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
 
         return uGv
 
-
-
     def calc_n1_n2(self):
         # ----------------------------- #
         # 		calc AptGk = A(PtGk)	#
@@ -629,7 +615,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
 
         return Alpha
 
-
     def Hr_tangentWk(self, Alpha, uGv):
         """Hard thresholding Hr(.) of the intermediate matrix Jk
                 according to the 4th step in the RGD algorithm in the paper,
@@ -652,7 +637,7 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         # ------------------------------------------------- #
         max_scaling_time = 1
         for ii_sc in range(max_scaling_time):
-            #print("    ************  {}-th scaling for the Alpha".format(ii_sc))
+            # print("    ************  {}-th scaling for the Alpha".format(ii_sc))
 
             D2s = Alpha * uGv + self.sDiag
 
@@ -712,8 +697,8 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
             Mu2r_Nr = Mu2r[:, :Nr]
             Mv2r_Nr = Mv2rh[:Nr, :].T.conj()
 
-            #print("        s2r       = {}".format(s2r))
-            #print("        max(s2r)  = {}".format(max(s2r)))
+            # print("        s2r       = {}".format(s2r))
+            # print("        max(s2r)  = {}".format(max(s2r)))
             if max(s2r) < 1:
                 break
             else:
@@ -755,11 +740,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         self.Xk = self.uk.dot(self.sDiag) @ self.vkh
 
 
-
-
-
-
-
 def Col_flip_sign(xCol):
     """to change the sign of each column
             such that the largest element of each column is positive.
@@ -784,8 +764,6 @@ def Col_flip_sign(xCol):
     xCol = np.multiply(sign, xCol)
 
     return xCol
-
-
 
 
 def Hr_Hermitian(X, r, Choice=0):
@@ -813,4 +791,3 @@ def Hr_Hermitian(X, r, Choice=0):
         u, s, vh = svds(X, k=r)
 
     return u, np.diag(s)[:r, :r], vh
-
