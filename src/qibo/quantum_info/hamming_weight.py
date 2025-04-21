@@ -101,13 +101,10 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         .. note::
             This method is inefficient in runtime and memory for a large number of qubits.
         """
-        if (
-            self._backend._dict_indexes is None
-            or list(self._backend._dict_indexes.keys())[0].count("1") != self.weight
-        ):
-            self._backend._dict_indexes = self._backend._get_lexicographical_order(
-                self.nqubits, self.weight
-            )
+
+        self._backend._dict_indexes = self._backend._get_lexicographical_order(
+            self.nqubits, self.weight
+        )
 
         state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
         state = self.engine.cast(state, dtype=state.dtype)

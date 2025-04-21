@@ -1,5 +1,6 @@
 """Module defining the Hamming-weight-preserving backend."""
 
+from functools import cache
 from typing import List, Union
 
 import numpy as np
@@ -185,6 +186,7 @@ class HammingWeightBackend(NumpyBackend):
 
         return strings
 
+    @cache
     def _get_cached_strings(
         self, nqubits: int, weight: int, ncontrols: int = 0, two_qubit_gate: bool = True
     ):
@@ -233,6 +235,7 @@ class HammingWeightBackend(NumpyBackend):
 
         return strings
 
+    @cache
     def _get_lexicographical_order(self, nqubits, weight):
         """Sort bistrings generated from ``self._get_cached_strings`` in lexicographical order.
 
@@ -506,11 +509,7 @@ class HammingWeightBackend(NumpyBackend):
         qubits = list(gate.qubits)
         gate_qubits = len(qubits)
 
-        if (
-            self._dict_indexes is None
-            or list(self._dict_indexes.keys())[0].count("1") != weight
-        ):
-            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = list(self._dict_indexes.keys())
 
@@ -556,11 +555,7 @@ class HammingWeightBackend(NumpyBackend):
         map_ = qubits + controls + other_qubits
         gate_matrix = gate.matrix(backend=self.engine)
 
-        if (
-            self._dict_indexes is None
-            or list(self._dict_indexes.keys())[0].count("1") != weight
-        ):
-            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = self.np.array(list(self._dict_indexes.keys()))
         indexes = self.np.array([index[1] for index in self._dict_indexes.values()])
@@ -627,11 +622,7 @@ class HammingWeightBackend(NumpyBackend):
         state = self.to_numpy(state)
         terms = []
 
-        if (
-            self._dict_indexes is None
-            or list(self._dict_indexes.keys())[0].count("1") != weight
-        ):
-            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = list(self._dict_indexes.keys())
         for i in self.np.nonzero(state)[0]:
@@ -659,11 +650,7 @@ class HammingWeightBackend(NumpyBackend):
         """
         rtype = self.np.real(state).dtype
 
-        if (
-            self._dict_indexes is None
-            or list(self._dict_indexes.keys())[0].count("1") != weight
-        ):
-            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = list(self._dict_indexes.keys())
         indexes = [index[0] for index in self._dict_indexes.values()]
@@ -698,11 +685,8 @@ class HammingWeightBackend(NumpyBackend):
             ndarray: collapsed ``state``.
         """
         state = self.cast(state, dtype=state.dtype)
-        if (
-            self._dict_indexes is None
-            or list(self._dict_indexes.keys())[0].count("1") != weight
-        ):
-            self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
+
+        self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
         strings = list(self._dict_indexes.keys())
         indexes = [index[0] for index in self._dict_indexes.values()]

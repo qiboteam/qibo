@@ -2717,8 +2717,8 @@ Simulation of Hamming-weight-preserving circuits
 This specialised backend in ``qibo`` supports the fast simulation of
 Hamming-weight-preserving circuits.
 Given a quantum state that only contains non-zero amplitudes associated with computational basis
-states of Hamming weight :math:`k`, the :class:`qibo.backends.hamming_weight.HammingWeightBackend`
-a compressed representation of quantum states that is restricted to the subspace of
+states of Hamming weight :math:`k`, the :class:`qibo.backends.hamming_weight.HammingWeightBackend` works with
+a compressed representation of quantum states that is restricted to the subspace
 with fixed Hamming weight :math:`k`.
 The dimension of this subspace is :math:`d = \binom{n}{k}`,
 where :math:`n` is the total number of qubits.
