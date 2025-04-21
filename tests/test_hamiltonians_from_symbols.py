@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import sympy
 
-from qibo import hamiltonians, matrices
+from qibo import get_backend, hamiltonians, matrices
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
@@ -19,63 +19,36 @@ def test_symbols_pickling(symbol):
     new_symbol = pickle.loads(dumped_symbol)
     for attr in ("target_qubit", "name", "_gate"):
         assert getattr(symbol, attr) == getattr(new_symbol, attr)
-    np.testing.assert_allclose(symbol.matrix, new_symbol.matrix)
+    get_backend().assert_allclose(symbol.matrix, new_symbol.matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
+def test_tfim_hamiltonian_from_symbols(backend, nqubits):
     """Check creating TFIM Hamiltonian using sympy."""
-    if hamtype == "symbolic":
-        h = 0.5
-        symham = sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
-        symham += Z(0) * Z(nqubits - 1)
-        symham += h * sum(X(i) for i in range(nqubits))
-        ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
-    else:
-        h = 0.5
-        z_symbols = sympy.symbols(" ".join(f"Z{i}" for i in range(nqubits)))
-        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(nqubits)))
-
-        symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
-        symham += z_symbols[0] * z_symbols[-1]
-        symham += h * sum(x_symbols)
-        symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
-        symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
-        ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap, backend=backend)
-
-    if calcterms:
-        _ = ham.terms
+    h = 0.5
+    symham = sum(
+        Z(i, backend=backend) * Z(i + 1, backend=backend) for i in range(nqubits - 1)
+    )
+    symham += Z(0, backend=backend) * Z(nqubits - 1, backend=backend)
+    symham += h * sum(X(i, backend=backend) for i in range(nqubits))
+    ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
     final_matrix = ham.matrix
     target_matrix = hamiltonians.TFIM(nqubits, h=h, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_from_symbolic_with_power(backend, hamtype, calcterms):
+def test_from_symbolic_with_power(backend):
     """Check ``from_symbolic`` when the expression contains powers."""
     npbackend = NumpyBackend()
-    if hamtype == "symbolic":
-        matrix = random_hermitian(2, backend=npbackend)
-        symham = (
-            Symbol(0, matrix) ** 2
-            - Symbol(1, matrix) ** 2
-            + 3 * Symbol(1, matrix)
-            - 2 * Symbol(0, matrix) * Symbol(2, matrix)
-            + 1
-        )
-        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    else:
-        z = sympy.symbols(" ".join(f"Z{i}" for i in range(3)))
-        symham = z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + 1
-        matrix = random_hermitian(2, backend=npbackend)
-        symmap = {x: (i, matrix) for i, x in enumerate(z)}
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
-
-    if calcterms:
-        _ = ham.terms
+    matrix = random_hermitian(2, backend=npbackend)
+    symham = (
+        Symbol(0, matrix, backend=backend) ** 2
+        - Symbol(1, matrix, backend=backend) ** 2
+        + 3 * Symbol(1, matrix, backend=backend)
+        - 2 * Symbol(0, matrix, backend=backend) * Symbol(2, matrix, backend=backend)
+        + 1
+    )
+    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
     matrix2 = matrix.dot(matrix)
@@ -88,160 +61,97 @@ def test_from_symbolic_with_power(backend, hamtype, calcterms):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_from_symbolic_with_complex_numbers(backend, hamtype, calcterms):
+def test_from_symbolic_with_complex_numbers(backend):
     """Check ``from_symbolic`` when the expression contains imaginary unit."""
-    if hamtype == "symbolic":
-        symham = (
-            (1 + 2j) * X(0) * X(1)
-            + 2 * Y(0) * Y(1)
-            - 3j * X(0) * Y(1)
-            + 1j * Y(0) * X(1)
-        )
-        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    else:
-        x = sympy.symbols(" ".join(f"X{i}" for i in range(2)))
-        y = sympy.symbols(" ".join(f"Y{i}" for i in range(2)))
-        symham = (
-            (1 + 2j) * x[0] * x[1]
-            + 2 * y[0] * y[1]
-            - 3j * x[0] * y[1]
-            + 1j * y[0] * x[1]
-        )
-        symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
-        symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
+    symham = (
+        (1 + 2j) * X(0, backend=backend) * X(1, backend=backend)
+        + 2 * Y(0, backend=backend) * Y(1, backend=backend)
+        - 3j * X(0, backend=backend) * Y(1, backend=backend)
+        + 1j * Y(0, backend=backend) * X(1, backend=backend)
+    )
+    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
-    if calcterms:
-        _ = ham.terms
     final_matrix = ham.matrix
-    target_matrix = (1 + 2j) * np.kron(matrices.X, matrices.X)
-    target_matrix += 2 * np.kron(matrices.Y, matrices.Y)
-    target_matrix -= 3j * np.kron(matrices.X, matrices.Y)
-    target_matrix += 1j * np.kron(matrices.Y, matrices.X)
+    target_matrix = (1 + 2j) * backend.np.kron(backend.matrices.X, backend.matrices.X)
+    target_matrix += 2 * backend.np.kron(backend.matrices.Y, backend.matrices.Y)
+    target_matrix -= 3j * backend.np.kron(backend.matrices.X, backend.matrices.Y)
+    target_matrix += 1j * backend.np.kron(backend.matrices.Y, backend.matrices.X)
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_from_symbolic_application_hamiltonian(backend, calcterms):
-    """Check ``from_symbolic`` for a specific four-qubit Hamiltonian."""
-    z1, z2, z3, z4 = sympy.symbols("z1 z2 z3 z4")
-    symmap = {z: (i, matrices.Z) for i, z in enumerate([z1, z2, z3, z4])}
-    symham = (
-        z1 * z2
-        - 0.5 * z1 * z3
-        + 2 * z2 * z3
-        + 0.35 * z2
-        + 0.25 * z3 * z4
-        + 0.5 * z3
-        + z4
-        - z1
-    )
-    # Check that Trotter dense matrix agrees will full Hamiltonian matrix
-    fham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
-    symham = (
-        Z(0) * Z(1)
-        - 0.5 * Z(0) * Z(2)
-        + 2 * Z(1) * Z(2)
-        + 0.35 * Z(1)
-        + 0.25 * Z(2) * Z(3)
-        + 0.5 * Z(2)
-        + Z(3)
-        - Z(0)
-    )
-    sham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    if calcterms:
-        _ = sham.terms
-    backend.assert_allclose(sham.matrix, fham.matrix)
-
-
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
+def test_x_hamiltonian_from_symbols(backend, nqubits):
     """Check creating sum(X) Hamiltonian using sympy."""
-    if hamtype == "symbolic":
-        symham = -sum(X(i) for i in range(nqubits))
-        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    else:
-        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(nqubits)))
-        symham = -sum(x_symbols)
-        symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
-    if calcterms:
-        _ = ham.terms
+    symham = -sum(X(i, backend=backend) for i in range(nqubits))
+    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     final_matrix = ham.matrix
     target_matrix = hamiltonians.X(nqubits, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
+def test_three_qubit_term_hamiltonian_from_symbols(backend):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
-    if hamtype == "symbolic":
-        symham = X(0) * Y(1) * Z(2) + 0.5 * Y(0) * Z(1) * X(3) + Z(0) * X(2)
-        symham += Y(2) + 1.5 * Z(1) - 2 - 3 * X(1) * Y(3)
-        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    else:
-        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(4)))
-        y_symbols = sympy.symbols(" ".join(f"Y{i}" for i in range(4)))
-        z_symbols = sympy.symbols(" ".join(f"Z{i}" for i in range(4)))
-        symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-        symmap.update({x: (i, matrices.Y) for i, x in enumerate(y_symbols)})
-        symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
-
-        symham = x_symbols[0] * y_symbols[1] * z_symbols[2]
-        symham += 0.5 * y_symbols[0] * z_symbols[1] * x_symbols[3]
-        symham += z_symbols[0] * x_symbols[2]
-        symham += -3 * x_symbols[1] * y_symbols[3]
-        symham += y_symbols[2]
-        symham += 1.5 * z_symbols[1]
-        symham -= 2
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
-
-    if calcterms:
-        _ = ham.terms
+    symham = (
+        X(0, backend=backend) * Y(1, backend=backend) * Z(2, backend=backend)
+        + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * X(3, backend=backend)
+        + Z(0, backend=backend) * X(2, backend=backend)
+    )
+    symham += (
+        Y(2, backend=backend)
+        + 1.5 * Z(1, backend=backend)
+        - 2
+        - 3 * X(1, backend=backend) * Y(3, backend=backend)
+    )
+    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     final_matrix = ham.matrix
-    target_matrix = np.kron(
-        np.kron(matrices.X, matrices.Y), np.kron(matrices.Z, matrices.I)
+    target_matrix = backend.np.kron(
+        backend.np.kron(backend.matrices.X, backend.matrices.Y),
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
     )
-    target_matrix += 0.5 * np.kron(
-        np.kron(matrices.Y, matrices.Z), np.kron(matrices.I, matrices.X)
+    target_matrix += 0.5 * backend.np.kron(
+        backend.np.kron(backend.matrices.Y, backend.matrices.Z),
+        backend.np.kron(backend.matrices.I(), backend.matrices.X),
     )
-    target_matrix += np.kron(
-        np.kron(matrices.Z, matrices.I), np.kron(matrices.X, matrices.I)
+    target_matrix += backend.np.kron(
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.np.kron(backend.matrices.X, backend.matrices.I()),
     )
-    target_matrix += -3 * np.kron(
-        np.kron(matrices.I, matrices.X), np.kron(matrices.I, matrices.Y)
+    target_matrix += -3 * backend.np.kron(
+        backend.np.kron(backend.matrices.I(), backend.matrices.X),
+        backend.np.kron(backend.matrices.I(), backend.matrices.Y),
     )
-    target_matrix += np.kron(
-        np.kron(matrices.I, matrices.I), np.kron(matrices.Y, matrices.I)
+    target_matrix += backend.np.kron(
+        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
+        backend.np.kron(backend.matrices.Y, backend.matrices.I()),
     )
-    target_matrix += 1.5 * np.kron(
-        np.kron(matrices.I, matrices.Z), np.kron(matrices.I, matrices.I)
+    target_matrix += 1.5 * backend.np.kron(
+        backend.np.kron(backend.matrices.I(), backend.matrices.Z),
+        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
     )
-    target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
+    target_matrix -= 2 * backend.matrices.I(2**4)
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("calcterms", [False, True])
-def test_hamiltonian_with_identity_symbol(backend, calcterms):
+def test_hamiltonian_with_identity_symbol(backend):
     """Check creating Hamiltonian from expression which contains the identity symbol."""
-    symham = X(0) * I(1) * Z(2) + 0.5 * Y(0) * Z(1) * I(3) + Z(0) * I(1) * X(2)
+    symham = (
+        X(0, backend=backend) * I(1, backend=backend) * Z(2, backend=backend)
+        + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * I(3, backend=backend)
+        + Z(0, backend=backend) * I(1, backend=backend) * X(2, backend=backend)
+    )
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
-    if calcterms:
-        _ = ham.terms
     final_matrix = ham.matrix
-    target_matrix = np.kron(
-        np.kron(matrices.X, matrices.I), np.kron(matrices.Z, matrices.I)
+    target_matrix = backend.np.kron(
+        backend.np.kron(backend.matrices.X, backend.matrices.I()),
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
     )
     target_matrix += 0.5 * np.kron(
-        np.kron(matrices.Y, matrices.Z), np.kron(matrices.I, matrices.I)
+        backend.np.kron(backend.matrices.Y, backend.matrices.Z),
+        backend.np.kron(backend.matrices.I(), backend.matrices.I()),
     )
-    target_matrix += np.kron(
-        np.kron(matrices.Z, matrices.I), np.kron(matrices.X, matrices.I)
+    target_matrix += backend.np.kron(
+        backend.np.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.np.kron(backend.matrices.X, backend.matrices.I()),
     )
     backend.assert_allclose(final_matrix, target_matrix)

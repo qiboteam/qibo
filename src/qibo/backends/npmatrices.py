@@ -15,7 +15,9 @@ class NumpyMatrices:
         self.np = np
 
     def _cast(self, x, dtype):
-        return self.np.array(x, dtype=dtype)
+        if isinstance(x, list):
+            return self.np.array(x, dtype=dtype)
+        return x.astype(dtype)
 
     @cached_property
     def H(self):
@@ -489,21 +491,17 @@ class NumpyMatrices:
         )
 
     def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
-        bitstring_length = len(qubits_in) + len(qubits_out)
-        integer_in = "".join(
-            ["1" if k in qubits_in else "0" for k in range(bitstring_length)]
-        )
-        integer_in = int(integer_in, 2)
-        integer_out = "".join(
-            ["1" if k in qubits_out else "0" for k in range(bitstring_length)]
-        )
-        integer_out = int(integer_out, 2)
+        num_qubits_in, num_qubits_out = len(qubits_in), len(qubits_out)
+        bitstring_length = num_qubits_in + num_qubits_out
 
         matrix = [
             [1 + 0j if l == k else 0j for l in range(2**bitstring_length)]
             for k in range(2**bitstring_length)
         ]
         exp, sin, cos = self.np.exp(1j * phi), self.np.sin(theta), self.np.cos(theta)
+
+        integer_in = int("1" * num_qubits_in + "0" * num_qubits_out, base=2)
+        integer_out = int("0" * num_qubits_in + "1" * num_qubits_out, base=2)
         matrix[integer_in][integer_in] = exp * cos
         matrix[integer_in][integer_out] = -exp * sin
         matrix[integer_out][integer_in] = self.np.conj(exp) * sin
@@ -512,7 +510,7 @@ class NumpyMatrices:
         return self._cast(matrix, dtype=self.dtype)
 
     def Unitary(self, u):
-        return self.np.array(u, dtype=self.dtype, copy=False)
+        return self.np.asarray(u, dtype=self.dtype)
 
     def CallbackGate(self):  # pragma: no cover
         raise_error(NotImplementedError)

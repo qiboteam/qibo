@@ -4,9 +4,13 @@ from collections import Counter
 
 import numpy as np
 import pytest
+from networkx import Graph
 
 from qibo import Circuit, gates
+from qibo.models.circuit import _resolve_qubits
 from qibo.models.utils import initialize
+from qibo.transpiler import Passes, Sabre
+from qibo.transpiler._exceptions import PlacementError
 
 
 def test_parametrizedgates_class():
@@ -46,6 +50,44 @@ def test_queue_class():
 def test_circuit_init():
     c = Circuit(2)
     assert c.nqubits == 2
+
+
+def test_resolve_qubits():
+    nqubits, wire_names = _resolve_qubits(3, None)
+    assert nqubits == 3 and wire_names is None
+    nqubits, wire_names = _resolve_qubits(3, ["a", "b", "c"])
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(["a", "b", "c"], None)
+    assert nqubits == 3 and wire_names == ["a", "b", "c"]
+    nqubits, wire_names = _resolve_qubits(None, ["x", "y", "z"])
+    assert nqubits == 3 and wire_names == ["x", "y", "z"]
+
+    with pytest.raises(ValueError):
+        _resolve_qubits(None, None)
+    with pytest.raises(ValueError):
+        _resolve_qubits(3, ["a", "b"])
+    with pytest.raises(ValueError):
+        _resolve_qubits(["a", "b", "c"], ["x", "y"])
+
+
+def test_circuit_init_resolve_qubits():
+    a = Circuit(3)
+    assert a.nqubits == 3 and a.wire_names == [0, 1, 2]
+    b = Circuit(3, wire_names=["a", "b", "c"])
+    assert b.nqubits == 3 and b.wire_names == ["a", "b", "c"]
+    c = Circuit(["a", "b", "c"])
+    assert c.nqubits == 3 and c.wire_names == ["a", "b", "c"]
+    d = Circuit(wire_names=["x", "y", "z"])
+    assert d.nqubits == 3 and d.wire_names == ["x", "y", "z"]
+
+
+def test_circuit_init_resolve_qubits_err():
+    with pytest.raises(ValueError):
+        a = Circuit()
+    with pytest.raises(ValueError):
+        b = Circuit(3, wire_names=["a", "b"])
+    with pytest.raises(ValueError):
+        c = Circuit(["a", "b", "c"], wire_names=["x", "y"])
 
 
 def test_eigenstate(backend):
@@ -336,6 +378,26 @@ def test_circuit_serialization():
     assert Circuit.from_dict(raw).raw == raw
 
 
+def test_circuit_serialization_with_wire_names():
+
+    wire_names = ["a", "b"]
+    c = Circuit(2, wire_names=wire_names)
+    raw = c.raw
+    assert "wire_names" in raw
+    new_c = Circuit.from_dict(raw)
+    assert new_c.wire_names == c.wire_names
+
+    transpiler = Passes(passes=[Sabre()], connectivity=Graph([wire_names]))
+
+    c, _ = transpiler(c)
+    new_c, _ = transpiler(new_c)
+    assert new_c.wire_names == c.wire_names
+
+    with pytest.raises(PlacementError):
+        c.wire_names = ["c", "b"]
+        transpiler(c)
+
+
 def test_circuit_light_cone():
     from qibo import __version__
 
@@ -499,24 +561,27 @@ def test_circuit_with_pauli_noise(measurements, noise_map):
 
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize("include_not_trainable", [True, False])
-@pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
-def test_get_parameters(trainable, include_not_trainable, format):
+@pytest.mark.parametrize("output_format", ["list", "dict", "flatlist"])
+def test_get_parameters(trainable, include_not_trainable, output_format):
     matrix = np.random.random((2, 2))
-    c = Circuit(3)
-    c.add(gates.RX(0, theta=0.123))
-    c.add(gates.RY(1, theta=0.456, trainable=trainable))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.Unitary(matrix, 2))
-    c.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
-    c.add(gates.H(2))
-    params = c.get_parameters(format, include_not_trainable)
+
+    circuit = Circuit(3)
+    circuit.add(gates.RX(0, theta=0.123))
+    circuit.add(gates.RY(1, theta=0.456, trainable=trainable))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.Unitary(matrix, 2))
+    circuit.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
+    circuit.add(gates.H(2))
+
+    params = circuit.get_parameters(output_format, include_not_trainable)
+
     if trainable or include_not_trainable:
         target_params = {
             "list": [(0.123,), (0.456,), (0.789, 0.987)],
             "dict": {
-                c.queue[0]: (0.123,),
-                c.queue[1]: (0.456,),
-                c.queue[4]: (0.789, 0.987),
+                circuit.queue[0]: (0.123,),
+                circuit.queue[1]: (0.456,),
+                circuit.queue[4]: (0.789, 0.987),
             },
             "flatlist": [0.123, 0.456],
         }
@@ -525,18 +590,28 @@ def test_get_parameters(trainable, include_not_trainable, format):
     else:
         target_params = {
             "list": [(0.123,)],
-            "dict": {c.queue[0]: (0.123,)},
+            "dict": {circuit.queue[0]: (0.123,)},
             "flatlist": [0.123],
         }
         target_params["flatlist"].extend(list(matrix.ravel()))
-    if format == "list":
+
+    if output_format == "list":
         i = len(target_params["list"]) // 2 + 1
         np.testing.assert_allclose(params.pop(i)[0], matrix)
-    elif format == "dict":
-        np.testing.assert_allclose(params.pop(c.queue[3])[0], matrix)
-    assert params == target_params[format]
+    elif output_format == "dict":
+        np.testing.assert_allclose(params.pop(circuit.queue[3])[0], matrix)
+
+    assert params == target_params[output_format]
+
     with pytest.raises(ValueError):
-        c.get_parameters("test")
+        circuit.get_parameters("test")
+
+
+def test_get_parameters_0_dimensional_tensor():
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, 0))
+    circuit.set_parameters([np.array(1)])
+    assert circuit.get_parameters(output_format="flatlist") == [np.array(1)]
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -625,7 +700,7 @@ def test_circuit_draw():
         "q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
         "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -636,17 +711,19 @@ def test_circuit_draw():
     assert str(circuit) == ref
 
 
-def test_circuit_wire_names_errors():
+def test_circuit_wire_names():
+    circuit = Circuit(5)
+    assert circuit.wire_names == [0, 1, 2, 3, 4]
+    assert circuit._wire_names == None
+
+    circuit.wire_names = ["a", "b", "c", "d", "e"]
+    assert circuit.wire_names == ["a", "b", "c", "d", "e"]
+    assert circuit._wire_names == ["a", "b", "c", "d", "e"]
+
     with pytest.raises(TypeError):
-        circuit = Circuit(5, wire_names=1)
+        circuit.wire_names = 5
     with pytest.raises(ValueError):
-        circuit = Circuit(5, wire_names=["a", "b", "c"])
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
-    with pytest.raises(ValueError):
-        circuit = Circuit(2, wire_names=["1", 2])
+        circuit.wire_names = ["a", "b", "c", "d"]
 
 
 def test_circuit_draw_wire_names():
@@ -666,6 +743,24 @@ def test_circuit_draw_wire_names():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
 
+    assert str(circuit) == ref
+
+
+def test_circuit_draw_wire_names_int():
+    ref = (
+        "2133: ─H─U1─U1─U1─U1───────────────────────────x───\n"
+        + "8   : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
+        + "2319: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
+        + "0   : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
+        + "1908: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5, wire_names=[2133, 8, 2319, 0, 1908])
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
     assert str(circuit) == ref
 
 
@@ -705,7 +800,7 @@ def test_circuit_draw_line_wrap(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -766,7 +861,7 @@ def test_circuit_draw_line_wrap_names(capsys):
         + "q4: ... ───"
     )
 
-    circuit = Circuit(5, wire_names={"q1": "a"})
+    circuit = Circuit(5, wire_names=["q0", "a", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -795,7 +890,7 @@ def test_circuit_draw_line_wrap_names(capsys):
 def test_circuit_draw_channels(capsys, legend):
     """Check that channels are drawn correctly."""
 
-    circuit = Circuit(2, density_matrix=True)
+    circuit = Circuit(2, density_matrix=True, wire_names=["q0", "q1"])
     circuit.add(gates.H(0))
     circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
     circuit.add(gates.H(1))
@@ -832,7 +927,7 @@ def test_circuit_draw_callbacks(capsys, legend):
     from qibo.callbacks import EntanglementEntropy
 
     entropy = EntanglementEntropy([0])
-    c = Circuit(2)
+    c = Circuit(2, wire_names=["q0", "q1"])
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))
@@ -863,7 +958,7 @@ def test_circuit_draw_labels():
         + "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
@@ -884,7 +979,7 @@ def test_circuit_draw_names(capsys):
         + "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
         + "q4: ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5)
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):

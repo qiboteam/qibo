@@ -70,9 +70,6 @@ def test_hamming_distance(bitstring_1, bitstring_2):
     with pytest.raises(TypeError):
         test = hamming_distance("1010", 2.3)
 
-    if isinstance(bitstring_1, int):
-        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
-
     distance = hamming_distance(bitstring_1, bitstring_2)
     indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
 
@@ -167,7 +164,7 @@ def test_hellinger(backend, validate, kind):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.calculate_norm(backend.np.sqrt(prob_p) - backend.np.sqrt(prob_q))
+        backend.calculate_vector_norm(backend.np.sqrt(prob_p) - backend.np.sqrt(prob_q))
         / np.sqrt(2)
     )
 
@@ -242,7 +239,7 @@ def test_total_variation_distance(backend, validate, kind):
     prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
-    target = float(backend.calculate_norm(prob_p - prob_q, order=1) / 2)
+    target = float(backend.calculate_vector_norm(prob_p - prob_q, order=1) / 2)
 
     prob_p = (
         kind(prob_p) if kind is not None else backend.cast(prob_p, dtype=prob_p.dtype)

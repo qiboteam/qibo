@@ -7,6 +7,8 @@ import pytest
 from qibo import construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
+from .conftest import AVAILABLE_BACKENDS
+
 ####################### Test `matrix` #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),
@@ -113,20 +115,21 @@ def test_construct_backend(backend):
 
 
 def test_list_available_backends():
-    tensorflow = False if platform.system() == "Windows" else True
-    qulacs = (
-        False if platform.system() == "Darwin" and sys.version_info[1] == 9 else True
-    )
+    qulacs = False if sys.version_info[1] == 13 else True
     available_backends = {
         "numpy": True,
-        "pytorch": True,
         "qulacs": qulacs,
-        "qibojit": {"numba": True, "cupy": False, "cuquantum": False},
+        "qibojit": {
+            platform: any(platform in backend for backend in AVAILABLE_BACKENDS)
+            for platform in ["numba", "cupy", "cuquantum"]
+        },
         "qibolab": False,
         "qibo-cloud-backends": False,
-        "qibotn": {"cutensornet": False, "qutensornet": True},
-        "qiboml": {"tensorflow": tensorflow},
+        # "qibotn": {"cutensornet": False, "qmatchatea": False, "qutensornet": True},
+        # "qiboml": {"tensorflow": False, "pytorch": True},
     }
     assert available_backends == list_available_backends(
-        "qibojit", "qibolab", "qibo-cloud-backends", "qibotn", "qiboml"
+        "qibojit",
+        "qibolab",
+        "qibo-cloud-backends",  # , "qibotn", "qiboml"
     )

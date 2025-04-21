@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 
 import qibo
-from qibo import matrices
+from qibo import Circuit, matrices
 from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.transpiler.optimizer import Preprocessing
@@ -86,10 +86,10 @@ def test_set_metropolis_threshold():
 
 def test_circuit_execution():
     qibo.set_backend("numpy")
-    c = qibo.models.Circuit(2)
-    c.add(qibo.gates.H(0))
-    c()
-    c.unitary()
+    circuit = Circuit(2)
+    circuit.add(qibo.gates.H(0))
+    circuit()
+    circuit.unitary()
 
 
 def test_gate_matrix():
@@ -128,9 +128,9 @@ def test_set_get_transpiler():
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
-            Preprocessing(connectivity),
-            Random(connectivity, seed=0),
-            Sabre(connectivity),
+            Preprocessing(),
+            Random(seed=0),
+            Sabre(),
             Unroller(NativeGates.default()),
         ],
     )
@@ -149,7 +149,15 @@ def test_default_transpiler_sim():
     )
 
 
-def test_default_transpiler_hw():
+CONNECTIVITY = [
+    [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")],
+    [("A1", "A2")],
+    [],
+]
+
+
+@pytest.mark.parametrize("connectivity", CONNECTIVITY)
+def test_default_transpiler_hw(connectivity):
     class TempBackend(NumpyBackend):
         def __init__(self):
             super().__init__()
@@ -161,7 +169,7 @@ def test_default_transpiler_hw():
 
         @property
         def connectivity(self):
-            return [("A1", "A2"), ("A2", "A3"), ("A3", "A4"), ("A4", "A5")]
+            return connectivity
 
         @property
         def natives(self):
@@ -171,8 +179,8 @@ def test_default_transpiler_hw():
     _Global._backend = backend
     transpiler = _Global.transpiler()
 
-    assert list(transpiler.connectivity.nodes) == [0, 1, 2, 3, 4]
-    assert list(transpiler.connectivity.edges) == [(0, 1), (1, 2), (2, 3), (3, 4)]
+    assert list(transpiler.connectivity.nodes) == ["A1", "A2", "A3", "A4", "A5"]
+    assert list(transpiler.connectivity.edges) == connectivity
     assert (
         NativeGates.CZ in transpiler.native_gates
         and NativeGates.GPI2 in transpiler.native_gates

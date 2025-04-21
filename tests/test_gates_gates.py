@@ -698,6 +698,9 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
+    if name == "CRY":
+        decomposition = gate.decompose()
+
     assert gate.unitary
 
     if name != "CU2":
@@ -721,6 +724,12 @@ def test_cun(backend, name, params):
     target_state = backend.np.matmul(gate, initial_state)
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+    if name == "CRY":
+        matrix = Circuit(2)
+        matrix.add(decomposition)
+        matrix = matrix.unitary(backend=backend)
+        backend.assert_allclose(matrix, _matrix, atol=1e-10)
 
 
 def test_swap(backend):
@@ -1313,7 +1322,7 @@ def test_deutsch(backend):
 
 def test_generalized_rbs(backend):
     theta, phi = 0.1234, 0.4321
-    qubits_in, qubits_out = [0, 1], [2, 3]
+    qubits_in, qubits_out = [0, 3], [1, 2]
     nqubits = len(qubits_in + qubits_out)
     integer_in = "".join(["1" if k in qubits_in else "0" for k in range(nqubits)])
     integer_out = "".join(["1" if k in qubits_out else "0" for k in range(nqubits)])
@@ -1351,6 +1360,30 @@ def test_generalized_rbs(backend):
 
     assert not gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).clifford
     assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).unitary
+
+
+@pytest.mark.parametrize("seed", [10])
+def test_generalized_rbs_apply(backend, seed):
+    rng = np.random.default_rng(seed)
+
+    nqubits = 4
+    dims = 2**nqubits
+    theta, phi = 2 * np.pi * rng.random(2)
+
+    qubit_ids = rng.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
+    qubits_in, qubits_out = qubit_ids[:1], qubit_ids[1:]
+
+    gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
+    matrix = Circuit(nqubits)
+    matrix.add(gate)
+    matrix = matrix.unitary(backend=backend)
+
+    state = random_statevector(dims, seed=rng, backend=backend)
+    target = matrix @ state
+
+    state = gate.apply(backend, state, nqubits)
+
+    backend.assert_allclose(state, target)
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])

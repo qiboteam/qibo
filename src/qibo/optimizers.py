@@ -58,7 +58,7 @@ def optimize(
         .. testcode::
 
             import numpy as np
-            from qibo import gates, models
+            from qibo import Circuit, gates
             from qibo.optimizers import optimize
 
             # create custom loss function
@@ -68,7 +68,7 @@ def optimize(
                 return np.square(np.sum(circuit().state())) # returns numpy array
 
             # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
+            circuit = Circuit(2)
             circuit.add(gates.RY(0, theta=0))
 
             # optimize using random initial variational parameters
@@ -84,7 +84,9 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
-        return cmaes(loss, initial_parameters, args, callback, options)
+        return cmaes(
+            loss, backend.to_numpy(initial_parameters), args, callback, options
+        )
     elif method == "sgd":
         from qibo.backends import _check_backend
 
@@ -208,13 +210,13 @@ def newtonian(
             callback=callback,
             options=options,
         )
-        m = o.run(initial_parameters)
+        m = o.run(backend.to_numpy(initial_parameters))
     else:
         from scipy.optimize import minimize
 
         m = minimize(
             loss,
-            initial_parameters,
+            backend.to_numpy(initial_parameters),
             args=args,
             method=method,
             jac=jac,
@@ -282,7 +284,7 @@ def sgd(
             callback=callback,
         )
 
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."

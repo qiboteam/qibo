@@ -8,9 +8,11 @@ import numpy as np
 import pytest
 from scipy.linalg import expm
 
-from qibo import gates, hamiltonians, models
+from qibo import Circuit, gates
+from qibo.hamiltonians import TFIM, XXZ, X, Y
 from qibo.models.utils import cvar, gibbs
-from qibo.quantum_info import random_statevector
+from qibo.models.variational import AAVQE, FALQON, QAOA, VQE
+from qibo.quantum_info.random_ensembles import random_statevector
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
@@ -63,14 +65,14 @@ def test_vqc(backend, method, options, compile, filename):
     nlayers = 4
 
     # Create variational circuit
-    c = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for _ in range(nlayers):
-        c.add(gates.RY(q, theta=0) for q in range(nqubits))
-        c.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
-        c.add(gates.RY(q, theta=0) for q in range(nqubits))
-        c.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
-        c.add(gates.CZ(0, nqubits - 1))
-    c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(qubit, theta=0.0) for qubit in range(nqubits))
+        circuit.add(gates.CZ(qubit, qubit + 1) for qubit in range(1, nqubits - 2, 2))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add(gates.RY(qubit, theta=0) for qubit in range(nqubits))
 
     # Optimize starting from a random guess for the variational parameters
     np.random.seed(0)
@@ -78,8 +80,13 @@ def test_vqc(backend, method, options, compile, filename):
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    best, params, _ = optimize(
-        myloss, x0, args=(c, data), method=method, options=options, compile=compile
+    _, params, _ = optimize(
+        myloss,
+        x0,
+        args=(circuit, data),
+        method=method,
+        options=options,
+        compile=compile,
     )
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
@@ -102,18 +109,16 @@ test_values = [
 def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and (
-        (backend.name != "pytorch") or (backend.platform != "tensorflow")
+        backend.platform not in ["tensorflow", "pytorch"]
     ):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name == "pytorch":
-        pytest.skip("Skipping scipy optimizers for pytorch.")
-    if method != "sgd" and backend.platform == "tensorflow":
-        pytest.skip("Skipping scipy optimizers for tensorflow.")
+    if method != "sgd" and (backend.platform in ["tensorflow", "pytorch"]):
+        pytest.skip("Skipping scipy optimizers for pytorch and tensorflow.")
     n_threads = backend.nthreads
     backend.set_threads(1)
     nqubits = 3
     layers = 4
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for l in range(layers):
         for q in range(nqubits):
             circuit.add(gates.RY(q, theta=1.0))
@@ -126,20 +131,21 @@ def test_vqe(backend, method, options, compile, filename):
         circuit.add(gates.CZ(0, nqubits - 1))
     for q in range(nqubits):
         circuit.add(gates.RY(q, theta=1.0))
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
+    hamiltonian = XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = backend.cast(
         np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits), dtype="float64"
     )
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         initial_parameters.requires_grad = True
-    v = models.VQE(circuit, hamiltonian)
+    v = VQE(circuit, hamiltonian)
 
     loss_values = []
 
     def callback(parameters, loss_values=loss_values, vqe=v):
         vqe.circuit.set_parameters(parameters)
-        loss_values.append(vqe.hamiltonian.expectation(vqe.circuit().state()))
+        state = vqe.backend.execute_circuit(vqe.circuit).state()
+        loss_values.append(vqe.hamiltonian.expectation(state))
 
     best, params, _ = v.minimize(
         initial_parameters,
@@ -176,8 +182,8 @@ def test_vqe(backend, method, options, compile, filename):
     ],
 )
 def test_qaoa_execution(backend, solver, dense, accel=None):
-    h = hamiltonians.TFIM(6, h=1.0, dense=dense, backend=backend)
-    m = hamiltonians.X(6, dense=dense, backend=backend)
+    h = TFIM(6, h=1.0, dense=dense, backend=backend)
+    m = X(6, dense=dense, backend=backend)
     # Trotter and RK require small p's!
     params = 0.01 * (1 - 2 * np.random.random(4))
     state = random_statevector(2**6, backend=backend)
@@ -199,7 +205,7 @@ def test_qaoa_execution(backend, solver, dense, accel=None):
             u = expm(-1j * p * h_matrix)
         target_state = backend.cast(u) @ target_state
 
-    qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accel)
+    qaoa = QAOA(h, mixer=m, solver=solver, accelerators=accel)
     qaoa.set_parameters(params)
     final_state = qaoa(backend.cast(state, copy=True))
     backend.assert_allclose(final_state, target_state, atol=atol)
@@ -214,13 +220,13 @@ def test_qaoa_callbacks(backend, accelerators):
 
     # use ``Y`` Hamiltonian so that there are no errors
     # in the Trotter decomposition
-    h = hamiltonians.Y(5, backend=backend)
+    h = Y(5, backend=backend)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
     state = random_statevector(2**5, backend=backend)
 
-    ham = hamiltonians.Y(5, dense=False, backend=backend)
-    qaoa = models.QAOA(ham, callbacks=[energy], accelerators=accelerators)
+    ham = Y(5, dense=False, backend=backend)
+    qaoa = QAOA(ham, callbacks=[energy], accelerators=accelerators)
     qaoa.set_parameters(params)
     final_state = qaoa(backend.cast(state, copy=True))
 
@@ -243,22 +249,22 @@ def test_qaoa_callbacks(backend, accelerators):
 def test_qaoa_errors(backend):
     # Invalid Hamiltonian type
     with pytest.raises(TypeError):
-        qaoa = models.QAOA("test")
+        qaoa = QAOA("test")
     # Hamiltonians of different type
-    h = hamiltonians.TFIM(4, h=1.0, dense=False, backend=backend)
-    m = hamiltonians.X(4, dense=True, backend=backend)
+    h = TFIM(4, h=1.0, dense=False, backend=backend)
+    m = X(4, dense=True, backend=backend)
     with pytest.raises(TypeError):
-        qaoa = models.QAOA(h, mixer=m)
+        qaoa = QAOA(h, mixer=m)
     # Hamiltonians acting on different qubit numbers
-    h = hamiltonians.TFIM(6, h=1.0, backend=backend)
-    m = hamiltonians.X(4, backend=backend)
+    h = TFIM(6, h=1.0, backend=backend)
+    m = X(4, backend=backend)
     with pytest.raises(ValueError):
-        qaoa = models.QAOA(h, mixer=m)
+        qaoa = QAOA(h, mixer=m)
     # distributed execution with RK solver
     with pytest.raises(NotImplementedError):
-        qaoa = models.QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
+        qaoa = QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
     # minimize with odd number of parameters
-    qaoa = models.QAOA(h)
+    qaoa = QAOA(h)
     with pytest.raises(ValueError):
         qaoa.minimize(np.random.random(5))
 
@@ -274,14 +280,14 @@ test_values = [
 
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, dense, filename):
-    if (method == "sgd") and (backend.name not in ["tensorflow", "pytorch"]):
+    if (method == "sgd") and (backend.platform not in ["tensorflow", "pytorch"]):
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if method != "sgd" and backend.name in ("tensorflow", "pytorch"):
+    if method != "sgd" and backend.platform in ("tensorflow", "pytorch"):
         pytest.skip("Skipping scipy optimizers for tensorflow and pytorch.")
-    h = hamiltonians.XXZ(3, dense=dense, backend=backend)
-    qaoa = models.QAOA(h)
+    h = XXZ(3, dense=dense, backend=backend)
+    qaoa = QAOA(h)
     initial_p = backend.cast([0.05, 0.06, 0.07, 0.08], dtype="float64")
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         initial_p.requires_grad = True
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
@@ -299,8 +305,8 @@ test_values = [
 
 @pytest.mark.parametrize(test_names, test_values)
 def test_falqon_optimization(backend, delta_t, max_layers, tolerance, filename):
-    h = hamiltonians.XXZ(3, backend=backend)
-    falqon = models.FALQON(h)
+    h = XXZ(3, backend=backend)
+    falqon = FALQON(h)
     best, params, extra = falqon.minimize(delta_t, max_layers, tol=tolerance)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
@@ -312,8 +318,8 @@ def test_falqon_optimization_callback(backend):
             return np.sum(x)
 
     callback = TestCallback()
-    h = hamiltonians.XXZ(3, backend=backend)
-    falqon = models.FALQON(h)
+    h = XXZ(3, backend=backend)
+    falqon = FALQON(h)
     best, params, extra = falqon.minimize(0.1, 5, callback=callback)
     assert len(extra["callbacks"]) == 5
 
@@ -332,7 +338,7 @@ def test_aavqe(backend, method, options, compile, filename):
 
     nqubits = 4
     layers = 1
-    circuit = models.Circuit(nqubits)
+    circuit = Circuit(nqubits)
 
     for l in range(layers):
         for q in range(nqubits):
@@ -347,12 +353,10 @@ def test_aavqe(backend, method, options, compile, filename):
     for q in range(nqubits):
         circuit.add(gates.RY(q, theta=1.0))
 
-    easy_hamiltonian = hamiltonians.X(nqubits, backend=backend)
-    problem_hamiltonian = hamiltonians.XXZ(nqubits, backend=backend)
+    easy_hamiltonian = X(nqubits, backend=backend)
+    problem_hamiltonian = XXZ(nqubits, backend=backend)
     s = lambda t: t
-    aavqe = models.AAVQE(
-        circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max=1
-    )
+    aavqe = AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
     best, params = aavqe.minimize(
@@ -374,8 +378,8 @@ def test_aavqe(backend, method, options, compile, filename):
 def test_custom_loss(test_input, test_param, expected):
     from qibo import hamiltonians
 
-    h = hamiltonians.XXZ(3)
-    qaoa = models.QAOA(h)
+    h = XXZ(3)
+    qaoa = QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
     best, params, _ = qaoa.minimize(
         initial_p, loss_func=test_input, loss_func_param=test_param

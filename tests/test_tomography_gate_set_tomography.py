@@ -204,20 +204,34 @@ def test_gate_tomography_noise_model(backend):
 
 @pytest.mark.parametrize(
     "target_gates",
-    [[gates.SX(0), gates.Z(0), gates.CY(0, 1)], [gates.TOFFOLI(0, 1, 2)]],
+    [
+        [
+            gates.SX(0),
+            gates.RX(0, np.pi / 4),
+            gates.PRX(0, np.pi, np.pi / 2),
+            gates.CY(0, 1),
+        ],
+        [gates.TOFFOLI(0, 1, 2)],
+    ],
 )
 @pytest.mark.parametrize("pauli_liouville", [False, True])
 def test_GST(backend, target_gates, pauli_liouville):
-    T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    T = backend.cast(T, dtype=T.dtype)
+    T = np.array(
+        [[1.0, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]], dtype=np.complex128
+    )
+    T = backend.cast(T)
     target_matrices = [g.matrix(backend=backend) for g in target_gates]
     # superoperator representation of the target gates in the Pauli basis
     target_matrices = [
         to_pauli_liouville(m, normalize=True, backend=backend) for m in target_matrices
     ]
-    gate_set = [g.__class__ for g in target_gates]
 
-    if len(target_gates) == 3:
+    gate_set = [
+        ((g.__class__, list(g.parameters)) if g.parameters else g.__class__)
+        for g in target_gates
+    ]
+
+    if len(target_gates) == 4:
         empty_1q, empty_2q, *approx_gates = GST(
             gate_set=gate_set,
             nshots=int(1e4),
@@ -225,12 +239,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        print(type(empty_1q), type(empty_2q))
-        T_2q = np.kron(T, T)
+        T_2q = backend.np.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = np.linalg.inv(G)
+                G_inv = backend.np.linalg.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
@@ -241,7 +254,7 @@ def test_GST(backend, target_gates, pauli_liouville):
     else:
         with pytest.raises(RuntimeError):
             empty_1q, empty_2q, *approx_gates = GST(
-                gate_set=[g.__class__ for g in target_gates],
+                gate_set=gate_set,
                 nshots=int(1e4),
                 include_empty=True,
                 pauli_liouville=pauli_liouville,
@@ -261,11 +274,14 @@ def test_GST_non_invertible_matrix():
         matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
 
 
-def test_GST_with_transpiler(backend):
+def test_GST_with_transpiler(backend, star_connectivity):
     import networkx as nx
 
     target_gates = [gates.SX(0), gates.Z(0), gates.CNOT(0, 1)]
-    gate_set = [g.__class__ for g in target_gates]
+    gate_set = [
+        ((g.__class__, list(g.parameters)) if g.parameters else g.__class__)
+        for g in target_gates
+    ]
     # standard not transpiled GST
     empty_1q, empty_2q, *approx_gates = GST(
         gate_set=gate_set,
@@ -276,18 +292,15 @@ def test_GST_with_transpiler(backend):
         transpiler=None,
     )
     # define transpiler
-    connectivity = nx.Graph()
-    # star connectivity
-    connectivity.add_edges_from([(0, 2), (1, 2), (2, 3), (2, 4)])
+    connectivity = star_connectivity()
     transpiler = Passes(
         connectivity=connectivity,
         passes=[
-            Preprocessing(connectivity),
-            Random(connectivity),
-            Sabre(connectivity),
+            Preprocessing(),
+            Random(),
+            Sabre(),
             Unroller(NativeGates.default(), backend=backend),
         ],
-        int_qubit_names=True,
     )
     # transpiled GST
     T_empty_1q, T_empty_2q, *T_approx_gates = GST(

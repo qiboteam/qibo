@@ -7,11 +7,13 @@ from pathlib import Path
 from typing import Union
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.transforms import Bbox
 
 from qibo import gates
 
-from .drawer_utils import FusedEndGateBarrier, FusedStartGateBarrier
+from .drawing_utils import FusedEndGateBarrier, FusedStartGateBarrier
 
 UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
@@ -218,8 +220,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[max_wire] + dy,
             plot_params,
         )
-    else:
-
+    elif not "UNITARY@" in name:
         _line(
             ax,
             gate_grid[i],
@@ -227,8 +228,12 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
             wire_grid[min_wire],
             wire_grid[max_wire],
             plot_params,
+            linestyle=(
+                "dashed" if name == "UNITARY" and target.count("_") > 1 else "solid"
+            ),
         )
 
+        cci = 0
         for ci in control_indices:
             x = gate_grid[i]
             y = wire_grid[ci]
@@ -256,6 +261,7 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 "RBS",
                 "ECR",
                 "MS",
+                "UNITARY",
             ]:
 
                 symbol = SYMBOLS.get(name, name)
@@ -263,16 +269,55 @@ def _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params, measu
                 if is_dagger:
                     symbol += r"$\rm{^{\dagger}}$"
 
+                if name == "UNITARY" and target.count("_") > 1:
+                    hash_split = controls[cci].split("_")
+                    u_gate_single_hash = hash_split[2]
+                    global_hash = hash_split[3]
+                    index_r = int(hash_split[4])
+                    subindex = plot_params["hash_unitary_gates"][index_r][
+                        u_gate_single_hash + "-" + global_hash
+                    ]
+                    symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+                    symbol += r"$\rm_{{{}}}$".format(
+                        plot_params["hash_global_unitary_gates"][global_hash]
+                    )
+                    cci += 1
+
                 _text(ax, x, y, symbol, plot_params, box=True)
 
             else:
                 _cdot(ax, x, y, plot_params)
+    else:
+        x = gate_grid[min_wire]
+        y = wire_grid[len(control_indices)]
+        strip_symbol = name.replace("UNITARY@", "")
+
+        if strip_symbol == "":
+            strip_symbol = "U_G"
+
+        symbol = r"$\rm{{{}}}$".format(strip_symbol)
+
+        dx_right = 0.45
+        dy = 0.25
+        _composed_rectangle(
+            ax,
+            gate_grid[i],
+            gate_grid[i] + dx_right,
+            wire_grid[min_wire] - dy,
+            wire_grid[max_wire] + dy,
+            symbol,
+            plot_params,
+        )
 
 
 def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     name, target = gate[:2]
 
-    if "FUSEDSTARTGATEBARRIER" in name or "FUSEDENDGATEBARRIER" in name:
+    if (
+        "FUSEDSTARTGATEBARRIER" in name
+        or "FUSEDENDGATEBARRIER" in name
+        or "UNITARY@" in name
+    ):
         return
 
     is_dagger = False
@@ -295,13 +340,31 @@ def _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params):
     else:
         if name == "ALIGN":
             symbol = "A({})".format(target[2:])
+
+        if name == "UNITARY" and target.count("_") > 1:
+            hash_split = target.split("_")
+            hash = hash_split[2]
+            global_hash = hash_split[3]
+            index_r = int(hash_split[4])
+            subindex = plot_params["hash_unitary_gates"][index_r][
+                hash + "-" + global_hash
+            ]
+            symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+            symbol += r"$\rm_{{{}}}$".format(
+                plot_params["hash_global_unitary_gates"][global_hash]
+            )
+
         _text(ax, x, y, symbol, plot_params, box=True)
 
 
-def _line(ax, x1, x2, y1, y2, plot_params):
+def _line(ax, x1, x2, y1, y2, plot_params, linestyle="solid"):
     Line2D = matplotlib.lines.Line2D
     line = Line2D(
-        (x1, x2), (y1, y2), color=plot_params["linecolor"], lw=plot_params["linewidth"]
+        (x1, x2),
+        (y1, y2),
+        color=plot_params["linecolor"],
+        lw=plot_params["linewidth"],
+        ls=linestyle,
     )
     ax.add_line(line)
 
@@ -323,7 +386,7 @@ def _text(ax, x, y, textstr, plot_params, box=False):
         )
     else:
         bbox = dict(fill=False, lw=0)
-    ax.text(
+    return ax.text(
         x,
         y,
         textstr,
@@ -377,7 +440,7 @@ def _swapx(ax, x, y, plot_params):
 
 def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
-    fig = matplotlib.pyplot.figure(
+    fig = plt.figure(
         figsize=(ng * scale, nq * scale),
         facecolor=plot_params["facecolor"],
         edgecolor=plot_params["edgecolor"],
@@ -413,6 +476,10 @@ def _draw_labels(ax, labels, inits, gate_grid, wire_grid, plot_params):
     fontsize = plot_params["fontsize"]
     nq = len(labels)
     xdata = (gate_grid[0] - scale, gate_grid[-1] + scale)
+    if "wire_names" in plot_params:
+        labels = (
+            plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
+        )
     for i in range(nq):
         j = _get_flipped_index(labels[i], labels)
         _text(
@@ -443,6 +510,10 @@ def _get_min_max_qbits(gates):
 
 
 def _get_flipped_index(target, labels):
+    if isinstance(target, str) and target.count("_") > 1:
+        end_index = target.find("_" + target.split("_")[2])
+        target = target[:end_index]
+
     nq = len(labels)
     i = labels.index(target)
     return nq - i - 1
@@ -468,6 +539,74 @@ def _rectangle(ax, x1, x2, y1, y2, plot_style):
         label="",
     )
     ax.add_patch(rect)
+
+
+def _composed_rectangle(ax, x1, x2, y1, y2, label, plot_style):
+    """
+    Draw a rectangle with a label inside.
+
+    Args:
+        ax (matplotlib.axes.Axes): Axes object to draw on.
+        x1 (float): x-coordinate of the first corner.
+        x2 (float): x-coordinate of the second corner.
+        y1 (float): y-coordinate of the first corner.
+        y2 (float): y-coordinate of the second corner.
+        label (str): Label to display inside the rectangle.
+        plot_style (dict): Dictionary containing style parameters for the rectangle.
+    """
+    Rectangle = matplotlib.patches.Rectangle
+    x = min(x1, x2)
+    y = min(y1, y2)
+    w = abs(x2 - x1)
+    h = abs(y2 - y1)
+    xm = x + w / 2.0
+    ym = y + h / 2.0
+
+    rect = Rectangle(
+        (x - w / 2.5, y),
+        w * 0.9,
+        h,
+        ec=plot_style["edgecolor"],
+        fc=plot_style["gatecolor"],
+        lw=plot_style["linewidth"],
+        label="",
+        fill=True,
+        zorder=2,
+    )
+
+    ax.add_patch(rect)
+    text_gate = _text(ax, x + w * 0.05, y + h / 2, label, plot_style, box=False)
+    _auto_fit_fontsize(text_gate, w * 0.8, None, fig=ax.figure, ax=ax)
+
+
+def _auto_fit_fontsize(text, width, height, fig=None, ax=None):
+    """
+    Auto-decrease the fontsize of a text object.
+
+    Args:
+        text (matplotlib.text.Text)
+        width (float): Allowed width in data coordinates.
+        height (float): Allowed height in data coordinates.
+        fig (matplotlib.figure.Figure): Figure object to use for rendering.
+        ax (matplotlib.axes.Axes): Axes object to use for rendering.
+    """
+    fig = fig or plt.gcf()
+    ax = ax or plt.gca()
+
+    # get text bounding box in figure coordinates
+    renderer = fig.canvas.get_renderer()
+    bbox_text = text.get_window_extent(renderer=renderer)
+
+    # transform bounding box to data coordinates
+    bbox_text = Bbox(ax.transData.inverted().transform(bbox_text))
+
+    # evaluate fit and recursively decrease fontsize until text fits
+    fits_width = bbox_text.width < width if width else True
+    fits_height = bbox_text.height < height if height else True
+    if not all((fits_width, fits_height)):
+        text.set_fontsize(text.get_fontsize() - 1)
+        text.set_weight("bold")
+        _auto_fit_fontsize(text, width, height, fig, ax)
 
 
 def _get_flipped_indices(targets, labels):
@@ -500,41 +639,101 @@ def _make_cluster_gates(gates_items):
     """
 
     temp_gates = []
-    temp_mgates = []
     cluster_gates = []
 
     for item in gates_items:
         if len(item) == 2:  # single qubit gates
-            if item[0] == "MEASURE":
-                temp_mgates.append(item)
-            else:
-                if len(temp_gates) > 0:
-                    if item[1] in [tup[1] for tup in temp_gates]:
-                        cluster_gates.append(temp_gates)
-                        temp_gates = []
-                        temp_gates.append(item)
-                    else:
-                        temp_gates.append(item)
+            if len(temp_gates) > 0:
+                if item[1] in [tup[1] for tup in temp_gates]:
+                    cluster_gates.append(temp_gates)
+                    temp_gates = []
+                    temp_gates.append(item)
                 else:
                     temp_gates.append(item)
+            else:
+                temp_gates.append(item)
         else:
             if len(temp_gates) > 0:
                 cluster_gates.append(temp_gates)
                 temp_gates = []
-
-            if len(temp_mgates) > 0:
-                cluster_gates.append(temp_mgates)
-                temp_mgates = []
 
             cluster_gates.append([item])
 
     if len(temp_gates) > 0:
         cluster_gates.append(temp_gates)
 
-    if len(temp_mgates) > 0:
-        cluster_gates.append(temp_mgates)
-
     return cluster_gates
+
+
+def _build_hash_init_unitary_gates_register(gates_circ, dict_init_param):
+    """
+    Given a list of gates, this function builds a dictionary to register a unique hash for each unitary gate.
+
+    Args:
+        gates_circ (list): List of gates provided by the Qibo circuit.
+        dict_init_param (dict): Dictionary to store the hash from unitary gates.
+    """
+    i = 0
+    for gate in gates_circ:
+        final_hash = _global_gate_hash(gate)
+        if final_hash != "" and final_hash not in dict_init_param:
+            dict_init_param[final_hash] = str(i)
+            i += 1
+    return dict_init_param
+
+
+def _build_unitary_gates_register(gate, array_register):
+    """
+    Given a gate, this function builds a dictionary to register the unitary gates and their parameters to identify them uniquely. Only for Unitary gates.
+
+    Args:
+        gate (gates.Unitary): Unitary gate to register.
+        dict_register (dict): Dictionary to store the unitary gates and their parameters.
+    """
+    if (
+        isinstance(gate, gates.Unitary)
+        and len(gate._target_qubits) > 1
+        and gate.name.upper() == "UNITARY"
+    ):
+        i = 0
+        dict_register = {}
+        for qbit in gate._target_qubits:
+            final_hash = _u_hash(gate, qbit)
+            param_init_hash = _global_gate_hash(gate)
+            dict_register[final_hash + "-" + param_init_hash] = str(i)
+            i += 1
+        array_register.append(dict_register)
+
+
+def _global_gate_hash(gate: gates.Unitary):
+    """
+    Given a unitary gate, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+
+    Args:
+        gate (gates.Unitary): Unitary gate.
+    """
+    if (
+        isinstance(gate, gates.Unitary)
+        and len(gate._target_qubits) > 1
+        and gate.name.upper() == "UNITARY"
+    ):
+        hash_result = str(abs(hash(gate._parameters[0].data.tobytes())))
+        hash_result = hash_result[:3] + hash_result[-3:]
+        return hash_result
+    return ""
+
+
+def _u_hash(gate: gates.Unitary, param_index: int):
+    """
+    Given a unitary gate and a qubit, this function returns a hash to identify the gate uniquely. Only for Unitary gates.
+
+    Args:
+        gate (gates.Unitary): Unitary gate.
+        param_index (int): Parameter index applied.
+    """
+    hash_result = str(abs(hash(gate._parameters[0][param_index].data.tobytes())))
+    hash_result = hash_result[:3] + hash_result[-3:]
+    return hash_result
 
 
 def _process_gates(array_gates, nqubits):
@@ -553,7 +752,7 @@ def _process_gates(array_gates, nqubits):
         return []
 
     gates_plot = []
-
+    ucount = 0
     for gate in array_gates:
         init_label = gate.name.upper()
 
@@ -583,28 +782,70 @@ def _process_gates(array_gates, nqubits):
         ]:
             for qbit in gate._target_qubits:
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         elif init_label == "ENTANGLEMENTENTROPY":
             for qbit in list(range(nqubits)):
                 item = (init_label,)
-                item += ("q_" + str(qbit),)
+                qbit_item = qbit if qbit < nqubits else nqubits - 1
+                item += ("q_" + str(qbit_item),)
                 gates_plot.append(item)
         else:
             item = ()
-            item += (init_label,)
+            if (
+                isinstance(gate, gates.Unitary)
+                and len(gate._target_qubits) > 1
+                and init_label != "UNITARY"
+            ):
+                item += ("UNITARY@" + gate.name,)
+            else:
+                item += (init_label,)
 
             for qbit in gate._target_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    u_param_hash = ""
+                    u_global_hash = ""
+                    if (
+                        isinstance(gate, gates.Unitary)
+                        and len(gate._target_qubits) > 1
+                        and init_label == "UNITARY"
+                    ):
+                        u_param_hash = _u_hash(gate, qbit_item)
+                        u_global_hash = _global_gate_hash(gate)
+
+                    item += (
+                        "q_"
+                        + str(qbit_item)
+                        + ("" if u_param_hash == "" else ("_" + u_param_hash))
+                        + ("" if u_global_hash == "" else ("_" + u_global_hash))
+                        + (
+                            ("_" + str(ucount))
+                            if isinstance(gate, gates.Unitary)
+                            and len(gate._target_qubits) > 1
+                            and init_label == "UNITARY"
+                            else ""
+                        ),
+                    )
+
+            if (
+                isinstance(gate, gates.Unitary)
+                and len(gate._target_qubits) > 1
+                and init_label == "UNITARY"
+            ):
+                ucount += 1
 
             for qbit in gate._control_qubits:
                 if type(qbit) is tuple:
-                    item += ("q_" + str(qbit[0]),)
+                    qbit_item = qbit[0] if qbit[0] < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
                 else:
-                    item += ("q_" + str(qbit),)
+                    qbit_item = qbit if qbit < nqubits else nqubits - 1
+                    item += ("q_" + str(qbit_item),)
 
             gates_plot.append(item)
 
@@ -694,14 +935,18 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     for i in range(circuit.nqubits):
         labels.append("q_" + str(i))
 
+    hash_unitary_gates = []
     all_gates = []
     for gate in circuit.queue:
+
+        _build_unitary_gates_register(gate, hash_unitary_gates)
+
         if isinstance(gate, gates.FusedGate):
             min_q, max_q = _get_min_max_qbits(gate)
 
             fgates = None
 
-            if cluster_gates:
+            if cluster_gates and circuit.nqubits > 1:
                 fgates = _make_cluster_gates(
                     _process_gates(gate.gates, circuit.nqubits)
                 )
@@ -724,7 +969,22 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     gates_plot = _process_gates(all_gates, circuit.nqubits)
 
-    if cluster_gates and len(gates_plot) > 0:
+    if hash_unitary_gates:
+        params["hash_unitary_gates"] = hash_unitary_gates
+
+    hash_global_unitary_gates = {}
+    _build_hash_init_unitary_gates_register(circuit.queue, hash_global_unitary_gates)
+
+    if hash_global_unitary_gates:
+        params["hash_global_unitary_gates"] = hash_global_unitary_gates
+
+    params["wire_names"] = (
+        circuit.init_kwargs["wire_names"]
+        if circuit.init_kwargs["wire_names"] is not None
+        else []
+    )
+
+    if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
         ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
         return ax, ax.figure

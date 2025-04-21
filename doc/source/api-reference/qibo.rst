@@ -40,21 +40,20 @@ Circuit addition
 
 .. testsetup::
 
-    import qibo
-    from qibo import models
-    from qibo import gates
+    from qibo import Circuit, gates
+    from qibo.models import QFT
 
 .. testcode::
 
-    c1 = models.QFT(4)
+    circuit_1 = QFT(4)
 
-    c2 = models.Circuit(4)
-    c2.add(gates.RZ(0, 0.1234))
-    c2.add(gates.RZ(1, 0.1234))
-    c2.add(gates.RZ(2, 0.1234))
-    c2.add(gates.RZ(3, 0.1234))
+    circuit_2 = Circuit(4)
+    circuit_2.add(gates.RZ(0, 0.1234))
+    circuit_2.add(gates.RZ(1, 0.1234))
+    circuit_2.add(gates.RZ(2, 0.1234))
+    circuit_2.add(gates.RZ(3, 0.1234))
 
-    c = c1 + c2
+    circuit = circuit_1 + circuit_2
 
 will create a circuit that performs the Quantum Fourier Transform on four qubits
 followed by Rotation-Z gates.
@@ -93,28 +92,28 @@ For example the following:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
-    c = models.Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.CZ(0, 1))
-    c.add([gates.X(0), gates.Y(1)])
-    fused_c = c.fuse()
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.H(1)])
+    circuit.add(gates.CZ(0, 1))
+    circuit.add([gates.X(0), gates.Y(1)])
+    fused_circuit = circuit.fuse()
 
 will create a new circuit with a single :class:`qibo.gates.special.FusedGate`
 acting on ``(0, 1)``, while the following:
 
 .. testcode::
 
-    from qibo import models, gates
+    from qibo import Circuit, gates
 
-    c = models.Circuit(3)
-    c.add([gates.H(0), gates.H(1), gates.H(2)])
-    c.add(gates.CZ(0, 1))
-    c.add([gates.X(0), gates.Y(1), gates.Z(2)])
-    c.add(gates.CNOT(1, 2))
-    c.add([gates.H(0), gates.H(1), gates.H(2)])
-    fused_c = c.fuse()
+    circuit = Circuit(3)
+    circuit.add([gates.H(0), gates.H(1), gates.H(2)])
+    circuit.add(gates.CZ(0, 1))
+    circuit.add([gates.X(0), gates.Y(1), gates.Z(2)])
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add([gates.H(0), gates.H(1), gates.H(2)])
+    fused_circuit = circuit.fuse()
 
 will give a circuit with two fused gates, the first of which will act on
 ``(0, 1)`` corresponding to
@@ -191,23 +190,6 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 .. autoclass:: qibo.models.iqae.IterativeAmplitudeEstimationResult
-    :members:
-    :member-order: bysource
-
-
-Double Bracket Iteration algorithm for Diagonalization
-""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
-as a novel strategy for preparing eigenstates of a quantum system. We implement in
-Qibo a discretized version of the algorithm, which executes sequential Double
-Bracket Iterations.
-
-.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketGeneratorType
-    :members:
-    :member-order: bysource
-
-.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketIteration
     :members:
     :member-order: bysource
 
@@ -306,6 +288,18 @@ For instance, the following two circuit generations are equivalent:
 .. autofunction:: qibo.models.encodings.phase_encoder
 
 
+Sparse encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.sparse_encoder
+
+
+Binary encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.binary_encoder
+
+
 Unary Encoder
 """""""""""""
 
@@ -374,6 +368,12 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
+Fixed Hamming-weight Encoder
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+
+
 Entangling layer
 """"""""""""""""
 
@@ -383,9 +383,9 @@ any of the two-qubit gates implemented in ``qibo`` can be selected to customize 
 If the chosen gate is parametrized, all phases are set to :math:`0.0`.
 Note that these phases can be updated a posterior by using
 :meth:`qibo.models.Circuit.set_parameters`.
-There are four possible choices of layer ``architecture``:
-``diagonal``, ``shifted``, ``even-layer``, and ``odd-layer``.
-For instance, we show below an example of each architecture for ``nqubits = 6``.
+The possible choices of layer ``architecture`` are the following, in alphabetical order:
+``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
+For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
 
 
 .. image:: ../_static/entangling_layer.png
@@ -1268,13 +1268,6 @@ In addition to the abstract Hamiltonian models, Qibo provides the following
 pre-coded Hamiltonians:
 
 
-Heisenberg XXZ
-^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.hamiltonians.XXZ
-    :members:
-    :member-order: bysource
-
 Non-interacting Pauli-X
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1326,6 +1319,30 @@ Max Cut
     and time evolution via the Trotter decomposition of the evolution operator.
     This is useful for systems that contain many qubits for which constructing
     the full matrix is intractable.
+
+
+Heisenberg model
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.Heisenberg
+    :members:
+    :member-order: bysource
+
+
+Heisenberg XXX
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.XXX
+    :members:
+    :member-order: bysource
+
+
+Heisenberg XXZ
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.XXZ
+    :members:
+    :member-order: bysource
 
 _______________________
 
@@ -1422,10 +1439,10 @@ The final result of the circuit execution can also be saved to disk and loaded b
 
 .. testcode::
 
-   c = Circuit(2)
-   c.add(gates.M(0,1))
+   circuit = Circuit(2)
+   circuit.add(gates.M(0,1))
    # this will be a CircuitResult object
-   result = c()
+   result = circuit()
    # save it to final_result.npy
    result.dump('final_result.npy')
    # can be loaded back
@@ -2022,6 +2039,12 @@ Schmidt decomposition
 .. autofunction:: qibo.quantum_info.schmidt_decomposition
 
 
+Lanczos algorithm
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.lanczos
+
+
 Quantum Networks
 ^^^^^^^^^^^^^^^^
 
@@ -2592,62 +2615,39 @@ size circuits you may benefit from single thread per process, thus set
 Backends
 --------
 
-The main calculation engine is defined in the abstract backend object
-:class:`qibo.backends.abstract.Backend`. This object defines the methods
-required by all Qibo models to perform simulation.
+:class:`qibo.backends.abstract.Backend` is the main calculation engine to execute circuits.
+Qibo provides backends for quantum simulation on classical hardware, as well as quantum hardware management and control.
+For a complete list of available backends, refer to the :ref:`Packages <packages>` section.
+To create new backends, inherit from :class:`qibo.backends.abstract.Backend` and implement
+its abstract methods. This abstract class defines the required methods for circuit execution.
 
-Qibo currently provides two different calculation backends, one based on
-numpy and one based on Tensorflow. It is possible to define new backends by
-inheriting :class:`qibo.backends.abstract.Backend` and implementing
-its abstract methods.
 
-An additional backend is shipped as the separate library qibojit.
-This backend is supplemented by custom operators defined under which can be
-used to efficiently apply gates to state vectors or density matrices.
-
-We refer to :ref:`Packages <packages>` section for a complete list of the
-available computation backends and instructions on how to install each of
-these libraries on top of qibo.
-
-Custom operators are much faster than implementations based on numpy or Tensorflow
-primitives, such as ``einsum``, but do not support some features, such as
-automatic differentiation for backpropagation of variational circuits which is
-only supported by the native ``tensorflow`` backend.
-
-The user can switch backends using
+The user can set the backend using the :func:`qibo.set_backend` function.
 
 .. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit")
+
+    # Switch to the numpy backend
     qibo.set_backend("numpy")
 
-before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``pytorch``, ``tensorflow``, ``numpy``.
 
-Some backends support different platforms. For example, the qibojit backend
+If no backend is specified, the default backend is used.
+The default backend is selected in the following order: ``qibojit``, ``numpy``, and ``qiboml``.
+The list of default backend candidates can be changed using the ``QIBO_BACKEND`` environment variable.
+
+Some backends support different platforms. For example, the ``qibojit`` backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
-The active platform can be switched using
+The platform can be specified using the ``platform`` parameter in the :func:`qibo.set_backend` function.
 
 .. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit", platform="cuquantum")
+
+    # Switch to the cupy platform
     qibo.set_backend("qibojit", platform="cupy")
-
-The default backend order is qibojit (if available), tensorflow (if available),
-numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
-variable.
-
-Qibo optionally provides an interface to `qulacs <https://github.com/qulacs/qulacs>`_ through the :class:`qibo.backends.qulacs.QulacsBackend`. To use ``qulacs`` for simulating a quantum circuit you can globally set the backend as in the other cases
-
-.. testcode:: python
-
-   import qibo
-   qibo.set_backend("qulacs")
-
-.. note::
-   GPU simulation through ``qulacs`` is not supported yet.
 
 .. autoclass:: qibo.backends.abstract.Backend
     :members:

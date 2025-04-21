@@ -1,2 +1,2 @@
-from qibo.hamiltonians.hamiltonians import *
-from qibo.hamiltonians.models import TFIM, XXZ, MaxCut, X, Y, Z
+from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians.models import TFIM, XXX, XXZ, Heisenberg, MaxCut, X, Y, Z

@@ -200,7 +200,9 @@ class Y(Gate):
         from qibo import matrices  # pylint: disable=C0415
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
-        return Unitary(matrix, self.target_qubits[0], trainable=False)
+        gate = Unitary(matrix, self.target_qubits[0], trainable=False)
+        gate.clifford = True
+        return gate
 
 
 class Z(Gate):
@@ -694,11 +696,11 @@ class PRX(ParametrizedGate):
 
     Corresponds to the following unitary matrix
 
-        .. math::
-            \\begin{pmatrix}
-                \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\
-                -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
-            \\end{pmatrix}
+    .. math::
+        \\begin{pmatrix}
+            \\cos{(\\theta / 2)} & -i e^{-i \\phi} \\sin{(\\theta / 2)} \\\\
+            -i e^{i \\phi} \\sin{(\\theta / 2)} & \\cos{(\\theta / 2)}
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -1383,6 +1385,14 @@ class CRY(_CRn_):
     @property
     def qasm_label(self):
         return "cry"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CRY}` gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class CRZ(_CRn_):
@@ -2501,8 +2511,8 @@ class GeneralizedRBS(ParametrizedGate):
 
     References:
         1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed Hamming-weight subspaces*.
-        `arXiv:2405.20408 [quant-ph] <https://arxiv.org/abs/2405.20408>`_
+        *Quantum encoder for fixed-Hamming-weight subspaces*,
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_
 
     Args:
         qubits_in (tuple or list): ids of "input" qubits.
@@ -2528,7 +2538,7 @@ class GeneralizedRBS(ParametrizedGate):
         self.target_qubits = tuple(qubits_in) + tuple(qubits_out)
         self.unitary = True
 
-        self.parameter_names = "theta"
+        self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
         self.nparams = 2
 
@@ -2643,5 +2653,5 @@ def _check_engine(array):
         import torch  # pylint: disable=C0415
 
         return torch
-    else:
-        return np
+
+    return np

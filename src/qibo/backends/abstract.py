@@ -303,8 +303,8 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_norm(self, state, order=2):  # pragma: no cover
-        """Calculate norm of a state vector.
+    def calculate_vector_norm(self, state, order=2):  # pragma: no cover
+        """Calculate norm of an :math:`1`-dimensional array.
 
         For specifications on possible values of the parameter ``order``
         for the ``tensorflow`` backend, please refer to
@@ -315,9 +315,10 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
-        """Calculate norm of a density matrix. Default is the ``nuclear`` norm.
+    def calculate_matrix_norm(self, state, order="nuc"):  # pragma: no cover
+        """Calculate norm of a :math:`2`-dimensional array.
 
+        Default is the ``nuclear`` norm.
         If ``order="nuc"``, it returns the nuclear norm of ``state``,
         assuming ``state`` is Hermitian (also known as trace norm).
         For specifications on the other  possible values of the
@@ -423,11 +424,3 @@ class Backend(abc.ABC):
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
-
-    @abc.abstractmethod
-    def _test_regressions(self, name):  # pragma: no cover
-        """Correct outcomes for tests that involve random numbers.
-
-        The outcomes of such tests depend on the backend.
-        """
-        raise_error(NotImplementedError)

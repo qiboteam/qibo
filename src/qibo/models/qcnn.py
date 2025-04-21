@@ -1,4 +1,6 @@
-""" This module implements a Quantum Convolutional Neural Network (QCNN) for classification tasks. The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_ for the identification of quantum phases.
+"""Implement a Quantum Convolutional Neural Network (QCNN) for classification tasks.
+The QCNN model was originally proposed in: arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>_
+for the identification of quantum phases.
 
 The QuantumCNN class in this module provides methods to construct the QCNN.
 """
@@ -14,8 +16,8 @@ class QuantumCNN:
     """
     Model that implements and trains a variational quantum convolutional network (QCNN) for
     classification tasks.
-    The QCNN model was originally proposed in: `arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>`_
-    for the identification of quantum phases.
+    The QCNN model was originally proposed in: `arXiv:1810.03787
+    <https://arxiv.org/abs/1810.03787>`_ for the identification of quantum phases.
 
     Args:
         nqubits (int): number of qubits of the input states. Currently supports powers of 2.
@@ -23,18 +25,22 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
-        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
+        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by
+            the user to form the two qubit ansatz used in the convolutional circuit.
+
     Example:
         .. testcode::
 
             import math
-            import numpy as np
             import random
-            import qibo
+
+            import numpy as np
+
+            from qibo import set_backend
             from qibo.models.qcnn import QuantumCNN
 
+            set_backend("numpy")
 
-            qibo.set_backend("numpy")
             data = np.random.rand(16)
             data = data / np.linalg.norm(data)
             data = [data]
@@ -110,15 +116,15 @@ class QuantumCNN:
         Returns:
             Circuit for a single convolutional layer
         """
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         for first, second in zip(bits[0::2], bits[1::2]):
-            c += self.two_qubit_unitary([first, second], symbols)
+            circuit += self.two_qubit_unitary([first, second], symbols)
 
         # check that there are more than 2 qubits to prevent double conv
         if len(bits) > 2:
             for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
-                c += self.two_qubit_unitary([first, second], symbols)
-        return c
+                circuit += self.two_qubit_unitary([first, second], symbols)
+        return circuit
 
     def quantum_pool_circuit(self, source_bits, sink_bits, symbols):
         """
@@ -131,10 +137,10 @@ class QuantumCNN:
         Returns:
             Circuit for a single pooling layer
         """
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         for source, sink in zip(source_bits, sink_bits):
-            c += self.two_qubit_pool(source, sink, symbols)
-        return c
+            circuit += self.two_qubit_pool(source, sink, symbols)
+        return circuit
 
     def ansatz(self, nlayers, params=None):
         """
@@ -156,24 +162,24 @@ class QuantumCNN:
         nbits = self.nqubits
 
         qubits = [_ for _ in range(nbits)]
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         for layer in range(nlayers):
             conv_start = int(nbits - nbits / (2**layer))
             pool_start = int(nbits - nbits / (2 ** (layer + 1)))
             param_start = layer * nparams_layer
-            c += self.quantum_conv_circuit(
+            circuit += self.quantum_conv_circuit(
                 qubits[conv_start:], symbols[param_start : param_start + nparams_conv]
             )
-            c += self.quantum_pool_circuit(
+            circuit += self.quantum_pool_circuit(
                 qubits[conv_start:pool_start],
                 qubits[pool_start:],
                 symbols[param_start + nparams_conv : param_start + nparams_layer],
             )
 
         # Measurements
-        c.add(gates.M(*[nbits - 1 - i for i in range(self.measured_qubits)]))
+        circuit.add(gates.M(*[nbits - 1 - i for i in range(self.measured_qubits)]))
 
-        return c
+        return circuit
 
     def one_qubit_unitary(self, bit, symbols):
         """
@@ -186,12 +192,12 @@ class QuantumCNN:
         Returns:
             Circuit containing the unitaries added to the specified qubit.
         """
-        c = Circuit(self.nqubits)
-        c.add(gates.RX(bit, symbols[0]))
-        c.add(gates.RY(bit, symbols[1]))
-        c.add(gates.RZ(bit, symbols[2]))
+        circuit = Circuit(self.nqubits)
+        circuit.add(gates.RX(bit, symbols[0]))
+        circuit.add(gates.RY(bit, symbols[1]))
+        circuit.add(gates.RZ(bit, symbols[2]))
 
-        return c
+        return circuit
 
     def two_qubit_unitary(self, bits, symbols):
         """
@@ -204,23 +210,23 @@ class QuantumCNN:
             Circuit containing the unitaries added to the specified qubits.
         """
 
-        if self.twoqubitansatz is None:
-            c = Circuit(self.nqubits)
-            c += self.one_qubit_unitary(bits[0], symbols[0:3])
-            c += self.one_qubit_unitary(bits[1], symbols[3:6])
-            c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
-            c.add(gates.RYY(bits[0], bits[1], symbols[7]))
-            c.add(gates.RXX(bits[0], bits[1], symbols[8]))
+        circuit = Circuit(self.nqubits)
 
-            c += self.one_qubit_unitary(bits[0], symbols[9:12])
-            c += self.one_qubit_unitary(bits[1], symbols[12:])
+        if self.twoqubitansatz is None:
+            circuit += self.one_qubit_unitary(bits[0], symbols[0:3])
+            circuit += self.one_qubit_unitary(bits[1], symbols[3:6])
+            circuit.add(gates.RZZ(bits[0], bits[1], symbols[6]))
+            circuit.add(gates.RYY(bits[0], bits[1], symbols[7]))
+            circuit.add(gates.RXX(bits[0], bits[1], symbols[8]))
+
+            circuit += self.one_qubit_unitary(bits[0], symbols[9:12])
+            circuit += self.one_qubit_unitary(bits[1], symbols[12:])
 
         else:
-            c = Circuit(self.nqubits)
-            c.add(self.twoqubitansatz.on_qubits(bits[0], bits[1]))
-            c.set_parameters(symbols[0 : self.nparams_conv])
+            circuit.add(self.twoqubitansatz.on_qubits(bits[0], bits[1]))
+            circuit.set_parameters(symbols[0 : self.nparams_conv])
 
-        return c
+        return circuit
 
     def two_qubit_pool(self, source_qubit, sink_qubit, symbols):
         """

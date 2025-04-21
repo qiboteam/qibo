@@ -1,12 +1,11 @@
-import os
+import pytest
 
-from qibo import get_backend, get_threads, set_backend
+from qibo import get_backend, set_backend
 
-# Force quimb to use qibojit default number of threads.
-os.environ["NUMBA_NUM_THREADS"] = f"{get_threads()}"
-from qibotn.backends.quimb import QuimbBackend
+# from qibotn.backends.quimb import QuimbBackend
 
 
+@pytest.mark.skip(reason="Inverse dependency currently suppressed.")
 def test_backend_qibotn():
     set_backend(backend="qibotn", platform="qutensornet", runcard=None)
     assert isinstance(get_backend(), QuimbBackend)

@@ -328,7 +328,7 @@ def _curve_fit(
     Returns:
         ndarray: the optimal parameters.
     """
-    if backend.name == "pytorch":
+    if backend.platform == "pytorch":
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
@@ -821,7 +821,7 @@ def get_expectation_val_with_readout_mitigation(
     Applies readout error mitigation to the given circuit and observable.
 
     Args:
-        circuit (qibo.models.Circuit): input circuit.
+        circuit (:class:`qibo.models.Circuit`): input circuit.
         observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): The observable to be measured.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
         nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
@@ -995,31 +995,13 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
 
-    pauli_gates = {
-        "I": backend.cast(matrices.I, dtype=matrices.I.dtype),
-        "X": backend.cast(matrices.X, dtype=matrices.X.dtype),
-        "Y": backend.cast(matrices.Y, dtype=matrices.Y.dtype),
-        "Z": backend.cast(matrices.Z, dtype=matrices.Z.dtype),
-    }
-
     adjustment_gates = []
     for i in range(num_qubits):
-        observable_i = pauli_gates[observable_pauli[i]]
-        random_init = pauli_gates["I"]
-        while backend.np.any(
-            backend.np.abs(observable_i - pauli_gates["Z"]) > 1e-5
-        ) and backend.np.any(abs(observable_i - pauli_gates["I"]) > 1e-5):
-            random_init = random_clifford(
-                1, return_circuit=False, seed=local_state, backend=backend
-            )
-            observable_i = (
-                backend.np.conj(backend.np.transpose(random_init, (1, 0)))
-                @ pauli_gates[observable_pauli[i]]
-                @ random_init
-            )
+        if observable_pauli[i] in ["X", "Y"]:
+            adjustment_gate = gates.M(i, basis=observable_pauli[i]).basis[0]
+        else:
+            adjustment_gate = gates.I(i)
 
-        adjustment_gate = gates.Unitary(random_init, i)
-        adjustment_gate.clifford = True
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
@@ -1163,7 +1145,7 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Helper function to execute the given circuit with the specified parameters.
 
     Args:
-        circuit (qibo.models.Circuit): input circuit.
+        circuit (:class:`qibo.models.Circuit`): input circuit.
         qubit_map (list): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): The noise model to be applied. Defaults to ``None``.
         nshots (int): the number of shots for the circuit execution. Defaults to :math:`10000`..
@@ -1174,21 +1156,11 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         qibo.states.CircuitResult: The result of the circuit execution.
     """
     from qibo.transpiler.pipeline import Passes
-    from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
-        qubits = backend.qubits
-        connectivity_edges = backend.connectivity
-        node_mapping = {q: i for i, q in enumerate(qubits)}
-        edges = [(node_mapping[e[0]], node_mapping[e[1]]) for e in connectivity_edges]
-        connectivity = nx.Graph(edges)
-        transpiler = Passes(
-            connectivity=connectivity,
-            passes=[Custom(initial_map=qubit_map, connectivity=connectivity)],
-        )
-        circuit, _ = transpiler(circuit)
+        circuit.wire_names = qubit_map
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
 

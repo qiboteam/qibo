@@ -70,19 +70,21 @@ class EntanglementEntropy(Callback):
     Example:
         .. testcode::
 
-            from qibo import models, gates, callbacks
+            from qibo import Circuit, gates
+            from qibo.callbacks import EntanglementEntropy
+
             # create entropy callback where qubit 0 is the first subsystem
-            entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
+            entropy = EntanglementEntropy([0], compute_spectrum=True)
             # initialize circuit with 2 qubits and add gates
-            c = models.Circuit(2)
+            circuit = Circuit(2)
             # add callback gates between normal gates
-            c.add(gates.CallbackGate(entropy))
-            c.add(gates.H(0))
-            c.add(gates.CallbackGate(entropy))
-            c.add(gates.CNOT(0, 1))
-            c.add(gates.CallbackGate(entropy))
+            circuit.add(gates.CallbackGate(entropy))
+            circuit.add(gates.H(0))
+            circuit.add(gates.CallbackGate(entropy))
+            circuit.add(gates.CNOT(0, 1))
+            circuit.add(gates.CallbackGate(entropy))
             # execute the circuit
-            final_state = c()
+            final_state = circuit()
             print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
@@ -181,12 +183,12 @@ class Norm(Callback):
     """
 
     def apply(self, backend, state):
-        norm = backend.calculate_norm(state)
+        norm = backend.calculate_vector_norm(state)
         self.append(norm)
         return norm
 
     def apply_density_matrix(self, backend, state):
-        norm = backend.calculate_norm_density_matrix(state)
+        norm = backend.calculate_matrix_norm(state)
         self.append(norm)
         return norm
 
@@ -237,7 +239,7 @@ class Energy(Callback):
             object to calculate its expectation value.
     """
 
-    def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):
+    def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):  # type: ignore
         super().__init__()
         self.hamiltonian = hamiltonian
 

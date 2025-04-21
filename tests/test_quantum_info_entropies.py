@@ -436,17 +436,8 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
             state, base=base, check_hermitian="False", backend=backend
         )
 
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
-        with pytest.raises(NotImplementedError):
-            state = random_unitary(4, backend=backend)
-            test = von_neumann_entropy(
-                state, base=base, check_hermitian=True, backend=backend
-            )
-    else:
-        state = random_unitary(4, backend=backend)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian=True, backend=backend
-        )
+    state = random_unitary(4, backend=backend)
+    test = von_neumann_entropy(state, base=base, check_hermitian=True, backend=backend)
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
@@ -590,7 +581,7 @@ def test_renyi_entropy(backend, alpha, base):
     elif alpha == 1.0:
         target = von_neumann_entropy(state, base=base, backend=backend)
     elif alpha == np.inf:
-        target = backend.calculate_norm_density_matrix(state, order=2)
+        target = backend.calculate_matrix_norm(state, order=2)
         target = -1 * backend.np.log2(target) / np.log2(base)
     else:
         target = np.log2(
@@ -687,9 +678,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 new_target = matrix_power(target_outer, 0.5, backend=backend)
 
                 log = backend.np.log2(
-                    backend.calculate_norm_density_matrix(
-                        new_state @ new_target, order=1
-                    )
+                    backend.calculate_matrix_norm(new_state @ new_target, order=1)
                 )
 
                 log = -2 * log / np.log2(base)
@@ -844,16 +833,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
             check_hermitian=check_hermitian,
             backend=backend,
         )
-    if backend.__class__.__name__ == "CupyBackend":
-        with pytest.raises(NotImplementedError):
-            state = random_unitary(4, backend=backend)
-            test = entanglement_entropy(
-                state,
-                bipartition=bipartition,
-                base=base,
-                check_hermitian=True,
-                backend=backend,
-            )
 
     # Bell state
     state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)

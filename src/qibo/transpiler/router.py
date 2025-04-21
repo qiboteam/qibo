@@ -6,60 +6,12 @@ import networkx as nx
 import numpy as np
 
 from qibo import gates
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
+from qibo.transpiler.asserts import assert_placement
 from qibo.transpiler.blocks import Block, CircuitBlocks
-
-
-def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
-    """Assert if a circuit can be executed on Hardware.
-
-    No gates acting on more than two qubits.
-    All two-qubit operations can be performed on hardware.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-    """
-    if list(connectivity.nodes) != list(range(connectivity.number_of_nodes())):
-        node_mapping = {node: i for i, node in enumerate(connectivity.nodes)}
-        new_connectivity = nx.Graph()
-        new_connectivity.add_edges_from(
-            [(node_mapping[u], node_mapping[v]) for u, v in connectivity.edges]
-        )
-        connectivity = new_connectivity
-    for gate in circuit.queue:
-        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-            raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
-        if len(gate.qubits) == 2:
-            # physical_qubits = tuple(sorted((circuit.wire_names[gate.qubits[0]], circuit.wire_names[gate.qubits[1]])))
-            physical_qubits = tuple(sorted(gate.qubits))  # for q_i naming
-            if physical_qubits not in connectivity.edges:
-                raise_error(
-                    ConnectivityError,
-                    f"The circuit does not respect the connectivity. {gate.name} acts on {physical_qubits} but only the following qubits are directly connected: {connectivity.edges}.",
-                )
-
-
-def _relabel_connectivity(connectivity, layout):
-    """Relabels the connectivity graph using the passed layout.
-
-    Args:
-        connectivity (nx.Graph): input connectivity.
-        layout (dict): input qubit layout.
-    Returns:
-        (dict) the updated connectivity.
-    """
-    node_mapping = {}
-    layout = dict(
-        sorted(layout.items(), key=lambda item: int(item[0][1:]))
-    )  # for q_i naming
-    for i, node in enumerate(list(layout.keys())):
-        node_mapping[int(node[1:])] = i  # for q_i naming
-    new_connectivity = nx.relabel_nodes(connectivity, node_mapping)
-    return new_connectivity
 
 
 class StarConnectivityRouter(Router):
@@ -76,91 +28,92 @@ class StarConnectivityRouter(Router):
     by adding SWAP gates when needed.
 
     Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity, not used for this transpiler.
-        middle_qubit (int, optional): qubit id of the qubit that is in the middle of the star.
+        connectivity (:class:`networkx.Graph`): Star connectivity graph.
     """
 
-    def __init__(self, connectivity=None, middle_qubit: int = 2):
-        self.middle_qubit = middle_qubit
-        if connectivity is not None:  # pragma: no cover
-            log.warning(
-                "StarConnectivityRouter does not use the connectivity graph."
-                "The connectivity graph will be ignored."
-            )
+    def __init__(self, connectivity: Optional[nx.Graph] = None):
+        self.connectivity = connectivity
+        self.middle_qubit = None
 
-    def __call__(self, circuit: Circuit, initial_layout: dict):
+    def __call__(self, circuit: Circuit):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 Only single qubit gates and two qubits gates are supported by the router.
-            initial_layout (dict): initial physical-to-logical qubit mapping,
-                use `qibo.transpiler.placer.StarConnectivityPlacer` for better performance.
-
-        Returns:
-            (:class:`qibo.models.circuit.Circuit`, list): circuit that performs the same operation
-                as the original but respects the hardware connectivity,
-                and list that maps logical to hardware qubits.
         """
+        self._check_star_connectivity()
+        assert_placement(circuit, self.connectivity)
 
-        middle_qubit = self.middle_qubit
-        nqubits = max(circuit.nqubits, middle_qubit + 1)
-        # new circuit object that will be compatible with hardware connectivity
-        new = Circuit(nqubits)
-        # list to maps logical to hardware qubits
-        hardware_qubits = list(initial_layout.values())
+        middle_qubit_idx = circuit.wire_names.index(self.middle_qubit)
+        nqubits = circuit.nqubits
+        new = Circuit(nqubits=nqubits, wire_names=circuit.wire_names)
+        l2p = list(range(nqubits))
 
         for i, gate in enumerate(circuit.queue):
-            # map gate qubits to hardware
-            qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
+            routed_qubits = [l2p[q] for q in gate.qubits]
+
             if isinstance(gate, gates.M):
-                new_gate = gates.M(*qubits, **gate.init_kwargs)
+                new_gate = gates.M(*routed_qubits, **gate.init_kwargs)
                 new_gate.result = gate.result
                 new.add(new_gate)
                 continue
 
-            if len(qubits) > 2:
+            if len(routed_qubits) > 2:
                 raise_error(
                     ConnectivityError,
                     "Gates targeting more than two qubits are not supported.",
                 )
 
-            if len(qubits) == 2 and middle_qubit not in qubits:
+            if len(routed_qubits) == 2 and middle_qubit_idx not in routed_qubits:
                 # find which qubit should be moved
                 new_middle = _find_connected_qubit(
-                    qubits,
+                    routed_qubits,
                     circuit.queue[i + 1 :],
-                    hardware_qubits,
                     error=ConnectivityError,
+                    mapping=l2p,
                 )
-                # update hardware qubits according to the swap
-                hardware_qubits[middle_qubit], hardware_qubits[new_middle] = (
-                    hardware_qubits[new_middle],
-                    hardware_qubits[middle_qubit],
-                )
-                new.add(gates.SWAP(middle_qubit, new_middle))
-                # update gate qubits according to the new swap
-                qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
+
+                new.add(gates.SWAP(new_middle, middle_qubit_idx))
+                idx1, idx2 = l2p.index(middle_qubit_idx), l2p.index(new_middle)
+                l2p[idx1], l2p[idx2] = l2p[idx2], l2p[idx1]
+
+            routed_qubits = [l2p[q] for q in gate.qubits]
 
             # add gate to the hardware circuit
             if isinstance(gate, gates.Unitary):
                 # gates.Unitary requires matrix as first argument
                 matrix = gate.init_args[0]
-                new.add(gate.__class__(matrix, *qubits, **gate.init_kwargs))
+                new.add(gate.__class__(matrix, *routed_qubits, **gate.init_kwargs))
             else:
-                new.add(gate.__class__(*qubits, **gate.init_kwargs))
-        hardware_qubits_keys = ["q" + str(i) for i in range(5)]
-        return new, dict(zip(hardware_qubits_keys, hardware_qubits))
+                new.add(gate.__class__(*routed_qubits, **gate.init_kwargs))
+        return new, {circuit.wire_names[i]: l2p[i] for i in range(nqubits)}
+
+    def _check_star_connectivity(self):
+        """Check if the connectivity graph is a star graph."""
+        if len(self.connectivity.nodes) != 5:
+            raise_error(
+                ConnectivityError,
+                f"This connectivity graph is not a star graph. Length of nodes provided: {len(self.connectivity.nodes)} != 5.",
+            )
+        for node in self.connectivity.nodes:
+            if self.connectivity.degree(node) == 4:
+                self.middle_qubit = node
+            elif self.connectivity.degree(node) != 1:
+                raise_error(
+                    ConnectivityError,
+                    "This connectivity graph is not a star graph. There is a node with degree different from 1 and 4.",
+                )
 
 
-def _find_connected_qubit(qubits, queue, hardware_qubits, error):
+def _find_connected_qubit(qubits, queue, error, mapping):
     """Helper method for :meth:`qibo.transpiler.router.StarConnectivityRouter`
     and :meth:`qibo.transpiler.router.StarConnectivityPlacer`.
 
     Finds which qubit should be mapped to hardware middle qubit
     by looking at the two-qubit gates that follow.
     """
-    possible_qubits = set(qubits)
+    possible_qubits = {qubits[0], qubits[1]}
     for next_gate in queue:
         if len(next_gate.qubits) > 2:
             raise_error(
@@ -168,11 +121,13 @@ def _find_connected_qubit(qubits, queue, hardware_qubits, error):
                 "Gates targeting more than 2 qubits are not supported",
             )
         if len(next_gate.qubits) == 2:
-            possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
+            possible_qubits &= {
+                mapping[next_gate.qubits[0]],
+                mapping[next_gate.qubits[1]],
+            }
 
-            if not possible_qubits:
+            if len(possible_qubits) == 0:
                 return qubits[0]
-
             if len(possible_qubits) == 1:
                 return possible_qubits.pop()
 
@@ -185,16 +140,13 @@ class CircuitMap:
     Also implements the initial two-qubit block decompositions.
 
     Args:
-        initial_layout (dict): initial physical to logical qubit mapping.
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
-        blocks (:class:`qibo.transpiler.blocks.CircuitBlocks`, optional): circuit
-            block representation. If ``None``, the blocks will be computed from the circuit.
-            Defaults to ``None``.
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
+        blocks (:class:`qibo.transpiler.blocks.CircuitBlocks`, optional): Circuit block representation.
+            If ``None``, the blocks will be computed from the circuit. Defaults to ``None``.
     """
 
     def __init__(
         self,
-        initial_layout: Optional[dict] = None,
         circuit: Optional[Circuit] = None,
         blocks: Optional[CircuitBlocks] = None,
         temp: Optional[bool] = False,
@@ -204,23 +156,21 @@ class CircuitMap:
         self._temporary = temp
         if self._temporary:
             return
-        elif circuit is None:
+        if circuit is None:
             raise_error(ValueError, "Circuit must be provided.")
-
         if blocks is not None:
             self.circuit_blocks = blocks
         else:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
 
-        self._nqubits = circuit.nqubits
-        self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
+        self.nqubits = circuit.nqubits
+        self._routed_blocks = CircuitBlocks(
+            Circuit(circuit.nqubits, wire_names=circuit.wire_names)
+        )
         self._swaps = 0
 
-        if initial_layout is None:
-            return
-
-        self.wire_names = list(initial_layout.keys())
-        self.physical_to_logical = list(initial_layout.values())
+        self.wire_names = circuit.wire_names.copy()
+        self.physical_to_logical = list(range(self.nqubits))
 
     @property
     def physical_to_logical(self):
@@ -237,7 +187,7 @@ class CircuitMap:
         """Sets the physical to logical qubit mapping and updates the logical to physical mapping.
 
         Args:
-            p2l_map (list): physical to logical mapping.
+            p2l_map (list): Physical to logical mapping.
         """
         self._p2l = p2l_map.copy()
         self._l2p = [0] * len(self._p2l)
@@ -249,7 +199,7 @@ class CircuitMap:
         """Sets the logical to physical qubit mapping and updates the physical to logical mapping.
 
         Args:
-            l2p_map (list): logical to physical mapping.
+            l2p_map (list): Logical to physical mapping.
         """
         self._l2p = l2p_map.copy()
         self._p2l = [0] * len(self._l2p)
@@ -260,8 +210,8 @@ class CircuitMap:
         """Updates the qubit mappings after applying a SWAP gate.
 
         Args:
-            logical_swap (tuple[int]): the indices of the logical qubits to be swapped.
-            physical_swap (tuple[int]): the indices of the corresponding physical qubits to be swapped.
+            logical_swap (tuple[int]): The indices of the logical qubits to be swapped.
+            physical_swap (tuple[int]): The indices of the corresponding physical qubits to be swapped.
         """
         self._p2l[physical_swap[0]], self._p2l[physical_swap[1]] = (
             logical_swap[1],
@@ -283,7 +233,7 @@ class CircuitMap:
         Method works in-place.
 
         Args:
-            block (:class:`qibo.transpiler.blocks.Block`): block to be removed.
+            block (:class:`qibo.transpiler.blocks.Block`): Block to be removed.
         """
         self._routed_blocks.add_block(block.on_qubits(self.get_physical_qubits(block)))
         self.circuit_blocks.remove_block(block)
@@ -292,7 +242,7 @@ class CircuitMap:
         """Returns the routed circuit.
 
         Args:
-            circuit_kwargs (dict): original circuit ``init_kwargs``.
+            circuit_kwargs (dict): Original circuit init_kwargs.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Routed circuit.
@@ -300,9 +250,9 @@ class CircuitMap:
         return self._routed_blocks.circuit(circuit_kwargs=circuit_kwargs)
 
     def final_layout(self):
-        """Returns the final physical-logical qubits mapping."""
+        """Returns the final {logical: physical} qubits mapping."""
 
-        return {self.wire_names[i]: self._p2l[i] for i in range(self._nqubits)}
+        return {self.wire_names[i]: self._l2p[i] for i in range(self.nqubits)}
 
     def update(self, logical_swap: tuple):
         """Updates the qubit mapping after applying a ``SWAP``
@@ -311,7 +261,7 @@ class CircuitMap:
         Method works in-place.
 
         Args:
-            swap (tuple): tuple containing the logical qubits to be swapped.
+            swap (tuple): Tuple containing the logical qubits to be swapped.
         """
 
         physical_swap = self.logical_pair_to_physical(logical_swap)
@@ -337,10 +287,10 @@ class CircuitMap:
         """Returns the physical qubits where a block is acting on.
 
         Args:
-            block (int or :class:`qibo.transpiler.blocks.Block`): block to be analysed.
+            block (int or :class:`qibo.transpiler.blocks.Block`): Block to be analysed.
 
         Returns:
-            tuple: physical qubit numbers where a block is acting on.
+            tuple: Physical qubit numbers where a block is acting on.
         """
         if isinstance(block, int):
             block = self.circuit_blocks.search_by_index(block)
@@ -351,10 +301,10 @@ class CircuitMap:
         """Returns the physical qubits associated to the logical qubit pair.
 
         Args:
-            logical_qubits (tuple): logical qubit pair.
+            logical_qubits (tuple): Logical qubit pair.
 
         Returns:
-            tuple: physical qubit numbers associated to the logical qubit pair.
+            tuple: Physical qubit numbers associated to the logical qubit pair.
         """
         return self._l2p[logical_qubits[0]], self._l2p[logical_qubits[1]]
 
@@ -363,12 +313,14 @@ class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
 
     Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        seed (int, optional): seed for the random number generator.
+        connectivity (:class:`networkx.Graph`): Chip connectivity.
+        seed (int, optional): Seed for the random number generator.
             If ``None``, defaults to :math:`42`. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph, seed: Optional[int] = None):
+    def __init__(
+        self, connectivity: Optional[nx.Graph] = None, seed: Optional[int] = None
+    ):
         self.connectivity = connectivity
         self._front_layer = None
         self.circuit_map = None
@@ -384,19 +336,17 @@ class ShortestPaths(Router):
         """Returns the number of SWAP gates added to the circuit during routing."""
         return self.circuit_map._swaps
 
-    def __call__(self, circuit: Circuit, initial_layout: dict):
+    def __call__(self, circuit: Circuit):
         """Circuit connectivity matching.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be matched
-                to hardware connectivity.
-            initial_layout (dict): initial physical-to-logical qubit mapping
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be matched to hardware connectivity.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): circut mapped to hardware topology,
-                and final physical-to-logical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
-        self._preprocessing(circuit=circuit, initial_layout=initial_layout)
+        assert_placement(circuit, self.connectivity)
+        self._preprocessing(circuit=circuit)
         while self._dag.number_of_nodes() != 0:
             execute_block_list = self._check_execution()
             if execute_block_list is not None:
@@ -405,7 +355,6 @@ class ShortestPaths(Router):
                 self._find_new_mapping()
 
         circuit_kwargs = circuit.init_kwargs
-        circuit_kwargs["wire_names"] = list(initial_layout.keys())
         routed_circuit = self.circuit_map.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
@@ -456,8 +405,8 @@ class ShortestPaths(Router):
         Method works in-place.
 
         Args:
-            candidate (tuple): contains path to move qubits and qubit meeting point in the path.
-            circuitmap (CircuitMap): representation of the circuit.
+            candidate (tuple): Contains path to move qubits and qubit meeting point in the path.
+            circuitmap (CircuitMap): Representation of the circuit.
         """
         path = candidate[0]
         meeting_point = candidate[1]
@@ -484,13 +433,13 @@ class ShortestPaths(Router):
         The cost is computed as minus the number of successive gates that can be executed.
 
         Args:
-            candidate (tuple): contains path to move qubits and qubit meeting point in the path.
+            candidate (tuple): Contains path to move qubits and qubit meeting point in the path.
 
         Returns:
-            (list, int): best path to move qubits and qubit meeting point in the path.
+            (list, int): Best path to move qubits and qubit meeting point in the path.
         """
         temporary_circuit = CircuitMap(
-            circuit=Circuit(self.circuit_map._nqubits),
+            circuit=Circuit(self.circuit_map.nqubits),
             blocks=deepcopy(self.circuit_map.circuit_blocks),
         )
 
@@ -530,7 +479,7 @@ class ShortestPaths(Router):
         """Check if some blocks in the front layer can be executed in the current configuration.
 
         Returns:
-            (list): executable blocks if there are, ``None`` otherwise.
+            (list): Executable blocks if there are, ``None`` otherwise.
         """
         executable_blocks = []
         for block in self._front_layer:
@@ -553,7 +502,7 @@ class ShortestPaths(Router):
         Method works in-place.
 
         Args:
-            blocklist (list): list of blocks.
+            blocklist (list): List of blocks.
         """
         for block_id in blocklist:
             block = self.circuit_map.circuit_blocks.search_by_index(block_id)
@@ -573,22 +522,21 @@ class ShortestPaths(Router):
             node[0] for node in self._dag.nodes(data="layer") if node[1] == 0
         ]
 
-    def _preprocessing(self, circuit: Circuit, initial_layout: dict):
+    def _preprocessing(self, circuit: Circuit):
         """The following objects will be initialised:
-            - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+            - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
             - _front_layer: list containing the blocks to be executed.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be preprocessed.
-            initial_layout (dict): initial physical-to-logical qubit mapping.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
         """
-
-        self.connectivity = _relabel_connectivity(self.connectivity, initial_layout)
-
+        self.connectivity = nx.relabel_nodes(
+            self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
+        )
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit_map = CircuitMap(initial_layout, copied_circuit)
+        self.circuit_map = CircuitMap(copied_circuit)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._update_front_layer()
 
@@ -596,10 +544,10 @@ class ShortestPaths(Router):
         """Detaches measurement gates at the end of the circuit for separate handling.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuits to be processed.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuits to be processed.
 
         Returns:
-            (NoneType or list): list of measurements. If no measurements, returns ``None``.
+            (NoneType or list): List of measurements. If no measurements, returns ``None``.
         """
         final_measurements = []
         for gate in circuit.queue[::-1]:
@@ -632,18 +580,18 @@ class Sabre(Router):
     """Routing algorithm proposed in Ref [1].
 
     Args:
-        connectivity (:class:`networkx.Graph`): hardware chip connectivity.
-        lookahead (int, optional): lookahead factor, how many dag layers will be considered
+        connectivity (:class:`networkx.Graph`): Hardware chip connectivity.
+        lookahead (int, optional): Lookahead factor, how many dag layers will be considered
             in computing the cost. Defaults to :math:`2`.
-        decay_lookahead (float, optional): value in interval :math:`[0, 1]`.
+        decay_lookahead (float, optional): Value in interval :math:`[0, 1]`.
             How the weight of the distance in the dag layers decays in computing the cost.
             Defaults to :math:`0.6`.
-        delta (float, optional): defines the number of SWAPs vs depth trade-off by deciding
+        delta (float, optional): Defines the number of SWAPs vs depth trade-off by deciding
             how the algorithm tends to select non-overlapping SWAPs.
             Defaults to math:`10^{-3}`.
-        seed (int, optional): seed for the candidate random choice as tiebraker.
+        seed (int, optional): Seed for the candidate random choice as tiebraker.
             Defaults to ``None``.
-        swap_threshold (float, optional): limits the number of added SWAPs in every routing iteration.
+        swap_threshold (float, optional): Limits the number of added SWAPs in every routing iteration.
             This threshold is multiplied by the length of the longest path in the circuit connectivity.
             If the number of added SWAPs exceeds the threshold before a gate is routed,
             shortestpath routing is applied.
@@ -657,7 +605,7 @@ class Sabre(Router):
 
     def __init__(
         self,
-        connectivity: nx.Graph,
+        connectivity: Optional[nx.Graph] = None,
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,
@@ -679,17 +627,17 @@ class Sabre(Router):
         self._temp_added_swaps = []
         random.seed(seed)
 
-    def __call__(self, circuit: Circuit, initial_layout: dict):
+    def __call__(self, circuit: Circuit):
         """Route the circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
-            initial_layout (dict): initial physical to logical qubit mapping.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be routed.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and final layout.
+            (:class:`qibo.models.circuit.Circuit`, dict): Routed circuit and final {logical: physical} qubit mapping.
         """
-        self._preprocessing(circuit=circuit, initial_layout=initial_layout)
+        assert_placement(circuit, self.connectivity)
+        self._preprocessing(circuit=circuit)
         longest_path = np.max(self._dist_matrix)
 
         while self._dag.number_of_nodes() != 0:
@@ -711,7 +659,6 @@ class Sabre(Router):
                 self._shortest_path_routing()
 
         circuit_kwargs = circuit.init_kwargs
-        circuit_kwargs["wire_names"] = list(initial_layout.keys())
         routed_circuit = self.circuit_map.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
@@ -725,9 +672,9 @@ class Sabre(Router):
         """Returns the number of SWAP gates added to the circuit during routing."""
         return self.circuit_map._swaps
 
-    def _preprocessing(self, circuit: Circuit, initial_layout: dict):
+    def _preprocessing(self, circuit: Circuit):
         """The following objects will be initialised:
-            - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+            - circuit: class to represent circuit and to perform {logical: physical} qubit mapping.
             - _final_measurements: measurement gates at the end of the circuit.
             - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
             - _dag: direct acyclic graph of the circuit based on commutativity.
@@ -737,15 +684,16 @@ class Sabre(Router):
                 to prevent overlapping swaps.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be preprocessed.
-            initial_layout (dict): initial physical-to-logical qubit mapping.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be preprocessed.
         """
 
-        self.connectivity = _relabel_connectivity(self.connectivity, initial_layout)
+        self.connectivity = nx.relabel_nodes(
+            self.connectivity, {v: i for i, v in enumerate(circuit.wire_names)}
+        )
 
         copied_circuit = circuit.copy(deep=True)
         self._final_measurements = self._detach_final_measurements(copied_circuit)
-        self.circuit_map = CircuitMap(initial_layout, copied_circuit)
+        self.circuit_map = CircuitMap(copied_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
         self._dag = _create_dag(self.circuit_map.blocks_logical_qubits_pairs())
         self._memory_map = []
@@ -770,10 +718,10 @@ class Sabre(Router):
         """Appends final measurment gates on the correct qubits conserving the measurement register.
 
         Args:
-            routed_circuit (:class:`qibo.models.circuit.Circuit`): original circuit.
+            routed_circuit (:class:`qibo.models.circuit.Circuit`): Original circuit.
 
         Returns:
-            (:class:`qibo.models.circuit.Circuit`) routed circuit.
+            (:class:`qibo.models.circuit.Circuit`) Routed circuit.
         """
         for measurement in self._final_measurements:
             original_qubits = measurement.qubits
@@ -805,12 +753,12 @@ class Sabre(Router):
         """Return the :math:`n`-topological layer of the dag.
 
         Args:
-            n_layer (int): layer number.
-            qubits (bool, optional): if ``True``, return the target qubits of the blocks in the layer.
+            n_layer (int): Layer number.
+            qubits (bool, optional): If ``True``, return the target qubits of the blocks in the layer.
                 If ``False``, return the block numbers. Defaults to ``False``.
 
         Returns:
-            (list): list of block numbers or target qubits.
+            (list): List of block numbers or target qubits.
         """
 
         if qubits:
@@ -875,7 +823,7 @@ class Sabre(Router):
         with a block in the front layer.
 
         Returns:
-            (list): list of candidates.
+            (list): List of candidates.
         """
         candidates = []
         for block in self._front_layer:
@@ -898,7 +846,7 @@ class Sabre(Router):
         """Check if some blocks in the front layer can be executed in the current configuration.
 
         Returns:
-            (list): executable blocks if there are, ``None`` otherwise.
+            (list): Executable blocks if there are, ``None`` otherwise.
         """
         executable_blocks = []
         for block in self._front_layer:
@@ -923,7 +871,7 @@ class Sabre(Router):
         Method works in-place.
 
         Args:
-            blocklist (list): list of blocks.
+            blocklist (list): List of blocks.
         """
         for block_id in blocklist:
             block = self.circuit_map.circuit_blocks.search_by_index(block_id)
@@ -969,15 +917,15 @@ def _create_dag(gates_qubits_pairs: list):
     commutativity relations.
 
     Args:
-        gates_qubits_pairs (list): list of qubits tuples where gates/blocks acts.
+        gates_qubits_pairs (list): List of qubits tuples where gates/blocks acts.
 
     Returns:
-        (:class:`networkx.DiGraph`): adjoint of the circuit.
+        (:class:`networkx.DiGraph`): Adjoint of the circuit.
     """
     dag = nx.DiGraph()
     dag.add_nodes_from(range(len(gates_qubits_pairs)))
 
-    for i in range(len(gates_qubits_pairs)):
+    for i, _ in enumerate(gates_qubits_pairs):
         dag.nodes[i]["qubits"] = gates_qubits_pairs[i]
 
     # Find all successors
@@ -986,7 +934,7 @@ def _create_dag(gates_qubits_pairs: list):
         saturated_qubits = []
         for next_idx, next_gate in enumerate(gates_qubits_pairs[idx + 1 :]):
             for qubit in gate:
-                if (qubit in next_gate) and (not qubit in saturated_qubits):
+                if (qubit in next_gate) and (qubit not in saturated_qubits):
                     saturated_qubits.append(qubit)
                     connectivity_list.append((idx, next_idx + idx + 1))
             if len(saturated_qubits) >= 2:
@@ -1002,10 +950,10 @@ def _remove_redundant_connections(dag: nx.DiGraph):
     Remove redundant connection from a DAG using transitive reduction.
 
     Args:
-        dag (:class:`networkx.DiGraph`): dag to be reduced.
+        dag (:class:`networkx.DiGraph`): DAG to be reduced.
 
     Returns:
-        (:class:`networkx.DiGraph`): reduced dag.
+        (:class:`networkx.DiGraph`): Reduced DAG.
     """
     new_dag = nx.DiGraph()
     new_dag.add_nodes_from(dag.nodes(data=True))

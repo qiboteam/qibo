@@ -4,8 +4,7 @@ import numpy as np
 from qaml_scripts.evolution import generate_schedule
 from scipy.integrate import quad
 
-import qibo
-from qibo.noise import DepolarizingError, NoiseModel
+from qibo import Circuit, gates
 
 
 class rotational_circuit:
@@ -203,26 +202,26 @@ class rotational_circuit:
     def rotations_circuit(self, t):
         psi, theta, phi = self.rotation_angles(t)
 
-        c = qibo.models.Circuit(self.nqubits, density_matrix=True)
+        c = Circuit(self.nqubits, density_matrix=True)
 
         # H gate
-        c.add(qibo.gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(qibo.gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(qibo.gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        c.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
+        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
 
         # RZ(psi)
-        c.add(qibo.gates.RZ(q=self.q, theta=psi))
+        c.add(gates.RZ(q=self.q, theta=psi))
 
         # RX(theta)
-        c.add(qibo.gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
-        c.add(qibo.gates.RX(q=self.q, theta=-np.pi / 2, trainable=False))
-        c.add(qibo.gates.RZ(q=self.q, theta=-theta))
-        c.add(qibo.gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
+        c.add(gates.RZ(q=self.q, theta=np.pi / 2, trainable=False))
+        c.add(gates.RX(q=self.q, theta=-np.pi / 2, trainable=False))
+        c.add(gates.RZ(q=self.q, theta=-theta))
+        c.add(gates.RX(q=self.q, theta=np.pi / 2, trainable=False))
 
         # RZ(phi)
-        c.add(qibo.gates.RZ(q=self.q, theta=phi))
+        c.add(gates.RZ(q=self.q, theta=phi))
 
-        c.add(qibo.gates.M(self.q))
+        c.add(gates.M(self.q))
 
         return c
 

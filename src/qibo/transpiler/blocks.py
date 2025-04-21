@@ -227,7 +227,7 @@ def _initial_block_decomposition(circuit: Circuit):
     This decomposition is not minimal.
 
     Args:
-        circuit (qibo.models.Circuit): circuit to be decomposed.
+        circuit (:class:`qibo.models.Circuit`): circuit to be decomposed.
 
     Return:
         blocks (list): list of blocks that act on two qubits.
