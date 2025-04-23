@@ -18,6 +18,7 @@ def HammingWeightBackend(engine=None):
 
         engine = _get_engine_name(_check_backend(engine))
 
+    backend = None  # needed for pylint
     if engine == "numpy":
         from qibo.backends import NumpyBackend  # pylint: disable=C0415
 
