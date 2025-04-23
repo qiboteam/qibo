@@ -3918,4 +3918,8 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
+<<<<<<< HEAD
 content-hash = "704344dfe0f199bb3e8315183fe6ab59be4d63658ef78681034352e105380a25"
+=======
+content-hash = "e39333e4ad4fc8af726007482076119422a55d208949bffd71971ce1aa013163"
+>>>>>>> master
