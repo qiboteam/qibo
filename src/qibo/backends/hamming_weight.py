@@ -35,11 +35,11 @@ def HammingWeightBackend(engine=None):
         from qibojit.backends import CuQuantumBackend  # pylint: disable=C0415
 
         backend = CuQuantumBackend()
-    elif engine == "tensorflow":
+    elif engine == "tensorflow":  # pragma: no cover
         from qiboml.backends import TensorflowBackend  # pylint: disable=E0401
 
         backend = TensorflowBackend()
-    elif engine == "pytorch":
+    elif engine == "pytorch":  # pragma: no cover
         from qiboml.backends import PyTorchBackend  # pylint: disable=E0401
 
         backend = PyTorchBackend()
