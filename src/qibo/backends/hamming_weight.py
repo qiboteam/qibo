@@ -35,11 +35,11 @@ def HammingWeightBackend(engine=None):
 
         backend = CuQuantumBackend()
     elif engine == "tensorflow":
-        from qiboml.backends import TensorflowBackend  # pylint: disable=C0415
+        from qiboml.backends import TensorflowBackend  # pylint: disable=E0401
 
         backend = TensorflowBackend()
     elif engine == "pytorch":
-        from qiboml.backends import PyTorchBackend  # pylint: disable=C0415
+        from qiboml.backends import PyTorchBackend  # pylint: disable=E0401
 
         backend = PyTorchBackend()
     else:  # pragma: no cover
@@ -61,7 +61,9 @@ def HammingWeightBackend(engine=None):
         if method_name in methods:
             methods[method_name] = cache(methods[method_name])
 
-    HWBackend = type("HammingWeightBackend", (backend.__class__,), methods)
+    HWBackend = type(
+        "HammingWeightBackend", (backend.__class__,), methods
+    )  # pylint: disable=E0606
 
     hw_backend = HWBackend()
     hw_backend.name = "hamming_weight"
