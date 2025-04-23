@@ -42,11 +42,9 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
     ):  # pylint: disable=too-many-arguments
 
         backend = HammingWeightBackend(engine)
-        QuantumState.__init__(self, state, backend.engine)
-        MeasurementOutcomes.__init__(self, measurements, backend.engine)
+        QuantumState.__init__(self, state, backend)
+        MeasurementOutcomes.__init__(self, measurements, backend)
 
-        self._backend = backend
-        self.engine = self._backend.engine
         self.measurements = measurements
         self.nqubits = nqubits
         self.nshots = nshots
@@ -75,7 +73,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         Returns:
             str: String representing the state in the computational basis.
         """
-        terms = self._backend.calculate_symbolic(
+        terms = self.backend.calculate_symbolic(
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
         )
         return " + ".join(terms)
@@ -102,13 +100,13 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             This method is inefficient in runtime and memory for a large number of qubits.
         """
 
-        self._backend._dict_indexes = self._backend._get_lexicographical_order(
+        self.backend._dict_indexes = self.backend._get_lexicographical_order(
             self.nqubits, self.weight
         )
 
-        state = self.engine.np.zeros(2**self.nqubits, dtype=self.engine.np.complex128)
-        state = self.engine.cast(state, dtype=state.dtype)
-        indices = list(self._backend._dict_indexes.values())
+        state = self.backend.np.zeros(2**self.nqubits, dtype=self.backend.np.complex128)
+        state = self.backend.cast(state, dtype=state.dtype)
+        indices = list(self.backend._dict_indexes.values())
         indices.sort()
         indices = np.asarray(indices)
         state[list(indices[:, 1])] = self._state[list(indices[:, 0])]
@@ -150,7 +148,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         if qubits is None:
             qubits = tuple(range(self.nqubits))
 
-        return self._backend.calculate_probabilities(
+        return self.backend.calculate_probabilities(
             self._state, qubits, self.weight, self.nqubits
         )
 
@@ -185,10 +183,10 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         self._probs = probs
 
         if nqubits != self.nqubits:
-            self._backend._dict_indexes = None
+            self.backend._dict_indexes = None
 
-        return self.backend.calculate_probabilities(
-            self.engine.np.sqrt(probs), qubits, nqubits
+        return self.backend.calculate_full_probabilities(
+            self.backend.np.sqrt(probs), qubits, nqubits
         )
 
     def samples(self, binary: bool = True, registers: bool = False):

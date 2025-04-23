@@ -226,7 +226,7 @@ class M(Gate):
 
         qubits = sorted(self.target_qubits)
         probs = backend.calculate_probabilities(state, qubits, weight, nqubits)
-        shot = self.result.add_shot(probs, backend=backend.engine)
+        shot = self.result.add_shot(probs, backend=backend)
 
         return backend.collapse_state(state, qubits, shot, weight, nqubits)
 
