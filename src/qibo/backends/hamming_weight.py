@@ -27,11 +27,11 @@ def HammingWeightBackend(engine=None):
         from qibojit.backends import NumbaBackend  # pylint: disable=C0415
 
         backend = NumbaBackend()
-    elif engine == "cupy":
+    elif engine == "cupy":  # pragma: no cover
         from qibojit.backends import CupyBackend  # pylint: disable=C0415
 
         backend = CupyBackend()
-    elif engine == "cuquantum":
+    elif engine == "cuquantum":  # pragma: no cover
         from qibojit.backends import CuQuantumBackend  # pylint: disable=C0415
 
         backend = CuQuantumBackend()
