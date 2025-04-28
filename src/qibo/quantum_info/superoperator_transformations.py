@@ -1,6 +1,8 @@
 """Module with the most commom superoperator transformations."""
 
+# %%
 import warnings
+from itertools import product
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -12,6 +14,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
+from qibo.quantum_info.utils import hamming_weight
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -2294,3 +2297,137 @@ def _individual_kraus_to_liouville(
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops
+
+
+def _hadamard_element_exponent(
+    first_index: int, second_index: int, return_weight: bool = True, backend=None
+):
+    backend = _check_backend(backend)
+
+    bit_and = int(backend.np.bitwise_and(first_index, second_index))
+
+    if return_weight:
+        return hamming_weight(bit_and)
+
+    return bit_and
+
+
+def _get_pauli_ordering(nqubits: int, pauli_order: str = "IXYZ"):
+    dims = 2**nqubits
+
+    paulis = list(pauli_order)
+    bits = [f"{elem:0{2}b}" for elem in range(4)]
+    paulis = dict(zip(paulis, bits))
+
+    indexes = np.array(
+        [[paulis["I"], paulis["Z"]], [paulis["X"], paulis["Y"]]]
+    ).flatten()
+    indexes = ["".join(elem) for elem in list(product(indexes, repeat=nqubits))]
+    indexes = np.reshape(indexes, (2,) * (2 * nqubits))
+
+    axes_old = list(range(2 * nqubits))
+    indexes = np.transpose(indexes, axes_old[0::2] + axes_old[1::2])
+    del axes_old
+
+    indexes = np.ravel(np.reshape(indexes, (dims,) * 2))
+
+    return [int(elem) for elem in np.argsort(indexes)]
+
+
+def _to_pauli_fht(
+    operator, normalize: bool = True, pauli_order: str = "IXYZ", backend=None
+):
+    backend = _check_backend(backend)
+
+    dims = operator.shape[0]
+    nqubits = int(np.log2(dims))
+
+    q_array = backend.np.arange(dims, dtype=backend.np.int64)
+
+    alphas = backend.np.zeros((dims, dims))
+    alphas = backend.cast(alphas, dtype=backend.np.float64)
+    for ind_row in q_array:
+        for ind_col in q_array:
+            elem = 0
+            for q_ind in q_array:
+                q_xor_r = backend.np.bitwise_xor(q_ind, ind_row)
+                hadamard_exp = _hadamard_element_exponent(
+                    q_ind, ind_col, return_weight=True
+                )
+                state_elem = operator[q_xor_r, q_ind]
+                elem += state_elem * ((-1) ** hadamard_exp)
+            hadamard_exp = _hadamard_element_exponent(
+                ind_row, ind_col, return_weight=True
+            )
+            elem *= 1j ** (-hadamard_exp)
+            if backend.np.abs(elem.imag) > 1e-14 and backend.np.abs(elem.real) < 1e-14:
+                elem = 1j * elem
+
+            alphas[ind_row, ind_col] = elem.real
+
+    ordering = _get_pauli_ordering(nqubits, pauli_order=pauli_order)
+    alphas = backend.np.ravel(alphas)
+    alphas = alphas[ordering]
+
+    if normalize:
+        alphas /= backend.np.sqrt(dims)
+
+    return alphas
+
+
+def _from_pauli_fht(operator, pauli_order: str = "IXYZ", backend=None):
+    backend = _check_backend(backend)
+
+    dims = int(np.sqrt(operator.shape[0]))
+    nqubits = int(np.log2(dims))
+
+    q_array = backend.np.arange(dims, dtype=backend.np.int64)
+
+    # if len(operator.shape) == 1:
+    #     operator = backend.np.reshape(operator, (dims, dims))
+
+    ordering = _get_pauli_ordering(nqubits, pauli_order=pauli_order)
+
+    print(operator)
+    operator = operator[ordering]
+    print(operator)
+    operator = backend.np.reshape(operator, (dims, dims)).T
+
+    a_matrix = backend.np.zeros((dims, dims))
+    a_matrix = backend.cast(a_matrix, dtype=backend.np.complex128)
+    for ind_row in q_array:
+        for ind_col in q_array:
+            r_and_s = backend.np.bitwise_xor(ind_row, ind_col)
+            elem = 0
+            for q_ind in q_array:
+                hadamard_exp = _hadamard_element_exponent(
+                    q_ind, ind_col, return_weight=True, backend=backend
+                )
+                elem += operator[r_and_s, q_ind] * (-1) ** hadamard_exp
+            hadamard_exp = _hadamard_element_exponent(
+                backend.np.bitwise_not(ind_row),
+                ind_col,
+                return_weight=True,
+                backend=backend,
+            )
+            a_matrix[ind_row, ind_col] = elem * (1j**hadamard_exp)
+
+    return a_matrix
+
+
+# %%
+import numpy as np
+
+from qibo.quantum_info.random_ensembles import random_statevector
+
+nqubits = 1
+dims = 2**nqubits
+
+state = random_statevector(dims, seed=10)
+state = np.outer(state, state.conj())
+print(state)
+print()
+
+state_pauli = _to_pauli_fht(state)
+
+_from_pauli_fht(state_pauli)
