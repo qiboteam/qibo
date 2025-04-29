@@ -23,8 +23,6 @@ def test_set_get_backend():
 def test_set_dtype():
     import numpy as np
 
-    assert qibo.get_dtype() == "complex128"
-
     qibo.set_dtype("float32")
     assert matrices.I.dtype == np.float32
     assert qibo.get_dtype() == "float32"
@@ -37,10 +35,17 @@ def test_set_dtype():
     assert matrices.I.dtype == np.complex64
     assert qibo.get_dtype() == "complex64"
 
+    qibo.set_dtype("complex128")
+    assert matrices.I.dtype == np.complex128
+    assert qibo.get_dtype() == "complex128"
+
 
 @pytest.mark.parametrize("dtype", ["complex128", "complex64", "float64", "float32"])
 @pytest.mark.parametrize("nqubits", [4, 7])
 def test_dtype_execution(backend, nqubits, dtype):
+    with pytest.raises(ValueError):
+        backend.set_dtype("complex")
+
     backend.set_dtype(dtype)
 
     initial_state = random_statevector(
