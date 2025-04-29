@@ -335,6 +335,11 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
 def test_ics(backend, nqubits, noise, full_output, readout):
     np.random.seed(10)
     backend.set_seed(10)
+    backend.set_dtype("complex128")
+
+    from qibo import set_dtype
+
+    set_dtype("complex128")
 
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
