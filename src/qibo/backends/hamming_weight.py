@@ -10,6 +10,8 @@ from qibo.config import raise_error
 def HammingWeightBackend(engine=None):
     """Dynamically create a HammingWeightBackend class based on the selected backend."""
 
+    from qibo.backends import construct_backend  # pylint: disable=C415
+
     if engine is None:
         from qibo.backends import (  # pylint: disable=C0415
             _check_backend,
@@ -20,29 +22,11 @@ def HammingWeightBackend(engine=None):
 
     backend = None  # needed for pylint
     if engine == "numpy":
-        from qibo.backends import NumpyBackend  # pylint: disable=C0415
-
-        backend = NumpyBackend()
-    elif engine in "numba":
-        from qibojit.backends import NumbaBackend  # pylint: disable=C0415
-
-        backend = NumbaBackend()
-    elif engine == "cupy":  # pragma: no cover
-        from qibojit.backends import CupyBackend  # pylint: disable=C0415
-
-        backend = CupyBackend()
-    elif engine == "cuquantum":  # pragma: no cover
-        from qibojit.backends import CuQuantumBackend  # pylint: disable=C0415
-
-        backend = CuQuantumBackend()
-    elif engine == "tensorflow":  # pragma: no cover
-        from qiboml.backends import TensorflowBackend  # pylint: disable=E0401
-
-        backend = TensorflowBackend()
-    elif engine == "pytorch":  # pragma: no cover
-        from qiboml.backends import PyTorchBackend  # pylint: disable=E0401
-
-        backend = PyTorchBackend()
+        backend = construct_backend("numpy", platform=engine)
+    elif engine in ["numba", "cupy", "cuquantum"]:
+        backend = construct_backend("qibojit", platform=engine)
+    elif engine in ["tensorflow", "pytorch"]:  # pragma: no cover
+        backend = construct_backend("qiboml", platform=engine)
     else:  # pragma: no cover
         raise_error(
             NotImplementedError,
@@ -50,9 +34,7 @@ def HammingWeightBackend(engine=None):
             + "Hamming-weight-preserving circuit simulation.",
         )
 
-    spec = find_spec("qibo.backends._hamming_weight_operations")
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
+    import qibo.backends._hamming_weight_operations as module
 
     methods = {
         name: func for name, func in inspect.getmembers(module, inspect.isfunction)
