@@ -370,10 +370,6 @@ class Gate:
         Returns:
             list: gates that have the same effect as applying the original gate.
         """
-        # TODO: Implement this method for all gates not supported by OpenQASM.
-        # Currently this is implemented only for multi-controlled X gates.
-        # If it is used on a different gate it will just return a deep copy
-        # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     def matrix(self, backend=None):
@@ -408,10 +404,6 @@ class Gate:
 
         Returns:
             ndarray: Matrix representation of gate.
-
-        .. note::
-            ``Gate.matrix`` was defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
-            From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
         """
         backend = _check_backend(backend)
 
