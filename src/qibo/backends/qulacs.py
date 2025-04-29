@@ -1,6 +1,6 @@
+"""Module defining the Qulacs backend."""
 import re
 
-import numpy as np
 import qulacs  # pylint: disable=import-error
 from qulacs import (  # pylint: disable=no-name-in-module, import-error
     QuantumCircuitSimulator,

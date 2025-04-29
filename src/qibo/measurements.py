@@ -111,7 +111,8 @@ class MeasurementResult:
     def nshots(self) -> int:
         if self.has_samples():
             return len(self._samples)
-        elif self._frequencies is not None:
+
+        if self._frequencies is not None:
             return sum(self._frequencies.values())
 
     def add_shot(self, probs, backend=None):
