@@ -1,4 +1,5 @@
 """Module defining the Qulacs backend."""
+
 import re
 
 import qulacs  # pylint: disable=import-error
