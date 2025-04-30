@@ -288,6 +288,12 @@ For instance, the following two circuit generations are equivalent:
 .. autofunction:: qibo.models.encodings.phase_encoder
 
 
+Sparse encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.sparse_encoder
+
+
 Binary encoder
 """"""""""""""
 
@@ -2031,6 +2037,12 @@ Schmidt decomposition
 """""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.schmidt_decomposition
+
+
+Lanczos algorithm
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.lanczos
 
 
 Quantum Networks

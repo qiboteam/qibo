@@ -1,4 +1,5 @@
-"""Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
+"""Test :meth:`qibo.models.circuit.Circuit.get_parameters` and
+:meth:`qibo.models.circuit.Circuit.set_parameters`."""
 
 import sys
 
@@ -6,6 +7,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import MissingBackend
 
 
 def test_rx_parameter_setter(backend):
@@ -221,7 +223,7 @@ def test_variable_theta():
         from qibo.backends import construct_backend
 
         backend = construct_backend(backend="qiboml", platform="tensorflow")
-    except ModuleNotFoundError:  # pragma: no cover
+    except MissingBackend:  # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
 
     theta1 = backend.tf.Variable(0.1234, dtype=backend.tf.float64)

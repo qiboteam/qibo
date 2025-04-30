@@ -261,7 +261,8 @@ class Clifford:
                     [
                         [p0.get(q) for q in measured_qubits],
                         [p1.get(q) for q in measured_qubits],
-                    ]
+                    ],
+                    dtype=self._backend.np.float64,
                 )
                 samples = self._backend.cast(samples, dtype="int32")
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)

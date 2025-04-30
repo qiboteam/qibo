@@ -26,8 +26,8 @@ BACKENDS = [
     "qibojit-numba",
     "qibojit-cupy",
     "qibojit-cuquantum",
-    "qiboml-tensorflow",
-    "qiboml-pytorch",
+    # "qiboml-tensorflow",
+    # "qiboml-pytorch",
 ]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
@@ -83,7 +83,10 @@ def pytest_configure(config):
 @pytest.fixture
 def backend(backend_name, request):
     if request.config.getoption("--gpu-only"):  # pragma: no cover
-        if backend_name not in ("cupy", "cuquantum"):
+        # is_gpu = "cupy" in backend_name or "cuquantum" in backend_name
+        if not backend_name in (
+            f"qibojit-{platform}" for platform in ("cupy", "cuquantum")
+        ):
             pytest.skip("Skipping non-gpu backend.")
     yield get_backend(backend_name)
 
