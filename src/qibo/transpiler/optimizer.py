@@ -76,7 +76,9 @@ class InverseCancellation(Optimizer):
         a quantum circuit.
         """
 
-        self.inverse_gates = gates.H|gates.Y|gates.Z|gates.X|gates.CNOT|gates.CZ|gates.SWAP
+        self.inverse_gates = (
+            gates.H | gates.Y | gates.Z | gates.X | gates.CNOT | gates.CZ | gates.SWAP
+        )
         self.pos_rm_inv_gate = []
 
     def __call__(self, circuit: Circuit) -> Circuit:
@@ -91,7 +93,7 @@ class InverseCancellation(Optimizer):
             adjacent gates removed.
         """
 
-        if (0 == circuit.ngates or circuit.gates_of_type(gates.FusedGate)):
+        if 0 == circuit.ngates or circuit.gates_of_type(gates.FusedGate):
             return circuit
 
         self.__find_pos_rm(circuit.nqubits, circuit.queue)
@@ -145,7 +147,9 @@ class InverseCancellation(Optimizer):
                     for q in gate.init_args:
                         previous_gates[q] = None
                 else:
-                    self.__update_previous_gates(gate.init_args, i, gate, previous_gates)
+                    self.__update_previous_gates(
+                        gate.init_args, i, gate, previous_gates
+                    )
             else:
                 self.__update_previous_gates(gate.init_args, i, gate, previous_gates)
 
@@ -157,7 +161,7 @@ class InverseCancellation(Optimizer):
             previous_gates[q] = (idx, gate)
 
     @staticmethod
-    def __same_gates(gate1: gates.Gate, gate2: gates.Gate)-> bool:
+    def __same_gates(gate1: gates.Gate, gate2: gates.Gate) -> bool:
         """Determines whether two gates are considered the same.
 
         Args:
@@ -184,7 +188,7 @@ class RotationGateFusion(Optimizer):
         a quantum circuit.
         """
 
-        self.rotated_gates = gates.RX|gates.RY|gates.RZ
+        self.rotated_gates = gates.RX | gates.RY | gates.RZ
         self.gates = []
 
     def __call__(self, circuit: Circuit) -> Circuit:
@@ -227,7 +231,9 @@ class RotationGateFusion(Optimizer):
             if isinstance(gate, self.rotated_gates):
                 prev_gate = previous_gates[primary_qubit]
                 if isinstance(prev_gate, gate.__class__):
-                    tmp_gate = gate.__class__(primary_qubit, prev_gate.parameters[0] + gate.parameters[0])
+                    tmp_gate = gate.__class__(
+                        primary_qubit, prev_gate.parameters[0] + gate.parameters[0]
+                    )
                     previous_gates[primary_qubit] = tmp_gate
                 else:
                     if isinstance(prev_gate, self.rotated_gates):
@@ -317,30 +323,38 @@ class U3GateFusion(Optimizer):
 
     @staticmethod
     def __extract_u3_params(unitary_matrix: np.ndarray):
-        """ Extracts the theta, phi, and lambda parameters from a fused U3 unitary matrix.
+        """Extracts the theta, phi, and lambda parameters from a fused U3 unitary matrix.
 
         Args:
             unitary_matrix (np.ndarray): a unitary matrix.
         """
 
-        theta_r = 2 * np.arccos(np.sqrt(np.abs(unitary_matrix[0, 0]*unitary_matrix[1, 1])))
+        theta_r = 2 * np.arccos(
+            np.sqrt(np.abs(unitary_matrix[0, 0] * unitary_matrix[1, 1]))
+        )
         sin_r = np.sin(theta_r / 2)
         cos_r = np.cos(theta_r / 2)
 
-        if 0 == cos_r :
-            lambda_r = -1j * np.log( -1 * unitary_matrix[0, 1])
+        if 0 == cos_r:
+            lambda_r = -1j * np.log(-1 * unitary_matrix[0, 1])
             phi_r = -1j * np.log(unitary_matrix[1, 0])
         elif 0 == sin_r:
-            lambda_r = -1j * np.log( unitary_matrix[1, 1])
-            phi_r =  1j * np.log(unitary_matrix[0, 0])
+            lambda_r = -1j * np.log(unitary_matrix[1, 1])
+            phi_r = 1j * np.log(unitary_matrix[0, 0])
         else:
-            phi_r = -1j * np.log((unitary_matrix[1, 0] * unitary_matrix[1, 1]) / ( sin_r * cos_r))
-            lambda_r = -1j * np.log((sin_r * unitary_matrix[1, 1]) / (unitary_matrix[1, 0] * cos_r))
+            phi_r = -1j * np.log(
+                (unitary_matrix[1, 0] * unitary_matrix[1, 1]) / (sin_r * cos_r)
+            )
+            lambda_r = -1j * np.log(
+                (sin_r * unitary_matrix[1, 1]) / (unitary_matrix[1, 0] * cos_r)
+            )
 
         return theta_r, np.real(phi_r), np.real(lambda_r)
 
     @staticmethod
-    def __create_u3_fusion (qubit: int, gate1: gates.Gate, gate2: gates.Gate) -> gates.Gate:
+    def __create_u3_fusion(
+        qubit: int, gate1: gates.Gate, gate2: gates.Gate
+    ) -> gates.Gate:
         """Create a U3 gate using two U3 gates.
 
         Args:
