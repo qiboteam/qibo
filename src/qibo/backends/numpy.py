@@ -836,19 +836,6 @@ class NumpyBackend(Backend):
             + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
         )
 
-    # TODO: remove this method
-    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        return matrix1 @ matrix2
-
-    # TODO: remove this method
-    def calculate_hamiltonian_state_product(self, matrix, state):
-        if len(tuple(state.shape)) > 2:
-            raise_error(
-                ValueError,
-                f"Cannot multiply Hamiltonian with rank-{len(tuple(state.shape))} tensor.",
-            )
-        return matrix @ state
-
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
             value = value.state()
