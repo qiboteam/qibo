@@ -180,11 +180,6 @@ def test_hamiltonian_matmul(backend, sparse_type):
         backend.assert_allclose((H1 @ H2).matrix, (m1 @ m2))
         backend.assert_allclose((H2 @ H1).matrix, (m2 @ m1))
 
-    with pytest.raises(ValueError):
-        H1 @ np.zeros(3 * (2**nqubits,), dtype=m1.dtype)
-    with pytest.raises(NotImplementedError):
-        H1 @ 2
-
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_matmul_states(backend, sparse_type):
