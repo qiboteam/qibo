@@ -407,18 +407,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_hamiltonian_matrix_product(
-        self, matrix1, matrix2
-    ):  # pragma: no cover
-        """Multiply two matrices."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_hamiltonian_state_product(self, matrix, state):  # pragma: no cover
-        """Multiply a matrix to a state vector or density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):  # pragma: no cover
         raise_error(NotImplementedError)
 
