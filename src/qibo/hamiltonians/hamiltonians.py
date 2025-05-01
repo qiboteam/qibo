@@ -260,13 +260,11 @@ class Hamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, other):
         if isinstance(other, self.__class__):
-            matrix = self.backend.calculate_hamiltonian_matrix_product(
-                self.matrix, other.matrix
-            )
+            matrix = self.matrix @ other.matrix
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
         if isinstance(other, self.backend.tensor_types):
-            return self.backend.calculate_hamiltonian_state_product(self.matrix, other)
+            return self.matrix @ other
 
         raise_error(
             NotImplementedError,

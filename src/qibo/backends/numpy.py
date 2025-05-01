@@ -91,6 +91,14 @@ class NumpyBackend(Backend):
     def compile(self, func):
         return func
 
+    def zeros(self, shape, dtype=None):
+        if dtype is None:  # pragma: no cover
+            dtype = self.dtype
+        return self.np.zeros(shape, dtype=dtype)
+
+    def random_choice(self, a, **kwargs):
+        return self.np.random.choice(a, **kwargs)
+
     def zero_state(self, nqubits):
         state = self.np.zeros(2**nqubits, dtype=self.dtype)
         state[0] = 1
@@ -271,7 +279,7 @@ class NumpyBackend(Backend):
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
-        index = self.sample_shots(probabilities, 1)[0]
+        index = int(self.sample_shots(probabilities, 1)[0])
         if index != len(channel.gates):
             gate = channel.gates[index]
             state = self.apply_gate(gate, state, nqubits)
@@ -663,7 +671,7 @@ class NumpyBackend(Backend):
         self.np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(
+        return self.random_choice(
             range(len(probabilities)), size=nshots, p=probabilities
         )
 
@@ -700,7 +708,7 @@ class NumpyBackend(Backend):
         from qibo.config import SHOT_BATCH_SIZE
 
         nprobs = probabilities / self.np.sum(probabilities)
-        frequencies = self.np.zeros(len(nprobs), dtype=self.np.int64)
+        frequencies = self.zeros(len(nprobs), dtype=self.np.int64)
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
         frequencies = self.update_frequencies(
@@ -711,11 +719,13 @@ class NumpyBackend(Backend):
         )
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        noiseless_samples = self.cast(noiseless_samples, dtype=noiseless_samples.dtype)
-        fprobs = self.cast(bitflip_probabilities, dtype="float64")
         sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
-        flip_0 = self.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip_1 = self.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        flip_0 = self.cast(
+            sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
+        )
+        flip_1 = self.cast(
+            sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
+        )
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
@@ -821,19 +831,6 @@ class NumpyBackend(Backend):
             + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
         )
 
-    # TODO: remove this method
-    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
-        return matrix1 @ matrix2
-
-    # TODO: remove this method
-    def calculate_hamiltonian_state_product(self, matrix, state):
-        if len(tuple(state.shape)) > 2:
-            raise_error(
-                ValueError,
-                f"Cannot multiply Hamiltonian with rank-{len(tuple(state.shape))} tensor.",
-            )
-        return matrix @ state
-
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
             value = value.state()
@@ -842,25 +839,6 @@ class NumpyBackend(Backend):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
-
-    def _test_regressions(self, name):
-        if name == "test_measurementresult_apply_bitflips":
-            return [
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
-            ]
-        elif name == "test_probabilistic_measurement":
-            return {0: 249, 1: 231, 2: 253, 3: 267}
-        elif name == "test_unbalanced_probabilistic_measurement":
-            return {0: 171, 1: 148, 2: 161, 3: 520}
-        elif name == "test_post_measurement_bitflips_on_circuit":
-            return [
-                {5: 30},
-                {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
-                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
-            ]
 
 
 def _calculate_negative_power_singular_matrix(

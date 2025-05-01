@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.18"
+version = "0.2.19"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -24,7 +24,7 @@ include = ["*.out", "*.yml"]
 python = ">=3.10,<3.14"
 numpy = "^2.0.0"
 scipy = "^1.15.2"
-sympy = "^1.13.3"
+sympy = "^1.13.1"
 networkx = "^3.2.1"
 cma = "^3.4.0"
 joblib = "^1.4.2"
@@ -108,9 +108,6 @@ ignored-modules = ["cvxpy", "torch"]
 
 [tool.pylint.reports]
 output-format = "colorized"
-
-[tool.coverage.run]
-omit = ["src/qibo/noise_model.py"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
