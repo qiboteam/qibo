@@ -300,6 +300,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): Samples shots.
         """
+        # breakpoint()
         if isinstance(qubits, list):
             qubits = tuple(qubits)
 
@@ -308,7 +309,6 @@ class CliffordBackend(NumpyBackend):
             samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
             samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
-
         return self.engine.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(
