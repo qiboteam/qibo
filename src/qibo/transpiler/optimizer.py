@@ -147,9 +147,7 @@ class InverseCancellation(Optimizer):
                     for q in gate.init_args:
                         previous_gates[q] = None
                 else:
-                    self._update_previous_gates(
-                        gate.init_args, i, gate, previous_gates
-                    )
+                    self._update_previous_gates(gate.init_args, i, gate, previous_gates)
             else:
                 self._update_previous_gates(gate.init_args, i, gate, previous_gates)
 
