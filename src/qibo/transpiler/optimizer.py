@@ -72,7 +72,7 @@ class Rearrange(Optimizer):
 class InverseCancellation(Optimizer):
 
     def __init__(self):
-        """Identifies and removes pairs of adjacent gates from
+        """Identify and remove pairs of adjacent gates from
         a quantum circuit.
         """
 
@@ -82,7 +82,7 @@ class InverseCancellation(Optimizer):
         self.pos_rm_inv_gate = []
 
     def __call__(self, circuit: Circuit) -> Circuit:
-        """Performs pattern recognition to detect and eliminate adjacent gate pairs
+        """Perform pattern recognition to detect and eliminate adjacent gate pairs
         in the quantum circuit.
 
         Args:
@@ -96,7 +96,7 @@ class InverseCancellation(Optimizer):
         if 0 == circuit.ngates or circuit.gates_of_type(gates.FusedGate):
             return circuit
 
-        self.__find_pos_rm(circuit.nqubits, circuit.queue)
+        self._find_pos_rm(circuit.nqubits, circuit.queue)
 
         if 0 == len(self.pos_rm_inv_gate):
             return circuit
@@ -108,16 +108,16 @@ class InverseCancellation(Optimizer):
                 new_circuit.add(gate)
         return new_circuit
 
-    def __find_pos_rm(self, number_qubits: int, list_gates: list):
-        """Identifies and marks pairs of inverse gates that
+    def _find_pos_rm(self, nqubits: int, list_gates: list):
+        """Identify and mark pairs of inverse gates that
         can be removed from the circuit.
 
         Args:
-            number_qubits (int): number of qubits
-            list_gates (list): a list of gates (:class:`qibo.gates.abstract.Gate`)
+            nqubits (int): number of qubits.
+            list_gates (list): a list of gates (:class:`qibo.gates.abstract.Gate`).
         """
 
-        previous_gates = [None] * number_qubits
+        previous_gates = [None] * nqubits
 
         for i, gate in enumerate(list_gates):
 
@@ -125,10 +125,10 @@ class InverseCancellation(Optimizer):
             other_qubits = gate.init_args[1:]
 
             if previous_gates[primary_qubit] is None:
-                self.__update_previous_gates(gate.init_args, i, gate, previous_gates)
+                self._update_previous_gates(gate.init_args, i, gate, previous_gates)
 
             elif isinstance(gate, self.inverse_gates):
-                same_gate = self.__same_gates(gate, previous_gates[primary_qubit][1])
+                same_gate = self._same_gates(gate, previous_gates[primary_qubit][1])
 
                 secondary_match = True
                 if other_qubits:  # for multi-qubits gates
@@ -136,7 +136,7 @@ class InverseCancellation(Optimizer):
 
                     for q in other_qubits:
                         has_previous_gate = previous_gates[q] is not None
-                        is_same_gate = self.__same_gates(gate, previous_gates[q][1])
+                        is_same_gate = self._same_gates(gate, previous_gates[q][1])
                         conditions.append(has_previous_gate and is_same_gate)
 
                     secondary_match = all(conditions)
@@ -147,22 +147,22 @@ class InverseCancellation(Optimizer):
                     for q in gate.init_args:
                         previous_gates[q] = None
                 else:
-                    self.__update_previous_gates(
+                    self._update_previous_gates(
                         gate.init_args, i, gate, previous_gates
                     )
             else:
-                self.__update_previous_gates(gate.init_args, i, gate, previous_gates)
+                self._update_previous_gates(gate.init_args, i, gate, previous_gates)
 
     @staticmethod
-    def __update_previous_gates(qubits, idx, gate, previous_gates):
+    def _update_previous_gates(qubits, idx, gate, previous_gates):
         """Helper function to update previous gate tracking."""
 
         for q in qubits:
             previous_gates[q] = (idx, gate)
 
     @staticmethod
-    def __same_gates(gate1: gates.Gate, gate2: gates.Gate) -> bool:
-        """Determines whether two gates are considered the same.
+    def _same_gates(gate1: gates.Gate, gate2: gates.Gate) -> bool:
+        """Determine whether two gates are considered the same.
 
         Args:
             gate1: The first gate (:class:`qibo.gates.abstract.Gate`).
@@ -184,7 +184,7 @@ class InverseCancellation(Optimizer):
 class RotationGateFusion(Optimizer):
 
     def __init__(self):
-        """Identifies and fuse rotated gates (RX, RY, RZ) from
+        """Identify and fuse rotated gates (RX, RY, RZ) from
         a quantum circuit.
         """
 
@@ -192,7 +192,7 @@ class RotationGateFusion(Optimizer):
         self.gates = []
 
     def __call__(self, circuit: Circuit) -> Circuit:
-        """Finds and combines RX, RY, and RZ rotation gates in a quantum circuit.
+        """Find and combine RX, RY, and RZ rotation gates in a quantum circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to have gates identified.
@@ -206,23 +206,23 @@ class RotationGateFusion(Optimizer):
             return circuit
 
         tmp_new_circuit = circuit.copy(True)
-        self.__merge_rotation_gates(tmp_new_circuit.nqubits, tmp_new_circuit.queue)
+        self._merge_rotation_gates(tmp_new_circuit.nqubits, tmp_new_circuit.queue)
 
         new_circuit = circuit.__class__(**tmp_new_circuit.init_kwargs)
         for gate in self.gates:
             new_circuit.add(gate)
         return new_circuit
 
-    def __merge_rotation_gates(self, number_qubits: int, list_gates: list):
-        """Identifies and accumulates rotation angles for
+    def _merge_rotation_gates(self, nqubits: int, list_gates: list):
+        """Identify and accumulate rotation angles for
         consecutive rotation gates of the same type.
 
         Args:
-            number_qubits (int): number of qubits.
+            nqubits (int): number of qubits.
             list_gates (list): a list of gates (:class:`qibo.gates.abstract.Gate`).
         """
 
-        previous_gates = [None] * number_qubits
+        previous_gates = [None] * nqubits
 
         for gate in list_gates:
 
@@ -278,7 +278,7 @@ class U3GateFusion(Optimizer):
             return circuit
 
         tmp_new_circuit = circuit.copy(True)
-        self.__merge_u3gates(tmp_new_circuit.nqubits, tmp_new_circuit.queue)
+        self._merge_u3gates(tmp_new_circuit.nqubits, tmp_new_circuit.queue)
 
         new_circuit = circuit.__class__(**tmp_new_circuit.init_kwargs)
 
@@ -286,15 +286,15 @@ class U3GateFusion(Optimizer):
             new_circuit.add(gate)
         return new_circuit
 
-    def __merge_u3gates(self, number_qubits: int, list_gates: list):
-        """Identifies pairs of U3 gates that can be merged.
+    def _merge_u3gates(self, nqubits: int, list_gates: list):
+        """Identify pairs of U3 gates that can be merged.
 
         Args:
-            number_qubits (int): number of qubits.
+            nqubits (int): number of qubits.
             list_gates (list): a list of gates (:class:`qibo.gates.abstract.Gate`).
         """
 
-        previous_gates = [None] * number_qubits
+        previous_gates = [None] * nqubits
 
         for gate in list_gates:
 
@@ -303,7 +303,7 @@ class U3GateFusion(Optimizer):
             if isinstance(gate, gates.U3):
                 prev_gate = previous_gates[primary_qubit]
                 if isinstance(prev_gate, gates.U3):
-                    tmp_gate = self.__create_u3_fusion(primary_qubit, prev_gate, gate)
+                    tmp_gate = self._create_u3_fusion(primary_qubit, prev_gate, gate)
                     previous_gates[primary_qubit] = tmp_gate
                 else:
                     previous_gates[primary_qubit] = gate
@@ -322,8 +322,8 @@ class U3GateFusion(Optimizer):
         self.gates.extend(g for g in previous_gates if isinstance(g, gates.U3))
 
     @staticmethod
-    def __extract_u3_params(unitary_matrix: np.ndarray):
-        """Extracts the theta, phi, and lambda parameters from a fused U3 unitary matrix.
+    def _extract_u3_params(unitary_matrix: np.ndarray):
+        """Extract the theta, phi, and lambda parameters from a fused U3 unitary matrix.
 
         Args:
             unitary_matrix (np.ndarray): a unitary matrix.
@@ -352,7 +352,7 @@ class U3GateFusion(Optimizer):
         return theta_r, np.real(phi_r), np.real(lambda_r)
 
     @staticmethod
-    def __create_u3_fusion(
+    def _create_u3_fusion(
         qubit: int, gate1: gates.Gate, gate2: gates.Gate
     ) -> gates.Gate:
         """Create a U3 gate using two U3 gates.
@@ -367,11 +367,11 @@ class U3GateFusion(Optimizer):
         """
 
         if gate1 is None or gate2 is None:
-            raise_error(ValueError, "__create_u3_fusion: a/two gate/s is/are None.")
+            raise_error(ValueError, "_create_u3_fusion: a/two gate/s is/are None.")
 
         if not isinstance(gate1, gates.U3) or not isinstance(gate2, gates.U3):
-            raise_error(ValueError, "__create_u3_fusion: a/two gate/s is/are not U3.")
+            raise_error(ValueError, "_create_u3_fusion: a/two gate/s is/are not U3.")
 
         u_final = np.dot(gate2.matrix(), gate1.matrix())
-        theta, phi, lam = U3GateFusion.__extract_u3_params(u_final)
+        theta, phi, lam = U3GateFusion._extract_u3_params(u_final)
         return gates.U3(qubit, theta, phi, lam)
