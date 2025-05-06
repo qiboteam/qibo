@@ -38,7 +38,7 @@ class QuantumCNN:
             else:
                 self.copy_init_state = False
 
-        if self.qcnntype == 'ORIGINAL':
+        if self.qcnntype == 'COMPLEX':
             self.nparams_conv = 15
             self.nparams_pool = 6
         elif self.qcnntype == 'REAL':
@@ -55,8 +55,9 @@ class QuantumCNN:
         self.nparams_per_layer = self.nparams_conv + self.nparams_pool
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
 
-        print('qcnntype= %s: nparams_conv= %d, nparams_pool= %d, nparams_per_layer= %d, \
-               measured_qubits= %d\n'%(self.qcnntype,self.nparams_conv,self.nparams_pool,self.nparams_per_layer,self.measured_qubits))
+        print('qcnntype= %s: nparams_conv= %d, nparams_pool= %d, nparams_per_layer= %d,'
+               'measured_qubits= %d\n'%(self.qcnntype,self.nparams_conv,\
+               self.nparams_pool,self.nparams_per_layer,self.measured_qubits))
 
         self._circuit = self.ansatz(nlayers, params=params)  # what is params doing here?
 
@@ -149,7 +150,7 @@ class QuantumCNN:
 
         circuit = Circuit(self.nqubits)
 
-        if self.qcnntype == 'ORIGINAL':
+        if self.qcnntype == 'COMPLEX':
 
           # print('len(irrthetas) is %d'%(len(irrthetas)))
 
@@ -192,7 +193,7 @@ class QuantumCNN:
     def one_qubit_unitary(self, bit, irrthetas):
         circuit = Circuit(self.nqubits)
 
-        if self.qcnntype == 'ORIGINAL':
+        if self.qcnntype == 'COMPLEX':
           circuit.add(gates.RX(bit, irrthetas[0]))
           circuit.add(gates.RY(bit, irrthetas[1]))
           circuit.add(gates.RZ(bit, irrthetas[2]))
@@ -213,7 +214,7 @@ class QuantumCNN:
 
         # seems contruct sink and source circuits and then join them.
 
-        if self.qcnntype == 'ORIGINAL':
+        if self.qcnntype == 'COMPLEX':
           sink_basis_selector = self.one_qubit_unitary(sink_qubit, irrthetas[0:3])
           source_basis_selector = self.one_qubit_unitary(source_qubit, irrthetas[3:6])
         elif self.qcnntype == 'REAL':
@@ -283,7 +284,7 @@ class QuantumCNN:
             # print('in set_circuit_params: paramb= %d, len(conv_params)=%d, len(pool_params)= %d'%(paramb, len(conv_params), len(pool_params)))
 
 
-            if self.qcnntype == 'ORIGINAL': # For original, we have 0, 1, 2 (for the bottom sink,   and the 4, 5, 6. 
+            if self.qcnntype == 'COMPLEX': # For original, we have 0, 1, 2 (for the bottom sink,   and the 4, 5, 6. 
                                             # (for the top source)? . Real: we have 0 (for sink), 1 (for source)
               pool_params += [-pool_params[2], -pool_params[1], -pool_params[0]]   # R^dagger (or the inverted) operations
             elif self.qcnntype == 'REAL':
