@@ -43,6 +43,11 @@ def test_set_dtype():
 @pytest.mark.parametrize("dtype", ["complex128", "complex64", "float64", "float32"])
 @pytest.mark.parametrize("nqubits", [4, 7])
 def test_dtype_execution(backend, nqubits, dtype):
+    if backend.platform == "cuquantum":
+        with pytest.raises(NotImplementedError):
+            backend.set_dtype("float32")
+        pytest.skip("CuQuantumBackend does not support ``float32`` and ``float64``.")
+
     with pytest.raises(ValueError):
         backend.set_dtype("complex")
 
