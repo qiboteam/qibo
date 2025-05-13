@@ -157,6 +157,7 @@ class NumpyBackend(Backend):
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
             # gmatrix = self.to_numpy(gate.matrix(self))
+            gmatrix = gate.matrix(self)
             # add controls if controls were instantiated using
             # the ``Gate.controlled_by`` method
             num_controls = len(gate.control_qubits)
