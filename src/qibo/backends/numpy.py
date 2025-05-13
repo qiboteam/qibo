@@ -156,7 +156,7 @@ class NumpyBackend(Backend):
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
-            gmatrix = self.to_numpy(gate.matrix(self))
+            # gmatrix = self.to_numpy(gate.matrix(self))
             # add controls if controls were instantiated using
             # the ``Gate.controlled_by`` method
             num_controls = len(gate.control_qubits)
