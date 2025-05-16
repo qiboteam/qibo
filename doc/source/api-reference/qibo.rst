@@ -2761,16 +2761,9 @@ A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be execute
 
     # the above execution is equivalent to the following
     # that uses the global backend and the ``weight`` kwarg
-
-    set_backend("hamming_weight", platform="numpy")
-
-    result = circuit(weight=2)
-
-.. testsetup::  python
-    from qibo import set_backend
-
-    set_backend("numpy")
-
+    #
+    # set_backend("hamming_weight", platform="numpy")
+    # result = circuit(weight=2)
 
 .. autoclass:: qibo.backends.hamming_weight.HammingWeightBackend
     :members:
