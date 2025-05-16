@@ -2744,34 +2744,27 @@ If not provided, the current global backend is used:
     # the Hamming-weight backend will use the numpy backend as engine
     backend = HammingWeightBackend()
 
-A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be executed with
+A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be executed as the following example:
 
 .. testcode::  python
 
     from qibo import Circuit, gates, set_backend
-
-    set_backend("numpy")
-
-    nqubits = 4
-    circuit = Circuit(nqubits)
-    circuit.add(gates.SWAP(0, 1))
-
-    result = circuit(weight=2)
-
-or
-
-.. testcode::  python
-
-    from qibo import Circuit, gates
     from qibo.backends import HammingWeightBackend
 
+    backend = HammingWeightBackend()
+
     nqubits = 4
     circuit = Circuit(nqubits)
     circuit.add(gates.SWAP(0, 1))
 
-    backend = HammingWeightBackend("numpy")
-
     result = backend.execute_circuit(circuit, weight=2)
+
+    # the above execution is equivalent to the following
+    # that uses the global backend and the ``weight`` kwarg
+   
+    set_backend("hamming_weight", platform="numpy")
+
+    result = circuit(weight=2)        
 
 
 
