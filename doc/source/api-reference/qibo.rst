@@ -2761,10 +2761,10 @@ A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be execute
 
     # the above execution is equivalent to the following
     # that uses the global backend and the ``weight`` kwarg
-   
+
     set_backend("hamming_weight", platform="numpy")
 
-    result = circuit(weight=2)        
+    result = circuit(weight=2)
 
 
 
