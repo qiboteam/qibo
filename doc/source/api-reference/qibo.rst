@@ -2766,6 +2766,9 @@ A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be execute
 
     result = circuit(weight=2)
 
+.. testsetup::  python
+
+    set_backend("numpy")
 
 
 .. autoclass:: qibo.backends.hamming_weight.HammingWeightBackend
