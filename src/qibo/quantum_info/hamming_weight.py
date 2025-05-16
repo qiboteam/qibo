@@ -43,21 +43,12 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
 
         backend = HammingWeightBackend(engine)
         QuantumState.__init__(self, state, backend)
-        MeasurementOutcomes.__init__(self, measurements, backend)
+        MeasurementOutcomes.__init__(self, measurements, backend, nshots=nshots)
 
-        self.measurements = measurements
         self.nqubits = nqubits
-        self.nshots = nshots
         self.weight = weight
-        self.n_choose_k = int(binom(self.nqubits, self.weight))
 
         self._state = state
-        self._samples = None
-        self._probs = None
-        self._frequencies = None
-        self._measurement_gate = None
-        self._repeated_execution_frequencies = None
-        self._measurement_gate = self.measurement_gate
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
         """Dirac notation representation of the state in the computational basis.
@@ -77,21 +68,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self._state, self.nqubits, self.weight, decimals, cutoff, max_terms
         )
         return " + ".join(terms)
-
-    def state(self, numpy: bool = False):
-        """Tensor representation of ``state`` as a backend tensor in the subspace
-        of fixed Hamming weight.
-
-        Args:
-            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
-                otherwise it will follow the backend tensor type.
-                Defaults to ``False``.
-
-        Returns:
-            ndarray: State in the computational basis of the subspace
-            with fixed Hamming weight ordered in lexicographical order.
-        """
-        return super().state(numpy=numpy)
 
     def full_state(self):
         """Tensor representation of ``state`` in the entire computational basis.
