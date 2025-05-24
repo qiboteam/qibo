@@ -272,14 +272,24 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_symbolic(
-        self, state, nqubits: int, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20
+        self,
+        state,
+        nqubits: int,
+        decimals: int = 5,
+        cutoff: float = 1e-10,
+        max_terms: int = 20,
     ):  # pragma: no cover
         """Dirac representation of a state vector."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def calculate_symbolic_density_matrix(
-        self, state, nqubits: int, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20
+        self,
+        state,
+        nqubits: int,
+        decimals: int = 5,
+        cutoff: float = 1e-10,
+        max_terms: int = 20,
     ):  # pragma: no cover
         """Dirac representation of a density matrix."""
         raise_error(NotImplementedError)
@@ -338,7 +348,9 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_vector_norm(self, state, order: Union[int, float, str] = 2):  # pragma: no cover
+    def calculate_vector_norm(
+        self, state, order: Union[int, float, str] = 2
+    ):  # pragma: no cover
         """Calculate norm of an :math:`1`-dimensional array.
 
         For specifications on possible values of the parameter ``order``
@@ -350,7 +362,9 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_matrix_norm(self, state, order: Union[int, float, str] = "nuc"):  # pragma: no cover
+    def calculate_matrix_norm(
+        self, state, order: Union[int, float, str] = "nuc"
+    ):  # pragma: no cover
         """Calculate norm of a :math:`2`-dimensional array.
 
         Default is the ``nuclear`` norm.
@@ -440,10 +454,14 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def assert_allclose(self, value, target, rtol: float = 1e-7, atol: float = 0.0):  # pragma: no cover
+    def assert_allclose(
+        self, value, target, rtol: float = 1e-7, atol: float = 0.0
+    ):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def assert_circuitclose(self, circuit, target_circuit, rtol: float = 1e-7, atol: float = 0.0):
+    def assert_circuitclose(
+        self, circuit, target_circuit, rtol: float = 1e-7, atol: float = 0.0
+    ):
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)

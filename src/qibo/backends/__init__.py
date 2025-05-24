@@ -346,6 +346,7 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
                 + "backends.",
             )
 
+
 def _check_backend_and_local_state(seed, backend):
     if (
         seed is not None
