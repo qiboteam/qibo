@@ -24,7 +24,6 @@ class Channel(Gate):
     def controlled_by(self, *q):
         raise_error(ValueError, f"Noise channel cannot be controlled on qubits {q}.")
 
-
     def apply(self, backend, state, nqubits):  # pragma: no cover
         raise_error(
             NotImplementedError,
