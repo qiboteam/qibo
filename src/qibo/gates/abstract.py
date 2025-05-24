@@ -1,9 +1,12 @@
+"""Module defines the abstract gate classes Gate, SpecialGate, ParametrizedGate."""
+
 import collections
 import json
 from typing import List, Sequence, Tuple
 
 import sympy
 
+from qibo import config
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -48,8 +51,6 @@ class Gate:
     """
 
     def __init__(self):
-        from qibo import config
-
         self.name = None
         self.draw_label = None
         self.is_controlled_by = False
@@ -110,7 +111,10 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import gates, measurements
+        from qibo.gates import (
+            gates,
+            measurements,
+        )  # pylint: disable=import-outside-toplevel
 
         for mod in (gates, measurements):
             try:
@@ -270,12 +274,20 @@ class Gate:
 
                 from qibo import Circuit, gates
                 circuit = Circuit(4)
+
                 # Add some CNOT gates
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
+
+                # equivalent to gates.CNOT(2, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3}))
+                # equivalent to gates.CNOT(3, 0)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0}))
+                # equivalent to gates.CNOT(1, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3}))
+                # equivalent to gates.CNOT(2, 1)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1}))
+
                 circuit.draw()
+
             .. testoutput::
 
                 0: ───X─────
@@ -289,7 +301,9 @@ class Gate:
 
         targets = tuple(qubit_map.get(q) for q in self.target_qubits)
         gate = (
-            self.__class__(targets, **self.init_kwargs)  # pylint: disable=too-many-function-args
+            self.__class__(
+                targets, **self.init_kwargs
+            )  # pylint: disable=too-many-function-args
             if isinstance(self, Channel)
             else self.__class__(*targets, **self.init_kwargs)
         )
