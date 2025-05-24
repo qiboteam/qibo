@@ -300,13 +300,10 @@ class Gate:
         )
 
         targets = tuple(qubit_map.get(q) for q in self.target_qubits)
-        gate = (
-            self.__class__(
-                targets, **self.init_kwargs
-            )  # pylint: disable=too-many-function-args
-            if isinstance(self, Channel)
-            else self.__class__(*targets, **self.init_kwargs)
-        )
+        if isinstance(self, Channel):
+            gate = self.__class__(targets, **self.init_kwargs)  # pylint: disable=E1121
+        else:
+            gate = self.__class__(*targets, **self.init_kwargs)
 
         if self.is_controlled_by:
             controls = (qubit_map.get(q) for q in self.control_qubits)
