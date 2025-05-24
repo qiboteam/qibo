@@ -258,7 +258,7 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, qubit_map) -> "Gate":
+    def on_qubits(self, qubit_map: dict) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -295,10 +295,8 @@ class Gate:
                 2: ─o─|─|─o─
                 3: ─X─o─X───
         """
-        from qibo.gates.channels import (  # pyling: disable=import-outside-toplevel
-            Channel,
-        )
-
+        # Explicit mention of gates where the method
+        # `.controlled_by` fail. This should be fixed separatedly.
         gates_controlled_by_default = [
             "cx",
             "cy",
@@ -314,17 +312,14 @@ class Gate:
             "ccx",
             "ccz",
         ]
+
         qubits = (
             self.qubits
             if self.name in gates_controlled_by_default
             else self.target_qubits
         )
         qubits = tuple(qubit_map.get(q) for q in qubits)
-
-        if isinstance(self, Channel):
-            gate = self.__class__(qubits, **self.init_kwargs)  # pylint: disable=E1121
-        else:
-            gate = self.__class__(*qubits, **self.init_kwargs)
+        gate = self.__class__(*qubits, **self.init_kwargs)
 
         if self.is_controlled_by:
             controls = (qubit_map.get(q) for q in self.control_qubits)
@@ -483,7 +478,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
     def matrix(self, backend=None):  # pragma: no cover
@@ -549,7 +544,7 @@ class ParametrizedGate(Gate):
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         gate = super().on_qubits(qubit_map)
         gate.parameters = self.parameters
         return gate

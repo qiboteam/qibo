@@ -24,6 +24,12 @@ class Channel(Gate):
     def controlled_by(self, *q):
         raise_error(ValueError, f"Noise channel cannot be controlled on qubits {q}.")
 
+    def on_qubits(self, qubit_map: dict):  # pragma: no cover
+        raise_error(
+            NotImplementedError,
+            "`on_qubits` method is not available for the `Channel` gate.",
+        )
+
     def apply(self, backend, state, nqubits):  # pragma: no cover
         raise_error(
             NotImplementedError,
@@ -305,10 +311,18 @@ class KrausChannel(Channel):
                 unitary_check.append(gate.unitary)
             self.gates = tuple(gates)
             self.target_qubits = tuple(sorted(qubitset))
+        self._qubits = qubits
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
         self._all_unitary_operators = True if all(unitary_check) else False
+
+    def on_qubits(self, qubit_map: dict):
+        _qubits = [
+            tuple(qubit_map.get(qubit) for qubit in row) 
+            for row in self._qubits
+        ]
+        return self.__class__(_qubits, self.gates)
 
 
 class UnitaryChannel(KrausChannel):
