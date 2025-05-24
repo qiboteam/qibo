@@ -454,6 +454,10 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_args = qubits
         self.init_kwargs = dict(operators)
 
+    def on_qubits(self, qubit_map):
+        _qubits = tuple(qubit_map.get(qubit) for qubit in self.init_args)
+        return self.__class__(_qubits, list(self.init_kwargs.items()))
+
 
 class DepolarizingChannel(PauliNoiseChannel):
     """:math:`n`-qubit Depolarizing quantum error channel,
@@ -501,9 +505,14 @@ class DepolarizingChannel(PauliNoiseChannel):
 
         self.init_args = [qubits]
         self.init_kwargs = {"lam": lam}
+        self._qubits = qubits
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.depolarizing_error_density_matrix(self, state, nqubits)
+
+    def on_qubits(self, qubit_map: dict):
+        _qubits = tuple(qubit_map.get(qubit) for qubit in self._qubits)
+        return self.__class__(_qubits, self.init_kwargs["lam"])
 
 
 class ThermalRelaxationChannel(KrausChannel):
