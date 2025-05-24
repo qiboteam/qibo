@@ -283,14 +283,21 @@ class Gate:
                 2: ─o─|─|─o─
                 3: ─X─o─X───
         """
+        from qibo.gates.channels import (
+            Channel,
+        )  # pyling: disable=import-outside-toplevel
+
+        targets = tuple(qubit_map.get(q) for q in self.target_qubits)
+        gate = (
+            self.__class__(targets, **self.init_kwargs)
+            if isinstance(self, Channel)
+            else self.__class__(*targets, **self.init_kwargs)
+        )
+
         if self.is_controlled_by:
-            targets = (qubit_map.get(q) for q in self.target_qubits)
             controls = (qubit_map.get(q) for q in self.control_qubits)
-            gate = self.__class__(*targets, **self.init_kwargs)
             gate = gate.controlled_by(*controls)
-        else:
-            qubits = (qubit_map.get(q) for q in self.qubits)
-            gate = self.__class__(*qubits, **self.init_kwargs)
+
         return gate
 
     def _dagger(self) -> "Gate":
