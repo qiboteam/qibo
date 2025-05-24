@@ -289,7 +289,9 @@ class Gate:
 
         targets = tuple(qubit_map.get(q) for q in self.target_qubits)
         gate = (
-            self.__class__(targets, **self.init_kwargs)  # pylint: disable=too-many-function-args
+            self.__class__(
+                targets, **self.init_kwargs
+            )  # pylint: disable=too-many-function-args
             if isinstance(self, Channel)
             else self.__class__(*targets, **self.init_kwargs)
         )
