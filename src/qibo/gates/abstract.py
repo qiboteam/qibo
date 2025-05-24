@@ -299,11 +299,32 @@ class Gate:
             Channel,
         )
 
-        targets = tuple(qubit_map.get(q) for q in self.target_qubits)
+        gates_controlled_by_default = [
+            "cx",
+            "cy",
+            "cz",
+            "csx",
+            "csxdg",
+            "crx",
+            "cry",
+            "crz",
+            "cu1",
+            "cu2",
+            "cu3",
+            "ccx",
+            "ccz",
+        ]
+        qubits = (
+            self.qubits
+            if self.name in gates_controlled_by_default
+            else self.target_qubits
+        )
+        qubits = tuple(qubit_map.get(q) for q in qubits)
+
         if isinstance(self, Channel):
-            gate = self.__class__(targets, **self.init_kwargs)  # pylint: disable=E1121
+            gate = self.__class__(qubits, **self.init_kwargs)  # pylint: disable=E1121
         else:
-            gate = self.__class__(*targets, **self.init_kwargs)
+            gate = self.__class__(*qubits, **self.init_kwargs)
 
         if self.is_controlled_by:
             controls = (qubit_map.get(q) for q in self.control_qubits)
