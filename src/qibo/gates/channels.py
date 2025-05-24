@@ -318,10 +318,7 @@ class KrausChannel(Channel):
         self._all_unitary_operators = True if all(unitary_check) else False
 
     def on_qubits(self, qubit_map: dict):
-        _qubits = [
-            tuple(qubit_map.get(qubit) for qubit in row) 
-            for row in self._qubits
-        ]
+        _qubits = [tuple(qubit_map.get(qubit) for qubit in row) for row in self._qubits]
         return self.__class__(_qubits, self.gates)
 
 
