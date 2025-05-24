@@ -6,6 +6,7 @@ import numpy as np
 
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
+from qibo.backends.hamming_weight import HammingWeightBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
@@ -32,18 +33,22 @@ class MetaBackend:
             :class:`qibo.backends.abstract.Backend`: Loaded backend.
         """
 
-        if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
+        if backend not in QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight"):
             raise_error(
                 ValueError,
                 f"Backend {backend} is not available. "
-                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford',)}",
+                + f"The native qibo backends are {QIBO_NATIVE_BACKENDS + ('clifford', 'hamming_weight')}",
             )
 
-        if backend == "clifford":
+        if backend in ["clifford", "hamming_weight"]:
+            backend_class = (
+                CliffordBackend if backend == "clifford" else HammingWeightBackend
+            )
+
             engine = kwargs.pop("platform", None)
             kwargs["engine"] = engine
 
-            return CliffordBackend(**kwargs)
+            return backend_class(**kwargs)
 
         dtype = kwargs.pop("dtype", "complex128")
 
@@ -181,7 +186,7 @@ class QiboMatrices:
         self.TOFFOLI = self.matrices.TOFFOLI
         self.CCZ = self.matrices.CCZ
 
-        if dtype in ["complex64", "complex128"]:
+        if dtype in ("complex64", "complex128"):
             self.Y = self.matrices.Y
             self.SX = self.matrices.SX
             self.S = self.matrices.S
@@ -297,6 +302,10 @@ def _check_backend(backend):
     return backend
 
 
+def _get_engine_name(backend):
+    return backend.platform if backend.platform is not None else backend.name
+
+
 def list_available_backends(*providers: str) -> dict:
     """Lists all the backends that are available."""
     available_backends = MetaBackend().list_available()
@@ -319,6 +328,9 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
     Returns:
         qibo.backends.abstract.Backend: The loaded backend.
     """
+    if backend in QIBO_NATIVE_BACKENDS + ("clifford", "hamming_weight"):
+        return MetaBackend.load(backend, **kwargs)
+
     if backend not in QIBO_NATIVE_BACKENDS + ("clifford",):
         provider = backend.replace("-", "_")
         try:
@@ -333,9 +345,6 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
                 + f"package named '{provider}' is installed, and it is exposing valid Qibo "
                 + "backends.",
             )
-
-    return MetaBackend.load(backend, **kwargs)
-
 
 def _check_backend_and_local_state(seed, backend):
     if (

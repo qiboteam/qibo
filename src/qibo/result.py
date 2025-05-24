@@ -65,6 +65,10 @@ class QuantumState:
     def state(self, numpy: bool = False):
         """State's tensor representation as a backend tensor.
 
+        .. note::
+            If the state has Hamming weight :math:`k` and is computed using the ``HammingWeightBackend``, its dimension
+            is :math:`d = \\binom{n}{k}`, where :math:`n` is the number of qubits.
+
         Args:
             numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
                 otherwise it will follow the backend tensor type.
