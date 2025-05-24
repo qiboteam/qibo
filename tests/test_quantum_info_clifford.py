@@ -5,8 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import CliffordBackend
-from qibo.backends.clifford import _get_engine_name
+from qibo.backends import CliffordBackend, _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
     _one_qubit_paulis_string_product,

@@ -32,6 +32,7 @@ def test_h(backend):
 
     assert gates.H(0).qasm_label == "h"
     assert gates.H(0).clifford
+    assert not gates.H(0).hamming_weight
     assert gates.H(0).unitary
 
 
@@ -43,6 +44,7 @@ def test_x(backend):
 
     assert gates.X(0).qasm_label == "x"
     assert gates.X(0).clifford
+    assert not gates.X(0).hamming_weight
     assert gates.X(0).unitary
 
 
@@ -54,6 +56,7 @@ def test_y(backend):
 
     assert gates.Y(0).qasm_label == "y"
     assert gates.Y(0).clifford
+    assert not gates.Y(0).hamming_weight
     assert gates.Y(0).unitary
 
 
@@ -66,6 +69,7 @@ def test_z(backend):
 
     assert gates.Z(0).qasm_label == "z"
     assert gates.Z(0).clifford
+    assert gates.Z(0).hamming_weight
     assert gates.Z(0).unitary
 
 
@@ -105,6 +109,7 @@ def test_sx(backend):
 
     assert gates.SX(0).qasm_label == "sx"
     assert gates.SX(0).clifford
+    assert not gates.SX(0).hamming_weight
     assert gates.SX(0).unitary
 
 
@@ -144,6 +149,7 @@ def test_sxdg(backend):
 
     assert gates.SXDG(0).qasm_label == "sxdg"
     assert gates.SXDG(0).clifford
+    assert not gates.SXDG(0).hamming_weight
     assert gates.SXDG(0).unitary
 
 
@@ -154,6 +160,7 @@ def test_s(backend):
 
     assert gates.S(0).qasm_label == "s"
     assert gates.S(0).clifford
+    assert gates.S(0).hamming_weight
     assert gates.S(0).unitary
 
 
@@ -166,6 +173,7 @@ def test_sdg(backend):
 
     assert gates.SDG(0).qasm_label == "sdg"
     assert gates.SDG(0).clifford
+    assert gates.SDG(0).hamming_weight
     assert gates.SDG(0).unitary
 
 
@@ -176,6 +184,7 @@ def test_t(backend):
 
     assert gates.T(0).qasm_label == "t"
     assert not gates.T(0).clifford
+    assert gates.T(0).hamming_weight
     assert gates.T(0).unitary
 
 
@@ -188,6 +197,7 @@ def test_tdg(backend):
 
     assert gates.TDG(0).qasm_label == "tdg"
     assert not gates.TDG(0).clifford
+    assert gates.TDG(0).hamming_weight
     assert gates.TDG(0).unitary
 
 
@@ -202,6 +212,7 @@ def test_identity(backend):
 
     assert gates.I(0).qasm_label == "id"
     assert gates.I(0).clifford
+    assert gates.I(0).hamming_weight
     assert gates.I(0).unitary
 
 
@@ -235,7 +246,9 @@ def test_align(backend):
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
 
-@pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2.0, -np.pi / 2.0, np.pi])
+@pytest.mark.parametrize(
+    "theta", [np.random.rand(), np.pi / 2.0, -np.pi / 2.0, np.pi, 2 * np.pi]
+)
 def test_rx(backend, theta):
     nqubits = 1
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -259,6 +272,10 @@ def test_rx(backend, theta):
         assert gates.RX(0, theta=theta).clifford
     else:
         assert not gates.RX(0, theta=theta).clifford
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.RX(0, theta=theta).hamming_weight
+    else:
+        assert not gates.RX(0, theta=theta).hamming_weight
 
     # test Parameter
     assert (
@@ -272,7 +289,9 @@ def test_rx(backend, theta):
     )
 
 
-@pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2.0, -np.pi / 2.0, np.pi])
+@pytest.mark.parametrize(
+    "theta", [np.random.rand(), np.pi / 2.0, -np.pi / 2.0, np.pi, 2 * np.pi]
+)
 def test_ry(backend, theta):
     nqubits = 1
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -296,6 +315,10 @@ def test_ry(backend, theta):
         assert gates.RY(0, theta=theta).clifford
     else:
         assert not gates.RY(0, theta=theta).clifford
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.RY(0, theta=theta).hamming_weight
+    else:
+        assert not gates.RY(0, theta=theta).hamming_weight
 
 
 @pytest.mark.parametrize("apply_x", [True, False])
@@ -314,6 +337,7 @@ def test_rz(backend, theta, apply_x):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     assert gates.RZ(0, theta).qasm_label == "rz"
+    assert gates.RZ(0, theta=theta).hamming_weight
     assert gates.RZ(0, theta=theta).unitary
     if (theta % (np.pi / 2)).is_integer():
         assert gates.RZ(0, theta=theta).clifford
@@ -321,8 +345,8 @@ def test_rz(backend, theta, apply_x):
         assert not gates.RZ(0, theta=theta).clifford
 
 
-def test_prx(backend):
-    theta = 0.52
+@pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
+def test_prx(backend, theta):
     phi = 0.24
 
     nqubits = 1
@@ -355,6 +379,10 @@ def test_prx(backend):
     assert gates.PRX(0, theta, phi).qasm_label == "prx"
     assert not gates.PRX(0, theta, phi).clifford
     assert gates.PRX(0, theta, phi).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.PRX(0, theta=theta, phi=phi).hamming_weight
+    else:
+        assert not gates.PRX(0, theta=theta, phi=phi).hamming_weight
 
 
 def test_gpi(backend):
@@ -372,6 +400,7 @@ def test_gpi(backend):
 
     assert gates.GPI(0, phi).qasm_label == "gpi"
     assert not gates.GPI(0, phi).clifford
+    assert not gates.GPI(0, phi).hamming_weight
     assert gates.GPI(0, phi).unitary
 
 
@@ -392,6 +421,7 @@ def test_gpi2(backend):
 
     assert gates.GPI2(0, phi).qasm_label == "gpi2"
     assert not gates.GPI2(0, phi).clifford
+    assert not gates.GPI2(0, phi).hamming_weight
     assert gates.GPI2(0, phi).unitary
 
 
@@ -404,6 +434,7 @@ def test_u1(backend):
 
     assert gates.U1(0, theta).qasm_label == "u1"
     assert not gates.U1(0, theta).clifford
+    assert gates.U1(0, theta).hamming_weight
     assert gates.U1(0, theta).unitary
 
 
@@ -427,6 +458,7 @@ def test_u2(backend):
 
     assert gates.U2(0, phi, lam).qasm_label == "u2"
     assert not gates.U2(0, phi, lam).clifford
+    assert not gates.U2(0, phi, lam).hamming_weight
     assert gates.U2(0, phi, lam).unitary
 
 
@@ -473,6 +505,10 @@ def test_u3(backend, seed_state, seed_observable):
     assert gates.U3(0, theta, phi, lam).qasm_label == "u3"
     assert not gates.U3(0, theta, phi, lam).clifford
     assert gates.U3(0, theta, phi, lam).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.U3(0, theta, phi, lam).hamming_weight
+    else:
+        assert not gates.U3(0, theta, phi, lam).hamming_weight
 
 
 @pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
@@ -497,6 +533,10 @@ def test_u1q(backend, seed_state):
 
     assert not gates.U1q(0, theta, phi).clifford
     assert gates.U1q(0, theta, phi).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.U1q(0, theta, phi).hamming_weight
+    else:
+        assert not gates.U1q(0, theta, phi).hamming_weight
 
 
 @pytest.mark.parametrize("applyx", [False, True])
@@ -513,6 +553,7 @@ def test_cnot(backend, applyx):
 
     assert gates.CNOT(0, 1).qasm_label == "cx"
     assert gates.CNOT(0, 1).clifford
+    assert not gates.CNOT(0, 1).hamming_weight
     assert gates.CNOT(0, 1).unitary
 
 
@@ -561,6 +602,7 @@ def test_cy(backend, seed_state, seed_observable):
     assert gate.name == "cy"
     assert gate.qasm_label == "cy"
     assert gate.clifford
+    assert not gate.hamming_weight
     assert gate.unitary
 
 
@@ -603,6 +645,7 @@ def test_cz(backend, seed_state, seed_observable):
     assert gate.name == "cz"
     assert gate.qasm_label == "cz"
     assert gate.clifford
+    assert gate.hamming_weight
     assert gate.unitary
 
 
@@ -639,6 +682,7 @@ def test_csx(backend):
 
     assert gates.CSX(0, 1).qasm_label == "csx"
     assert not gates.CSX(0, 1).clifford
+    assert not gates.CSX(0, 1).hamming_weight
     assert gates.CSX(0, 1).unitary
 
 
@@ -675,6 +719,7 @@ def test_csxdg(backend):
 
     assert gates.CSXDG(0, 1).qasm_label == "csxdg"
     assert not gates.CSXDG(0, 1).clifford
+    assert not gates.CSXDG(0, 1).hamming_weight
     assert gates.CSXDG(0, 1).unitary
 
 
@@ -683,13 +728,16 @@ def test_csxdg(backend):
     [
         ("CRX", {"theta": 0.1}),
         ("CRX", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
+        ("CRX", {"theta": np.random.randint(-5, 5) * 2 * np.pi}),
         ("CRY", {"theta": 0.2}),
         ("CRY", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
+        ("CRY", {"theta": np.random.randint(-5, 5) * 2 * np.pi}),
         ("CRZ", {"theta": 0.3}),
         ("CRZ", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CU1", {"theta": 0.1}),
         ("CU2", {"phi": 0.1, "lam": 0.2}),
         ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
+        ("CU3", {"theta": 2 * np.pi, "phi": 0.2, "lam": 0.3}),
     ],
 )
 def test_cun(backend, name, params):
@@ -715,6 +763,24 @@ def test_cun(backend, name, params):
             assert gate.clifford
         else:
             assert not gate.clifford
+        if name == "CRZ":
+            assert gate.hamming_weight
+        else:
+            if (theta % (2 * np.pi)).is_integer():
+                assert gate.hamming_weight
+            else:
+                assert not gate.hamming_weight
+
+    if name == "CU1":
+        assert gate.hamming_weight
+    elif name == "CU2":
+        assert not gate.hamming_weight
+    elif name == "CU3":
+        theta = params["theta"]
+        if (theta % (2 * np.pi)).is_integer():
+            assert gate.hamming_weight
+        else:
+            assert not gate.hamming_weight
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
 
@@ -740,6 +806,7 @@ def test_swap(backend):
 
     assert gates.SWAP(0, 1).qasm_label == "swap"
     assert gates.SWAP(0, 1).clifford
+    assert gates.SWAP(0, 1).hamming_weight
     assert gates.SWAP(0, 1).unitary
 
 
@@ -751,6 +818,7 @@ def test_iswap(backend):
 
     assert gates.iSWAP(0, 1).qasm_label == "iswap"
     assert gates.iSWAP(0, 1).clifford
+    assert gates.iSWAP(0, 1).hamming_weight
     assert gates.iSWAP(0, 1).unitary
 
 
@@ -762,6 +830,7 @@ def test_siswap(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     assert not gates.SiSWAP(0, 1).clifford
+    assert gates.SiSWAP(0, 1).hamming_weight
     assert gates.SiSWAP(0, 1).unitary
 
 
@@ -799,6 +868,7 @@ def test_fswap(backend):
 
     assert gates.FSWAP(0, 1).qasm_label == "fswap"
     assert gates.FSWAP(0, 1).clifford
+    assert gates.FSWAP(0, 1).hamming_weight
     assert gates.FSWAP(0, 1).unitary
 
 
@@ -831,6 +901,7 @@ def test_fsim(backend):
         gates.fSim(0, 1, theta, phi).qasm_label
 
     assert not gates.fSim(0, 1, theta, phi).clifford
+    assert gates.fSim(0, 1, theta, phi).hamming_weight
     assert gates.fSim(0, 1, theta, phi).unitary
 
 
@@ -862,6 +933,7 @@ def test_sycamore(backend):
         gates.SYC(0, 1).qasm_label
 
     assert not gates.SYC(0, 1).clifford
+    assert gates.SYC(0, 1).hamming_weight
     assert gates.SYC(0, 1).unitary
 
 
@@ -885,6 +957,7 @@ def test_generalized_fsim(backend):
         gatelist[-1].qasm_label
 
     assert not gates.GeneralizedfSim(0, 1, rotation, phi).clifford
+    assert gates.GeneralizedfSim(0, 1, rotation, phi).hamming_weight
     assert gates.GeneralizedfSim(0, 1, rotation, phi).unitary
 
 
@@ -905,11 +978,12 @@ def test_generalized_fsim_parameter_setter(backend):
         gate.qasm_label
 
     assert not gate.clifford
+    assert gate.hamming_weight
     assert gate.unitary
 
 
-def test_rxx(backend):
-    theta = 0.1234
+@pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
+def test_rxx(backend, theta):
     final_state = apply_gates(
         backend, [gates.H(0), gates.H(1), gates.RXX(0, 1, theta=theta)], nqubits=2
     )
@@ -928,9 +1002,14 @@ def test_rxx(backend):
     assert gates.RXX(0, 1, theta=theta).qasm_label == "rxx"
     assert not gates.RXX(0, 1, theta).clifford
     assert gates.RXX(0, 1, theta).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.RXX(0, 1, theta).hamming_weight
+    else:
+        assert not gates.RXX(0, 1, theta).hamming_weight
 
 
-def test_ryy(backend):
+@pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
+def test_ryy(backend, theta):
     theta = 0.1234
     final_state = apply_gates(
         backend, [gates.H(0), gates.H(1), gates.RYY(0, 1, theta=theta)], nqubits=2
@@ -950,6 +1029,10 @@ def test_ryy(backend):
     assert gates.RYY(0, 1, theta=theta).qasm_label == "ryy"
     assert not gates.RYY(0, 1, theta).clifford
     assert gates.RYY(0, 1, theta).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.RYY(0, 1, theta).hamming_weight
+    else:
+        assert not gates.RYY(0, 1, theta).hamming_weight
 
 
 def test_rzz(backend):
@@ -963,11 +1046,12 @@ def test_rzz(backend):
 
     assert gates.RZZ(0, 1, theta=theta).qasm_label == "rzz"
     assert not gates.RZZ(0, 1, theta).clifford
+    assert gates.RZZ(0, 1, theta).hamming_weight
     assert gates.RZZ(0, 1, theta).unitary
 
 
-def test_rzx(backend):
-    theta = 0.1234
+@pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
+def test_rzx(backend, theta):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
@@ -1005,6 +1089,10 @@ def test_rzx(backend):
 
     assert not gates.RZX(0, 1, theta).clifford
     assert gates.RZX(0, 1, theta).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.RZX(0, 1, theta).hamming_weight
+    else:
+        assert not gates.RZX(0, 1, theta).hamming_weight
 
 
 def test_rxxyy(backend):
@@ -1054,13 +1142,14 @@ def test_rxxyy(backend):
         gates.RXXYY(0, 1, theta).qasm_label
 
     assert not gates.RXXYY(0, 1, theta).clifford
+    assert gates.RXXYY(0, 1, theta).hamming_weight
     assert gates.RXXYY(0, 1, theta).unitary
 
 
-def test_ms(backend):
+@pytest.mark.parametrize("theta", [0, np.pi / 2])
+def test_ms(backend, theta):
     phi0 = 0.1234
     phi1 = 0.4321
-    theta = np.pi / 2
 
     with pytest.raises(ValueError):
         gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=np.pi)
@@ -1088,6 +1177,10 @@ def test_ms(backend):
     assert gates.MS(0, 1, phi0, phi1, theta).qasm_label == "ms"
     assert not gates.MS(0, 1, phi0, phi1).clifford
     assert gates.MS(0, 1, phi0, phi1).unitary
+    if (theta % (2 * np.pi)).is_integer():
+        assert gates.MS(0, 1, phi0, phi1, theta).hamming_weight
+    else:
+        assert not gates.MS(0, 1, phi0, phi1, theta).hamming_weight
 
 
 def test_givens(backend):
@@ -1127,6 +1220,7 @@ def test_givens(backend):
         gates.GIVENS(0, 1, theta).qasm_label
 
     assert not gates.GIVENS(0, 1, theta).clifford
+    assert gates.GIVENS(0, 1, theta).hamming_weight
     assert gates.GIVENS(0, 1, theta).unitary
 
 
@@ -1167,6 +1261,7 @@ def test_rbs(backend):
         gates.RBS(0, 1, theta).qasm_label
 
     assert not gates.RBS(0, 1, theta).clifford
+    assert gates.RBS(0, 1, theta).hamming_weight
     assert gates.RBS(0, 1, theta).unitary
 
 
@@ -1214,6 +1309,7 @@ def test_ecr(backend):
         gates.ECR(0, 1).qasm_label
 
     assert gates.ECR(0, 1).clifford
+    assert not gates.ECR(0, 1).hamming_weight
     assert gates.ECR(0, 1).unitary
 
 
@@ -1233,6 +1329,7 @@ def test_toffoli(backend, applyx):
 
     assert gatelist[-1].qasm_label == "ccx"
     assert not gates.TOFFOLI(0, 1, 2).clifford
+    assert not gates.TOFFOLI(0, 1, 2).hamming_weight
     assert gates.TOFFOLI(0, 1, 2).unitary
 
     # test decomposition
@@ -1273,6 +1370,7 @@ def test_ccz(backend):
 
     assert gates.CCZ(0, 1, 2).qasm_label == "ccz"
     assert not gates.CCZ(0, 1, 2).clifford
+    assert gates.CCZ(0, 1, 2).hamming_weight
     assert gates.CCZ(0, 1, 2).unitary
 
     # test decomposition
@@ -1283,7 +1381,8 @@ def test_ccz(backend):
     backend.assert_allclose(decomposition, backend.cast(matrices.CCZ), atol=1e-10)
 
 
-def test_deutsch(backend):
+@pytest.mark.parametrize("theta", [np.random.rand(), np.pi])
+def test_deutsch(backend, theta):
     theta = 0.1234
     nqubits = 3
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -1318,11 +1417,21 @@ def test_deutsch(backend):
 
     assert not gates.DEUTSCH(0, 1, 2, theta).clifford
     assert gates.DEUTSCH(0, 1, 2, theta).unitary
+    if (theta % np.pi).is_integer():
+        assert gates.DEUTSCH(0, 1, 2, theta).hamming_weight
+    else:
+        assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
 
-def test_generalized_rbs(backend):
+@pytest.mark.parametrize(
+    "qubits_in,qubits_out",
+    [
+        ([0, 3], [1, 2]),
+        ([0], [1, 2]),
+    ],
+)
+def test_generalized_rbs(backend, qubits_in, qubits_out):
     theta, phi = 0.1234, 0.4321
-    qubits_in, qubits_out = [0, 3], [1, 2]
     nqubits = len(qubits_in + qubits_out)
     integer_in = "".join(["1" if k in qubits_in else "0" for k in range(nqubits)])
     integer_out = "".join(["1" if k in qubits_out else "0" for k in range(nqubits)])
@@ -1360,6 +1469,12 @@ def test_generalized_rbs(backend):
 
     assert not gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).clifford
     assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).unitary
+    if len(qubits_in) == len(qubits_out):
+        assert gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).hamming_weight
+    else:
+        assert not gates.GeneralizedRBS(
+            qubits_in, qubits_out, theta, phi
+        ).hamming_weight
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -1408,6 +1523,9 @@ def test_unitary_initialization(backend):
         gates.Unitary(matrix, 0, 1).qasm_label
 
     assert not gates.Unitary(matrix, 0, 1).clifford
+    assert not gates.Unitary(matrix, 0, 1).hamming_weight
+    gate.hamming_weight = True
+    assert gate.hamming_weight
     assert not gates.Unitary(matrix, 0, 1, check_unitary=False).unitary
     assert gates.Unitary(random_unitary(2, backend=backend), 0).unitary
 

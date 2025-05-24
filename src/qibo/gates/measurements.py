@@ -219,6 +219,17 @@ class M(Gate):
         self.result.add_shot_from_sample(sample[0])
         return state
 
+    def apply_hamming_weight(self, backend, state, nqubits, weight):
+        self.result.backend = backend
+        if not self.collapse:
+            return state
+
+        qubits = sorted(self.target_qubits)
+        probs = backend.calculate_probabilities(state, qubits, weight, nqubits)
+        shot = self.result.add_shot(probs, backend=backend)
+
+        return backend.collapse_state(state, qubits, shot, weight, nqubits)
+
     @classmethod
     def load(cls, payload):
         """Constructs a measurement gate starting from a json serialized

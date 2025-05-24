@@ -494,7 +494,7 @@ def M(state, qubits, nqubits, collapse=False):
     return sample
 
 
-def cast(x, dtype=None, copy=False):
+def cast(x, dtype=None, copy: bool = False):
     if dtype is None:
         dtype = "complex128"
     if isinstance(x, np.ndarray):

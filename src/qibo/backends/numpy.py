@@ -1,3 +1,5 @@
+"""Module defining the Numpy backend."""
+
 import collections
 import math
 from importlib.util import find_spec, module_from_spec
@@ -74,17 +76,19 @@ class NumpyBackend(Backend):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x, dtype=None, copy=False):
+    def cast(self, x, dtype=None, copy: bool = False):
         if dtype is None:
             dtype = self.dtype
+
         if isinstance(x, self.tensor_types):
             return x.astype(dtype, copy=copy)
-        elif self.is_sparse(x):
+
+        if self.is_sparse(x):
             return x.astype(dtype, copy=copy)
+
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
-        from scipy import sparse
 
         return sparse.issparse(x)
 
@@ -411,7 +415,8 @@ class NumpyBackend(Backend):
                     f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
                       initial state for circuit with density_matrix {circuit.density_matrix}.""",
                 )
-            elif (
+
+            if (
                 not initial_state.accelerators == circuit.accelerators
             ):  # pragma: no cover
                 raise_error(
@@ -419,8 +424,7 @@ class NumpyBackend(Backend):
                     f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
                       initial state for circuit with accelerators {circuit.density_matrix}.""",
                 )
-            else:
-                return self.execute_circuit(initial_state + circuit, None, nshots)
+            return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
             initial_state = self.cast(initial_state)
             valid_shape = (
@@ -438,14 +442,14 @@ class NumpyBackend(Backend):
         if circuit.repeated_execution:
             if circuit.measurements or circuit.has_collapse:
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
-            else:
-                raise_error(
-                    RuntimeError,
-                    "Attempting to perform noisy simulation with `density_matrix=False` "
-                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
-                    + "statistics of the outcomes please include measurements in the circuit, "
-                    + "otherwise set `density_matrix=True` to recover the final state.",
-                )
+
+            raise_error(
+                RuntimeError,
+                "Attempting to perform noisy simulation with `density_matrix=False` "
+                + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                + "statistics of the outcomes please include measurements in the circuit, "
+                + "otherwise set `density_matrix=True` to recover the final state.",
+            )
 
         if circuit.accelerators:  # pragma: no cover
             return self.execute_distributed_circuit(circuit, initial_state, nshots)
@@ -454,19 +458,21 @@ class NumpyBackend(Backend):
             nqubits = circuit.nqubits
 
             if circuit.density_matrix:
-                if initial_state is None:
-                    state = self.zero_density_matrix(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_density_matrix(nqubits)
+                    if initial_state is None
+                    else self.cast(initial_state)
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
-                if initial_state is None:
-                    state = self.zero_state(nqubits)
-                else:
-                    state = self.cast(initial_state)
+                state = (
+                    self.zero_state(nqubits)
+                    if initial_state is None
+                    else self.cast(initial_state)
+                )
 
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
@@ -479,19 +485,19 @@ class NumpyBackend(Backend):
                         state, circuit.measurements, backend=self, nshots=nshots
                     )
                     return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
 
-            else:
-                if circuit.measurements:
-                    circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
-                    )
-                    return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
+                circuit._final_state = QuantumState(state, backend=self)
+                return circuit._final_state
+
+            if circuit.measurements:
+                circuit._final_state = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=nshots
+                )
+                return circuit._final_state
+
+            circuit._final_state = QuantumState(state, backend=self)
+
+            return circuit._final_state
 
         except self.oom_error:
             raise_error(
