@@ -111,10 +111,10 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import (
+        from qibo.gates import (  # pylint: disable=import-outside-toplevel
             gates,
             measurements,
-        )  # pylint: disable=import-outside-toplevel
+        )
 
         for mod in (gates, measurements):
             try:
