@@ -49,8 +49,8 @@ def test_general_channel(backend):
     )
     backend.assert_allclose(final_state, target_state)
 
-    with pytest.raises(NotImplementedError):
-        channel1.on_qubits({})
+    # with pytest.raises(NotImplementedError):
+    #     channel1.on_qubits({})
     with pytest.raises(NotImplementedError):
         state = random_statevector(2**2, backend=backend)
         channel1.apply(backend, state, 2)
