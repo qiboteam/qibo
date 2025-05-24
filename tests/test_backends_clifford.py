@@ -135,7 +135,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
     backend.set_seed(seed)
-    nqubits, nshots = 3, 1000
+    nqubits, nshots = 3, 5000
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 
