@@ -283,9 +283,9 @@ class Gate:
                 2: ─o─|─|─o─
                 3: ─X─o─X───
         """
-        from qibo.gates.channels import (
+        from qibo.gates.channels import (  # pyling: disable=import-outside-toplevel
             Channel,
-        )  # pyling: disable=import-outside-toplevel
+        )
 
         targets = tuple(qubit_map.get(q) for q in self.target_qubits)
         gate = (
