@@ -462,8 +462,12 @@ def test_reset_channel_errors(p_0, p_1):
 
 @pytest.mark.parametrize(
     "channel,qubits,new_qubits",
-
-    [("damp/depol", 0, 5), ("thermal", 0, 2), ("readout", (0, 5), (3, 2)), ("reset", 10, 3)],
+    [
+        ("damp/depol", 0, 5),
+        ("thermal", 0, 2),
+        ("readout", (0, 5), (3, 2)),
+        ("reset", 10, 3),
+    ],
 )
 def test_on_qubits(channel, qubits, new_qubits):
     if channel == "damp/depol":
@@ -496,7 +500,7 @@ def test_on_qubits(channel, qubits, new_qubits):
         )
 
     if channel == "readout":
-        probabilities = random_stochastic_matrix(2**len(qubits), seed=10)
+        probabilities = random_stochastic_matrix(2 ** len(qubits), seed=10)
         gate = gates.ReadoutErrorChannel(qubits, probabilities)
         new_gate = gate.on_qubits(dict(zip(qubits, new_qubits)))
 
