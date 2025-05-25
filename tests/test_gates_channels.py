@@ -141,9 +141,7 @@ def test_kraus_channel(backend, pauli_order):
 def test_unitary_channel(backend):
     """"""
     a_1 = backend.cast(matrices.X)
-    a_2 = backend.cast(
-        np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    )
+    a_2 = backend.matrices.CNOT
 
     qubits = [(0,), (2, 3)]
     probabilities = [0.4, 0.3]
@@ -463,6 +461,8 @@ def test_reset_channel_errors(p_0, p_1):
 @pytest.mark.parametrize(
     "channel,qubits,new_qubits",
     [
+        ("kraus", [(1,), (0, 2)], [(10,), (0, 8)]),
+        ("unitary", [(0,), (2, 3)], [(10,), (0, 8)]),
         ("damp/depol", 0, 5),
         ("thermal", 0, 2),
         ("readout", (0, 5), (3, 2)),
@@ -470,6 +470,33 @@ def test_reset_channel_errors(p_0, p_1):
     ],
 )
 def test_on_qubits(channel, qubits, new_qubits):
+    if channel == "kraus":
+        a_1 = np.sqrt(0.4) * matrices.X
+        a_2 = np.sqrt(0.6) * np.kron(matrices.Z, matrices.Z)
+
+        gate = gates.KrausChannel(qubits, [a_1, a_2])
+        new_gate = gate.on_qubits({0: 0, 1: 10, 2: 8})
+
+        assert isinstance(new_gate, gates.KrausChannel)
+        assert new_gate.target_qubits == tuple(
+            sorted([q for row in new_qubits for q in row])
+        )
+
+    if channel == "unitary":
+        a_1 = matrices.X
+        a_2 = matrices.CNOT
+
+        probabilities = [0.4, 0.3]
+        matrices_ = list(zip(probabilities, [a_1, a_2]))
+
+        gate = gates.UnitaryChannel(qubits, matrices_)
+        new_gate = gate.on_qubits({0: 10, 2: 0, 3: 8})
+
+        assert isinstance(new_gate, gates.UnitaryChannel)
+        assert new_gate.target_qubits == tuple(
+            sorted([q for row in new_qubits for q in row])
+        )
+
     if channel == "damp/depol":
         for channel_class in (
             gates.DepolarizingChannel,

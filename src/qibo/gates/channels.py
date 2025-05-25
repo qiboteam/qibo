@@ -374,9 +374,14 @@ class UnitaryChannel(KrausChannel):
             )
 
         self.init_args = [probabilities, self.gates]
+        self._qubits = qubits
 
     def apply(self, backend, state, nqubits):
         return backend.apply_channel(self, state, nqubits)
+    
+    def on_qubits(self, qubit_map):
+        _qubits = _get_new_qubit_map(self, self._qubits, qubit_map)
+        return self.__class__(_qubits, list(zip(self.init_args[0], self.init_args[1])))
 
 
 class PauliNoiseChannel(UnitaryChannel):
