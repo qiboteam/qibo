@@ -463,6 +463,7 @@ def test_reset_channel_errors(p_0, p_1):
     [
         ("kraus", [(1,), (0, 2)], [(10,), (0, 8)]),
         ("unitary", [(0,), (2, 3)], [(10,), (0, 8)]),
+        ("pauli", 0, 3),
         ("damp/depol", 0, 5),
         ("thermal", 0, 2),
         ("readout", (0, 5), (3, 2)),
@@ -496,6 +497,14 @@ def test_on_qubits(channel, qubits, new_qubits):
         assert new_gate.target_qubits == tuple(
             sorted([q for row in new_qubits for q in row])
         )
+
+    if channel == "pauli":
+        gate = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
+        new_gate = gate.on_qubits({qubits: new_qubits})
+
+        assert isinstance(new_gate, gates.PauliNoiseChannel)
+        assert new_gate.qubits[0] == new_qubits
+        assert new_gate.init_kwargs == {"X": 0.3}
 
     if channel == "damp/depol":
         for channel_class in (
