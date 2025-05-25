@@ -311,14 +311,14 @@ class KrausChannel(Channel):
                 unitary_check.append(gate.unitary)
             self.gates = tuple(gates)
             self.target_qubits = tuple(sorted(qubitset))
-        self._qubits = qubits
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
         self._all_unitary_operators = True if all(unitary_check) else False
+        self._qubits = qubits
 
     def on_qubits(self, qubit_map: dict):
-        _qubits = [tuple(qubit_map.get(qubit) for qubit in row) for row in self._qubits]
+        _qubits = _get_new_qubit_map(self, self._qubits, qubit_map)
         return self.__class__(_qubits, self.gates)
 
 
@@ -455,7 +455,7 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = dict(operators)
 
     def on_qubits(self, qubit_map):
-        _qubits = tuple(qubit_map.get(qubit) for qubit in self.init_args)
+        _qubits = _get_new_qubit_map(self, self.init_args, qubit_map)
         return self.__class__(_qubits, list(self.init_kwargs.items()))
 
 
@@ -505,13 +505,12 @@ class DepolarizingChannel(PauliNoiseChannel):
 
         self.init_args = [qubits]
         self.init_kwargs = {"lam": lam}
-        self._qubits = qubits
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.depolarizing_error_density_matrix(self, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):
-        _qubits = tuple(qubit_map.get(qubit) for qubit in self._qubits)
+        _qubits = _get_new_qubit_map(self, self.init_args[0], qubit_map)
         return self.__class__(_qubits, self.init_kwargs["lam"])
 
 
@@ -657,6 +656,11 @@ class ThermalRelaxationChannel(KrausChannel):
         self.name = "ThermalRelaxationChannel"
         self.draw_label = "TR"
 
+    def on_qubits(self, qubit_map):
+        qubit = qubit_map.get(self.init_args[0])
+        parameters = self.init_args[1:] + [self.init_kwargs["excited_population"]]
+        return self.__class__(qubit, parameters)
+
     def apply_density_matrix(self, backend, state, nqubits):
         qubit = self.target_qubits[0]
 
@@ -722,6 +726,11 @@ class AmplitudeDampingChannel(KrausChannel):
         super().__init__([(qubit,)] * len(operators), operators)
         self.name = "AmplitudeDampingChannel"
         self.draw_label = "AD"
+        self.init_kwargs["gamma"] = gamma
+
+    def on_qubits(self, qubit_map):
+        qubit = qubit_map.get(self.qubits[0])
+        return self.__class__(qubit, self.init_kwargs["gamma"])
 
 
 class PhaseDampingChannel(KrausChannel):
@@ -757,6 +766,11 @@ class PhaseDampingChannel(KrausChannel):
         super().__init__([(qubit,)] * len(operators), operators)
         self.name = "PhaseDampingChannel"
         self.draw_label = "PD"
+        self.init_kwargs["gamma"] = gamma
+
+    def on_qubits(self, qubit_map):
+        qubit = qubit_map.get(self.qubits[0])
+        return self.__class__(qubit, self.init_kwargs["gamma"])
 
 
 class ReadoutErrorChannel(KrausChannel):
@@ -764,7 +778,7 @@ class ReadoutErrorChannel(KrausChannel):
 
     Args:
         qubits (int or list or tuple): Qubit ids that the channel acts on.
-        probabilities (array): row-stochastic matrix :math:`P` with all
+        probabilities (ndarray): row-stochastic matrix :math:`P` with all
             readout transition probabilities.
 
     Example:
@@ -796,10 +810,15 @@ class ReadoutErrorChannel(KrausChannel):
                 operator = np.zeros((dim, dim))
                 operator[j, k] = sqrt(probabilities[k, j])
                 operators.append(operator)
-
         super().__init__([qubits] * len(operators), operators)
         self.name = "ReadoutErrorChannel"
         self.draw_label = "RE"
+        self.probabilities = probabilities
+        self._qubits = qubits
+
+    def on_qubits(self, qubit_map):
+        _qubits = _get_new_qubit_map(self, self._qubits, qubit_map)
+        return self.__class__(_qubits, self.probabilities)
 
 
 class ResetChannel(KrausChannel):
@@ -852,3 +871,17 @@ class ResetChannel(KrausChannel):
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
+
+    def on_qubits(self, qubit_map):
+        qubit = qubit_map.get(self.qubits[0])
+        return self.__class__(qubit, [self.init_kwargs["p_0"], self.init_kwargs["p_1"]])
+
+
+def _get_new_qubit_map(gate, qubits, qubit_map: dict):
+    """Wrapper for qubit_map used in ``on_qubits``."""
+    if isinstance(gate, (PauliNoiseChannel, ReadoutErrorChannel)) or (
+        isinstance(gate, ResetChannel) and len(gate.qubits) == 1
+    ):
+        return tuple(qubit_map.get(qubit) for qubit in qubits)
+
+    return [tuple(qubit_map.get(qubit) for qubit in row) for row in qubits]

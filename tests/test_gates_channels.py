@@ -458,3 +458,59 @@ def test_reset_channel_errors(p_0, p_1):
         gates.ResetChannel(0, [p_0])
     with pytest.raises(ValueError):
         gates.ResetChannel(0, [p_0, p_1])
+
+
+@pytest.mark.parametrize(
+    "channel,qubits,new_qubits",
+
+    [("damp/depol", 0, 5), ("thermal", 0, 2), ("readout", (0, 5), (3, 2)), ("reset", 10, 3)],
+)
+def test_on_qubits(channel, qubits, new_qubits):
+    if channel == "damp/depol":
+        for channel_class in (
+            gates.DepolarizingChannel,
+            gates.AmplitudeDampingChannel,
+            gates.PhaseDampingChannel,
+        ):
+            param_name = (
+                "lam" if channel_class == gates.DepolarizingChannel else "gamma"
+            )
+            param = np.random.rand()
+            gate = channel_class(qubits, param)
+            new_gate = gate.on_qubits({qubits: new_qubits})
+
+            assert isinstance(new_gate, channel_class)
+            assert new_gate.qubits[0] == new_qubits
+            assert new_gate.init_kwargs[param_name] == param
+
+    if channel == "thermal":
+        parameters = [0.8, 0.5, 1.0, 0.4]
+        gate = gates.ThermalRelaxationChannel(qubits, parameters)
+        new_gate = gate.on_qubits({qubits: new_qubits})
+
+        assert isinstance(new_gate, gates.ThermalRelaxationChannel)
+        assert new_gate.init_args[0] == new_qubits
+        assert (
+            new_gate.init_args[1:] + [new_gate.init_kwargs["excited_population"]]
+            == parameters
+        )
+
+    if channel == "readout":
+        probabilities = random_stochastic_matrix(2**len(qubits), seed=10)
+        gate = gates.ReadoutErrorChannel(qubits, probabilities)
+        new_gate = gate.on_qubits(dict(zip(qubits, new_qubits)))
+
+        assert isinstance(new_gate, gates.ReadoutErrorChannel)
+        assert new_gate.target_qubits == tuple(sorted(new_qubits))
+
+    if channel == "reset":
+        probabilities = [0.2, 0.2]
+        gate = gates.ResetChannel(qubits, probabilities)
+        new_gate = gate.on_qubits({qubits: new_qubits})
+
+        assert isinstance(new_gate, gates.ResetChannel)
+        assert new_gate.qubits[0] == new_qubits
+        assert [
+            new_gate.init_kwargs["p_0"],
+            new_gate.init_kwargs["p_1"],
+        ] == probabilities
