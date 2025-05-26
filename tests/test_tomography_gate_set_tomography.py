@@ -364,36 +364,36 @@ def test_GST_2qb_basis_op_diff_registers_wrong_gates(backend, gate_set):
         )
 
 
-# @pytest.mark.parametrize(
-#     "gate_set",
-#     [
-#         [gates.T, gates.TDG],
-#         [(gates.RX, [np.pi / 4]), (gates.RY, [np.pi / 3])],
-#         [
-#             (gates.Unitary, [np.array([[1, 0], [0, 1]])]),
-#             (gates.Unitary, [np.array([[1, 0], [0, 1]])]),
-#         ],
-#     ],
-# )
-# def test_GST_2qb_basis_op_diff_registers_param_gates(backend, gate_set):
-#     matrices = GST(
-#         gate_set=gate_set,
-#         two_qubit_basis_op_diff_registers=True,
-#         include_empty=False,
-#     )
-#     assert len(matrices) == 1
+@pytest.mark.parametrize(
+    "gate_set",
+    [
+        [gates.T, gates.TDG],
+        [(gates.RX, [np.pi / 4]), (gates.RY, [np.pi / 3])],
+        [
+            (gates.Unitary, [np.array([[1, 0], [0, 1]])]),
+            (gates.Unitary, [np.array([[1, 0], [0, 1]])]),
+        ],
+    ],
+)
+def test_GST_2qb_basis_op_diff_registers_param_gates(backend, gate_set):
+    matrices = GST(
+        gate_set=gate_set,
+        two_qubit_basis_op_diff_registers=True,
+        include_empty=False,
+    )
+    assert len(matrices) == 1
 
 
-# def test_gate_list_building_with_extract_gate():
-#     gate_set = [(gates.RX, [np.pi / 3]), (gates.RY, [np.pi / 4])]
+def test_gate_list_building_with_extract_gate():
+    gate_set = [(gates.RX, [np.pi / 3]), (gates.RY, [np.pi / 4])]
 
-#     gate_list = []
-#     for idx in range(len(gate_set)):
-#         gate = gate_set[idx]
-#         gate, _ = _extract_gate(gate, idx)  # this line will now be covered
-#         gate_list.append(gate)
+    gate_list = []
+    for idx in range(len(gate_set)):
+        gate = gate_set[idx]
+        gate, _ = _extract_gate(gate, idx)  # this line will now be covered
+        gate_list.append(gate)
 
-#     assert len(gate_list) == 2
+    assert len(gate_list) == 2
 
 
 def test_GST_invertible_matrix():
