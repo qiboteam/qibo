@@ -733,7 +733,7 @@ class AmplitudeDampingChannel(KrausChannel):
         self.draw_label = "AD"
         self.init_kwargs["gamma"] = gamma
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         qubit = qubit_map.get(self.qubits[0])
         return self.__class__(qubit, self.init_kwargs["gamma"])
 
