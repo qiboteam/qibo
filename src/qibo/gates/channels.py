@@ -821,7 +821,7 @@ class ReadoutErrorChannel(KrausChannel):
         self.probabilities = probabilities
         self._qubits = qubits
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         _qubits = _get_new_qubit_map(self, self._qubits, qubit_map)
         return self.__class__(_qubits, self.probabilities)
 
