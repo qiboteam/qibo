@@ -198,7 +198,7 @@ def _extract_gate(gate, idx=None):
                 raise_error(ValueError, "Unitary gate received non-unitary matrix.")
 
     # Construct gate instance
-    if idx:  # pragma: no cover
+    if idx:
         idx = (idx,) if isinstance(idx, int) else tuple(idx)
         if "unitary" in angle_values:
             gate = gate(angle_values["unitary"], *idx)
