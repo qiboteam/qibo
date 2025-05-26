@@ -459,7 +459,7 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_args = qubits
         self.init_kwargs = dict(operators)
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         _qubits = _get_new_qubit_map(self, self.init_args, qubit_map)
         return self.__class__(_qubits, list(self.init_kwargs.items()))
 
