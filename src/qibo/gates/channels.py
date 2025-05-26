@@ -661,7 +661,7 @@ class ThermalRelaxationChannel(KrausChannel):
         self.name = "ThermalRelaxationChannel"
         self.draw_label = "TR"
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         qubit = qubit_map.get(self.init_args[0])
         parameters = self.init_args[1:] + [self.init_kwargs["excited_population"]]
         return self.__class__(qubit, parameters)
