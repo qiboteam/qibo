@@ -877,7 +877,7 @@ class ResetChannel(KrausChannel):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         qubit = qubit_map.get(self.qubits[0])
         return self.__class__(qubit, [self.init_kwargs["p_0"], self.init_kwargs["p_1"]])
 
