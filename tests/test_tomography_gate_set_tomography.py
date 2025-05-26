@@ -204,7 +204,7 @@ def test__extract_gate_default_idx():
             assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
 
 
-def test__extract_gate_default_idx():
+def test__extract_gate_user_defined_idx():
     chosen_idx = [2, 2, 2, (2, 3), (2, 3)]
 
     gates_to_test = [
