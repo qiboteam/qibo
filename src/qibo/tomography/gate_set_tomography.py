@@ -151,8 +151,8 @@ def _extract_gate(gate, idx=None):
             - `gate = gates.Z` for a non-parametrized gate.
             - `gate = (gates.RX, [np.pi/3])` or `gate = (gates.PRX, [np.pi/2, np.pi/3])` for a parametrized gate.
             - `gate = (gates.Unitary, [np.array([[1, 0], [0, 1]])])` for an arbitrary unitary operator.
-        idx (int, optional): The specific qubit index to apply the gate to. Defaults to ``None`` and q0 is
-            selected as default.
+        idx (int or tuple, optional): The specific qubit index/indices to apply the gate to. Defaults to ``None``
+            where q0/q0&q1 is/are set as default qubit index/indices.
     Returns:
         gate (:class:`qibo.gates.Gate`): An instance of the gate that can be applied directly to the circuit.
         nqubits (int): The number of qubits that the gate acts on.
@@ -191,6 +191,7 @@ def _extract_gate(gate, idx=None):
                     "Parametrized gate received numpy.ndarray as parameter(s) instead of float.",
                 )
         else:
+            nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
             # Check that unitary gate does not receive a non-unitary matrix.
             g = gate(angle_values["unitary"], *range(nqubits), check_unitary=True)
             if g.unitary is False:
@@ -198,10 +199,11 @@ def _extract_gate(gate, idx=None):
 
     # Construct gate instance
     if idx:  # pragma: no cover
+        idx = (idx,) if isinstance(idx, int) else tuple(idx)
         if "unitary" in angle_values:
-            gate = gate(angle_values["unitary"], idx)
+            gate = gate(angle_values["unitary"], *idx)
         else:
-            gate = gate(idx, **angle_values)
+            gate = gate(*idx, **angle_values)
 
     else:
         if "unitary" in angle_values:
