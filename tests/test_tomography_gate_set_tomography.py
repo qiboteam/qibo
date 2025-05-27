@@ -11,6 +11,7 @@ from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
+    _extract_gate,
     _gate_tomography,
     _get_observable,
     _measurement_basis,
@@ -115,7 +116,7 @@ def test__measurement_basis(j, nqubits):
 
 
 @pytest.mark.parametrize(
-    "j,nqubits",
+    "j, nqubits",
     INDEX_NQUBITS,
 )
 def test__get_observable(j, nqubits):
@@ -162,6 +163,103 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
+def test__extract_gate_default_idx():
+    gates_to_test = [
+        (gates.T),
+        ((gates.RX, [np.pi / 2])),
+        ((gates.Unitary, [np.eye(2)])),
+        ((gates.CRX, [np.pi / 3])),
+        ((gates.Unitary, [np.eye(4)])),
+    ]
+
+    correct_gates = [
+        gates.T(0),
+        gates.RX(0, np.pi / 2),
+        gates.Unitary(np.eye(2), 0),
+        gates.CRX(0, 1, np.pi / 3),
+        gates.Unitary(np.eye(4), 0, 1),
+    ]
+
+    for _i in range(len(gates_to_test)):
+        extracted_gate, _ = _extract_gate(gates_to_test[_i])
+
+        assert extracted_gate.qubits == correct_gates[_i].qubits
+        if _i in (0, 1):
+            assert extracted_gate.init_kwargs == correct_gates[_i].init_kwargs
+            assert extracted_gate.parameters == correct_gates[_i].parameters
+        elif _i == 2:
+            assert (
+                extracted_gate.init_args[0].all()
+                == correct_gates[_i].init_args[0].all()
+            )
+        elif _i == 3:
+            assert extracted_gate.control_qubits == correct_gates[_i].control_qubits
+            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
+            assert extracted_gate.parameters == correct_gates[_i].parameters
+        elif _i == 4:
+            assert (
+                extracted_gate.init_args[0].all()
+                == correct_gates[_i].init_args[0].all()
+            )
+            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
+
+
+def test__extract_gate_user_defined_idx():
+    chosen_idx = [2, 2, 2, (2, 3), (2, 3)]
+
+    gates_to_test = [
+        (gates.T),
+        ((gates.RX, [np.pi / 2])),
+        ((gates.Unitary, [np.eye(2)])),
+        ((gates.CRX, [np.pi / 3])),
+        ((gates.Unitary, [np.eye(4)])),
+    ]
+
+    correct_gates = [
+        gates.T(2),
+        gates.RX(2, np.pi / 2),
+        gates.Unitary(np.eye(2), 2),
+        gates.CRX(2, 3, np.pi / 3),
+        gates.Unitary(np.eye(4), 2, 3),
+    ]
+
+    for _i in range(len(gates_to_test)):
+        extracted_gate, _ = _extract_gate(gates_to_test[_i], idx=chosen_idx[_i])
+
+        assert extracted_gate.qubits == correct_gates[_i].qubits
+        if _i in (0, 1):
+            assert extracted_gate.init_kwargs == correct_gates[_i].init_kwargs
+            assert extracted_gate.parameters == correct_gates[_i].parameters
+        elif _i == 2:
+            assert (
+                extracted_gate.init_args[0].all()
+                == correct_gates[_i].init_args[0].all()
+            )
+        elif _i == 3:
+            assert extracted_gate.control_qubits == correct_gates[_i].control_qubits
+            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
+            assert extracted_gate.parameters == correct_gates[_i].parameters
+        elif _i == 4:
+            assert (
+                extracted_gate.init_args[0].all()
+                == correct_gates[_i].init_args[0].all()
+            )
+            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
+
+
+@pytest.mark.parametrize(
+    "gate, error_type",
+    [
+        (((gates.RX), [np.eye(2)]), ValueError),
+        (((gates.Unitary), np.array([[1, 2], [3, 4]])), ValueError),
+        ((gates.TOFFOLI), RuntimeError),
+    ],
+)
+def test__extract_gate_error(gate, error_type):
+    with pytest.raises(error_type):
+        extracted_gate, _ = _extract_gate(gate)
+
+
 @pytest.mark.parametrize(
     "nqubits, gate",
     [
@@ -173,7 +271,7 @@ def test_gate_tomography_value_error(backend, nqubits, gate):
     with pytest.raises(ValueError):
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
-            gate=gate,
+            gate=[gate],
             nshots=int(1e4),
             noise_model=None,
             backend=backend,
@@ -189,7 +287,7 @@ def test_gate_tomography_noise_model(backend):
     # return noise_model
     target = _gate_tomography(
         nqubits=nqubits,
-        gate=gate,
+        gate=[gate],
         nshots=int(1e4),
         noise_model=noise_model,
         backend=backend,
@@ -202,6 +300,39 @@ def test_gate_tomography_noise_model(backend):
     )
 
 
+def test_gate_tomography_apply_ancillas(backend):
+    nqubits = 2
+    gate_list = [gates.T(0), gates.TDG(0), gates.S(0)]
+    with pytest.raises(ValueError):
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate_list,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+        )
+
+
+@pytest.mark.parametrize(
+    "ancilla",
+    [
+        (3),
+    ],
+)
+def test_gate_tomography_ancilla_error(backend, ancilla):
+    nqubits = 2
+    gate_list = [gates.T(0), gates.TDG(0)]
+    with pytest.raises(ValueError):
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate_list,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+            ancilla=ancilla,
+        )
+
+
 @pytest.mark.parametrize(
     "target_gates",
     [
@@ -209,6 +340,7 @@ def test_gate_tomography_noise_model(backend):
             gates.SX(0),
             gates.RX(0, np.pi / 4),
             gates.PRX(0, np.pi, np.pi / 2),
+            gates.Unitary(np.array([[1, 0], [0, 1]]), 0),
             gates.CY(0, 1),
         ],
         [gates.TOFFOLI(0, 1, 2)],
@@ -231,7 +363,7 @@ def test_GST(backend, target_gates, pauli_liouville):
         for g in target_gates
     ]
 
-    if len(target_gates) == 4:
+    if len(target_gates) == 5:
         empty_1q, empty_2q, *approx_gates = GST(
             gate_set=gate_set,
             nshots=int(1e4),
@@ -260,6 +392,74 @@ def test_GST(backend, target_gates, pauli_liouville):
                 pauli_liouville=pauli_liouville,
                 backend=backend,
             )
+
+
+def test_GST_2qb_basis_op_diff_registers(backend):
+    gate_set = [gates.T, gates.TDG, gates.S]
+    with pytest.raises(RuntimeError):
+        if len(gate_set) > 2:
+            matrices = GST(
+                gate_set=gate_set,
+                two_qubit_basis_op_diff_registers=True,
+                include_empty=False,
+            )
+
+
+@pytest.mark.parametrize(
+    "gate_set",
+    [
+        [gates.T, gates.CNOT],
+        [gates.CNOT, gates.T],
+        [gates.CNOT, gates.CNOT],
+    ],
+)
+def test_GST_2qb_basis_op_diff_registers_wrong_gates(backend, gate_set):
+    with pytest.raises(RuntimeError):
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
+
+
+def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
+    gate_set = [
+        [gates.T, gates.TDG],
+        [(gates.RX, [np.pi / 4]), (gates.RY, [np.pi / 3])],
+        [(gates.Unitary, [np.eye(2)]), (gates.Unitary, [np.eye(2)])],
+    ]
+
+    ground_truth_matrices = [
+        np.kron(gates.T(0).matrix(), gates.TDG(0).matrix()),
+        np.kron(gates.RX(0, np.pi / 4).matrix(), gates.RY(0, np.pi / 3).matrix()),
+        np.eye(4),
+    ]
+
+    for _i in range(0, 3):
+        test_matrix = GST(
+            gate_set=gate_set[_i],
+            nshots=int(1e4),
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
+        ground_truth_matrix = GST(
+            gate_set=[((gates.Unitary), ground_truth_matrices[_i])],
+            nshots=int(1e4),
+            include_empty=False,
+        )
+        backend.assert_allclose(test_matrix[0], ground_truth_matrix[0], atol=1e-1)
+
+
+# def test_gate_list_building_with_extract_gate():
+#     gate_set = [(gates.RX, [np.pi / 3]), (gates.RY, [np.pi / 4])]
+
+#     gate_list = []
+#     for idx in range(len(gate_set)):
+#         gate = gate_set[idx]
+#         gate, _ = _extract_gate(gate, idx)
+#         gate_list.append(gate)
+
+#     assert len(gate_list) == 2
 
 
 def test_GST_invertible_matrix():
