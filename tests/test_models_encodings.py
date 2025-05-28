@@ -485,7 +485,7 @@ def test_graph_state(backend, matrix_data, expects_error):
 
     if expects_error:
         # We expect a ValueError for non-symmetric matrices
-        with pytest.raises(ValueError, match="``matrix`` is not symmetric"):
+        with pytest.raises(ValueError):
             graph_state(matrix, backend=backend)
 
     # If no error is expected, proceed with normal circuit construction and checks

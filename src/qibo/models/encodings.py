@@ -1501,10 +1501,10 @@ def graph_state(matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=type(matrix[0]))
 
-    if backend.assert_allclose(np.array(matrix, dtype=float), np.array(matrix, dtype=float).T):
+    if not backend.np.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
-            f"``matrix`` is not symmetric, not representing an undirected graph.",
+            f"``matrix`` is not symmetric, not representing an undirected graph",
         )
 
     nqubits = len(matrix)
