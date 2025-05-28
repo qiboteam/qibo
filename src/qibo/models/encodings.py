@@ -1496,11 +1496,10 @@ def graph_state(adj_matrix, backend=None, **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit`:  Circuit of the graph state with the given Adjacency matrix.
     """
-    if not isinstance(adj_matrix, np.ndarray):
-        raise_error(
-            TypeError,
-            f"Input given as type {type(adj_matrix)}. Input must be a NumPy array.",
-        )
+    backend = _check_backend(backend)
+
+    if isinstance(matrix, list):
+        matrix = backend.cast(matrix, dtype=type(matrix[0]))
 
     if not np.allclose(adj_matrix, adj_matrix.T):
         raise_error(
