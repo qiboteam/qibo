@@ -1485,7 +1485,7 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def dicke_state_encoder(nqubits: int, k: int, **kwargs):
+def dicke_state(nqubits: int, weight: int, backend=None, **kwargs):
     """Create a circuit that prepares the Dicke state |D_k^n⟩.
 
     The Dicke state |D_k^n⟩ is the equal superposition of all n-qubit states
@@ -1494,12 +1494,12 @@ def dicke_state_encoder(nqubits: int, k: int, **kwargs):
     from arXiv:1904.07358.
 
     Args:
-        nqubits (int): Total number of qubits (n).
-        k (int): Hamming weight of the Dicke state (k ≤ n).
+        nqubits (int): number of qubits :math:`n`.
+        weight (int): Hamming weight :math:`k` of the Dicke state.
         kwargs: Additional arguments for Circuit initialization.
 
     Returns:
-        Circuit: Quantum circuit that prepares |D_k^n⟩ when applied to |0⟩^⊗n.
+        :class:`qibo.models.circuit.Circuit` : Quantum circuit that prepares |D_k^n⟩ when applied to |0⟩^⊗n.
     """
     if k < 0 or k > nqubits:
         raise ValueError(f"k must be between 0 and {nqubits}, got {k}")
