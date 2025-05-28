@@ -1507,8 +1507,7 @@ def dicke_state(nqubits: int, weight: int, backend=None, **kwargs):
     circuit = Circuit(nqubits, **kwargs)
 
     # Start with |0⟩^(n-k) |1⟩^k
-    for qubit in range(nqubits - k, nqubits):
-        circuit.add(gates.X(qubit))
+    circuit.add(gates.X(qubit) for qubit in range(nqubits - k, nqubits))
 
     for m in range(nqubits, weight, -1):
         # Add SCS_{m,k} acting on last k+1 qubits
