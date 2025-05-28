@@ -1483,3 +1483,77 @@ def _get_phase_gate_correction_sparse(
         gate = _get_phase_gate_correction(last_string, phis[-1])
 
     return gate
+    
+def dicke_state_encoder(nqubits: int, k: int, **kwargs):
+    """Create a circuit that prepares the Dicke state |D_k^n⟩.
+    
+    The Dicke state |D_k^n⟩ is the equal superposition of all n-qubit states
+    with Hamming weight k (exactly k ones). The circuit prepares the state
+    deterministically with O(kn) gates and O(n) depth, following the construction
+    from arXiv:1904.07358.
+    
+    Args:
+        nqubits (int): Total number of qubits (n).
+        k (int): Hamming weight of the Dicke state (k ≤ n).
+        kwargs: Additional arguments for Circuit initialization.
+        
+    Returns:
+        Circuit: Quantum circuit that prepares |D_k^n⟩ when applied to |0⟩^⊗n.
+    """
+    if k < 0 or k > nqubits:
+        raise ValueError(f"k must be between 0 and {nqubits}, got {k}")
+    
+    circuit = Circuit(nqubits, **kwargs)
+    
+    # Start with |0⟩^(n-k) |1⟩^k
+    for qubit in range(nqubits - k, nqubits):
+        circuit.add(gates.X(qubit))
+
+    for m in np.flip(range(k+1, nqubits+1)):
+        # Add SCS_{m,k} acting on last k+1 qubits
+        _add_scs_gate(circuit, m, k)
+    
+    # Recursively build the unitary U_n,k
+    for m in np.flip(range(2, k+1)):
+        # Add SCS_{m,m-1} acting on last m qubits
+        _add_scs_gate(circuit, m, m-1)
+    
+
+    return circuit
+# to check
+# n = 4
+# k = 2
+# dicke_circuit = dicke_state_encoder(n, k)
+# print(dicke_circuit)
+# state = dicke_circuit()
+# print(state)
+
+def _add_scs_gate(circuit: Circuit, n: int, k: int):
+    """Add a Split & Cyclic Shift (SCS) gate to the circuit.
+    
+    Implements the SCS_{n,k} unitary from Definition 3 of the paper.
+    Acts on the last k+1 qubits of the circuit.
+    """
+    if k == 0:
+        return  # SCS_{n,0} is identity
+    
+    last_qubit = n-1
+    # first_qubit = last_qubit - k
+    
+    # Gate (i) - acts on last two qubits
+    theta = 2 * np.arccos(np.sqrt(1/n))
+    circuit.add(gates.CNOT(last_qubit-1, last_qubit))
+    circuit.add(gates.RY(last_qubit-1, theta).controlled_by(last_qubit))
+    circuit.add(gates.CNOT(last_qubit-1, last_qubit))
+    
+    # Gates (ii)_ℓ for ℓ from 2 to k
+    for l in range(2, k + 1):
+        theta = 2 * np.arccos(np.sqrt(l/n))
+        target_qubit = last_qubit - l
+        control_qubit = target_qubit + 1
+        
+        # Implement the three-qubit gate (ii)_ℓ
+        circuit.add(gates.CNOT(target_qubit, last_qubit))
+        circuit.add(gates.RY(target_qubit, theta).controlled_by(control_qubit, last_qubit))
+        circuit.add(gates.CNOT(target_qubit, last_qubit))
+    # return circuit
