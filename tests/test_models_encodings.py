@@ -488,26 +488,27 @@ def test_graph_state(backend, matrix_data, expects_error):
         with pytest.raises(ValueError):
             graph_state(matrix, backend=backend)
 
-    # If no error is expected, proceed with normal circuit construction and checks
-    nqubits = len(matrix)
+    else:
+        # If no error is expected, proceed with normal circuit construction and checks
+        nqubits = len(matrix)
 
-    # Create the graph state circuit
-    circuit = graph_state(matrix, backend=backend)
+        # Create the graph state circuit
+        circuit = graph_state(matrix, backend=backend)
 
-    # Assertions about the constructed circuit
-    assert circuit.nqubits == nqubits
+        # Assertions about the constructed circuit
+        assert circuit.nqubits == nqubits
 
-    # Verify initial Hadamard gates
-    h_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.H))
-    assert h_gates_count == nqubits
+        # Verify initial Hadamard gates
+        h_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.H))
+        assert h_gates_count == nqubits
 
-    # Verify CZ gates
-    cz_gates_expected = 0
-    # Count non-zero elements in the upper triangular part of the matrix
-    for a in range(nqubits):
-        for b in range(a + 1, nqubits):
-            if matrix[a, b] != 0:
-                cz_gates_expected += 1
+        # Verify CZ gates
+        cz_gates_expected = 0
+        # Count non-zero elements in the upper triangular part of the matrix
+        for a in range(nqubits):
+            for b in range(a + 1, nqubits):
+                if matrix[a, b] != 0:
+                    cz_gates_expected += 1
 
-    cz_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.CZ))
-    assert cz_gates_count == cz_gates_expected
+        cz_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.CZ))
+        assert cz_gates_count == cz_gates_expected
