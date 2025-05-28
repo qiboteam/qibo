@@ -1512,9 +1512,8 @@ def graph_state(adj_matrix, backend=None, **kwargs):
     circuit = Circuit(nqubits, **kwargs)
     circuit.add(gates.H(qubit) for qubits in range(nqubits))
 
-    for a in range(num_qubits):
-        for b in range(a + 1, num_qubits):
-            if adj_matrix[a][b] == 1:
-                circuit.add(gates.CZ(a, b))
+    # since the matrix is symmetric, we only need the upper triangular part
+    rows, columns = backend.np.nonzero(backend.np.triu(matrix))
+    circuit.add(gates.CZ(ind_r, ind_c) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
