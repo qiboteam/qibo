@@ -1507,11 +1507,10 @@ def graph_state(adj_matrix, backend=None, **kwargs):
             f"``matrix`` is not symmetric, not representing an undirected graph.",
         )
 
-    num_qubits = len(adj_matrix)
-    circuit = Circuit(num_qubits, **kwargs)
+    nqubits = len(matrix)
 
-    for qubits in range(num_qubits):
-        circuit.add(gates.H(qubits))
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(qubit) for qubits in range(nqubits))
 
     for a in range(num_qubits):
         for b in range(a + 1, num_qubits):
