@@ -1483,3 +1483,39 @@ def _get_phase_gate_correction_sparse(
         gate = _get_phase_gate_correction(last_string, phis[-1])
 
     return gate
+
+
+def graph_state(adj_matrix, **kwargs):
+    """Circuit that creates the graph state of a given Adjacency matrix
+
+    Args:
+        adj_matrix (ndarray): Adjacency matrix
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+    Returns:
+        :class:`qibo.models.circuit.Circuit`:  Circuit of the graph state with the given Adjacency matrix.
+    """
+    if not isinstance(adj_matrix, np.ndarray):
+        raise_error(
+            TypeError,
+            f"Input given as type {type(adj_matrix)}. Input must be a NumPy array.",
+        )
+
+    if not np.allclose(adj_matrix, adj_matrix.T):
+        raise_error(
+            ValueError,
+            f"Matrix is not symmetric.",
+        )
+
+    num_qubits = len(adj_matrix)
+    circuit = Circuit(num_qubits, **kwargs)
+
+    for qubits in range(num_qubits):
+        circuit.add(gates.H(qubits))
+
+    for a in range(num_qubits):
+        for b in range(a+1, num_qubits):
+            if adj_matrix[a][b] == 1:
+                circuit.add(gates.CZ(a,b))
+
+    return circuit

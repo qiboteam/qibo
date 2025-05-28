@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from scipy.optimize import curve_fit
 from scipy.special import binom
+import networkx as nx
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
@@ -21,6 +22,7 @@ from qibo.models.encodings import (
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
+    graph_state
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -454,3 +456,44 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
             target = backend.np.outer(target, backend.np.conj(target.T))
 
         backend.assert_allclose(state, target)
+
+
+
+
+# Helper to create a symmetric adjacency matrix
+def create_symmetric_adj(size=3):
+    G = nx.generators.cycle_graph(size)
+    return nx.adjacency_matrix(G).todense()
+
+# A non-numpy array input
+non_numpy_input = [[1, 2], [2, 1]]
+
+@pytest.mark.parametrize(
+    "matrix_input, expected_error",
+    [
+        # Valid symmetric matrices (should NOT raise an error)
+        (create_symmetric_adj(5), None),
+        (np.array([[1, 2], [2, 1]]), None), # Manually created symmetric
+        (np.identity(3), None), # Identity matrix is symmetric
+
+        # Invalid inputs (should raise errors)
+        (non_numpy_input, TypeError), # Not a numpy array
+        (None, TypeError), # None input
+        (123, TypeError), # Integer input
+        (np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=float), ValueError), # non-symmetric 
+        (np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]), ValueError) # non-symmetric
+    ],
+)
+def test_check_symmetric(matrix_input, expected_error):
+    if expected_error is None:
+        # For valid inputs, no error should be raised
+        try:
+            graph_state(matrix_input)
+            # If a print statement was inside, it would execute here.
+            # For tests, just successfully completing without error is the pass condition.
+        except Exception as e:
+            pytest.fail(f"Expected no error but got {type(e).__name__}: {e}")
+    else:
+        # For invalid inputs, the specific error should be raised
+        with pytest.raises(expected_error) as excinfo:
+            graph_state(matrix_input)
