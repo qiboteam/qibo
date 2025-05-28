@@ -1514,8 +1514,8 @@ def graph_state(adj_matrix, **kwargs):
         circuit.add(gates.H(qubits))
 
     for a in range(num_qubits):
-        for b in range(a+1, num_qubits):
+        for b in range(a + 1, num_qubits):
             if adj_matrix[a][b] == 1:
-                circuit.add(gates.CZ(a,b))
+                circuit.add(gates.CZ(a, b))
 
     return circuit

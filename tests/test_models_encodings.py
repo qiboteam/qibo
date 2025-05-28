@@ -3,11 +3,11 @@
 import math
 from functools import reduce
 
+import networkx as nx
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
 from scipy.special import binom
-import networkx as nx
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
@@ -17,12 +17,12 @@ from qibo.models.encodings import (
     comp_basis_encoder,
     entangling_layer,
     ghz_state,
+    graph_state,
     hamming_weight_encoder,
     phase_encoder,
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
-    graph_state
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -458,30 +458,32 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         backend.assert_allclose(state, target)
 
 
-
-
 # Helper to create a symmetric adjacency matrix
 def create_symmetric_adj(size=3):
     G = nx.generators.cycle_graph(size)
     return nx.adjacency_matrix(G).todense()
 
+
 # A non-numpy array input
 non_numpy_input = [[1, 2], [2, 1]]
+
 
 @pytest.mark.parametrize(
     "matrix_input, expected_error",
     [
         # Valid symmetric matrices (should NOT raise an error)
         (create_symmetric_adj(5), None),
-        (np.array([[1, 2], [2, 1]]), None), # Manually created symmetric
-        (np.identity(3), None), # Identity matrix is symmetric
-
+        (np.array([[1, 2], [2, 1]]), None),  # Manually created symmetric
+        (np.identity(3), None),  # Identity matrix is symmetric
         # Invalid inputs (should raise errors)
-        (non_numpy_input, TypeError), # Not a numpy array
-        (None, TypeError), # None input
-        (123, TypeError), # Integer input
-        (np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=float), ValueError), # non-symmetric 
-        (np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]), ValueError) # non-symmetric
+        (non_numpy_input, TypeError),  # Not a numpy array
+        (None, TypeError),  # None input
+        (123, TypeError),  # Integer input
+        (
+            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=float),
+            ValueError,
+        ),  # non-symmetric
+        (np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]), ValueError),  # non-symmetric
     ],
 )
 def test_check_symmetric(matrix_input, expected_error):
