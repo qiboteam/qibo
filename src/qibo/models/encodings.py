@@ -1522,13 +1522,6 @@ def dicke_state_encoder(nqubits: int, k: int, **kwargs):
     return circuit
 
 
-# to check
-# n = 4
-# k = 2
-# dicke_circuit = dicke_state_encoder(n, k)
-# print(dicke_circuit)
-# state = dicke_circuit()
-# print(state)
 
 
 def _add_scs_gate(circuit: Circuit, n: int, k: int):
