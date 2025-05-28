@@ -1515,7 +1515,7 @@ def dicke_state(nqubits: int, weight: int, backend=None, **kwargs):
         _add_scs_gate(circuit, m, weight)
 
     # Recursively build the unitary U_n,k
-    for m in np.flip(range(2, k + 1)):
+    for m in range(k, 1, -1):
         # Add SCS_{m,m-1} acting on last m qubits
         _add_scs_gate(circuit, m, m - 1)
 
