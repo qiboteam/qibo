@@ -1523,7 +1523,7 @@ def dicke_state(nqubits: int, weight: int, backend=None, **kwargs):
 
 
 def _add_scs_gate(circuit: Circuit, n: int, k: int):
-    """Add a Split & Cyclic Shift (SCS) gate to the circuit.
+    """In-place addition of a Split & Cyclic Shift (SCS) gate to ``circuit``.
 
     Implements the SCS_{n,k} unitary from Definition 3 of the paper.
     Acts on the last k+1 qubits of the circuit.
