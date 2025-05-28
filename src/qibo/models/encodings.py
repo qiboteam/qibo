@@ -1522,8 +1522,6 @@ def dicke_state_encoder(nqubits: int, k: int, **kwargs):
     return circuit
 
 
-
-
 def _add_scs_gate(circuit: Circuit, n: int, k: int):
     """Add a Split & Cyclic Shift (SCS) gate to the circuit.
 
