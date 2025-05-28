@@ -1501,7 +1501,7 @@ def graph_state(matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=type(matrix[0]))
 
-    if not backend.assert_allclose(np.array(matrix), np.array(matrix).T):
+    if backend.assert_allclose(np.array(matrix, dtype=float), np.array(matrix, dtype=float).T):
         raise_error(
             ValueError,
             f"``matrix`` is not symmetric, not representing an undirected graph.",
