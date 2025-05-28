@@ -1485,13 +1485,14 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def graph_state(adj_matrix, **kwargs):
-    """Circuit that creates the graph state of a given Adjacency matrix
+def graph_state(adj_matrix, backend=None, **kwargs):
+    """Create circuit encoding an undirected graph state given its adjacency matrix.
 
     Args:
-        adj_matrix (ndarray): Adjacency matrix
+        matrix (ndarray or list): Adjacency matrix of the graph.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
     Returns:
         :class:`qibo.models.circuit.Circuit`:  Circuit of the graph state with the given Adjacency matrix.
     """
