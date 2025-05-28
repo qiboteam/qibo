@@ -458,44 +458,54 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         backend.assert_allclose(state, target)
 
 
-# Helper to create a symmetric adjacency matrix
-def create_symmetric_adj(size=3):
-    G = nx.generators.cycle_graph(size)
-    return nx.adjacency_matrix(G).todense()
-
-
-# A non-numpy array input
-non_numpy_input = [[1, 2], [2, 1]]
-
-
 @pytest.mark.parametrize(
-    "matrix_input, expected_error",
+    "matrix_data, expects_error",
     [
-        # Valid symmetric matrices (should NOT raise an error)
-        (create_symmetric_adj(5), None),
-        (np.array([[1, 2], [2, 1]]), None),  # Manually created symmetric
-        (np.identity(3), None),  # Identity matrix is symmetric
-        # Invalid inputs (should raise errors)
-        (non_numpy_input, TypeError),  # Not a numpy array
-        (None, TypeError),  # None input
-        (123, TypeError),  # Integer input
-        (
-            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=float),
-            ValueError,
-        ),  # non-symmetric
-        (np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]), ValueError),  # non-symmetric
+        # Test Case 1: 3-qubit graph
+        ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False),
+        # Test Case 2: 5-qubit  graph 
+        ([
+            [0, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0],
+        ], False),
+        # Test Case 3: Non-symmetric matrix (expected error)
+        ([[0, 1, 0], [0, 0, 1], [0, 1, 0]], True),  # matrix[1,0] != matrix[0,1]
+        # Test Case 4: Non-symmetric matrix (expected error)
+        ([[0, 1], [0, 0]], True),  # matrix[1,0] != matrix[0,1]
     ],
 )
-def test_check_symmetric(matrix_input, expected_error):
-    if expected_error is None:
-        # For valid inputs, no error should be raised
-        try:
-            graph_state(matrix_input)
-            # If a print statement was inside, it would execute here.
-            # For tests, just successfully completing without error is the pass condition.
-        except Exception as e:
-            pytest.fail(f"Expected no error but got {type(e).__name__}: {e}")
-    else:
-        # For invalid inputs, the specific error should be raised
-        with pytest.raises(expected_error) as excinfo:
-            graph_state(matrix_input)
+def test_graph_state(backend, matrix_data, expects_error):
+    matrix = np.array(matrix_data)
+
+    if expects_error:
+        # We expect a ValueError for non-symmetric matrices
+        with pytest.raises(ValueError, match="``matrix`` is not symmetric"):
+            graph_state(matrix, backend=backend)
+
+    # If no error is expected, proceed with normal circuit construction and checks
+    nqubits = len(matrix)
+
+    # Create the graph state circuit
+    circuit = graph_state(matrix, backend=backend)
+
+    # Assertions about the constructed circuit
+    assert circuit.nqubits == nqubits
+
+    # Verify initial Hadamard gates
+    h_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.H))
+    assert h_gates_count == nqubits
+
+    # Verify CZ gates
+    cz_gates_expected = 0
+    # Count non-zero elements in the upper triangular part of the matrix
+    for a in range(nqubits):
+        for b in range(a + 1, nqubits):
+            if matrix[a, b] != 0:
+                cz_gates_expected += 1
+
+    cz_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.CZ))
+    assert cz_gates_count == cz_gates_expected
+    

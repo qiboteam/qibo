@@ -1485,7 +1485,7 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def graph_state(adj_matrix, backend=None, **kwargs):
+def graph_state(matrix, backend=None, **kwargs):
     """Create circuit encoding an undirected graph state given its adjacency matrix.
 
     Args:
@@ -1501,7 +1501,7 @@ def graph_state(adj_matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=type(matrix[0]))
 
-    if not backend.assert_allclose(matrix, matrix.T):
+    if not backend.assert_allclose(np.array(matrix), np.array(matrix).T):
         raise_error(
             ValueError,
             f"``matrix`` is not symmetric, not representing an undirected graph.",
@@ -1510,7 +1510,7 @@ def graph_state(adj_matrix, backend=None, **kwargs):
     nqubits = len(matrix)
 
     circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.H(qubit) for qubits in range(nqubits))
+    circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     # since the matrix is symmetric, we only need the upper triangular part
     rows, columns = backend.np.nonzero(backend.np.triu(matrix))
