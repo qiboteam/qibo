@@ -2821,7 +2821,7 @@ def _check_engine(array):
 
 
 def _controlled_decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-    """Decompose non-conjugation gates component-wise. """
+    """Decompose non-conjugation gates component-wise."""
     from qibo.transpiler.decompositions import (  # pylint: disable=C0415
         standard_decompositions,
     )
@@ -2847,10 +2847,7 @@ def _controlled_decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
             gate_control_qubits = gate.control_qubits
             gate.is_controlled_by = False
             gate.control_qubits = ()
-            c_gate = gate.controlled_by(
-                *control_qubits,
-                *gate_control_qubits
-            )
+            c_gate = gate.controlled_by(*control_qubits, *gate_control_qubits)
             decomp[i] = c_gate
         self.is_controlled_by = True
         decomp = [*c_decomps1, *decomp, *c_decomps2[::-1]]
