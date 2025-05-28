@@ -463,14 +463,17 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
     [
         # Test Case 1: 3-qubit graph
         ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False),
-        # Test Case 2: 5-qubit  graph 
-        ([
-            [0, 1, 0, 0, 1],
-            [1, 0, 1, 0, 0],
-            [0, 1, 0, 1, 0],
-            [0, 0, 1, 0, 1],
-            [1, 0, 0, 1, 0],
-        ], False),
+        # Test Case 2: 5-qubit  graph
+        (
+            [
+                [0, 1, 0, 0, 1],
+                [1, 0, 1, 0, 0],
+                [0, 1, 0, 1, 0],
+                [0, 0, 1, 0, 1],
+                [1, 0, 0, 1, 0],
+            ],
+            False,
+        ),
         # Test Case 3: Non-symmetric matrix (expected error)
         ([[0, 1, 0], [0, 0, 1], [0, 1, 0]], True),  # matrix[1,0] != matrix[0,1]
         # Test Case 4: Non-symmetric matrix (expected error)
@@ -508,4 +511,3 @@ def test_graph_state(backend, matrix_data, expects_error):
 
     cz_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.CZ))
     assert cz_gates_count == cz_gates_expected
-    
