@@ -358,7 +358,7 @@ class Gate:
             self.is_controlled_by = True
             self.control_qubits = qubits
         return self
-    
+
     def _base_decompose(self, *free) -> List["Gate"]:
         """Base decomposition for gates.
 
@@ -384,9 +384,11 @@ class Gate:
 
         Returns:
             list: gates that have the same effect as applying the original gate.
-        """ 
+        """
         if self.is_controlled_by:
-            decomposed = self.__class__(*self.init_args, **self.init_kwargs)._base_decompose(*free)
+            decomposed = self.__class__(
+                *self.init_args, **self.init_kwargs
+            )._base_decompose(*free)
             for g in decomposed:
                 if not g.is_controlled_by:
                     g.is_controlled_by = True
