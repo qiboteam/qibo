@@ -459,10 +459,10 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
 
 @pytest.mark.parametrize(
-    "matrix_data, expects_error",
+    "matrix_data, expects_error, circuit1, circuit2",
     [
         # Test Case 1: 3-qubit graph
-        ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False),
+        ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False, True, False),
         # Test Case 2: 5-qubit  graph
         (
             [
@@ -472,15 +472,17 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
                 [0, 0, 1, 0, 1],
                 [1, 0, 0, 1, 0],
             ],
+            False, 
             False,
+            True
         ),
         # Test Case 3: Non-symmetric matrix (expected error)
-        ([[0, 1, 0], [0, 0, 1], [0, 1, 0]], True),  # matrix[1,0] != matrix[0,1]
+        ([[0, 1, 0], [0, 0, 1], [0, 1, 0]], True, False, False),  # matrix[1,0] != matrix[0,1]
         # Test Case 4: Non-symmetric matrix (expected error)
-        ([[0, 1], [0, 0]], True),  # matrix[1,0] != matrix[0,1]
+        ([[0, 1], [0, 0]], True, False, False),  # matrix[1,0] != matrix[0,1]
     ],
 )
-def test_graph_state(backend, matrix_data, expects_error):
+def test_graph_state(backend, matrix_data, expects_error, circuit1, circuit2):
     matrix = backend.cast(matrix_data, dtype=int)
 
     if expects_error:
@@ -489,26 +491,27 @@ def test_graph_state(backend, matrix_data, expects_error):
             graph_state(matrix, backend=backend)
 
     else:
-        # If no error is expected, proceed with normal circuit construction and checks
-        nqubits = len(matrix)
+        if circuit1:
+            nqubits = 3
+            circuit = Circuit(nqubits)
+            circuit.add(gates.H(qubit) for qubit in range(nqubits))
+            circuit.add(gates.CZ(0, 1))
+            circuit.add(gates.CZ(1, 2))
 
-        # Create the graph state circuit
-        circuit = graph_state(matrix, backend=backend)
+            circuit_target1 = graph_state(matrix)
+            backend.assert_circuitclose(circuit, circuit_target1)
+        
+        if circuit2:
+            nqubits2 = 5
+            circuit2 = Circuit(nqubits2)
+            circuit2.add(gates.H(qubit) for qubit in range(nqubits2))
+            circuit2.add(gates.CZ(0, 1))
+            circuit2.add(gates.CZ(0, 4))
+            circuit2.add(gates.CZ(1, 2))
+            circuit2.add(gates.CZ(2, 3))
+            circuit2.add(gates.CZ(3, 4))
 
-        # Assertions about the constructed circuit
-        assert circuit.nqubits == nqubits
+            circuit_target2 = graph_state(matrix)
+            backend.assert_circuitclose(circuit2, circuit_target2)
 
-        # Verify initial Hadamard gates
-        h_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.H))
-        assert h_gates_count == nqubits
 
-        # Verify CZ gates
-        cz_gates_expected = 0
-        # Count non-zero elements in the upper triangular part of the matrix
-        for a in range(nqubits):
-            for b in range(a + 1, nqubits):
-                if matrix[a, b] != 0:
-                    cz_gates_expected += 1
-
-        cz_gates_count = sum(1 for gate in circuit.queue if isinstance(gate, gates.CZ))
-        assert cz_gates_count == cz_gates_expected

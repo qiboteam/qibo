@@ -1499,7 +1499,7 @@ def graph_state(matrix, backend=None, **kwargs):
     backend = _check_backend(backend)
 
     if isinstance(matrix, list):
-        matrix = backend.cast(matrix, dtype=type(matrix[0]))
+        matrix = backend.cast(matrix, dtype=type(matrix[0][0]))
 
     if not backend.np.allclose(matrix, matrix.T):
         raise_error(
