@@ -3,7 +3,7 @@ import json
 from typing import List, Sequence, Tuple
 
 import sympy
-from numpy import pi, isclose
+from numpy import isclose, pi
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
@@ -373,7 +373,7 @@ class Gate:
             list: gates that have the same effect as applying the original gate.
         """
         return [self.__class__(*self.init_args, **self.init_kwargs)]
-    
+
     @staticmethod
     def gates_cancel(g1, g2):
         """Check if same gate type, same targets, same controls"""
@@ -394,7 +394,7 @@ class Gate:
             # Check if theta1 + theta2 is a multiple of 2π
             return isclose((theta1 + theta2) % (2 * pi), 0, atol=1e-8)
         return False
-    
+
     def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
         """Returns a mask indicating which gates should be controlled."""
         left = 0
