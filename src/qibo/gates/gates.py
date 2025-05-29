@@ -2851,8 +2851,6 @@ def _controlled_decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
             decomp[i] = c_gate
         self.is_controlled_by = True
         decomp = [*c_decomps1, *decomp, *c_decomps2[::-1]]
-        for gate in decomp:
-            print(gate, gate.control_qubits)
         return decomp
 
     return standard_decompositions(self)
