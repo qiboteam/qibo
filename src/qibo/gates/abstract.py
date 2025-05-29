@@ -6,7 +6,6 @@ import sympy
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
-
 REQUIRED_FIELDS = [
     "name",
     "init_args",
@@ -358,11 +357,12 @@ class Gate:
             self.is_controlled_by = True
             self.control_qubits = qubits
         return self
+    
+    def _base_decompose(self, *free) -> List["Gate"]:
+        """Base decomposition for gates.
 
-    def decompose(self, *free) -> List["Gate"]:
-        """Decomposes multi-control gates to gates supported by OpenQASM.
-
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        Returns a list containing the gate itself. Should be overridden by subclasses
+        that support decomposition to simpler gates.
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
@@ -371,6 +371,29 @@ class Gate:
             list: gates that have the same effect as applying the original gate.
         """
         return [self.__class__(*self.init_args, **self.init_kwargs)]
+
+    def decompose(self, *free) -> List["Gate"]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        If the gate is already controlled, it recursively decomposes the base gate and updates the control qubits accordingly.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+
+        Returns:
+            list: gates that have the same effect as applying the original gate.
+        """ 
+        if self.is_controlled_by:
+            decomposed = self.__class__(*self.init_args, **self.init_kwargs)._base_decompose(*free)
+            for g in decomposed:
+                if not g.is_controlled_by:
+                    g.is_controlled_by = True
+                    g.control_qubits = self.control_qubits
+                else:
+                    g.control_qubits += self.control_qubits
+            return decomposed
+        return self._base_decompose(self, *free)
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
