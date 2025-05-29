@@ -498,23 +498,20 @@ def test_graph_state(backend, matrix_data, expects_error, circuit1, circuit2):
     else:
         if circuit1:
             nqubits = 3
-            circuit = Circuit(nqubits)
-            circuit.add(gates.H(qubit) for qubit in range(nqubits))
-            circuit.add(gates.CZ(0, 1))
-            circuit.add(gates.CZ(1, 2))
-
-            circuit_target1 = graph_state(matrix)
-            backend.assert_circuitclose(circuit, circuit_target1)
-
+            target = Circuit(nqubits)
+            target.add(gates.H(qubit) for qubit in range(nqubits))
+            target.add(gates.CZ(0, 1))
+            target.add(gates.CZ(1, 2))
+        
         if circuit2:
-            nqubits2 = 5
-            circuit2 = Circuit(nqubits2)
-            circuit2.add(gates.H(qubit) for qubit in range(nqubits2))
-            circuit2.add(gates.CZ(0, 1))
-            circuit2.add(gates.CZ(0, 4))
-            circuit2.add(gates.CZ(1, 2))
-            circuit2.add(gates.CZ(2, 3))
-            circuit2.add(gates.CZ(3, 4))
-
-            circuit_target2 = graph_state(matrix)
-            backend.assert_circuitclose(circuit2, circuit_target2)
+            nqubits = 5
+            target = Circuit(nqubits)
+            target.add(gates.H(qubit) for qubit in range(nqubits))
+            target.add(gates.CZ(0, 1))
+            target.add(gates.CZ(0, 4))
+            target.add(gates.CZ(1, 2))
+            target.add(gates.CZ(2, 3))
+            target.add(gates.CZ(3, 4))
+            
+        circuit = graph_state(matrix)
+        backend.assert_circuitclose(circuit, target)
