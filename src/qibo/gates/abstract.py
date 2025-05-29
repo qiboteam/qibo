@@ -3,6 +3,7 @@ import json
 from typing import List, Sequence, Tuple
 
 import sympy
+from numpy import pi, isclose
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
@@ -372,6 +373,43 @@ class Gate:
             list: gates that have the same effect as applying the original gate.
         """
         return [self.__class__(*self.init_args, **self.init_kwargs)]
+    
+    @staticmethod
+    def gates_cancel(g1, g2):
+        """Check if same gate type, same targets, same controls"""
+        if g1.__class__ != g2.__class__:
+            return False
+        if g1.target_qubits != g2.target_qubits:
+            return False
+        if getattr(g1, "is_controlled_by", True):
+            if g1.control_qubits != g2.control_qubits:
+                return False
+        # Identity conditions
+        name = g1.name
+        if name in ("h", "cx"):
+            return True
+        if name == "ry":
+            theta1 = g1.parameters[0]
+            theta2 = g2.parameters[0]
+            # Check if theta1 + theta2 is a multiple of 2π
+            return isclose((theta1 + theta2) % (2 * pi), 0, atol=1e-8)
+        return False
+    
+    def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
+        """Returns a mask indicating which gates should be controlled."""
+        left = 0
+        right = len(gates) - 1
+        mask = [True] * len(gates)
+        while left < right:
+            g1, g2 = gates[left], gates[right]
+            if self.gates_cancel(g1, g2):
+                mask[left] = False
+                mask[right] = False
+                left += 1
+                right -= 1
+            else:
+                break
+        return mask
 
     def decompose(self, *free) -> List["Gate"]:
         """Decomposes multi-control gates to gates supported by OpenQASM.
@@ -389,14 +427,17 @@ class Gate:
             decomposed = self.__class__(
                 *self.init_args, **self.init_kwargs
             )._base_decompose(*free)
-            for g in decomposed:
+            mask = self.control_mask_after_stripping(decomposed)
+            for i, g in enumerate(decomposed):
+                if not mask[i]:
+                    continue
                 if not g.is_controlled_by:
                     g.is_controlled_by = True
                     g.control_qubits = self.control_qubits
                 else:
                     g.control_qubits += self.control_qubits
             return decomposed
-        return self._base_decompose(self, *free)
+        return self._base_decompose(*free)
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
