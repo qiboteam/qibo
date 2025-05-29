@@ -472,12 +472,17 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
                 [0, 0, 1, 0, 1],
                 [1, 0, 0, 1, 0],
             ],
-            False, 
             False,
-            True
+            False,
+            True,
         ),
         # Test Case 3: Non-symmetric matrix (expected error)
-        ([[0, 1, 0], [0, 0, 1], [0, 1, 0]], True, False, False),  # matrix[1,0] != matrix[0,1]
+        (
+            [[0, 1, 0], [0, 0, 1], [0, 1, 0]],
+            True,
+            False,
+            False,
+        ),  # matrix[1,0] != matrix[0,1]
         # Test Case 4: Non-symmetric matrix (expected error)
         ([[0, 1], [0, 0]], True, False, False),  # matrix[1,0] != matrix[0,1]
     ],
@@ -500,7 +505,7 @@ def test_graph_state(backend, matrix_data, expects_error, circuit1, circuit2):
 
             circuit_target1 = graph_state(matrix)
             backend.assert_circuitclose(circuit, circuit_target1)
-        
+
         if circuit2:
             nqubits2 = 5
             circuit2 = Circuit(nqubits2)
@@ -513,5 +518,3 @@ def test_graph_state(backend, matrix_data, expects_error, circuit1, circuit2):
 
             circuit_target2 = graph_state(matrix)
             backend.assert_circuitclose(circuit2, circuit_target2)
-
-
