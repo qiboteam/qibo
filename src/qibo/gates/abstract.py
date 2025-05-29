@@ -6,6 +6,7 @@ import sympy
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
+
 REQUIRED_FIELDS = [
     "name",
     "init_args",
