@@ -360,7 +360,7 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def _base_decompose(self, *free) -> List["Gate"]:
+    def _base_decompose(self) -> List["Gate"]:
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by subclasses
@@ -411,7 +411,7 @@ class Gate:
                 break
         return mask
 
-    def decompose(self, *free) -> List["Gate"]:
+    def decompose(self, *free, use_toffolis=True) -> List["Gate"]:
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
@@ -426,7 +426,7 @@ class Gate:
         if self.is_controlled_by:
             decomposed = self.__class__(
                 *self.init_args, **self.init_kwargs
-            )._base_decompose(*free)
+            )._base_decompose(*free, use_toffolis=True)
             mask = self.control_mask_after_stripping(decomposed)
             for i, g in enumerate(decomposed):
                 if not mask[i]:
@@ -437,7 +437,7 @@ class Gate:
                 else:
                     g.control_qubits += self.control_qubits
             return decomposed
-        return self._base_decompose(*free)
+        return self._base_decompose(*free, use_toffolis=True)
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
