@@ -1551,4 +1551,3 @@ def _add_scs_gate(circuit: Circuit, n: int, k: int):
             gates.RY(target_qubit, theta).controlled_by(control_qubit, last_qubit)
         )
         circuit.add(gates.CNOT(target_qubit, last_qubit))
-    # return circuit
