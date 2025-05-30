@@ -2,6 +2,7 @@
 
 import math
 from functools import reduce
+from itertools import combinations
 
 import numpy as np
 import pytest
@@ -14,6 +15,7 @@ from qibo.models.encodings import (
     _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
+    dicke_state,
     entangling_layer,
     ghz_state,
     hamming_weight_encoder,
@@ -449,6 +451,38 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
         GHZ_circ = ghz_state(nqubits, density_matrix=density_matrix)
         state = backend.execute_circuit(GHZ_circ).state()
+
+        if density_matrix:
+            target = backend.np.outer(target, backend.np.conj(target.T))
+
+        backend.assert_allclose(state, target)
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nqubits, weight", [
+    (2, 1),
+    (3, 1),
+    (3, 2),
+    (4, 2),
+    (4, 1),
+])
+def test_dicke_state(backend, nqubits, weight, density_matrix):
+    if weight < 0 or weight > nqubits:
+        with pytest.raises(ValueError):
+            dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+    else:
+        # Build expected Dicke state vector
+        target = np.zeros(2**nqubits, dtype=complex)
+        bitstrings = combinations(range(nqubits), weight)
+        for positions in bitstrings:
+            index = sum(1 << (nqubits - 1 - p) for p in positions)
+            target[index] = 1.0
+        target /= np.sqrt(np.count_nonzero(target))
+
+        target = backend.cast(target, dtype=target.dtype)
+
+        dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+        result = backend.execute_circuit(dicke_circ)
+        state = result.state()
 
         if density_matrix:
             target = backend.np.outer(target, backend.np.conj(target.T))
