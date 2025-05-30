@@ -426,8 +426,17 @@ class Gate:
             list: gates that have the same effect as applying the original gate.
         """
         if self.is_controlled_by:
+            # Step 1: Error check with all controls/targets
+            error_check_gate = self.__class__(*self.init_args, **self.init_kwargs)
+            error_check_gate.target_qubits = self.target_qubits
+            error_check_gate.control_qubits = self.control_qubits
+            if set(free) & set(error_check_gate.qubits):
+                raise ValueError(
+                    "Cannot decompose multi-control X gate if free "
+                    "qubits coincide with target or controls."
+                )
+            # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            base_gate.control_qubits = self.control_qubits
             decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
             mask = self.control_mask_after_stripping(decomposed)
             for i, g in enumerate(decomposed):
