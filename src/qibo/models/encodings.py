@@ -1498,7 +1498,12 @@ def dicke_state(nqubits: int, weight: int, **kwargs):
         kwargs: Additional arguments for Circuit initialization.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit` : Quantum circuit that prepares |D_k^n⟩ when applied to |0⟩^⊗n.
+        :class:`qibo.models.circuit.Circuit` : Circuit that prepares :math:`\\ket{D_{k}^{n}}`.
+
+    References:
+        1. Andreas Bärtschi and Stephan Eidenbenz, *Deterministic preparation of Dicke states*,
+        `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
+        <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
     """
     if weight < 0 or weight > nqubits:
         raise ValueError(f"weight must be between 0 and {nqubits}, got {weight}")
