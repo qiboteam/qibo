@@ -243,81 +243,54 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend):
     ]
 
 
-def _get_z_component(unitary, backend):
-    """Calculates the hz component from a unitary's magic decomposition."""
-    ud_diag = to_bell_diagonal(unitary, backend=backend)
-    if ud_diag is None:
-        _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
-        ud_diag = to_bell_diagonal(ud, backend=backend)
-    _, _, hz = calculate_h_vector(ud_diag, backend=backend)
-    return float(hz)
-
-
-def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
-    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
-    # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
-    ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy = float(hx), float(hy)
-
-    # Get light decomposition
-    gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
-
-    # Combine with initial and final local unitaries
-    g0, g1 = gatelist[:2]
-    gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
-    gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
-
-    g0, g1 = gatelist[-2:]
-    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
-    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    return gatelist
-
-
-def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
-    """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
-    # Get magic decomposition
-    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
-    ud_diag = to_bell_diagonal(ud, backend=backend)
-    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy, hz = float(hx), float(hy), float(hz)
-
-    # Get full decomposition
-    cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
-
-    # Combine with initial and final local unitaries
-    gatelist = [
-        gates.Unitary(u1, q0),
-        gates.Unitary(backend.cast(H) @ v1, q1),
-    ]
-    gatelist.extend(cnot_dec[1:])
-    g0, g1 = gatelist[-2:]
-    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
-    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    return gatelist
-
-
-def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
-    """Performs two qubit unitary gate decomposition.
+def two_qubit_decomposition(q0, q1, unitary, backend):
+    """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
 
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
         backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
-        threshold (float): Threshold for determining if hz component is zero.
 
     Returns:
-        list: gates implementing the decomposition
+        (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
-    # Handle identity case efficiently
-    if np.allclose(unitary, np.eye(4)):
-        return []
 
-    z_component = _get_z_component(unitary, backend)
-    if abs(z_component) < threshold:
-        return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
-    return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
+    ud_diag = to_bell_diagonal(unitary, backend=backend)
+    ud = None
+    if ud_diag is None:
+        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+        ud_diag = to_bell_diagonal(ud, backend=backend)
+
+    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
+    hx, hy, hz = float(hx), float(hy), float(hz)
+    if np.allclose([hx, hy, hz], [0, 0, 0]):
+        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+        gatelist = [gates.Unitary(u4 @ u1, q0), gates.Unitary(v4 @ v1, q1)]
+    elif np.allclose(hz, 0):
+        gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
+        if ud is None:
+            return gatelist
+        g0, g1 = gatelist[:2]
+        gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
+        gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
+
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    else:
+        cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
+        if ud is None:
+            return cnot_dec
+
+        gatelist = [
+            gates.Unitary(u1, q0),
+            gates.Unitary(backend.cast(H) @ v1, q1),
+        ]
+        gatelist.extend(cnot_dec[1:])
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    return gatelist
