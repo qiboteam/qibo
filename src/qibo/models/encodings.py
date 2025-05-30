@@ -1489,7 +1489,7 @@ def dicke_state(nqubits: int, weight: int, **kwargs):
     """Create a circuit that prepares the Dicke state |D_k^n⟩.
 
     The Dicke state |D_k^n⟩ is the equal superposition of all n-qubit states
-    with Hamming weight k (exactly k ones). The circuit prepares the state
+    with Hamming weight k. The circuit prepares the state
     deterministically with O(kn) gates and O(n) depth, following the construction
     from arXiv:1904.07358.
 
