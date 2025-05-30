@@ -1555,3 +1555,37 @@ def _add_scs_gate(circuit: Circuit, n: int, k: int):
             gates.RY(target_qubit, theta).controlled_by(control_qubit, last_qubit)
         )
         circuit.add(gates.CNOT(target_qubit, last_qubit))
+
+
+def graph_state(matrix, backend=None, **kwargs):
+    """Create circuit encoding an undirected graph state given its adjacency matrix.
+
+    Args:
+        matrix (ndarray or list): Adjacency matrix of the graph.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`:  Circuit of the graph state with the given Adjacency matrix.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(matrix, list):
+        matrix = backend.cast(matrix, dtype=int)
+
+    if not backend.np.allclose(matrix, matrix.T):
+        raise_error(
+            ValueError,
+            f"``matrix`` is not symmetric, not representing an undirected graph",
+        )
+
+    nqubits = len(matrix)
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(qubit) for qubit in range(nqubits))
+
+    # since the matrix is symmetric, we only need the upper triangular part
+    rows, columns = backend.np.nonzero(backend.np.triu(matrix))
+    circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
+
+    return circuit
