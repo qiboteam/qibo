@@ -1,5 +1,6 @@
 import collections
 import json
+from math import pi
 from typing import List, Sequence, Tuple
 
 import sympy
@@ -359,10 +360,11 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def decompose(self, *free) -> List["Gate"]:
-        """Decomposes multi-control gates to gates supported by OpenQASM.
+    def _base_decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+        """Base decomposition for gates.
 
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        Returns a list containing the gate itself. Should be overridden by subclasses
+        that support decomposition to simpler gates.
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
@@ -371,6 +373,82 @@ class Gate:
             list: gates that have the same effect as applying the original gate.
         """
         return [self.__class__(*self.init_args, **self.init_kwargs)]
+
+    @staticmethod
+    def gates_cancel(g1, g2):
+        """Check if same gate type, same targets, same controls"""
+        if g1.__class__ != g2.__class__:
+            return False
+        if g1.target_qubits != g2.target_qubits:
+            return False
+        if getattr(g1, "is_controlled_by", True):
+            if g1.control_qubits != g2.control_qubits:
+                return False
+        # Identity conditions
+        name = g1.name
+        if name in ("h", "cx"):
+            return True
+        if name == "ry":
+            theta1 = g1.parameters[0]
+            theta2 = g2.parameters[0]
+            # Check if theta1 + theta2 is a multiple of 2π
+            return [
+                bool((first + second) % (2 * pi) < 1e-8)
+                for first, second in zip(theta1, theta2)
+            ]
+        return False
+
+    def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
+        """Returns a mask indicating which gates should be controlled."""
+        left = 0
+        right = len(gates) - 1
+        mask = [True] * len(gates)
+        while left < right:
+            g1, g2 = gates[left], gates[right]
+            if self.gates_cancel(g1, g2):
+                mask[[left, right]] = False
+                left += 1
+                right -= 1
+            else:
+                break
+        return mask
+
+    def decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        If the gate is already controlled, it recursively decomposes the base gate and updates the control qubits accordingly.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+
+        Returns:
+            list: gates that have the same effect as applying the original gate.
+        """
+        if self.is_controlled_by:
+            # Step 1: Error check with all controls/targets
+            error_check_gate = self.__class__(*self.init_args, **self.init_kwargs)
+            error_check_gate.target_qubits = self.target_qubits
+            error_check_gate.control_qubits = self.control_qubits
+            if set(free) & set(error_check_gate.qubits):
+                raise ValueError(
+                    "Cannot decompose multi-control X gate if free "
+                    "qubits coincide with target or controls."
+                )
+            # Step 2: Decompose base gate without controls
+            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
+            decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
+            mask = self.control_mask_after_stripping(decomposed)
+            for i, g in enumerate(decomposed):
+                if not mask[i]:
+                    continue
+                if not g.is_controlled_by:
+                    g.is_controlled_by = True
+                    g.control_qubits = self.control_qubits
+                else:
+                    g.control_qubits += self.control_qubits
+            return decomposed
+        return self._base_decompose(*free, use_toffolis=use_toffolis)
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
