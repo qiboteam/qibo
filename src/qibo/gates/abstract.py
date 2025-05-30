@@ -403,8 +403,7 @@ class Gate:
         while left < right:
             g1, g2 = gates[left], gates[right]
             if self.gates_cancel(g1, g2):
-                mask[left] = False
-                mask[right] = False
+                mask[[left, right]] = False
                 left += 1
                 right -= 1
             else:
