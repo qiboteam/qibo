@@ -1514,6 +1514,6 @@ def graph_state(matrix, backend=None, **kwargs):
 
     # since the matrix is symmetric, we only need the upper triangular part
     rows, columns = backend.np.nonzero(backend.np.triu(matrix))
-    circuit.add(gates.CZ(ind_r, ind_c) for ind_r, ind_c in zip(rows, columns))
+    circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
