@@ -488,7 +488,6 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
     ],
 )
 def test_graph_state(backend, matrix_data, expects_error, circuit1, circuit2):
-    matrix = backend.cast(matrix_data, dtype=int)
 
     if expects_error:
         # We expect a ValueError for non-symmetric matrices
