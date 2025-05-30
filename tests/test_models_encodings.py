@@ -462,6 +462,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 @pytest.mark.parametrize(
     "nqubits, weight",
     [
+        (2, -1),
         (2, 1),
         (3, 1),
         (3, 2),
