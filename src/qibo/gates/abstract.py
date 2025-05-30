@@ -392,7 +392,7 @@ class Gate:
             theta1 = g1.parameters[0]
             theta2 = g2.parameters[0]
             # Check if theta1 + theta2 is a multiple of 2π
-            return isclose((theta1 + theta2) % (2 * pi), 0, atol=1e-8)
+            return [bool((first + second) % (2 * pi) < 1e-8) for first, second in zip(theta1, theta2) ]
         return False
 
     def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
