@@ -496,6 +496,7 @@ def test_dicke_state(backend, nqubits, weight, density_matrix):
 
         backend.assert_allclose(state, target)
 
+
 @pytest.mark.parametrize(
     "matrix_data, expects_error, circuit1, circuit2",
     [
