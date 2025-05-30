@@ -3,7 +3,7 @@ import json
 from typing import List, Sequence, Tuple
 
 import sympy
-from numpy import isclose, pi
+from math import pi
 
 from qibo.backends import _check_backend
 from qibo.config import raise_error
