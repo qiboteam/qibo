@@ -1485,7 +1485,7 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def dicke_state(nqubits: int, weight: int, backend=None, **kwargs):
+def dicke_state(nqubits: int, weight: int, **kwargs):
     """Create a circuit that prepares the Dicke state |D_k^n⟩.
 
     The Dicke state |D_k^n⟩ is the equal superposition of all n-qubit states
