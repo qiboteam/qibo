@@ -1501,8 +1501,8 @@ def dicke_state(nqubits: int, weight: int, **kwargs):
     Returns:
         :class:`qibo.models.circuit.Circuit` : Quantum circuit that prepares |D_k^n⟩ when applied to |0⟩^⊗n.
     """
-    if k < 0 or k > nqubits:
-        raise ValueError(f"k must be between 0 and {nqubits}, got {k}")
+    if weight < 0 or weight > nqubits:
+        raise ValueError(f"weight must be between 0 and {nqubits}, got {weight}")
 
     circuit = Circuit(nqubits, **kwargs)
 
