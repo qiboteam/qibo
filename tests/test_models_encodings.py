@@ -457,14 +457,18 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
         backend.assert_allclose(state, target)
 
+
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nqubits, weight", [
-    (2, 1),
-    (3, 1),
-    (3, 2),
-    (4, 2),
-    (4, 1),
-])
+@pytest.mark.parametrize(
+    "nqubits, weight",
+    [
+        (2, 1),
+        (3, 1),
+        (3, 2),
+        (4, 2),
+        (4, 1),
+    ],
+)
 def test_dicke_state(backend, nqubits, weight, density_matrix):
     if weight < 0 or weight > nqubits:
         with pytest.raises(ValueError):
