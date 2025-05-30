@@ -333,26 +333,35 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     ],
 )
 def test_ics(backend, nqubits, noise, full_output, readout):
+    np.random.seed(10)
+    backend.set_seed(10)
+    backend.set_dtype("complex128")
+
+    from qibo import set_dtype
+
+    set_dtype("complex128")
+
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
         backend.tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
+
     """Test that ICS reduces the noise."""
     # Define the circuit
-    c = get_circuit(nqubits, nqubits - 1)
+    circuit = get_circuit(nqubits, nqubits - 1)
     # Define the observable
     obs = np.prod([Z(i, backend=backend) for i in range(nqubits - 1)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=10000)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
     noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = ICS(
-        circuit=c,
+        circuit=circuit,
         observable=obs,
         noise_model=noise,
         nshots=10000,

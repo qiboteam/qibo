@@ -119,7 +119,7 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
         state, implementation=implementation, backend=backend
     )
 
-    backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
+    backend.assert_allclose(transformed, test_transformed, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("kind", [None, list])

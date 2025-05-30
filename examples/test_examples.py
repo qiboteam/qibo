@@ -152,7 +152,7 @@ def test_benchmarks(nqubits, circuit_name):
         "nqubits": nqubits,
         "circuit_name": circuit_name,
         "backend": "qibojit",
-        "precision": "double",
+        "dtype": "complex128",
         "device": None,
         "accelerators": None,
         "get_branch": False,
