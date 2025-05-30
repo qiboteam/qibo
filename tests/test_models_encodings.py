@@ -498,7 +498,7 @@ def test_dicke_state(backend, nqubits, weight, density_matrix):
 
 
 @pytest.mark.parametrize(
-    "matrix_data, expects_error, circuit1, circuit2",
+    "matrix, expects_error, circuit1, circuit2",
     [
         # Test Case 1: 3-qubit graph
         ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False, True, False),
