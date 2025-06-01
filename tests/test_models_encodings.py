@@ -461,6 +461,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("all_to_all", [False, True])
 @pytest.mark.parametrize(
     "nqubits, weight",
     [
@@ -472,10 +473,10 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         (4, 1),
     ],
 )
-def test_dicke_state(backend, nqubits, weight, density_matrix):
+def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
     if weight < 0 or weight > nqubits:
         with pytest.raises(ValueError):
-            dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+            dicke_circ = dicke_state(nqubits, weight, all_to_all=all_to_all, density_matrix=density_matrix)
     else:
         # Build expected Dicke state vector
         target = np.zeros(2**nqubits, dtype=complex)
@@ -487,7 +488,7 @@ def test_dicke_state(backend, nqubits, weight, density_matrix):
 
         target = backend.cast(target, dtype=target.dtype)
 
-        dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+        dicke_circ = dicke_state(nqubits, weight, all_to_all=all_to_all, density_matrix=density_matrix)
         result = backend.execute_circuit(dicke_circ)
         state = result.state()
 

@@ -746,254 +746,6 @@ def ghz_state(nqubits: int, **kwargs):
     return circuit
 
 
-def dicke_state(nqubits: int, k: int, all_to_all_connectivity: bool = False, **kwargs):
-    """Generate an :math:`n`-qubit Dicke state defined as
-
-    .. math::
-        \\ket{D^n_k} = \\frac{1}{{n\\choose k}} \\sum_{\\ket{b}\\in B} \\ket{b}
-
-    where :math:`B={\\ket{b}:b\\in {0,1}}^{\\otimes n} \\text{and } |b|=k}` is the set of
-    bitstrings with fixed Hamming weight k (i.e. number of non-zero bits).
-    Implemented following Lemma 2 from [1]`arXiv:1904.07358 <https://arxiv.org/abs/1904.07358>`_ with
-    :math:`O(kn)` two-qubit gates and depth :math:`O(n)`. Additionally, if all-to-all connectivity is
-    allowed, the improved version from [2]`arXiv:2207.09998 <https://arxiv.org/abs/2207.09998>`_ with depth
-    :math:`O(k\\log(\\frac{n}{k}))` is used instead.
-
-    Args:
-        nqubits (int): number of qubits :math:`n >= 2`.
-        k (int): bitstring's Hamming weight k.
-        all_to_all_connectivity (bool): Decides which implementation to use.
-        kwargs (dict, optional): additional arguments used to initialize a Circuit object.
-            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
-
-    Returns:
-        :class:`qibo.models.circuit.Circuit`: Circuit that prepares the Dicke state.
-
-    TEST:
-    ### TEST FOR VALIDATING WBD/U BY REPLICATING QUIRK CIRCUIT AFTER DEFINITION 2 (IMPLEMENT FIGURE 2) from ref [2]
-    print("MANUAL WBD CONSTRUCTION TEST: ")
-    nqubits = 11
-    circ = Circuit(nqubits)
-    qubits = range(nqubits)
-
-    # flip last k bits, to generate Dnk
-    k = 3
-    circ.add( gates.X(nqubits-1-q) for q in range(k) )   # can test for l=0, 1, 2 or 3
-
-    circ += _dicke_WBD(nqubits, qubits, 11, 5, 3)
-
-    circ += _dicke_WBD(nqubits, qubits[-6:], 6, 3, 3)
-    circ += _dicke_WBD(nqubits, qubits[:5], 5, 2, 3)
-
-    circ += _dicke_u(nqubits, qubits[:2], 2)
-    circ += _dicke_u(nqubits, qubits[2:5], 3)
-    circ += _dicke_u(nqubits, qubits[5:8], 3)
-    circ += _dicke_u(nqubits, qubits[8:], 3)
-
-    circ.draw()
-    print(circ())
-
-
-    ### WE ALSO VALIDATE IT GIVES THE SAME AS WITHOUT FULL_CONENCTIVITY
-    print("\n\nNON-FULL CONNECTIVITY SANITY CHECK: ")
-    print(dicke_state(nqubits, k)())
-
-
-    ### AND FINALLY TEST WE ALSO GET THIS CIRCUIT FROM THE ALL_TO_ALL_CONNECTIVITY
-    print("\n\nALL-TO-ALL CONNECTIVITY REPLICATE: ")
-    circ2 = dicke_state(nqubits, k, all_to_all_connectivity=True)
-    circ2.draw()
-    print(circ2())
-    """
-    circuit = Circuit(nqubits, **kwargs)
-    if k == nqubits:
-        circuit.add(gates.X(q) for q in range(nqubits))
-        return circuit
-    if all_to_all_connectivity:
-        ## confusing because big endian interpretation in the paper for Unk is reversed from paper for all-to-all
-        ## Circuit drawings are inverted with respect to paper for us
-
-        # 1. We prepare disjoint sets of qubits / trees. Tier in ascending order
-        disjoint_sets = [
-            {"qubits": list(range(k * it, k * (it + 1))), "tier": k, "children": []}
-            for it in range(nqubits // k)
-        ]
-        nmodk = nqubits % k
-        if nmodk != 0:
-            disjoint_sets.append(
-                {
-                    "qubits": list(range(nqubits - nmodk, nqubits)),
-                    "tier": nmodk,
-                    "children": [],
-                }
-            )
-        disjoint_sets = list(
-            reversed(disjoint_sets)
-        )  # we reverse to have in ascending order of tier
-
-        trees = disjoint_sets.copy()
-        # combine lowest tier trees into one tree. Could do binary search but isn't bottleneck
-        while len(trees) > 1:
-            trees[1]["tier"] += trees[0]["tier"]
-            trees[1]["children"].append(trees[0])
-            root = trees[1]
-            del trees[1]
-            del trees[0]
-            trees.insert(sum(x["tier"] < root["tier"] for x in trees), root)
-
-        # We initialize [1]xk  bitstring we distribute with WBD
-        circuit.add(gates.X(q) for q in trees[0]["qubits"][-k:])
-
-        # undo the union-by-tier algorithm applying WDB gates with root x and highest tier child y (y<x by construct.)
-        it = 0
-        while it < len(trees):
-            node = trees[it]
-            if len(node["children"]) > 0:
-                y = max(node["children"], key=lambda x: x["tier"])
-
-                circuit += _dicke_WBD(
-                    nqubits,
-                    None,
-                    node["tier"],
-                    y["tier"],
-                    k,
-                    second_register=node["qubits"],
-                    first_register=y["qubits"],
-                    **kwargs,
-                )
-
-                node["tier"] -= y["tier"]
-                node["children"].remove(y)
-                trees.append(y)
-                if len(node["children"]) == 0:
-                    it += 1
-            else:
-                it += 1
-
-        for node in disjoint_sets:
-            circuit += _dicke_u(
-                nqubits, node["qubits"], min(k, len(node["qubits"])), **kwargs
-            )
-
-    else:
-        circuit.add(gates.X(q) for q in range(nqubits - k, nqubits))
-        circuit += _dicke_u(nqubits, range(nqubits), k, **kwargs)
-
-    return circuit
-
-
-def _dicke_u(nqubits: int, qubits: List[int], k: int, **kwargs):
-    """Implements :math:`U_{n,k}` gate from `arXiv:1904.07358 <https://arxiv.org/abs/1904.07358>`_"""
-    circuit = Circuit(nqubits, **kwargs)
-    n = len(qubits)
-    if k == 0:
-        # State already in dicke state (as there is only 1 bitstring with hamming weight k=0 and k=n)
-        return circuit
-    for l in range(n, k, -1):
-        circuit += _dicke_scs(nqubits, qubits[:l], k, **kwargs)
-    for l in range(k, 1, -1):
-        circuit += _dicke_scs(nqubits, qubits[:l], l - 1, **kwargs)
-    return circuit
-
-
-def _dicke_scs(nqubits: int, qubits: List[int], k: int, **kwargs):
-    """Implements :math:`SCS_{n,k}` gate from `arXiv:1904.07358 <https://arxiv.org/abs/1904.07358>`_"""
-    n = len(qubits)
-    circuit = Circuit(nqubits, **kwargs)
-    circuit.add(gates.CNOT(qubits[n - 2], qubits[n - 1]))
-    circuit.add(
-        gates.RY(qubits[n - 2], 2 * math.acos(math.sqrt(1 / n))).controlled_by(
-            qubits[n - 1]
-        )
-    )
-    circuit.add(gates.CNOT(qubits[n - 2], qubits[n - 1]))
-    for l in range(2, k + 1):
-        circuit.add(gates.CNOT(qubits[n - 1 - l], qubits[n - 1]))
-        circuit.add(
-            gates.RY(qubits[n - 1 - l], 2 * math.acos(math.sqrt(l / n))).controlled_by(
-                qubits[n - 1], qubits[n - l]
-            )
-        )
-        circuit.add(gates.CNOT(qubits[n - 1 - l], qubits[n - 1]))
-    return circuit
-
-
-def _dicke_WBD(
-    nqubits: int,
-    qubits: List[int],
-    n: int,
-    m: int,
-    k: int,
-    first_register: List[int] = None,
-    second_register: List[int] = None,
-    **kwargs,
-):
-    """Implements :math:`WBD^{n,m}_k` gate from `arXiv:2207.09998 <https://arxiv.org/abs/2207.09998>`_
-    Only acts relevantly on last k digits of first m digits and last k digits of all n digits.
-    These relevant first and second registers can be passed directly"""
-    ## A bit confusing because they changed big endian interpretation in the paper!!!
-    # we asume n-m > m (m <= n/2)
-    if m > n / 2:
-        raise (ValueError("m must not be greater than n-m"))
-
-    circuit = Circuit(nqubits, **kwargs)
-
-    # IMPORTANT REMINDER, our first register and second register are reverse as paper,
-    # Our drawn circuits are mirrored to circuit.
-    # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
-    if (first_register is None) and (second_register is None):
-        first_register = qubits[max(m - k, 0) : m]
-        second_register = qubits[n - k : n]
-
-    # (1) Switching from unary encoding to one hot encoding
-    circuit.add(gates.CNOT(q, q + 1) for q in reversed(second_register[:-1]))
-
-    # (2) Adding a supperposition of hamming weights into the second register
-    # this can be optimized
-    # We follow Figure 4, but adjust definition of xi and si (suffix sum) to match
-    for l in reversed(range(1, k + 1)):
-        x = [math.comb(m, i) * math.comb(n - m, l - i) for i in range(l)]
-        s = math.comb(n, l)
-        circuit.add(
-            gates.RY(
-                first_register[-1], 2 * math.acos(math.sqrt(x[0] / s))
-            ).controlled_by(second_register[-l])
-        )
-        s -= x[0]
-        for q in range(1, min(l, m)):
-            circuit.add(
-                gates.RY(
-                    first_register[-q - 1], 2 * math.acos(math.sqrt(x[q] / s))
-                ).controlled_by(second_register[-l], first_register[-q])
-            )
-            s -= x[q]
-
-    # (3) Go back to unary encoding, undoing one hot encoding
-    circuit.add(gates.CNOT(q, q + 1) for q in second_register[:-1])
-
-    # (4) Substracting weight i in the first register from weight l in the second register.
-    # We use fredkin, controlled swap (can be decomposed into CNOT and Toffoli)
-    fredkin = lambda control, s1, s2: (
-        gates.CNOT(s2, s1),
-        gates.TOFFOLI(control, s1, s2),
-        gates.CNOT(s2, s1),
-    )
-
-    dif = max(0, k - m)
-    for control in range(dif, k):
-        for q in range(control):
-            circuit.add(
-                fredkin(
-                    first_register[control - dif],
-                    second_register[control - q],
-                    second_register[control - q - 1],
-                )
-            )
-        circuit.add(gates.CNOT(first_register[control - dif], second_register[0]))
-
-    return circuit
-
-
 def _generate_rbs_pairs(nqubits: int, architecture: str, **kwargs):
     """Generate list of indexes representing the RBS connections.
 
@@ -1733,69 +1485,120 @@ def _get_phase_gate_correction_sparse(
     return gate
 
 
-def dicke_state(nqubits: int, weight: int, **kwargs):
+def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
     """Create a circuit that prepares the Dicke state :math:`\\ket{D_{k}^{n}}`.
-
     The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
     computational basis states with fixed-Hamming-weight :math:`k`.
-    The circuit prepares the state deterministically with :math:`O(k \\, n)` gates and :math:`O(n)` depth.
-
+    The circuit prepares the state deterministically with :math:`O(k \\, n)` gates and :math:`O(n)` depth,
+    or :math:`O(k \\log\\frac{n}{k})` for all-to-all connectivity.
     Args:
         nqubits (int): number of qubits :math:`n`.
         weight (int): Hamming weight :math:`k` of the Dicke state.
+        all_to_all (bool): Whether to use the shorter depth implementation from reference
         kwargs: Additional arguments for Circuit initialization.
-
     Returns:
         :class:`qibo.models.circuit.Circuit` : Circuit that prepares :math:`\\ket{D_{k}^{n}}`.
-
     References:
         1. Andreas Bärtschi and Stephan Eidenbenz, *Deterministic preparation of Dicke states*,
         `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
         <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
+        2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State Preparation*,
+        `IEEE International Conference on Quantum Computing & Engineering (QCE), 2022, pp. 87--96
+        <https://doi.org/10.1109/QCE53715.2022.00027>`_.
     """
     if weight < 0 or weight > nqubits:
         raise ValueError(f"weight must be between 0 and {nqubits}, got {weight}")
 
     circuit = Circuit(nqubits, **kwargs)
 
-    # Start with |0⟩^(n-k) |1⟩^k
-    circuit.add(gates.X(qubit) for qubit in range(nqubits - weight, nqubits))
+    if weight == 0: 
+        return circuit
 
-    for m in range(nqubits, weight, -1):
-        # Add SCS_{m,k} acting on last k+1 qubits
-        _add_scs_gate(circuit, m, weight)
+    if not all_to_all:
+        # Start with |0⟩^(n-k) |1⟩^k
+        circuit.add(gates.X(qubit) for qubit in range(nqubits - weight, nqubits))
 
-    # Recursively build the unitary U_n,k
-    for m in range(weight, 0, -1):
-        # Add SCS_{m,m-1} acting on last m qubits
-        _add_scs_gate(circuit, m, m - 1)
+        _add_dicke_unitary_gate(circuit, range(nqubits), weight)
+            
+    else:
+        # We prepare disjoint sets of qubits
+        disjoint_sets = [
+            {"qubits": list(range(weight * it, weight * (it + 1))), "tier": weight, "children": []}
+            for it in range(nqubits // weight)
+        ]
+        nmodk = nqubits % weight
+        if nmodk != 0:
+            disjoint_sets.append(
+                {"qubits": list(range(nqubits - nmodk, nqubits)), "tier": nmodk,"children": []}
+            )
+        disjoint_sets = list(
+            reversed(disjoint_sets)
+        )  # we reverse to have in ascending order of tier
+
+        trees = disjoint_sets.copy()
+        # combine lowest tier trees into one tree
+        print(": ")
+        print(list(id(t) for t in trees))
+        while len(trees) > 1:
+            first_smallest = trees.pop(0)
+            second_smallest = trees.pop(0)
+            second_smallest["tier"] += first_smallest["tier"]
+            second_smallest["children"].append(first_smallest)
+            new = second_smallest
+            # put new combined tree in list mantaining ordering
+            trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
+            print(list(id(t) for t in trees))
+
+        root = trees[0]
+        # We initialize |0>^|1>^k  bitstring at root qubits
+        circuit.add(gates.X(q) for q in root["qubits"][-weight:])
+
+        # undo the union-by-tier algorithm: 
+        # split each root's (x) highest tier child y, and add WBD acting on both
+        while len(trees) < len(disjoint_sets):
+            cut_nodes = []
+            for node in trees:
+                if len(node["children"]) > 0:
+                    # find highest tier child
+                    y = max(node["children"], key=lambda x: x["tier"])
+                    # add WBD acting on both sets of qubits
+                    _add_wbd_gate(circuit, node["qubits"], y["qubits"], node["tier"], y["tier"], weight)
+                    # cut tree splitting x and y
+                    node["tier"] -= y["tier"]
+                    node["children"].remove(y)
+                    cut_nodes.append(y)
+            trees += cut_nodes
+
+        for node in disjoint_sets:
+            _add_dicke_unitary_gate(circuit, node["qubits"], min(weight, len(node["qubits"])))
 
     return circuit
 
 
-def _add_scs_gate(circuit: Circuit, n: int, k: int):
+def _add_scs_gate(circuit: Circuit, qubits: List[int], k: int):
     """In-place addition of a Split & Cyclic Shift (SCS) gate to ``circuit``.
-
-    Implements the SCS_{n,k} unitary from Definition 3 of the paper.
-    Acts on the last k+1 qubits of the circuit.
+    Implements the SCS_{n,k} unitary from Definition 3 of the paper [1].
+    Acts on the last k+1 qubits of the n passed qubits.
     """
     if k == 0:
         return  # SCS_{n,0} is identity
 
-    last_qubit = n - 1
-    # first_qubit = last_qubit - k
+    n = len(qubits)
+    last_qubit = qubits[-1] # qubits[n - 1]
+    target_qubit = qubits[-2]
+    # first_qubit = qubits[n - 1 - k]
 
     # Gate (i) - acts on last two qubits
     theta = 2 * np.arccos(np.sqrt(1 / n))
-    circuit.add(gates.CNOT(last_qubit - 1, last_qubit))
-    circuit.add(gates.RY(last_qubit - 1, theta).controlled_by(last_qubit))
-    circuit.add(gates.CNOT(last_qubit - 1, last_qubit))
+    circuit.add(gates.CNOT(target_qubit, last_qubit))
+    circuit.add(gates.RY(target_qubit, theta).controlled_by(last_qubit))
+    circuit.add(gates.CNOT(target_qubit, last_qubit))
 
     # Gates (ii)_ℓ for ℓ from 2 to k
     for l in range(2, k + 1):
         theta = 2 * np.arccos(np.sqrt(l / n))
-        target_qubit = last_qubit - l
-        control_qubit = target_qubit + 1
+        target_qubit = qubits[-(l + 1)]
+        control_qubit = qubits[-l]
 
         # Implement the three-qubit gate (ii)_ℓ
         circuit.add(gates.CNOT(target_qubit, last_qubit))
@@ -1803,6 +1606,75 @@ def _add_scs_gate(circuit: Circuit, n: int, k: int):
             gates.RY(target_qubit, theta).controlled_by(control_qubit, last_qubit)
         )
         circuit.add(gates.CNOT(target_qubit, last_qubit))
+
+def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], k: int):
+    """In-place addition to ``circuit`` of a U_{n,k} gate from Definition 2 of the paper [1]."""
+    n = len(qubits)
+    for m in range(n, k, -1):
+        # Add SCS_{m,k} acting on last k+1 qubits
+        _add_scs_gate(circuit, qubits[:m], k)
+
+    # Recursively build the unitary U_n,k
+    for m in range(k, 0, -1):
+        # Add SCS_{m,m-1} acting on last m qubits
+        _add_scs_gate(circuit, qubits[:m], m - 1)
+
+def _add_wbd_gate(
+    circuit: Circuit, first_register: List[int], second_register: List[int], n: int, m: int, k: int
+):
+    """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
+    Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
+    Only acts on first_register and second_register.
+    Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left bitstring convention"""
+
+    if m > n / 2:
+        raise (ValueError("m must not be greater than n-m"))
+    # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
+
+    # (1) Switching from unary encoding to one hot encoding
+    circuit.add(gates.CNOT(q, q + 1) for q in reversed(first_register[:-1]))
+
+    # (2) Adding a supperposition of hamming weights into the second register
+    # this can be optimized
+    # We follow Figure 4, but adjust definition of xi and si (suffix sum) to match
+    theta_gate = lambda qubit, theta: gates.RY(qubit, 2*math.acos(theta))
+    for l in range(k, 0, -1):
+        x = [math.comb(m, i) * math.comb(n - m, l - i) for i in range(l)]
+        s = math.comb(n, l)
+        circuit.add(
+            theta_gate(second_register[-1], math.sqrt(x[0] / s)).controlled_by(first_register[-l])
+        )
+        s -= x[0]
+        for qubit in range(1, min(l, m)):
+            circuit.add(
+                theta_gate(second_register[-qubit - 1], math.sqrt(x[qubit] / s)).controlled_by(
+                    first_register[-l], second_register[-qubit]
+                    )
+            )
+            s -= x[qubit]
+
+    # (3) Go back to unary encoding, undoing one hot encoding
+    circuit.add(gates.CNOT(q, q + 1) for q in first_register[:-1])
+
+    # (4) Substracting weight i in the first register from weight l in the second register.
+    # fredkin, controlled swaps (decomposed into CNOT and Toffoli)
+    fredkin = lambda control, s1, s2: (
+        gates.CNOT(s2, s1),
+        gates.TOFFOLI(control, s1, s2),
+        gates.CNOT(s2, s1),
+    )
+
+    dif = max(0, k - m)
+    for control in range(dif, k):
+        for q in range(control):
+            circuit.add(
+                fredkin(
+                    second_register[control - dif],
+                    first_register[control - q],
+                    first_register[control - q - 1],
+                )
+            )
+        circuit.add(gates.CNOT(second_register[control - dif], first_register[0]))
 
 
 def graph_state(matrix, backend=None, **kwargs):
