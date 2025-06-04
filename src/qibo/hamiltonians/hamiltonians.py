@@ -128,7 +128,7 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        diag = self.backend.np.reshape(self.nqubits * (2,))
+        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
         diag = self.backend.np.transpose(diag, axes=qubit_map).ravel()
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
