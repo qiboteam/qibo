@@ -1545,8 +1545,6 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
 
         trees = disjoint_sets.copy()
         # combine lowest tier trees into one tree
-        print(": ")
-        print(list(id(t) for t in trees))
         while len(trees) > 1:
             first_smallest = trees.pop(0)
             second_smallest = trees.pop(0)
