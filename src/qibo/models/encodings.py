@@ -1501,6 +1501,7 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
 
     Returns:
         :class:`qibo.models.circuit.Circuit` : Circuit that prepares :math:`\\ket{D_{k}^{n}}`.
+
     References:
         1. Andreas Bärtschi and Stephan Eidenbenz, *Deterministic preparation of Dicke states*,
         `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
