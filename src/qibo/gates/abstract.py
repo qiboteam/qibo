@@ -29,55 +29,416 @@ REQUIRED_FIELDS_INIT_KWARGS = [
 
 
 class Gate:
-    """The base class for gate implementation.
+    """Abstract class for gates.
 
-    All base gates should inherit this class.
-
-    Attributes:
-        name (str): Name of the gate.
-        draw_label (str): Optional label for drawing the gate in a circuit
-            with :meth:`qibo.models.Circuit.draw`.
-        is_controlled_by (bool): ``True`` if the gate was created using the
-            :meth:`qibo.gates.abstract.Gate.controlled_by` method,
-            otherwise ``False``.
-        init_args (list): Arguments used to initialize the gate.
-        init_kwargs (dict): Arguments used to initialize the gate.
-        target_qubits (tuple): Tuple with ids of target qubits.
-        control_qubits (tuple): Tuple with ids of control qubits sorted in
-            increasing order.
+    Args:
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``False``.
+        optimize_depth (bool): whether to optimize for circuit depth.
+            Defaults to ``True``.
     """
 
-    def __init__(self):
-        from qibo import config
-
+    def __init__(self, trainable=False, optimize_depth=True):
         self.name = None
         self.draw_label = None
-        self.is_controlled_by = False
-        # args for creating gate
+        self.target_qubits = None
+        self.control_qubits = None
         self.init_args = []
         self.init_kwargs = {}
-
         self.unitary = False
-        self._target_qubits = ()
-        self._control_qubits = ()
-        self._parameters = ()
-        config.ALLOW_SWITCHERS = False
-
-        self.symbolic_parameters = {}
-
-        # for distributed circuits
-        self.device_gates = set()
-        self.original_gate = None
+        self.parameters = None
+        self.nparams = 0
+        self.parameter_names = []
+        self.trainable = trainable
+        self.optimize_depth = optimize_depth
 
     @property
     def clifford(self):
-        """Return boolean value representing if a Gate is Clifford or not."""
+        """Whether the gate is a Clifford gate."""
         return False
 
     @property
     def hamming_weight(self):
-        """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
+        """Whether the gate preserves Hamming weight."""
         return False
+
+    @property
+    def qasm_label(self):
+        """QASM label of the gate."""
+        return self.name
+
+    def _base_decompose(self, *free, use_toffolis=True):
+        """Base decomposition method that returns the gate itself.
+
+        This method should be overridden by subclasses to provide specific
+        decomposition implementations.
+
+        Returns:
+            List containing the gate itself.
+        """
+        return [self]
+
+    def decompose(self, *free, use_toffolis=True):
+        """Decomposes the gate into simpler gates.
+
+        This method handles the decomposition of controlled gates by:
+        1. First decomposing the base gate
+        2. Then applying the control mask to the decomposed gates
+        3. Optimizing the decomposition based on the optimization profile
+
+        Args:
+            *free: Additional qubits that can be used in the decomposition.
+            use_toffolis: Whether to use Toffoli gates in the decomposition.
+
+        Returns:
+            List of gates that have the same effect as applying the original gate.
+        """
+        # First decompose the base gate
+        gates = self._base_decompose(*free, use_toffolis=use_toffolis)
+
+        # If this is a controlled gate, we need to add controls to the decomposed gates
+        if self.control_qubits:
+            # Get the control mask for the decomposed gates
+            control_mask = self.control_mask_after_stripping(gates)
+
+            # Add controls to the gates that need them
+            controlled_gates = []
+            for gate, needs_control in zip(gates, control_mask):
+                if needs_control:
+                    controlled_gates.append(gate.controlled_by(*self.control_qubits))
+                else:
+                    controlled_gates.append(gate)
+
+            # Optimize the decomposition based on the optimization profile
+            if self.optimize_depth:
+                controlled_gates = self._optimize_depth(controlled_gates)
+            else:
+                controlled_gates = self._optimize_compilation_time(controlled_gates)
+
+            return controlled_gates
+
+        return gates
+
+    def _optimize_depth(self, gates):
+        """Optimizes the decomposition for minimum circuit depth.
+
+        This method implements the divide-and-conquer approach from recent research
+        to reduce circuit depth.
+
+        Args:
+            gates: List of gates to optimize.
+
+        Returns:
+            Optimized list of gates.
+        """
+        if len(gates) <= 1:
+            return gates
+
+        # Divide the gates into two halves
+        mid = len(gates) // 2
+        left = self._optimize_depth(gates[:mid])
+        right = self._optimize_depth(gates[mid:])
+
+        # Merge the optimized halves
+        return self._merge_optimized_gates(left, right)
+
+    def _optimize_compilation_time(self, gates):
+        """Optimizes the decomposition for minimum compilation time.
+
+        This method implements a simpler optimization strategy that focuses
+        on reducing compilation time rather than circuit depth.
+
+        Args:
+            gates: List of gates to optimize.
+
+        Returns:
+            Optimized list of gates.
+        """
+        # For compilation time optimization, we use a simpler strategy
+        # that focuses on reducing the number of gates
+        optimized = []
+        i = 0
+        while i < len(gates):
+            if i + 1 < len(gates) and self.gates_cancel(gates[i], gates[i + 1]):
+                i += 2
+            else:
+                optimized.append(gates[i])
+                i += 1
+        return optimized
+
+    def _merge_optimized_gates(self, left, right):
+        """Merges two optimized gate lists while maintaining optimal depth.
+
+        Args:
+            left: First list of gates.
+            right: Second list of gates.
+
+        Returns:
+            Merged list of gates.
+        """
+        # If either list is empty, return the other
+        if not left:
+            return right
+        if not right:
+            return left
+
+        # Try to cancel gates at the boundary
+        if self.gates_cancel(left[-1], right[0]):
+            return left[:-1] + right[1:]
+
+        # Otherwise, just concatenate
+        return left + right
+
+    def controlled_by(self, *q):
+        """Controls the gate on the specified qubits.
+
+        Args:
+            *q: Control qubit indices.
+
+        Returns:
+            A new gate that is controlled on the specified qubits.
+        """
+        if not q:
+            return self
+
+        if self.control_qubits is None:
+            self.control_qubits = tuple(q)
+        else:
+            self.control_qubits = tuple(q) + self.control_qubits
+
+        return self
+
+    def on_qubits(self, *q):
+        """Applies the gate on the specified qubits.
+
+        Args:
+            *q: Qubit indices.
+
+        Returns:
+            A new gate that is applied on the specified qubits.
+        """
+        if len(q) != len(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"Gate {self.name} requires {len(self.target_qubits)} qubits, "
+                f"but {len(q)} were given.",
+            )
+
+        if self.control_qubits is None:
+            self.control_qubits = tuple()
+
+        self.target_qubits = tuple(q)
+        return self
+
+    def _dagger(self):
+        """Returns the dagger (conjugate transpose) of the gate.
+
+        Returns:
+            A new gate that is the dagger of the original gate.
+        """
+        return self
+
+    def dagger(self):
+        """Returns the dagger (conjugate transpose) of the gate.
+
+        Returns:
+            A new gate that is the dagger of the original gate.
+        """
+        return self._dagger()
+
+    def __call__(self, *q):
+        """Applies the gate on the specified qubits.
+
+        Args:
+            *q: Qubit indices.
+
+        Returns:
+            A new gate that is applied on the specified qubits.
+        """
+        return self.on_qubits(*q)
+
+    def __matmul__(self, other):
+        """Composes two gates.
+
+        Args:
+            other: Another gate.
+
+        Returns:
+            A new gate that is the composition of the two gates.
+        """
+        if not isinstance(other, Gate):
+            raise_error(
+                TypeError,
+                f"Gate can only be composed with another Gate, but {type(other)} was given.",
+            )
+
+        if self.target_qubits is None or other.target_qubits is None:
+            raise_error(
+                ValueError,
+                "Cannot compose gates that have not been applied to qubits.",
+            )
+
+        if set(self.target_qubits) & set(other.target_qubits):
+            raise_error(
+                ValueError,
+                "Cannot compose gates that act on the same qubits.",
+            )
+
+        if self.control_qubits is None:
+            self.control_qubits = tuple()
+
+        if other.control_qubits is None:
+            other.control_qubits = tuple()
+
+        if set(self.control_qubits) & set(other.control_qubits):
+            raise_error(
+                ValueError,
+                "Cannot compose gates that are controlled by the same qubits.",
+            )
+
+        if set(self.target_qubits) & set(other.control_qubits):
+            raise_error(
+                ValueError,
+                "Cannot compose gates where one gate's target qubits are controlled by the other gate.",
+            )
+
+        if set(other.target_qubits) & set(self.control_qubits):
+            raise_error(
+                ValueError,
+                "Cannot compose gates where one gate's target qubits are controlled by the other gate.",
+            )
+
+        return self.controlled_by(*other.control_qubits).on_qubits(*other.target_qubits)
+
+    def __eq__(self, other):
+        """Checks if two gates are equal.
+
+        Args:
+            other: Another gate.
+
+        Returns:
+            True if the gates are equal, False otherwise.
+        """
+        if not isinstance(other, Gate):
+            return False
+
+        if self.name != other.name:
+            return False
+
+        if self.target_qubits != other.target_qubits:
+            return False
+
+        if self.control_qubits != other.control_qubits:
+            return False
+
+        if self.parameters is not None and other.parameters is not None:
+            if self.parameters != other.parameters:
+                return False
+
+        return True
+
+    def __hash__(self):
+        """Returns the hash of the gate.
+
+        Returns:
+            The hash of the gate.
+        """
+        return hash(
+            (
+                self.name,
+                self.target_qubits,
+                self.control_qubits,
+                self.parameters,
+            )
+        )
+
+    def __str__(self):
+        """Returns a string representation of the gate.
+
+        Returns:
+            A string representation of the gate.
+        """
+        if self.control_qubits:
+            return f"{self.name}({self.control_qubits})->{self.target_qubits}"
+        return f"{self.name}({self.target_qubits})"
+
+    def __repr__(self):
+        """Returns a string representation of the gate.
+
+        Returns:
+            A string representation of the gate.
+        """
+        return self.__str__()
+
+    @staticmethod
+    def gates_cancel(gate1, gate2):
+        """Checks if two gates cancel each other out.
+
+        Args:
+            gate1: First gate.
+            gate2: Second gate.
+
+        Returns:
+            True if the gates cancel each other out, False otherwise.
+        """
+        if not isinstance(gate1, Gate) or not isinstance(gate2, Gate):
+            return False
+
+        if gate1.name != gate2.name:
+            return False
+
+        if gate1.target_qubits != gate2.target_qubits:
+            return False
+
+        if gate1.control_qubits != gate2.control_qubits:
+            return False
+
+        if gate1.parameters is not None and gate2.parameters is not None:
+            if gate1.parameters != gate2.parameters:
+                return False
+
+        return True
+
+    def control_mask_after_stripping(self, gates):
+        """Returns a mask indicating which gates should be controlled after analyzing a list of gates.
+
+        This method analyzes the list of gates and returns a boolean mask indicating
+        which gates should be controlled. The mask is determined by:
+        1. Gates that act on the same qubits as the original gate should be controlled
+        2. Gates that are part of a decomposition that needs to be controlled should be controlled
+        3. Gates that are part of a decomposition that doesn't need to be controlled should not be controlled
+
+        Args:
+            gates: List of gates to analyze.
+
+        Returns:
+            A list of booleans indicating which gates should be controlled.
+        """
+        if not self.control_qubits:
+            return [False] * len(gates)
+
+        # Initialize mask with all False
+        mask = [False] * len(gates)
+
+        # Find gates that act on the same qubits as the original gate
+        for i, gate in enumerate(gates):
+            if set(gate.target_qubits) & set(self.target_qubits):
+                mask[i] = True
+
+        # Find gates that are part of a decomposition that needs to be controlled
+        for i in range(len(gates)):
+            if mask[i]:
+                # If this gate is controlled, check if it's part of a decomposition
+                # that needs to be controlled
+                for j in range(i + 1, len(gates)):
+                    if gates_cancel(gates[i], gates[j]):
+                        # If we find a gate that cancels this one, neither should be controlled
+                        mask[i] = False
+                        mask[j] = False
+                        break
+
+        return mask
 
     @property
     def raw(self) -> dict:
@@ -157,14 +518,6 @@ class Gate:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
-    @property
-    def qasm_label(self):
-        """String corresponding to OpenQASM operation of the gate."""
-        raise_error(
-            NotImplementedError,
-            f"{self.__class__.__name__} is not supported by OpenQASM",
-        )
-
     def _set_target_qubits(self, qubits: Sequence[int]):
         """Helper method for setting target qubits."""
         self._target_qubits = tuple(qubits)
@@ -235,7 +588,7 @@ class Gate:
     @property
     def parameters(self):
         """Returns a tuple containing the current value of gate's parameters."""
-        return self._parameters
+        return self.parameters
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -253,124 +606,6 @@ class Gate:
         a = self.__class__ == gate.__class__ and t1 == t2
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
-
-    def on_qubits(self, qubit_map) -> "Gate":
-        """Creates the same gate targeting different qubits.
-
-        Args:
-            qubit_map (int): Dictionary mapping original qubit indices to new ones.
-
-        Returns:
-            A :class:`qibo.gates.Gate` object of the original gate
-            type targeting the given qubits.
-
-        Example:
-
-            .. testcode::
-
-                from qibo import Circuit, gates
-                circuit = Circuit(4)
-                # Add some CNOT gates
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
-                circuit.draw()
-            .. testoutput::
-
-                0: ───X─────
-                1: ───|─o─X─
-                2: ─o─|─|─o─
-                3: ─X─o─X───
-        """
-        if self.is_controlled_by:
-            targets = (qubit_map.get(q) for q in self.target_qubits)
-            controls = (qubit_map.get(q) for q in self.control_qubits)
-            gate = self.__class__(*targets, **self.init_kwargs)
-            gate = gate.controlled_by(*controls)
-        else:
-            qubits = (qubit_map.get(q) for q in self.qubits)
-            gate = self.__class__(*qubits, **self.init_kwargs)
-        return gate
-
-    def _dagger(self) -> "Gate":
-        """Helper method for :meth:`qibo.gates.Gate.dagger`."""
-        # By default the ``_dagger`` method creates an equivalent gate, assuming
-        # that the gate is Hermitian (true for common gates like H or Paulis).
-        # If the gate is not Hermitian the ``_dagger`` method should be modified.
-        return self.__class__(*self.init_args, **self.init_kwargs)
-
-    def dagger(self) -> "Gate":
-        """Returns the dagger (conjugate transpose) of the gate.
-
-        Note that dagger is not persistent for parametrized gates.
-        For example, applying a dagger to an :class:`qibo.gates.gates.RX` gate
-        will change the sign of its parameter at the time of application.
-        However, if the parameter is updated after that, for example using
-        :meth:`qibo.models.circuit.Circuit.set_parameters`, then the
-        action of dagger will be lost.
-
-        Returns:
-            :class:`qibo.gates.Gate`: object representing the dagger of the original gate.
-        """
-        new_gate = self._dagger()
-        new_gate.is_controlled_by = self.is_controlled_by
-        new_gate.control_qubits = self.control_qubits
-        return new_gate
-
-    def check_controls(func):  # pylint: disable=E0213
-        def wrapper(self, *args):
-            if self.control_qubits:
-                raise_error(
-                    RuntimeError,
-                    "Cannot use `controlled_by` method "
-                    + f"on gate {self} because it is already "
-                    + f"controlled by {self.control_qubits}.",
-                )
-            return func(self, *args)  # pylint: disable=E1102
-
-        return wrapper
-
-    @check_controls
-    def controlled_by(self, *qubits: int) -> "Gate":
-        """Controls the gate on (arbitrarily many) qubits.
-
-        To see how this method affects the underlying matrix representation of a gate,
-        please see the documentation of :meth:`qibo.gates.Gate.matrix`.
-
-        .. note::
-            Some gate classes default to another gate class depending on the number of controls
-            present. For instance, an :math:`1`-controlled :class:`qibo.gates.X` gate
-            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`2`-controlled
-            :class:`qibo.gates.X` gate defaults to a :class:`qibo.gates.TOFFOLI` gate.
-            Other gates affected by this method are: :class:`qibo.gates.Y`, :class:`qibo.gates.Z`,
-            :class:`qibo.gates.RX`, :class:`qibo.gates.RY`, :class:`qibo.gates.RZ`,
-            :class:`qibo.gates.U1`, :class:`qibo.gates.U2`, and :class:`qibo.gates.U3`.
-
-        Args:
-            *qubits (int): Ids of the qubits that the gate will be controlled on.
-
-        Returns:
-            :class:`qibo.gates.Gate`: object in with the corresponding
-                gate being controlled in the given qubits.
-        """
-        if qubits:
-            self.is_controlled_by = True
-            self.control_qubits = qubits
-        return self
-
-    def decompose(self, *free) -> List["Gate"]:
-        """Decomposes multi-control gates to gates supported by OpenQASM.
-
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
-
-        Args:
-            free: Ids of free qubits to use for the gate decomposition.
-
-        Returns:
-            list: gates that have the same effect as applying the original gate.
-        """
-        return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
@@ -460,7 +695,7 @@ class ParametrizedGate(Gate):
     """
 
     def __init__(self, trainable=True):
-        super().__init__()
+        super().__init__(trainable)
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable
@@ -487,10 +722,10 @@ class ParametrizedGate(Gate):
             nparams = len(self.parameter_names)
             names = self.parameter_names
 
-        if not self._parameters:
+        if not self.parameters:
             params = nparams * [None]
         else:
-            params = list(self._parameters)
+            params = list(self.parameters)
         if len(x) != nparams:
             raise_error(
                 ValueError,
@@ -501,9 +736,9 @@ class ParametrizedGate(Gate):
             if isinstance(v, sympy.Expr):
                 self.symbolic_parameters[i] = v
             params[i] = v
-        self._parameters = tuple(params)
+        self.parameters = tuple(params)
         self.init_kwargs.update(
-            {n: v for n, v in zip(names, self._parameters) if n in self.init_kwargs}
+            {n: v for n, v in zip(names, self.parameters) if n in self.init_kwargs}
         )
 
         # set parameters in device gates
@@ -516,7 +751,7 @@ class ParametrizedGate(Gate):
         return gate
 
     def substitute_symbols(self):
-        params = list(self._parameters)
+        params = list(self.parameters)
         for i, param in self.symbolic_parameters.items():
             for symbol in param.free_symbols:
                 param = symbol.evaluate(param)

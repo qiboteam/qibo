@@ -47,8 +47,8 @@ class X(Gate):
 
     .. math::
         \\begin{pmatrix}
-        0 & 1 \\\\
-        1 & 0 \\\\
+            0 & 1 \\\\
+            1 & 0 \\\\
         \\end{pmatrix}
 
     Args:
@@ -71,18 +71,7 @@ class X(Gate):
     def qasm_label(self):
         return "x"
 
-    @Gate.check_controls
-    def controlled_by(self, *q):
-        """Fall back to CNOT and Toffoli if there is one or two controls."""
-        if len(q) == 1:
-            gate = CNOT(q[0], self.target_qubits[0])
-        elif len(q) == 2:
-            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
-        else:
-            gate = super().controlled_by(*q)
-        return gate
-
-    def decompose(self, *free, use_toffolis=True):
+    def _base_decompose(self, *free, use_toffolis=True):
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
@@ -133,12 +122,12 @@ class X(Gate):
             m1 = n // 2
             free1 = controls[m1:] + (target,) + tuple(free[1:])
             x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
-            part1 = x1.decompose(*free1, use_toffolis=use_toffolis)
+            part1 = x1._base_decompose(*free1, use_toffolis=use_toffolis)
 
             free2 = controls[:m1] + tuple(free[1:])
             controls2 = controls[m1:] + (free[0],)
             x2 = self.__class__(target).controlled_by(*controls2)
-            part2 = x2.decompose(*free2, use_toffolis=use_toffolis)
+            part2 = x2._base_decompose(*free2, use_toffolis=use_toffolis)
 
             decomp_gates = [*part1, *part2]
 
@@ -284,7 +273,7 @@ class SX(Gate):
     def qasm_label(self):
         return "sx"
 
-    def decompose(self):
+    def _base_decompose(self, *free, use_toffolis=True):
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -634,7 +623,7 @@ class RX(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
     """
 
@@ -951,8 +940,11 @@ class U1(_Un_):
         return "u1"
 
     def _dagger(self) -> "Gate":
+        """"""
+        q0 = self.control_qubits[0]
+        q1 = self.target_qubits[0]
         theta = -self.parameters[0]
-        return self.__class__(self.target_qubits[0], theta)  # pylint: disable=E1130
+        return self.__class__(q0, q1, theta)  # pylint: disable=E1130
 
 
 class U2(_Un_):
@@ -993,9 +985,11 @@ class U2(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
+        q0 = self.control_qubits[0]
+        q1 = self.target_qubits[0]
         phi, lam = self.parameters
         phi, lam = math.pi - lam, -math.pi - phi
-        return self.__class__(self.target_qubits[0], phi, lam)
+        return self.__class__(q0, q1, phi, lam)
 
 
 class U3(_Un_):
@@ -1005,41 +999,42 @@ class U3(_Un_):
 
     .. math::
         \\begin{pmatrix}
-        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
-            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
-            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+            \\cos(\\theta/2) & -e^{i\\lambda}\\sin(\\theta/2) \\\\
+            e^{i\\phi}\\sin(\\theta/2) & e^{i(\\phi+\\lambda)}\\cos(\\theta/2) \\\\
         \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
-        theta (float): first rotation angle.
-        phi (float): second rotation angle.
-        lamb (float): third rotation angle.
+        theta (float): first parameter.
+        phi (float): second parameter.
+        lam (float): third parameter.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
     """
 
     def __init__(self, q, theta, phi, lam, trainable=True):
-        super().__init__(q, trainable=trainable)
+        super().__init__(trainable)
         self.name = "u3"
         self.draw_label = "U3"
-        self._controlled_gate = CU3
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = ["theta", "phi", "lam"]
+        self.parameters = theta, phi, lam
         self.nparams = 3
-        self._theta, self._phi, self._lam = None, None, None
+
+        self.init_args = [q]
         self.init_kwargs = {
             "theta": theta,
             "phi": phi,
             "lam": lam,
             "trainable": trainable,
         }
-        self.parameter_names = ["theta", "phi", "lam"]
-        self.parameters = theta, phi, lam
 
     @property
-    def hamming_weight(self):
-        return _is_hamming_weight_given_angle(self.parameters[0])
+    def clifford(self):
+        return False
 
     @property
     def qasm_label(self):
@@ -1050,7 +1045,7 @@ class U3(_Un_):
         theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
-    def decompose(self) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -1192,7 +1187,7 @@ class CY(Gate):
     def qasm_label(self):
         return "cy"
 
-    def decompose(self) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of :math:`\\text{CY}` gate.
 
         Decompose :math:`\\text{CY}` gate into :class:`qibo.gates.SDG` in
@@ -1245,7 +1240,7 @@ class CZ(Gate):
     def qasm_label(self):
         return "cz"
 
-    def decompose(self) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of :math:`\\text{CZ}` gate.
 
         Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in
@@ -1290,7 +1285,7 @@ class CSX(Gate):
     def qasm_label(self):
         return "csx"
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """"""
         from qibo.transpiler.decompositions import (  # pylint: disable=C0415
             standard_decompositions,
@@ -2363,21 +2358,17 @@ class GIVENS(ParametrizedGate):
 
 
 class RBS(ParametrizedGate):
-    """The Reconfigurable Beam Splitter gate.
+    """The Reconfigurable Beam Splitter gate (:math:`\\text{RBS}`).
 
     Corresponds to the following unitary matrix
 
     .. math::
         \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
-            0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
-            0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
+            0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
             0 & 0 & 0 & 1 \\\\
         \\end{pmatrix}
-
-    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`,
-    where :math:`\\text{Givens}` is the :class:`qibo.gates.GIVENS` gate.
-    However, we point out that this definition is not unique.
 
     Args:
         q0 (int): the first qubit id number.
@@ -2410,7 +2401,7 @@ class RBS(ParametrizedGate):
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of RBS gate according to `ArXiv:2109.09685
         <https://arxiv.org/abs/2109.09685>`_."""
         from qibo.transpiler.decompositions import (  # pylint: disable=C0415
@@ -2504,41 +2495,42 @@ class TOFFOLI(Gate):
     def qasm_label(self):
         return "ccx"
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         c0, c1 = self.control_qubits
         t = self.target_qubits[0]
         return [self.__class__(c0, c1, t)]
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
-        """Congruent representation of ``TOFFOLI`` gate.
-
-        This is a helper method for the decomposition of multi-control ``X`` gates.
-        The congruent representation is based on Sec. 6.2 of
-        `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
-        The sequence of the gates produced here has the same effect as ``TOFFOLI``
-        with the phase of the ``|101>`` state reversed.
+        """Decomposes the ``TOFFOLI`` gate into a congruent representation.
 
         Args:
-            use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.
-                If ``False`` the congruent representation is returned.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
 
         Returns:
-            List with ``RY`` and ``CNOT`` gates that have the same effect as
-            applying the original ``TOFFOLI`` gate.
+            list: gates that have the same effect as applying the original ``TOFFOLI`` gate.
         """
         if use_toffolis:
-            return self.decompose()
+            return self._base_decompose()
 
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
         return [
-            RY(target, -math.pi / 4),
+            H(target),
             CNOT(control1, target),
-            RY(target, -math.pi / 4),
+            T(target).dagger(),
             CNOT(control0, target),
-            RY(target, math.pi / 4),
+            T(target),
             CNOT(control1, target),
-            RY(target, math.pi / 4),
+            T(target).dagger(),
+            CNOT(control0, target),
+            T(control1),
+            T(target),
+            H(target),
+            CNOT(control0, control1),
+            T(control0),
+            T(control1).dagger(),
+            CNOT(control0, control1),
         ]
 
 
@@ -2582,7 +2574,7 @@ class CCZ(Gate):
     def qasm_label(self):
         return "ccz"
 
-    def decompose(self) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of :math:`\\text{CCZ}` gate.
 
         Decompose :math:`\\text{CCZ}` gate into :class:`qibo.gates.H` in
@@ -2642,38 +2634,23 @@ class DEUTSCH(ParametrizedGate):
 class GeneralizedRBS(ParametrizedGate):
     """The generalized (complex) Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
 
-    Given a register called ``qubits_in`` containing :math:`m` qubits and a
-    register named ``qubits_out`` containing :math:`m'` qubits, the :math:`\\text{gRBS}`
-    is a :math:`(m + m')`-qubit gate that has the following matrix representation:
+    Corresponds to the following unitary matrix
 
     .. math::
-
         \\begin{pmatrix}
-            I &           &  &             &  \\\\
-              & e^{-i\\phi}\\cos\\theta &      & e^{-i\\phi}\\sin\\theta   &  \\\\
-              &  & I'       &    &  \\\\
-              & -e^{i\\phi}\\sin\\theta &      & e^{i\\phi}\\cos\\theta   &  \\\\
-              &           &  &             &  I\\\\
-        \\end{pmatrix} \\,\\, ,
-
-    where :math:`I` and :math:`I'` are, respectively, identity matrices of size
-    :math:`2^{m} - 1` and :math:`2^{m}(2^{m'} - 2)`.
-
-    This unitary matrix is also known as a
-    `Givens rotation <https://en.wikipedia.org/wiki/Givens_rotation>`_.
-
-    References:
-        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
-        *Quantum encoder for fixed-Hamming-weight subspaces*,
-        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & -e^{i\\phi}\\sin(\\theta) & 0 \\\\
+            0 & e^{-i\\phi}\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
 
     Args:
-        qubits_in (tuple or list): ids of "input" qubits.
-        qubits_out (tuple or list): ids of "output" qubits.
+        qubits_in (tuple or list): the input qubit id numbers.
+        qubits_out (tuple or list): the output qubit id numbers.
         theta (float): the rotation angle.
-        phi (float): the phase angle. Defaults to :math:`0.0`.
-        trainable (bool): whether gate parameter can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+        phi (float): the phase angle. Defaults to 0.0.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
     """
 
@@ -2702,7 +2679,7 @@ class GeneralizedRBS(ParametrizedGate):
     def hamming_weight(self):
         return len(self.init_args[0]) == len(self.init_args[1])
 
-    def decompose(self) -> List[Gate]:
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
         """Decomposition of :math:`\\text{gRBS}` gate.
 
         Decompose :math:`\\text{gRBS}` gate into :class:`qibo.gates.X`, :class:`qibo.gates.CNOT`,
