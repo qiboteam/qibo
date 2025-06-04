@@ -1498,6 +1498,7 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
         weight (int): Hamming weight :math:`k` of the Dicke state.
         all_to_all (bool): Whether to use the shorter depth implementation from reference
         kwargs: Additional arguments for Circuit initialization.
+
     Returns:
         :class:`qibo.models.circuit.Circuit` : Circuit that prepares :math:`\\ket{D_{k}^{n}}`.
     References:
