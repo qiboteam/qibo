@@ -3,6 +3,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+src/qibo/tomography_RGD/testData/
 
 # C extensions
 *.so
