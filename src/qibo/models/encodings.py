@@ -1553,7 +1553,6 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
             new = second_smallest
             # put new combined tree in list mantaining ordering
             trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
-            print(list(id(t) for t in trees))
 
         root = trees[0]
         # We initialize |0>^|1>^k  bitstring at root qubits
