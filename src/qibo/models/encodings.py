@@ -1487,6 +1487,7 @@ def _get_phase_gate_correction_sparse(
 
 def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
     """Create a circuit that prepares the Dicke state :math:`\\ket{D_{k}^{n}}`.
+
     The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
     computational basis states with fixed-Hamming-weight :math:`k`.
     The circuit prepares the state deterministically with :math:`O(k \\, n)` gates and :math:`O(n)` depth,
