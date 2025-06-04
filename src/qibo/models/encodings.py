@@ -1503,7 +1503,7 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
         `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
         <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
         2. Andreas Bärtschi and Stephan Eidenbenz, *Short-Depth Circuits for Dicke State Preparation*,
-        `IEEE International Conference on Quantum Computing & Engineering (QCE), 2022, pp. 87--96
+        `IEEE International Conference on Quantum Computing & Engineering (QCE), 87--96 (2022)
         <https://doi.org/10.1109/QCE53715.2022.00027>`_.
     """
     if weight < 0 or weight > nqubits:
