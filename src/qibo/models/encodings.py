@@ -1491,7 +1491,8 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
     The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
     computational basis states with fixed-Hamming-weight :math:`k`.
     The circuit prepares the state deterministically with :math:`O(k \\, n)` gates and :math:`O(n)` depth,
-    or :math:`O(k \\log\\frac{n}{k})` for all-to-all connectivity.
+    or :math:`O(k \\log\\frac{n}{k})` depth under the assumption of ``all-to-all`` connectivity.
+
     Args:
         nqubits (int): number of qubits :math:`n`.
         weight (int): Hamming weight :math:`k` of the Dicke state.
