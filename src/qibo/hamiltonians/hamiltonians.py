@@ -8,12 +8,13 @@ from typing import Optional
 
 import numpy as np
 import sympy
+from sympy.physics.paulialgebra import Pauli, evaluate_pauli_product
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import Symbol, Z
+from qibo.symbols import Symbol, X, Y, Z
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -354,6 +355,38 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             )
         self._form = form
         self.nqubits = _calculate_nqubits_from_form(form)
+
+    def expand_form(self):
+        """Expand and simplifies the Hamiltonian form"""
+        form = 0.0
+        # For mapping between qibo symbols and sympy Pauli objects
+        pauli_mapping = {X: Pauli(1), Y: Pauli(2), Z: Pauli(3)}
+        inverse_pauli_mapping = {_v: _k for _k, _v in pauli_mapping.items()}
+        # Simplify each term in the expanded Hamiltonian
+        terms_dict = sympy.expand(self.form).as_coefficients_dict()
+        for factors, _coeff in terms_dict.items():
+            coeff = _coeff  # For moving I in later (sqrt(-1), not qibo.symbols.I)
+            qubit_dict = {}
+            for factor in factors.as_ordered_factors():
+                pauli_term = pauli_mapping[type(factor)]
+                if qubit_dict.get(factor.target_qubit) is None:
+                    qubit_dict[factor.target_qubit] = pauli_term
+                else:
+                    pauli_product = evaluate_pauli_product(
+                        qubit_dict[factor.target_qubit] * pauli_term
+                    )
+                    # Move the sympy.I into the coefficient
+                    if sympy.I in pauli_product.atoms():
+                        pauli_product *= -sympy.I
+                        coeff *= 1.0j
+                    qubit_dict[factor.target_qubit] = pauli_product
+            # Convert the simplified factor back to a qibo symbol and add it to form
+            form += coeff * prod(
+                inverse_pauli_mapping[pauli](qubit)
+                for qubit, pauli in qubit_dict.items()
+                if pauli != 1
+            )
+        self.form = form
 
     @cached_property
     def terms(self):
