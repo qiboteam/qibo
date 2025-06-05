@@ -1530,69 +1530,69 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
 
         return circuit
 
-        # We prepare disjoint sets of qubits
-        disjoint_sets = [
+    # We prepare disjoint sets of qubits
+    disjoint_sets = [
+        {
+            "qubits": list(range(weight * it, weight * (it + 1))),
+            "tier": weight,
+            "children": [],
+        }
+        for it in range(nqubits // weight)
+    ]
+    nmodk = nqubits % weight
+    if nmodk != 0:
+        disjoint_sets.append(
             {
-                "qubits": list(range(weight * it, weight * (it + 1))),
-                "tier": weight,
+                "qubits": list(range(nqubits - nmodk, nqubits)),
+                "tier": nmodk,
                 "children": [],
             }
-            for it in range(nqubits // weight)
-        ]
-        nmodk = nqubits % weight
-        if nmodk != 0:
-            disjoint_sets.append(
-                {
-                    "qubits": list(range(nqubits - nmodk, nqubits)),
-                    "tier": nmodk,
-                    "children": [],
-                }
-            )
-        # reverse to have in ascending order of tier
-        disjoint_sets = list(reversed(disjoint_sets))
+        )
+    # reverse to have in ascending order of tier
+    disjoint_sets = list(reversed(disjoint_sets))
 
-        trees = disjoint_sets.copy()
-        # combine lowest tier trees into one tree
-        while len(trees) > 1:
-            first_smallest = trees.pop(0)
-            second_smallest = trees.pop(0)
-            second_smallest["tier"] += first_smallest["tier"]
-            second_smallest["children"].append(first_smallest)
-            new = second_smallest
-            # put new combined tree in list mantaining ordering
-            trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
+    trees = disjoint_sets.copy()
+    # combine lowest tier trees into one tree
+    while len(trees) > 1:
+        first_smallest = trees.pop(0)
+        second_smallest = trees.pop(0)
+        second_smallest["tier"] += first_smallest["tier"]
+        second_smallest["children"].append(first_smallest)
+        new = second_smallest
+        # put new combined tree in list mantaining ordering
+        trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
 
-        root = trees[0]
-        # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
-        circuit.add(gates.X(q) for q in root["qubits"][-weight:])
+    root = trees[0]
+    # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
+    circuit.add(gates.X(q) for q in root["qubits"][-weight:])
 
-        # undo the union-by-tier algorithm:
-        # split each root's (x) highest tier child y, and add WBD acting on both
-        while len(trees) < len(disjoint_sets):
-            cut_nodes = []
-            for node in trees:
-                if len(node["children"]) > 0:
-                    # find highest tier child
-                    y = max(node["children"], key=lambda x: x["tier"])
-                    # add WBD acting on both sets of qubits
-                    _add_wbd_gate(
-                        circuit,
-                        node["qubits"],
-                        y["qubits"],
-                        node["tier"],
-                        y["tier"],
-                        weight,
-                    )
-                    # cut tree splitting x and y
-                    node["tier"] -= y["tier"]
-                    node["children"].remove(y)
-                    cut_nodes.append(y)
-            trees += cut_nodes
+    # undo the union-by-tier algorithm:
+    # split each root's (x) highest tier child y, and add WBD acting on both
+    while len(trees) < len(disjoint_sets):
+        cut_nodes = []
+        for node in trees:
+            if len(node["children"]) > 0:
+                # find highest tier child
+                y = max(node["children"], key=lambda x: x["tier"])
+                # add WBD acting on both sets of qubits
+                _add_wbd_gate(
+                    circuit,
+                    node["qubits"],
+                    y["qubits"],
+                    node["tier"],
+                    y["tier"],
+                    weight,
+                )
+                # cut tree splitting x and y
+                node["tier"] -= y["tier"]
+                node["children"].remove(y)
+                cut_nodes.append(y)
+        trees += cut_nodes
 
-        for node in disjoint_sets:
-            _add_dicke_unitary_gate(
-                circuit, node["qubits"], min(weight, len(node["qubits"]))
-            )
+    for node in disjoint_sets:
+        _add_dicke_unitary_gate(
+            circuit, node["qubits"], min(weight, len(node["qubits"]))
+        )
 
     return circuit
 
@@ -1600,25 +1600,25 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
 def _add_scs_gate(circuit: Circuit, qubits: List[int], weight: int):
     """In-place addition of a Split & Cyclic Shift (SCS) gate to ``circuit``.
     Implements the SCS_{n,k} unitary from Definition 3 of the paper [1].
-    Acts on the last k+1 qubits of the n passed qubits.
+    Acts on the last weight+1 qubits of the nqubits passed qubits.
     """
-    if k == 0:
+    if weight == 0:
         return  # SCS_{n,0} is identity
 
     nqubits = len(qubits)
-    last_qubit = qubits[-1]  # qubits[n - 1]
+    last_qubit = qubits[-1]  # qubits[nqubits - 1]
     target_qubit = qubits[-2]
-    # first_qubit = qubits[n - 1 - k]
+    # first_qubit = qubits[nqubits - 1 - weight]
 
     # Gate (i) - acts on last two qubits
-    theta = 2 * np.arccos(np.sqrt(1 / n))
+    theta = 2 * np.arccos(np.sqrt(1 / nqubits))
     circuit.add(gates.CNOT(target_qubit, last_qubit))
     circuit.add(gates.RY(target_qubit, theta).controlled_by(last_qubit))
     circuit.add(gates.CNOT(target_qubit, last_qubit))
 
     # Gates (ii)_ℓ for ℓ from 2 to k
-    for l in range(2, k + 1):
-        theta = 2 * np.arccos(np.sqrt(l / n))
+    for l in range(2, weight + 1):
+        theta = 2 * np.arccos(np.sqrt(l / nqubits))
         target_qubit = qubits[-(l + 1)]
         control_qubit = qubits[-l]
 
@@ -1633,12 +1633,12 @@ def _add_scs_gate(circuit: Circuit, qubits: List[int], weight: int):
 def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int):
     """In-place addition to ``circuit`` of a U_{n,k} gate from Definition 2 of the paper [1]."""
     nqubits = len(qubits)
-    for m in range(n, k, -1):
+    for m in range(nqubits, weight, -1):
         # Add SCS_{m,k} acting on last k+1 qubits
-        _add_scs_gate(circuit, qubits[:m], k)
+        _add_scs_gate(circuit, qubits[:m], weight)
 
     # Recursively build the unitary U_n,k
-    for m in range(k, 0, -1):
+    for m in range(weight, 0, -1):
         # Add SCS_{m,m-1} acting on last m qubits
         _add_scs_gate(circuit, qubits[:m], m - 1)
 
@@ -1648,7 +1648,7 @@ def _add_wbd_gate(
     first_register: List[int],
     second_register: List[int],
     nqubits: int,
-    m: int,
+    mqubits: int,
     weight: int,
 ):
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
@@ -1657,8 +1657,8 @@ def _add_wbd_gate(
     Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left bitstring convention
     """
 
-    if m > n / 2:
-        raise_error(ValueError, "``m`` must not be greater than ``n - m``."))
+    if mqubits > nqubits / 2:
+        raise_error(ValueError, "``m`` must not be greater than ``n - m``.")
     # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
 
     # (1) Switching from unary encoding to one hot encoding
@@ -1668,16 +1668,16 @@ def _add_wbd_gate(
     # this can be optimized
     # We follow Figure 4, but adjust definition of xi and si (suffix sum) to match
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
-    for l in range(k, 0, -1):
-        x = [math.comb(m, i) * math.comb(n - m, l - i) for i in range(l)]
-        s = math.comb(n, l)
+    for l in range(weight, 0, -1):
+        x = [math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i) for i in range(l)]
+        s = math.comb(nqubits, l)
         circuit.add(
             theta_gate(second_register[-1], math.sqrt(x[0] / s)).controlled_by(
                 first_register[-l]
             )
         )
         s -= x[0]
-        for qubit in range(1, min(l, m)):
+        for qubit in range(1, min(l, mqubits)):
             circuit.add(
                 theta_gate(
                     second_register[-qubit - 1], math.sqrt(x[qubit] / s)
@@ -1696,8 +1696,8 @@ def _add_wbd_gate(
         gates.CNOT(s2, s1),
     )
 
-    dif = max(0, k - m)
-    for control in range(dif, k):
+    dif = max(0, weight - mqubits)
+    for control in range(dif, weight):
         for q in range(control):
             circuit.add(
                 fredkin(
