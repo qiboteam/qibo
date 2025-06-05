@@ -1655,7 +1655,7 @@ def _add_wbd_gate(
     """
 
     if m > n / 2:
-        raise (ValueError("m must not be greater than n-m"))
+        raise_error(ValueError, "``m`` must not be greater than ``n - m``."))
     # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
 
     # (1) Switching from unary encoding to one hot encoding
