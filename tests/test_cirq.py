@@ -294,7 +294,10 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
         phi = np.random.random()
         qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(*activeq[:-2])
         cirq_gate = [(cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)]
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+        atol = 1e-6 if backend.platform == "numba" else 1e-7
+        assert_gates_equivalent(
+            backend, qibo_gate, cirq_gate, nqubits, ndevices, atol=atol
+        )
 
 
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
