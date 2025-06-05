@@ -2,7 +2,9 @@
 
 import math
 from functools import reduce
+from itertools import combinations
 
+import networkx as nx
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
@@ -14,8 +16,10 @@ from qibo.models.encodings import (
     _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
+    dicke_state,
     entangling_layer,
     ghz_state,
+    graph_state,
     hamming_weight_encoder,
     phase_encoder,
     sparse_encoder,
@@ -454,3 +458,98 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
             target = backend.np.outer(target, backend.np.conj(target.T))
 
         backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize(
+    "nqubits, weight",
+    [
+        (2, -1),
+        (2, 1),
+        (3, 1),
+        (3, 2),
+        (4, 2),
+        (4, 1),
+    ],
+)
+def test_dicke_state(backend, nqubits, weight, density_matrix):
+    if weight < 0 or weight > nqubits:
+        with pytest.raises(ValueError):
+            dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+    else:
+        # Build expected Dicke state vector
+        target = np.zeros(2**nqubits, dtype=complex)
+        bitstrings = combinations(range(nqubits), weight)
+        for positions in bitstrings:
+            index = sum(1 << (nqubits - 1 - p) for p in positions)
+            target[index] = 1.0
+        target /= np.sqrt(np.count_nonzero(target))
+
+        target = backend.cast(target, dtype=target.dtype)
+
+        dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+        result = backend.execute_circuit(dicke_circ)
+        state = result.state()
+
+        if density_matrix:
+            target = backend.np.outer(target, backend.np.conj(target.T))
+
+        backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize(
+    "matrix, expects_error, circuit1, circuit2",
+    [
+        # Test Case 1: 3-qubit graph
+        ([[0, 1, 0], [1, 0, 1], [0, 1, 0]], False, True, False),
+        # Test Case 2: 5-qubit  graph
+        (
+            [
+                [0, 1, 0, 0, 1],
+                [1, 0, 1, 0, 0],
+                [0, 1, 0, 1, 0],
+                [0, 0, 1, 0, 1],
+                [1, 0, 0, 1, 0],
+            ],
+            False,
+            False,
+            True,
+        ),
+        # Test Case 3: Non-symmetric matrix (expected error)
+        (
+            [[0, 1, 0], [0, 0, 1], [0, 1, 0]],
+            True,
+            False,
+            False,
+        ),  # matrix[1,0] != matrix[0,1]
+        # Test Case 4: Non-symmetric matrix (expected error)
+        ([[0, 1], [0, 0]], True, False, False),  # matrix[1,0] != matrix[0,1]
+    ],
+)
+def test_graph_state(backend, matrix, expects_error, circuit1, circuit2):
+
+    if expects_error:
+        # We expect a ValueError for non-symmetric matrices
+        with pytest.raises(ValueError):
+            graph_state(matrix, backend=backend)
+
+    else:
+        if circuit1:
+            nqubits = 3
+            target = Circuit(nqubits)
+            target.add(gates.H(qubit) for qubit in range(nqubits))
+            target.add(gates.CZ(0, 1))
+            target.add(gates.CZ(1, 2))
+
+        if circuit2:
+            nqubits = 5
+            target = Circuit(nqubits)
+            target.add(gates.H(qubit) for qubit in range(nqubits))
+            target.add(gates.CZ(0, 1))
+            target.add(gates.CZ(0, 4))
+            target.add(gates.CZ(1, 2))
+            target.add(gates.CZ(2, 3))
+            target.add(gates.CZ(3, 4))
+
+        circuit = graph_state(matrix)
+        backend.assert_circuitclose(circuit, target)
