@@ -1496,7 +1496,9 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
     Args:
         nqubits (int): number of qubits :math:`n`.
         weight (int): Hamming weight :math:`k` of the Dicke state.
-        all_to_all (bool): Whether to use the shorter depth implementation from reference
+        all_to_all (bool, optional): If ``False``, uses implementation from Ref. [1].
+            If ``True``, uses shorter-depth implementation from Ref. [2].
+            Defaults to ``False``.
         kwargs: Additional arguments for Circuit initialization.
 
     Returns:
