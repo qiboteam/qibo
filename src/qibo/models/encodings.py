@@ -1560,7 +1560,7 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
             trees.insert(sum(x["tier"] < new["tier"] for x in trees), new)
 
         root = trees[0]
-        # We initialize |0>^|1>^k  bitstring at root qubits
+        # We initialize |0>^(n-k)|1>^k  bitstring at root qubits
         circuit.add(gates.X(q) for q in root["qubits"][-weight:])
 
         # undo the union-by-tier algorithm:
