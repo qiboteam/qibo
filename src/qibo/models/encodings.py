@@ -1669,7 +1669,10 @@ def _add_wbd_gate(
     # We follow Figure 4, but adjust definition of xi and si (suffix sum) to match
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
     for l in range(weight, 0, -1):
-        x = [math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i) for i in range(l)]
+        x = [
+            math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i)
+            for i in range(l)
+        ]
         s = math.comb(nqubits, l)
         circuit.add(
             theta_gate(second_register[-1], math.sqrt(x[0] / s)).controlled_by(
