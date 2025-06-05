@@ -2800,7 +2800,7 @@ class Unitary(ParametrizedGate):
     def hamming_weight(self, value):
         self._hamming_weight = value
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         args = [self.init_args[0]]
         args.extend(qubit_map.get(i) for i in self.target_qubits)
         gate = self.__class__(*args, **self.init_kwargs)
