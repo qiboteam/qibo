@@ -1513,7 +1513,9 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
         <https://doi.org/10.1109/QCE53715.2022.00027>`_.
     """
     if weight < 0 or weight > nqubits:
-        raise_error(ValueError, f"weight must be between 0 and {nqubits}, but got {weight}.")
+        raise_error(
+            ValueError, f"weight must be between 0 and {nqubits}, but got {weight}."
+        )
 
     circuit = Circuit(nqubits, **kwargs)
 
