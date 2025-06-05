@@ -1657,7 +1657,7 @@ def _add_wbd_gate(
     Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left bitstring convention
     """
 
-    if mqubits > nqubits / 2:
+    if mqubits > nqubits / 2:  # pragma: no cover
         raise_error(ValueError, "``m`` must not be greater than ``n - m``.")
     # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
 

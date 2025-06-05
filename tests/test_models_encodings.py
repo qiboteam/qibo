@@ -466,6 +466,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
     "nqubits, weight",
     [
         (2, -1),
+        (2, 0),
         (2, 1),
         (3, 1),
         (3, 2),
