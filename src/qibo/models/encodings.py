@@ -1483,3 +1483,109 @@ def _get_phase_gate_correction_sparse(
         gate = _get_phase_gate_correction(last_string, phis[-1])
 
     return gate
+
+
+def dicke_state(nqubits: int, weight: int, **kwargs):
+    """Create a circuit that prepares the Dicke state :math:`\\ket{D_{k}^{n}}`.
+
+    The Dicke state :math:`\\ket{D_{k}^{n}}` is the equal superposition of all :math:`n`-qubit
+    computational basis states with fixed-Hamming-weight :math:`k`.
+    The circuit prepares the state deterministically with :math:`O(k \\, n)` gates and :math:`O(n)` depth.
+
+    Args:
+        nqubits (int): number of qubits :math:`n`.
+        weight (int): Hamming weight :math:`k` of the Dicke state.
+        kwargs: Additional arguments for Circuit initialization.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit` : Circuit that prepares :math:`\\ket{D_{k}^{n}}`.
+
+    References:
+        1. Andreas Bärtschi and Stephan Eidenbenz, *Deterministic preparation of Dicke states*,
+        `22nd International Symposium on Fundamentals of Computation Theory, FCT'19, 126-139  (2019)
+        <https://doi.org/10.1007/978-3-030-25027-0_9>`_.
+    """
+    if weight < 0 or weight > nqubits:
+        raise ValueError(f"weight must be between 0 and {nqubits}, got {weight}")
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    # Start with |0⟩^(n-k) |1⟩^k
+    circuit.add(gates.X(qubit) for qubit in range(nqubits - weight, nqubits))
+
+    for m in range(nqubits, weight, -1):
+        # Add SCS_{m,k} acting on last k+1 qubits
+        _add_scs_gate(circuit, m, weight)
+
+    # Recursively build the unitary U_n,k
+    for m in range(weight, 0, -1):
+        # Add SCS_{m,m-1} acting on last m qubits
+        _add_scs_gate(circuit, m, m - 1)
+
+    return circuit
+
+
+def _add_scs_gate(circuit: Circuit, n: int, k: int):
+    """In-place addition of a Split & Cyclic Shift (SCS) gate to ``circuit``.
+
+    Implements the SCS_{n,k} unitary from Definition 3 of the paper.
+    Acts on the last k+1 qubits of the circuit.
+    """
+    if k == 0:
+        return  # SCS_{n,0} is identity
+
+    last_qubit = n - 1
+    # first_qubit = last_qubit - k
+
+    # Gate (i) - acts on last two qubits
+    theta = 2 * np.arccos(np.sqrt(1 / n))
+    circuit.add(gates.CNOT(last_qubit - 1, last_qubit))
+    circuit.add(gates.RY(last_qubit - 1, theta).controlled_by(last_qubit))
+    circuit.add(gates.CNOT(last_qubit - 1, last_qubit))
+
+    # Gates (ii)_ℓ for ℓ from 2 to k
+    for l in range(2, k + 1):
+        theta = 2 * np.arccos(np.sqrt(l / n))
+        target_qubit = last_qubit - l
+        control_qubit = target_qubit + 1
+
+        # Implement the three-qubit gate (ii)_ℓ
+        circuit.add(gates.CNOT(target_qubit, last_qubit))
+        circuit.add(
+            gates.RY(target_qubit, theta).controlled_by(control_qubit, last_qubit)
+        )
+        circuit.add(gates.CNOT(target_qubit, last_qubit))
+
+
+def graph_state(matrix, backend=None, **kwargs):
+    """Create circuit encoding an undirected graph state given its adjacency matrix.
+
+    Args:
+        matrix (ndarray or list): Adjacency matrix of the graph.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`:  Circuit of the graph state with the given Adjacency matrix.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(matrix, list):
+        matrix = backend.cast(matrix, dtype=int)
+
+    if not backend.np.allclose(matrix, matrix.T):
+        raise_error(
+            ValueError,
+            f"``matrix`` is not symmetric, not representing an undirected graph",
+        )
+
+    nqubits = len(matrix)
+
+    circuit = Circuit(nqubits, **kwargs)
+    circuit.add(gates.H(qubit) for qubit in range(nqubits))
+
+    # since the matrix is symmetric, we only need the upper triangular part
+    rows, columns = backend.np.nonzero(backend.np.triu(matrix))
+    circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
+
+    return circuit
