@@ -1644,9 +1644,9 @@ def _add_wbd_gate(
     circuit: Circuit,
     first_register: List[int],
     second_register: List[int],
-    n: int,
+    nqubits: int,
     m: int,
-    k: int,
+    weight: int,
 ):
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
     Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
