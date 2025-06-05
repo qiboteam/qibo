@@ -1602,7 +1602,7 @@ def _add_scs_gate(circuit: Circuit, qubits: List[int], k: int):
     if k == 0:
         return  # SCS_{n,0} is identity
 
-    n = len(qubits)
+    nqubits = len(qubits)
     last_qubit = qubits[-1]  # qubits[n - 1]
     target_qubit = qubits[-2]
     # first_qubit = qubits[n - 1 - k]
