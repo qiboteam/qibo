@@ -1545,9 +1545,8 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
                     "children": [],
                 }
             )
-        disjoint_sets = list(
-            reversed(disjoint_sets)
-        )  # we reverse to have in ascending order of tier
+        # reverse to have in ascending order of tier
+        disjoint_sets = list(reversed(disjoint_sets))
 
         trees = disjoint_sets.copy()
         # combine lowest tier trees into one tree
