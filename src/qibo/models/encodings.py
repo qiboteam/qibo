@@ -1627,7 +1627,7 @@ def _add_scs_gate(circuit: Circuit, qubits: List[int], k: int):
         circuit.add(gates.CNOT(target_qubit, last_qubit))
 
 
-def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], k: int):
+def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int):
     """In-place addition to ``circuit`` of a U_{n,k} gate from Definition 2 of the paper [1]."""
     n = len(qubits)
     for m in range(n, k, -1):
