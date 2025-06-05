@@ -1527,8 +1527,9 @@ def dicke_state(nqubits: int, weight: int, all_to_all: bool = False, **kwargs):
         circuit.add(gates.X(qubit) for qubit in range(nqubits - weight, nqubits))
 
         _add_dicke_unitary_gate(circuit, range(nqubits), weight)
+        
+        return circuit
 
-    else:
         # We prepare disjoint sets of qubits
         disjoint_sets = [
             {
