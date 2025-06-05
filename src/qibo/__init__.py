@@ -17,7 +17,7 @@ from qibo.backends import (
     construct_backend,
     get_backend,
     get_device,
-    get_precision,
+    get_dtype,
     get_threads,
     get_transpiler,
     get_transpiler_name,
@@ -25,7 +25,7 @@ from qibo.backends import (
     matrices,
     set_backend,
     set_device,
-    set_precision,
+    set_dtype,
     set_threads,
     set_transpiler,
 )

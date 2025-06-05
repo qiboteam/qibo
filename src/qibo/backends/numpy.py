@@ -48,16 +48,18 @@ class NumpyBackend(Backend):
     def natives(self):
         return None
 
-    def set_precision(self, precision):
-        if precision != self.precision:
-            if precision == "single":
-                self.precision = precision
-                self.dtype = "complex64"
-            elif precision == "double":
-                self.precision = precision
-                self.dtype = "complex128"
-            else:
-                raise_error(ValueError, f"Unknown precision {precision}.")
+    def set_dtype(self, dtype):
+        if dtype not in ("complex128", "complex64", "float64", "float32"):
+            raise_error(
+                ValueError,
+                f"Unknown ``dtype`` ``{dtype}``."
+                + "``dtype`` must be one of the following options: 'complex128', 'complex64',"
+                + "'float64', 'float32'",
+            )
+
+        if dtype != self.dtype:
+            self.dtype = dtype
+
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
 
@@ -84,7 +86,6 @@ class NumpyBackend(Backend):
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def is_sparse(self, x):
-
         return sparse.issparse(x)
 
     def to_numpy(self, x):
@@ -421,7 +422,7 @@ class NumpyBackend(Backend):
                 )
             return self.execute_circuit(initial_state + circuit, None, nshots)
         elif initial_state is not None:
-            initial_state = self.cast(initial_state)
+            initial_state = self.cast(initial_state, dtype=initial_state.dtype)
             valid_shape = (
                 2 * (2**circuit.nqubits,)
                 if circuit.density_matrix

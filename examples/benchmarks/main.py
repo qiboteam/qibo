@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=20, type=int)
 parser.add_argument("--circuit", default="qft", type=str)
 parser.add_argument("--backend", default="qibojit", type=str)
-parser.add_argument("--precision", default="double", type=str)
+parser.add_argument("--dtype", default="complex128", type=str)
 parser.add_argument("--nreps", default=1, type=int)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--transfer", action="store_true")
@@ -105,7 +105,7 @@ def main(
     nqubits,
     circuit_name,
     backend="custom",
-    precision="double",
+    dtype="complex128",
     nreps=1,
     nshots=None,
     transfer=False,
@@ -125,7 +125,7 @@ def main(
     See benchmark documentation for a description of arguments.
     """
     qibo.set_backend(backend)
-    qibo.set_precision(precision)
+    qibo.set_dtype(dtype)
     if device is not None:
         qibo.set_device(device)
 
@@ -137,7 +137,7 @@ def main(
             "circuit_name": circuit_name,
             "threading": "",
             "backend": qibo.get_backend(),
-            "precision": qibo.get_precision(),
+            "dtype": qibo.get_dtype(),
             "device": qibo.get_device(),
             "accelerators": accelerators,
             "nshots": nshots,

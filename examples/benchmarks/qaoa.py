@@ -48,7 +48,7 @@ def main(
             "dense": dense,
             "solver": solver,
             "backend": qibo.get_backend(),
-            "precision": qibo.get_precision(),
+            "dtype": qibo.get_dtype(),
             "device": qibo.get_device(),
             "threads": qibo.get_threads(),
             "method": method,
