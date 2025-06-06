@@ -253,11 +253,11 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
             A_xor[r, s] = A[r ^ s, s]
 
     # Step 2: Walsh-Hadamard transform over columns
-    H1 = backend.cast([[1, 1], [1, -1]], dtype=complex)
-    Hn = H1
-    for _ in range(nqubits - 1):
-        Hn = backend.np.kron(Hn, H1)
-    A_hat = backend.np.dot(A_xor, Hn)
+    from functools import reduce
+
+    H1 = float(np.sqrt(2)) * backend.matrices.H
+    Hn = reduce(backend.np.kron, [H1]*nqubits)
+    A_hat = A_xor @ Hn
 
     # Step 3: Phase factor (-i)^wt(r & s)
     r = backend.np.arange(dim).reshape(-1, 1)
