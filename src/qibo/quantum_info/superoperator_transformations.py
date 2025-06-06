@@ -264,8 +264,7 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     s = backend.np.arange(dim).reshape(1, -1)
     r_and_s = backend.np.bitwise_and(r, s)
 
-    def hamming_weight(x):
-        return backend.np.array([bin(v).count("1") for v in x.flat]).reshape(x.shape)
+from qibo.quantum_info.utils import hamming_weight
 
     wt = hamming_weight(r_and_s)
     phase = backend.np.power(-1j, wt)
