@@ -217,6 +217,64 @@ def to_liouville(channel, order: str = "row", backend=None):
 
     return channel
 
+def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
+    """
+    Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
+    using the Fast Walsh-Hadamard Transform (FHT), based on:
+    "Pauli Decomposition via the Fast Walsh-Hadamard Transform", Sec. 3.
+
+    Args:
+        matrix (ndarray): Input matrix of shape (2^n, 2^n).
+        normalize (bool): Whether to normalize the Pauli basis.
+        backend (Qibo backend, optional): Computational backend.
+
+    Returns:
+        ndarray: Pauli-Liouville matrix of shape (4^n, 4^n) with coefficients α_{r,s}
+                 such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†
+    """
+    from qibo.quantum_info import vectorization
+    from qibo.backends import _check_backend
+
+    backend = _check_backend(backend)
+
+    dim = matrix.shape[0]
+    nqubits = int(np.log2(dim))
+    if matrix.shape[1] != dim or 2**nqubits != dim:
+        raise ValueError("Input matrix must be square with dimension 2^n.")
+
+    A = backend.cast(matrix, dtype=complex)
+
+    # Step 1: XOR permutation
+    A_xor = backend.np.empty_like(A)
+    for r in range(dim):
+        for s in range(dim):
+            A_xor[r, s] = A[r ^ s, s]
+
+    # Step 2: Walsh-Hadamard transform over columns
+    H1 = backend.cast([[1, 1], [1, -1]], dtype=complex)
+    Hn = H1
+    for _ in range(nqubits - 1):
+        Hn = backend.np.kron(Hn, H1)
+    A_hat = backend.np.dot(A_xor, Hn)
+
+    # Step 3: Phase factor (-i)^wt(r & s)
+    r = backend.np.arange(dim).reshape(-1, 1)
+    s = backend.np.arange(dim).reshape(1, -1)
+    r_and_s = backend.np.bitwise_and(r, s)
+
+    def hamming_weight(x):
+        return backend.np.array([bin(v).count("1") for v in x.flat]).reshape(x.shape)
+
+    wt = hamming_weight(r_and_s)
+    phase = backend.np.power(-1j, wt)
+
+    coeffs = A_hat * phase / (2 ** nqubits)
+
+    if normalize:
+        coeffs /= backend.np.sqrt(2**nqubits)
+
+    return coeffs
+
 
 def to_pauli_liouville(
     channel,
@@ -262,7 +320,7 @@ def to_pauli_liouville(
     channel = unitary @ channel @ backend.np.conj(unitary).T
 
     return channel
-
+    
 
 def to_chi(
     channel,
