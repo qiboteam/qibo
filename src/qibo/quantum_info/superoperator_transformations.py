@@ -233,8 +233,6 @@ def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
         ndarray: Pauli-Liouville matrix of shape (4^n, 4^n) with coefficients α_{r,s}
                  such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†
     """
-    from qibo.backends import _check_backend
-    from qibo.quantum_info import vectorization
 
     backend = _check_backend(backend)
 
