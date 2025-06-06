@@ -235,8 +235,9 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
         ndarray: Matrix of shape (4^n, 4^n) with coefficients α_{r,s}
             such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
     """
-    from qibo.backends import _check_backend
     from functools import reduce
+
+    from qibo.backends import _check_backend
 
     backend = _check_backend(backend)
 
@@ -267,7 +268,7 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     wt = hamming_weight_array(r_and_s)
     phase = backend.np.power(-1j, wt)
 
-    coeffs = A_hat * phase / (2 ** nqubits)
+    coeffs = A_hat * phase / (2**nqubits)
 
     if normalize:
         coeffs /= backend.np.sqrt(2**nqubits)
@@ -291,15 +292,16 @@ def from_pauli_liouville_fht(coeffs, backend=None):
     Returns:
         ndarray: Reconstructed matrix A ∈ ℂ^{2^n × 2^n}.
     """
-    from qibo.backends import _check_backend
     import numpy as np
     from numpy.linalg import matrix_power
+
+    from qibo.backends import _check_backend
 
     backend = _check_backend(backend)
 
     dim = coeffs.shape[0]
     n = int(np.log2(dim))
-    d = 2 ** n
+    d = 2**n
     A = backend.np.zeros((d, d), dtype=complex)
 
     def int_to_binary_array(x, bits):
@@ -326,7 +328,7 @@ def from_pauli_liouville_fht(coeffs, backend=None):
             bins = int_to_binary_array(s, n)
             wt = hamming_weight(bins, binr)
             P_rs = pauli_operator(r, s)
-            A += coeffs[r, s] * P_rs * (1j ** wt)
+            A += coeffs[r, s] * P_rs * (1j**wt)
 
     return A
 
