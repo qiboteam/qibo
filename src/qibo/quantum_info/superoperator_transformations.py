@@ -228,7 +228,9 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
         matrix (ndarray): Input matrix of shape (2^n, 2^n).
         normalize (bool, optional): If ``True``, uses the normalized Pauli basis.
             Defaults to ``False``.
-        backend (Qibo backend, optional): Computational backend.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
 
     Returns:
         ndarray: Pauli-Liouville matrix of shape (4^n, 4^n) with coefficients α_{r,s}
