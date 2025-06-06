@@ -413,7 +413,12 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     if pauli != 1
                 )
             )
+        # print(f"New form: {form}")
+        # print(f"{self.nqubits = }")
+        nqubits = self.nqubits
         self.form = form
+        # print(f"{self.nqubits = }")
+        self.nqubits = nqubits
 
     @cached_property
     def terms(self):
