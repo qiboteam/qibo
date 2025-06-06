@@ -217,6 +217,7 @@ def to_liouville(channel, order: str = "row", backend=None):
 
     return channel
 
+
 def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
     """
     Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
@@ -232,8 +233,8 @@ def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
         ndarray: Pauli-Liouville matrix of shape (4^n, 4^n) with coefficients α_{r,s}
                  such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†
     """
-    from qibo.quantum_info import vectorization
     from qibo.backends import _check_backend
+    from qibo.quantum_info import vectorization
 
     backend = _check_backend(backend)
 
@@ -268,7 +269,7 @@ def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
     wt = hamming_weight(r_and_s)
     phase = backend.np.power(-1j, wt)
 
-    coeffs = A_hat * phase / (2 ** nqubits)
+    coeffs = A_hat * phase / (2**nqubits)
 
     if normalize:
         coeffs /= backend.np.sqrt(2**nqubits)
@@ -320,7 +321,7 @@ def to_pauli_liouville(
     channel = unitary @ channel @ backend.np.conj(unitary).T
 
     return channel
-    
+
 
 def to_chi(
     channel,
