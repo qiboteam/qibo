@@ -226,7 +226,8 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
 
     Args:
         matrix (ndarray): Input matrix of shape (2^n, 2^n).
-        normalize (bool): Whether to normalize the Pauli basis.
+        normalize (bool, optional): If ``True``, uses the normalized Pauli basis.
+            Defaults to ``False``.
         backend (Qibo backend, optional): Computational backend.
 
     Returns:
