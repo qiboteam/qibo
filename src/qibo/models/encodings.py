@@ -1653,16 +1653,21 @@ def _add_wbd_gate(
 ):
     """In-place addition of a Weight Distribution Block (WBD) to ``circuit``.
     Implements the :math:`WBD^{n,m}_k` unitary from Definition 2 of the paper [2].
-    Only acts on first_register and second_register.
+    Only acts on first_register and second_register, last k qubits
     Our circuit is mirrored, as paper [2] uses a top-bottom circuit <-> right-left bitstring convention
     """
 
-    if mqubits > nqubits / 2:  # pragma: no cover
+    if mqubits > nqubits / 2:
         raise_error(ValueError, "``m`` must not be greater than ``n - m``.")
+
+    # only acts on last k qubits
+    first_register = first_register[-weight:]
+    second_register = second_register[-weight:]
+
     # if m>k, m is truncated. Operations involving the most significant k-m digits can be removed
 
     # (1) Switching from unary encoding to one hot encoding
-    circuit.add(gates.CNOT(q, q + 1) for q in reversed(first_register[:-1]))
+    circuit.add(gates.CNOT(q, q + 1) for q in first_register[-2::-1])
 
     # (2) Adding a supperposition of hamming weights into the second register
     # this can be optimized
