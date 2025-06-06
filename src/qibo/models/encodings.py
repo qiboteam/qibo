@@ -1660,7 +1660,7 @@ def _add_wbd_gate(
     if mqubits > nqubits / 2:
         raise_error(ValueError, "``m`` must not be greater than ``n - m``.")
 
-    # only acts on last k qubits
+    # only acts on last k qubits
     first_register = first_register[-weight:]
     second_register = second_register[-weight:]
 

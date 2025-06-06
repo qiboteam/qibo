@@ -12,12 +12,12 @@ from scipy.special import binom
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    _add_wbd_gate,
     _ehrlich_algorithm,
     _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
-    _add_wbd_gate,
     entangling_layer,
     ghz_state,
     graph_state,
@@ -520,25 +520,33 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
     wbd_circ = Circuit(nqubits, density_matrix=density_matrix)
     first_register = list(range(mqubits, nqubits))
     second_register = list(range(mqubits))
-    if mqubits > nqubits-mqubits:
+    if mqubits > nqubits - mqubits:
         with pytest.raises(ValueError):
-            _add_wbd_gate(wbd_circ, first_register, second_register, nqubits, mqubits, weight)
+            _add_wbd_gate(
+                wbd_circ, first_register, second_register, nqubits, mqubits, weight
+            )
     else:
-        _add_wbd_gate(wbd_circ, first_register, second_register, nqubits, mqubits, weight)
+        _add_wbd_gate(
+            wbd_circ, first_register, second_register, nqubits, mqubits, weight
+        )
 
         # Build expected WBD state vector (Definition 2 from [2])
-        # Test for all considered (0 <= l <= weight) input states: |0>^n-l |1>^l
-        for l in range(weight+1):
-            initial = np.zeros(2**(nqubits), dtype=complex)
-            target = np.zeros(2**(nqubits), dtype=complex)
+        # Test for all considered (0 <= l <= weight) input states: |0>^n-l |1>^l
+        for l in range(weight + 1):
+            initial = np.zeros(2 ** (nqubits), dtype=complex)
+            target = np.zeros(2 ** (nqubits), dtype=complex)
 
             # initial state |0>^n-l |1>^l
-            initial[2**l-1] = 1
-            
+            initial[2**l - 1] = 1
+
             comb_n_l = math.comb(nqubits, l)
-            for i in range(min(l,mqubits)+1):
-                index = 2**(nqubits-mqubits) * (2**(i) - 1) + 2**(l-i)-1
-                target[index] = np.sqrt(math.comb(mqubits,i)*math.comb(nqubits-mqubits, l-i) / comb_n_l)
+            for i in range(min(l, mqubits) + 1):
+                index = 2 ** (nqubits - mqubits) * (2 ** (i) - 1) + 2 ** (l - i) - 1
+                target[index] = np.sqrt(
+                    math.comb(mqubits, i)
+                    * math.comb(nqubits - mqubits, l - i)
+                    / comb_n_l
+                )
 
             initial = backend.cast(initial, dtype=target.dtype)
             target = backend.cast(target, dtype=target.dtype)
@@ -547,7 +555,7 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
                 initial = backend.np.outer(initial, backend.np.conj(initial.T))
                 target = backend.np.outer(target, backend.np.conj(target.T))
 
-            result = backend.execute_circuit(wbd_circ, initial_state = initial)
+            result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()
 
             backend.assert_allclose(state, target)
