@@ -218,7 +218,7 @@ def to_liouville(channel, order: str = "row", backend=None):
     return channel
 
 
-def to_pauli_liouville_fht(matrix, normalize=False, backend=None):
+def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     """
     Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
     using the Fast Walsh-Hadamard Transform (FHT), based on:
