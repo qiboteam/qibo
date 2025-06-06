@@ -14,7 +14,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import Symbol, X, Y, Z
+from qibo.symbols import I, Symbol, X, Y, Z
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -365,26 +365,53 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # Simplify each term in the expanded Hamiltonian
         terms_dict = sympy.expand(self.form).as_coefficients_dict()
         for factors, _coeff in terms_dict.items():
-            coeff = _coeff  # For moving I in later (sqrt(-1), not qibo.symbols.I)
+            coeff = _coeff  # To put I (sqrt(-1), not qibo.symbols.I)
+            other_symbols = []  # For storing non-X,Y,Z Symbols
             qubit_dict = {}
-            for factor in factors.as_ordered_factors():
-                pauli_term = pauli_mapping[type(factor)]
-                if qubit_dict.get(factor.target_qubit) is None:
-                    qubit_dict[factor.target_qubit] = pauli_term
+            for _factor in factors.as_ordered_factors():
+                print(f"{_factor = }, {type(_factor) = }")
+                # To handle powers of Pauli terms
+                if isinstance(_factor, sympy.Pow):
+                    factor, power = _factor.args
+                    assert isinstance(power, sympy.Integer)
+                    assert isinstance(factor, sympy.Symbol)
+                    # Ignore even powers
+                    if not int(power) % 2:
+                        continue
+
                 else:
-                    pauli_product = evaluate_pauli_product(
-                        qubit_dict[factor.target_qubit] * pauli_term
-                    )
-                    # Move the sympy.I into the coefficient
-                    if sympy.I in pauli_product.atoms():
-                        pauli_product *= -sympy.I
-                        coeff *= 1.0j
-                    qubit_dict[factor.target_qubit] = pauli_product
-            # Convert the simplified factor back to a qibo symbol and add it to form
-            form += coeff * prod(
-                inverse_pauli_mapping[pauli](qubit)
-                for qubit, pauli in qubit_dict.items()
-                if pauli != 1
+                    factor = _factor
+
+                print(f"{factor = }")
+                # Should have no powers left. Only process the qibo X, Y, Z symbols
+                if isinstance(factor, (X, Y, Z)):
+                    pauli_term = pauli_mapping[factor.__class__]
+                    if qubit_dict.get(factor.target_qubit) is None:
+                        qubit_dict[factor.target_qubit] = pauli_term
+                    else:
+                        pauli_product = evaluate_pauli_product(
+                            qubit_dict[factor.target_qubit] * pauli_term
+                        )
+                        # Move the sympy.I into the coefficient
+                        if sympy.I in pauli_product.atoms():
+                            pauli_product *= -sympy.I
+                            coeff *= 1.0j
+                        print(f"{coeff = }")
+                        print(f"{pauli_product = }")
+                        qubit_dict[factor.target_qubit] = pauli_product
+                # Non-X/Y/Z Symbols
+                else:
+                    other_symbols.append(factor)
+
+            # Convert the simplified factor back to a qibo symbol and add it to form along with any non-X/Y/Z factors
+            form += (
+                coeff
+                * prod(other_symbols)
+                * prod(
+                    inverse_pauli_mapping[pauli](qubit)
+                    for qubit, pauli in qubit_dict.items()
+                    if pauli != 1
+                )
             )
         self.form = form
 
@@ -394,13 +421,14 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Terms will be objects of type :class:`qibo.core.terms.HamiltonianTerm`.
         """
-        # Calculate terms based on ``self.form``
+        # Calculate terms after expanding ``self.form``
 
         self.constant = 0.0
 
-        form = sympy.expand(self.form)
+        self.expand_form()
         terms = []
-        for f, c in form.as_coefficients_dict().items():
+        for f, c in self.form.as_coefficients_dict().items():
+            # ZC WAS HERE
             term = SymbolicTerm(c, f, backend=self.backend)
             if term.target_qubits:
                 terms.append(term)

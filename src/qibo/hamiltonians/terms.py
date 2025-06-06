@@ -153,22 +153,22 @@ class SymbolicTerm(HamiltonianTerm):
             for factor in factors.as_ordered_factors():
                 # check if factor has some power ``power`` so that the corresponding
                 # matrix is multiplied ``pow`` times
-                if isinstance(factor, sympy.Pow):
-                    factor, pow = factor.args
-                    assert isinstance(pow, sympy.Integer)
-                    assert isinstance(factor, sympy.Symbol)
-                    # if the symbol is a Pauli (i.e. a qibo symbol) and `pow` is even
-                    # the power is the identity, thus the factor vanishes. Otherwise,
-                    # for an odd exponent, it remains unchanged (i.e. `pow`=1)
-                    if factor.__class__ in (I, X, Y, Z):
-                        if not int(pow) % 2:
-                            factor = sympy.N(1)
-                        else:
-                            pow = 1
-                    else:
-                        pow = int(pow)
-                else:
-                    pow = 1
+                # if isinstance(factor, sympy.Pow):
+                #     factor, pow = factor.args
+                #     assert isinstance(pow, sympy.Integer)
+                #     assert isinstance(factor, sympy.Symbol)
+                #     # if the symbol is a Pauli (i.e. a qibo symbol) and `pow` is even
+                #     # the power is the identity, thus the factor vanishes. Otherwise,
+                #     # for an odd exponent, it remains unchanged (i.e. `pow`=1)
+                #     if factor.__class__ in (I, X, Y, Z):
+                #         if not int(pow) % 2:
+                #             factor = sympy.N(1)
+                #         else:
+                #             pow = 1
+                #     else:
+                #         pow = int(pow)
+                # else:
+                #     pow = 1
 
                 if isinstance(factor, sympy.Symbol):
                     # forces the backend of the factor
@@ -176,7 +176,9 @@ class SymbolicTerm(HamiltonianTerm):
                     # backend of a symbol, i.e. Z(q, backend=backend)
                     factor.backend = self.backend
                     if isinstance(factor.matrix, self.backend.tensor_types):
-                        self.factors.extend(pow * [factor])
+                        self.factors.extend([factor])
+                        # self.factors.extend(pow * [factor])
+
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple
                         # when calculating the term's total matrix so we
@@ -185,9 +187,10 @@ class SymbolicTerm(HamiltonianTerm):
                         # see the ``SymbolicTerm.matrix`` property for the
                         # full matrix calculation
                         if q in self.matrix_map:
-                            self.matrix_map[q].extend(pow * [factor.matrix])
+                            self.matrix_map[q].extend([factor.matrix])
+                            # self.matrix_map[q].extend(pow * [factor.matrix])
                         else:
-                            self.matrix_map[q] = pow * [factor.matrix]
+                            self.matrix_map[q] = [factor.matrix]
                     else:
                         self.coefficient *= factor.matrix
                 elif factor == sympy.I:
