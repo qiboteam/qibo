@@ -218,7 +218,7 @@ def to_liouville(channel, order: str = "row", backend=None):
     return channel
 
 
-def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
+def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     """
     Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
     using the Fast Walsh-Hadamard Transform (FHT), based on:
@@ -228,14 +228,15 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
         matrix (ndarray): Input matrix of shape (2^n, 2^n).
         normalize (bool, optional): If ``True``, uses the normalized Pauli basis.
             Defaults to ``False``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            the current backend. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+            to be used in the execution. If ``None``, it uses the current backend.
 
     Returns:
-        ndarray: Pauli-Liouville matrix of shape (4^n, 4^n) with coefficients α_{r,s}
-                 such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†
+        ndarray: Matrix of shape (4^n, 4^n) with coefficients α_{r,s}
+            such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
     """
+    from qibo.backends import _check_backend
+    from functools import reduce
 
     backend = _check_backend(backend)
 
@@ -247,34 +248,87 @@ def _to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     A = backend.cast(matrix, dtype=complex)
 
     # Step 1: XOR permutation
-    A_xor = backend.np.empty_like(A)
-    for r in range(dim):
-        for s in range(dim):
-            A_xor[r, s] = A[r ^ s, s]
+    idx = backend.np.arange(dim)
+    A_xor = A[idx[:, None] ^ idx, idx]
 
-    # Step 2: Walsh-Hadamard transform over columns
-    from functools import reduce
-
-    H1 = float(np.sqrt(2)) * backend.matrices.H
-    Hn = reduce(backend.np.kron, [H1]*nqubits)
+    # Step 2: Walsh-Hadamard transform
+    H1 = float(backend.np.sqrt(2)) * backend.matrices.H
+    Hn = reduce(backend.np.kron, [H1] * nqubits)
     A_hat = A_xor @ Hn
 
-    # Step 3: Phase factor (-i)^wt(r & s)
+    # Step 3: Phase factor (-i)^{wt(r & s)}
     r = backend.np.arange(dim).reshape(-1, 1)
     s = backend.np.arange(dim).reshape(1, -1)
     r_and_s = backend.np.bitwise_and(r, s)
 
-from qibo.quantum_info.utils import hamming_weight
+    def hamming_weight_array(x):
+        return backend.np.array([bin(v).count("1") for v in x.flat]).reshape(x.shape)
 
-    wt = hamming_weight(r_and_s)
+    wt = hamming_weight_array(r_and_s)
     phase = backend.np.power(-1j, wt)
 
-    coeffs = A_hat * phase / (2**nqubits)
+    coeffs = A_hat * phase / (2 ** nqubits)
 
     if normalize:
         coeffs /= backend.np.sqrt(2**nqubits)
 
     return coeffs
+
+
+def from_pauli_liouville_fht(coeffs, backend=None):
+    """
+    Reconstructs a matrix A ∈ ℂ^{2^n × 2^n} from its FHT-based Pauli-Liouville
+    decomposition coefficients α_{r,s}, as described in:
+    "Pauli Decomposition via the Fast Walsh-Hadamard Transform", Eq. (7).
+
+    A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s† ⋅ (-i)^{wt(s ∧ r)}
+
+    Args:
+        coeffs (ndarray): Matrix of shape (4^n, 4^n) with Pauli coefficients.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+            to be used in the execution. If ``None``, it uses the current backend.
+
+    Returns:
+        ndarray: Reconstructed matrix A ∈ ℂ^{2^n × 2^n}.
+    """
+    from qibo.backends import _check_backend
+    import numpy as np
+    from numpy.linalg import matrix_power
+
+    backend = _check_backend(backend)
+
+    dim = coeffs.shape[0]
+    n = int(np.log2(dim))
+    d = 2 ** n
+    A = backend.np.zeros((d, d), dtype=complex)
+
+    def int_to_binary_array(x, bits):
+        return backend.np.array([int(b) for b in format(x, f"0{bits}b")])
+
+    def hamming_weight(a, b):
+        return backend.np.sum(a * b)
+
+    def pauli_operator(r, s):
+        X = np.array([[0, 1], [1, 0]])
+        Z = np.array([[1, 0], [0, -1]])
+        bin_r = int_to_binary_array(r, n)
+        bin_s = int_to_binary_array(s, n)
+        op = matrix_power(X, bin_r[0]) @ matrix_power(Z, bin_s[0])
+        for i in range(1, n):
+            xi = matrix_power(X, bin_r[i])
+            zi = matrix_power(Z, bin_s[i])
+            op = backend.np.kron(op, xi @ zi)
+        return backend.cast(op, dtype=complex)
+
+    for r in range(dim):
+        binr = int_to_binary_array(r, n)
+        for s in range(dim):
+            bins = int_to_binary_array(s, n)
+            wt = hamming_weight(bins, binr)
+            P_rs = pauli_operator(r, s)
+            A += coeffs[r, s] * P_rs * (1j ** wt)
+
+    return A
 
 
 def to_pauli_liouville(
