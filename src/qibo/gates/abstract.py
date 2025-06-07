@@ -195,6 +195,7 @@ class Gate:
     @staticmethod
     def check_controls(func):
         """Decorator to check if a gate can be controlled."""
+
         def wrapper(self, *q):
             if not self.unitary:
                 raise_error(
@@ -202,6 +203,7 @@ class Gate:
                     f"Gate {self.__class__.__name__} cannot be controlled because it is not unitary.",
                 )
             return func(self, *q)
+
         return wrapper
 
     def controlled_by(self, *q):
