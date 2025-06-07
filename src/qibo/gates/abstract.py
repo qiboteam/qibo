@@ -43,25 +43,27 @@ class Gate:
         self.name = None
         self.draw_label = None
         self.target_qubits = None
-        self.control_qubits = None
+        self.control_qubits = ()
         self.init_args = []
         self.init_kwargs = {}
+        self.trainable = trainable
+        self.optimize_depth = optimize_depth
         self.unitary = False
+        self._clifford = None
+        self._hamming_weight = None
         self.parameters = None
         self.nparams = 0
         self.parameter_names = []
-        self.trainable = trainable
-        self.optimize_depth = optimize_depth
 
     @property
     def clifford(self):
         """Whether the gate is a Clifford gate."""
-        return False
+        return self._clifford
 
     @property
     def hamming_weight(self):
         """Whether the gate preserves Hamming weight."""
-        return False
+        return self._hamming_weight
 
     @property
     def qasm_label(self):
@@ -189,6 +191,18 @@ class Gate:
 
         # Otherwise, just concatenate
         return left + right
+
+    @staticmethod
+    def check_controls(func):
+        """Decorator to check if a gate can be controlled."""
+        def wrapper(self, *q):
+            if not self.unitary:
+                raise_error(
+                    ValueError,
+                    f"Gate {self.__class__.__name__} cannot be controlled because it is not unitary.",
+                )
+            return func(self, *q)
+        return wrapper
 
     def controlled_by(self, *q):
         """Controls the gate on the specified qubits.
@@ -432,7 +446,7 @@ class Gate:
                 # If this gate is controlled, check if it's part of a decomposition
                 # that needs to be controlled
                 for j in range(i + 1, len(gates)):
-                    if gates_cancel(gates[i], gates[j]):
+                    if Gate.gates_cancel(gates[i], gates[j]):
                         # If we find a gate that cancels this one, neither should be controlled
                         mask[i] = False
                         mask[j] = False
@@ -689,13 +703,12 @@ class SpecialGate(Gate):
 
 
 class ParametrizedGate(Gate):
-    """Base class for parametrized gates.
-
-    Implements the basic functionality of parameter setters and getters.
-    """
+    """Base class for gates that depend on parameters."""
 
     def __init__(self, trainable=True):
-        super().__init__(trainable)
+        super().__init__(trainable=trainable)
+        self.symbolic_parameters = {}
+        self.device_gates = []
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable

@@ -2696,17 +2696,13 @@ class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.
 
     Args:
-        unitary: Unitary matrix as a tensor supported by the backend.
-        *q (int): Qubit id numbers that the gate acts on.
+        unitary: Unitary matrix.
+        q (int): the qubit id number.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
-            Defaults to ``True``.
         name (str): Optional name for the gate.
-        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
-            If ``False``, check is not performed and ``unitary`` attribute
-            defaults to ``False``. Note that, even when the check is performed,
-            there is no enforcement. This allows the user to create
-            non-unitary gates. Default is ``True``.
+        check_unitary (bool): If ``True``, the input matrix is checked to ensure
+            it is unitary.
     """
 
     def __init__(
@@ -2718,48 +2714,28 @@ class Unitary(ParametrizedGate):
         check_unitary: bool = True,
     ):
         super().__init__(trainable)
-        self.name = "Unitary" if name is None else name
+        self.name = name or "Unitary"
         self.draw_label = "U"
-        self.target_qubits = tuple(q)
-        self._hamming_weight = False
-        self._clifford = False
-
-        # TODO: Check that given ``unitary`` has proper shape?
-        self.parameter_names = "u"
-        self._parameters = (unitary,)
-        self.nparams = 4 ** len(self.target_qubits)
-
+        self.target_qubits = q
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {
+            "trainable": trainable,
             "name": name,
             "check_unitary": check_unitary,
-            "trainable": trainable,
         }
+        self.unitary = True
+        self._clifford = None
+        self._hamming_weight = None
+        self._is_controlled_by = False
 
-        if check_unitary:
-            engine = _check_engine(unitary)
-            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
-            diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
-            off_diagonals = bool(
-                engine.all(
-                    engine.abs(product - engine.diag(engine.diag(product)))
-                    < PRECISION_TOL
-                )
-            )
+    @property
+    def is_controlled_by(self):
+        """Whether the gate is controlled by other qubits."""
+        return self._is_controlled_by
 
-            self.unitary = True if diagonals and off_diagonals else False
-            del diagonals, off_diagonals, product
-
-    @Gate.parameters.setter
-    def parameters(self, x):
-        shape = self.parameters[0].shape
-        engine = _check_engine(x)
-        # Reshape doesn't accept a tuple if engine is pytorch.
-        if isinstance(x, tuple):
-            x = x[0]
-        self._parameters = (engine.reshape(x, shape),)
-        for gate in self.device_gates:  # pragma: no cover
-            gate.parameters = x
+    @is_controlled_by.setter
+    def is_controlled_by(self, value):
+        self._is_controlled_by = value
 
     @property
     def clifford(self):
