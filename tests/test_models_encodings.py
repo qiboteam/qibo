@@ -548,7 +548,7 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
                     / comb_n_l
                 )
 
-            initial = backend.cast(initial, dtype=target.dtype)
+            initial = backend.cast(initial, dtype=initial.dtype)
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
