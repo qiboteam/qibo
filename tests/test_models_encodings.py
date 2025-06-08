@@ -12,6 +12,7 @@ from scipy.special import binom
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
+    _add_wbd_gate,
     _ehrlich_algorithm,
     _get_next_bistring,
     binary_encoder,
@@ -461,10 +462,12 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("all_to_all", [False, True])
 @pytest.mark.parametrize(
     "nqubits, weight",
     [
         (2, -1),
+        (2, 0),
         (2, 1),
         (3, 1),
         (3, 2),
@@ -472,10 +475,12 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         (4, 1),
     ],
 )
-def test_dicke_state(backend, nqubits, weight, density_matrix):
+def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
     if weight < 0 or weight > nqubits:
         with pytest.raises(ValueError):
-            dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+            dicke_circ = dicke_state(
+                nqubits, weight, all_to_all=all_to_all, density_matrix=density_matrix
+            )
     else:
         # Build expected Dicke state vector
         target = np.zeros(2**nqubits, dtype=complex)
@@ -487,7 +492,9 @@ def test_dicke_state(backend, nqubits, weight, density_matrix):
 
         target = backend.cast(target, dtype=target.dtype)
 
-        dicke_circ = dicke_state(nqubits, weight, density_matrix=density_matrix)
+        dicke_circ = dicke_state(
+            nqubits, weight, all_to_all=all_to_all, density_matrix=density_matrix
+        )
         result = backend.execute_circuit(dicke_circ)
         state = result.state()
 
@@ -495,6 +502,63 @@ def test_dicke_state(backend, nqubits, weight, density_matrix):
             target = backend.np.outer(target, backend.np.conj(target.T))
 
         backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize(
+    "nqubits, mqubits, weight",
+    [
+        (2, 1, 1),
+        (3, 1, 0),
+        (4, 1, 2),
+        (4, 2, 2),
+        (4, 3, 1),
+        (5, 2, 3),
+    ],
+)
+def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
+    wbd_circ = Circuit(nqubits, density_matrix=density_matrix)
+    first_register = list(range(mqubits, nqubits))
+    second_register = list(range(mqubits))
+    if mqubits > nqubits - mqubits:
+        with pytest.raises(ValueError):
+            _add_wbd_gate(
+                wbd_circ, first_register, second_register, nqubits, mqubits, weight
+            )
+    else:
+        _add_wbd_gate(
+            wbd_circ, first_register, second_register, nqubits, mqubits, weight
+        )
+
+        # Build expected WBD state vector (Definition 2 from [2])
+        # Test for all considered (0 <= l <= weight) input states: |0>^n-l |1>^l
+        for l in range(weight + 1):
+            initial = np.zeros(2 ** (nqubits), dtype=complex)
+            target = np.zeros(2 ** (nqubits), dtype=complex)
+
+            # initial state |0>^n-l |1>^l
+            initial[2**l - 1] = 1
+
+            comb_n_l = math.comb(nqubits, l)
+            for i in range(min(l, mqubits) + 1):
+                index = 2 ** (nqubits - mqubits) * (2 ** (i) - 1) + 2 ** (l - i) - 1
+                target[index] = np.sqrt(
+                    math.comb(mqubits, i)
+                    * math.comb(nqubits - mqubits, l - i)
+                    / comb_n_l
+                )
+
+            initial = backend.cast(initial, dtype=initial.dtype)
+            target = backend.cast(target, dtype=target.dtype)
+
+            if density_matrix:
+                initial = backend.np.outer(initial, backend.np.conj(initial.T))
+                target = backend.np.outer(target, backend.np.conj(target.T))
+
+            result = backend.execute_circuit(wbd_circ, initial_state=initial)
+            state = result.state()
+
+            backend.assert_allclose(state, target)
 
 
 @pytest.mark.parametrize(
