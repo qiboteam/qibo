@@ -363,8 +363,8 @@ class Gate:
     def _base_decompose(self, *free, use_toffolis=True) -> List["Gate"]:
         """Base decomposition for gates.
 
-        Returns a list containing the gate itself. Should be overridden by subclasses
-        that support decomposition to simpler gates.
+        Returns a list containing the gate itself. Should be overridden by
+        subclasses that support decomposition to simpler gates.
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
