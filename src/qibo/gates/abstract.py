@@ -373,7 +373,7 @@ class Gate:
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
-            list: gates that have the same effect as applying the original gate.
+            list: Synthesis of the original gate in another gate set.
         """
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
