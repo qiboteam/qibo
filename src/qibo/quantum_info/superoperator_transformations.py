@@ -1,13 +1,11 @@
 """Module with the most commom superoperator transformations."""
 
 import warnings
+from itertools import product
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from scipy.optimize import minimize
-
-from itertools import product
-from functools import reduce
 
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
@@ -16,7 +14,6 @@ from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
 from qibo.quantum_info.utils import hamming_weight
-
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -287,7 +284,7 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     if normalize:
         alphas /= backend.np.sqrt(dims)
 
-    return alphas/dims
+    return alphas / dims
 
 
 def from_pauli_liouville_fht(coeffs, backend=None):
