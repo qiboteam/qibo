@@ -378,7 +378,7 @@ class Gate:
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     @staticmethod
-    def gates_cancel(g1, g2):
+    def _gates_cancel(g1, g2):
         """Check if same gate type, same targets, same controls"""
         if g1.__class__ != g2.__class__:
             return False
