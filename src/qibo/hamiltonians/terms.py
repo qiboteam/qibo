@@ -1,7 +1,6 @@
 from functools import cached_property, reduce
 from typing import Optional
 
-import numpy as np
 import sympy
 from sympy.physics.paulialgebra import Pauli, evaluate_pauli_product
 
@@ -176,6 +175,9 @@ class SymbolicTerm(HamiltonianTerm):
                     power = 1
 
                 if isinstance(factor, sympy.Symbol):
+                    # Skip any qibo.symbols.I factors
+                    if isinstance(factor, I):
+                        continue
                     # forces the backend of the factor
                     # this way it is not necessary to explicitely define the
                     # backend of a symbol, i.e. Z(q, backend=backend)
@@ -185,21 +187,23 @@ class SymbolicTerm(HamiltonianTerm):
                         if q in self.matrix_map:
                             # Check for possible simplifications only if current factor is X/Y/Z
                             if isinstance(factor, (X, Y, Z)):
-                                xyz_factors = [
+                                q_factors = [
                                     _factor
                                     for _factor in self.factors
                                     if _factor.target_qubit == q
-                                    and isinstance(_factor, (X, Y, Z))
                                 ]
-                                # Reduce all X/Y/Z factors occurring at the same qubit
-                                while xyz_factors:
-                                    xyz_factor = xyz_factors[-1]
+                                while q_factors:
+                                    # Reduce all X/Y/Z factors occurring at the same qubit
+                                    q_factor = q_factors[-1]
                                     # Only simplify if the last term in matrix_map[q] is a Pauli matrix
-                                    if self.backend.np.allclose(
-                                        xyz_factor.matrix, self.matrix_map[q][-1]
+                                    if (
+                                        q_factor.__class__ in pauli_mapping
+                                        and self.backend.np.allclose(
+                                            q_factor.matrix, self.matrix_map[q][-1]
+                                        )
                                     ):
                                         pauli_product = evaluate_pauli_product(
-                                            pauli_mapping[xyz_factor.__class__]
+                                            pauli_mapping[q_factor.__class__]
                                             * pauli_mapping[factor.__class__]
                                         )
                                         # Move -1 or sympy.I from the product into the coefficient
@@ -209,19 +213,24 @@ class SymbolicTerm(HamiltonianTerm):
                                         if sympy.I in pauli_product.atoms():
                                             pauli_product *= -sympy.I
                                             self.coefficient *= 1j
-                                        # Replace the original factor/matrix by the updated factor/matrix
                                         factor_index = (
                                             len(self.factors)
-                                            - self.factors[::-1].index(xyz_factor)
+                                            - self.factors[::-1].index(q_factor)
                                             - 1
                                         )
-                                        factor = inverse_pauli_mapping.get(
-                                            pauli_product, I
-                                        )(q)
-                                        factor.backend = self.backend
-                                        self.factors[factor_index] = factor
-                                        self.matrix_map[q][-1] = factor.matrix
-                                        xyz_factors.pop(-1)
+                                        # If pauli_product is not identity, then update the original factor/matrix
+                                        if pauli_product in inverse_pauli_mapping:
+                                            factor = inverse_pauli_mapping[
+                                                pauli_product
+                                            ](q)
+                                            factor.backend = self.backend
+                                            self.factors[factor_index] = factor
+                                            self.matrix_map[q][-1] = factor.matrix
+                                        # Otherwise, just remove the factor/matrix
+                                        else:
+                                            self.factors.pop(factor_index)
+                                            self.matrix_map[q].pop(-1)
+                                        q_factors.pop(-1)
                                     # X/Y/Z factor wasn't the last term previously => Cannot simplify, just extend
                                     else:
                                         self.factors.extend([factor])
@@ -230,10 +239,11 @@ class SymbolicTerm(HamiltonianTerm):
                             # Case whereby factor isn't X/Y/Z: Multiply matrix multiple times based on its power,
                             # see the ``SymbolicTerm.matrix`` property for the full matrix calculation
                             else:
+                                self.factors.extend(power * [factor])
                                 self.matrix_map[q].extend(power * [factor.matrix])
                         else:
-                            self.matrix_map[q] = [factor.matrix]
                             self.factors.extend(power * [factor])
+                            self.matrix_map[q] = [factor.matrix]
 
                     else:
                         self.coefficient *= factor.matrix

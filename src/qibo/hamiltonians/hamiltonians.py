@@ -13,7 +13,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import I, Symbol, X, Y, Z
+from qibo.symbols import Symbol, Z
 
 
 class Hamiltonian(AbstractHamiltonian):
