@@ -388,6 +388,7 @@ class Gate:
         name = g1.name
         if name in ("h", "cx"):
             return True
+
         if name == "ry":
             theta1 = g1.parameters[0]
             theta2 = g2.parameters[0]
@@ -396,6 +397,7 @@ class Gate:
                 bool((first + second) % (2 * pi) < 1e-8)
                 for first, second in zip(theta1, theta2)
             ]
+
         return False
 
     def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
