@@ -204,9 +204,6 @@ class SymbolicTerm(HamiltonianTerm):
                                         pauli_mapping[xyz_factor.__class__]
                                         * pauli_mapping[factor.__class__]
                                     )
-                                    # print(f"{pauli_product = }")
-                                    # print(f"{type(pauli_product.atoms()) = }")
-                                    # print(f"{pauli_product.atoms() = }")
                                     # Move -1 or sympy.I from the product into the coefficient
                                     if -1 in pauli_product.atoms():
                                         pauli_product *= -1
