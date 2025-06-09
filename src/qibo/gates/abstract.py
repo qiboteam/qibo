@@ -403,7 +403,7 @@ class Gate:
 
         return False
 
-    def control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
+    def _control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
         """Returns a mask indicating which gates should be controlled."""
         left = 0
         right = len(gates) - 1
