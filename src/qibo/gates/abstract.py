@@ -385,7 +385,10 @@ class Gate:
 
         if g1.target_qubits != g2.target_qubits:
             return False
-        if getattr(g1, "is_controlled_by", True) and g1.control_qubits != g2.control_qubits:
+        if (
+            getattr(g1, "is_controlled_by", True)
+            and g1.control_qubits != g2.control_qubits
+        ):
             return False
 
         # Identity conditions
