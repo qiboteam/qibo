@@ -109,8 +109,6 @@ def test_symbolic_term_creation(backend):
     assert len(term.matrix_map) == 2
     backend.assert_allclose(term.matrix_map.get(0)[0], backend.matrices.X)
     backend.assert_allclose(term.matrix_map.get(1)[0], backend.matrices.Z)
-    # backend.assert_allclose(term.matrix_map.get(1)[0], backend.matrices.Y)
-    # backend.assert_allclose(term.matrix_map.get(1)[1], backend.matrices.X)
 
 
 def test_symbolic_term_with_power_creation(backend):
@@ -144,9 +142,7 @@ def test_symbolic_term_matrix(backend):
     assert term.target_qubits == (0, 1, 2)
     target_matrix = np.kron(matrices.X, matrices.Y @ matrices.X)
     target_matrix = backend.cast(2 * np.kron(target_matrix, matrices.Z))
-    backend.assert_allclose(
-        term.matrix, target_matrix
-    ), "{term.matrix} != {target_matrix = }"
+    backend.assert_allclose(term.matrix, target_matrix)
 
 
 def test_symbolic_term_mul(backend):
