@@ -423,7 +423,8 @@ class Gate:
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
-        If the gate is already controlled, it recursively decomposes the base gate and updates the control qubits accordingly.
+        If the gate is already controlled, it recursively decomposes the base gate and updates
+        the control qubits accordingly.
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
