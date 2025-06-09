@@ -444,8 +444,8 @@ class Gate:
             error_check_gate.target_qubits = self.target_qubits
             error_check_gate.control_qubits = self.control_qubits
             if set(free) & set(error_check_gate.qubits):
-                raise ValueError(
-                    "Cannot decompose multi-control X gate if free "
+                raise_error(ValueError, 
+                    "Cannot decompose multi-controlled ``X`` gate if free "
                     "qubits coincide with target or controls."
                 )
             # Step 2: Decompose base gate without controls
