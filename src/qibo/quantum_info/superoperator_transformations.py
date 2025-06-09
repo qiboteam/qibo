@@ -6,12 +6,17 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from scipy.optimize import minimize
 
+from itertools import product
+from functools import reduce
+
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
+from qibo.quantum_info.utils import hamming_weight
+
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -218,6 +223,23 @@ def to_liouville(channel, order: str = "row", backend=None):
     return channel
 
 
+def hamming_weight_array(arr, backend):
+    """
+    Vectorized Hamming weight computation for arrays of integers.
+    Args:
+        arr: Integer array.
+        backend: Qibo backend.
+    Returns:
+        Array with the same shape, containing the Hamming weight of each element.
+    """
+    arr = backend.np.array(arr, dtype=backend.np.uint64)
+    weights = backend.np.zeros_like(arr)
+    while backend.np.any(arr):
+        weights += arr & 1
+        arr >>= 1
+    return weights
+
+
 def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
     """
     Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
@@ -235,45 +257,37 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
         ndarray: Matrix of shape (4^n, 4^n) with coefficients α_{r,s}
             such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
     """
-    from functools import reduce
 
     from qibo.backends import _check_backend
 
     backend = _check_backend(backend)
 
-    dim = matrix.shape[0]
-    nqubits = int(np.log2(dim))
-    if matrix.shape[1] != dim or 2**nqubits != dim:
-        raise ValueError("Input matrix must be square with dimension 2^n.")
+    dims = operator.shape[0]
+    nqubits = int(np.log2(dims))
 
-    A = backend.cast(matrix, dtype=complex)
-
-    # Step 1: XOR permutation
-    idx = backend.np.arange(dim)
-    A_xor = A[idx[:, None] ^ idx, idx]
-
-    # Step 2: Walsh-Hadamard transform
-    H1 = float(backend.np.sqrt(2)) * backend.matrices.H
-    Hn = reduce(backend.np.kron, [H1] * nqubits)
-    A_hat = A_xor @ Hn
-
-    # Step 3: Phase factor (-i)^{wt(r & s)}
-    r = backend.np.arange(dim).reshape(-1, 1)
-    s = backend.np.arange(dim).reshape(1, -1)
+    q_array = backend.np.arange(dims, dtype=backend.np.int64)
+    r = backend.np.arange(dims).reshape(-1, 1)
+    s = backend.np.arange(dims).reshape(1, -1)
     r_and_s = backend.np.bitwise_and(r, s)
+    wt = hamming_weight_array(r_and_s, backend)
+    alphas = backend.np.zeros((dims, dims))
+    alphas = backend.cast(alphas, dtype=backend.np.float64)
+    for ind_row in q_array:
+        for ind_col in q_array:
+            elem = 0
+            for q_ind in q_array:
+                q_xor_r = backend.np.bitwise_xor(q_ind, ind_row)
+                state_elem = operator[q_xor_r][q_ind]
+                elem += state_elem * ((-1) ** int(wt[q_ind][ind_col]))
+            elem *= 1j ** (-int(wt[ind_row][ind_col]))
+            if backend.np.abs(elem.imag) > 1e-14 and backend.np.abs(elem.real) < 1e-14:
+                elem = 1j * elem
 
-    def hamming_weight_array(x):
-        return backend.np.array([bin(v).count("1") for v in x.flat]).reshape(x.shape)
-
-    wt = hamming_weight_array(r_and_s)
-    phase = backend.np.power(-1j, wt)
-
-    coeffs = A_hat * phase / (2**nqubits)
-
+            alphas[ind_row][ind_col] = elem.real
     if normalize:
-        coeffs /= backend.np.sqrt(2**nqubits)
+        alphas /= backend.np.sqrt(dims)
 
-    return coeffs
+    return alphas/dims
 
 
 def from_pauli_liouville_fht(coeffs, backend=None):
