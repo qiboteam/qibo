@@ -382,6 +382,7 @@ class Gate:
         """Check if same gate type, same targets, same controls"""
         if g1.__class__ != g2.__class__:
             return False
+
         if g1.target_qubits != g2.target_qubits:
             return False
         if getattr(g1, "is_controlled_by", True):
