@@ -255,7 +255,6 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
             such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
     """
 
-    from qibo.backends import _check_backend
 
     backend = _check_backend(backend)
 
