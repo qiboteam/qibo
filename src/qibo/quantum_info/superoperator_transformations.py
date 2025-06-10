@@ -254,8 +254,6 @@ def to_pauli_liouville_fht(matrix, normalize: bool = False, backend=None):
         ndarray: Matrix of shape (4^n, 4^n) with coefficients α_{r,s}
             such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
     """
-
-
     backend = _check_backend(backend)
 
     dims = operator.shape[0]
