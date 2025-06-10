@@ -371,19 +371,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             term = SymbolicTerm(c, f, backend=self.backend)
             if term.target_qubits:
                 # Check for any terms with the same factors and add their coefficients together
-                while True:
-                    same_terms = [
-                        _term
-                        for _term in terms
-                        if set(_term.factors) == set(term.factors)
-                    ]
-                    if not same_terms:
-                        break
-                    same_term = same_terms[0]
-                    term.coefficient = term.coefficient + same_term.coefficient
-                    terms.pop(terms.index(same_term))
-                    same_terms.pop(0)
-                terms.append(term)
+                same_terms = [
+                    _term for _term in terms if set(_term.factors) == set(term.factors)
+                ]
+                term.coefficient = term.coefficient + sum(
+                    _term.coefficient for _term in same_terms
+                )
+                terms = [_term for _term in terms if _term not in same_terms] + [term]
             else:
                 self.constant += term.coefficient
         return terms

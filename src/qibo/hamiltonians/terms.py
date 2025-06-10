@@ -193,7 +193,6 @@ class SymbolicTerm(HamiltonianTerm):
                                     if _factor.target_qubit == q
                                 ]
                                 while q_factors:
-                                    # Reduce all X/Y/Z factors occurring at the same qubit
                                     q_factor = q_factors[-1]
                                     # Only simplify if the last term in matrix_map[q] is a Pauli matrix
                                     if (
@@ -213,12 +212,12 @@ class SymbolicTerm(HamiltonianTerm):
                                         if sympy.I in pauli_product.atoms():
                                             pauli_product *= -sympy.I
                                             self.coefficient *= 1j
+                                        # If pauli_product is not identity, then update the original factor/matrix
                                         factor_index = (
                                             len(self.factors)
                                             - self.factors[::-1].index(q_factor)
                                             - 1
                                         )
-                                        # If pauli_product is not identity, then update the original factor/matrix
                                         if pauli_product in inverse_pauli_mapping:
                                             factor = inverse_pauli_mapping[
                                                 pauli_product
@@ -230,6 +229,8 @@ class SymbolicTerm(HamiltonianTerm):
                                         else:
                                             self.factors.pop(factor_index)
                                             self.matrix_map[q].pop(-1)
+                                            if not self.matrix_map[q]:
+                                                del self.matrix_map[q]
                                         q_factors.pop(-1)
                                     # X/Y/Z factor wasn't the last term previously => Cannot simplify, just extend
                                     else:
