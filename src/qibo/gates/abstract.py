@@ -414,8 +414,9 @@ class Gate:
         mask = [True] * len(gates)
         while left < right:
             g1, g2 = gates[left], gates[right]
-            if self.gates_cancel(g1, g2):
-                mask[[left, right]] = False
+            if self._gates_cancel(g1, g2):
+                mask[left] = False
+                mask[right] = False
                 left += 1
                 right -= 1
             else:
@@ -452,7 +453,7 @@ class Gate:
             # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
-            mask = self.control_mask_after_stripping(decomposed)
+            mask = self._control_mask_after_stripping(decomposed)
             for k, g in enumerate(decomposed):
                 if mask[k]:
                     if not g.is_controlled_by:
