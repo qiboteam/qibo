@@ -441,10 +441,7 @@ class Gate:
         """
         if self.is_controlled_by:
             # Step 1: Error check with all controls/targets
-            error_check_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            error_check_gate.target_qubits = self.target_qubits
-            error_check_gate.control_qubits = self.control_qubits
-            if set(free) & set(error_check_gate.qubits):
+            if set(free) & set(self.qubits):
                 raise_error(
                     ValueError,
                     "Cannot decompose multi-controlled ``X`` gate if free "
