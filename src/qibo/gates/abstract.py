@@ -448,8 +448,8 @@ class Gate:
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
             mask = self._control_mask_after_stripping(decomposed)
-            for k, g in enumerate(decomposed):
-                if mask[k]:
+            for m, g in zip(mask, decomposed):
+                if m:
                     if not g.is_controlled_by:
                         g.is_controlled_by = True
                         g.control_qubits = self.control_qubits
