@@ -68,10 +68,12 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
             np.round(backend.np.real(ut_u), decimals=20), hermitian=True
         )
     else:
-        eigvals_real, psi_magic = backend.calculate_eigenvectors(backend.np.real(ut_u), hermitian=True)
+        eigvals_real, psi_magic = backend.calculate_eigenvectors(
+            backend.np.real(ut_u), hermitian=True
+        )
 
     # sort eigvals to match psi_magic, as eigvals_real only give real part (at least in numpy backend)
-    eigvals = backend.np.sum(backend.np.conj(psi_magic) @ ut_u @ psi_magic , 0)
+    eigvals = backend.np.sum(backend.np.conj(psi_magic) @ ut_u @ psi_magic, 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
