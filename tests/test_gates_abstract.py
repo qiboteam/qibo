@@ -419,6 +419,7 @@ def test_decompose():
     assert len(decomp_gates) == 1
     assert isinstance(decomp_gates[0], gates.H)
 
+
 def test_decompose_controlled():
     target = gates.H(0).controlled_by(1)
     decomp = target.decompose()
@@ -426,12 +427,14 @@ def test_decompose_controlled():
     assert isinstance(decomp[0], gates.H)
     assert decomp[0].control_qubits == (1,)
 
+
 def test_decompose_controlled_optimized():
     target = gates.RBS(1, 2, 0.1).controlled_by(0)
     decomp = target.decompose()
     assert len(decomp) == 6
     controls_on_zero = sum([0 in g.control_qubits for g in decomp])
     assert controls_on_zero == 2
+
 
 def test_special_gate():
     from qibo.gates.abstract import SpecialGate
