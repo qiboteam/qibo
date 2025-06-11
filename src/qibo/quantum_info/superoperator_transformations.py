@@ -266,10 +266,12 @@ def _to_pauli_fht(operator, normalize: bool = True, backend=None):
             elem = 0
             for q_ind in q_array:
                 q_xor_r = backend.np.bitwise_xor(q_ind, ind_row)
-                hadamard_exp = hamming_weight(int(backend.np.bitwise_and(q_ind, ind_col)))
+                hadamard_exp = hamming_weight(
+                    int(backend.np.bitwise_and(q_ind, ind_col))
+                )
                 elem += operator[q_xor_r, q_ind] * ((-1) ** hadamard_exp)
             hadamard_exp = hamming_weight(int(backend.np.bitwise_and(ind_row, ind_col)))
-            alphas[ind_row, ind_col] = (elem * (1j ** -hadamard_exp)) / dims
+            alphas[ind_row, ind_col] = (elem * (1j**-hadamard_exp)) / dims
 
     if normalize:
         alphas /= backend.np.sqrt(dims)
@@ -290,7 +292,7 @@ def _from_pauli(operator, backend=None):
             to be used in the execution. If ``None``, it uses the current backend.
 
     Returns:
-        ndarray: Matrix A of shape (2^n, 2^n) 
+        ndarray: Matrix A of shape (2^n, 2^n)
     """
     backend = _check_backend(backend)
 
@@ -306,8 +308,12 @@ def _from_pauli(operator, backend=None):
         for ind_col in q_array:
             coeff = operator[ind_row, ind_col]
             if coeff != 0:
-                bin_r = np.array(list(backend.np.binary_repr(ind_row, width=nqubits))).astype(int)
-                bin_s = np.array(list(backend.np.binary_repr(ind_col, width=nqubits))).astype(int)
+                bin_r = np.array(
+                    list(backend.np.binary_repr(ind_row, width=nqubits))
+                ).astype(int)
+                bin_s = np.array(
+                    list(backend.np.binary_repr(ind_col, width=nqubits))
+                ).astype(int)
 
                 xi = X if bin_r[0] else backend.np.eye(2)
                 zi = Z if bin_s[0] else backend.np.eye(2)
@@ -318,7 +324,7 @@ def _from_pauli(operator, backend=None):
                     zi = Z if bin_s[i] else backend.np.eye(2)
                     op = backend.np.kron(op, backend.np.dot(xi, zi))
                 exponent = hamming_weight(int(backend.np.bitwise_and(ind_row, ind_col)))
-                a_matrix += coeff * backend.cast(op, dtype=complex) * (1j ** exponent)
+                a_matrix += coeff * backend.cast(op, dtype=complex) * (1j**exponent)
 
     return a_matrix
 
