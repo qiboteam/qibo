@@ -1,16 +1,13 @@
-import matplotlib.pyplot as plt
-import numpy as np
-
-from typing import Union
 from logging import warning
 
-from dataclasses import dataclass
-from mpl_toolkits.mplot3d import Axes3D, proj3d
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import Axes3D, proj3d
 
 from qibo import hamiltonians
-from qibo.symbols import X, Y, Z
 from qibo.config import raise_error
+from qibo.symbols import X, Y, Z
 
 
 class Arrow3D(FancyArrowPatch):

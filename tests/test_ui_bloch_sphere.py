@@ -1,12 +1,13 @@
-import numpy as np
 import matplotlib
-
-# matplotlib.use("Agg")
-
+import numpy as np
 import pytest
 
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
+
+# matplotlib.use("Agg")
+
+
 
 
 def test_empty_sphere():
