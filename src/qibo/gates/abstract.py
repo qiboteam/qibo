@@ -446,10 +446,7 @@ class Gate:
             for m, g in zip(mask, decomposed):
                 if m:
                     g.is_controlled_by = True
-                    if len(g.control_qubits) == 0:
-                        g.control_qubits = self.control_qubits
-                    else:
-                        g.control_qubits += self.control_qubits
+                    g.control_qubits += self.control_qubits
             return decomposed
         return self._base_decompose(*free, use_toffolis=use_toffolis)
 
