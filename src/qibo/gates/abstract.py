@@ -385,9 +385,7 @@ class Gate:
 
         if g1.target_qubits != g2.target_qubits:
             return False
-        if (
-            g1.control_qubits != g2.control_qubits
-        ):
+        if g1.control_qubits != g2.control_qubits:
             return False
 
         # Identity conditions
