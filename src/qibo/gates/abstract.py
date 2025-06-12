@@ -450,8 +450,8 @@ class Gate:
             mask = self._control_mask_after_stripping(decomposed)
             for m, g in zip(mask, decomposed):
                 if m:
-                    if not g.is_controlled_by:
-                        g.is_controlled_by = True
+                    g.is_controlled_by = True
+                    if len(g.control_qubits) == 0:
                         g.control_qubits = self.control_qubits
                     else:
                         g.control_qubits += self.control_qubits
