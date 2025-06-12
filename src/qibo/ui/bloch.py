@@ -353,7 +353,7 @@ class Bloch:
                     self.points.append(vector)
                     self.color_points.append(color)
 
-    def add_state(self, state, mode="vector", color=["black"]):
+    def add_state(self, state, mode="vector", color="black"):
         "Function to add a state to the sphere."
 
         vectors, modes, colors, lenght_vectors = self.normalize_input(
@@ -405,5 +405,6 @@ class Bloch:
         plt.tight_layout()
         if save:
             plt.savefig(filename)
+            plt.close()
         else:
             plt.show()
