@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib
 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 
 import pytest
 
@@ -17,7 +17,7 @@ def test_empty_sphere():
 def test_state():
     bs = Bloch()
     state = np.array([1 / np.sqrt(2), 1 / np.sqrt(2) * 1j], dtype="complex")
-    bs.add_state(state, color="blue")
+    bs.add_state(state)
     bs.plot()
 
 
