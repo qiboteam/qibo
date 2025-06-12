@@ -51,14 +51,13 @@ class Bloch:
         self.vectors = []
 
         # Color data
-        self.color_states = []
         self.color_points = []
         self.color_vectors = []
 
     def normalize_input(self, vectors, modes, colors):
         vectors, length_vectors = self._normalize_vectors(vectors)
-        modes = self._normalize_modes_colors(modes, length_states, "mode")
-        colors = self._normalize_modes_colors(colors, length_vectors, "color")
+        modes = self._normalize_modes_colors(modes, length_vectors, "modes")
+        colors = self._normalize_modes_colors(colors, length_vectors, "colors")
 
         return vectors, modes, colors, length_vectors
 
@@ -66,7 +65,7 @@ class Bloch:
         length_option = 0
         if isinstance(element, np.ndarray):
             if element.ndim == 1:
-                element = [element]
+                element = [element[0]]
                 length_option = len(element)
             elif element.ndim == 2:
                 length_option = len(element)
@@ -124,10 +123,9 @@ class Bloch:
         elif option == "modes":
             option_list = ["vector"]
 
-        element = [element] + option_list * (length_states - length_option)
+        element = [element[0]] + option_list * (length_states - length_option)
         warning(
-            f"Mismatch between number of states ({length_states}) and colors ({length_option})."
-            "Defaulting missing "
+            f"Mismatch between number of states ({length_states}) and colors ({length_option}). Defaulting missing "
             + option
             + " to '"
             + option_list[0]
@@ -135,10 +133,10 @@ class Bloch:
         )
         return element
 
-    def check(self, element):
+    def _check_normalisation(self, element):
         if len(element) == 2:
-            total_prob = sum(np.abs(amplitude) ** 2 for amplitude in element)
-            if not np.isclose(total_prob, 1):
+            norm = np.linalg.norm(element)
+            if not np.isclose(norm, 1):
                 raise_error(ValueError, "Unnormalized state detected.")
         elif len(element) == 3:
             norm = np.linalg.norm(element)
@@ -334,35 +332,43 @@ class Bloch:
 
     def add_vector(self, vector, mode="vector", color="black"):
 
-        vectors, modes, colors, lenght_state = self.normalize_input(vector, color, mode)
+        vectors, modes, colors, lenght_state = self.normalize_input(vector, mode, color)
 
         for vector, color, mode in zip(vectors, colors, modes):
-            self.check(vector)
-            if len(vector) == 2:
-                x, y, z = self.coordinates(vector)
-                self.vectors.append(np.array([x, y, z]))
-                self.mode_vectors.append(mode)
-                self.color_vectors.append(color)
+            self._check_normalisation(vector)
+            if mode == "vector":
+                if len(vector) == 2:
+                    x, y, z = self.coordinates(vector)
+                    self.vectors.append(np.array([x, y, z]))
+                    self.color_vectors.append(color)
+                else:
+                    self.vectors.append(vector)
+                    self.color_vectors.append(color)
             else:
-                self.vectors.append(vector)
-                self.mode_vectors.append(mode)
-                self.color_vectors.append(color)
+                if len(vector) == 2:
+                    x, y, z = self.coordinates(vector)
+                    self.points.append(np.array([x, y, z]))
+                    self.color_points.append(color)
+                else:
+                    self.points.append(vector)
+                    self.color_points.append(color)
 
     def add_state(self, state, mode="vector", color=["black"]):
         "Function to add a state to the sphere."
 
-        # 1: Array of dimension 1
-        states, length_states = self.normalize_input_state(state)
-        colors, length_colors = self.normalize_input_color(color, length_states)
+        vectors, modes, colors, lenght_vectors = self.normalize_input(
+            state, mode, color
+        )
 
-        for i in range(length_states):
-            self.check(states[i])
-            x, y, z = self.coordinates(states[i])
-            self.color_states.append(colors[i])
+        for vector, color, mode in zip(vectors, colors, modes):
+            self._check_normalisation(vector)
+            x, y, z = self.coordinates(vector)
             if mode == "vector":
-                self.states.append(np.array([x, y, z]))
+                self.vectors.append(np.array([x, y, z]))
+                self.color_vectors.append(color)
             else:
-                self.states.append(np.array([x, y, z]))
+                self.points.append(np.array([x, y, z]))
+                self.color_points.append(color)
 
     def rendering(self):
         if self._shown == True:
@@ -378,21 +384,6 @@ class Bloch:
             xs3d = vector[0] * np.array([0, 1])
             ys3d = vector[1] * np.array([0, 1])
             zs3d = vector[2] * np.array([0, 1])
-            a = Arrow3D(
-                xs3d,
-                ys3d,
-                zs3d,
-                lw=self.arrow_width,
-                arrowstyle=self.arrow_style,
-                mutation_scale=self.mutation_scale,
-                color=color,
-            )
-            self.ax.add_artist(a)
-
-        for color, state in zip(self.color_states, self.states):
-            xs3d = state[0] * np.array([0, 1])
-            ys3d = state[1] * np.array([0, 1])
-            zs3d = state[2] * np.array([0, 1])
             a = Arrow3D(
                 xs3d,
                 ys3d,
