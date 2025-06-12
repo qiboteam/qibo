@@ -61,17 +61,11 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
+    ut_u_real = backend.np.real(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
-        # eig seems to have a different behavior based on backend/hardware,
-        # use np.round to increase precision seems to fix the issue
-        eigvals_real, psi_magic = backend.calculate_eigenvectors(
-            np.round(backend.np.real(ut_u), decimals=20), hermitian=True
-        )
-    else:
-        eigvals_real, psi_magic = backend.calculate_eigenvectors(
-            backend.np.real(ut_u), hermitian=True
-        )
+        ut_u_real = np.round(ut_u_real, decimals=20)
 
+    eigvals_real, psi_magic = backend.calculate_eigenvectors(ut_u_real, hermitian=True)
     # sort eigvals to match psi_magic, as eigvals_real only give real part (at least in numpy backend)
     eigvals = backend.np.sum(backend.np.conj(psi_magic) @ ut_u @ psi_magic, 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
