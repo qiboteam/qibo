@@ -392,7 +392,7 @@ class Gate:
         name = g1.name
         if name in ("h", "cx", "x", "y", "z", "swap"):
             return True
-        
+
         if "_Rn_" in [base.__name__ for base in g1.__class__.__bases__]:
             theta1 = g1.parameters[0]
             theta2 = g2.parameters[0]
@@ -412,7 +412,7 @@ class Gate:
                 mask[left] = False
                 mask[right] = False
             left += 1
-            right -= 1    
+            right -= 1
         return mask
 
     def decompose(self, *free, use_toffolis=True) -> List["Gate"]:
