@@ -8,9 +8,9 @@ import pytest
 
 from qibo import gates, matrices
 from qibo.backends import NumpyBackend
-from qibo.models import Circuit
 from qibo.config import PRECISION_TOL
 from qibo.gates import abstract
+from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
