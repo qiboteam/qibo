@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from typing import Union
+from logging import warning
+
 from dataclasses import dataclass
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 from matplotlib.patches import FancyArrowPatch
@@ -52,6 +55,69 @@ class Bloch:
         self.color_states = []
         self.color_points = []
         self.color_vectors = []
+
+    def normalize_input_color(self, element, length_states):
+        length_colors = 0
+        if isinstance(element, np.ndarray):
+            if element.ndim == 1:
+                element = [element]
+                length = len(element)
+            elif element.ndim == 2:
+                length = len(element)
+            else:
+                raise_error(
+                    ValueError,
+                    "`color` must be 1D or 2D `np.ndarray` or `list`.",
+                )
+        elif isinstance(element, list):
+            length = len(element)
+        elif isinstance(element, str):
+            if length_states == 1:
+                element = [element]
+                length = len(element)
+            else:
+                element = [element] + ["black"] * (length_states - 1)
+                warning(
+                    f"Mismatch between number of states ({length_states}) and colors (1). "
+                    "Defaulting missing colors to 'black' to match the number of states."
+                )
+        else:
+            raise_error(
+                ValueError,
+                f"Unsupported type for `color`. Types supported: `np.ndarray`, `list`, `str`.",
+            )
+
+        if length_states > length_colors:
+            element += ["black"] * (length_states - length_colors)
+            warning(
+                f"Mismatch between number of states ({length_states}) and colors ({length_colors}). "
+                "Defaulting missing colors to 'black' to match the number of states."
+            )
+
+        return element, length_colors
+
+    def normalize_input_state(self, element):
+        length = 0
+        if isinstance(element, np.ndarray):
+            if element.ndim == 1:
+                element = [element]
+                length = len(element)
+            elif element.ndim == 2:
+                length = len(element)
+            else:
+                raise_error(
+                    ValueError,
+                    "`state` must be 1D or 2D `np.ndarray` or `list`.",
+                )
+        elif isinstance(element, list):
+            length = len(element)
+        else:
+            raise_error(
+                ValueError,
+                f"Unsupported type for `state`. Types supported: `np.ndarray` or `list`.",
+            )
+
+        return element, length
 
     def check(self, element):
         if len(element) == 2:
@@ -250,42 +316,33 @@ class Bloch:
             z = sigma_Z.expectation(state)
         return x, y, z
 
-    def add_vector(self, elements, mode="vector", color="black"):
+    def add_vector(self, vector, mode="vector", color="black"):
 
-        if isinstance(elements, list) and isinstance(color, list):
-            if len(elements) != len(color):
-                raise_error(
-                    ValueError, "Elements and color must be lists of the same length."
-                )
-        if not isinstance(elements, list):
-            elements = [elements]
-        if not isinstance(color, list):
-            color = [color] * len(elements)
+        vectors, length_vectors = self.normalize_input_state(vector)
+        colors, length_colors = self.normalize_input_color(color, length_vectors)
 
         if mode == "vector":
-            for c, element in zip(color, elements):
-                self.check(element)
+            for vector, color in zip(vectors, colors):
+                self.check(vector)
                 # If the element has length two it means
                 # that it is a state
-                if len(element) == 2:
-                    x, y, z = self.coordinates(element)
-                    element = np.array([x, y, z])
-                    self.color_vectors.append(c)
-                    self.vectors.append(element)
+                if len(vector) == 2:
+                    x, y, z = self.coordinates(vector)
+                    self.color_vectors.append(color)
+                    self.vectors.append(np.array([x, y, z]))
                 else:
-                    self.color_vectors.append(c)
-                    self.vectors.append(element)
+                    self.color_vectors.append(color)
+                    self.vectors.append(vector)
         elif mode == "point":
-            for c, element in zip(color, elements):
-                self.check(element)
-                if len(element) == 2:
-                    x, y, z = self.coordinates(element)
-                    element = np.array([x, y, z])
-                    self.color_points.append(c)
-                    self.points.append(element)
+            for i in range(length_vectors):
+                self.check(vector)
+                if len(vector) == 2:
+                    x, y, z = self.coordinates(vector)
+                    self.color_points.append(color)
+                    self.points.append(np.array([x, y, z]))
                 else:
-                    self.color_points.append(c)
-                    self.points.append(element)
+                    self.color_points.append(color)
+                    self.points.append(vector)
         else:
             raise_error(
                 ValueError,
@@ -294,20 +351,17 @@ class Bloch:
                 + ". Only 'vector' and 'point' are available.",
             )
 
-    def add_state(self, states, color="black"):
+    def add_state(self, state, color=["black"]):
         "Function to add a state to the sphere."
-        if isinstance(states, list) and isinstance(color, list):
-            if len(states) != len(color):
-                raise ValueError("States and color must be lists of the same length")
-        if not isinstance(states, list):
-            states = [states]
-        if not isinstance(color, list):
-            color = [color] * len(states)
 
-        for c, state in zip(color, states):
-            self.check(state)
-            x, y, z = self.coordinates(state)
-            self.color_states.append(c)
+        # 1: Array of dimension 1
+        states, length_states = self.normalize_input_state(state)
+        colors, length_colors = self.normalize_input_color(color, length_states)
+
+        for i in range(length_states):
+            self.check(states[i])
+            x, y, z = self.coordinates(states[i])
+            self.color_states.append(colors[i])
             self.states.append(np.array([x, y, z]))
 
     def rendering(self):
