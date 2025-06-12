@@ -1,4 +1,9 @@
 import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
+
+import pytest
 
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
@@ -24,7 +29,7 @@ def test_vector_point(mode):
     bs.plot()
 
 
-def test_multiple_vectors():
+def test_multiple_vectors_array():
     bs = Bloch()
     vectors = np.random.normal(size=(100, 3))
     vectors /= np.linalg.norm(vectors, axis=1)[:, np.newaxis]
@@ -32,10 +37,23 @@ def test_multiple_vectors():
     bs.plot()
 
 
+def test_multiple_vectors_list():
+    bs = Bloch()
+
+    vectors = []
+    for i in range(100):
+        vector = np.random.normal(size=(3,))
+        vector /= np.linalg.norm(vector)
+        vectors.append(vector)
+
+    bs.add_vector(vectors)
+    bs.plot()
+
+
 def test_multiple_states():
     bs = Bloch()
     states = np.random.normal(size=(100, 2))
-    states /= np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    states /= np.linalg.norm(states, axis=1)[:, np.newaxis]
     bs.add_state(states)
     bs.plot()
 
@@ -43,7 +61,7 @@ def test_multiple_states():
 def test_clear():
     bs = Bloch()
     states = np.random.normal(size=(100, 2))
-    states /= np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    states /= np.linalg.norm(states, axis=1)[:, np.newaxis]
     bs.add_state(states)
     bs.plot()
     bs.clear()
@@ -64,5 +82,5 @@ def test_qibo_output():
     state = circ().state()
 
     # --Sphere--
-    bs.add_state(states=state, color=["orange"])
+    bs.add_state(state, color=["orange"])
     bs.plot()
