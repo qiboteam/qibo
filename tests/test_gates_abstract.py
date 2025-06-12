@@ -7,6 +7,8 @@ from typing import Optional
 import pytest
 
 from qibo import gates, matrices
+from qibo.backends import NumpyBackend
+from qibo.models import Circuit
 from qibo.config import PRECISION_TOL
 from qibo.gates import abstract
 
@@ -437,11 +439,19 @@ def test_decompose_controlled():
 
 
 def test_decompose_controlled_optimized():
+    backend = NumpyBackend()
     target = gates.RBS(1, 2, 0.1).controlled_by(0)
     decomp = target.decompose()
     assert len(decomp) == 6
     controls_on_zero = sum([0 in g.control_qubits for g in decomp])
     assert controls_on_zero == 2
+    c1 = Circuit(3)
+    c2 = c1.copy()
+    c1.add(target)
+    c2.add(decomp)
+    s1 = backend.execute_circuit(c1).state()
+    s2 = backend.execute_circuit(c2).state()
+    backend.assert_allclose(s1, s2)
 
 
 def test_special_gate():
