@@ -47,7 +47,6 @@ class Bloch:
         self._shown = False
 
         # Data
-        self.states = []
         self.points = []
         self.vectors = []
 
@@ -56,47 +55,45 @@ class Bloch:
         self.color_points = []
         self.color_vectors = []
 
-    def normalize_input_color(self, element, length_states):
-        length_colors = 0
+    def normalize_input(self, vectors, modes, colors):
+        vectors, length_vectors = self._normalize_vectors(vectors)
+        modes = self._normalize_modes_colors(modes, length_states, "mode")
+        colors = self._normalize_modes_colors(colors, length_vectors, "color")
+
+        return vectors, modes, colors, length_vectors
+
+    def _normalize_modes_colors(self, element, length_states, option):
+        length_option = 0
         if isinstance(element, np.ndarray):
             if element.ndim == 1:
                 element = [element]
-                length = len(element)
+                length_option = len(element)
             elif element.ndim == 2:
-                length = len(element)
+                length_option = len(element)
             else:
                 raise_error(
                     ValueError,
-                    "`color` must be 1D or 2D `np.ndarray` or `list`.",
+                    "`" + option + "` must be 1D or 2D `np.ndarray`, `list`, `str`.",
                 )
         elif isinstance(element, list):
-            length = len(element)
+            length_option = len(element)
         elif isinstance(element, str):
-            if length_states == 1:
-                element = [element]
-                length = len(element)
-            else:
-                element = [element] + ["black"] * (length_states - 1)
-                warning(
-                    f"Mismatch between number of states ({length_states}) and colors (1). "
-                    "Defaulting missing colors to 'black' to match the number of states."
-                )
+            element = [element]
+            length_option = len(element)
         else:
             raise_error(
                 ValueError,
-                f"Unsupported type for `color`. Types supported: `np.ndarray`, `list`, `str`.",
+                f"Unsupported type for `"
+                + option
+                + "`. Types supported: `np.ndarray`, `list`, `str`.",
             )
 
-        if length_states > length_colors:
-            element += ["black"] * (length_states - length_colors)
-            warning(
-                f"Mismatch between number of states ({length_states}) and colors ({length_colors}). "
-                "Defaulting missing colors to 'black' to match the number of states."
-            )
+        if length_states > length_option:
+            element = self._mismatch(element, length_states, length_option, option)
 
-        return element, length_colors
+        return element
 
-    def normalize_input_state(self, element):
+    def _normalize_vectors(self, element):
         length = 0
         if isinstance(element, np.ndarray):
             if element.ndim == 1:
@@ -118,6 +115,25 @@ class Bloch:
             )
 
         return element, length
+
+    def _mismatch(self, element, length_states, length_option, option):
+
+        option_list = 0
+        if option == "colors":
+            option_list = ["black"]
+        elif option == "modes":
+            option_list = ["vector"]
+
+        element = [element] + option_list * (length_states - length_option)
+        warning(
+            f"Mismatch between number of states ({length_states}) and colors ({length_option})."
+            "Defaulting missing "
+            + option
+            + " to '"
+            + option_list[0]
+            + "' to match the number of states."
+        )
+        return element
 
     def check(self, element):
         if len(element) == 2:
@@ -318,40 +334,21 @@ class Bloch:
 
     def add_vector(self, vector, mode="vector", color="black"):
 
-        vectors, length_vectors = self.normalize_input_state(vector)
-        colors, length_colors = self.normalize_input_color(color, length_vectors)
+        vectors, modes, colors, lenght_state = self.normalize_input(vector, color, mode)
 
-        if mode == "vector":
-            for vector, color in zip(vectors, colors):
-                self.check(vector)
-                # If the element has length two it means
-                # that it is a state
-                if len(vector) == 2:
-                    x, y, z = self.coordinates(vector)
-                    self.color_vectors.append(color)
-                    self.vectors.append(np.array([x, y, z]))
-                else:
-                    self.color_vectors.append(color)
-                    self.vectors.append(vector)
-        elif mode == "point":
-            for i in range(length_vectors):
-                self.check(vector)
-                if len(vector) == 2:
-                    x, y, z = self.coordinates(vector)
-                    self.color_points.append(color)
-                    self.points.append(np.array([x, y, z]))
-                else:
-                    self.color_points.append(color)
-                    self.points.append(vector)
-        else:
-            raise_error(
-                ValueError,
-                "Unsupported `mode`: "
-                + mode
-                + ". Only 'vector' and 'point' are available.",
-            )
+        for vector, color, mode in zip(vectors, colors, modes):
+            self.check(vector)
+            if len(vector) == 2:
+                x, y, z = self.coordinates(vector)
+                self.vectors.append(np.array([x, y, z]))
+                self.mode_vectors.append(mode)
+                self.color_vectors.append(color)
+            else:
+                self.vectors.append(vector)
+                self.mode_vectors.append(mode)
+                self.color_vectors.append(color)
 
-    def add_state(self, state, color=["black"]):
+    def add_state(self, state, mode="vector", color=["black"]):
         "Function to add a state to the sphere."
 
         # 1: Array of dimension 1
@@ -362,7 +359,10 @@ class Bloch:
             self.check(states[i])
             x, y, z = self.coordinates(states[i])
             self.color_states.append(colors[i])
-            self.states.append(np.array([x, y, z]))
+            if mode == "vector":
+                self.states.append(np.array([x, y, z]))
+            else:
+                self.states.append(np.array([x, y, z]))
 
     def rendering(self):
         if self._shown == True:
@@ -407,9 +407,12 @@ class Bloch:
         for color, point in zip(self.color_points, self.points):
             self.ax.scatter(point[0], point[1], point[2], color=color, s=10)
 
-    def plot(self):
+    def plot(self, save=False, filename="bloch_sphere.pdf"):
         self.rendering()
         self.ax.set_aspect("equal")
         plt.axis("off")
         plt.tight_layout()
-        plt.show()
+        if save:
+            plt.savefig(filename)
+        else:
+            plt.show()
