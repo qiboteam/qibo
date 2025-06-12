@@ -390,10 +390,10 @@ class Gate:
 
         # Identity conditions
         name = g1.name
-        if name in ("h", "cx"):
+        if name in ("h", "cx", "x", "y", "z", "swap"):
             return True
-
-        if name == "ry":
+        
+        if "_Rn_" in [base.__name__ for base in g1.__class__.__bases__]:
             theta1 = g1.parameters[0]
             theta2 = g2.parameters[0]
             # Check if theta1 + theta2 is a multiple of 2π
@@ -411,10 +411,8 @@ class Gate:
             if self._gates_cancel(g1, g2):
                 mask[left] = False
                 mask[right] = False
-                left += 1
-                right -= 1
-            else:
-                break
+            left += 1
+            right -= 1    
         return mask
 
     def decompose(self, *free, use_toffolis=True) -> List["Gate"]:

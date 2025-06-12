@@ -3,6 +3,7 @@
 
 import json
 from typing import Optional
+from math import pi
 
 import pytest
 
@@ -10,7 +11,7 @@ from qibo import gates, matrices
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.config import PRECISION_TOL
-from qibo.gates import abstract
+from qibo.gates import abstract, Gate
 
 
 @pytest.mark.parametrize(
@@ -452,6 +453,23 @@ def test_decompose_controlled_optimized():
     s1 = backend.execute_circuit(c1).state()
     s2 = backend.execute_circuit(c2).state()
     backend.assert_allclose(s1, s2)
+    
+
+@pytest.mark.parametrize(
+    "g1, g2, expected",
+    [
+        (gates.RX(0, pi), gates.RX(0, -pi), True),
+        (gates.RY(1, 0.5), gates.RY(1, -0.5), True),
+        (gates.RZ(2, 2*pi), gates.RZ(2, -2*pi), True),
+        (gates.X(0), gates.X(0), True),
+        (gates.Y(1), gates.Y(1), True),
+        (gates.Z(2), gates.Z(2), True),
+        (gates.RX(0, pi/2), gates.RX(0, pi/3), False),  
+    ]
+)
+def test_gates_cancel(g1, g2, expected):
+    result = Gate._gates_cancel(g1, g2)
+    assert result is expected
 
 
 def test_special_gate():
