@@ -421,11 +421,19 @@ def test_decompose():
 
 
 def test_decompose_controlled():
+    backend = NumpyBackend()
     target = gates.H(0).controlled_by(1)
     decomp = target.decompose()
     assert len(decomp) == 1
     assert isinstance(decomp[0], gates.H)
     assert decomp[0].control_qubits == (1,)
+    c1 = Circuit(2)
+    c2 = c1.copy()
+    c1.add(target)
+    c2.add(decomp)
+    s1 = backend.execute_circuit(c1).state()
+    s2 = backend.execute_circuit(c2).state()
+    backend.assert_allclose(s1, s2)
 
 
 def test_decompose_controlled_optimized():
