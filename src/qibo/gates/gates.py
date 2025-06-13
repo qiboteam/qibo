@@ -92,8 +92,8 @@ class X(Gate):
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
-            List with one-qubit, ``CNOT`` and ``TOFFOLI`` gates that have the
-            same effect as applying the original multi-control gate.
+            list: Set of one-qubit, :class:`qibo.gates.CNOT`, and :class:`qibo.gates.TOFFOLI`
+            gates that have the same effect as applying the original multi-control gate.
         """
         if set(free) & set(self.qubits):
             raise_error(
