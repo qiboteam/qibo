@@ -245,6 +245,8 @@ class Z(Gate):
         """Fall back to CZ if there is only one control."""
         if len(q) == 1:
             gate = CZ(q[0], self.target_qubits[0])
+        if len(q) == 2:
+            gate = CCZ(q[0], q[1], self.target_qubits[0])
         else:
             gate = super().controlled_by(*q)
         return gate
