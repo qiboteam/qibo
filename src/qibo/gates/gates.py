@@ -2505,9 +2505,17 @@ class TOFFOLI(Gate):
         return "ccx"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        c0, c1 = self.control_qubits
-        t = self.target_qubits[0]
-        return [self.__class__(c0, c1, t)]
+        """Decomposition of :math:`\\text{TOFFOLI}` gate.
+
+        Decompose :math:`\\text{TOFFOLI}` gate into :class:`qibo.gates.CNOT` gates,
+        :class:`qibo.gates.T` gates, :class:`qibo.gates.TDG` gates,
+        and :class:`qibo.gates.H` gates.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
         """Congruent representation of ``TOFFOLI`` gate.
