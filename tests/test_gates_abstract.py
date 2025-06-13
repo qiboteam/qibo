@@ -468,6 +468,16 @@ def test_decompose_controlled_optimized():
         (gates.Y(1), gates.Y(1), True),
         (gates.Z(2), gates.Z(2), True),
         (gates.RX(0, pi / 2), gates.RX(0, pi / 3), False),
+        (gates.X(0), gates.Y(0), False),
+        (gates.CNOT(0,1), gates.CNOT(0,1), True),
+        (gates.CNOT(0,2), gates.CNOT(1,2), False),
+        (gates.RX(0, pi), gates.RX(0, -pi), True),
+        (gates.RY(1, 0.5), gates.RY(1, -0.5), True),
+        (gates.RZ(2, 2 * pi), gates.RZ(2, -2 * pi), True),
+        (gates.X(0), gates.X(0), True),
+        (gates.Y(1), gates.Y(1), True),
+        (gates.Z(2), gates.Z(2), True),
+        (gates.RX(0, pi / 2), gates.RX(0, pi / 3), False),
     ],
 )
 def test_gates_cancel(g1, g2, expected):
