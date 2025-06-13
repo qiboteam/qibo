@@ -392,6 +392,9 @@ cz_dec.add(
     ],
 )
 cz_dec.add(
+    gates.CCZ, [gates.H(2)] + cz_dec.decompositions[gates.TOFFOLI] + [gates.H(2)]
+)
+cz_dec.add(
     gates.Unitary,
     lambda gate, backend: two_qubit_decomposition(
         0, 1, gate.parameters[0], backend=backend
