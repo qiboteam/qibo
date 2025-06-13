@@ -406,6 +406,18 @@ Greenberger-Horne-Zeilinger (GHZ) state
 
 .. autofunction:: qibo.models.encodings.ghz_state
 
+
+Dicke state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.dicke_state
+
+
+Graph state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.graph_state
+
 .. _error-mitigation:
 
 Error Mitigation
