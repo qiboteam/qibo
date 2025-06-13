@@ -1,6 +1,6 @@
 """Utility functions for the Quantum Information module."""
 
-from functools import reduce
+from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
@@ -9,8 +9,22 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+
+
+@cache
+def _get_paulis(order: str, backend: Backend):
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
+    return [pauli_labels[label] for label in order]
+
+
+@cache
+def _normalization(nqubits: int):
+    return float(np.sqrt(2**nqubits))
 
 
 def hamming_weight(
@@ -435,15 +449,25 @@ def haar_integral(
         rand_unit_density = backend.cast(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
-        for _ in range(samples):
-            haar_state = backend.np.reshape(
-                random_statevector(dim, backend=backend), (-1, 1)
-            )
 
-            rho = haar_state @ backend.np.conj(haar_state).T
+        random_states = backend.qinfo.ENGINE.random.standard_normal(
+            (samples, dim)
+        ).astype(rand_unit_density.dtype)
+        random_states += 1.0j * backend.qinfo.ENGINE.random.standard_normal(
+            (samples, dim)
+        )
+        random_states /= backend.qinfo.ENGINE.linalg.norm(
+            random_states, axis=1
+        ).reshape(-1, 1)
+        random_states = random_states.reshape(samples, 1, dim)
+        rho = backend.np.einsum(
+            "ijk,ijl->ikl", random_states, backend.np.conj(random_states)
+        )
+
+        for state in rho:
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.np.kron, [rho] * power_t
+                backend.np.kron, [state] * power_t
             )
 
         integral = rand_unit_density / samples
