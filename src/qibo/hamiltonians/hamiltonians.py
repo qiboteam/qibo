@@ -133,7 +133,7 @@ class Hamiltonian(AbstractHamiltonian):
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
         )
-        return self.backend.np.sum(diag * counts)
+        return self.backend.np.real(self.backend.np.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
