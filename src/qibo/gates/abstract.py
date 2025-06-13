@@ -379,7 +379,23 @@ class Gate:
 
     @staticmethod
     def _gates_cancel(g1, g2):
-        """Check if same gate type, same targets, same controls"""
+        """Determines if two gates cancel each other.
+
+        Two gates are considered to cancel if:
+          - They are of the same type (class).
+          - They act on the same target and control qubits.
+          - For fixed gates (like H, CX, X, Y, Z, SWAP), they always cancel in pairs.
+          - For parametrized rotation gates (subclasses of _Rn_), their parameters sum to a multiple of 2π.
+
+        Note:
+            Multi-parameter gates are not currently supported by this check.
+
+        Args:
+            g1, g2: Gate instances to compare.
+
+        Returns:
+            bool: True if the gates cancel each other, False otherwise.
+        """
         if g1.__class__ != g2.__class__:
             return False
 
@@ -388,11 +404,12 @@ class Gate:
         if g1.control_qubits != g2.control_qubits:
             return False
 
-        # Identity conditions
+        # Identity conditions for fixed gates
         name = g1.name
         if name in ("h", "cx", "x", "y", "z", "swap"):
             return True
 
+        # Check for parametrized rotation gates
         if "_Rn_" in [base.__name__ for base in g1.__class__.__bases__]:
             theta1 = g1.parameters[0]
             theta2 = g2.parameters[0]
