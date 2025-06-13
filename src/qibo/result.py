@@ -276,20 +276,20 @@ class MeasurementOutcomes:
         nqubits = len(self.measurement_gate.qubits)
         if qubits is None:
             qubits = range(nqubits)
-        else:
-            if not set(qubits).issubset(self.measurement_gate.qubits):
-                raise_error(
-                    RuntimeError,
-                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
-                )
+        elif set(qubits).issubset(self.measurement_gate.qubits):
             qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
+        else:
+            raise_error(
+                RuntimeError,
+                f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
+            )
 
         if self._probs is not None and not self.measurement_gate.has_bitflip_noise():
             return self.backend.calculate_probabilities(
                 np.sqrt(self._probs), qubits, nqubits
             )
 
-        probs = [0 for _ in range(2**nqubits)]
+        probs = [0] * 2**nqubits
         for state, freq in self.frequencies(binary=False).items():
             probs[state] = freq / self.nshots
         probs = self.backend.cast(probs)
