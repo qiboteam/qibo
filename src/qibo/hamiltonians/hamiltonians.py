@@ -122,28 +122,18 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        if (
-            self.backend.np.count_nonzero(
-                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
-            )
-            != 0
-        ):
+        diag = self.backend.np.diagonal(obs)
+        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        keys = list(freq.keys())
-        if qubit_map is None:
-            qubit_map = list(range(int(np.log2(len(obs)))))
-        counts = np.array(list(freq.values())) / sum(freq.values())
-        expval = 0
-        size = len(qubit_map)
-        for j, k in enumerate(keys):
-            index = 0
-            for i in qubit_map:
-                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
-            expval += obs[index, index] * counts[j]
-        return self.backend.np.real(expval)
+        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
+        diag = self.backend.np.transpose(diag, axes=qubit_map).ravel()
+        counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
+            freq.values()
+        )
+        return self.backend.np.real(self.backend.np.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
