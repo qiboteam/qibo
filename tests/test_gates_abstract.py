@@ -110,7 +110,9 @@ def test_x_decomposition_errors(use_toffolis):
         _ = gate.decompose(2, 3, use_toffolis=use_toffolis)
 
 
-@pytest.mark.parametrize("controls,instance", [((1,), "CZ"), ((1, 2), "Z")])
+@pytest.mark.parametrize(
+    "controls,instance", [((1,), "CZ"), ((1, 2), "CCZ"), ((1, 2, 3), "Z")]
+)
 def test_z_controlled_by(controls, instance):
     gate = gates.Z(0).controlled_by(*controls)
     assert gate.target_qubits == (0,)
