@@ -92,8 +92,8 @@ class X(Gate):
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
-            List with one-qubit, ``CNOT`` and ``TOFFOLI`` gates that have the
-            same effect as applying the original multi-control gate.
+            list: Set of one-qubit, :class:`qibo.gates.CNOT`, and :class:`qibo.gates.TOFFOLI`
+            gates that have the same effect as applying the original multi-control gate.
         """
         if set(free) & set(self.qubits):
             raise_error(
@@ -245,6 +245,8 @@ class Z(Gate):
         """Fall back to CZ if there is only one control."""
         if len(q) == 1:
             gate = CZ(q[0], self.target_qubits[0])
+        elif len(q) == 2:
+            gate = CCZ(q[0], q[1], self.target_qubits[0])
         else:
             gate = super().controlled_by(*q)
         return gate
@@ -2505,9 +2507,17 @@ class TOFFOLI(Gate):
         return "ccx"
 
     def _base_decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        c0, c1 = self.control_qubits
-        t = self.target_qubits[0]
-        return [self.__class__(c0, c1, t)]
+        """Decomposition of :math:`\\text{TOFFOLI}` gate.
+
+        Decompose :math:`\\text{TOFFOLI}` gate into :class:`qibo.gates.CNOT` gates,
+        :class:`qibo.gates.T` gates, :class:`qibo.gates.TDG` gates,
+        and :class:`qibo.gates.H` gates.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
         """Congruent representation of ``TOFFOLI`` gate.
