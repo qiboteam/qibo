@@ -2536,7 +2536,6 @@ class TOFFOLI(Gate):
             List with ``RY`` and ``CNOT`` gates that have the same effect as
             applying the original ``TOFFOLI`` gate.
         """
-            return self._base_decompose()
 
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
