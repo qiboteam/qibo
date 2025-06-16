@@ -440,20 +440,21 @@ def test_decompose_controlled():
     backend.assert_allclose(s1, s2)
 
 
-def test_decompose_controlled_optimized():
-    backend = NumpyBackend()
+def test_decompose_controlled_optimized(backend):
     target = gates.RBS(1, 2, 0.1).controlled_by(0)
     decomp = target.decompose()
+
     assert len(decomp) == 6
+
     controls_on_zero = sum([0 in g.control_qubits for g in decomp])
     assert controls_on_zero == 2
-    c1 = Circuit(3)
-    c2 = c1.copy()
-    c1.add(target)
-    c2.add(decomp)
-    s1 = backend.execute_circuit(c1).state()
-    s2 = backend.execute_circuit(c2).state()
-    backend.assert_allclose(s1, s2)
+
+    circuit_1 = Circuit(3)
+    circuit_2 = circuit_1.copy(deep=True)
+    circuit_1.add(target)
+    circuit_2.add(decomp)
+
+    backend.assert_circuitclose(circuit_1, circuit_2)
 
 
 @pytest.mark.parametrize(
