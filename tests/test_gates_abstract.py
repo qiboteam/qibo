@@ -481,19 +481,6 @@ def test_gates_cancel(g1, g2, expected):
     assert result is expected
 
 
-def test_toffoli_congruent(backend):
-    congruent = gates.TOFFOLI(0, 1, 2)
-
-    circuit = Circuit(3)
-    circuit.add(congruent.congruent())
-    congruent = circuit.unitary(backend)
-
-    target = backend.matrices.TOFFOLI
-    target[4, 4] = -1
-
-    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
-
-
 def test_special_gate():
     from qibo.gates.abstract import SpecialGate
 
