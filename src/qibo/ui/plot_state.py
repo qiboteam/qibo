@@ -4,7 +4,6 @@ import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import qibo
-from qibo.ui.drawing_utils import QIBO_COMPLEMENTARY_COLOR, QIBO_DEFAULT_COLOR
 
 
 # Based on Qiskit density state plot
