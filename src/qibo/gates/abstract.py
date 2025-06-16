@@ -433,7 +433,7 @@ class Gate:
             right -= 1
         return mask
 
-    def decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+    def decompose(self, *free, use_toffolis: bool = True) -> List["Gate"]:
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
@@ -442,8 +442,9 @@ class Gate:
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
-                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+            use_toffolis(bool, optional): If ``True``, the decomposition contains only 
+                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent 
+                representation is used for :class:`qibo.gates.TOFFOLI` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
