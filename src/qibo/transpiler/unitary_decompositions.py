@@ -63,7 +63,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
     ut_u_real = backend.np.real(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
-        ut_u_real = np.round(ut_u_real, decimals=20)
+        ut_u_real = np.round(ut_u_real, decimals=15)
 
     eigvals_real, psi_magic = backend.calculate_eigenvectors(ut_u_real, hermitian=True)
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only the real part
