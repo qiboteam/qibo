@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import qibo
-from qibo import Circuit, construct_backend, gates
+from qibo import Circuit, gates
 from qibo.ui.plot_state import plot_density_hist
 
 from .utils import match_figure_image
