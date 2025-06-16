@@ -2,13 +2,15 @@
 `qibo/gates/gates.py`."""
 
 import json
+from math import pi
 from typing import Optional
 
 import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
-from qibo.gates import abstract
+from qibo.gates import Gate, abstract
+from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
@@ -420,6 +422,76 @@ def test_decompose():
     decomp_gates = gates.H(0).decompose(1)
     assert len(decomp_gates) == 1
     assert isinstance(decomp_gates[0], gates.H)
+
+
+def test_decompose_controlled(backend):
+    target = gates.H(0).controlled_by(1)
+    decomp = target.decompose()
+
+    assert len(decomp) == 1
+    assert isinstance(decomp[0], gates.H)
+    assert decomp[0].control_qubits == (1,)
+
+    circuit_1 = Circuit(2)
+    circuit_2 = circuit_1.copy(deep=True)
+    circuit_1.add(target)
+    circuit_2.add(decomp)
+
+    backend.assert_circuitclose(circuit_1, circuit_2)
+
+
+def test_decompose_controlled_optimized(backend):
+    target = gates.RBS(1, 2, 0.1).controlled_by(0)
+    decomp = target.decompose()
+
+    assert len(decomp) == 6
+
+    controls_on_zero = sum([0 in g.control_qubits for g in decomp])
+    assert controls_on_zero == 2
+
+    circuit_1 = Circuit(3)
+    circuit_2 = circuit_1.copy(deep=True)
+    circuit_1.add(target)
+    circuit_2.add(decomp)
+
+    backend.assert_circuitclose(circuit_1, circuit_2)
+
+
+@pytest.mark.parametrize(
+    "g1, g2, expected",
+    [
+        (gates.X(0), gates.X(0), True),
+        (gates.X(0), gates.X(1), False),
+        (gates.X(0), gates.Y(0), False),
+        (gates.Y(1), gates.Y(1), True),
+        (gates.Z(2), gates.Z(2), True),
+        (gates.SX(0), gates.SX(0), False),
+        (gates.RX(0, pi), gates.RX(0, -pi), True),
+        (gates.RX(0, pi / 2), gates.RX(0, pi / 3), False),
+        (gates.RY(1, 0.5), gates.RY(1, -0.5), True),
+        (gates.RZ(2, 2 * pi), gates.RZ(2, -2 * pi), True),
+        (gates.CNOT(0, 1), gates.CNOT(0, 1), True),
+        (gates.CNOT(0, 2), gates.CNOT(1, 2), False),
+        (gates.TOFFOLI(0, 1, 2), gates.TOFFOLI(0, 1, 2), True),
+        (gates.CCZ(0, 1, 2), gates.CCZ(0, 1, 2), True),
+    ],
+)
+def test_gates_cancel(g1, g2, expected):
+    result = Gate._gates_cancel(g1, g2)
+    assert result is expected
+
+
+def test_toffoli_congruent(backend):
+    congruent = gates.TOFFOLI(0, 1, 2)
+
+    circuit = Circuit(3)
+    circuit.add(congruent.congruent())
+    congruent = circuit.unitary(backend)
+
+    target = backend.matrices.TOFFOLI
+    target[4, 4] = -1
+
+    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
 
 
 def test_special_gate():
