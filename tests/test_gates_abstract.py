@@ -431,7 +431,7 @@ def test_decompose_controlled(backend):
     assert len(decomp) == 1
     assert isinstance(decomp[0], gates.H)
     assert decomp[0].control_qubits == (1,)
-    
+
     circuit_1 = Circuit(2)
     circuit_2 = circuit_1.copy(deep=True)
     circuit_1.add(target)
