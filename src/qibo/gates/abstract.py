@@ -442,8 +442,8 @@ class Gate:
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis(bool, optional): If ``True``, the decomposition contains only 
-                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent 
+            use_toffolis(bool, optional): If ``True``, the decomposition contains only
+                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent
                 representation is used for :class:`qibo.gates.TOFFOLI` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
