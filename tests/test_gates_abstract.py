@@ -461,6 +461,7 @@ def test_decompose_controlled_optimized(backend):
     "g1, g2, expected",
     [
         (gates.X(0), gates.Y(0), False),
+        (gates.X(0), gates.X(1), False),
         (gates.CNOT(0, 1), gates.CNOT(0, 1), True),
         (gates.CNOT(0, 2), gates.CNOT(1, 2), False),
         (gates.RX(0, pi), gates.RX(0, -pi), True),
