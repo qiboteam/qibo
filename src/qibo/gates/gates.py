@@ -104,23 +104,25 @@ class X(Gate):
 
         controls = self.control_qubits
         target = self.target_qubits[0]
-        m = len(controls)
-        if m < 3:
+        ncontrols = len(controls)
+        if ncontrols < 3:
             return [self.__class__(target).controlled_by(*controls)]
 
         decomp_gates = []
-        n = m + 1 + len(free)
-        if (n >= 2 * m - 1) and (m >= 3):
+        nqubits = ncontrols + 1 + len(free)
+        if (nqubits >= 2 * ncontrols - 1) and (ncontrols >= 3):
             gates1 = [
                 TOFFOLI(
-                    controls[m - 2 - i], free[m - 4 - i], free[m - 3 - i]
-                ).congruent(use_toffolis=use_toffolis)
-                for i in range(m - 3)
+                    controls[ncontrols - 2 - k],
+                    free[ncontrols - 4 - k],
+                    free[ncontrols - 3 - k],
+                ).congruent()
+                for k in range(ncontrols - 3)
             ]
-            gates2 = TOFFOLI(controls[0], controls[1], free[0]).congruent(
-                use_toffolis=use_toffolis
+            gates2 = TOFFOLI(controls[0], controls[1], free[0]).congruent()
+            first_toffoli = TOFFOLI(
+                controls[ncontrols - 1], free[ncontrols - 3], target
             )
-            first_toffoli = TOFFOLI(controls[m - 1], free[m - 3], target)
 
             decomp_gates.append(first_toffoli)
             for gates in gates1:
@@ -130,7 +132,7 @@ class X(Gate):
                 decomp_gates.extend(gates)
 
         elif len(free) >= 1:
-            m1 = n // 2
+            m1 = nqubits // 2
             free1 = controls[m1:] + (target,) + tuple(free[1:])
             x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
             part1 = x1._base_decompose(*free1, use_toffolis=use_toffolis)
@@ -146,11 +148,14 @@ class X(Gate):
             # impractical case
             raise_error(
                 NotImplementedError,
-                "X decomposition not implemented for zero free qubits.",
+                "``X`` decomposition not implemented for zero free qubits.",
             )
 
         decomp_gates.extend(decomp_gates)
         return decomp_gates
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List["Gate"]:
+        return self._base_decompose(*free, use_toffolis=use_toffolis)
 
     def basis_rotation(self):
         return H(self.target_qubits[0])
