@@ -480,6 +480,7 @@ def test_gates_cancel(g1, g2, expected):
     result = Gate._gates_cancel(g1, g2)
     assert result is expected
 
+
 def test_toffoli_congruent(backend):
     congruent = gates.TOFFOLI(0, 1, 2)
 
@@ -491,6 +492,8 @@ def test_toffoli_congruent(backend):
     target[4, 4] = -1
 
     assert backend.calculate_matrix_norm(congruent - target) < 1e-8
+
+
 def test_special_gate():
     from qibo.gates.abstract import SpecialGate
 
