@@ -9,10 +9,7 @@ from qibo.ui.drawing_utils import QIBO_COMPLEMENTARY_COLOR, QIBO_DEFAULT_COLOR
 
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
-def plot_density_hist(
-    circuit,
-    title=""
-):
+def plot_density_hist(circuit, title=""):
     """
         Plots the real and imaginary parts of the density matrix as separate 3D cityscape plots, side by side,
         with a gray z=0 plane for the imaginary part.
