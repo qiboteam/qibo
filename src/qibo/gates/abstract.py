@@ -462,10 +462,10 @@ class Gate:
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
             mask = self._control_mask_after_stripping(decomposed)
-            for m, g in zip(mask, decomposed):
-                if m:
-                    g.is_controlled_by = True
-                    g.control_qubits += self.control_qubits
+            for bool_value, gate in zip(mask, decomposed):
+                if bool_value:
+                    gate.is_controlled_by = True
+                    gate.control_qubits += self.control_qubits
             return decomposed
         return self._base_decompose(*free, use_toffolis=use_toffolis)
 
