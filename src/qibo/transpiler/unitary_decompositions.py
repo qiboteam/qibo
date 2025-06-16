@@ -67,7 +67,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
 
     eigvals_real, psi_magic = backend.calculate_eigenvectors(ut_u_real, hermitian=True)
     # sort eigvals to match psi_magic, as eigvals_real only give real part (at least in numpy backend)
-    eigvals = backend.np.sum(backend.np.conj(psi_magic) @ ut_u @ psi_magic, 0)
+    eigvals = backend.np.sum(backend.np.conj(psi_magic) * ut_u @ psi_magic, 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
