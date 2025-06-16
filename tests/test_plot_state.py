@@ -5,10 +5,11 @@ import matplotlib.pyplot
 import numpy as np
 import pytest
 
-from qibo import Circuit, construct_backend, gates
-from .utils import match_figure_image
-from qibo.ui.plot_state import plot_density_hist
 import qibo
+from qibo import Circuit, construct_backend, gates
+from qibo.ui.plot_state import plot_density_hist
+
+from .utils import match_figure_image
 
 qibo.set_backend("numpy")
 
