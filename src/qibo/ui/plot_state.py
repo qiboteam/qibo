@@ -11,9 +11,7 @@ from qibo.ui.drawing_utils import QIBO_COMPLEMENTARY_COLOR, QIBO_DEFAULT_COLOR
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
 def plot_density_hist(
     circuit,
-    title="",
-    real_color=QIBO_DEFAULT_COLOR,
-    imag_color=QIBO_COMPLEMENTARY_COLOR,
+    title=""
 ):
     """
         Plots the real and imaginary parts of the density matrix as separate 3D cityscape plots, side by side,
@@ -22,8 +20,6 @@ def plot_density_hist(
     Args:
         circuit (qibo.core.circuit.Circuit): The quantum circuit to visualize.
         title (str): Title of the plot.
-        real_color (str): Color for the real part of the density matrix.
-        imag_color (str): Color for the imaginary part of the density matrix.
 
     Returns:
         tuple: A tuple containing the figure, axes for the real part and axes for the imaginary part.
@@ -92,16 +88,13 @@ def plot_density_hist(
     max_font_size = int(2 * max_plot_size)
     max_zoom = 10 / (10 + np.sqrt(max_plot_size))
 
-    for ax, dz, col, zlabel in (
-        (ax1, dzr, real_color, "Real"),
-        (ax2, dzi, imag_color, "Imaginary"),
+    for ax, dz, zlabel in (
+        (ax1, dzr, "Real"),
+        (ax2, dzi, "Imaginary"),
     ):
 
         max_dz = np.max(dz)
         min_dz = np.min(dz)
-
-        if isinstance(col, str) and col.startswith("#"):
-            col = mcolors.to_rgba_array(col)
 
         dzn = dz < 0
         if np.any(dzn):
