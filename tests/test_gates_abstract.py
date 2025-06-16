@@ -8,7 +8,6 @@ from typing import Optional
 import pytest
 
 from qibo import gates, matrices
-from qibo.backends import NumpyBackend
 from qibo.config import PRECISION_TOL
 from qibo.gates import Gate, abstract
 from qibo.models import Circuit
