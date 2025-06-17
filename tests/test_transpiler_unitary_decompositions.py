@@ -158,7 +158,7 @@ def test_two_qubit_decomposition(backend, seed):
     backend.assert_allclose(final_matrix, unitary, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
+@pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
 def test_two_qubit_decomposition_common_gates(backend, gate_name):
     """Test general two-qubit decomposition on some common gates."""
     if gate_name == "iSWAP":

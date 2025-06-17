@@ -46,7 +46,7 @@ def test_rygate_density_matrix(backend):
 
 
 @pytest.mark.parametrize(
-    "gatename,gatekwargs",
+    "gate_name,gatekwargs",
     [
         ("H", {}),
         ("X", {}),
@@ -66,11 +66,11 @@ def test_rygate_density_matrix(backend):
         ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
     ],
 )
-def test_one_qubit_gates(backend, gatename, gatekwargs):
+def test_one_qubit_gates(backend, gate_name, gatekwargs):
     """Check applying one qubit gates to one qubit density matrix."""
     nqubits = 1
     initial_rho = random_density_matrix(2**nqubits, backend=backend)
-    gate = getattr(gates, gatename)(0, **gatekwargs)
+    gate = getattr(gates, gate_name)(0, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 1, initial_rho)
 
     matrix = backend.to_numpy(gate.matrix(backend))
@@ -80,14 +80,14 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
-def test_controlled_by_one_qubit_gates(backend, gatename):
+@pytest.mark.parametrize("gate_name", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
+def test_controlled_by_one_qubit_gates(backend, gate_name):
     nqubits = 2
     initial_rho = random_density_matrix(2**nqubits, seed=1, backend=backend)
-    gate = getattr(gates, gatename)(1).controlled_by(0)
+    gate = getattr(gates, gate_name)(1).controlled_by(0)
     final_rho = apply_gates(backend, [gate], 2, backend.np.copy(initial_rho))
 
-    matrix = backend.to_numpy(backend.matrix(getattr(gates, gatename)(1)))
+    matrix = backend.to_numpy(backend.matrix(getattr(gates, gate_name)(1)))
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
     target_rho = np.einsum(
@@ -100,7 +100,7 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
 
 
 @pytest.mark.parametrize(
-    "gatename,gatekwargs",
+    "gate_name,gatekwargs",
     [
         ("CNOT", {}),
         ("CY", {}),
@@ -115,11 +115,11 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
         ("fSim", {"theta": 0.123, "phi": 0.543}),
     ],
 )
-def test_two_qubit_gates(backend, gatename, gatekwargs):
+def test_two_qubit_gates(backend, gate_name, gatekwargs):
     """Check applying two qubit gates to two qubit density matrix."""
     nqubits = 2
     initial_rho = random_density_matrix(2**nqubits, backend=backend)
-    gate = getattr(gates, gatename)(0, 1, **gatekwargs)
+    gate = getattr(gates, gate_name)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
     matrix = backend.to_numpy(gate.matrix(backend))
