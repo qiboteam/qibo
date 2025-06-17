@@ -262,7 +262,11 @@ def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
 
     # Get light decomposition
     gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
-
+    if backend.np.allclose(unitary, backend.cast(matrices.iSWAP, dtype="complex128")):
+        raise_error(
+            NotImplementedError,
+            "``two_qubit_decomposition`` not implemented for the ``iSWAP``.",
+        )
     # Combine with initial and final local unitaries
     g0, g1 = gatelist[:2]
     gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
@@ -312,6 +316,12 @@ def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
     Returns:
         list: gates implementing the decomposition
     """
+    if backend.np.allclose(unitary, backend.cast(matrices.iSWAP, dtype="complex128")):
+        raise_error(
+            NotImplementedError,
+            "``two_qubit_decomposition`` not implemented for the ``iSWAP`` gate.",
+        )
+
     # Handle identity case efficiently
     if backend.np.allclose(
         unitary, backend.identity_density_matrix(nqubits=2, normalize=False)
