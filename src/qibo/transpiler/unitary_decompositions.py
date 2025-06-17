@@ -129,7 +129,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
     # this is required so that sum(lambdas) = 0
     # and Ud can be written as exp(-iH)
-    if backend.__class__.__name__ == "TensorflowBackend":
+    if backend.__class__.__name__ == "TensorflowBackend":  # pragma: no cover
         det = np.linalg.det(unitary) ** (1 / 16)
     else:
         det = backend.np.linalg.det(unitary) ** (1 / 16)
