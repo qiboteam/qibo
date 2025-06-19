@@ -192,6 +192,7 @@ class Circuit:
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         self.trainable_gates = _ParametrizedGates()
+        self._independent_parameters_map = None
         self.measurements = []  # list of non-collapsible measurements
 
         self._final_state = None
@@ -675,6 +676,23 @@ class Circuit:
 
                 return gate.result
 
+            elif isinstance(gate, ParametrizedGate):
+                independent = True
+                if self._independent_parameters_map is not None:
+                    for idx in self._independent_parameters_map:
+                        indep_params = self.queue[idx].parameters[0]
+                        params = gate.parameters
+                        # for now only 1 parameter gates are checked
+                        if len(params) == 1 and np.shares_memory(
+                            indep_params, params[0]
+                        ):
+                            self._independent_parameters_map[idx].add(self.ngates)
+                            independent = False
+                if independent:
+                    self._independent_parameters_map[self.ngates] = {
+                        self.ngates,
+                    }
+
             self.queue.append(gate)
             for measurement in list(self.measurements):
                 if set(measurement.qubits) & set(gate.qubits):
@@ -722,6 +740,24 @@ class Circuit:
         for gate in self.queue:
             gatecounter[gate.name] += 1
         return gatecounter
+
+    @property
+    def independent_parameters_map(self) -> dict[int, set[int]]:
+        return self._independent_parameters_map
+
+    @independent_parameters_map.setter
+    def independent_parameters_map(self, par_map: dict[int, set[int]]):
+        for val in par_map.values():
+            for idx in val:
+                try:
+                    if not isinstance(self.queue[idx], ParametrizedGate):
+                        raise_error(
+                            RuntimeError,
+                            f"Passed a parameter map containing the index ``{idx}``, corresponding to the non-parametrized gate ``{self.queue[idx]}``.",
+                        )
+                except IndexError as e:
+                    raise e
+        self._independent_parameters_map = par_map
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
@@ -841,7 +877,10 @@ class Circuit:
             raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
     def get_parameters(
-        self, output_format: str = "list", include_not_trainable: bool = False
+        self,
+        output_format: str = "list",
+        include_not_trainable: bool = False,
+        independent_only: bool = False,
     ) -> Union[List, Dict]:  # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
@@ -856,9 +895,18 @@ class Circuit:
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
         """
-        parametrized_gates = (
-            self.parametrized_gates if include_not_trainable else self.trainable_gates
-        )
+        if independent_only:
+            parametrized_gates = [
+                self.queue[idx]
+                for idx in self.independent_parameters_map
+                if (self.queue[idx].trainable or include_not_trainable)
+            ]
+        else:
+            parametrized_gates = (
+                self.parametrized_gates
+                if include_not_trainable
+                else self.trainable_gates
+            )
 
         if output_format not in ["list", "dict", "flatlist"]:
             raise_error(
