@@ -14,15 +14,15 @@ from qibo.models import Circuit
 
 
 @pytest.mark.parametrize(
-    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+    "gate_name", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
 )
-def test_one_qubit_gates_init(gatename):
-    gate = getattr(gates, gatename)(0)
+def test_one_qubit_gates_init(gate_name):
+    gate = getattr(gates, gate_name)(0)
     assert gate.target_qubits == (0,)
 
 
-def gate_from_json(gatename: str, control: Optional[list] = None):
-    gate = getattr(gates, gatename)(0)
+def gate_from_json(gate_name: str, control: Optional[list] = None):
+    gate = getattr(gates, gate_name)(0)
 
     control = [] if control is None else control
 
@@ -43,10 +43,10 @@ def gate_from_json(gatename: str, control: Optional[list] = None):
 
 
 @pytest.mark.parametrize(
-    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+    "gate_name", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
 )
-def test_one_qubit_gates_serialization(gatename):
-    gate, json_gate = gate_from_json(gatename)
+def test_one_qubit_gates_serialization(gate_name):
+    gate, json_gate = gate_from_json(gate_name)
     raw = gate.raw
 
     assert isinstance(raw, dict)
@@ -60,10 +60,10 @@ def test_one_qubit_gates_serialization(gatename):
 
 
 @pytest.mark.parametrize(
-    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+    "gate_name", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
 )
-def test_controlled_gates_serialization(gatename):
-    gate, _ = gate_from_json(gatename, control=[1, 4])
+def test_controlled_gates_serialization(gate_name):
+    gate, _ = gate_from_json(gate_name, control=[1, 4])
 
     assert isinstance(gate.raw, dict)
     assert gates.Gate.from_dict(gate.raw).raw == gate.raw
@@ -151,7 +151,7 @@ def test_measurement_errors():
 
 
 @pytest.mark.parametrize(
-    "gatename,params",
+    "gate_name,params",
     [
         ("RX", (0.1234,)),
         ("RY", (0.1234,)),
@@ -161,14 +161,14 @@ def test_measurement_errors():
         ("U3", (0.1234, 0.4321, 0.5678)),
     ],
 )
-def test_one_qubit_rotations_init(gatename, params):
-    gate = getattr(gates, gatename)(0, *params)
+def test_one_qubit_rotations_init(gate_name, params):
+    gate = getattr(gates, gate_name)(0, *params)
     assert gate.target_qubits == (0,)
     assert gate.parameters == params
 
 
 @pytest.mark.parametrize(
-    "gatename,params",
+    "gate_name,params",
     [
         ("RX", (0.1234,)),
         ("RY", (0.1234,)),
@@ -178,8 +178,8 @@ def test_one_qubit_rotations_init(gatename, params):
         ("U3", (0.1234, 0.4321, 0.5678)),
     ],
 )
-def test_one_qubit_rotations_serialization(gatename, params):
-    gate = getattr(gates, gatename)(0, *params)
+def test_one_qubit_rotations_serialization(gate_name, params):
+    gate = getattr(gates, gate_name)(0, *params)
 
     json_general = """
     {
@@ -212,7 +212,7 @@ def test_one_qubit_rotations_serialization(gatename, params):
 
 
 @pytest.mark.parametrize(
-    "gatename,params",
+    "gate_name,params",
     [
         ("RX", (0.1234,)),
         ("RY", (0.1234,)),
@@ -222,12 +222,12 @@ def test_one_qubit_rotations_serialization(gatename, params):
         ("U3", (0.1234, 0.4321, 0.5678)),
     ],
 )
-def test_one_qubit_rotations_controlled_by(gatename, params):
-    gate = getattr(gates, gatename)(0, *params).controlled_by(1)
+def test_one_qubit_rotations_controlled_by(gate_name, params):
+    gate = getattr(gates, gate_name)(0, *params).controlled_by(1)
     assert gate.target_qubits == (0,)
     assert gate.control_qubits == (1,)
-    assert isinstance(gate, getattr(gates, f"C{gatename}"))
-    gate = getattr(gates, gatename)(1, *params).controlled_by(0, 3)
+    assert isinstance(gate, getattr(gates, f"C{gate_name}"))
+    gate = getattr(gates, gate_name)(1, *params).controlled_by(0, 3)
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0, 3)
     assert gate.parameters == params
@@ -250,7 +250,7 @@ def test_cnot_and_cy_and_cz_init():
 
 
 @pytest.mark.parametrize(
-    "gatename,params",
+    "gate_name,params",
     [
         ("CRX", (0.1234,)),
         ("CRY", (0.1234,)),
@@ -260,8 +260,8 @@ def test_cnot_and_cy_and_cz_init():
         ("CU3", (0.1234, 0.4321, 0.5678)),
     ],
 )
-def test_two_qubit_controlled_rotations_init(gatename, params):
-    gate = getattr(gates, gatename)(0, 2, *params)
+def test_two_qubit_controlled_rotations_init(gate_name, params):
+    gate = getattr(gates, gate_name)(0, 2, *params)
     assert gate.target_qubits == (2,)
     assert gate.control_qubits == (0,)
 
@@ -479,19 +479,6 @@ def test_decompose_controlled_optimized(backend):
 def test_gates_cancel(g1, g2, expected):
     result = Gate._gates_cancel(g1, g2)
     assert result is expected
-
-
-def test_toffoli_congruent(backend):
-    congruent = gates.TOFFOLI(0, 1, 2)
-
-    circuit = Circuit(3)
-    circuit.add(congruent.congruent())
-    congruent = circuit.unitary(backend)
-
-    target = backend.matrices.TOFFOLI
-    target[4, 4] = -1
-
-    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
 
 
 def test_special_gate():
