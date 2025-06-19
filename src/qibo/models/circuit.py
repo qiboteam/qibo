@@ -688,9 +688,15 @@ class Circuit:
                         ):
                             self._independent_parameters_map[idx].add(self.ngates)
                             independent = False
-                if independent:
-                    self._independent_parameters_map[self.ngates] = {
-                        self.ngates,
+                    if independent:
+                        self._independent_parameters_map[self.ngates] = {
+                            self.ngates,
+                        }
+                else:
+                    self._independent_parameters_map = {
+                        self.ngates: {
+                            self.ngates,
+                        }
                     }
 
             self.queue.append(gate)
@@ -747,14 +753,16 @@ class Circuit:
 
     @independent_parameters_map.setter
     def independent_parameters_map(self, par_map: dict[int, set[int]]):
-        for val in par_map.values():
+        for key, val in par_map.items():
             for idx in val:
                 try:
-                    if not isinstance(self.queue[idx], ParametrizedGate):
+                    gate = self.queue[idx]
+                    if not isinstance(gate, ParametrizedGate):
                         raise_error(
                             RuntimeError,
-                            f"Passed a parameter map containing the index ``{idx}``, corresponding to the non-parametrized gate ``{self.queue[idx]}``.",
+                            f"Passed a parameter map containing the index ``{idx}``, corresponding to the non-parametrized gate ``{gate}``.",
                         )
+                    self.queue[idx].parameters = self.queue[key].parameters
                 except IndexError as e:
                     raise e
         self._independent_parameters_map = par_map

@@ -5,6 +5,7 @@ from collections import Counter
 
 import numpy as np
 import pytest
+import torch
 
 from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
@@ -372,3 +373,48 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
         )
     for key in dict(test_frequencies).keys():
         backend.assert_allclose(result.frequencies()[key], test_frequencies[key])
+
+
+def test_circuit_independent_parameters_map():
+    # all parameters independent
+    c = Circuit(2)
+    parameters = np.array([1, 2, 3, 4])
+    c.add(gates.RZ(0, parameters[0]))
+    c.add(gates.U2(1, *parameters[1:3]))
+    c.add(gates.RX(0, parameters[3]))
+    assert c.independent_parameters_map == {0: {0}, 1: {1}, 2: {2}}
+    # some dependent parameters
+
+    c = Circuit(2)
+    parameters = torch.tensor([1, 2, 3, 4])
+    c.add(gates.RZ(0, parameters[0]))
+    c.add(gates.U2(1, *parameters[1:3]))
+    c.add(gates.U2(0, *parameters[1:3]))
+    c.add(gates.RX(1, parameters[0]))
+    c.add(gates.RY(0, parameters[3]))
+    # multiple parameters gate are always considered independent for now
+    assert c.independent_parameters_map == {
+        0: {0, 3},
+        1: {
+            1,
+        },
+        2: {
+            2,
+        },
+        4: {
+            4,
+        },
+    }
+    # testing the setter
+    c.independent_parameters_map = {
+        0: {0, 3, 4},
+        1: {
+            1,
+        },
+        2: {
+            2,
+        },
+    }
+    assert (
+        c.queue[0].parameters[0] is c.queue[3].parameters[0] is c.queue[4].parameters[0]
+    )
