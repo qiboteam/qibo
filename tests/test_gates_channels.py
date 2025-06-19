@@ -138,7 +138,7 @@ def test_kraus_channel(backend, pauli_order):
 
 def test_unitary_channel(backend):
     """"""
-    a_1 = backend.cast(matrices.X)
+    a_1 = backend.matrices.X
     a_2 = backend.matrices.CNOT
 
     qubits = [(0,), (2, 3)]
