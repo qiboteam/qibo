@@ -51,3 +51,58 @@ def test_simple_circuit_state():
         )
         == True
     )
+
+
+def test_simple_circuit_state_hadamard():
+    """Test for simple circuit plot state with Hadamard gates"""
+    nqubits = 2
+    circuit = Circuit(nqubits)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    fig, _, _ = plot_density_hist(circuit)
+    assert (
+        match_figure_image(
+            fig,
+            BASEPATH
+            + "/test_simple_circuit_state_hadamard_nqubits_"
+            + str(nqubits)
+            + ".npy",
+        )
+        == True
+    )
+
+
+def test_simple_title_circuit_state():
+    """Test for simple circuit plot state with title"""
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(0, 2))
+    fig, _, _ = plot_density_hist(circuit, title="Test Circuit State")
+    assert (
+        match_figure_image(
+            fig,
+            BASEPATH
+            + "/test_simple_circuit_state_title_nqubits_"
+            + str(nqubits)
+            + ".npy",
+        )
+        == True
+    )
+
+
+def test_simple_raise_error_measure_state():
+    """Test for simple circuit plot state with error raising if measurement gates are present"""
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(*range(nqubits)))
+
+    with pytest.raises(Exception) as excinfo:
+        plot_density_hist(circuit, title="Test Circuit State")
+        assert (
+            str(excinfo.value)
+            == "Circuit must not contain measurement gates for density matrix visualization."
+        )

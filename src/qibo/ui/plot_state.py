@@ -159,7 +159,7 @@ def plot_density_hist(circuit, title=""):
         ax.set_ymargin(0)
 
     if title != "":
-        fig.suptitle(title, fontsize=max_font_size * 1.25)
+        fig.suptitle(title, fontsize=max_font_size)
     fig.subplots_adjust(top=0.9, bottom=0, left=0, right=1, hspace=0, wspace=0)
 
     return fig, ax1, ax2
