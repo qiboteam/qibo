@@ -276,21 +276,26 @@ multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
 the section :ref:`How to select hardware devices? <gpu-examples>`.
 
 
-.. _precision-example:
+.. _dtype-example:
 
-How to modify the simulation precision?
+How to modify the simulation data type?
 ---------------------------------------
 
-By default the simulation is performed in ``double`` precision (``complex128``).
-We provide the ``qibo.set_precision`` function to modify the default behaviour.
-Note that `qibo.set_precision` must be called before allocating circuits:
+By default the simulation is performed in ``complex128`` precision.
+We provide the ``qibo.set_dtype`` function to modify the default behaviour, *i.e.* the data type
+of all arrays, matrices, and / or tensors involved in the computation(s).
+Note that `qibo.set_dtype` must be called before allocating circuits:
 
 .. testcode::
 
-        import qibo
-        qibo.set_precision("single") # enables complex64
-        # or
-        qibo.set_precision("double") # re-enables complex128
+        from qibo import set_backend, set_dtype
+
+        set_backend("numpy")  # enables the numpy backend
+        set_dtype("complex64") # enables complex64
+
+        # alternatively, it is possible to set backend and data type in the same line.
+        # The following line re-enables the numpy backend but now with complex128 data type.
+        set_backend("numpy", dtype="complex128")
 
         # ... continue with circuit creation and execution
 

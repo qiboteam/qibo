@@ -33,7 +33,7 @@ def main(nqubits, dt, solver, backend, dense=False, accelerators=None, filename=
             "solver": solver,
             "dense": dense,
             "backend": qibo.get_backend(),
-            "precision": qibo.get_precision(),
+            "dtype": qibo.get_dtype(),
             "device": qibo.get_device(),
             "threads": qibo.get_threads(),
             "accelerators": accelerators,
