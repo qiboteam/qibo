@@ -78,6 +78,9 @@ def optimize(
             # set parameters to circuit
             circuit.set_parameters(params)
     """
+    from qibo.backends import _check_backend
+
+    backend = _check_backend(backend)
     if method == "cma":
         if bounds is not None:  # pragma: no cover
             raise_error(
@@ -88,16 +91,8 @@ def optimize(
             loss, backend.to_numpy(initial_parameters), args, callback, options
         )
     elif method == "sgd":
-        from qibo.backends import _check_backend
-
-        backend = _check_backend(backend)
-
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
     else:
-        from qibo.backends import _check_backend
-
-        backend = _check_backend(backend)
-
         return newtonian(
             loss,
             initial_parameters,
