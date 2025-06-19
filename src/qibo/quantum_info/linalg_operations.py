@@ -450,7 +450,8 @@ def lanczos(
         random_statevector,
     )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     dims = matrix.shape[0]
 
@@ -458,7 +459,7 @@ def lanczos(
         steps = dims
 
     vector = (
-        random_statevector(dims, seed=local_state, backend=backend)
+        random_statevector(dims, seed=seed, backend=backend)
         if initial_vector is None
         else initial_vector
     )
@@ -474,7 +475,7 @@ def lanczos(
             vector = omega / norm
         else:  # pragma: no cover
             # this part is tested separatedly
-            vector = random_statevector(dims, seed=local_state, backend=backend)
+            vector = random_statevector(dims, seed=seed, backend=backend)
             vector = _gram_schmidt_process(
                 vector, backend.cast(lanczos_vectors).T, backend=backend
             )
