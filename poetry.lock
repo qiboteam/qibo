@@ -2946,7 +2946,7 @@ develop = false
 [package.dependencies]
 numba = "^0.61.0"
 psutil = "^5.9.5"
-qibo = "^0.2.18"
+qibo = {git = "https://github.com/qiboteam/qibo"}
 scipy = "^1.10.1"
 
 [package.extras]
@@ -2957,7 +2957,7 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "HEAD"
-resolved_reference = "ab07e2f5656993d076e18bfc317eec4416d2b97c"
+resolved_reference = "25251be45d9e9a4bf7f811e8cdee90d8407855a0"
 
 [[package]]
 name = "qulacs"
