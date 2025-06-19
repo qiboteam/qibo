@@ -5,6 +5,8 @@ import qibo
 from qibo import Circuit, matrices
 from qibo.backends import _Global, get_backend
 from qibo.backends.numpy import NumpyBackend
+from qibo.models.encodings import entangling_layer
+from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import Random
@@ -18,18 +20,62 @@ def test_set_get_backend():
     assert qibo.get_backend().name == "numpy"
 
 
-def test_set_precision():
+def test_set_dtype():
     import numpy as np
 
-    assert qibo.get_precision() == "double"
-    qibo.set_precision("single")
+    qibo.set_dtype("float32")
+    assert matrices.I.dtype == np.float32
+    assert qibo.get_dtype() == "float32"
+
+    qibo.set_dtype("float64")
+    assert matrices.I.dtype == np.float64
+    assert qibo.get_dtype() == "float64"
+
+    qibo.set_dtype("complex64")
     assert matrices.I.dtype == np.complex64
-    assert qibo.get_precision() == "single"
-    qibo.set_precision("double")
+    assert qibo.get_dtype() == "complex64"
+
+    qibo.set_dtype("complex128")
     assert matrices.I.dtype == np.complex128
-    assert qibo.get_precision() == "double"
+    assert qibo.get_dtype() == "complex128"
+
+
+@pytest.mark.parametrize("dtype", ["complex128", "complex64", "float64", "float32"])
+@pytest.mark.parametrize("nqubits", [4, 7])
+def test_dtype_execution(backend, nqubits, dtype):
+    if backend.platform == "cuquantum":
+        with pytest.raises(NotImplementedError):
+            backend.set_dtype("float32")
+        pytest.skip("CuQuantumBackend does not support ``float32`` and ``float64``.")
+
     with pytest.raises(ValueError):
-        qibo.set_precision("test")
+        backend.set_dtype("complex")
+
+    backend.set_dtype(dtype)
+
+    initial_state = random_statevector(
+        2**nqubits, dtype="float32", seed=8, backend=backend
+    )
+    state_reference = backend.cast(initial_state, dtype="complex128")
+    initial_state = backend.cast(initial_state, dtype=dtype)
+
+    assert initial_state.dtype == backend.dtype
+
+    # circuit with real-valued matrices only
+    circuit = entangling_layer(nqubits, entangling_gate="CNOT")
+    state = backend.execute_circuit(circuit, initial_state).state()
+
+    assert state.dtype == backend.dtype
+
+    cnot_layer = circuit.unitary(backend=backend)
+    assert cnot_layer.dtype == backend.dtype
+
+    cnot_layer = backend.cast(cnot_layer, dtype="complex128")
+
+    target = cnot_layer @ state_reference
+
+    # float32 needs more precision tolerance
+    backend.assert_allclose(state, target, rtol=1e-6, atol=1e-6)
 
 
 def test_set_device():
