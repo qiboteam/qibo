@@ -99,10 +99,10 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
 
     pieces = [x for x in re.split("[()]", "".join(clean_gate)) if x]
     if len(pieces) == 2:
-        gatename, targets = pieces
+        gate_name, targets = pieces
         theta = None
     elif len(pieces) == 3:
-        gatename, theta, targets = pieces
+        gate_name, theta, targets = pieces
     else:  # pragma: no cover
         # case not tested because it fails
         raise RuntimeError(f"Cirq gate parsing failed with {pieces}.")
@@ -112,7 +112,7 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
     controls = set(qubits)
 
     qibo_to_cirq = {"CNOT": "CNOT", "RY": "Ry", "TOFFOLI": "TOFFOLI"}
-    assert qibo_to_cirq[qibo_gate.__class__.__name__] == gatename
+    assert qibo_to_cirq[qibo_gate.__class__.__name__] == gate_name
     assert qibo_gate.target_qubits == targets
     assert set(qibo_gate.control_qubits) == controls
     if theta is not None:

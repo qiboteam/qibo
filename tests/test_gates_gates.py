@@ -1340,6 +1340,19 @@ def test_toffoli(backend, applyx):
     backend.assert_allclose(decomposition, backend.cast(matrices.TOFFOLI), atol=1e-10)
 
 
+def test_toffoli_congruent(backend):
+    congruent = gates.TOFFOLI(0, 1, 2)
+
+    circuit = Circuit(3)
+    circuit.add(congruent.congruent())
+    congruent = circuit.unitary(backend)
+
+    target = backend.matrices.TOFFOLI
+    target[4, 4] = -1
+
+    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
+
+
 def test_ccz(backend):
     nqubits = 3
     initial_state = random_statevector(2**nqubits, backend=backend)
