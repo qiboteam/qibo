@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.colors import Normalize
+
 import qibo
 
 
@@ -92,7 +92,7 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
     else:
         if len(colours) != 2:
             raise ValueError(
-                "Colours must be a list of len=2, got {0} instead".format(len(colours))
+                "Colours must be a list of len=2, got {} instead".format(len(colours))
             )
         pos_color = "#ff7f0e" if colours[0] is None else colours[0]
         neg_color = "#1f77b4" if colours[1] is None else colours[1]
