@@ -1,3 +1,5 @@
+"""Module defining the matrix representation of gates used by the backends."""
+
 import cmath
 import math
 from functools import cached_property
