@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import Normalize
 import qibo
 
 
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
-def plot_density_hist(circuit, title=""):
+def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
     """
         Plots the real and imaginary parts of the density matrix as separate 3D cityscape plots, side by side,
         with a gray z=0 plane for the imaginary part.
@@ -15,6 +16,9 @@ def plot_density_hist(circuit, title=""):
     Args:
         circuit (qibo.core.circuit.Circuit): The quantum circuit to visualize.
         title (str): Title of the plot.
+        alpha (float): Transparency level for the bars in the plot.
+        colours (list): A list of two colors for the positive and negative parts of the density matrix.
+                        If None, default colors will be used.
 
     Returns:
         tuple: A tuple containing the figure, axes for the real part and axes for the imaginary part.
@@ -26,7 +30,7 @@ def plot_density_hist(circuit, title=""):
     # if exec_circ is kind of MeasurementOutcomes, error measure gates are present
     if isinstance(exec_circ, qibo.result.MeasurementOutcomes):
         raise ValueError(
-            "Circuit must not contain measurement gates for density matrix visualization."
+            "Circuit must not contain measurement gates for density matrix visualization"
         )
 
     state = exec_circ.state()
@@ -83,6 +87,19 @@ def plot_density_hist(circuit, title=""):
     max_font_size = int(2 * max_plot_size)
     max_zoom = 10 / (10 + np.sqrt(max_plot_size))
 
+    if colours is None:
+        pos_color, neg_color = "#ff7f0e", "#1f77b4"
+    else:
+        if len(colours) != 2:
+            raise ValueError(
+                "Colours must be a list of len=2, got {0} instead".format(len(colours))
+            )
+        pos_color = "#ff7f0e" if colours[0] is None else colours[0]
+        neg_color = "#1f77b4" if colours[1] is None else colours[1]
+
+    cmap_pos = LinearSegmentedColormap.from_list("cmap_pos", 4 * [pos_color])
+    cmap_neg = LinearSegmentedColormap.from_list("cmap_neg", 4 * [neg_color])
+
     for ax, dz, zlabel in (
         (ax1, dzr, "Real"),
         (ax2, dzi, "Imaginary"),
@@ -90,6 +107,19 @@ def plot_density_hist(circuit, title=""):
 
         max_dz = np.max(dz)
         min_dz = np.min(dz)
+
+        # Normalize the heights for colormap
+        norm_pos = plt.Normalize(vmin=0, vmax=dz.max())
+        norm_neg = plt.Normalize(vmin=dz.min(), vmax=0)
+
+        # Create a color array based on the heights
+        colors = []
+        for height in dz:
+            if height >= 0:
+                colors.append(cmap_pos(norm_pos(height)))
+            else:
+                colors.append(cmap_neg(norm_neg(height)))
+        colors = np.array(colors)
 
         dzn = dz < 0
         if np.any(dzn):
@@ -100,8 +130,10 @@ def plot_density_hist(circuit, title=""):
                 dx[dzn],
                 dy[dzn],
                 dz[dzn],
-                alpha=0.5,
+                alpha=alpha,
                 zorder=0.625,
+                color=colors[dzn],
+                shade=True,
             )
 
         if min_dz < 0 < max_dz:
@@ -120,8 +152,10 @@ def plot_density_hist(circuit, title=""):
                 dx[dzp],
                 dy[dzp],
                 dz[dzp],
-                alpha=0.5,
+                alpha=alpha,
                 zorder=0.875,
+                color=colors[dzp],
+                shade=True,
             )
 
         ax.set_title(zlabel, fontsize=max_font_size)

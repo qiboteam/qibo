@@ -92,6 +92,28 @@ def test_simple_title_circuit_state():
     )
 
 
+def test_simple_title_circuit_colours_state():
+    """Test for simple circuit plot state with title, alpha and custom colours"""
+    nqubits = 2
+    circuit = Circuit(nqubits)
+
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    fig, _, _ = plot_density_hist(
+        circuit, title="Density plot", alpha=0.5, colours=["green", "purple"]
+    )
+    assert (
+        match_figure_image(
+            fig,
+            BASEPATH
+            + "/test_simple_circuit_state_colours_nqubits_"
+            + str(nqubits)
+            + ".npy",
+        )
+        == True
+    )
+
+
 def test_simple_raise_error_measure_state():
     """Test for simple circuit plot state with error raising if measurement gates are present"""
     nqubits = 3
@@ -104,5 +126,21 @@ def test_simple_raise_error_measure_state():
         plot_density_hist(circuit, title="Test Circuit State")
         assert (
             str(excinfo.value)
-            == "Circuit must not contain measurement gates for density matrix visualization."
+            == "Circuit must not contain measurement gates for density matrix visualization"
         )
+
+
+def test_simple_raise_error_colours_state():
+    """Test for simple circuit plot state with error raising if colours are not a list of length 2"""
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(*range(nqubits)))
+
+    with pytest.raises(Exception) as excinfo:
+        colours = ["red", "blue", "green"]
+        plot_density_hist(circuit, title="Test Circuit State", colours=colours)
+        assert str(
+            excinfo.value
+        ) == "Colours must be a list of len=2, got {0} instead".format(len(colours))
