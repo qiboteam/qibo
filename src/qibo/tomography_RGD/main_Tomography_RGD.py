@@ -94,8 +94,8 @@ if __name__ == "__main__":
     ############################################################
     ### Example of creating and running an experiment
     ############################################################
-    num_labels = 5      #  number of Pauli labels
-    n = 3               #  number of qubits
+    num_labels = 5  #  number of Pauli labels
+    n = 3  #  number of qubits
     # labels = [generate_random_label(n) for i in range(num_labels)]
 
     labels = ["YXY", "IXX", "ZYI", "XXX", "YZZ", "ZYY", "IXX", "XYY", "XZI"]
@@ -108,17 +108,17 @@ if __name__ == "__main__":
 
     #   generate circuit & shot measurements
     #
-    Nr = 1                                          #  rank of the target density matrix
+    Nr = 1  #  rank of the target density matrix
 
-    stateGHZ = ghz_state(n)                         # generate GHZ state circuit
-    target_state_GHZ = stateGHZ.execute().state()   # get the state vector of the circuit
+    stateGHZ = ghz_state(n)  # generate GHZ state circuit
+    target_state_GHZ = stateGHZ.execute().state()  # get the state vector of the circuit
     target_density_matrix = np.outer(target_state_GHZ, target_state_GHZ.conj())
 
-    num_shots = 200                                 # number of shot measurements
+    num_shots = 200  # number of shot measurements
 
     coef_Pauli_exact, measurement_list = qibochem_measure_expectation(
         stateGHZ, labels, num_shots
-    )                    # get the expectation values of Pauli terms (exact and from shots)
+    )  # get the expectation values of Pauli terms (exact and from shots)
     print(coef_Pauli_exact)
     print(measurement_list)
 
@@ -141,4 +141,4 @@ if __name__ == "__main__":
     worker = RGD.BasicWorkerRGD(params_dict)
     worker.computeRGD(InitX_RGD, Ch_svd)
 
-    Plt_Err_Time(worker)    # plot the error and time evolution of the RGD algorithm
+    Plt_Err_Time(worker)  # plot the error and time evolution of the RGD algorithm
