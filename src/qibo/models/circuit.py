@@ -4,6 +4,7 @@ import collections
 import copy
 import sys
 from collections.abc import Iterable
+from functools import cached_property
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -767,6 +768,14 @@ class Circuit:
                     raise e
         self._independent_parameters_map = par_map
 
+    @cached_property
+    def independent_trainable_gates(self):
+        return _ParametrizedGates(
+            self.queue[idx]
+            for idx in self.independent_parameters_map
+            if self.queue[idx].trainable
+        )
+
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
 
@@ -798,17 +807,18 @@ class Circuit:
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
-        if n == len(self.trainable_gates):
-            for i, gate in enumerate(self.trainable_gates):
-                gate.parameters = parameters[i]
-        elif n == self.trainable_gates.nparams:
-            parameters = list(parameters)
+        if n == len(self._independent_parameters_map):
+            for indices, param in zip(self._independent_parameters_map, parameters):
+                for i in indices:
+                    self.queue[i].parameters = param
+        elif n == self.independent_trainable_gates.nparams:
             k = 0
-            for i, gate in enumerate(self.trainable_gates):
-                if gate.nparams == 1:
-                    gate.parameters = parameters[i + k]
-                else:
-                    gate.parameters = parameters[i + k : i + k + gate.nparams]
+            for indices in self.independent_parameters_map.values():
+                nparams = self.queue[indices[0]].nparams
+                params = parameters[i + k : i + k + nparams]
+                for i in indices:
+                    self.queue[i].parameters = params
+                gate.parameters = parameters[i + k : i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(
