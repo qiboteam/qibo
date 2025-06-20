@@ -8,7 +8,7 @@ import qibo
 
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
-def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
+def plot_density_hist(circuit, title="", alpha=0.5, colors=None):
     """
         Plots the real and imaginary parts of the density matrix as separate 3D cityscape plots, side by side,
         with a gray z=0 plane for the imaginary part.
@@ -17,7 +17,7 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
         circuit (qibo.core.circuit.Circuit): The quantum circuit to visualize.
         title (str): Title of the plot.
         alpha (float): Transparency level for the bars in the plot.
-        colours (list): A list of two colors for the positive and negative parts of the density matrix.
+        colors (list): A list of two colors for the positive and negative parts of the density matrix.
                         If None, default colors will be used.
 
     Returns:
@@ -87,15 +87,15 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
     max_font_size = int(2 * max_plot_size)
     max_zoom = 10 / (10 + np.sqrt(max_plot_size))
 
-    if colours is None:
+    if colors is None:
         pos_color, neg_color = "#ff7f0e", "#1f77b4"
     else:
-        if len(colours) != 2:
+        if len(colors) != 2:
             raise ValueError(
-                "Colours must be a list of len=2, got {} instead".format(len(colours))
+                "Colors must be a list of len=2, got {} instead".format(len(colors))
             )
-        pos_color = "#ff7f0e" if colours[0] is None else colours[0]
-        neg_color = "#1f77b4" if colours[1] is None else colours[1]
+        pos_color = "#ff7f0e" if colors[0] is None else colors[0]
+        neg_color = "#1f77b4" if colors[1] is None else colors[1]
 
     cmap_pos = LinearSegmentedColormap.from_list("cmap_pos", 4 * [pos_color])
     cmap_neg = LinearSegmentedColormap.from_list("cmap_neg", 4 * [neg_color])
@@ -113,13 +113,13 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
         norm_neg = plt.Normalize(vmin=dz.min(), vmax=0)
 
         # Create a color array based on the heights
-        colors = []
+        colors_mapping = []
         for height in dz:
             if height >= 0:
-                colors.append(cmap_pos(norm_pos(height)))
+                colors_mapping.append(cmap_pos(norm_pos(height)))
             else:
-                colors.append(cmap_neg(norm_neg(height)))
-        colors = np.array(colors)
+                colors_mapping.append(cmap_neg(norm_neg(height)))
+        colors_mapping = np.array(colors_mapping)
 
         dzn = dz < 0
         if np.any(dzn):
@@ -132,7 +132,7 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
                 dz[dzn],
                 alpha=alpha,
                 zorder=0.625,
-                color=colors[dzn],
+                color=colors_mapping[dzn],
                 shade=True,
             )
 
@@ -154,7 +154,7 @@ def plot_density_hist(circuit, title="", alpha=0.5, colours=None):
                 dz[dzp],
                 alpha=alpha,
                 zorder=0.875,
-                color=colors[dzp],
+                color=colors_mapping[dzp],
                 shade=True,
             )
 

@@ -92,21 +92,21 @@ def test_simple_title_circuit_state():
     )
 
 
-def test_simple_title_circuit_colours_state():
-    """Test for simple circuit plot state with title, alpha and custom colours"""
+def test_simple_title_circuit_colors_state():
+    """Test for simple circuit plot state with title, alpha and custom colors"""
     nqubits = 2
     circuit = Circuit(nqubits)
 
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
     fig, _, _ = plot_density_hist(
-        circuit, title="Density plot", alpha=0.5, colours=["green", "purple"]
+        circuit, title="Density plot", alpha=0.5, colors=["green", "purple"]
     )
     assert (
         match_figure_image(
             fig,
             BASEPATH
-            + "/test_simple_circuit_state_colours_nqubits_"
+            + "/test_simple_circuit_state_colors_nqubits_"
             + str(nqubits)
             + ".npy",
         )
@@ -130,8 +130,8 @@ def test_simple_raise_error_measure_state():
         )
 
 
-def test_simple_raise_error_colours_state():
-    """Test for simple circuit plot state with error raising if colours are not a list of length 2"""
+def test_simple_raise_error_colors_state():
+    """Test for simple circuit plot state with error raising if colors are not a list of length 2"""
     nqubits = 3
     circuit = Circuit(nqubits)
     circuit.add(gates.H(0))
@@ -139,8 +139,8 @@ def test_simple_raise_error_colours_state():
     circuit.add(gates.M(*range(nqubits)))
 
     with pytest.raises(Exception) as excinfo:
-        colours = ["red", "blue", "green"]
-        plot_density_hist(circuit, title="Test Circuit State", colours=colours)
+        colors = ["red", "blue", "green"]
+        plot_density_hist(circuit, title="Test Circuit State", colors=colors)
         assert str(
             excinfo.value
-        ) == "Colours must be a list of len=2, got {} instead".format(len(colours))
+        ) == "Colors must be a list of len=2, got {} instead".format(len(colors))
