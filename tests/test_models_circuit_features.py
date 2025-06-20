@@ -372,3 +372,54 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
         )
     for key in dict(test_frequencies).keys():
         backend.assert_allclose(result.frequencies()[key], test_frequencies[key])
+
+
+def test_circuit_independent_parameters_map():
+    # all parameters independent
+    c = Circuit(2)
+    parameters = np.array([1, 2, 3, 4])
+    c.add(gates.RZ(0, parameters[0]))
+    c.add(gates.H(0))
+    c.add(gates.U2(1, *parameters[1:3]))
+    c.add(gates.X(1))
+    c.add(gates.RX(0, parameters[3]))
+    assert c.independent_parameters_map == {0: {0}, 2: {2}, 4: {4}}
+    # some dependent parameters
+
+    c = Circuit(2)
+    p1 = [parameters[0:1]]
+    p2 = parameters[1:3]
+    p3 = [parameters[2:3]]
+    c.add(gates.RZ(0, p1))
+    c.add(gates.H(0))
+    c.add(gates.U2(1, *p2))
+    c.add(gates.U2(0, *p2))
+    c.add(gates.X(1))
+    c.add(gates.RX(1, p1))
+    c.add(gates.RY(0, p3))
+    # multiple parameters gate are always considered independent for now
+    assert c.independent_parameters_map == {
+        0: {0, 5},
+        3: {
+            3,
+        },
+        2: {
+            2,
+        },
+        6: {
+            6,
+        },
+    }
+    # testing the setter
+    c.independent_parameters_map = {
+        0: {0, 5, 6},
+        3: {
+            3,
+        },
+        2: {
+            2,
+        },
+    }
+    assert (
+        c.queue[0].parameters[0] is c.queue[5].parameters[0] is c.queue[6].parameters[0]
+    )

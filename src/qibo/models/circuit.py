@@ -4,6 +4,7 @@ import collections
 import copy
 import sys
 from collections.abc import Iterable
+from functools import cached_property
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -192,6 +193,7 @@ class Circuit:
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         self.trainable_gates = _ParametrizedGates()
+        self._independent_parameters_map = None
         self.measurements = []  # list of non-collapsible measurements
 
         self._final_state = None
@@ -675,6 +677,29 @@ class Circuit:
 
                 return gate.result
 
+            elif isinstance(gate, ParametrizedGate):
+                independent = True
+                if self._independent_parameters_map is not None:
+                    for idx in self._independent_parameters_map:
+                        indep_params = self.queue[idx].parameters[0]
+                        params = gate.parameters
+                        # for now only 1 parameter gates are checked
+                        if len(params) == 1 and np.shares_memory(
+                            indep_params, params[0]
+                        ):
+                            self._independent_parameters_map[idx].add(self.ngates)
+                            independent = False
+                    if independent:
+                        self._independent_parameters_map[self.ngates] = {
+                            self.ngates,
+                        }
+                else:
+                    self._independent_parameters_map = {
+                        self.ngates: {
+                            self.ngates,
+                        }
+                    }
+
             self.queue.append(gate)
             for measurement in list(self.measurements):
                 if set(measurement.qubits) & set(gate.qubits):
@@ -723,6 +748,34 @@ class Circuit:
             gatecounter[gate.name] += 1
         return gatecounter
 
+    @property
+    def independent_parameters_map(self) -> dict[int, set[int]]:
+        return self._independent_parameters_map
+
+    @independent_parameters_map.setter
+    def independent_parameters_map(self, par_map: dict[int, set[int]]):
+        for key, val in par_map.items():
+            for idx in val:
+                try:
+                    gate = self.queue[idx]
+                    if not isinstance(gate, ParametrizedGate):
+                        raise_error(
+                            RuntimeError,
+                            f"Passed a parameter map containing the index ``{idx}``, corresponding to the non-parametrized gate ``{gate}``.",
+                        )
+                    self.queue[idx].parameters = self.queue[key].parameters
+                except IndexError as e:
+                    raise e
+        self._independent_parameters_map = par_map
+
+    @cached_property
+    def independent_trainable_gates(self):
+        gates = _ParametrizedGates()
+        for idx in self.independent_parameters_map:
+            if self.queue[idx].trainable:
+                gates.append(self.queue[idx])
+        return gates
+
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
 
@@ -754,18 +807,23 @@ class Circuit:
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
-        if n == len(self.trainable_gates):
-            for i, gate in enumerate(self.trainable_gates):
-                gate.parameters = parameters[i]
-        elif n == self.trainable_gates.nparams:
-            parameters = list(parameters)
+        if n == len(self._independent_parameters_map):
+            for indices, param in zip(self._independent_parameters_map, parameters):
+                for i in indices:
+                    self.queue[i].parameters = param
+        elif n == self.independent_trainable_gates.nparams:
             k = 0
-            for i, gate in enumerate(self.trainable_gates):
-                if gate.nparams == 1:
-                    gate.parameters = parameters[i + k]
-                else:
-                    gate.parameters = parameters[i + k : i + k + gate.nparams]
-                k += gate.nparams - 1
+            for i, indices in enumerate(self.independent_parameters_map.values()):
+                # if len(indices) == 0:
+                #    breakpoint()
+                first = indices.pop()
+                nparams = self.queue[first].nparams
+                params = parameters[i + k : i + k + nparams]
+                self.queue[first].parameters = params
+                for idx in indices:
+                    self.queue[idx].parameters = params
+                # gate.parameters = parameters[i + k : i + k + nparams]
+                k += nparams - 1
         else:
             raise_error(
                 ValueError,
@@ -841,7 +899,10 @@ class Circuit:
             raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
     def get_parameters(
-        self, output_format: str = "list", include_not_trainable: bool = False
+        self,
+        output_format: str = "list",
+        include_not_trainable: bool = False,
+        independent_only: bool = False,
     ) -> Union[List, Dict]:  # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
@@ -856,9 +917,18 @@ class Circuit:
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
         """
-        parametrized_gates = (
-            self.parametrized_gates if include_not_trainable else self.trainable_gates
-        )
+        if independent_only:
+            parametrized_gates = [
+                self.queue[idx]
+                for idx in self.independent_parameters_map
+                if (self.queue[idx].trainable or include_not_trainable)
+            ]
+        else:
+            parametrized_gates = (
+                self.parametrized_gates
+                if include_not_trainable
+                else self.trainable_gates
+            )
 
         if output_format not in ["list", "dict", "flatlist"]:
             raise_error(
