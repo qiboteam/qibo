@@ -109,8 +109,8 @@ def plot_density_hist(circuit, title="", alpha=0.5, colors=None):
         min_dz = np.min(dz)
 
         # Normalize the heights for colormap
-        norm_pos = plt.Normalize(vmin=0, vmax=dz.max())
-        norm_neg = plt.Normalize(vmin=dz.min(), vmax=0)
+        norm_pos = plt.Normalize(vmin=0, vmax=max_dz)
+        norm_neg = plt.Normalize(vmin=min_dz, vmax=0)
 
         # Create a color array based on the heights
         colors_mapping = []
