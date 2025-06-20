@@ -770,11 +770,11 @@ class Circuit:
 
     @cached_property
     def independent_trainable_gates(self):
-        return _ParametrizedGates(
-            self.queue[idx]
-            for idx in self.independent_parameters_map
-            if self.queue[idx].trainable
-        )
+        gates = _ParametrizedGates()
+        for idx in self.independent_parameters_map:
+            if self.queue[idx].trainable:
+                gates.append(self.queue[idx])
+        return gates
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type or name.
@@ -813,13 +813,17 @@ class Circuit:
                     self.queue[i].parameters = param
         elif n == self.independent_trainable_gates.nparams:
             k = 0
-            for indices in self.independent_parameters_map.values():
-                nparams = self.queue[indices[0]].nparams
+            for i, indices in enumerate(self.independent_parameters_map.values()):
+                # if len(indices) == 0:
+                #    breakpoint()
+                first = indices.pop()
+                nparams = self.queue[first].nparams
                 params = parameters[i + k : i + k + nparams]
-                for i in indices:
-                    self.queue[i].parameters = params
-                gate.parameters = parameters[i + k : i + k + gate.nparams]
-                k += gate.nparams - 1
+                self.queue[first].parameters = params
+                for idx in indices:
+                    self.queue[idx].parameters = params
+                # gate.parameters = parameters[i + k : i + k + nparams]
+                k += nparams - 1
         else:
             raise_error(
                 ValueError,
