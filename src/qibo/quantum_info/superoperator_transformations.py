@@ -1,6 +1,7 @@
 """Module with the most commom superoperator transformations."""
 
 import warnings
+from itertools import product
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -12,6 +13,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
+from qibo.quantum_info.utils import hamming_weight
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -216,6 +218,115 @@ def to_liouville(channel, order: str = "row", backend=None):
     channel = _reshuffling(channel, order=order, backend=backend)
 
     return channel
+
+
+def hamming_weight_array(arr, backend):
+    """
+    Vectorized Hamming weight computation for arrays of integers.
+    Args:
+        arr: Integer array.
+        backend: Qibo backend.
+    Returns:
+        Array with the same shape, containing the Hamming weight of each element.
+    """
+    arr = backend.np.array(arr, dtype=backend.np.uint64)
+    weights = backend.np.zeros_like(arr)
+    while backend.np.any(arr):
+        weights += arr & 1
+        arr >>= 1
+    return weights
+
+
+def _to_pauli_fht(operator, normalize: bool = True, backend=None):
+    """
+    Converts a square matrix A ∈ ℂ^{2ⁿ × 2ⁿ} into its Pauli-Liouville representation
+    using the Fast Walsh-Hadamard Transform (FHT), based on:
+    "Pauli Decomposition via the Fast Walsh-Hadamard Transform", Sec. 3.
+
+    Args:
+        matrix (ndarray): Input matrix of shape (2^n, 2^n).
+        normalize (bool, optional): If ``True``, uses the normalized Pauli basis.
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+            to be used in the execution. If ``None``, it uses the current backend.
+
+    Returns:
+        ndarray: Matrix of shape (2^n, 2^n) with coefficients α_{r,s}
+            such that A = ∑_{r,s} α_{r,s} ⋅ P_r ⋅ P_s†.
+    """
+    backend = _check_backend(backend)
+
+    dims = operator.shape[0]
+    nqubits = int(np.log2(dims))
+    q_array = backend.np.arange(dims, dtype=backend.np.int64)
+
+    alphas = backend.np.zeros((dims, dims), dtype=backend.np.complex128)
+    for ind_row in q_array:
+        for ind_col in q_array:
+            elem = 0
+            for q_ind in q_array:
+                q_xor_r = backend.np.bitwise_xor(q_ind, ind_row)
+                hadamard_exp = hamming_weight(
+                    int(backend.np.bitwise_and(q_ind, ind_col))
+                )
+                elem += operator[q_xor_r, q_ind] * ((-1) ** hadamard_exp)
+            hadamard_exp = hamming_weight(int(backend.np.bitwise_and(ind_row, ind_col)))
+            alphas[ind_row, ind_col] = (elem * (1j**-hadamard_exp)) / dims
+
+    if normalize:
+        alphas /= backend.np.sqrt(dims)
+
+    return alphas
+
+
+def _from_pauli(operator, backend=None):
+    """
+    Reconstructs an operator A from its Pauli-Liouville coefficients
+    using the explicit expression A = ∑_{r,s} α_{r,s} P_r P_s^†.
+
+    Args:
+        matrix (ndarray): Input matrix of elements α_{r,s} of shape (2^n, 2^n).
+        normalize (bool, optional): If ``True``, uses the normalized Pauli basis.
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend
+            to be used in the execution. If ``None``, it uses the current backend.
+
+    Returns:
+        ndarray: Matrix A of shape (2^n, 2^n)
+    """
+    backend = _check_backend(backend)
+
+    dims = int(operator.shape[0])
+    nqubits = int(np.log2(dims))
+    q_array = backend.np.arange(dims, dtype=backend.np.int64)
+
+    X = np.array([[0, 1], [1, 0]])
+    Z = np.array([[1, 0], [0, -1]])
+    a_matrix = backend.np.zeros((dims, dims), dtype=backend.np.complex128)
+
+    for ind_row in q_array:
+        for ind_col in q_array:
+            coeff = operator[ind_row, ind_col]
+            if coeff != 0:
+                bin_r = np.array(
+                    list(backend.np.binary_repr(ind_row, width=nqubits))
+                ).astype(int)
+                bin_s = np.array(
+                    list(backend.np.binary_repr(ind_col, width=nqubits))
+                ).astype(int)
+
+                xi = X if bin_r[0] else backend.np.eye(2)
+                zi = Z if bin_s[0] else backend.np.eye(2)
+                op = backend.np.dot(xi, zi)
+
+                for i in range(1, nqubits):
+                    xi = X if bin_r[i] else backend.np.eye(2)
+                    zi = Z if bin_s[i] else backend.np.eye(2)
+                    op = backend.np.kron(op, backend.np.dot(xi, zi))
+                exponent = hamming_weight(int(backend.np.bitwise_and(ind_row, ind_col)))
+                a_matrix += coeff * backend.cast(op, dtype=complex) * (1j**exponent)
+
+    return a_matrix
 
 
 def to_pauli_liouville(
