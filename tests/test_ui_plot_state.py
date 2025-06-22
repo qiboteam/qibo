@@ -32,6 +32,7 @@ def test_complex_circuit_state():
         match_figure_image(
             fig,
             BASEPATH + "/test_complex_circuit_state_nqubits_" + str(nqubits) + ".npy",
+            transparent_layer=True,
         )
         == True
     )
@@ -48,6 +49,7 @@ def test_simple_circuit_state():
         match_figure_image(
             fig,
             BASEPATH + "/test_simple_circuit_state_nqubits_" + str(nqubits) + ".npy",
+            transparent_layer=True,
         )
         == True
     )
@@ -67,6 +69,7 @@ def test_simple_circuit_state_hadamard():
             + "/test_simple_circuit_state_hadamard_nqubits_"
             + str(nqubits)
             + ".npy",
+            transparent_layer=True,
         )
         == True
     )
@@ -89,6 +92,7 @@ def test_simple_title_circuit_colors_state():
             + "/test_simple_circuit_state_colors_nqubits_"
             + str(nqubits)
             + ".npy",
+            transparent_layer=True,
         )
         == True
     )
@@ -106,6 +110,7 @@ def test_title_circuit_state():
         match_figure_image(
             fig,
             BASEPATH + "/test_title_circuit_state_nqubits_" + str(nqubits) + ".npy",
+            transparent_layer=True,
         )
         == True
     )
