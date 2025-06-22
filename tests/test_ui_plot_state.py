@@ -9,7 +9,7 @@ import qibo
 from qibo import Circuit, gates
 from qibo.ui.plot_state import plot_density_hist
 
-from .utils import match_figure_image
+from .utils import match_figure_close_image
 
 qibo.set_backend("numpy")
 
@@ -29,10 +29,9 @@ def test_complex_circuit_state():
     circuit.add(gates.RX(1, theta=np.pi / 5))
     fig, _, _ = plot_density_hist(circuit)
     assert (
-        match_figure_image(
+        match_figure_close_image(
             fig,
             BASEPATH + "/test_complex_circuit_state_nqubits_" + str(nqubits) + ".npy",
-            transparent_layer=True,
         )
         == True
     )
@@ -46,10 +45,9 @@ def test_simple_circuit_state():
     circuit.add(gates.CNOT(0, 1))
     fig, _, _ = plot_density_hist(circuit)
     assert (
-        match_figure_image(
+        match_figure_close_image(
             fig,
             BASEPATH + "/test_simple_circuit_state_nqubits_" + str(nqubits) + ".npy",
-            transparent_layer=True,
         )
         == True
     )
@@ -63,13 +61,12 @@ def test_simple_circuit_state_hadamard():
     circuit.add(gates.H(1))
     fig, _, _ = plot_density_hist(circuit)
     assert (
-        match_figure_image(
+        match_figure_close_image(
             fig,
             BASEPATH
             + "/test_simple_circuit_state_hadamard_nqubits_"
             + str(nqubits)
             + ".npy",
-            transparent_layer=True,
         )
         == True
     )
@@ -86,13 +83,12 @@ def test_simple_title_circuit_colors_state():
         circuit, title="Density plot", alpha=0.5, colors=["green", "purple"]
     )
     assert (
-        match_figure_image(
+        match_figure_close_image(
             fig,
             BASEPATH
             + "/test_simple_circuit_state_colors_nqubits_"
             + str(nqubits)
             + ".npy",
-            transparent_layer=True,
         )
         == True
     )
@@ -107,10 +103,8 @@ def test_title_circuit_state():
     circuit.add(gates.CNOT(0, 2))
     fig, _, _ = plot_density_hist(circuit, title="Test Circuit State")
     assert (
-        match_figure_image(
-            fig,
-            BASEPATH + "/test_title_circuit_state_nqubits_" + str(nqubits) + ".npy",
-            transparent_layer=True,
+        match_figure_close_image(
+            fig, BASEPATH + "/test_title_circuit_state_nqubits_" + str(nqubits) + ".npy"
         )
         == True
     )
