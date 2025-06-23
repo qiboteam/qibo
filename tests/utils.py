@@ -37,17 +37,16 @@ def match_figure_image(fig, arr_path: str):
     return np.all(fig2array(fig) == np.load(arr_path))
 
 
-def match_figure_close_image(fig, arr_path, rtol=0, atol=255):
-    """
-    Check whether the two image arrays match within a tolerance.
+def match_figure_close_image(fig, arr_path: str, rtol: float = 0, atol: float = 255):
+    """Check whether the two image arrays match within a tolerance.
 
     Args:
-        fig (matplotlib.figure.Figure): Matplotlib figure to compare.
-        arr_path (str): Path to the numpy array file containing the reference image.
+        fig (:class:`matplotlib.figure.Figure`): Figure to compare.
+        arr_path (str): Path to the ``numpy`` array file containing the reference image.
         rtol (float, optional): Relative tolerance for comparison.
         atol (float, optional): Absolute tolerance for comparison.
 
     Returns:
-        bool: True if the images match within the specified tolerances, False otherwise.
+        bool: ``True`` if the images match within the specified tolerances, ``False`` otherwise.
     """
     return np.allclose(fig2array(fig), np.load(arr_path), rtol=rtol, atol=atol)
