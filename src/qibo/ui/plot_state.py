@@ -5,6 +5,7 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
+import qibo
 from qibo.backends import _check_backend
 from qibo.result import MeasurementOutcomes
 
@@ -76,8 +77,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = backend.np.reshape(matrix_real, (-1, 1))
-    dzi = backend.np.reshape(matrix_imag, (-1, 1))
+    dzr = backend.np.reshape(matrix_real, (-1, 1)).flatten()
+    dzi = backend.np.reshape(matrix_imag, (-1, 1)).flatten()
 
     fig = plt.figure(figsize=(16, 8), facecolor="w")
     ax1 = fig.add_subplot(1, 2, 1, projection="3d", computed_zorder=False)
@@ -94,8 +95,6 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)  # width of bars
     dy = dx.copy()
-    dz_real = matrix_real.flatten()
-    dz_imag = matrix_imag.flatten()
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)
