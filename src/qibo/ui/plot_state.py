@@ -18,9 +18,11 @@ def plot_density_hist(circuit, title="", alpha=0.5, colors=None):
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to visualize.
         title (str, optional): Title of the plot. Defaults to ``""``.
-        alpha (float, optional): Transparency level for the bars in the plot. Defaults to :math:`0.5`.
-        colors (list, optional): A list of two colors for the positive and negative parts of the density matrix.
-            If ``None``, default colors will be used. Defaults to ``None``.
+        alpha (float, optional): Transparency level for the bars in the plot. 
+            Defaults to :math:`0.5`.
+        colors (list, optional): A list of two colors for the positive and negative
+            parts of the density matrix. If ``None``, default colors will be used.
+            Defaults to ``None``.
 
     Returns:
         tuple: Respectively, the figure, and axes for the real and the imaginary parts.
