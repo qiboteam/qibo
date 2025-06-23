@@ -32,7 +32,7 @@ def match_figure_image(fig, arr_path: str):
         arr_path (str): Path to the ``numpy`` array file containing the reference image.
 
     Returns:
-        bool: True if the images match, False otherwise.
+        bool: ``True`` if the images match, ``False`` otherwise.
     """
     return np.all(fig2array(fig) == np.load(arr_path))
 
