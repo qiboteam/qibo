@@ -55,8 +55,8 @@ def plot_density_hist(
 
     # Create a density matrix from state vector
     if not circuit.density_matrix:
-        ket = np.asarray(state)
-        state = np.outer(ket, ket.conj())
+        state = backend.cast(state)
+        state = backend.np.outer(state, backend.np.conj(state))
 
     n = circuit.nqubits
     row_names = [bin(i)[2:].zfill(n) for i in range(2**n)]
