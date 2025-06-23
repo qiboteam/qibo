@@ -24,7 +24,7 @@ def fig2array(fig):
     return data
 
 
-def match_figure_image(fig, arr_path):
+def match_figure_image(fig, arr_path: str):
     """
     Check whether the two image arrays match.
 
