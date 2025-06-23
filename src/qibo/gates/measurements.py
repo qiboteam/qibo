@@ -238,7 +238,7 @@ class M(Gate):
         return cls.from_dict(args)
 
     # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
-    def on_qubits(self, qubit_map) -> "Gate":
+    def on_qubits(self, qubit_map: dict) -> "Gate":
         """Creates the same measurement gate targeting different qubits
         and preserving the measurement result register.
 
