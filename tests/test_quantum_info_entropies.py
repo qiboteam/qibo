@@ -811,14 +811,14 @@ def test_relative_tsallis_entropy(
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("bipartition", [[0], [1]])
-def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
+@pytest.mark.parametrize("partition", [[0], [1]])
+def test_entanglement_entropy(backend, partition, base, check_hermitian):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_entropy(
             state,
-            bipartition=bipartition,
+            partition=partition,
             base=base,
             check_hermitian=check_hermitian,
             backend=backend,
@@ -828,7 +828,7 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_entropy(
             state,
-            bipartition=bipartition,
+            partition=partition,
             base=0,
             check_hermitian=check_hermitian,
             backend=backend,
@@ -840,7 +840,7 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
 
     entang_entrop = entanglement_entropy(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         check_hermitian=check_hermitian,
         backend=backend,
@@ -864,7 +864,7 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
 
     entang_entrop = entanglement_entropy(
         state,
-        bipartition=bipartition,
+        partition=partition,
         base=base,
         check_hermitian=check_hermitian,
         backend=backend,
