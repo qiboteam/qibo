@@ -3,7 +3,6 @@ from itertools import product
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
-import torch
 from sympy import S
 
 from qibo import Circuit, gates, symbols
