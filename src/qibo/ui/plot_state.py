@@ -9,19 +9,21 @@ import qibo
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
 def plot_density_hist(circuit, title="", alpha=0.5, colors=None):
-    """
-        Plots the real and imaginary parts of the density matrix as separate 3D cityscape plots, side by side,
-        with a gray z=0 plane for the imaginary part.
+    """Plot the real and imaginary parts of the density matrix
+
+    Given a :class:`qibo.models.circuit.Circuit`, plots the real and imaginary parts
+    of the final density matrix as separate 3D cityscape plots, side by side, and
+    with a gray ``z=0`` plane for the imaginary part.
 
     Args:
-        circuit (qibo.core.circuit.Circuit): The quantum circuit to visualize.
-        title (str): Title of the plot.
-        alpha (float): Transparency level for the bars in the plot.
-        colors (list): A list of two colors for the positive and negative parts of the density matrix.
-                        If None, default colors will be used.
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit to visualize.
+        title (str, optional): Title of the plot. Defaults to ``""``.
+        alpha (float, optional): Transparency level for the bars in the plot. Defaults to :math:`0.5`.
+        colors (list, optional): A list of two colors for the positive and negative parts of the density matrix.
+            If ``None``, default colors will be used. Defaults to ``None``.
 
     Returns:
-        tuple: A tuple containing the figure, axes for the real part and axes for the imaginary part.
+        tuple: Respectively, the figure, and axes for the real and the imaginary parts.
     """
 
     # Execute the circuit to get the state
