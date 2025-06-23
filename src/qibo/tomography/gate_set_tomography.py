@@ -1,6 +1,6 @@
 from inspect import signature
 from itertools import product
-from typing import List, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from sympy import S
@@ -140,7 +140,55 @@ def _measurement_basis(j: int, nqubits: int):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-def _extract_gate(gate, idx=None):
+def _get_nqubits_and_angles(gate):
+    """A function to extract information about a `qibo.gates.Gate`.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate` or tuple): Either a gate or a tuple consisting of a gate and a list of its parameters.
+            Examples of a valid input:
+            - ``gate = gates.Z`` for a non-parametrized gate.
+            - ``gate = (gates.RX, [np.pi/3])`` or ``gate = (gates.PRX, [np.pi/2, np.pi/3])`` for a parametrized gate.
+            - ``gate = (gates.Unitary, [np.array([[1, 0], [0, 1]])])`` for an arbitrary unitary operator.
+    Returns:
+        gate (:class:`qibo.gates.Gate`): Gate class.
+        nqubits (int): Number of qubits that the gate acts on.
+        angles (None or list[float]): If gate is a parametrized gate, angles contains a list of angle names to check for.
+            Else, if gate is non-parametrized, angles is None.
+        init_args (OrderedDict): An ordered dictionary of information about the gate.
+        params (list[float]): Stores all the parameters of the gate in a list.
+    """
+
+    if isinstance(gate, tuple):
+        angles = ["theta", "phi", "lam", "unitary"]
+        gate, params = gate
+        if not (isinstance(params, list) or isinstance(params, tuple)):
+            if isinstance(params, torch.Tensor):
+                params = [params.numpy()]
+            elif isinstance(params, np.ndarray):
+                params = [params]
+            # elif isinstance(params, cupy.ndarray):
+            # params = [cupy.asnumpy(params)]
+
+    else:
+        angles = None
+        params = None
+    init_args = signature(gate).parameters
+    if "q" in init_args:
+        nqubits = 1
+    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+        nqubits = 2
+    else:
+        raise_error(
+            RuntimeError,
+            f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
+        )
+    return gate, nqubits, angles, init_args, params
+
+
+def _extract_gate(
+    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
+    idx: Optional[Union[int, Tuple[int, ...]]] = None,
+):
     """Receives a gate class / tuple of gate class and parameters and extracts an instance of a
         `qibo.gates.Gate` that can be applied directly to the circuit while also returning the number of
         qubits that the gate acts on.
@@ -151,35 +199,24 @@ def _extract_gate(gate, idx=None):
             - `gate = gates.Z` for a non-parametrized gate.
             - `gate = (gates.RX, [np.pi/3])` or `gate = (gates.PRX, [np.pi/2, np.pi/3])` for a parametrized gate.
             - `gate = (gates.Unitary, [np.array([[1, 0], [0, 1]])])` for an arbitrary unitary operator.
-        idx (int or tuple, optional): The specific qubit index/indices to apply the gate to. Defaults to ``None``
-            where q0/q0&q1 is/are set as default qubit index/indices.
+        idx (int or tuple, optional): Specifies the qubit index (or indices) the gate should be applied to.
+            Defaults to None, in which case qubit 0 (or qubits 0 and 1 for two-qubit gates) will be used by default.
+
     Returns:
         gate (:class:`qibo.gates.Gate`): An instance of the gate that can be applied directly to the circuit.
         nqubits (int): The number of qubits that the gate acts on.
     """
 
-    nqubits = None
     original_gate_input = gate
-    if isinstance(original_gate_input, tuple):
-        angles = {"theta", "phi", "lam", "unitary"}
-        gate, params = gate
-        params = [params] if isinstance(params, np.ndarray) else params
-        init_args = signature(gate).parameters
+
+    gate, nqubits, angles, init_args, params = _get_nqubits_and_angles(
+        original_gate_input
+    )
+    if angles:
         valid_angles = [arg for arg in init_args if arg in angles]
         angle_values = dict(zip(valid_angles, params))
     else:
         angle_values = {}
-        init_args = signature(gate).parameters
-
-    if "q" in init_args:
-        nqubits = 1
-    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-        nqubits = 2
-    else:
-        raise_error(
-            RuntimeError,
-            f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
-        )
 
     # Perform some checks
     if isinstance(original_gate_input, tuple):
@@ -188,28 +225,25 @@ def _extract_gate(gate, idx=None):
             if any(isinstance(p, np.ndarray) for p in params):
                 raise_error(
                     ValueError,
-                    "Parametrized gate received numpy.ndarray as parameter(s) instead of float.",
+                    f"Parametrized gate received numpy.ndarray as parameter(s) instead of float.",
                 )
         else:
             nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
             # Check that unitary gate does not receive a non-unitary matrix.
             g = gate(angle_values["unitary"], *range(nqubits), check_unitary=True)
-            if g.unitary is False:
+            if not g.unitary:
                 raise_error(ValueError, "Unitary gate received non-unitary matrix.")
 
     # Construct gate instance
-    if idx:
-        idx = (idx,) if isinstance(idx, int) else tuple(idx)
-        if "unitary" in angle_values:
-            gate = gate(angle_values["unitary"], *idx)
-        else:
-            gate = gate(*idx, **angle_values)
-
+    idx = (
+        range(nqubits)
+        if idx is None
+        else ((idx,) if isinstance(idx, int) else tuple(idx))
+    )
+    if "unitary" in angle_values:
+        gate = gate(angle_values["unitary"], *idx)
     else:
-        if "unitary" in angle_values:
-            gate = gate(angle_values["unitary"], *range(nqubits))
-        else:
-            gate = gate(*range(nqubits), **angle_values)
+        gate = gate(*idx, **angle_values)
 
     return gate, nqubits
 
@@ -255,7 +289,7 @@ def _gate_tomography(
             - If `ancilla = None`, no SWAP gates are used. Defaults to ``None``.
 
     Returns:
-        ndarray: matrix approximating the input gate.
+        ndarray: Matrix approximating the input gate.
     """
 
     # Check if gate is 1 or 2 qubit gate.
@@ -274,6 +308,8 @@ def _gate_tomography(
                 f"                     ancilla=2 to apply SWAP to qubit0 and qubit1 (simulating reset of qubit0 and qubit1).",
             )
     if gate is not None:
+        if isinstance(gate, gates.Gate):
+            gate = [gate]
         if len(gate) == 1:
             _gate = gate[0]
             if nqubits != len(_gate.qubits):
@@ -343,16 +379,20 @@ def GST(
     """Run Gate Set Tomography on the input ``gate_set``.
 
     Example 1:
-
-
-    Example 2:
-    1qb basis operation
-
-    Example 3:
-    2qb basis operation
-
-
-
+        Given the following ``gate_set``: ``gate_set = [(gates.RX, [np.pi/3]), gates.Z,
+            (gates.PRX, [np.pi/2, np.pi/3]), (gates.GPI, [np.pi/7]), (gates.Unitary,
+            [np.array([[1, 0], [0, 1]])]), gates.CNOT]``, one can can simply run GST to extract
+            calibration matrices for 1- and 2-qubits (``g_1q`` and ``g_2q`` respectively):
+            ``` python
+            g_1q, g_2q, *gates_GST = GST(gate_set=gate_set,
+                                         nshots=int(1e4),
+                                         include_empty=True,
+                                         backend=NumpyBackend(),
+                                         )
+            ```
+    Other examples:
+        To include 2 examples for 1qb & 2qb basis operation when probabilistic error cancellation
+        is ready.
     Args:
         gate_set (tuple or set or list): set of :class:`qibo.gates.Gate` and parameters to run
             GST on. For instance, ``gate_set = [(gates.RX, [np.pi/3]), gates.Z, (gates.PRX,
@@ -427,20 +467,13 @@ def GST(
             empty_matrices.append(empty_matrix)
 
     # Check that gate_set has two single-qubit gates if two_qubit_basis_op_diff_registers=True.
-    # Then, if gate_set has two single-qubit gates, then extract its :class:`qibo.gates.Gate` and
-    # append to gate_list for _gate_tomography.
+    # Then, if gate_set has two single-qubit gates, extract its :class:`qibo.gates.Gate` and
+    # append to gate for _gate_tomography.
     if two_qubit_basis_op_diff_registers:
         if len(gate_set) == 2:
             gate_set_nqubits = []
             for gate in gate_set:
-                if isinstance(gate, tuple):
-                    angles = {"theta", "phi", "lam", "unitary"}
-                    gate, params = gate
-                init_args = signature(gate).parameters
-                if "q" in init_args:
-                    nqubits = 1
-                elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-                    nqubits = 2
+                _, nqubits, _, _, _ = _get_nqubits_and_angles(gate)
                 gate_set_nqubits.append(nqubits)
             if 2 in gate_set_nqubits:
                 raise_error(RuntimeError, f"Requires two single-qubit gates")
@@ -448,10 +481,8 @@ def GST(
             raise_error(RuntimeError, f"Requires two single-qubit gates")
 
         gate = []
-        for idx in range(len(gate_set)):
-            _gate = gate_set[idx]
+        for idx, _gate in enumerate(gate_set):
             _gate, _ = _extract_gate(_gate, idx)
-
             gate.append(_gate)
 
         matrices.append(
