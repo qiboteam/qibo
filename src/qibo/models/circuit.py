@@ -808,7 +808,9 @@ class Circuit:
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
         if n == len(self._independent_parameters_map):
-            for indices, param in zip(self._independent_parameters_map, parameters):
+            for indices, param in zip(
+                self._independent_parameters_map.values(), parameters
+            ):
                 for i in indices:
                     self.queue[i].parameters = param
         elif n == self.independent_trainable_gates.nparams:
