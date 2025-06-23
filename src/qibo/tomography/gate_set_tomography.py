@@ -216,12 +216,13 @@ def _extract_gate(
     # Perform some checks
     if isinstance(original_gate_input, tuple):
         if "unitary" not in valid_angles:
-            # Check that parametrized gates do not receive a numpy array
-            if any(isinstance(p, np.ndarray) for p in params):
-                raise_error(
-                    ValueError,
-                    f"Parametrized gate received numpy.ndarray as parameter(s) instead of float.",
-                )
+            # Check that input for parametrized gates are float, int
+            for p in params:
+                if type(p) not in (int, float):
+                    raise_error(
+                        ValueError,
+                        f"Invalid parameters for parametrized gate. Expected int or float, received {type(p)}.",
+                    )
         else:
             nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
             # Check that unitary gate does not receive a non-unitary matrix.
