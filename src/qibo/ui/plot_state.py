@@ -1,9 +1,13 @@
-import matplotlib.pyplot as plt
+from typing import Optional
+
 import numpy as np
+
+import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-import qibo
+from qibo.backends import _check_backend
+from qibo.result import MeasurementOutcomes
 
 
 # Based on Qiskit density state plot
