@@ -32,8 +32,9 @@ def plot_density_hist(circuit, title: str = "", alpha: float = 0.5, colors: Opti
         tuple: Respectively, the figure, and axes for the real and the imaginary parts.
     """
 
+    backend = _check_backend(backend)
     # Execute the circuit to get the state
-    exec_circ = circuit.execute()
+    exec_circ = backend.execute_circuit(circuit)
 
     # if exec_circ is kind of MeasurementOutcomes, error measure gates are present
     if isinstance(exec_circ, qibo.result.MeasurementOutcomes):
