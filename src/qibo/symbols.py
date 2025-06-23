@@ -56,11 +56,11 @@ class Symbol(sympy.Symbol):
         self.backend = _check_backend(backend)
         self._gate = None
         if not (
-            isinstance(matrix, np.ndarray)
-            or isinstance(matrix, self.backend.tensor_types)
-            or isinstance(
+            isinstance(
                 matrix,
                 (
+                    np.ndarray,
+                    self.backend.tensor_types,
                     int,
                     float,
                     complex,
