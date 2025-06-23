@@ -76,8 +76,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = matrix_real.flatten()
-    dzi = matrix_imag.flatten()
+    dzr = backend.np.reshape(matrix_real, (-1, 1))
+    dzi = backend.np.reshape(matrix_imag, (-1, 1))
 
     fig = plt.figure(figsize=(16, 8), facecolor="w")
     ax1 = fig.add_subplot(1, 2, 1, projection="3d", computed_zorder=False)
