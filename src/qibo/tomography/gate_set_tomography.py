@@ -153,6 +153,7 @@ def _get_nqubits_and_angles(gate):
         params (list[float]): Stores all the parameters of the gate in a list.
     """
 
+    nqubits = None
     if isinstance(gate, tuple):
         angles = ["theta", "phi", "lam", "unitary"]
         gate, params = gate
