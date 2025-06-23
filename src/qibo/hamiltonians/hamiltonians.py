@@ -326,7 +326,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     @cached_property
-    def dense(self) -> "MatrixHamiltonian":
+    def dense(self) -> "MatrixHamiltonian":  # type: ignore
         """Creates the equivalent Hamiltonian matrix."""
         return self.calculate_dense()
 
@@ -478,7 +478,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:
+    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
@@ -559,16 +559,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             for factor in term.factors:
                 if not isinstance(factor, Z):
                     raise_error(
-                        NotImplementedError, "Observable is not a Z Pauli string."
+                        NotImplementedError, "Observable is not a Pauli-Z string."
                     )
 
         if qubit_map is None:
             qubit_map = list(range(self.nqubits))
 
         keys = list(freq.keys())
-        counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
-            freq.values()
-        )
+        counts = list(freq.values())
+        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(counts)
         expvals = []
         for term in self.terms:
             qubits = {
@@ -584,7 +583,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
+        return self.backend.np.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form
@@ -593,7 +592,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be composed.",
+                    "Only Hamiltonians with the same number of qubits can be composed.",
                 )
 
             if other._form is not None:
