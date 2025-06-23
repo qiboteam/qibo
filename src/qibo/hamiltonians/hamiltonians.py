@@ -122,28 +122,18 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        if (
-            self.backend.np.count_nonzero(
-                obs - self.backend.np.diag(self.backend.np.diagonal(obs))
-            )
-            != 0
-        ):
+        diag = self.backend.np.diagonal(obs)
+        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        keys = list(freq.keys())
-        if qubit_map is None:
-            qubit_map = list(range(int(np.log2(len(obs)))))
-        counts = np.array(list(freq.values())) / sum(freq.values())
-        expval = 0
-        size = len(qubit_map)
-        for j, k in enumerate(keys):
-            index = 0
-            for i in qubit_map:
-                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
-            expval += obs[index, index] * counts[j]
-        return self.backend.np.real(expval)
+        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
+        diag = self.backend.np.transpose(diag, axes=qubit_map).ravel()
+        counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
+            freq.values()
+        )
+        return self.backend.np.real(self.backend.np.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -336,7 +326,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     @cached_property
-    def dense(self) -> "MatrixHamiltonian":
+    def dense(self) -> "MatrixHamiltonian":  # type: ignore
         """Creates the equivalent Hamiltonian matrix."""
         return self.calculate_dense()
 
@@ -481,7 +471,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
-    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:
+    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
@@ -562,16 +552,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             for factor in term.factors:
                 if not isinstance(factor, Z):
                     raise_error(
-                        NotImplementedError, "Observable is not a Z Pauli string."
+                        NotImplementedError, "Observable is not a Pauli-Z string."
                     )
 
         if qubit_map is None:
             qubit_map = list(range(self.nqubits))
 
         keys = list(freq.keys())
-        counts = self.backend.cast(list(freq.values()), self.backend.precision) / sum(
-            freq.values()
-        )
+        counts = list(freq.values())
+        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(counts)
         expvals = []
         for term in self.terms:
             qubits = {
@@ -587,7 +576,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts.T) + self.constant.real
+        return self.backend.np.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form
@@ -596,7 +585,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be composed.",
+                    "Only Hamiltonians with the same number of qubits can be composed.",
                 )
 
             if other._form is not None:

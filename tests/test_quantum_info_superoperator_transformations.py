@@ -177,7 +177,7 @@ def test_vectorization(backend, nqubits, order, statevector):
 def test_batched_vectorization(backend, nqubits, order, statevector):
     if statevector:
         state = backend.cast(
-            [random_statevector(2**nqubits, 42, backend=backend) for _ in range(3)]
+            [random_statevector(2**nqubits, seed=42, backend=backend) for _ in range(3)]
         ).reshape(3, 1, -1)
     else:
         state = backend.cast(
