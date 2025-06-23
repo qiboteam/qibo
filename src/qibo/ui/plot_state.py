@@ -27,6 +27,9 @@ def plot_density_hist(circuit, title: str = "", alpha: float = 0.5, colors: Opti
         colors (list, optional): A list of two colors for the positive and negative
             parts of the density matrix. If ``None``, default colors will be used.
             Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
 
     Returns:
         tuple: Respectively, the figure, and axes for the real and the imaginary parts.
