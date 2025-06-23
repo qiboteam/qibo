@@ -25,12 +25,11 @@ def fig2array(fig):
 
 
 def match_figure_image(fig, arr_path: str):
-    """
-    Check whether the two image arrays match.
+    """Check whether the two image arrays match.
 
     Args:
-        fig (matplotlib.figure.Figure): Matplotlib figure to compare.
-        arr_path (str): Path to the numpy array file containing the reference image.
+        fig (:class:`matplotlib.figure.Figure`): Figure to compare.
+        arr_path (str): Path to the ``numpy`` array file containing the reference image.
 
     Returns:
         bool: True if the images match, False otherwise.
