@@ -163,49 +163,19 @@ def test__get_observable(j, nqubits):
         assert groundtruth == prepared_observable
 
 
-def test__extract_gate_default_idx():
-    gates_to_test = [
-        (gates.T),
-        ((gates.RX, [np.pi / 2])),
-        ((gates.Unitary, [np.eye(2)])),
-        ((gates.CRX, [np.pi / 3])),
-        ((gates.Unitary, [np.eye(4)])),
-    ]
+@pytest.mark.parametrize(
+    "idx",
+    (
+        5
+        * [
+            None,
+        ],
+        [2, 2, 2, (2, 3), (2, 3)],
+    ),
+)
+def test__extract_gate(idx):
 
-    correct_gates = [
-        gates.T(0),
-        gates.RX(0, np.pi / 2),
-        gates.Unitary(np.eye(2), 0),
-        gates.CRX(0, 1, np.pi / 3),
-        gates.Unitary(np.eye(4), 0, 1),
-    ]
-
-    for _i in range(len(gates_to_test)):
-        extracted_gate, _ = _extract_gate(gates_to_test[_i])
-
-        assert extracted_gate.qubits == correct_gates[_i].qubits
-        if _i in (0, 1):
-            assert extracted_gate.init_kwargs == correct_gates[_i].init_kwargs
-            assert extracted_gate.parameters == correct_gates[_i].parameters
-        elif _i == 2:
-            assert (
-                extracted_gate.init_args[0].all()
-                == correct_gates[_i].init_args[0].all()
-            )
-        elif _i == 3:
-            assert extracted_gate.control_qubits == correct_gates[_i].control_qubits
-            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
-            assert extracted_gate.parameters == correct_gates[_i].parameters
-        elif _i == 4:
-            assert (
-                extracted_gate.init_args[0].all()
-                == correct_gates[_i].init_args[0].all()
-            )
-            assert extracted_gate.target_qubits == correct_gates[_i].target_qubits
-
-
-def test__extract_gate_user_defined_idx():
-    chosen_idx = [2, 2, 2, (2, 3), (2, 3)]
+    chosen_idx = idx
 
     gates_to_test = [
         (gates.T),
@@ -215,13 +185,22 @@ def test__extract_gate_user_defined_idx():
         ((gates.Unitary, [np.eye(4)])),
     ]
 
-    correct_gates = [
-        gates.T(2),
-        gates.RX(2, np.pi / 2),
-        gates.Unitary(np.eye(2), 2),
-        gates.CRX(2, 3, np.pi / 3),
-        gates.Unitary(np.eye(4), 2, 3),
-    ]
+    if all(i is None for i in chosen_idx):
+        correct_gates = [
+            gates.T(0),
+            gates.RX(0, np.pi / 2),
+            gates.Unitary(np.eye(2), 0),
+            gates.CRX(0, 1, np.pi / 3),
+            gates.Unitary(np.eye(4), 0, 1),
+        ]
+    else:
+        correct_gates = [
+            gates.T(2),
+            gates.RX(2, np.pi / 2),
+            gates.Unitary(np.eye(2), 2),
+            gates.CRX(2, 3, np.pi / 3),
+            gates.Unitary(np.eye(4), 2, 3),
+        ]
 
     for _i in range(len(gates_to_test)):
         extracted_gate, _ = _extract_gate(gates_to_test[_i], idx=chosen_idx[_i])
@@ -448,18 +427,6 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
             include_empty=False,
         )
         backend.assert_allclose(test_matrix[0], ground_truth_matrix[0], atol=1e-1)
-
-
-# def test_gate_list_building_with_extract_gate():
-#     gate_set = [(gates.RX, [np.pi / 3]), (gates.RY, [np.pi / 4])]
-
-#     gate_list = []
-#     for idx in range(len(gate_set)):
-#         gate = gate_set[idx]
-#         gate, _ = _extract_gate(gate, idx)
-#         gate_list.append(gate)
-
-#     assert len(gate_list) == 2
 
 
 def test_GST_invertible_matrix():
