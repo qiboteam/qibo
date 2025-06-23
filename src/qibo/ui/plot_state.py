@@ -64,6 +64,7 @@ def plot_density_hist(
 
     matrix_real = state.real
     matrix_imag = state.imag
+    del state
 
     label_y, label_x = matrix_real.shape[:2]
     xpos = np.arange(0, label_x, 1)
