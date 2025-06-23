@@ -3,6 +3,7 @@ from itertools import product
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import torch
 from sympy import S
 
 from qibo import Circuit, gates, symbols
@@ -27,7 +28,7 @@ def _check_nqubits(nqubits):
         )
 
 
-# @cache
+@cache
 def _gates(nqubits) -> List:
     """Gates implementing all the GST state preparations.
 
@@ -44,7 +45,7 @@ def _gates(nqubits) -> List:
     )
 
 
-# @cache
+@cache
 def _measurements(nqubits: int) -> List:
     """Measurement gates implementing all the GST measurement bases.
 
@@ -57,7 +58,7 @@ def _measurements(nqubits: int) -> List:
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _observables(nqubits: int) -> List:
     """All the observables measured in the GST protocol.
 
@@ -71,7 +72,7 @@ def _observables(nqubits: int) -> List:
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _get_observable(j: int, nqubits: int):
     """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
@@ -96,7 +97,7 @@ def _get_observable(j: int, nqubits: int):
     return SymbolicHamiltonian(observable, nqubits=nqubits)
 
 
-# @cache
+@cache
 def _prepare_state(k: int, nqubits: int):
     """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
     Using base-4 indexing for :math:`k`,
@@ -118,7 +119,7 @@ def _prepare_state(k: int, nqubits: int):
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
-# @cache
+@cache
 def _measurement_basis(j: int, nqubits: int):
     """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
     Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
