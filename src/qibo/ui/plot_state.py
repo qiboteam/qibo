@@ -83,18 +83,6 @@ def plot_density_hist(
     ax1 = fig.add_subplot(1, 2, 1, projection="3d", computed_zorder=False)
     ax2 = fig.add_subplot(1, 2, 2, projection="3d", computed_zorder=False)
 
-    labels_y, labels_x = matrix_real.shape[:2]
-    xpos = np.arange(0, labels_x, 1)  # Set up a mesh of positions
-    ypos = np.arange(0, labels_y, 1)
-    xpos, ypos = np.meshgrid(xpos + 0.25, ypos + 0.25)
-
-    xpos = xpos.flatten()
-    ypos = ypos.flatten()
-    zpos = np.zeros(label_x * label_y)
-
-    dx = 0.5 * np.ones_like(zpos)  # width of bars
-    dy = dx.copy()
-
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)
 
