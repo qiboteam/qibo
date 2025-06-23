@@ -5,7 +5,6 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-import qibo
 from qibo.backends import _check_backend
 from qibo.result import MeasurementOutcomes
 
@@ -46,7 +45,7 @@ def plot_density_hist(
     exec_circ = backend.execute_circuit(circuit)
 
     # if exec_circ is kind of MeasurementOutcomes, error measure gates are present
-    if isinstance(exec_circ, qibo.result.MeasurementOutcomes):
+    if isinstance(exec_circ, MeasurementOutcomes):
         raise ValueError(
             "Circuit must not contain measurement gates for density matrix visualization"
         )
