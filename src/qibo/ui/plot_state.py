@@ -12,7 +12,13 @@ from qibo.result import MeasurementOutcomes
 
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
-def plot_density_hist(circuit, title: str = "", alpha: float = 0.5, colors: Optional[list] = None, backend=None):
+def plot_density_hist(
+    circuit,
+    title: str = "",
+    alpha: float = 0.5,
+    colors: Optional[list] = None,
+    backend=None,
+):
     """Plot the real and imaginary parts of the density matrix
 
     Given a :class:`qibo.models.circuit.Circuit`, plots the real and imaginary parts
