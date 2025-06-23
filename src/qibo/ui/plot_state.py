@@ -57,9 +57,9 @@ def plot_density_hist(
         state = backend.cast(state)
         state = backend.np.outer(state, backend.np.conj(state))
 
-    n = circuit.nqubits
-    row_names = [bin(i)[2:].zfill(n) for i in range(2**n)]
-    column_names = [bin(i)[2:].zfill(n) for i in range(2**n)]
+    nqubits = circuit.nqubits
+    row_names = [bin(i)[2:].zfill(nqubits) for i in range(2**nqubits)]
+    column_names = [bin(i)[2:].zfill(nqubits) for i in range(2**nqubits)]
 
     matrix_real = state.real
     matrix_imag = state.imag
