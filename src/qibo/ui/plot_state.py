@@ -117,7 +117,9 @@ def plot_density_hist(
         norm_neg = plt.Normalize(vmin=min_dz, vmax=0)
 
         # Create a color array based on the heights
-        colors_mapping = np.where(dz >= 0, cmap_pos(norm_pos(dz)), cmap_neg(norm_neg(dz)))
+        colors_mapping = np.where(
+            dz >= 0, cmap_pos(norm_pos(dz)), cmap_neg(norm_neg(dz))
+        )
 
         dzn = dz < 0
         if np.any(dzn):
