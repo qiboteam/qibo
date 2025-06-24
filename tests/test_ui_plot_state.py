@@ -33,10 +33,10 @@ def test_complex_circuit_state():
     fig, _, _ = plot_density_hist(circuit)
 
     temp_file_path = fig2png(fig)
-
+    base_image_path = f"{BASEPATH}/test_complex_circuit_state_nqubits_{nqubits}.png"
     assert (
         compare_images(
-            BASEPATH + "/test_complex_circuit_state_nqubits_" + str(nqubits) + ".png",
+            base_image_path,
             temp_file_path,
             tol=IMAGE_TOLERANCE,
         )
@@ -53,10 +53,10 @@ def test_simple_circuit_state():
     fig, _, _ = plot_density_hist(circuit)
 
     temp_file_path = fig2png(fig)
-
+    base_image_path = f"{BASEPATH}/test_simple_circuit_state_nqubits_{nqubits}.png"
     assert (
         compare_images(
-            BASEPATH + "/test_simple_circuit_state_nqubits_" + str(nqubits) + ".png",
+            base_image_path,
             temp_file_path,
             tol=IMAGE_TOLERANCE,
         )
@@ -73,13 +73,12 @@ def test_simple_circuit_state_hadamard():
     fig, _, _ = plot_density_hist(circuit)
 
     temp_file_path = fig2png(fig)
-
+    base_image_path = (
+        f"{BASEPATH}/test_simple_circuit_state_hadamard_nqubits_{nqubits}.png"
+    )
     assert (
         compare_images(
-            BASEPATH
-            + "/test_simple_circuit_state_hadamard_nqubits_"
-            + str(nqubits)
-            + ".png",
+            base_image_path,
             temp_file_path,
             tol=IMAGE_TOLERANCE,
         )
@@ -99,13 +98,12 @@ def test_simple_title_circuit_colors_state():
     )
 
     temp_file_path = fig2png(fig)
-
+    base_image_path = (
+        f"{BASEPATH}/test_simple_circuit_state_colors_nqubits_{nqubits}.png"
+    )
     assert (
         compare_images(
-            BASEPATH
-            + "/test_simple_circuit_state_colors_nqubits_"
-            + str(nqubits)
-            + ".png",
+            base_image_path,
             temp_file_path,
             tol=IMAGE_TOLERANCE,
         )
@@ -123,10 +121,10 @@ def test_title_circuit_state():
     fig, _, _ = plot_density_hist(circuit, title="Test Circuit State")
 
     temp_file_path = fig2png(fig)
-
+    base_image_path = f"{BASEPATH}/test_title_circuit_state_nqubits_{nqubits}.png"
     assert (
         compare_images(
-            BASEPATH + "/test_title_circuit_state_nqubits_" + str(nqubits) + ".png",
+            base_image_path,
             temp_file_path,
             tol=IMAGE_TOLERANCE,
         )
