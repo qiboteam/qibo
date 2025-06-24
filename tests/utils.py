@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import numpy as np
 from scipy import sparse
 
@@ -37,16 +40,17 @@ def match_figure_image(fig, arr_path: str):
     return np.all(fig2array(fig) == np.load(arr_path))
 
 
-def match_figure_close_image(fig, arr_path: str, rtol: float = 0, atol: float = 255):
-    """Check whether the two image arrays match within a tolerance.
-
+def fig2png(figure):
+    """Save a matplotlib figure to a temporary PNG file.
     Args:
-        fig (:class:`matplotlib.figure.Figure`): Figure to compare.
-        arr_path (str): Path to the ``numpy`` array file containing the reference image.
-        rtol (float, optional): Relative tolerance for comparison.
-        atol (float, optional): Absolute tolerance for comparison.
-
+        figure (:class:`matplotlib.figure.Figure`): The figure to save.
     Returns:
-        bool: ``True`` if the images match within the specified tolerances, ``False`` otherwise.
+        str: The path to the temporary PNG file if successful, otherwise None.
     """
-    return np.allclose(fig2array(fig), np.load(arr_path), rtol=rtol, atol=atol)
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+        # Save the figure as a PNG file in the temporary file
+        temp_file_path = temp_file.name
+        figure.savefig(temp_file_path)
+        if os.path.exists(temp_file_path):
+            return temp_file_path
+        return None
