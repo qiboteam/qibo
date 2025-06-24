@@ -1,6 +1,6 @@
 import numpy as np
+import matplotlib as mlp
 
-from logging import warning
 from dataclasses import dataclass, field
 
 from matplotlib.figure import Figure
@@ -28,13 +28,16 @@ class Arrow3D(FancyArrowPatch):
 @dataclass
 class Bloch:
 
-    self.figsize: tuple = (5, 5)
-    self.fontsize: int = 18
-    self.arrow_style: str = "-|>"
-    self.arrow_width: float = 2.0
-    self.mutation_scale: int = 20
-    self.linewidth: float = 0.9
-    self.linecolor: str = "#383838"
+    self.STYLE = {
+        "figure.figsize": (5, 5),
+        "legend.fontsize": 18,
+        "axes.titlesize": 18,
+        "lines.linewidth": 0.9,
+        "lines.color": "#383838",
+    }
+
+    self.STYLE_TEXT = {"text.color": "black", "font.size": 18}
+
     self.main_alpha: float = 0.6
     self.secondary_alpha: float = 0.2
 
@@ -123,13 +126,6 @@ class Bloch:
             option_list = ["vector"]
 
         element = [element[0]] + option_list * (length_states - length_option)
-        warning(
-            f"Mismatch between number of states ({length_states}) and colors ({length_option}). Defaulting missing "
-            + option
-            + " to '"
-            + option_list[0]
-            + "' to match the number of states."
-        )
         return element
 
     def _check_normalisation(self, element):
@@ -168,7 +164,8 @@ class Bloch:
         y = np.sin(phi) * np.sin(theta)
         z = np.cos(phi)
 
-        self.ax.plot_surface(x, y, z, color="lavenderblush", alpha=0.2)
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot_surface(x, y, z)
 
         # ----Circular curves over the surface----
         # Axis
@@ -176,70 +173,42 @@ class Bloch:
         z = np.zeros(100)
         x = np.sin(theta)
         y = np.cos(theta)
-        self.ax.plot(
-            x,
-            y,
-            z,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
-        self.ax.plot(
-            z,
-            x,
-            y,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
-        self.ax.plot(
-            y,
-            z,
-            x,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot(x, y, z)
+            self.ax.plot(z, x, y)
+            self.ax.plot(y, z, x)
 
         # Latitude
         z1 = np.full(100, 0.4)
         r1 = np.sqrt(1 - z1[0] ** 2)
         x1 = r1 * np.cos(theta)
         y1 = r1 * np.sin(theta)
-        self.ax.plot(
-            x1,
-            y1,
-            z1,
-            color=self.linecolor,
-            alpha=self.secondary_alpha,
-            linewidth=self.linewidth,
-        )
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot(x1, y1, z1)
 
         z1 = np.full(100, 0.9)
         r1 = np.sqrt(1 - z1[0] ** 2)
         x1 = r1 * np.cos(theta)
         y1 = r1 * np.sin(theta)
-        self.ax.plot(
-            x1,
-            y1,
-            z1,
-            color=self.linecolor,
-            alpha=self.secondary_alpha,
-            linewidth=self.linewidth,
-        )
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot(
+                x1,
+                y1,
+                z1,
+                alpha=self.secondary_alpha,
+            )
 
         z2 = np.full(100, -0.9)
         r2 = np.sqrt(1 - z2[0] ** 2)
         x2 = r2 * np.cos(theta)
         y2 = r2 * np.sin(theta)
-        self.ax.plot(
-            x2,
-            y2,
-            z2,
-            color=self.linecolor,
-            alpha=self.secondary_alpha,
-            linewidth=self.linewidth,
-        )
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot(
+                x2,
+                y2,
+                z2,
+                alpha=self.secondary_alpha,
+            )
 
         # Longitude
         phi_list = np.linspace(0, 2 * np.pi, 6)
@@ -249,64 +218,54 @@ class Bloch:
             x = np.sin(theta) * np.cos(phi)
             y = np.sin(theta) * np.sin(phi)
             z = np.cos(theta)
-            self.ax.plot(
-                x,
-                y,
-                z,
-                color=self.linecolor,
-                alpha=self.secondary_alpha,
-                linewidth=self.linewidth,
-            )
+            with mpl.rc_context(self.STYLE):
+                self.ax.plot(
+                    x,
+                    y,
+                    z,
+                    alpha=self.secondary_alpha,
+                )
 
         # ----Axis lines----
         line = np.linspace(-1, 1, 100)
         zeros = np.zeros_like(line)
 
-        self.ax.plot(
-            line,
-            zeros,
-            zeros,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
-        self.ax.plot(
-            zeros,
-            line,
-            zeros,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
-        self.ax.plot(
-            zeros,
-            zeros,
-            line,
-            color=self.linecolor,
-            alpha=self.main_alpha,
-            linewidth=self.linewidth,
-        )
+        with mpl.rc_context(self.STYLE):
+            self.ax.plot(
+                line,
+                zeros,
+                zeros,
+                alpha=self.main_alpha,
+            )
+            self.ax.plot(
+                zeros,
+                line,
+                zeros,
+                alpha=self.main_alpha,
+            )
+            self.ax.plot(
+                zeros,
+                zeros,
+                line,
+            )
 
-        self.ax.text(1.2, 0, 0, "x", color="black", fontsize=self.fontsize, ha="center")
-        self.ax.text(0, 1.2, 0, "y", color="black", fontsize=self.fontsize, ha="center")
-        self.ax.text(
-            0,
-            0,
-            1.2,
-            r"$|0\rangle$",
-            color="black",
-            fontsize=self.fontsize,
-            ha="center",
-        )
-        self.ax.text(
-            0,
-            0,
-            -1.3,
-            r"$|1\rangle$",
-            color="black",
-            fontsize=self.fontsize,
-            ha="center",
-        )
+        with mpl.rc_context(self.STYLE_TEXT):
+            self.ax.text(1.2, 0, 0, "x", ha="center")
+            self.ax.text(0, 1.2, 0, "y", ha="center")
+            self.ax.text(
+                0,
+                0,
+                1.2,
+                r"$|0\rangle$",
+                ha="center",
+            )
+            self.ax.text(
+                0,
+                0,
+                -1.3,
+                r"$|1\rangle$",
+                ha="center",
+            )
 
         self.ax.set_xlim([-0.7, 0.7])
         self.ax.set_ylim([-0.7, 0.7])
@@ -390,9 +349,9 @@ class Bloch:
                 xs3d,
                 ys3d,
                 zs3d,
-                lw=self.arrow_width,
-                arrowstyle=self.arrow_style,
-                mutation_scale=self.mutation_scale,
+                lw=2.0,
+                arrowstyle="-|>",
+                mutation_scale=20,
                 color=color,
             )
             self.ax.add_artist(a)
