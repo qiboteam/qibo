@@ -131,18 +131,17 @@ def plot_density_hist(
             ]
         )
 
-        dzn = dz < 0
-        if np.any(dzn):
-            negative_bars = ax.bar3d(
-                xpos[dzn],
-                ypos[dzn],
-                zpos[dzn],
-                dx[dzn],
-                dy[dzn],
-                dz[dzn],
+        for mask, zorder in ((dz < 0, 0.625), (dz > 0, 0.875)):
+            ax.bar3d(
+                xpos[mask],
+                ypos[mask],
+                zpos[mask],
+                dx[mask],
+                dy[mask],
+                dz[mask],
                 alpha=alpha,
-                zorder=0.625,
-                color=colors_mapping[dzn],
+                zorder=zorder,
+                color=colors_mapping[mask],
                 shade=True,
             )
 
@@ -152,21 +151,6 @@ def plot_density_hist(
             plane = Poly3DCollection(verts, alpha=0.25, facecolor="k", linewidths=1)
             plane.set_zorder(0.75)
             ax.add_collection3d(plane)
-
-        dzp = dz >= 0
-        if np.any(dzp):
-            positive_bars = ax.bar3d(
-                xpos[dzp],
-                ypos[dzp],
-                zpos[dzp],
-                dx[dzp],
-                dy[dzp],
-                dz[dzp],
-                alpha=alpha,
-                zorder=0.875,
-                color=colors_mapping[dzp],
-                shade=True,
-            )
 
         ax.set_title(zlabel, fontsize=max_font_size)
 
