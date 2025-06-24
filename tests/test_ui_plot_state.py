@@ -128,11 +128,10 @@ def test_simple_raise_error_measure_state():
 
 def test_simple_raise_error_colors_state():
     """Test for simple circuit plot state with error raising if colors are not a list of length 2"""
-    nqubits = 3
+    nqubits = 2
     circuit = Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
-    circuit.add(gates.M(*range(nqubits)))
 
     with pytest.raises(Exception) as excinfo:
         colors = ["red", "blue", "green"]
