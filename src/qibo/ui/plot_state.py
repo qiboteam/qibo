@@ -58,8 +58,10 @@ def plot_density_hist(
         state = backend.np.outer(state, backend.np.conj(state))
 
     nqubits = circuit.nqubits
-    row_names = [bin(i)[2:].zfill(nqubits) for i in range(2**nqubits)]
-    column_names = [bin(i)[2:].zfill(nqubits) for i in range(2**nqubits)]
+    indices = np.arange(2**nqubits)
+    bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
+    row_names = ["".join(str(b) for b in row) for row in bits]
+    column_names = ["".join(str(b) for b in row) for row in bits]
 
     matrix_real = state.real
     matrix_imag = state.imag
@@ -117,7 +119,16 @@ def plot_density_hist(
         norm_neg = plt.Normalize(vmin=min_dz, vmax=0)
 
         # Create a color array based on the heights
-        colors_mapping = np.where(dz >= 0, cmap_pos(norm_pos(dz)), cmap_neg(norm_neg(dz)))
+        colors_mapping = np.array(
+            [
+                (
+                    cmap_pos(norm_pos(height))
+                    if height >= 0
+                    else cmap_neg(norm_neg(height))
+                )
+                for height in dz
+            ]
+        )
 
         dzn = dz < 0
         if np.any(dzn):
