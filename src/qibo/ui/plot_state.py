@@ -119,7 +119,6 @@ def plot_density_hist(
         norm_neg = plt.Normalize(vmin=min_dz, vmax=0)
 
         # Create a color array based on the heights
-
         colors_mapping = np.array(
             [
                 (
@@ -132,18 +131,19 @@ def plot_density_hist(
         )
 
         for mask, zorder in ((dz < 0, 0.625), (dz > 0, 0.875)):
-            ax.bar3d(
-                xpos[mask],
-                ypos[mask],
-                zpos[mask],
-                dx[mask],
-                dy[mask],
-                dz[mask],
-                alpha=alpha,
-                zorder=zorder,
-                color=colors_mapping[mask],
-                shade=True,
-            )
+            if np.any(mask):
+                ax.bar3d(
+                    xpos[mask],
+                    ypos[mask],
+                    zpos[mask],
+                    dx[mask],
+                    dy[mask],
+                    dz[mask],
+                    alpha=alpha,
+                    zorder=zorder,
+                    color=colors_mapping[mask],
+                    shade=True,
+                )
 
         if min_dz < 0 < max_dz:
             xlim, ylim = [0, label_x], [0, label_y]
