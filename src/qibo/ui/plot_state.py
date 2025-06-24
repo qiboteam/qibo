@@ -130,7 +130,7 @@ def plot_density_hist(
             ]
         )
 
-        for mask, zorder in ((dz < 0, 0.625), (dz > 0, 0.875)):
+        for mask, zorder in ((dz < 0, 0.625), (dz >= 0, 0.875)):
             if np.any(mask):
                 ax.bar3d(
                     xpos[mask],
