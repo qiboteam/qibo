@@ -8,8 +8,6 @@ from qibo.ui.bloch import Bloch
 # matplotlib.use("Agg")
 
 
-
-
 def test_empty_sphere():
     bs = Bloch()
     bs.plot()
@@ -271,6 +269,3 @@ def test_mismatch_colors_state_5():
     # --Sphere--
     bs.add_state(states, color="red")
     bs.plot()
-
-
-test_mismatch_colors_state_5()
