@@ -139,3 +139,6 @@ tmp.npy
 # Mac
 .DS_Store
 .devenv
+
+# pdf
+*.pdf
