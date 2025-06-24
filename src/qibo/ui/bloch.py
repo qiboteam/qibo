@@ -37,7 +37,6 @@ class Bloch:
     self.linecolor: str = "#383838"
     self.main_alpha: float = 0.6
     self.secondary_alpha: float = 0.2
-    # Bool variable
 
     self._shown: bool = False
 
@@ -149,6 +148,9 @@ class Bloch:
             )
 
     def clear(self):
+        # Figure
+        self.fig.clear()
+
         # Data
         self.points = []
         self.vectors = []
@@ -398,13 +400,16 @@ class Bloch:
         for color, point in zip(self.color_points, self.points):
             self.ax.scatter(point[0], point[1], point[2], color=color, s=10)
 
-    def plot(self, save=False, filename="bloch_sphere.pdf"):
+    def _view(self):
         self.rendering()
         self.ax.set_aspect("equal")
-        plt.axis("off")
-        plt.tight_layout()
-        if save:
-            plt.savefig(filename)
-            plt.close()
-        else:
-            plt.show()
+        self.ax.axis("off")
+        self.fig.tight_layout()
+
+    def save(self, filename="bloch_sphere.pdf"):
+        self._view()
+        self.fig.savefig(filename)
+
+    def plot(self):
+        self._view()
+        self.fig.show()
