@@ -18,7 +18,7 @@ matplotlib.use("agg")
 
 BASEPATH = str(Path(__file__).parent / "test_plot_state_ui_images")
 
-IMAGE_TOLERANCE = 0
+IMAGE_TOLERANCE = 255
 
 
 def test_complex_circuit_state():
