@@ -27,33 +27,32 @@ class Arrow3D(FancyArrowPatch):
 
 @dataclass
 class Bloch:
-    def __init__(self, state=None, vector=None, point=None):
-        # Size and style
-        self.figsize: tuple = (5, 5)
-        self.fontsize: int = 18
-        self.arrow_style: str = "-|>"
-        self.arrow_width: float = 2.0
-        self.mutation_scale: int = 20
-        self.linewidth: float = 0.9
-        self.linecolor: str = "#383838"
-        self.main_alpha: float = 0.6
-        self.secondary_alpha: float = 0.2
 
-        # Bool variable
-        self._shown: bool = False
+    self.figsize: tuple = (5, 5)
+    self.fontsize: int = 18
+    self.arrow_style: str = "-|>"
+    self.arrow_width: float = 2.0
+    self.mutation_scale: int = 20
+    self.linewidth: float = 0.9
+    self.linecolor: str = "#383838"
+    self.main_alpha: float = 0.6
+    self.secondary_alpha: float = 0.2
+    # Bool variable
 
-        # Data
-        self.points: list = field(default_factory=list)
-        self.vectors: list = field(default_factory=list)
+    self._shown: bool = False
 
-        # Color data
-        self.color_points: list = field(default_factory=list)
-        self.color_vectors: list = field(default_factory=list)
+    # Data
+    self.points: list = field(default_factory=list)
+    self.vectors: list = field(default_factory=list)
 
-        # Figure and axis
-        def __post_init__(self):
-            self.fig = Figure(figsize=self.figsize)
-            self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
+    # Color data
+    self.color_points: list = field(default_factory=list)
+    self.color_vectors: list = field(default_factory=list)
+
+    # Figure and axis
+    def __post_init__(self):
+        self.fig = Figure(figsize=self.figsize)
+        self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
 
     def _normalize_input(self, vectors, modes, colors):
         vectors, length_vectors = self._normalize_vectors(vectors)
