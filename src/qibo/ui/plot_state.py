@@ -9,6 +9,23 @@ from qibo.backends import _check_backend
 from qibo.result import MeasurementOutcomes
 
 
+def _validate_colors(colors):
+    if colors is None:
+        return "#ff7f0e", "#1f77b4"
+    if len(colors) != 2:
+        raise ValueError(f"Colors must be a list of len=2, got {len(colors)} instead")
+    pos_color = "#ff7f0e" if colors[0] is None else colors[0]
+    neg_color = "#1f77b4" if colors[1] is None else colors[1]
+    return pos_color, neg_color
+
+
+def _get_labels(nqubits):
+    indices = np.arange(2**nqubits)
+    bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
+    labels = ["".join(str(b) for b in row) for row in bits]
+    return labels
+
+
 # Based on Qiskit density state plot
 # https://github.com/Qiskit/qiskit/blob/stable/2.0/qiskit/visualization/state_visualization.py#L372-L622
 def plot_density_hist(
@@ -58,10 +75,8 @@ def plot_density_hist(
         state = backend.np.outer(state, backend.np.conj(state))
 
     nqubits = circuit.nqubits
-    indices = np.arange(2**nqubits)
-    bits = np.array(np.unravel_index(indices, [2] * nqubits)).T
-    row_names = ["".join(str(b) for b in row) for row in bits]
-    column_names = ["".join(str(b) for b in row) for row in bits]
+    row_names = _get_labels(nqubits)
+    column_names = _get_labels(nqubits)
 
     matrix_real = state.real
     matrix_imag = state.imag
@@ -71,7 +86,6 @@ def plot_density_hist(
     xpos = np.arange(0, label_x, 1)
     ypos = np.arange(0, label_y, 1)
     xpos, ypos = np.meshgrid(xpos + 0.25, ypos + 0.25)
-
     xpos = xpos.flatten()
     ypos = ypos.flatten()
     zpos = np.zeros(label_x * label_y)
@@ -93,16 +107,7 @@ def plot_density_hist(
     max_font_size = int(2 * max_plot_size)
     max_zoom = 10 / (10 + np.sqrt(max_plot_size))
 
-    if colors is None:
-        pos_color, neg_color = "#ff7f0e", "#1f77b4"
-    else:
-        if len(colors) != 2:
-            raise ValueError(
-                "Colors must be a list of len=2, got {} instead".format(len(colors))
-            )
-        pos_color = "#ff7f0e" if colors[0] is None else colors[0]
-        neg_color = "#1f77b4" if colors[1] is None else colors[1]
-
+    pos_color, neg_color = _validate_colors(colors)
     cmap_pos = LinearSegmentedColormap.from_list("cmap_pos", 4 * [pos_color])
     cmap_neg = LinearSegmentedColormap.from_list("cmap_neg", 4 * [neg_color])
 
