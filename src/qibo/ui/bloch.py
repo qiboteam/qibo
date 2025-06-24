@@ -1,7 +1,9 @@
-from logging import warning
-
-import matplotlib.pyplot as plt
 import numpy as np
+
+from logging import warning
+from dataclasses import dataclass, field
+
+from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 
@@ -23,35 +25,37 @@ class Arrow3D(FancyArrowPatch):
         return np.min(zs)
 
 
+@dataclass
 class Bloch:
     def __init__(self, state=None, vector=None, point=None):
         # Size and style
-        self.figsize = [5, 5]
-        self.fontsize = 18
-        self.arrow_style = "-|>"
-        self.arrow_width = 2.0
-        self.mutation_scale = 20
-        self.linewidth = 0.9
-        self.linecolor = "#383838"
-        self.main_alpha = 0.6
-        self.secondary_alpha = 0.2
-
-        # Figure and axis
-        self.fig = plt.figure(figsize=self.figsize)
-        self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
+        self.figsize: tuple = (5, 5)
+        self.fontsize: int = 18
+        self.arrow_style: str = "-|>"
+        self.arrow_width: float = 2.0
+        self.mutation_scale: int = 20
+        self.linewidth: float = 0.9
+        self.linecolor: str = "#383838"
+        self.main_alpha: float = 0.6
+        self.secondary_alpha: float = 0.2
 
         # Bool variable
-        self._shown = False
+        self._shown: bool = False
 
         # Data
-        self.points = []
-        self.vectors = []
+        self.points: list = field(default_factory=list)
+        self.vectors: list = field(default_factory=list)
 
         # Color data
-        self.color_points = []
-        self.color_vectors = []
+        self.color_points: list = field(default_factory=list)
+        self.color_vectors: list = field(default_factory=list)
 
-    def normalize_input(self, vectors, modes, colors):
+        # Figure and axis
+        def __post_init__(self):
+            self.fig = Figure(figsize=self.figsize)
+            self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
+
+    def _normalize_input(self, vectors, modes, colors):
         vectors, length_vectors = self._normalize_vectors(vectors)
         modes = self._normalize_modes_colors(modes, length_vectors, "modes")
         colors = self._normalize_modes_colors(colors, length_vectors, "colors")
@@ -147,12 +151,10 @@ class Bloch:
 
     def clear(self):
         # Data
-        self.states = []
         self.points = []
         self.vectors = []
 
         # Color data
-        self.color_states = []
         self.color_points = []
         self.color_vectors = []
 
@@ -329,7 +331,9 @@ class Bloch:
 
     def add_vector(self, vector, mode="vector", color="black"):
 
-        vectors, modes, colors, lenght_state = self.normalize_input(vector, mode, color)
+        vectors, modes, colors, lenght_state = self._normalize_input(
+            vector, mode, color
+        )
 
         for vector, color, mode in zip(vectors, colors, modes):
             self._check_normalisation(vector)
@@ -353,7 +357,7 @@ class Bloch:
     def add_state(self, state, mode="vector", color="black"):
         "Function to add a state to the sphere."
 
-        vectors, modes, colors, lenght_vectors = self.normalize_input(
+        vectors, modes, colors, lenght_vectors = self._normalize_input(
             state, mode, color
         )
 
