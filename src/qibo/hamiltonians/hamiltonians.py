@@ -357,10 +357,17 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         form = sympy.expand(self.form)
         terms = []
-        for f, c in form.as_coefficients_dict().items():
-            term = SymbolicTerm(c, f, backend=self.backend)
+        for factors, coeff in form.as_coefficients_dict().items():
+            term = SymbolicTerm(coeff, factors, backend=self.backend)
             if term.target_qubits:
-                terms.append(term)
+                # Check for any terms with the same factors and add their coefficients together
+                same_terms = [
+                    _term for _term in terms if set(_term.factors) == set(term.factors)
+                ]
+                term.coefficient = term.coefficient + sum(
+                    _term.coefficient for _term in same_terms
+                )
+                terms = [_term for _term in terms if _term not in same_terms] + [term]
             else:
                 self.constant += term.coefficient
         return terms
@@ -528,7 +535,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             result.frequencies()
             for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
         ]
-        return sum(
+        return self.constant + sum(
             coeff * obs.expectation_from_samples(freq, qubit_map)
             for coeff, freq, obs, qubit_map in zip(
                 coefficients, frequencies, Z_observables, qubit_maps
