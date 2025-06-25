@@ -6,7 +6,6 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from qibo.backends import _check_backend
-from qibo.result import MeasurementOutcomes
 
 
 def _validate_colors(colors):
@@ -34,6 +33,8 @@ def plot_density_hist(
     alpha: float = 0.5,
     colors: Optional[list] = None,
     backend=None,
+    fig_width=16,
+    fig_height=8,
 ):
     """Plot the real and imaginary parts of the density matrix.
 
@@ -52,20 +53,22 @@ def plot_density_hist(
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
+        fig_width (int, optional): Width of the figure in inches. Defaults to ``16``.
+        fig_height (int, optional): Height of the figure in inches. Defaults to ``8``.
 
     Returns:
         tuple: Respectively, the figure, and axes for the real and the imaginary parts.
     """
 
-    backend = _check_backend(backend)
-    # Execute the circuit to get the state
-    exec_circ = backend.execute_circuit(circuit)
-
-    # if exec_circ is kind of MeasurementOutcomes, error measure gates are present
-    if isinstance(exec_circ, MeasurementOutcomes):
+    # if exec_circ has measurements then, error measure gates are present
+    if len(circuit.measurements) > 0:
         raise ValueError(
             "Circuit must not contain measurement gates for density matrix visualization"
         )
+
+    backend = _check_backend(backend)
+    # Execute the circuit to get the state
+    exec_circ = backend.execute_circuit(circuit)
 
     state = exec_circ.state()
 
@@ -95,14 +98,13 @@ def plot_density_hist(
     dzr = backend.np.reshape(matrix_real, (-1))
     dzi = backend.np.reshape(matrix_imag, (-1))
 
-    fig = plt.figure(figsize=(16, 8), facecolor="w")
+    fig = plt.figure(figsize=(fig_width, fig_height), facecolor="w")
     ax1 = fig.add_subplot(1, 2, 1, projection="3d", computed_zorder=False)
     ax2 = fig.add_subplot(1, 2, 2, projection="3d", computed_zorder=False)
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)
 
-    fig_width, fig_height = fig.get_size_inches()
     max_plot_size = min(fig_width / 2.25, fig_height)
     max_font_size = int(2 * max_plot_size)
     max_zoom = 10 / (10 + np.sqrt(max_plot_size))
