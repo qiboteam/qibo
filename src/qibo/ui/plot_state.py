@@ -35,7 +35,7 @@ def plot_density_hist(
     colors: Optional[list] = None,
     backend=None,
 ):
-    """Plot the real and imaginary parts of the density matrix
+    """Plot the real and imaginary parts of the density matrix.
 
     Given a :class:`qibo.models.circuit.Circuit`, plots the real and imaginary parts
     of the final density matrix as separate 3D cityscape plots, side by side, and
