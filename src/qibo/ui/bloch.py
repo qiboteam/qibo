@@ -1,18 +1,20 @@
 import numpy as np
 import matplotlib as mpl
-
-mpl.use("Qt5Agg")
-
-from dataclasses import dataclass, field
+import tkinter
+import importlib
 
 from matplotlib.figure import Figure
-from matplotlib.backend_bases import FigureManagerBase
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
+from matplotlib.backends import backend_agg, backend_tkagg
 
 from qibo import hamiltonians
 from qibo.config import raise_error
 from qibo.symbols import X, Y, Z
+
+from dataclasses import dataclass, field
+from typing import Union, Optional
+from numpy.typing import ArrayLike
 
 
 class Arrow3D(FancyArrowPatch):
@@ -57,7 +59,7 @@ class Bloch:
     # Figure and axis
     def __post_init__(self):
         self.fig = Figure(figsize=self.STYLE["figure.figsize"])
-        self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
+        self.ax = self.fig.add_subplot(111, elev=30, azim=30)
 
     def clear(self):
         # Figure
@@ -187,7 +189,7 @@ class Bloch:
         self.ax.set_ylim([-0.7, 0.7])
         self.ax.set_zlim([-0.7, 0.7])
 
-    def coordinates(self, state):
+    def _coordinates(self, state):
         "Function to determine the coordinates of a qubit in the sphere."
 
         x, y, z = 0, 0, 0
@@ -205,53 +207,69 @@ class Bloch:
             z = sigma_Z.expectation(state)
         return x, y, z
 
-    def add_vector(self, vector, mode="vector", color="black"):
+    def _broadcasting_semantics(self, vector, mode, color):
+        if isinstance(vector, list):
+            vectors = np.array(vector)
 
-        vectors, modes, colors, lenght_state = self._normalize_input(
-            vector, mode, color
-        )
+        num_vector = len(vectors)
+        if isinstance(mode, str):
+            modes = [mode] * num_vector
+        elif len(mode) == num_vector:
+            modes = [mode]
+        else:
+            raise_error(ValueError, "`mode` and `vector` should have same length.")
 
+        if isinstance(color, str):
+            colors = [color] * num_vector
+        elif len(color) == num_vector:
+            colors = [color]
+        else:
+            raise_error(ValueError, "`mode` and `vector` should have same length.")
+
+        return vectors, colors, modes
+
+    def add_vector(
+        self,
+        vector: ArrayLike,
+        mode: Union[str, list[str]] = "vector",
+        color: Union[str, list[str]] = "black",
+    ):
+        vectors, colors, modes = self._broadcasting_semantics(vector, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
-            self._check_normalisation(vector)
             if mode == "vector":
-                if len(vector) == 2:
-                    x, y, z = self.coordinates(vector)
-                    self.vectors.append(np.array([x, y, z]))
-                    self.color_vectors.append(color)
-                else:
-                    self.vectors.append(vector)
-                    self.color_vectors.append(color)
+                self.vectors.append(vector)
+                self.color_vectors.append(color)
+            elif mode == "point":
+                self.points.append(vector)
+                self.color_points.append(color)
             else:
-                if len(vector) == 2:
-                    x, y, z = self.coordinates(vector)
-                    self.points.append(np.array([x, y, z]))
-                    self.color_points.append(color)
-                else:
-                    self.points.append(vector)
-                    self.color_points.append(color)
+                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
-    def add_state(self, state, mode="vector", color="black"):
+    def add_state(
+        self,
+        state: ArrayLike,
+        mode: Union[str, list[str]] = "vector",
+        color: Union[str, list[str]] = "black",
+    ):
         "Function to add a state to the sphere."
 
-        vectors, modes, colors, lenght_vectors = self._normalize_input(
-            state, mode, color
-        )
-
+        vectors, colors, modes = self._broadcasting_semantics(vector, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
-            self._check_normalisation(vector)
-            x, y, z = self.coordinates(vector)
+            x, y, z = self._coordinates(vector)
             if mode == "vector":
                 self.vectors.append(np.array([x, y, z]))
                 self.color_vectors.append(color)
-            else:
+            elif mode == "point":
                 self.points.append(np.array([x, y, z]))
                 self.color_points.append(color)
+            else:
+                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
-    def rendering(self):
+    def _rendering(self):
         if self._shown == True:
-            plt.close(self.fig)
-            self.fig = plt.figure(figsize=self.figsize)
-            self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
+            # plt.close(self.fig)
+            self.fig = Figure()
+            self.ax = self.fig.add_subplot(111, elev=30, azim=30)
 
         self._shown = True
 
@@ -275,18 +293,24 @@ class Bloch:
         for color, point in zip(self.color_points, self.points):
             self.ax.scatter(point[0], point[1], point[2], color=color, s=10)
 
-    def _view(self):
-        self.rendering()
         self.ax.set_aspect("equal")
         self.ax.axis("off")
         self.fig.tight_layout()
 
     def save(self, filename="bloch_sphere.pdf"):
-        self._view()
+        self._rendering()
+
+        mpl.use("Agg")
+        canvas = backend_agg.FigureCanvas(self.fig)
+
         self.fig.savefig(filename)
 
     def plot(self):
-        self._view()
-        # breakpoint()
-        # FigureManagerBase.pyplot_show(block=False)
-        self.fig.show(warn=True)
+        self._rendering()
+
+        mpl.use("tkagg")
+        manager = backend_tkagg.new_figure_manager_given_figure(1, self.fig)
+        manager.show()
+        tkinter.mainloop()
+
+        self.fig.show()
