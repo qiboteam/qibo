@@ -1,9 +1,12 @@
 import numpy as np
-import matplotlib as mlp
+import matplotlib as mpl
+
+mpl.use("Qt5Agg")
 
 from dataclasses import dataclass, field
 
 from matplotlib.figure import Figure
+from matplotlib.backend_bases import FigureManagerBase
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 
@@ -28,7 +31,7 @@ class Arrow3D(FancyArrowPatch):
 @dataclass
 class Bloch:
 
-    self.STYLE = {
+    STYLE = {
         "figure.figsize": (5, 5),
         "legend.fontsize": 18,
         "axes.titlesize": 18,
@@ -36,112 +39,25 @@ class Bloch:
         "lines.color": "#383838",
     }
 
-    self.STYLE_TEXT = {"text.color": "black", "font.size": 18}
+    STYLE_TEXT = {"text.color": "black", "font.size": 18}
 
-    self.main_alpha: float = 0.6
-    self.secondary_alpha: float = 0.2
+    main_alpha: float = 0.6
+    secondary_alpha: float = 0.2
 
-    self._shown: bool = False
+    _shown: bool = False
 
     # Data
-    self.points: list = field(default_factory=list)
-    self.vectors: list = field(default_factory=list)
+    points: list = field(default_factory=list)
+    vectors: list = field(default_factory=list)
 
     # Color data
-    self.color_points: list = field(default_factory=list)
-    self.color_vectors: list = field(default_factory=list)
+    color_points: list = field(default_factory=list)
+    color_vectors: list = field(default_factory=list)
 
     # Figure and axis
     def __post_init__(self):
-        self.fig = Figure(figsize=self.figsize)
+        self.fig = Figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(111, projection="3d", elev=30, azim=30)
-
-    def _normalize_input(self, vectors, modes, colors):
-        vectors, length_vectors = self._normalize_vectors(vectors)
-        modes = self._normalize_modes_colors(modes, length_vectors, "modes")
-        colors = self._normalize_modes_colors(colors, length_vectors, "colors")
-
-        return vectors, modes, colors, length_vectors
-
-    def _normalize_modes_colors(self, element, length_states, option):
-        length_option = 0
-        if isinstance(element, np.ndarray):
-            if element.ndim == 1:
-                element = [element[0]]
-                length_option = len(element)
-            elif element.ndim == 2:
-                length_option = len(element)
-            else:
-                raise_error(
-                    ValueError,
-                    "`" + option + "` must be 1D or 2D `np.ndarray`, `list`, `str`.",
-                )
-        elif isinstance(element, list):
-            length_option = len(element)
-        elif isinstance(element, str):
-            element = [element]
-            length_option = len(element)
-        else:
-            raise_error(
-                ValueError,
-                f"Unsupported type for `"
-                + option
-                + "`. Types supported: `np.ndarray`, `list`, `str`.",
-            )
-
-        if length_states > length_option:
-            element = self._mismatch(element, length_states, length_option, option)
-
-        return element
-
-    def _normalize_vectors(self, element):
-        length = 0
-        if isinstance(element, np.ndarray):
-            if element.ndim == 1:
-                element = [element]
-                length = len(element)
-            elif element.ndim == 2:
-                length = len(element)
-            else:
-                raise_error(
-                    ValueError,
-                    "`state` must be 1D or 2D `np.ndarray` or `list`.",
-                )
-        elif isinstance(element, list):
-            length = len(element)
-        else:
-            raise_error(
-                ValueError,
-                f"Unsupported type for `state`. Types supported: `np.ndarray` or `list`.",
-            )
-
-        return element, length
-
-    def _mismatch(self, element, length_states, length_option, option):
-
-        option_list = 0
-        if option == "colors":
-            option_list = ["black"]
-        elif option == "modes":
-            option_list = ["vector"]
-
-        element = [element[0]] + option_list * (length_states - length_option)
-        return element
-
-    def _check_normalisation(self, element):
-        if len(element) == 2:
-            norm = np.linalg.norm(element)
-            if not np.isclose(norm, 1):
-                raise_error(ValueError, "Unnormalized state detected.")
-        elif len(element) == 3:
-            norm = np.linalg.norm(element)
-            if not np.isclose(norm, 1.0):
-                raise_error(ValueError, "The vector does not lie on the Bloch sphere.")
-        else:
-            raise_error(
-                ValueError,
-                "States must have two components. Vectors must have three components.",
-            )
 
     def clear(self):
         # Figure
@@ -371,4 +287,6 @@ class Bloch:
 
     def plot(self):
         self._view()
-        self.fig.show()
+        # breakpoint()
+        # FigureManagerBase.pyplot_show(block=False)
+        self.fig.show(warn=True)
