@@ -1,4 +1,5 @@
-from .abstract import Gate, ParametrizedGate
+from .abstract import ParametrizedGate
+from .gates import H
 import perceval as pcvl
 import numpy as np
 
@@ -37,7 +38,7 @@ class PS(ParametrizedGate, PhotonicGate):
 
 
 class BS(ParametrizedGate, PhotonicGate):
-    def __init__(self, q0, q1, theta=np.pi / 2,trainable: bool = True):
+    def __init__(self, q0, q1, theta=np.pi / 2, trainable: bool = True):
         ParametrizedGate.__init__(self, trainable=True)
         self.nparams = 1
         self.parameter_names = [theta]
@@ -52,3 +53,9 @@ class BS(ParametrizedGate, PhotonicGate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1, theta]
 
+    @property
+    def wires(self):
+        return self.target_qubits
+
+
+PHOTONIC_GATE_TYPES = (PhotonicGate, H)
