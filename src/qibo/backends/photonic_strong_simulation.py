@@ -24,26 +24,27 @@ class LOQCMatrices:
         return self._cast([[cos, isin], [isin, cos]], dtype=self.dtype)
     
     def PS(self, phi):
-        return self._cast([self.np.exp(1j * phi)], dtype=self.dtype)
+        return self._cast([np.exp(1j * phi)], dtype=self.dtype)
 
     def H(self):
         npmat = NumpyMatrices(self.dtype)
         return npmat.H
 
 
-class SlosBackend(NumpyBackend):
+class LoqcStrongBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        self.name = "slos"
+        self.name = "LOQC strong simulation"
         self.matrices = LOQCMatrices(self.dtype)
         self.tensor_types = np.ndarray
         self.versions = {"qibo": __version__, "perceval": pcvl_version}
         self.modality = Modality.PHOTONIC_CV
 
-    def _convert_gate(self, gate):
+    @staticmethod
+    def _convert_gate(gate):
         if isinstance(gate, PhotonicGate):
-            return gate._pcvl
+            return gate.photonic_component
         if isinstance(gate, H):
             return BS.H()
 
@@ -64,5 +65,3 @@ class SlosBackend(NumpyBackend):
         m = MeasurementResult(experiment.m)
         m.register_samples([list(k) for k in samples])
         return m
-
-

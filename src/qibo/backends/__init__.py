@@ -12,7 +12,7 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.backends.modality import Modality
 
-QIBO_NATIVE_BACKENDS = ("numpy", "qulacs", "slos")
+QIBO_NATIVE_BACKENDS = ("numpy", "qulacs", "loqc")
 
 
 class MissingBackend(ValueError):
@@ -59,10 +59,10 @@ class MetaBackend:
             backend_obj = QulacsBackend()
             backend_obj.set_dtype(dtype=dtype)
 
-        if backend == "slos":
-            from qibo.backends.photonic_strong_simulation import SlosBackend
+        if backend == "loqc":
+            from qibo.backends.photonic_strong_simulation import LoqcStrongBackend
 
-            return SlosBackend()
+            return LoqcStrongBackend()
 
         backend_obj = NumpyBackend()
         backend_obj.set_dtype(dtype=dtype)
