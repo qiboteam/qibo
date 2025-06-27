@@ -1,5 +1,6 @@
 from qibo.backends.numpy import NumpyBackend, NumpyMatrices
-from perceval import Experiment, Processor, BasicState, probs_to_samples, BS
+from perceval import Experiment, Processor, BasicState, probs_to_samples, BS, RemoteProcessor
+from perceval.algorithm import Sampler
 from perceval import __version__ as pcvl_version
 from qibo import __version__, Circuit
 from qibo.measurements import MeasurementResult
@@ -64,4 +65,31 @@ class LoqcStrongBackend(NumpyBackend):
         
         m = MeasurementResult(experiment.m)
         m.register_samples([list(k) for k in samples])
+        return m
+
+
+class QuandelaCloudBackend(LoqcStrongBackend):
+    # Should probably be moved to qibo-cloud-backends
+    # But for this proof of concept, I've written the class here
+
+    def __init__(self, platform, token):
+        super().__init__()
+        self._platform = platform
+        self._token = token
+        self.name = "Quandela Cloud"
+
+    def execute_circuit(self, circuit: Circuit, initial_state=None, nshots=None):
+        assert initial_state is not None
+        assert nshots is not None
+
+        experiment = self._convert_circuit(circuit)
+        rp = RemoteProcessor(self._platform, self._token)
+        rp.add(0, experiment)
+        rp.with_input(BasicState(initial_state))
+        rp.min_detected_photons_filter(1)
+        sampler = Sampler(rp, max_shots_per_call=nshots)
+        response = sampler.samples(nshots)
+
+        m = MeasurementResult(experiment.m)
+        m.register_samples([list(k) for k in response["results"]])
         return m
