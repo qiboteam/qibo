@@ -214,6 +214,7 @@ class Circuit:
                     "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
+        self._wire_type = "qubit"
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
@@ -935,7 +936,7 @@ class Circuit:
         logs = [
             f"Circuit depth = {self.depth}",
             f"Total number of gates = {self.ngates}",
-            f"Number of qubits = {self.nqubits}",
+            f"Number of {self._wire_type}s = {self.nqubits}",
             "Most common gates:",
         ]
         common_gates = self.gate_names.most_common()

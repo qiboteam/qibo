@@ -2,7 +2,7 @@ import abc
 from typing import Optional, Union
 
 from qibo.config import raise_error
-
+from .modality import Modality
 
 class Backend(abc.ABC):
     def __init__(self):
@@ -18,6 +18,7 @@ class Backend(abc.ABC):
         self.nthreads = 1
         self.supports_multigpu = False
         self.oom_error = MemoryError
+        self.modality = Modality.GATE
 
     def __reduce__(self):
         """Allow pickling backend objects that have references to modules."""
