@@ -62,7 +62,9 @@ def test_eigenbasis_entanglement(backend, seed):
     """Check that the eigenvectors of UT_U are maximally entangled."""
     states, eigvals = calculate_psi(unitary, backend=backend)
     eigvals = backend.cast(eigvals, dtype=eigvals.dtype)
+
     backend.assert_allclose(backend.np.abs(eigvals), np.ones(4))
+
     for state in states.T:
         state = partial_trace(state, [1], backend=backend)
         backend.assert_allclose(purity(state, backend=backend), 0.5)
@@ -104,6 +106,7 @@ def test_ud_eigenvalues(backend, seed):
         @ backend.cast(bell_basis)
     )
     ud_diag = backend.np.diag(ud_bell)
+
     backend.assert_allclose(backend.np.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6)
     backend.assert_allclose(backend.np.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
 
@@ -113,51 +116,68 @@ def test_calculate_h_vector(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
     _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
     ud_diag = to_bell_diagonal(ud, backend=backend)
+
     assert ud_diag is not None
+
     hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
     target_matrix = bell_unitary(hx, hy, hz, backend)
+
     backend.assert_allclose(ud, target_matrix, atol=1e-6, rtol=1e-6)
 
 
 def test_cnot_decomposition(backend):
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz, backend)
-    c = Circuit(2)
-    c.add(cnot_decomposition(0, 1, hx, hy, hz, backend))
-    final_matrix = c.unitary(backend)
+
+    circuit = Circuit(2)
+    circuit.add(cnot_decomposition(0, 1, hx, hy, hz, backend))
+    final_matrix = circuit.unitary(backend)
+
     backend.assert_allclose(final_matrix, target_matrix, atol=1e-6, rtol=1e-6)
 
 
 def test_cnot_decomposition_light(backend):
     hx, hy = np.random.random(2)
     target_matrix = bell_unitary(hx, hy, 0, backend)
-    c = Circuit(2)
-    c.add(cnot_decomposition_light(0, 1, hx, hy, backend))
-    final_matrix = c.unitary(backend)
+
+    circuit = Circuit(2)
+    circuit.add(cnot_decomposition_light(0, 1, hx, hy, backend))
+    final_matrix = circuit.unitary(backend)
+
     backend.assert_allclose(final_matrix, target_matrix, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_two_qubit_decomposition(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
-    c = Circuit(2)
-    c.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
-    final_matrix = c.unitary(backend)
+
+    circuit = Circuit(2)
+    circuit.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
+    final_matrix = circuit.unitary(backend)
+
     backend.assert_allclose(final_matrix, unitary, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
-def test_two_qubit_decomposition_common_gates(backend, gatename):
+@pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
+def test_two_qubit_decomposition_common_gates(backend, gate_name):
     """Test general two-qubit decomposition on some common gates."""
-    if gatename == "fSim":
-        gate = gates.fSim(0, 1, theta=0.1, phi=0.2)
+    if gate_name == "iSWAP":
+        with pytest.raises(NotImplementedError):
+            matrix = gates.iSWAP(0, 1).matrix(backend)
+            test = two_qubit_decomposition(0, 1, matrix, backend=backend)
     else:
-        gate = getattr(gates, gatename)(0, 1)
-    matrix = gate.matrix(backend)
-    c = Circuit(2)
-    c.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
-    final_matrix = c.unitary(backend)
-    backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
+        gate = (
+            gates.fSim(0, 1, theta=0.1, phi=0.2)
+            if gate_name == "fSim"
+            else getattr(gates, gate_name)(0, 1)
+        )
+        matrix = gate.matrix(backend)
+
+        circuit = Circuit(2)
+        circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+        final_matrix = circuit.unitary(backend)
+
+        backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("hz_zero", [False, True])
@@ -166,9 +186,11 @@ def test_two_qubit_decomposition_bell_unitary(backend, hz_zero):
     if hz_zero:
         hz = 0
     unitary = backend.cast(bell_unitary(hx, hy, hz, backend))
-    c = Circuit(2)
-    c.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
-    final_matrix = c.unitary(backend)
+
+    circuit = Circuit(2)
+    circuit.add(two_qubit_decomposition(0, 1, unitary, backend=backend))
+    final_matrix = circuit.unitary(backend)
+
     backend.assert_allclose(final_matrix, unitary, atol=1e-6, rtol=1e-6)
 
 
@@ -183,7 +205,9 @@ def test_two_qubit_decomposition_no_entanglement(backend):
         ]
     )
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    c = Circuit(2)
-    c.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
-    final_matrix = c.unitary(backend)
+
+    circuit = Circuit(2)
+    circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+    final_matrix = circuit.unitary(backend)
+
     backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)

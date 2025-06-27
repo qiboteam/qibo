@@ -1060,18 +1060,18 @@ class Circuit:
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
 
-    def execute(self, initial_state=None, nshots=1000):
+    def execute(self, initial_state=None, nshots: int = 1000, **kwargs):
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:
-            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`):
+            initial_state (ndarray or :class:`qibo.models.circuit.Circuit`):
                 Initial configuration. It can be specified by the setting the state
                 vector using an array or a circuit. If ``None``, the initial state
                 is ``|000..00>``.
-            nshots (int): Number of shots.
+            nshots (int, optional): Number of shots. Defaults ot :math:`1000`.
 
         Returns:
-            either a ``qibo.result.QuantumState``, ``qibo.result.MeasurementOutcomes``
+            Either a ``qibo.result.QuantumState``, ``qibo.result.MeasurementOutcomes``
             or ``qibo.result.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
@@ -1088,11 +1088,18 @@ class Circuit:
             return backend.execute_distributed_circuit(
                 transpiled_circuit, initial_state, nshots
             )
-        return backend.execute_circuit(transpiled_circuit, initial_state, nshots)
 
-    def __call__(self, initial_state=None, nshots=1000):
+        args = [transpiled_circuit, initial_state, nshots]
+
+        if backend.name == "hamming_weight":
+            weight = kwargs["weight"]
+            args = args[:1] + [weight] + args[1:]
+
+        return backend.execute_circuit(*args)
+
+    def __call__(self, initial_state=None, nshots=1000, **kwargs):
         """Equivalent to ``circuit.execute``."""
-        return self.execute(initial_state=initial_state, nshots=nshots)
+        return self.execute(initial_state=initial_state, nshots=nshots, **kwargs)
 
     @property
     def raw(self) -> dict:

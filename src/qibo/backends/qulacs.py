@@ -1,6 +1,7 @@
+"""Module defining the Qulacs backend."""
+
 import re
 
-import numpy as np
 import qulacs  # pylint: disable=import-error
 from qulacs import (  # pylint: disable=no-name-in-module, import-error
     QuantumCircuitSimulator,
@@ -14,7 +15,7 @@ from qibo.result import CircuitResult, QuantumState
 
 
 def circuit_to_qulacs(
-    circuit: "qibo.Circuit",
+    circuit: "qibo.Circuit",  # type: ignore
 ) -> "qulacs.QuantumCircuit":  # pylint: disable=no-member
     """
     Converts a qibo circuit in a qulacs circuit.
@@ -43,7 +44,7 @@ class QulacsBackend(NumpyBackend):
 
     def execute_circuit(
         self,
-        circuit: "qibo.Circuit",
+        circuit: "qibo.Circuit",  # type: ignore
         initial_state=None,
         nshots: int = 1000,
     ):

@@ -135,7 +135,7 @@ def translate_gate(
         backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
 
     Returns:
-        list: List of native gates that decompose the input gate.
+        list: Native gates that decompose the input gate.
     """
     backend = _check_backend(backend)
 
@@ -167,7 +167,7 @@ def _translate_single_qubit_gates(
 ):
     """Helper method for :meth:`translate_gate`.
 
-    Maps single qubit gates to a hardware-native implementation.
+    Maps single-qubit gates to a hardware-native implementation.
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): Gate to be decomposed.
@@ -175,7 +175,7 @@ def _translate_single_qubit_gates(
         backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
 
     Returns:
-        list: List of native gates that decompose the input gate.
+        list: Native gates that decompose the input gate.
     """
     if NativeGates.U3 & single_qubit_natives:
         return u3_dec(gate, backend)
@@ -189,15 +189,16 @@ def _translate_single_qubit_gates(
 def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates, backend):
     """Helper method for :meth:`translate_gate`.
 
-    Maps two qubit gates to a hardware-native implementation.
+    Maps two-qubit gates to a hardware-native implementation.
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): Gate to be decomposed.
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates supported by the hardware.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): Native gates
+            supported by the hardware.
         backend (:class:`qibo.backends.Backend`): Backend to use for gate matrix.
 
     Returns:
-        list: List of native gates that decompose the input gate.
+        list: Native gates that decompose the input gate.
     """
     if (
         native_gates & (NativeGates.CZ | NativeGates.iSWAP)
@@ -205,21 +206,25 @@ def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates, back
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate, backend)
+
         # Check if the gate has a CZ decomposition
         if gate.__class__ not in iswap_dec.decompositions:
             return cz_dec(gate, backend)
-        # Check the decomposition with less 2 qubit gates.
 
+        # Check the decomposition with less 2 qubit gates.
         if cz_dec.count_2q(gate, backend) < iswap_dec.count_2q(gate, backend):
             return cz_dec(gate)
+
         if cz_dec.count_2q(gate, backend) > iswap_dec.count_2q(gate, backend):
             return iswap_dec(gate, backend)
+
         # If equal check the decomposition with less 1 qubit gates.
         # This is never used for now but may be useful for future generalization
         if cz_dec.count_1q(gate, backend) < iswap_dec.count_1q(
             gate, backend
         ):  # pragma: no cover
             return cz_dec(gate, backend)
+
         return iswap_dec(gate, backend)  # pragma: no cover
 
     if native_gates & NativeGates.CZ:

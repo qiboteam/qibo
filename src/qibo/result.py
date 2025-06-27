@@ -65,6 +65,10 @@ class QuantumState:
     def state(self, numpy: bool = False):
         """State's tensor representation as a backend tensor.
 
+        .. note::
+            If the state has Hamming weight :math:`k` and is computed using the ``HammingWeightBackend``, its dimension
+            is :math:`d = \\binom{n}{k}`, where :math:`n` is the number of qubits.
+
         Args:
             numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
                 otherwise it will follow the backend tensor type.
@@ -272,20 +276,20 @@ class MeasurementOutcomes:
         nqubits = len(self.measurement_gate.qubits)
         if qubits is None:
             qubits = range(nqubits)
-        else:
-            if not set(qubits).issubset(self.measurement_gate.qubits):
-                raise_error(
-                    RuntimeError,
-                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
-                )
+        elif set(qubits).issubset(self.measurement_gate.qubits):
             qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
+        else:
+            raise_error(
+                RuntimeError,
+                f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
+            )
 
         if self._probs is not None and not self.measurement_gate.has_bitflip_noise():
             return self.backend.calculate_probabilities(
                 np.sqrt(self._probs), qubits, nqubits
             )
 
-        probs = [0 for _ in range(2**nqubits)]
+        probs = [0] * 2**nqubits
         for state, freq in self.frequencies(binary=False).items():
             probs[state] = freq / self.nshots
         probs = self.backend.cast(probs)
