@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib as mpl
 import tkinter as tk
 import importlib
+import time
 
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 from matplotlib.backends import backend_agg, backend_tkagg, backend_qtagg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from qibo import hamiltonians
 from qibo.config import raise_error
@@ -16,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Union, Optional
 from types import ModuleType
 from numpy.typing import ArrayLike
+from contextlib import contextmanager
 
 
 class Arrow3D(FancyArrowPatch):
@@ -33,16 +36,7 @@ class Arrow3D(FancyArrowPatch):
 
 @dataclass
 class Bloch:
-
-    STYLE = {
-        "figure.figsize": (6, 6),
-        "lines.linewidth": 0.9,
-    }
-
-    STYLE_TEXT = {"text.color": "black", "font.size": 19}
-
-    _shown: bool = False
-    backend: str = "qtagg"
+    backend: str = "tkagg"
 
     # Data
     points: list = field(default_factory=list)
@@ -52,38 +46,29 @@ class Bloch:
     color_points: list = field(default_factory=list)
     color_vectors: list = field(default_factory=list)
 
+    # Plot style sheets
+    STYLE = {
+        "figure.figsize": (6, 6),
+        "lines.linewidth": 0.9,
+    }
+    STYLE_TEXT = {"text.color": "black", "font.size": 19}
+
     # Figure and axis
     def __post_init__(self):
         self.fig = Figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
-        self._backend = importlib.import_module(
-            "matplotlib.backends.backend_" + self.backend.lower()
-        )
 
-    def clear(self):
+        if self.backend == "qtagg":
+            mpl.use("qtagg")
+            self._backend = importlib.import_module(
+                "matplotlib.backends.backend_" + self.backend.lower()
+            )
+        elif self.backend == "tkagg":
+            mpl.use("tkagg")
+        else:
+            raise_error(ValueError, "Backend not supported. Try: `qtagg` or `tkagg`.")
 
-        print("clear")
-        # Figure, Axis clear
-        self.fig.clear()
-        self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
-
-        print("clear 2")
-
-        # Recreate the sphere
-        self.create_sphere()
-
-        print("clear 3")
-
-        # Clear data
-        self.points = []
-        self.vectors = []
-
-        print("clear 4")
-
-        # Clear Color
-        self.color_points = []
-        self.color_vectors = []
-
+    # -----Sphere-----
     def _sphere_surface(self):
         phi, theta = np.mgrid[0.0 : np.pi : 100j, 0.0 : 2.0 * np.pi : 100j]
         x = np.sin(phi) * np.cos(theta)
@@ -113,7 +98,7 @@ class Bloch:
         z = np.cos(theta)
         return x, y, z
 
-    def create_sphere(self):
+    def _create_sphere(self):
         "Function to create an empty sphere."
 
         # Empty sphere
@@ -154,9 +139,9 @@ class Bloch:
             self.ax.text(0, 0, 1.2, r"$|0\rangle$", ha="center")
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
+    # -----States and Vectors-----
     def _coordinates(self, state):
         "Function to determine the coordinates of a qubit in the sphere."
-
         x, y, z = 0, 0, 0
         if state[0] == 1 and state[0] == 0:
             z = 1
@@ -173,6 +158,18 @@ class Bloch:
         return x, y, z
 
     def _broadcasting_semantics(self, vector, mode, color):
+        if isinstance(vector, list) and len(vector) > 2:
+            # Se è una lista
+            # [[0,1], [0,1], [0,1]] --> np.array([[0,1], [0,1], [0,1]])
+            vector = np.array(vector)
+        elif isinstance(vector, list) and len(vector) == 2:
+            vector = [np.array(vector)]
+        elif (len(vector.shape) == 1) or (vector.shape[0] == 1):
+            # Se è un array con shape (2, ) oppure (1, 2)
+            vector = [vector]
+        else:
+            # Se è un array con shape (100, 2)
+            pass
 
         num_vector = len(vector)
         if isinstance(mode, str):
@@ -182,6 +179,10 @@ class Bloch:
             color = [color] * num_vector
 
         return vector, mode, color
+
+    def _new_window(self):
+        self.fig = Figure(figsize=self.STYLE["figure.figsize"])
+        self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
     def add_vector(
         self,
@@ -207,11 +208,7 @@ class Bloch:
         color: Union[str, list[str]] = "black",
     ):
         "Function to add a state to the sphere."
-
-        vectors, modes, colors = self._broadcasting_semantics(
-            np.array(state), mode, color
-        )
-
+        vectors, modes, colors = self._broadcasting_semantics(state, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
             x, y, z = self._coordinates(vector)
             if mode == "vector":
@@ -223,13 +220,20 @@ class Bloch:
             else:
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
+    def clear(self):
+        self._new_window()
+
+        # Clear data
+        self.points = []
+        self.vectors = []
+
+        # Clear Color
+        self.color_points = []
+        self.color_vectors = []
+
+    # ----Plot and Save-----
     def _rendering(self):
-        if self._shown == True:
-            self.fig.clear()
-
-        self._shown = True
-
-        self.create_sphere()
+        self._create_sphere()
 
         for color, vector in zip(self.color_vectors, self.vectors):
             xs3d = vector[0] * np.array([0, 1])
@@ -256,14 +260,6 @@ class Bloch:
         self.ax.axis("off")
         self.fig.tight_layout()
 
-    def save(self, filename="bloch_sphere.pdf"):
-        self._rendering()
-
-        mpl.use("Agg")
-        canvas = backend_agg.FigureCanvas(self.fig)
-
-        self.fig.savefig(filename)
-
     def _qt_window(self):
         manager = self._backend.new_figure_manager_given_figure(1, self.fig)
         manager.show()
@@ -272,13 +268,14 @@ class Bloch:
         self.fig.show()
 
     def _tk_window(self):
-        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
         root = tk.Tk()
         root.title("Bloch Sphere")
+        # Frame
         frame = tk.Frame(root)
-        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        canvas = FigureCanvasTkAgg(self.fig, master=frame)
+
+        # Canvas widget
+        canvas = FigureCanvasTkAgg(self.fig, master=root)
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         canvas.draw()
@@ -287,10 +284,14 @@ class Bloch:
     def plot(self):
         self._rendering()
 
-        mpl.use(self.backend)
         if self.backend == "tkagg":
-            # If I use tkinter.mainloop() I get problems with `wm`
-            # hence I need to wrap mpl.Figure in tkinter
             self._tk_window()
         else:
             self._qt_window()
+
+    def save(self, filename="bloch_sphere.pdf"):
+        self._rendering()
+
+        mpl.use("Agg")
+        canvas = backend_agg.FigureCanvas(self.fig)
+        self.fig.savefig(filename)
