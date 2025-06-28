@@ -1,21 +1,20 @@
-import numpy as np
-import matplotlib as mpl
-import tkinter as tk
 import importlib
+import tkinter as tk
+from dataclasses import dataclass, field
+from typing import Union
 
+import matplotlib as mpl
+import numpy as np
+from matplotlib.backends import backend_agg, backend_qtagg, backend_tkagg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
-from matplotlib.backends import backend_agg, backend_tkagg, backend_qtagg
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from numpy.typing import ArrayLike
 
 from qibo import hamiltonians
 from qibo.config import raise_error
 from qibo.symbols import X, Y, Z
-
-from typing import Union
-from dataclasses import dataclass, field
-from numpy.typing import ArrayLike
 
 
 class Arrow3D(FancyArrowPatch):
