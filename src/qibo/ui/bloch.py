@@ -63,6 +63,7 @@ class Bloch:
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
         # Backends
+        # TO-DO: Add a jupyter backend
         if self.backend == "qtagg":
             mpl.use(self.backend)
             self._backend = importlib.import_module(
@@ -312,7 +313,7 @@ class Bloch:
 
         if self.backend == "tkagg":
             self._tk_window()
-        else:
+        elif self.backend == "qtagg":
             self._qt_window()
 
     def save(self, filename="bloch_sphere.pdf"):
