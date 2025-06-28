@@ -64,14 +64,19 @@ class Bloch:
 
         # Backends
         if self.backend == "qtagg":
-            mpl.use("qtagg")
+            mpl.use(self.backend)
             self._backend = importlib.import_module(
                 "matplotlib.backends.backend_" + self.backend
             )
         elif self.backend == "tkagg":
-            mpl.use("tkagg")
+            mpl.use(self.backend)
+        elif self.backend == "agg":
+            mpl.use(self.backend)
         else:
-            raise_error(ValueError, "Backend not supported. Try: `qtagg` or `tkagg`.")
+            raise_error(
+                ValueError,
+                "Backend not supported. Try: `qtagg`, `tkagg` (interactive) or `agg` (non-interactive).",
+            )
 
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
@@ -183,7 +188,7 @@ class Bloch:
         if isinstance(vector, list):
             vector = np.array(vector)
 
-        self._homogeneous(vector)
+        vector = self._homogeneous(vector)
 
         num_vector = len(vector)
         if isinstance(mode, str):
@@ -284,7 +289,6 @@ class Bloch:
         manager.show()
         manager.set_window_title("Bloch Sphere")
         self._backend.Show().mainloop()
-        self.fig.show()
 
     def _tk_window(self):
         "Helper method to `plot()` for the `tkagg` backend."
