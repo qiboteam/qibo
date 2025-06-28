@@ -41,21 +41,20 @@ class Bloch:
 
     backend: str = "tkagg"
 
-    # Data
-    _points: list = field(default_factory=list)
-    _vectors: list = field(default_factory=list)
-
-    # Color data
-    _color_states: list = field(default_factory=list)
-    _color_points: list = field(default_factory=list)
-    _color_vectors: list = field(default_factory=list)
-
     # Plot style sheets
     STYLE = {
         "figure.figsize": (6, 6),
         "lines.linewidth": 0.9,
     }
     STYLE_TEXT = {"text.color": "black", "font.size": 19}
+
+    # Data
+    _points: list = field(default_factory=list)
+    _vectors: list = field(default_factory=list)
+
+    # Color data
+    _color_points: list = field(default_factory=list)
+    _color_vectors: list = field(default_factory=list)
 
     # Figure and axis
     def __post_init__(self):
@@ -67,7 +66,7 @@ class Bloch:
         if self.backend == "qtagg":
             mpl.use("qtagg")
             self._backend = importlib.import_module(
-                "matplotlib.backends.backend_" + self.backend.lower()
+                "matplotlib.backends.backend_" + self.backend
             )
         elif self.backend == "tkagg":
             mpl.use("tkagg")
@@ -172,22 +171,21 @@ class Bloch:
             z = sigma_Z.expectation(state)
         return x, y, z
 
-    def _broadcasting_semantics(self, vector, mode, color):
-        if isinstance(vector, list) and len(vector) > 2:
-            # Se è una lista
-            # [[0,1], [0,1], [0,1]] --> np.array([[0,1], [0,1], [0,1]])
-            vector = np.array(vector)
-        elif isinstance(vector, list) and len(vector) == 2:
-            vector = [np.array(vector)]
-        elif (len(vector.shape) == 1) or (vector.shape[0] == 1):
-            # Se è un array con shape (2, ) oppure (1, 2)
-            vector = [vector]
+    def _homogeneous(self, vector):
+        if len(vector.shape) == 1:
+            return [vector]
+        elif len(vector.shape) == 2:
+            return vector
         else:
-            # Se è un array con shape (100, 2)
-            pass
+            raise_error(ValueError, "Only `2D` or `1D` np.ndarray / list is accepted.")
+
+    def _broadcasting_semantics(self, vector, mode, color):
+        if isinstance(vector, list):
+            vector = np.array(vector)
+
+        self._homogeneous(vector)
 
         num_vector = len(vector)
-        print(num_vector)
         if isinstance(mode, str):
             mode = [mode] * num_vector
 
