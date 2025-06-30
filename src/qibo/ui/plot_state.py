@@ -35,10 +35,10 @@ def plot_density_hist(
     circuit,
     title: str = "",
     alpha: float = 0.5,
-    colors: Optional[list] = None,
+    colors: Optional[List[str]] = None,
+    fig_width: int = 16,
+    fig_height: int = 8,
     backend=None,
-    fig_width=16,
-    fig_height=8,
 ):
     """Plot the real and imaginary parts of the density matrix.
 
