@@ -1243,7 +1243,7 @@ class Circuit:
             pcvl_class = gate.__class__.__name__
             if pcvl_class == "H":
                 pcvl_class = "BS.H"
-            code += f"\n    .add({wires[0]}, {pcvl_class}({', '.join(map(str, gate.init_args[len(wires):]))}))"
+            code += f"\\\n    .add({tuple(wires)}, {pcvl_class}({', '.join(map(str, gate.init_args[len(wires):]))}))"
 
         return code
 
