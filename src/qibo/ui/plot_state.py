@@ -122,7 +122,7 @@ def plot_density_hist(
     cmap_neg = LinearSegmentedColormap.from_list("cmap_neg", 4 * [neg_color])
 
     negative_order = kwargs.get("negative_order", 0.625)
-    positive_order = kwargs.get("negative_order", 0.875)
+    positive_order = kwargs.get("positive_order", 0.875)
     alpha_3dplane = kwargs.get("alpha_3dplane", 0.25)
 
     for ax, dz, zlabel in (
