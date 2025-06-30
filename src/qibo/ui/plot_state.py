@@ -70,7 +70,7 @@ def plot_density_hist(
     if len(circuit.measurements) > 0:
         raise_error(
             ValueError,
-            "Circuit must not contain measurement gates for density matrix visualization"
+            "Circuit must not contain measurement gates for density matrix visualization",
         )
 
     backend = _check_backend(backend)
