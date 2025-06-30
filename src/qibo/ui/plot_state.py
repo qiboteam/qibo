@@ -14,11 +14,13 @@ def _validate_colors(colors):
         return "#ff7f0e", "#1f77b4"
 
     if len(colors) != 2:
-        raise_error(ValueError, f"Colors must be a list of length 2, got {len(colors)} instead")
+        raise_error(
+            ValueError, f"Colors must be a list of length 2, got {len(colors)} instead"
+        )
 
     pos_color = "#ff7f0e" if colors[0] is None else colors[0]
     neg_color = "#1f77b4" if colors[1] is None else colors[1]
-    
+
     return pos_color, neg_color
 
 
