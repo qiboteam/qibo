@@ -105,12 +105,12 @@ def plot_density_hist(
     dzr = backend.np.reshape(matrix_real, (-1))
     dzi = backend.np.reshape(matrix_imag, (-1))
 
+    max_dzr = np.max(dzr)
+    max_dzi = np.max(dzi)
+
     fig = plt.figure(figsize=(fig_width, fig_height), facecolor="w")
     ax1 = fig.add_subplot(1, 2, 1, projection="3d", computed_zorder=False)
     ax2 = fig.add_subplot(1, 2, 2, projection="3d", computed_zorder=False)
-
-    max_dzr = np.max(dzr)
-    max_dzi = np.max(dzi)
 
     max_plot_size = min(fig_width / 2.25, fig_height)
     max_font_size = int(2 * max_plot_size)
