@@ -158,6 +158,7 @@ def test_simple_raise_error_colors_state():
     with pytest.raises(Exception) as excinfo:
         colors = ["red", "blue", "green"]
         plot_density_hist(circuit, title="Test Circuit State", colors=colors)
-        assert str(
-            excinfo.value
-        ) == f"Colors must be a list of length 2, got {len(colors)} instead."
+        assert (
+            str(excinfo.value)
+            == f"Colors must be a list of length 2, got {len(colors)} instead."
+        )
