@@ -1,4 +1,5 @@
 from abc import abstractmethod
+
 import numpy as np
 
 from .abstract import ParametrizedGate
@@ -8,6 +9,7 @@ from .gates import H
 class PhotonicGate:
     def __init__(self, wires: tuple[int, ...]):
         import perceval as pcvl
+
         self._wires = wires
         self._pcvl = pcvl
 
@@ -26,7 +28,7 @@ class PS(ParametrizedGate, PhotonicGate):
         ParametrizedGate.__init__(self, trainable=trainable)
         self.nparams = 1
         self.parameter_names = [phi]
-        self.parameters = phi,
+        self.parameters = (phi,)
 
         PhotonicGate.__init__(self, (wire,))
         self.target_qubits = (wire,)
@@ -48,7 +50,7 @@ class BS(ParametrizedGate, PhotonicGate):
         ParametrizedGate.__init__(self, trainable=True)
         self.nparams = 1
         self.parameter_names = [theta]
-        self.parameters = theta,
+        self.parameters = (theta,)
 
         PhotonicGate.__init__(self, (q0, q1))
         self.name = "Beam splitter"

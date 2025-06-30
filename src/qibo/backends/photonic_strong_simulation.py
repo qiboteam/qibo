@@ -1,13 +1,23 @@
-from qibo.backends.numpy import NumpyBackend, NumpyMatrices
-from perceval import Experiment, Processor, BasicState, probs_to_samples, BS, RemoteProcessor
-from perceval.algorithm import Sampler
-from perceval import __version__ as pcvl_version
-from qibo import __version__, Circuit
-from qibo.measurements import MeasurementResult
-from .modality import Modality
 import numpy as np
+from perceval import (
+    BS,
+    BasicState,
+    Experiment,
+    Processor,
+    RemoteProcessor,
+)
+from perceval import __version__ as pcvl_version
+from perceval import (
+    probs_to_samples,
+)
+from perceval.algorithm import Sampler
 
+from qibo import Circuit, __version__
+from qibo.backends.numpy import NumpyBackend, NumpyMatrices
 from qibo.gates import H, PhotonicGate
+from qibo.measurements import MeasurementResult
+
+from .modality import Modality
 
 
 class LOQCMatrices:
@@ -18,12 +28,12 @@ class LOQCMatrices:
         if isinstance(x, list):
             return np.array(x, dtype=dtype)
         return x.astype(dtype)
-    
+
     def BS(self, theta):
         cos = np.cos(theta / 2.0) + 0j
         isin = -1j * np.sin(theta / 2.0)
         return self._cast([[cos, isin], [isin, cos]], dtype=self.dtype)
-    
+
     def PS(self, phi):
         return self._cast([np.exp(1j * phi)], dtype=self.dtype)
 
@@ -62,7 +72,7 @@ class LoqcStrongBackend(NumpyBackend):
             experiment.with_input(BasicState(initial_state))
         p = Processor("SLOS", experiment)
         samples = probs_to_samples(p.probs()["results"], count=nshots)
-        
+
         m = MeasurementResult(experiment.m)
         m.register_samples([list(k) for k in samples])
         return m

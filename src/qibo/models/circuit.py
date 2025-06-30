@@ -10,9 +10,9 @@ import numpy as np
 from tabulate import tabulate
 
 from qibo import __version__, gates
-from qibo.backends import _check_backend, _Global, Modality
+from qibo.backends import Modality, _check_backend, _Global
 from qibo.config import raise_error
-from qibo.gates import ParametrizedGate, PhotonicGate, PHOTONIC_GATE_TYPES
+from qibo.gates import PHOTONIC_GATE_TYPES, ParametrizedGate, PhotonicGate
 from qibo.gates.abstract import Gate
 from qibo.models._openqasm import QASMParser
 from qibo.result import CircuitResult, QuantumState
@@ -178,7 +178,7 @@ class Circuit:
         accelerators=None,
         density_matrix: bool = False,
         wire_names: Optional[list] = None,
-        modality: Optional[Modality] = None
+        modality: Optional[Modality] = None,
     ):
         nqubits, wire_names = _resolve_qubits(nqubits, wire_names)
         self.nqubits = nqubits
@@ -187,7 +187,7 @@ class Circuit:
             "accelerators": accelerators,
             "density_matrix": density_matrix,
             "wire_names": wire_names,
-            "modality": modality
+            "modality": modality,
         }
         self.wire_names = wire_names
         self.queue = _Queue(nqubits)
@@ -216,7 +216,9 @@ class Circuit:
                     "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
-        self._modality: Modality = modality or Modality.GATE  # For compatibility, the default is gate based
+        self._modality: Modality = (
+            modality or Modality.GATE
+        )  # For compatibility, the default is gate based
         if Modality.is_photonic:
             self._wire_type = "mode"
         else:
@@ -654,7 +656,8 @@ class Circuit:
             if self._modality.is_photonic:
                 if not isinstance(gate, PHOTONIC_GATE_TYPES):
                     raise_error(
-                        TypeError, f"Gate {gate.name} cannot be used with photonic modality."
+                        TypeError,
+                        f"Gate {gate.name} cannot be used with photonic modality.",
                     )
 
             if isinstance(gate, gates.M):
@@ -1095,8 +1098,12 @@ class Circuit:
         backend = _Global.backend()
 
         if self._modality.is_photonic:
-            assert backend.modality.is_photonic, "Back-end has to be photonic compatible for a photonic circuit."
-            assert initial_state is not None, "Photonic modality requires an initial state."
+            assert (
+                backend.modality.is_photonic
+            ), "Back-end has to be photonic compatible for a photonic circuit."
+            assert (
+                initial_state is not None
+            ), "Photonic modality requires an initial state."
             args = [self, initial_state, nshots]
 
         else:

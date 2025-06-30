@@ -2,7 +2,9 @@ import abc
 from typing import Optional, Union
 
 from qibo.config import raise_error
+
 from .modality import Modality
+
 
 class Backend(abc.ABC):
     def __init__(self):

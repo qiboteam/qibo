@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Modality(Enum):
     GATE = "gate"
     PHOTONIC = "photonic"
@@ -21,4 +22,3 @@ class Modality(Enum):
     def is_pulse(self) -> bool:
         """Check if the modality is pulse."""
         return self == Modality.PULSE
-
