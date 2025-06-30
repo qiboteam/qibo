@@ -68,7 +68,8 @@ def plot_density_hist(
 
     # if exec_circ has measurements then, error measure gates are present
     if len(circuit.measurements) > 0:
-        raise ValueError(
+        raise_error(
+            ValueError,
             "Circuit must not contain measurement gates for density matrix visualization"
         )
 
