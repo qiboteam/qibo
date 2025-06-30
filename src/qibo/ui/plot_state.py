@@ -41,6 +41,7 @@ def plot_density_hist(
     fig_width: int = 16,
     fig_height: int = 8,
     backend=None,
+    **kwargs,
 ):
     """Plot the real and imaginary parts of the density matrix.
 
@@ -120,6 +121,10 @@ def plot_density_hist(
     cmap_pos = LinearSegmentedColormap.from_list("cmap_pos", 4 * [pos_color])
     cmap_neg = LinearSegmentedColormap.from_list("cmap_neg", 4 * [neg_color])
 
+    negative_order = kwargs.get("negative_order", 0.625)
+    positive_order = kwargs.get("negative_order", 0.875)
+    alpha_3dplane = kwargs.get("alpha_3dplane", 0.25)
+
     for ax, dz, zlabel in (
         (ax1, dzr, "Real"),
         (ax2, dzi, "Imaginary"),
@@ -144,7 +149,7 @@ def plot_density_hist(
             ]
         )
 
-        for mask, zorder in ((dz < 0, 0.625), (dz >= 0, 0.875)):
+        for mask, zorder in ((dz < 0, negative_order), (dz >= 0, positive_order)):
             if np.any(mask):
                 ax.bar3d(
                     xpos[mask],
@@ -162,7 +167,9 @@ def plot_density_hist(
         if min_dz < 0 < max_dz:
             xlim, ylim = [0, label_x], [0, label_y]
             verts = [list(zip(xlim + xlim[::-1], np.repeat(ylim, 2), [0] * 4))]
-            plane = Poly3DCollection(verts, alpha=0.25, facecolor="k", linewidths=1)
+            plane = Poly3DCollection(
+                verts, alpha=alpha_3dplane, facecolor="k", linewidths=1
+            )
             plane.set_zorder(0.75)
             ax.add_collection3d(plane)
 
