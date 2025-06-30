@@ -6,6 +6,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from qibo.backends import _check_backend
+from qibo.config import raise_error
 
 
 def _validate_colors(colors):
