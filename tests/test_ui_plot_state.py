@@ -160,4 +160,4 @@ def test_simple_raise_error_colors_state():
         plot_density_hist(circuit, title="Test Circuit State", colors=colors)
         assert str(
             excinfo.value
-        ) == "Colors must be a list of len=2, got {} instead".format(len(colors))
+        ) == f"Colors must be a list of length 2, got {len(colors)} instead."
