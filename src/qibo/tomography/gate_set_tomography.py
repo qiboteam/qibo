@@ -22,7 +22,7 @@ ANGLES = ["theta", "phi", "lam", "unitary"]
 """Angle names for parametrized gates."""
 
 
-# @cache
+@cache
 def _check_nqubits(nqubits):
     if nqubits not in SUPPORTED_NQUBITS:
         raise_error(
@@ -31,7 +31,7 @@ def _check_nqubits(nqubits):
         )
 
 
-# @cache
+@cache
 def _gates(nqubits) -> List:
     """Gates implementing all the GST state preparations.
 
@@ -48,7 +48,7 @@ def _gates(nqubits) -> List:
     )
 
 
-# @cache
+@cache
 def _measurements(nqubits: int) -> List:
     """Measurement gates implementing all the GST measurement bases.
 
@@ -61,7 +61,7 @@ def _measurements(nqubits: int) -> List:
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _observables(nqubits: int) -> List:
     """All the observables measured in the GST protocol.
 
@@ -75,7 +75,7 @@ def _observables(nqubits: int) -> List:
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
-# @cache
+@cache
 def _get_observable(j: int, nqubits: int):
     """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
@@ -100,7 +100,7 @@ def _get_observable(j: int, nqubits: int):
     return SymbolicHamiltonian(observable, nqubits=nqubits)
 
 
-# @cache
+@cache
 def _prepare_state(k: int, nqubits: int):
     """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
     Using base-4 indexing for :math:`k`,
@@ -122,7 +122,7 @@ def _prepare_state(k: int, nqubits: int):
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
-# @cache
+@cache
 def _measurement_basis(j: int, nqubits: int):
     """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
     Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
@@ -144,7 +144,7 @@ def _measurement_basis(j: int, nqubits: int):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-# @cache
+@cache
 def _extract_nqubits(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
 ):
@@ -174,7 +174,7 @@ def _extract_nqubits(
     return nqubits
 
 
-# @cache
+@cache
 def _get_nqubits_and_angles(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
 ):
@@ -228,7 +228,7 @@ def _get_nqubits_and_angles(
     return gate, nqubits, angle_names, angle_values, params
 
 
-# @cache
+@cache
 def _extract_gate(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
     idx: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -286,6 +286,30 @@ def _extract_gate(
         gate = gate(*idx, **angle_values)
 
     return gate, nqubits
+
+
+@cache
+def _get_swap_pairs(circ, ancilla):
+    """Function that returns a tuple representing which qubits to swap. There are three
+        scenarios:
+        - If ``ancilla = 0``, ``swap_pairs = [(0, 2)]``.
+        - If ``ancilla = 1``, ``swap_pairs = [(1, 2)]``.
+        - If ``ancilla = 2``, ``swap_pairs = [(0, 2), (1, 3)]``.
+
+    Args:
+        circ (:class:`qibo.models.circuit.Circuit`): The circuit to find out which swap pairs are
+        ancilla (int): Controls which qubits the SWAP gates are applied to.
+
+    Returns:
+        swap_pairs (list(tuple)): A list containing the tuple of the qubits to swap.
+    """
+
+    swap_pairs = (
+        [(ancilla, circ.nqubits - 1)]
+        if ancilla < 2
+        else [(0, circ.nqubits - 2), (1, circ.nqubits - 1)]
+    )
+    return swap_pairs
 
 
 def _gate_tomography(
@@ -373,11 +397,12 @@ def _gate_tomography(
         circ.add(_prepare_state(k, nqubits))
 
         if ancilla is not None:
-            swap_pairs = (
-                [(ancilla, circ.nqubits - 1)]
-                if ancilla < 2
-                else [(0, circ.nqubits - 2), (1, circ.nqubits - 1)]
-            )
+            # swap_pairs = (
+            #     [(ancilla, circ.nqubits - 1)]
+            #     if ancilla < 2
+            #     else [(0, circ.nqubits - 2), (1, circ.nqubits - 1)]
+            # )
+            swap_pairs = _get_swap_pairs(circ, ancilla)
             for q1, q2 in swap_pairs:
                 circ.add(gates.SWAP(q1, q2))
 

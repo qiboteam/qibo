@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from sympy import S
 
-from qibo import gates, symbols
+from qibo import Circuit, gates, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
@@ -15,6 +15,7 @@ from qibo.tomography.gate_set_tomography import (
     _extract_nqubits,
     _gate_tomography,
     _get_observable,
+    _get_swap_pairs,
     _measurement_basis,
     _prepare_state,
 )
@@ -322,6 +323,19 @@ def test_gate_tomography_ancilla_error(backend, ancilla):
             backend=backend,
             ancilla=ancilla,
         )
+
+
+def test__get_swap_pairs():
+    true_swap_pairs = [[(0, 2)], [(1, 2)], [(0, 2), (1, 3)]]
+    for ancilla in range(0, 3):
+        gate_list = [gates.T(0), gates.TDG(0)]
+
+        nqubits = 2
+        additional_qubits = 0 if ancilla is None else (1 if ancilla in (0, 1) else 2)
+        circ = Circuit(nqubits + additional_qubits, density_matrix=True)
+        swap_pairs = _get_swap_pairs(circ, ancilla)
+
+        assert true_swap_pairs[ancilla] == swap_pairs
 
 
 @pytest.mark.parametrize(
