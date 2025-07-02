@@ -18,7 +18,11 @@ from qibo.transpiler.unroller import NativeGates, Unroller
 SUPPORTED_NQUBITS = [1, 2]
 """Supported nqubits for GST."""
 
+ANGLES = ["theta", "phi", "lam", "unitary"]
+"""Angle names for parametrized gates."""
 
+
+# @cache
 def _check_nqubits(nqubits):
     if nqubits not in SUPPORTED_NQUBITS:
         raise_error(
@@ -27,6 +31,7 @@ def _check_nqubits(nqubits):
         )
 
 
+# @cache
 def _gates(nqubits) -> List:
     """Gates implementing all the GST state preparations.
 
@@ -43,6 +48,7 @@ def _gates(nqubits) -> List:
     )
 
 
+# @cache
 def _measurements(nqubits: int) -> List:
     """Measurement gates implementing all the GST measurement bases.
 
@@ -55,6 +61,7 @@ def _measurements(nqubits: int) -> List:
     return list(product([gates.Z, gates.X, gates.Y, gates.Z], repeat=nqubits))
 
 
+# @cache
 def _observables(nqubits: int) -> List:
     """All the observables measured in the GST protocol.
 
@@ -68,6 +75,7 @@ def _observables(nqubits: int) -> List:
     return list(product([symbols.I, symbols.Z, symbols.Z, symbols.Z], repeat=nqubits))
 
 
+# @cache
 def _get_observable(j: int, nqubits: int):
     """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
@@ -92,6 +100,7 @@ def _get_observable(j: int, nqubits: int):
     return SymbolicHamiltonian(observable, nqubits=nqubits)
 
 
+# @cache
 def _prepare_state(k: int, nqubits: int):
     """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
     Using base-4 indexing for :math:`k`,
@@ -113,6 +122,7 @@ def _prepare_state(k: int, nqubits: int):
     return [gate(q) for q in range(len(gates)) for gate in gates[q]]
 
 
+# @cache
 def _measurement_basis(j: int, nqubits: int):
     """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
     Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
@@ -134,7 +144,40 @@ def _measurement_basis(j: int, nqubits: int):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-def _get_nqubits_and_angles(gate):
+# @cache
+def _extract_nqubits(
+    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
+):
+    """A function to extract the number of qubits the gate acts on.
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate` or tuple): Either a gate or a tuple consisting of a gate and a list of its parameters.
+            Examples of a valid input:
+            - ``gate = gates.Z`` for a non-parametrized gate.
+            - ``gate = (gates.RX, [np.pi/3])`` or ``gate = (gates.PRX, [np.pi/2, np.pi/3])`` for a parametrized gate.
+            - ``gate = (gates.Unitary, [np.array([[1, 0], [0, 1]])])`` for an arbitrary unitary operator.
+    Returns:
+        nqubits (int): Number of qubits that the gate acts on.
+    """
+
+    if isinstance(gate, tuple):
+        gate, params = gate
+    init_args = signature(gate).parameters
+    if "q" in init_args:
+        nqubits = 1
+    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+        nqubits = 2
+    else:
+        raise_error(
+            RuntimeError,
+            f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
+        )
+    return nqubits
+
+
+# @cache
+def _get_nqubits_and_angles(
+    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
+):
     """A function to extract information about a `qibo.gates.Gate`.
 
     Args:
@@ -146,23 +189,20 @@ def _get_nqubits_and_angles(gate):
     Returns:
         gate (:class:`qibo.gates.Gate`): Gate class.
         nqubits (int): Number of qubits that the gate acts on.
-        angles (None or list[float]): If gate is a parametrized gate, angles contains a list of angle names to check for.
-            Else, if gate is non-parametrized, angles is None.
-        init_args (OrderedDict): An ordered dictionary of information about the gate.
+        angle_names (list[str]): If gate is a parametrized gate, ``angle_names`` contains a list containing the angle names of the
+            parametrized gate. Else, ``None``.
+        angle_values (dict[str, float]): If gate is a parametrized gate, ``angle_values`` is a dictionary containing the angle names
+            of the parametrized gate and the respective angles. Else, an empty dictionary is returned.
         params (list[float]): Stores all the parameters of the gate in a list.
     """
 
     nqubits = None
     if isinstance(gate, tuple):
-        angles = ["theta", "phi", "lam", "unitary"]
+        angles = ANGLES
         gate, params = gate
         if not (isinstance(params, list) or isinstance(params, tuple)):
-            if isinstance(params, torch.Tensor):
-                params = [params.numpy()]
-            elif isinstance(params, np.ndarray):
+            if isinstance(params, np.ndarray):
                 params = [params]
-            # elif isinstance(params, cupy.ndarray):
-            # params = [cupy.asnumpy(params)]
 
     else:
         angles = None
@@ -177,9 +217,18 @@ def _get_nqubits_and_angles(gate):
             RuntimeError,
             f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
         )
-    return gate, nqubits, angles, init_args, params
+
+    if angles:
+        angle_names = [arg for arg in init_args if arg in angles]
+        angle_values = dict(zip(angle_names, params))
+    else:
+        angle_names = None
+        angle_values = {}
+
+    return gate, nqubits, angle_names, angle_values, params
 
 
+# @cache
 def _extract_gate(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
     idx: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -204,18 +253,13 @@ def _extract_gate(
 
     original_gate_input = gate
 
-    gate, nqubits, angles, init_args, params = _get_nqubits_and_angles(
+    gate, nqubits, angle_names, angle_values, params = _get_nqubits_and_angles(
         original_gate_input
     )
-    if angles:
-        valid_angles = [arg for arg in init_args if arg in angles]
-        angle_values = dict(zip(valid_angles, params))
-    else:
-        angle_values = {}
 
     # Perform some checks
     if isinstance(original_gate_input, tuple):
-        if "unitary" not in valid_angles:
+        if "unitary" not in angle_names:
             # Check that input for parametrized gates are float, int
             for p in params:
                 if type(p) not in (int, float):
@@ -246,7 +290,7 @@ def _extract_gate(
 
 def _gate_tomography(
     nqubits: int,
-    gate=None,
+    gate: gates.Gate = None,
     nshots: int = int(1e4),
     noise_model=None,
     backend=None,
@@ -328,7 +372,7 @@ def _gate_tomography(
 
         circ.add(_prepare_state(k, nqubits))
 
-        if ancilla is not None:  # pragma: no cover
+        if ancilla is not None:
             swap_pairs = (
                 [(ancilla, circ.nqubits - 1)]
                 if ancilla < 2
@@ -469,7 +513,7 @@ def GST(
         if len(gate_set) == 2:
             gate_set_nqubits = []
             for gate in gate_set:
-                _, nqubits, _, _, _ = _get_nqubits_and_angles(gate)
+                nqubits = _extract_nqubits(gate)
                 gate_set_nqubits.append(nqubits)
             if 2 in gate_set_nqubits:
                 raise_error(RuntimeError, f"Requires two single-qubit gates")

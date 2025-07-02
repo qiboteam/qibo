@@ -12,6 +12,7 @@ from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
 from qibo.tomography.gate_set_tomography import (
     GST,
     _extract_gate,
+    _extract_nqubits,
     _gate_tomography,
     _get_observable,
     _measurement_basis,
@@ -161,6 +162,17 @@ def test__get_observable(j, nqubits):
         prepared_observable = _get_observable(j, nqubits).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
+
+
+def test__extract_nqubits():
+    correct_nqubits = [1, 1, 2, 3]
+    gates_to_test = [gates.Z, (gates.RX, [np.pi / 2]), gates.CNOT, gates.TOFFOLI]
+    for idx in range(0, len(gates_to_test)):
+        if idx < 3:
+            assert _extract_nqubits(gates_to_test[idx]) == correct_nqubits[idx]
+        else:
+            with pytest.raises(RuntimeError):
+                nqubits = _extract_nqubits(gates_to_test[idx])
 
 
 @pytest.mark.parametrize(
