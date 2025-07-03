@@ -31,6 +31,22 @@ REQUIRED_FIELDS_INIT_KWARGS = [
     "p1",
 ]
 
+GATES_CONTROLLED_BY_DEFAULT = [
+    "cx",
+    "cy",
+    "cz",
+    "csx",
+    "csxdg",
+    "crx",
+    "cry",
+    "crz",
+    "cu1",
+    "cu2",
+    "cu3",
+    "ccx",
+    "ccz",
+]
+
 
 class Gate:
     """The base class for gate implementation.
@@ -298,25 +314,9 @@ class Gate:
         """
         # Explicit mention of gates where the method
         # `.controlled_by` fail. This should be fixed separatedly.
-        gates_controlled_by_default = [
-            "cx",
-            "cy",
-            "cz",
-            "csx",
-            "csxdg",
-            "crx",
-            "cry",
-            "crz",
-            "cu1",
-            "cu2",
-            "cu3",
-            "ccx",
-            "ccz",
-        ]
-
         qubits = (
             self.qubits
-            if self.name in gates_controlled_by_default
+            if self.name in GATES_CONTROLLED_BY_DEFAULT
             else self.target_qubits
         )
         qubits = tuple(qubit_map.get(q) for q in qubits)
