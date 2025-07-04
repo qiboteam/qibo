@@ -300,7 +300,6 @@ def test_hamiltonian_expectation_from_samples_with_some_zero_counts(backend, qma
         freq["01"] / 100 * observable.matrix[indices[0], indices[0]]
         + freq["11"] / 100 * observable.matrix[indices[1], indices[1]]
     )
-    # breakpoint()
     backend.assert_allclose(observable.expectation_from_samples(freq, qmap), true_val)
 
 
