@@ -7,11 +7,12 @@ import numpy as np
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.hamming_weight import HammingWeightBackend
+from qibo.backends.modality import Modality
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import log, raise_error
 
-QIBO_NATIVE_BACKENDS = ("numpy", "qulacs")
+QIBO_NATIVE_BACKENDS = ("numpy", "qulacs", "loqc", "quandela")
 
 
 class MissingBackend(ValueError):
@@ -58,7 +59,15 @@ class MetaBackend:
             backend_obj = QulacsBackend()
             backend_obj.set_dtype(dtype=dtype)
 
-            return backend_obj
+        if backend == "loqc":
+            from qibo.backends.photonic_strong_simulation import LoqcStrongBackend
+
+            return LoqcStrongBackend()
+
+        if backend == "quandela":
+            from qibo.backends.photonic_strong_simulation import QuandelaCloudBackend
+
+            return QuandelaCloudBackend(**kwargs)
 
         backend_obj = NumpyBackend()
         backend_obj.set_dtype(dtype=dtype)

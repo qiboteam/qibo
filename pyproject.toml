@@ -32,6 +32,7 @@ optuna = "^4.2.1"
 tabulate = "^0.9.0"
 openqasm3 = { version = "^1.0.1", extras = ["parser"] }
 qulacs = { version = "^0.6.4", optional = true, python = "<3.13" }
+perceval-quandela = ">=0.13"
 
 [tool.poetry.group.dev]
 optional = true
