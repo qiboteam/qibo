@@ -1,3 +1,5 @@
+"""Module defines the abstract gate classes Gate, SpecialGate, ParametrizedGate."""
+
 import collections
 import json
 from math import pi
@@ -5,6 +7,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
+from qibo import config
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -28,6 +31,22 @@ REQUIRED_FIELDS_INIT_KWARGS = [
     "p1",
 ]
 
+GATES_CONTROLLED_BY_DEFAULT = [
+    "cx",
+    "cy",
+    "cz",
+    "csx",
+    "csxdg",
+    "crx",
+    "cry",
+    "crz",
+    "cu1",
+    "cu2",
+    "cu3",
+    "ccx",
+    "ccz",
+]
+
 
 class Gate:
     """The base class for gate implementation.
@@ -49,8 +68,6 @@ class Gate:
     """
 
     def __init__(self):
-        from qibo import config
-
         self.name = None
         self.draw_label = None
         self.is_controlled_by = False
@@ -111,7 +128,10 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import gates, measurements
+        from qibo.gates import (  # pylint: disable=import-outside-toplevel
+            gates,
+            measurements,
+        )
 
         for mod in (gates, measurements):
             try:
@@ -255,7 +275,7 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, qubit_map) -> "Gate":
+    def on_qubits(self, qubit_map: dict) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -271,12 +291,20 @@ class Gate:
 
                 from qibo import Circuit, gates
                 circuit = Circuit(4)
+
                 # Add some CNOT gates
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
+
+                # equivalent to gates.CNOT(2, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3}))
+                # equivalent to gates.CNOT(3, 0)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0}))
+                # equivalent to gates.CNOT(1, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3}))
+                # equivalent to gates.CNOT(2, 1)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1}))
+
                 circuit.draw()
+
             .. testoutput::
 
                 0: ───X─────
@@ -284,14 +312,20 @@ class Gate:
                 2: ─o─|─|─o─
                 3: ─X─o─X───
         """
+        # Explicit mention of gates where the method
+        # `.controlled_by` fail. This should be fixed separatedly.
+        qubits = (
+            self.qubits
+            if self.name in GATES_CONTROLLED_BY_DEFAULT
+            else self.target_qubits
+        )
+        qubits = tuple(qubit_map.get(q) for q in qubits)
+        gate = self.__class__(*qubits, **self.init_kwargs)
+
         if self.is_controlled_by:
-            targets = (qubit_map.get(q) for q in self.target_qubits)
             controls = (qubit_map.get(q) for q in self.control_qubits)
-            gate = self.__class__(*targets, **self.init_kwargs)
             gate = gate.controlled_by(*controls)
-        else:
-            qubits = (qubit_map.get(q) for q in self.qubits)
-            gate = self.__class__(*qubits, **self.init_kwargs)
+
         return gate
 
     def _dagger(self) -> "Gate":
@@ -541,7 +575,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
     def matrix(self, backend=None):  # pragma: no cover
@@ -607,7 +641,7 @@ class ParametrizedGate(Gate):
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         gate = super().on_qubits(qubit_map)
         gate.parameters = self.parameters
         return gate
