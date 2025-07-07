@@ -125,7 +125,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
 
     See Eq. (A1) in arXiv:quant-ph/0011050.
     Ud is diagonal in the magic and Bell basis.
-    Also returns local unitaries that put Ud in "standard" form: pi/4 >= hx >= hy >= |hz|
+    Also returns local unitaries that modify Ud so: pi/4 >= hx >= hy >= |hz|
     """
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
     # this is required so that sum(lambdas) = 0
@@ -151,7 +151,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     # 1. force coefficients to be in pi/4 >= ... >= 0 interval, using pi/2 periodicity and pi/4 symmetry
     fit = lambda alpha: min(alpha%(np.pi/2), np.pi/2 - (alpha%(np.pi/2)))
 
-    # 2. permute to ensure ordering:  x <-> y == 1 <-> 0 / x <--> z == 1 <--> 3 / y <--> z == 0 <--> 3
+    # 2. permute to ensure ordering:
     alphas_ordered = sorted( [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]),  reverse=True)
 
     correction = {"left_A": matrices.I.copy(), "left_B": matrices.I.copy(),
@@ -298,10 +298,8 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend):
 
 def _get_z_component(unitary, backend):
     """Calculates the hz component from a unitary's magic decomposition."""
-    ud_diag = to_bell_diagonal(unitary, backend=backend)
-    if ud_diag is None:
-        _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
-        ud_diag = to_bell_diagonal(ud, backend=backend)
+    _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
+    ud_diag = to_bell_diagonal(ud, backend=backend)
     _, _, hz = calculate_h_vector(ud_diag, backend=backend)
     return float(hz)
 
@@ -313,8 +311,6 @@ def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
     ud_diag = to_bell_diagonal(ud, backend=backend)
     hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
     hx, hy = float(hx), float(hy)
-
-    print("Hs light:", hx, hy, _)
 
     # Get light decomposition
     gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
@@ -337,7 +333,6 @@ def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
     ud_diag = to_bell_diagonal(ud, backend=backend)
     hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
     hx, hy, hz = float(hx), float(hy), float(hz)
-    print("HS: ", hx, hy, hz)
 
     # Get full decomposition
     cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
@@ -379,38 +374,3 @@ def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
         return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
     return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
 
-if __name__ == "__main__":
-    import qibo
-    from qibo import Circuit, gates
-    import numpy as np
-    from qibo.quantum_info.random_ensembles import random_unitary
-    q0 = 0
-    q1 = 1
-    circ = Circuit(2)
-    circ.add(gates.iSWAP(q0,q1))
-
-    backend = qibo.get_backend()
-
-    unitary = circ.unitary()
-
-    #unitary = random_unitary(4, seed=15)
-
-    circ2 = Circuit(2)
-
-    #print("Desired unitary (CNOT):\n", unitary)
-    decomp = two_qubit_decomposition(q0, q1, unitary, backend)
-    circ2.add(decomp)
-    reconstructed_unitary = circ2.unitary()
-    #print("Decomposed unitary: ", reconstructed_unitary)
-
-    print("ALLCLOSE?", np.allclose(unitary, reconstructed_unitary))
-
-    #print("decomposition:", decomp)
-
-    print("AllClose without phase: ", np.allclose(unitary/unitary[0,0], reconstructed_unitary/reconstructed_unitary[0,0]))
-
-
-    """print("\n MANUAL::")
-    print("Unitary in magic basis: \n", np.transpose(np.conj(magic_basis), (1, 0))
-        @ unitary
-        @ magic_basis)"""
