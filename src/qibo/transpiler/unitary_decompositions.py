@@ -138,72 +138,110 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     ub *= det
     va *= det
     vb *= det
-    dag = lambda u: backend.np.transpose(backend.np.conj(u), (1,0))
-    u_dagger = dag(backend.np.kron(ua,ub,))
+    dag = lambda u: backend.np.transpose(backend.np.conj(u), (1, 0))
+    u_dagger = dag(
+        backend.np.kron(
+            ua,
+            ub,
+        )
+    )
     v_dagger = dag(backend.np.kron(va, vb))
     ud = u_dagger @ unitary @ v_dagger
-    
+
     lambdas = to_bell_diagonal(ud, backend)
 
-    # We permute to ensure we will have hx >= hy >= hz in the end
+    # We permute to ensure we will have hx >= hy >= hz in the end
     hx, hy, hz = calculate_h_vector(lambdas, backend)
-    
+
     # 1. force coefficients to be in pi/4 >= ... >= 0 interval, using pi/2 periodicity and pi/4 symmetry
-    fit = lambda alpha: min(alpha%(np.pi/2), np.pi/2 - (alpha%(np.pi/2)))
+    fit = lambda alpha: min(alpha % (np.pi / 2), np.pi / 2 - (alpha % (np.pi / 2)))
 
-    # 2. permute to ensure ordering:
-    alphas_ordered = sorted( [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]),  reverse=True)
+    # 2. permute to ensure ordering:
+    alphas_ordered = sorted(
+        [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]), reverse=True
+    )
 
-    correction = {"left_A": matrices.I.copy(), "left_B": matrices.I.copy(),
-                  "right_A": matrices.I.copy(), "right_B": matrices.I.copy()}
+    correction = {
+        "left_A": matrices.I.copy(),
+        "left_B": matrices.I.copy(),
+        "right_A": matrices.I.copy(),
+        "right_B": matrices.I.copy(),
+    }
 
     permutation = [x[1] for x in alphas_ordered]
 
     if permutation[0] == 1:
-        correction['left_A'] @= matrices.S
-        correction['left_B'] @= matrices.S
-        correction['right_A'] = dag(matrices.S) @ correction['right_A']
-        correction['right_B'] = dag(matrices.S) @ correction['right_B']
+        correction["left_A"] @= matrices.S
+        correction["left_B"] @= matrices.S
+        correction["right_A"] = dag(matrices.S) @ correction["right_A"]
+        correction["right_B"] = dag(matrices.S) @ correction["right_B"]
 
     elif permutation[0] == 2:
-        correction['left_A']  = correction['left_A'] @ matrices.H
-        correction['left_B']  = correction['left_B'] @ matrices.H
-        correction['right_A'] = dag(matrices.H) @ correction['right_A']
-        correction['right_B'] = dag(matrices.H) @ correction['right_B']
+        correction["left_A"] = correction["left_A"] @ matrices.H
+        correction["left_B"] = correction["left_B"] @ matrices.H
+        correction["right_A"] = dag(matrices.H) @ correction["right_A"]
+        correction["right_B"] = dag(matrices.H) @ correction["right_B"]
 
-    if not( permutation[1] == 1 or permutation[2] == 2 ):
-        correction['left_A']  = correction['left_A'] @ (matrices.S @ matrices.H @ matrices.S)
-        correction['left_B']  = correction['left_B'] @ (matrices.S @ matrices.H @ matrices.S)
-        correction['right_A'] = dag(matrices.S @ matrices.H @ matrices.S) @ correction['right_A']
-        correction['right_B'] = dag(matrices.S @ matrices.H @ matrices.S) @ correction['right_B']
+    if not (permutation[1] == 1 or permutation[2] == 2):
+        correction["left_A"] = correction["left_A"] @ (
+            matrices.S @ matrices.H @ matrices.S
+        )
+        correction["left_B"] = correction["left_B"] @ (
+            matrices.S @ matrices.H @ matrices.S
+        )
+        correction["right_A"] = (
+            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_A"]
+        )
+        correction["right_B"] = (
+            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_B"]
+        )
 
     # 3. find local corrections to enforce, as possible, conditions on h
-    paulis = ['X', 'Y', 'Z']
+    paulis = ["X", "Y", "Z"]
     for i, (alpha, _) in enumerate(alphas_ordered):
-        if i < 2: 
+        if i < 2:
             if alpha < 0:
-                alpha += np.pi/2
-                correction["left_A"] = correction["left_A"] @ (1j * getattr(matrices, paulis[i]))
-                correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
-            if alpha > np.pi/4: # can't conjugate so sign of z alternates to compensate
-                # Swap alpha_i and alpha_z sign
-                correction["left_B"]  = correction["left_B"] @ getattr(matrices, paulis[(i+1)%2])
-                correction["right_B"] = getattr(matrices, paulis[(i+1)%2]) @ correction["right_B"] 
+                alpha += np.pi / 2
+                correction["left_A"] = correction["left_A"] @ (
+                    1j * getattr(matrices, paulis[i])
+                )
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[i]
+                )
+            if (
+                alpha > np.pi / 4
+            ):  # can't conjugate so sign of z alternates to compensate
+                # Swap alpha_i and alpha_z sign
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[(i + 1) % 2]
+                )
+                correction["right_B"] = (
+                    getattr(matrices, paulis[(i + 1) % 2]) @ correction["right_B"]
+                )
                 # Add pi/2 to alpha_i
-                correction["left_A"]  = correction["left_A"] @ (1j * getattr(matrices, paulis[i]))
-                correction["left_B"]  = correction["left_B"] @ getattr(matrices, paulis[i])
-        elif abs(alpha) > np.pi/4:
-            correction["left_A"] = correction["left_A"] @ ((1j if alpha < 0 else -1j) * getattr(matrices, paulis[i]))
+                correction["left_A"] = correction["left_A"] @ (
+                    1j * getattr(matrices, paulis[i])
+                )
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[i]
+                )
+        elif abs(alpha) > np.pi / 4:
+            correction["left_A"] = correction["left_A"] @ (
+                (1j if alpha < 0 else -1j) * getattr(matrices, paulis[i])
+            )
             correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
-                
-    
+
     # 4. apply corrections
     ua = backend.np.matmul(ua, correction["left_A"])
     ub = backend.np.matmul(ub, correction["left_B"])
     va = backend.np.matmul(correction["right_A"], va)
     vb = backend.np.matmul(correction["right_B"], vb)
-    ud = backend.np.matmul(backend.np.kron(dag(correction["left_A"]), dag(correction["left_B"])),
-                           backend.np.matmul(ud, backend.np.kron(dag(correction["right_A"]), dag(correction["right_B"]))))
+    ud = backend.np.matmul(
+        backend.np.kron(dag(correction["left_A"]), dag(correction["left_B"])),
+        backend.np.matmul(
+            ud, backend.np.kron(dag(correction["right_A"]), dag(correction["right_B"]))
+        ),
+    )
     return ua, ub, ud, va, vb
 
 
@@ -220,6 +258,7 @@ def magic_decomposition(unitary, backend=None):
     dag = lambda U: backend.np.transpose(backend.np.conj(U), (1, 0))
     ua, ub = dag(ua_dagger), dag(ub_dagger)
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
+
 
 def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
@@ -373,4 +412,3 @@ def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
     if abs(z_component) < threshold:
         return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
     return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
-
