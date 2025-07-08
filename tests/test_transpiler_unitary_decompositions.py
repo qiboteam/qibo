@@ -161,23 +161,18 @@ def test_two_qubit_decomposition(backend, seed):
 @pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
 def test_two_qubit_decomposition_common_gates(backend, gate_name):
     """Test general two-qubit decomposition on some common gates."""
-    if gate_name == "iSWAP":
-        with pytest.raises(NotImplementedError):
-            matrix = gates.iSWAP(0, 1).matrix(backend)
-            test = two_qubit_decomposition(0, 1, matrix, backend=backend)
-    else:
-        gate = (
-            gates.fSim(0, 1, theta=0.1, phi=0.2)
-            if gate_name == "fSim"
-            else getattr(gates, gate_name)(0, 1)
-        )
-        matrix = gate.matrix(backend)
+    gate = (
+        gates.fSim(0, 1, theta=0.1, phi=0.2)
+        if gate_name == "fSim"
+        else getattr(gates, gate_name)(0, 1)
+    )
+    matrix = gate.matrix(backend)
 
-        circuit = Circuit(2)
-        circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
-        final_matrix = circuit.unitary(backend)
+    circuit = Circuit(2)
+    circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+    final_matrix = circuit.unitary(backend)
 
-        backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
+    backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("hz_zero", [False, True])
