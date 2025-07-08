@@ -12,8 +12,6 @@ from qibo.ui.plot_state import plot_density_hist
 
 from .utils import fig2png
 
-qibo.set_backend("numpy")
-
 matplotlib.use("agg")
 
 BASEPATH = str(Path(__file__).parent / "test_plot_state_ui_images")
