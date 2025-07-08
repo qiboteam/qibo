@@ -159,11 +159,13 @@ def _extract_nqubits(
         nqubits (int): Number of qubits that the gate acts on.
     """
 
+    nqubits = None
+    params = None
     if isinstance(gate, tuple):
         gate, params = gate
     init_args = signature(gate).parameters
     if "unitary" in init_args:
-        nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
+        nqubits = int(np.log2(np.shape(params[0])[0]))
     else:
         if "q" in init_args:
             nqubits = 1
@@ -380,11 +382,6 @@ def _gate_tomography(
         circ.add(_prepare_state(k, nqubits))
 
         if ancilla is not None:
-            # swap_pairs = (
-            #     [(ancilla, circ.nqubits - 1)]
-            #     if ancilla < 2
-            #     else [(0, circ.nqubits - 2), (1, circ.nqubits - 1)]
-            # )
             swap_pairs = _get_swap_pairs(circ, ancilla)
             for q1, q2 in swap_pairs:
                 circ.add(gates.SWAP(q1, q2))
