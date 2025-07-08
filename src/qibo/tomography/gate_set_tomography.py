@@ -1,3 +1,4 @@
+from functools import cache
 from inspect import signature
 from itertools import product
 from typing import List, Optional, Tuple, Union
@@ -144,7 +145,6 @@ def _measurement_basis(j: int, nqubits: int):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-@cache
 def _extract_nqubits(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
 ):
@@ -162,20 +162,21 @@ def _extract_nqubits(
     if isinstance(gate, tuple):
         gate, params = gate
     init_args = signature(gate).parameters
-    if "q" in init_args:
-        nqubits = 1
-    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-        nqubits = 2
+    if "unitary" in init_args:
+        nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
     else:
-        nqubits = None
-        raise_error(
-            RuntimeError,
-            f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
-        )
+        if "q" in init_args:
+            nqubits = 1
+        elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
+            nqubits = 2
+        else:
+            raise_error(
+                RuntimeError,
+                f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
+            )
     return nqubits
 
 
-@cache
 def _get_nqubits_and_angles(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
 ):
@@ -198,26 +199,18 @@ def _get_nqubits_and_angles(
     """
 
     nqubits = None
+    original_gate = gate
     if isinstance(gate, tuple):
         angles = ANGLES
         gate, params = gate
         if not (isinstance(params, list) or isinstance(params, tuple)):
             if isinstance(params, np.ndarray):
                 params = [params]
-
     else:
         angles = None
         params = None
     init_args = signature(gate).parameters
-    if "q" in init_args:
-        nqubits = 1
-    elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
-        nqubits = 2
-    else:
-        raise_error(
-            RuntimeError,
-            f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
-        )
+    nqubits = _extract_nqubits(original_gate)
 
     if angles:
         angle_names = [arg for arg in init_args if arg in angles]
@@ -229,7 +222,6 @@ def _get_nqubits_and_angles(
     return gate, nqubits, angle_names, angle_values, params
 
 
-@cache
 def _extract_gate(
     gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
     idx: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -260,16 +252,7 @@ def _extract_gate(
 
     # Perform some checks
     if isinstance(original_gate_input, tuple):
-        if "unitary" not in angle_names:
-            # Check that input for parametrized gates are float, int
-            for p in params:
-                if type(p) not in (int, float):
-                    raise_error(
-                        ValueError,
-                        f"Invalid parameters for parametrized gate. Expected int or float, received {type(p)}.",
-                    )
-        else:
-            nqubits = int(np.log2(np.shape(params[0])[0]))  # Reassign nqubits
+        if "unitary" in angle_names:
             # Check that unitary gate does not receive a non-unitary matrix.
             g = gate(angle_values["unitary"], *range(nqubits), check_unitary=True)
             if not g.unitary:
@@ -289,8 +272,7 @@ def _extract_gate(
     return gate, nqubits
 
 
-@cache
-def _get_swap_pairs(circ, ancilla):
+def _get_swap_pairs(nqubits, ancilla):
     """Function that returns a tuple representing which qubits to swap. There are three
         scenarios:
         - If ``ancilla = 0``, ``swap_pairs = [(0, 2)]``.
@@ -298,7 +280,7 @@ def _get_swap_pairs(circ, ancilla):
         - If ``ancilla = 2``, ``swap_pairs = [(0, 2), (1, 3)]``.
 
     Args:
-        circ (:class:`qibo.models.circuit.Circuit`): The circuit to find out which swap pairs are
+        nqubits (int): The number of qubits in the GST circuit.
         ancilla (int): Controls which qubits the SWAP gates are applied to.
 
     Returns:
@@ -306,9 +288,9 @@ def _get_swap_pairs(circ, ancilla):
     """
 
     swap_pairs = (
-        [(ancilla, circ.nqubits - 1)]
+        [(ancilla, nqubits - 1)]
         if ancilla < 2
-        else [(0, circ.nqubits - 2), (1, circ.nqubits - 1)]
+        else [(0, nqubits - 2), (1, nqubits - 1)]
     )
     return swap_pairs
 
