@@ -382,7 +382,7 @@ def _gate_tomography(
         circ.add(_prepare_state(k, nqubits))
 
         if ancilla is not None:
-            swap_pairs = _get_swap_pairs(circ, ancilla)
+            swap_pairs = _get_swap_pairs(circ.nqubits, ancilla)
             for q1, q2 in swap_pairs:
                 circ.add(gates.SWAP(q1, q2))
 

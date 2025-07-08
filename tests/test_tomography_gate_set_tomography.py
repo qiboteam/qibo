@@ -275,26 +275,55 @@ def test_gate_tomography_noise_model(backend):
     )
 
 
-def test_gate_tomography_apply_ancillas(backend):
-    nqubits = 2
-    gate_list = [gates.T(0), gates.TDG(0), gates.S(0)]
-    with pytest.raises(ValueError):
-        matrix_jk = _gate_tomography(
-            nqubits=nqubits,
-            gate=gate_list,
-            nshots=int(1e4),
-            noise_model=None,
-            backend=backend,
-        )
+def test_gate_tomography_single_gate(backend):
+    gate = gates.X(0)
+    nqubits = 1
+    matrix_jk = _gate_tomography(
+        nqubits=nqubits,
+        gate=gate,
+        nshots=int(1e4),
+        noise_model=None,
+        backend=backend,
+    )
+    assert matrix_jk.shape == (4**nqubits, 4**nqubits)
 
 
 @pytest.mark.parametrize(
-    "ancilla",
+    "nqubits, gate, ancilla, raise_error",
     [
-        (3),
+        (1, [gates.X(0)], 0, False),
+        (2, [gates.X(0), gates.T(1)], 0, False),
+        (2, [gates.X(0), gates.T(1)], 1, False),
+        (2, [], 2, False),
+        (2, [gates.Unitary(np.eye(4), 0, 1)], 1, False),
+        (2, [gates.X(0), gates.T(1), gates.S(0)], 1, True),
     ],
 )
-def test_gate_tomography_ancilla_error(backend, ancilla):
+def test_gate_tomography_apply_ancillas(backend, nqubits, gate, ancilla, raise_error):
+    if raise_error:
+        with pytest.raises(ValueError):
+            matrix_jk = _gate_tomography(
+                nqubits=nqubits,
+                gate=gate,
+                nshots=int(1e4),
+                noise_model=None,
+                backend=backend,
+                ancilla=ancilla,
+            )
+    else:
+        matrix_jk = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate,
+            nshots=int(1e4),
+            noise_model=None,
+            backend=backend,
+            ancilla=ancilla,
+        )
+        assert matrix_jk.shape == (4**nqubits, 4**nqubits)
+
+
+def test_gate_tomography_ancilla_error(backend):
+    ancilla = 3
     nqubits = 2
     gate_list = [gates.T(0), gates.TDG(0)]
     with pytest.raises(ValueError):
