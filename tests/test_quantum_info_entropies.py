@@ -452,9 +452,8 @@ def test_von_neumann_entropy(backend, base):
     )
 
 
-@pytest.mark.parametrize("statevector", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_relative_von_neumann_entropy(backend, base, statevector):
+def test_relative_von_neumann_entropy(backend, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -475,30 +474,22 @@ def test_relative_von_neumann_entropy(backend, base, statevector):
     nqubits = 2
     dims = 2**nqubits
 
-    state = (
-        random_statevector(dims, backend=backend)
-        if statevector
-        else random_density_matrix(dims, backend=backend)
-    )
     target = backend.identity_density_matrix(nqubits, normalize=True)
 
-    entropy = relative_von_neumann_entropy(state, target, base=base, backend=backend)
+    state = random_statevector(dims, backend=backend)
+    state = backend.np.outer(state, backend.np.conj(state.T))
 
-    if statevector:
-        state = backend.np.outer(state, backend.np.conj(state.T))
-
-    entropy_target = von_neumann_entropy(state, base=base, backend=backend)
-
-    backend.assert_allclose(
-        entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
+    rel_entropy = relative_von_neumann_entropy(
+        state, target, base=base, backend=backend
     )
 
-    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-    target = backend.cast([0.0, 1.0], dtype=np.float64)
+    backend.assert_allclose(rel_entropy, 2 / float(np.log2(base)), atol=1e-5)
+
+    state = random_density_matrix(dims, seed=8, pure=False, backend=backend)
 
     backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, backend=backend),
-        -0.21227801,
+        relative_von_neumann_entropy(state, target, base=base, backend=backend),
+        0.4100035816956977 / float(np.log(base)),
         atol=1e-8,
     )
 

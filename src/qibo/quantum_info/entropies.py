@@ -610,9 +610,9 @@ def relative_von_neumann_entropy(
     if len(target.shape) == 1:
         target = backend.np.outer(target, backend.np.conj(target))
 
-    relative = backend.calculate_matrix_log(target)
+    relative = backend.calculate_matrix_log(target, base=base)
     relative = -backend.np.trace(state @ relative)
-    relative += von_neumann_entropy(
+    relative -= von_neumann_entropy(
         state, base=base, return_spectrum=False, backend=backend
     )
 
