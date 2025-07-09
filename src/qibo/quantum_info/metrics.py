@@ -829,24 +829,3 @@ def quantum_fisher_information_matrix(
     qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
 
     return 4 * backend.np.real(qfim)
-
-
-def _check_hermitian(matrix, backend=None):
-    """Checks if a given matrix is Hermitian.
-
-    Args:
-        matrix: input array.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses the current backend.
-            Defaults to ``None``.
-
-    Returns:
-        bool: whether the matrix is Hermitian.
-    """
-    backend = _check_backend(backend)
-
-    norm = backend.calculate_matrix_norm(backend.np.conj(matrix).T - matrix, order=2)
-
-    hermitian = bool(float(norm) <= PRECISION_TOL)
-
-    return hermitian
