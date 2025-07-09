@@ -657,9 +657,7 @@ def relative_von_neumann_entropy(
     return float(backend.np.real(entropy_state - relative))
 
 
-def mutual_information(
-    state, partition, base: float = 2, check_hermitian: bool = False, backend=None
-):
+def mutual_information(state, partition, base: float = 2, backend=None):
     """Calculates the mutual information of a bipartite state.
 
     Given a qubit ``partition`` :math:`A`, the mutual information
@@ -675,8 +673,6 @@ def mutual_information(
         state (ndarray): statevector or density matrix.
         partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -695,9 +691,9 @@ def mutual_information(
     state_b = partial_trace(state, partition, backend)
 
     return (
-        von_neumann_entropy(state_a, base, check_hermitian, False, backend)
-        + von_neumann_entropy(state_b, base, check_hermitian, False, backend)
-        - von_neumann_entropy(state, base, check_hermitian, False, backend)
+        von_neumann_entropy(state_a, base, False, backend)
+        + von_neumann_entropy(state_b, base, False, backend)
+        - von_neumann_entropy(state, base, False, backend)
     )
 
 
@@ -1029,7 +1025,6 @@ def entanglement_entropy(
     state,
     bipartition,
     base: float = 2,
-    check_hermitian: bool = False,
     return_spectrum: bool = False,
     backend=None,
 ):
@@ -1046,8 +1041,6 @@ def entanglement_entropy(
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float, optional): the base of the log. Defaults to :math: `2`.
-        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
         return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -1077,7 +1070,6 @@ def entanglement_entropy(
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
         base=base,
-        check_hermitian=check_hermitian,
         return_spectrum=return_spectrum,
         backend=backend,
     )
