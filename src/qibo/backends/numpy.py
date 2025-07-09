@@ -826,6 +826,9 @@ class NumpyBackend(Backend):
 
         return fractional_matrix_power(matrix, power)
 
+    def calculate_matrix_sqrt(self, matrix):
+        return self.calculate_matrix_power(matrix, power=0.5)
+
     def calculate_singular_value_decomposition(self, matrix):
         return self.np.linalg.svd(matrix)
 

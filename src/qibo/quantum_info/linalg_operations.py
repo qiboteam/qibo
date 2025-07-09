@@ -300,6 +300,21 @@ def matrix_power(
     return backend.calculate_matrix_power(matrix, power, precision_singularity)
 
 
+def matrix_sqrt(matrix, backend=None):
+    """Given a ``matrix`` :math:`A`, calculate :math:`A^{1/2}`.
+
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix power :math:`A^{1/2}`.
+    """
+    return matrix_power(matrix, power=0.5, backend=backend)
+
+
 def singular_value_decomposition(matrix, backend=None):
     """Calculate the Singular Value Decomposition (SVD) of ``matrix``.
 
