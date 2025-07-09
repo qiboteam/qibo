@@ -811,10 +811,10 @@ class NumpyBackend(Backend):
 
             return expm(phase * matrix)
 
-        expd = self.np.diag(self.np.exp(phase * eigenvalues))
+        expd = self.np.exp(phase * eigenvalues)
         ud = self.np.transpose(np.conj(eigenvectors))
 
-        return eigenvectors @ (expd @ ud)
+        return (eigenvectors * expd) @ ud
 
     def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None:
@@ -824,10 +824,11 @@ class NumpyBackend(Backend):
 
             return matrix_log
 
-        log = self.np.diag(self.np.log(eigenvalues) / float(np.log(base)))
+        # log = self.np.diag(self.np.log(eigenvalues) / float(np.log(base)))
+        log = self.np.log(eigenvalues) / float(np.log(base))
         ud = self.np.transpose(np.conj(eigenvectors))
 
-        return eigenvectors @ (log @ ud)
+        return (eigenvectors * log) @ ud
 
     def calculate_matrix_power(
         self,
