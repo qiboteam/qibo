@@ -210,7 +210,7 @@ def hilbert_schmidt_distance(state, target, backend=None):
     return hilbert_schmidt_inner_product(difference, difference, backend=backend)
 
 
-def fidelity(state, target, check_hermitian: bool = False, backend=None):
+def fidelity(state, target, backend=None):
     """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho` and
     ``target`` state :math:`\\sigma`. In general,
 
@@ -226,8 +226,6 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
-            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -251,12 +249,6 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             + f"but have dims {state.shape} and {target.shape}",
         )
 
-    if isinstance(check_hermitian, bool) is False:
-        raise_error(
-            TypeError,
-            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
-        )
-
     # check purity if both states are density matrices
     if len(state.shape) == 2 and len(target.shape) == 2:
         purity_state = purity(state, backend=backend)
@@ -267,47 +259,12 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
-            hermitian = check_hermitian is False or _check_hermitian(
-                state, backend=backend
-            )
-            # using eigh since rho is supposed to be Hermitian
-            eigenvalues, eigenvectors = backend.calculate_eigenvectors(
-                state, hermitian=hermitian
-            )
-            state = np.zeros(state.shape, dtype=complex)
-            state = backend.cast(state, dtype=state.dtype)
-            for eig, eigvec in zip(
-                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
-            ):
-                matrix = backend.np.sqrt(eig) * backend.np.outer(
-                    eigvec, backend.np.conj(eigvec)
-                )
-                matrix = backend.cast(matrix, dtype=matrix.dtype)
-                state = state + matrix
-                del matrix
-
-            fid = state @ target @ state
-
-            # since sqrt(rho) is Hermitian, we can use eigh again
-            eigenvalues, eigenvectors = backend.calculate_eigenvectors(
-                fid, hermitian=hermitian
-            )
-            fid = np.zeros(state.shape, dtype=complex)
-            fid = backend.cast(fid, dtype=fid.dtype)
-            for eig, eigvec in zip(
-                eigenvalues, backend.np.transpose(eigenvectors, (1, 0))
-            ):
-                if backend.np.real(eig) > PRECISION_TOL:
-                    matrix = backend.np.sqrt(eig) * backend.np.outer(
-                        eigvec, backend.np.conj(eigvec)
-                    )
-                    matrix = backend.cast(matrix, dtype=matrix.dtype)
-                    fid = fid + matrix
-                    del matrix
-
+            fid = backend.calculate_matrix_sqrt(state)
+            fid = fid @ backend.np.conj(target.T) @ fid
+            fid = backend.calculate_matrix_sqrt(fid)
             fid = backend.np.real(backend.np.trace(fid))
 
-            return fid
+            return fid**2
 
     # if any of the states is pure, perform lighter calculation
     fid = (
