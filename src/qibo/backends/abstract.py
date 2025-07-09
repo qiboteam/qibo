@@ -424,10 +424,8 @@ class Backend(abc.ABC):
         eigenvectors=None,
         eigenvalues=None,
     ):  # pragma: no cover
-        """Calculate the exponential :math:`e^{A}` of a matrix :math:`A`.
-
-        If ``phase`` :math:`\\theta` is provided, then it calculates
-        :math:`e^{\\theta \\, A}`.
+        """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
+        and ``phase`` :math:`\\theta`.
 
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.

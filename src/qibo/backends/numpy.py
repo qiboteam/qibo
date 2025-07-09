@@ -794,7 +794,11 @@ class NumpyBackend(Backend):
         return ev
 
     def calculate_matrix_exp(
-        self, matrix, phase=None, eigenvectors=None, eigenvalues=None
+        self,
+        matrix,
+        phase: Union[float, int, complex] = 1,
+        eigenvectors=None,
+        eigenvalues=None,
     ):
         if phase is None:
             phase = 1
