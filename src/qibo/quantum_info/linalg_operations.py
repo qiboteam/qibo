@@ -278,6 +278,43 @@ def matrix_exponentiation(
     return backend.calculate_matrix_exp(matrix, phase, eigenvectors, eigenvalues)
 
 
+def matrix_exponentiation(
+    matrix,
+    base: Union[float, int] = 2,
+    eigenvectors=None,
+    eigenvalues=None,
+    backend=None,
+):
+    """Calculates the logarithm of a matrix.
+
+    Given a ``matrix`` :math:`A` and a log base :math:`b`, it returns the logarithm of the form
+
+    .. math::
+        \\log_{b}\\left(\\theta \\, H \\right) \\, .
+
+    If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
+    is used for the calculation.
+
+    Args:
+        matrix (ndarray): matrix to be logarithmed.
+        eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvalues``. Defaults to ``None``.
+        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvectors``. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix logarithm :math:`\\log_{b}(H)`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_matrix_log(matrix, base, eigenvectors, eigenvalues)
+
+
 def matrix_power(
     matrix, power: Union[float, int], precision_singularity: float = 1e-14, backend=None
 ):

@@ -6,7 +6,7 @@ from typing import Union
 
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.linalg import block_diag, fractional_matrix_power, logm
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -810,7 +810,20 @@ class NumpyBackend(Backend):
         expd = self.np.diag(self.np.exp(phase * eigenvalues))
         ud = self.np.transpose(np.conj(eigenvectors))
 
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+        return eigenvectors @ (expd @ ud)
+
+    def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None:
+            matrix_log = logm(matrix) / float(np.log(base))
+            # cast needed for GPUs
+            matrix_log = self.cast(matrix_log, dtype=matrix_log.dtype)
+
+            return matrix_log
+
+        log = self.np.diag(self.np.log(eigenvalues) / float(np.log(base)))
+        ud = self.np.transpose(np.conj(eigenvectors))
+
+        return eigenvectors @ (log @ ud)
 
     def calculate_matrix_power(
         self,
