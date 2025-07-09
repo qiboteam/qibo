@@ -418,9 +418,29 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_matrix_exp(
-        self, a, matrix, eigenvectors=None, eigenvalues=None
+        self,
+        matrix,
+        phase: Optional[Union[float, int, complex]] = None,
+        eigenvectors=None,
+        eigenvalues=None,
     ):  # pragma: no cover
-        """Calculate matrix exponential of a matrix.
+        """Calculate the exponential :math:`e^{A}` of a matrix :math:`A`.
+
+        If ``phase`` :math:`\\theta` is provided, then it calculates
+        :math:`e^{\\theta \\, A}`.
+
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_log(
+        self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
+    ):  # pragma: no cover
+        """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
+        of a matrix :math:`A`.
+
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
