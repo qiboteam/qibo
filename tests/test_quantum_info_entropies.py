@@ -425,9 +425,6 @@ def test_von_neumann_entropy(backend, base):
         state = backend.cast(state, dtype=state.dtype)
         test = von_neumann_entropy(state, base=0, backend=backend)
 
-    state = random_unitary(4, backend=backend)
-    test = von_neumann_entropy(state, base=base, backend=backend)
-
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(

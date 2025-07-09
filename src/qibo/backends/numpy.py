@@ -814,8 +814,8 @@ class NumpyBackend(Backend):
 
     def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None:
-            matrix_log = logm(matrix) / float(np.log(base))
-            # cast needed for GPUs
+            # to_numpy and cast needed for GPUs
+            matrix_log = logm(self.to_numpy(matrix)) / float(np.log(base))
             matrix_log = self.cast(matrix_log, dtype=matrix_log.dtype)
 
             return matrix_log

@@ -528,7 +528,7 @@ def von_neumann_entropy(
 
         return 0.0
 
-    ent = backend.calculate_matrix_log(state) / float(np.log(base))
+    ent = backend.calculate_matrix_log(state, base=base)
     ent = -backend.np.trace(state @ ent)
     ent = backend.np.real(ent)
 
