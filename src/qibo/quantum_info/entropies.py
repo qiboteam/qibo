@@ -484,23 +484,19 @@ def classical_relative_tsallis_entropy(
 def von_neumann_entropy(
     state,
     base: float = 2,
-    check_hermitian: bool = False,
     return_spectrum: bool = False,
     backend=None,
 ):
-    """Calculates the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
+    """Calculate the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
 
     It is given by
 
     .. math::
-        S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S(\\rho) = - \\text{tr}\\left(\\rho \\, \\log(\\rho)\\right)
 
     Args:
         state (ndarray): statevector or density matrix.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian .
-            Defaults to ``False``.
         return_spectrum: if ``True``, returns ``entropy`` and
             :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
             If ``False``, returns only ``entropy``. Default is ``False``.
@@ -526,35 +522,25 @@ def von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if not isinstance(check_hermitian, bool):
-        raise_error(
-            TypeError,
-            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
-        )
-
     if purity(state, backend=backend) == 1.0:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=float)
 
         return 0.0
 
-    eigenvalues = backend.calculate_eigenvalues(
-        state,
-        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
-    )
-
-    log_prob = backend.np.where(
-        backend.np.real(eigenvalues) > 0.0,
-        backend.np.log2(eigenvalues) / np.log2(base),
-        0.0,
-    )
-
-    ent = -backend.np.sum(eigenvalues * log_prob)
-    # absolute value if entropy == 0.0 to avoid returning -0.0
-    ent = backend.np.abs(ent) if ent == 0.0 else backend.np.real(ent)
+    ent = backend.calculate_matrix_log(state) / float(np.log(base))
+    ent = -backend.np.trace(state @ ent)
 
     if return_spectrum:
+        eigenvalues = backend.calculate_eigenvalues(state)
+
+        log_prob = backend.np.where(
+            backend.np.real(eigenvalues) > 0.0,
+            backend.np.log2(eigenvalues) / np.log2(base),
+            0.0,
+        )
         log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
+
         return ent, -log_prob
 
     return ent
