@@ -1,7 +1,7 @@
 """Module with common linear algebra operations for quantum information."""
 
 import math
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibo.backends import _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
@@ -239,8 +239,8 @@ def partial_transpose(
 
 
 def matrix_exponentiation(
-    phase: Union[float, complex],
     matrix,
+    phase: Optional[Union[float, int, complex]] = None,
     eigenvectors=None,
     eigenvalues=None,
     backend=None,
@@ -251,14 +251,15 @@ def matrix_exponentiation(
     it returns the exponential of the form
 
     .. math::
-        \\exp\\left(-i \\, \\theta \\, H \\right) \\, .
+        \\exp\\left(\\theta \\, H \\right) \\, .
 
     If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
     is used for the exponentiation.
 
     Args:
-        phase (float or complex): phase that multiplies the matrix.
         matrix (ndarray): matrix to be exponentiated.
+        phase (float or int or complex): phase that multiplies the matrix.
+            If ``None``, defaults to :math:`1`. Defaults to ``None``.
         eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
             to calculate ``matrix`` exponentiation as part of diagonalization.
             Must be used together with ``eigenvalues``. Defaults to ``None``.
@@ -274,7 +275,7 @@ def matrix_exponentiation(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+    return backend.calculate_matrix_exp(matrix, phase, eigenvectors, eigenvalues)
 
 
 def matrix_power(

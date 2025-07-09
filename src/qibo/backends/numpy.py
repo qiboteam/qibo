@@ -793,15 +793,23 @@ class NumpyBackend(Backend):
             ev /= norm
         return ev
 
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+    def calculate_matrix_exp(
+        self, matrix, phase=None, eigenvectors=None, eigenvalues=None
+    ):
+        if phase is None:
+            phase = 1
+
         if eigenvectors is None or self.is_sparse(matrix):
             if self.is_sparse(matrix):
                 from scipy.sparse.linalg import expm
             else:
                 from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+
+            return expm(phase * matrix)
+
+        expd = self.np.diag(self.np.exp(phase * eigenvalues))
         ud = self.np.transpose(np.conj(eigenvectors))
+
         return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_matrix_power(
