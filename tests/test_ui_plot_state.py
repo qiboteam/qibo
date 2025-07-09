@@ -8,7 +8,7 @@ from matplotlib.testing.compare import compare_images
 
 import qibo
 from qibo import Circuit, gates
-from qibo.ui.plot_state import plot_density_hist
+from qibo.ui.result_visualization import plot_density_hist
 
 from .utils import fig2png
 
@@ -120,6 +120,34 @@ def test_title_circuit_state():
 
     temp_file_path = fig2png(fig)
     base_image_path = f"{BASEPATH}/test_title_circuit_state_nqubits_{nqubits}.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
+
+
+def test_simple_circuit_relevant_labels():
+    """Test for simple circuit plot state with relevant axes labels"""
+    nqubits = 2
+    circuit = Circuit(nqubits)
+    for q in list(range(2)):
+        circuit.add(gates.H(q))
+    circuit.add(gates.CNOT(0, 1))
+
+    fig, _, _ = plot_density_hist(
+        circuit,
+        title="Density plot",
+        alpha=0.5,
+        colors=["green", "brown"],
+        n_most_relevant_components=2,
+    )
+
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_simple_circuit_state_relevant_components_nqubits_{nqubits}.png"
     assert (
         compare_images(
             base_image_path,
