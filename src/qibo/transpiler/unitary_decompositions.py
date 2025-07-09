@@ -232,6 +232,10 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
             correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
 
     # 4. apply corrections
+    correction["left_A"] = backend.cast(correction["left_A"])
+    correction["left_B"] = backend.cast(correction["left_B"])
+    correction["right_A"] = backend.cast(correction["right_A"])
+    correction["right_B"] = backend.cast(correction["right_B"])
     ua = backend.np.matmul(ua, correction["left_A"])
     ub = backend.np.matmul(ub, correction["left_B"])
     va = backend.np.matmul(correction["right_A"], va)
