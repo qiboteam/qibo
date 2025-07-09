@@ -1814,13 +1814,6 @@ von Neumann entropy
 
 .. autofunction:: qibo.quantum_info.von_neumann_entropy
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
 
 Relative von Neumann entropy
 """"""""""""""""""""""""""""
@@ -2033,10 +2026,22 @@ Matrix exponentiation
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
 
 
+Matrix logarithm
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_logarithm
+
+
 Matrix power
 """"""""""""
 
 .. autofunction:: qibo.quantum_info.matrix_power
+
+
+Matrix square root
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_sqrt
 
 
 Singular value decomposition
