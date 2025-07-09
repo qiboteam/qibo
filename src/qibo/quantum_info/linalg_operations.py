@@ -278,7 +278,7 @@ def matrix_exponentiation(
     return backend.calculate_matrix_exp(matrix, phase, eigenvectors, eigenvalues)
 
 
-def matrix_exponentiation(
+def matrix_logarithm(
     matrix,
     base: Union[float, int] = 2,
     eigenvectors=None,
