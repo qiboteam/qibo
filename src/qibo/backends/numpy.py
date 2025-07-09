@@ -800,9 +800,6 @@ class NumpyBackend(Backend):
         eigenvectors=None,
         eigenvalues=None,
     ):
-        if phase is None:
-            phase = 1
-
         if eigenvectors is None or self.is_sparse(matrix):
             if self.is_sparse(matrix):
                 from scipy.sparse.linalg import expm
