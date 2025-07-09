@@ -2,7 +2,7 @@ from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from qibo.backends import _check_backend
