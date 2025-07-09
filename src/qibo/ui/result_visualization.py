@@ -306,9 +306,8 @@ def plot_density_hist(
 
         if n_most_relevant_components is not None:
             total = len(row_names)
-            if n_most_relevant_components >= total:
-                indices = list(range(total))
-            else:
+            indices = list(range(total))
+            if n_most_relevant_components < total:
                 step = max(1, total // n_most_relevant_components)
                 indices = list(range(0, total, step))[:n_most_relevant_components]
             xtick_labels = [row_names[i] if i in indices else "" for i in range(total)]
@@ -332,9 +331,7 @@ def plot_density_hist(
             tick.label1.set_verticalalignment("bottom")
 
         ax.set_xlabel("Ket", labelpad=20)
-        ax.xaxis.label.set_rotation(30)
         ax.set_ylabel("Bra", labelpad=15)
-        ax.yaxis.label.set_rotation(30)
         ax.set_box_aspect(aspect=(4, 4, 4), zoom=max_zoom)
         ax.set_xmargin(0)
         ax.set_ymargin(0)
