@@ -130,6 +130,29 @@ def test_title_circuit_state():
     )
 
 
+def test_simple_circuit_greater_relevant__labels():
+    """Test for simple circuit plot state with a bigger number of relevant axes labels"""
+    nqubits = 3
+    circuit = Circuit(nqubits)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(0, 2))
+    fig, _, _ = plot_density_hist(
+        circuit, title="Test Circuit State", n_most_relevant_components=10
+    )
+
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_title_circuit_state_nqubits_{nqubits}.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
+
+
 def test_simple_circuit_relevant_labels():
     """Test for simple circuit plot state with relevant axes labels"""
     nqubits = 2
