@@ -131,7 +131,7 @@ class Hamiltonian(AbstractHamiltonian):
         diag = self.backend.np.reshape(diag, self.nqubits * (2,))
         if qubit_map is None:
             qubit_map = range(self.nqubits)
-        diag = self.backend.np.transpose(diag, axes=qubit_map).ravel()
+        diag = self.backend.np.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
         diag = diag[[int(state, 2) for state in freq.keys()]]
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
