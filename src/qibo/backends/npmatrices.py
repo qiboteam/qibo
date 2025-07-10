@@ -75,13 +75,13 @@ class NumpyMatrices:
         raise_error(NotImplementedError)
 
     def RX(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        isin = -1j * self.np.sin(theta / 2.0)
+        cos = self.np.cos(theta / 2.0)  # + 0j
+        isin = -1 * self.np.sin(theta / 2.0)
         return self._cast([[cos, isin], [isin, cos]], dtype=self.dtype)
 
     def RY(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        sin = self.np.sin(theta / 2.0) + 0j
+        cos = self.np.cos(theta / 2.0)  # + 0j
+        sin = self.np.sin(theta / 2.0)  # + 0j
         return self._cast([[cos, -sin], [sin, cos]], dtype=self.dtype)
 
     def RZ(self, theta):
