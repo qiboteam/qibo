@@ -39,6 +39,11 @@ class H(Gate):
     def qasm_label(self):
         return "h"
 
+    @property
+    def wires(self):  # wires is used for the photonic computation
+        q = self.target_qubits[0]
+        return (q, q + 1)
+
 
 class X(Gate):
     """The Pauli-:math:`X` gate.
