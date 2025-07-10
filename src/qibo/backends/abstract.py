@@ -420,7 +420,7 @@ class Backend(abc.ABC):
     def calculate_matrix_exp(
         self,
         matrix,
-        phase: Optional[Union[float, int, complex]] = None,
+        phase: Union[float, int, complex] = 1,
         eigenvectors=None,
         eigenvalues=None,
     ):  # pragma: no cover
