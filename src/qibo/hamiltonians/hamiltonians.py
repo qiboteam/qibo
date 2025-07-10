@@ -532,7 +532,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             result.frequencies()
             for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
         ]
-        # breakpoint()
         return sum(
             coeff.real * obs.expectation_from_samples(freq, qubit_map)
             for coeff, freq, obs, qubit_map in zip(
