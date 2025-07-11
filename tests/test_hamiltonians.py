@@ -305,7 +305,8 @@ def test_hamiltonian_expectation_from_samples_with_some_zero_counts(backend, qma
 
 def test_hamiltonian_expectation_from_circuit(backend):
     """Test Hamiltonian expectation value calculation."""
-    backend.set_seed(12)
+    seed = 12
+    backend.set_seed(seed)
 
     nshots = 4 * 10**6
     observable = I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3

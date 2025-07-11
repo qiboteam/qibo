@@ -370,7 +370,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return terms
 
     @cached_property
-    def diagonal_terms(self):
+    def diagonal_terms(self) -> list[list[SymbolicTerm]]:
+        """List of terms that can be diagonalized simultaneously, i.e. that
+        commute with each other. In detail each element of the list is a sublist
+        of commuting ``SymbolicTerm``s.
+        """
         diagonal_terms = []
         terms = self.terms
         while len(terms) > 0:

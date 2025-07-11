@@ -213,6 +213,10 @@ class SymbolicTerm(HamiltonianTerm):
 
     @cached_property
     def qubit_to_matrix_map(self) -> dict:
+        """Dictionary mapping each qubit to the corresponding global matrix
+        that acts on it, i.e. the product of the matrices of all the factors
+        acting on it.
+        """
         return {
             q: reduce(self.backend.np.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
@@ -241,6 +245,7 @@ class SymbolicTerm(HamiltonianTerm):
         return self.coefficient * state
 
     def commute(self, term) -> bool:
+        """Check whether this term commutes with another term."""
         for q in set(self.target_qubits).intersection(set(term.target_qubits)):
             m1 = self.qubit_to_matrix_map.get(q)
             m2 = term.qubit_to_matrix_map.get(q)
