@@ -377,17 +377,24 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """
         diagonal_terms = []
         terms = self.terms
+        # loop until there are no more terms
         while len(terms) > 0:
+            # take the first (remaining) term
             t0 = terms[0]
             diagonal_term = [t0]
             removable_indices = {
                 0,
             }
+            # look for all the following terms that commute with the
+            # first one and among themselves
             for i, t1 in enumerate(terms[1:], 1):
+                # commutes with all the other terms -> append it
                 if all(term.commute(t1) for term in diagonal_term):
                     diagonal_term.append(t1)
                     removable_indices.add(i)
+            # append the new sublist of commuting terms found
             diagonal_terms.append(diagonal_term)
+            # remove them from the original terms
             terms = [term for i, term in enumerate(terms) if i not in removable_indices]
         return diagonal_terms
 
