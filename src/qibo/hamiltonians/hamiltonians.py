@@ -536,13 +536,21 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # extract the coefficient, Z observable and qubit map
             # the basis rotation, instead, will be the same
             tmp_coeffs, tmp_obs, tmp_qmaps = [], [], []
+            measurements = {}
             for term in terms:
                 # store coefficient
                 tmp_coeffs.append(term.coefficient)
+
                 # Only care about non-I terms
-                non_identity_factors = [
-                    factor for factor in term.factors if factor.name[0] != "I"
-                ]
+                non_identity_factors = []
+                # prepare the measurement basis and append it to the circuit
+                for factor in term.factors:
+                    if factor.name[0] != "I":
+                        non_identity_factors.append(factor)
+                        q = factor.target_qubit
+                        if q not in measurements:
+                            measurements[q] = gates.M(q, basis=factor.gate.__class__)
+
                 # build diagonal observable
                 tmp_obs.append(
                     SymbolicHamiltonian(
@@ -551,6 +559,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                         backend=self.backend,
                     )
                 )
+
                 # Get the qubits we want to measure for each term
                 tmp_qmaps.append(
                     sorted(factor.target_qubit for factor in non_identity_factors)
@@ -559,13 +568,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             Z_observables.append(tmp_obs)
             qubit_maps.append(tmp_qmaps)
 
-            # prepare the measurement basis and append it to the circuit
-            measurements = [
-                gates.M(factor.target_qubit, basis=factor.gate.__class__)
-                for factor in non_identity_factors
-            ]
             circ_copy = circuit.copy(True)
-            circ_copy.add(measurements)
+            circ_copy.add(list(measurements.values()))
             rotated_circuits.append(circ_copy)
 
         # execute the circuits
