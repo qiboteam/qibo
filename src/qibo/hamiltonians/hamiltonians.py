@@ -373,19 +373,18 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def diagonal_terms(self):
         diagonal_terms = []
         terms = self.terms
-        n = 0
-        while n < len(terms):
-            t0 = terms[n]
+        while len(terms) > 0:
+            t0 = terms[0]
             diagonal_term = [t0]
-            removable_indices = []
-            for i, t1 in enumerate(terms[n + 1 :], n + 1):
-                if t0.commute(t1):
+            removable_indices = {
+                0,
+            }
+            for i, t1 in enumerate(terms[1:], 1):
+                if all(term.commute(t1) for term in diagonal_term):
                     diagonal_term.append(t1)
-                    removable_indices.append(i)
+                    removable_indices.add(i)
             diagonal_terms.append(diagonal_term)
-            for i in removable_indices:
-                del terms[i]
-            n += 1
+            terms = [term for i, term in enumerate(terms) if i not in removable_indices]
         return diagonal_terms
 
     @property
@@ -542,8 +541,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     )
                 )
                 # Get the qubits we want to measure for each term
-                tmp_qmaps = sorted(
-                    factor.target_qubit for factor in non_identity_factors
+                tmp_qmaps.append(
+                    sorted(factor.target_qubit for factor in non_identity_factors)
                 )
             coefficients.append(tmp_coeffs)
             Z_observables.append(tmp_obs)
@@ -573,13 +572,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 for c, o, qmap in zip(coeffs, obs, qmaps)
             )
         return expval
-
-        return sum(
-            coeff.real * obs.expectation_from_samples(freq, qubit_map)
-            for coeff, freq, obs, qubit_map in zip(
-                coefficients, frequencies, Z_observables, qubit_maps
-            )
-        )
 
     def expectation_from_samples(self, freq: dict, qubit_map: list = None) -> float:
         """
