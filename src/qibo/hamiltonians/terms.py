@@ -208,11 +208,15 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        matrices = [
-            reduce(self.backend.np.matmul, self.matrix_map.get(q))
-            for q in self.target_qubits
-        ]
+        matrices = list(self.qubit_to_matrix_map.values())
         return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
+
+    @cached_property
+    def qubit_to_matrix_map(self) -> dict:
+        return {
+            q: reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            for q in self.target_qubits
+        }
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
@@ -235,6 +239,14 @@ class SymbolicTerm(HamiltonianTerm):
                 backend, state, nqubits, factor.gate, density_matrix
             )
         return self.coefficient * state
+
+    def commute(self, term) -> bool:
+        for q in set(self.target_qubits).intersection(set(term.target_qubits)):
+            m1 = self.qubit_to_matrix_map.get(q)
+            m2 = term.qubit_to_matrix_map.get(q)
+            if not self.backend.np.all(m1 @ m2 == m2 @ m1):
+                return False
+        return True
 
 
 class TermGroup(list):

@@ -369,6 +369,25 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 self.constant += term.coefficient
         return terms
 
+    @cached_property
+    def diagonal_terms(self):
+        diagonal_terms = []
+        terms = self.terms
+        n = 0
+        while n < len(terms):
+            t0 = terms[n]
+            diagonal_term = [t0]
+            removable_indices = []
+            for i, t1 in enumerate(terms[n + 1 :], n + 1):
+                if t0.commute(t1):
+                    diagonal_term.append(t1)
+                    removable_indices.append(i)
+            diagonal_terms.append(diagonal_term)
+            for i in removable_indices:
+                del terms[i]
+            n += 1
+        return diagonal_terms
+
     @property
     def matrix(self):
         """Returns the full matrix representation.
@@ -501,23 +520,35 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         coefficients = []
         Z_observables = []
         qubit_maps = []
-        for term in self.terms:
-            # store coefficient
-            coefficients.append(term.coefficient)
-            # Only care about non-I terms
-            non_identity_factors = [
-                factor for factor in term.factors if factor.name[0] != "I"
-            ]
-            # build diagonal observable
-            Z_observables.append(
-                SymbolicHamiltonian(
-                    prod(Z(factor.target_qubit) for factor in non_identity_factors),
-                    nqubits=circuit.nqubits,
-                    backend=self.backend,
+        # loop over the terms that can be diagonalized simultaneously
+        for terms in self.diagonal_terms:
+            # for each term that can be diagonalized simultaneously
+            # extract the coefficient, Z observable and qubit map
+            # the basis rotation, instead, will be the same
+            tmp_coeffs, tmp_obs, tmp_qmaps = [], [], []
+            for term in terms:
+                # store coefficient
+                tmp_coeffs.append(term.coefficient)
+                # Only care about non-I terms
+                non_identity_factors = [
+                    factor for factor in term.factors if factor.name[0] != "I"
+                ]
+                # build diagonal observable
+                tmp_obs.append(
+                    SymbolicHamiltonian(
+                        prod(Z(factor.target_qubit) for factor in non_identity_factors),
+                        nqubits=circuit.nqubits,
+                        backend=self.backend,
+                    )
                 )
-            )
-            # Get the qubits we want to measure for each term
-            qubit_map = sorted(factor.target_qubit for factor in non_identity_factors)
+                # Get the qubits we want to measure for each term
+                tmp_qmaps = sorted(
+                    factor.target_qubit for factor in non_identity_factors
+                )
+            coefficients.append(tmp_coeffs)
+            Z_observables.append(tmp_obs)
+            qubit_maps.append(tmp_qmaps)
+
             # prepare the measurement basis and append it to the circuit
             measurements = [
                 gates.M(factor.target_qubit, basis=factor.gate.__class__)
@@ -526,12 +557,23 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             circ_copy = circuit.copy(True)
             circ_copy.add(measurements)
             rotated_circuits.append(circ_copy)
-            # for mapping the obtained sample frequencies to the original qubits
-            qubit_maps.append(qubit_map)
-        frequencies = [
-            result.frequencies()
-            for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
-        ]
+
+        # execute the circuits
+        results = self.backend.execute_circuits(rotated_circuits, nshots=nshots)
+
+        # construct the expectation value for each diagonal term
+        # and sum all together
+        expval = 0.0
+        for coeffs, res, obs, qmaps in zip(
+            coefficients, results, Z_observables, qubit_maps
+        ):
+            freq = res.frequencies()
+            expval += sum(
+                c.real * o.expectation_from_samples(freq, qmap)
+                for c, o, qmap in zip(coeffs, obs, qmaps)
+            )
+        return expval
+
         return sum(
             coeff.real * obs.expectation_from_samples(freq, qubit_map)
             for coeff, freq, obs, qubit_map in zip(
