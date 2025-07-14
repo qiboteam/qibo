@@ -92,7 +92,11 @@ class Hamiltonian(AbstractHamiltonian):
         if self._exp.get("a") != a:
             self._exp["a"] = a
             self._exp["result"] = matrix_exponentiation(
-                a, self.matrix, self._eigenvectors, self._eigenvalues, self.backend
+                self.matrix,
+                -1j * a,
+                self._eigenvectors,
+                self._eigenvalues,
+                self.backend,
             )
         return self._exp.get("result")
 

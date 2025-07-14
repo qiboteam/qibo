@@ -6,7 +6,7 @@ from typing import Union
 
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.linalg import block_diag, fractional_matrix_power, logm
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -793,16 +793,39 @@ class NumpyBackend(Backend):
             ev /= norm
         return ev
 
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+    def calculate_matrix_exp(
+        self,
+        matrix,
+        phase: Union[float, int, complex] = 1,
+        eigenvectors=None,
+        eigenvalues=None,
+    ):
         if eigenvectors is None or self.is_sparse(matrix):
             if self.is_sparse(matrix):
                 from scipy.sparse.linalg import expm
             else:
                 from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+
+            return expm(phase * matrix)
+
+        expd = self.np.exp(phase * eigenvalues)
         ud = self.np.transpose(np.conj(eigenvectors))
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+        return (eigenvectors * expd) @ ud
+
+    def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None:
+            # to_numpy and cast needed for GPUs
+            matrix_log = logm(self.to_numpy(matrix)) / float(np.log(base))
+            matrix_log = self.cast(matrix_log, dtype=matrix_log.dtype)
+
+            return matrix_log
+
+        # log = self.np.diag(self.np.log(eigenvalues) / float(np.log(base)))
+        log = self.np.log(eigenvalues) / float(np.log(base))
+        ud = self.np.transpose(np.conj(eigenvectors))
+
+        return (eigenvectors * log) @ ud
 
     def calculate_matrix_power(
         self,
@@ -825,6 +848,9 @@ class NumpyBackend(Backend):
                 )
 
         return fractional_matrix_power(matrix, power)
+
+    def calculate_matrix_sqrt(self, matrix):
+        return self.calculate_matrix_power(matrix, power=0.5)
 
     def calculate_singular_value_decomposition(self, matrix):
         return self.np.linalg.svd(matrix)

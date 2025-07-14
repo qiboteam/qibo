@@ -414,30 +414,16 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
     backend.assert_allclose(value, target)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_von_neumann_entropy(backend, base, check_hermitian):
+def test_von_neumann_entropy(backend, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = von_neumann_entropy(state, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=0, check_hermitian=check_hermitian, backend=backend
-        )
-    with pytest.raises(TypeError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian="False", backend=backend
-        )
-
-    state = random_unitary(4, backend=backend)
-    test = von_neumann_entropy(state, base=base, check_hermitian=True, backend=backend)
+        test = von_neumann_entropy(state, base=0, backend=backend)
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
@@ -461,86 +447,55 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
         test = 0.8613531161467861
 
     backend.assert_allclose(
-        von_neumann_entropy(
-            state, base, check_hermitian=check_hermitian, backend=backend
-        ),
+        von_neumann_entropy(state, base, backend=backend),
         test,
     )
 
 
-@pytest.mark.parametrize("statevector", [False, True])
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevector):
+def test_relative_von_neumann_entropy(backend, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         target = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(TypeError):
         target = np.random.rand(2, 3)
         target = backend.cast(target, dtype=target.dtype)
         state = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
         target = np.array([0.0, 1.0])
         target = backend.cast(target, dtype=target.dtype)
-        test = relative_von_neumann_entropy(
-            state, target, base=0, check_hermitian=check_hermitian, backend=backend
-        )
-    with pytest.raises(TypeError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        target = np.array([0.0, 1.0])
-        target = backend.cast(target, dtype=target.dtype)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian="False", backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=0, backend=backend)
 
     nqubits = 2
     dims = 2**nqubits
 
-    state = (
-        random_statevector(dims, backend=backend)
-        if statevector
-        else random_density_matrix(dims, backend=backend)
-    )
     target = backend.identity_density_matrix(nqubits, normalize=True)
 
-    entropy = relative_von_neumann_entropy(
-        state, target, base=base, check_hermitian=check_hermitian, backend=backend
+    state = random_statevector(dims, backend=backend)
+    state = backend.np.outer(state, backend.np.conj(state.T))
+
+    rel_entropy = relative_von_neumann_entropy(
+        state, target, base=base, backend=backend
     )
 
-    if statevector:
-        state = backend.np.outer(state, backend.np.conj(state.T))
+    backend.assert_allclose(rel_entropy, 2 / float(np.log2(base)), atol=1e-5)
 
-    entropy_target = von_neumann_entropy(
-        state, base=base, check_hermitian=check_hermitian, backend=backend
-    )
+    state = random_density_matrix(dims, seed=8, pure=False, backend=backend)
 
     backend.assert_allclose(
-        entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
-    )
-
-    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-    target = backend.cast([0.0, 1.0], dtype=np.float64)
-
-    backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, backend=backend),
-        -0.21227801,
+        relative_von_neumann_entropy(state, target, base=base, backend=backend),
+        0.4100035816956977 / float(np.log(base)),
         atol=1e-8,
     )
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_mutual_information(backend, base, check_hermitian):
+def test_mutual_information(backend, base):
     with pytest.raises(ValueError):
         state = np.ones((3, 3))
         state = backend.cast(state, dtype=state.dtype)
@@ -551,7 +506,7 @@ def test_mutual_information(backend, base, check_hermitian):
     state = backend.np.kron(state_a, state_b)
 
     backend.assert_allclose(
-        mutual_information(state, [0, 1], base, check_hermitian, backend),
+        mutual_information(state, [0, 1], base, backend),
         0.0,
         atol=1e-10,
     )
@@ -755,12 +710,9 @@ def test_tsallis_entropy(backend, alpha, base):
 @pytest.mark.parametrize(
     ["state_flag", "target_flag"], [[True, True], [False, True], [True, False]]
 )
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("alpha", [0, 0.5, 1, 1.9])
-def test_relative_tsallis_entropy(
-    backend, alpha, base, check_hermitian, state_flag, target_flag
-):
+def test_relative_tsallis_entropy(backend, alpha, base, state_flag, target_flag):
     state = random_statevector(4, backend=backend)
     target = random_statevector(4, backend=backend)
 
@@ -784,13 +736,11 @@ def test_relative_tsallis_entropy(
         else random_density_matrix(4, seed=11, backend=backend)
     )
 
-    value = relative_tsallis_entropy(
-        state, target, alpha, base, check_hermitian, backend
-    )
+    value = relative_tsallis_entropy(state, target, alpha, base, backend)
 
     if alpha == 1.0:
         target_value = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
+            state, target, base=base, backend=backend
         )
     else:
         if alpha < 1.0:
@@ -809,10 +759,9 @@ def test_relative_tsallis_entropy(
     backend.assert_allclose(value, target_value, atol=1e-10)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("bipartition", [[0], [1]])
-def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
+def test_entanglement_entropy(backend, bipartition, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -820,7 +769,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
             state,
             bipartition=bipartition,
             base=base,
-            check_hermitian=check_hermitian,
             backend=backend,
         )
     with pytest.raises(ValueError):
@@ -830,7 +778,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
             state,
             bipartition=bipartition,
             base=0,
-            check_hermitian=check_hermitian,
             backend=backend,
         )
 
@@ -842,7 +789,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
         state,
         bipartition=bipartition,
         base=base,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
 
@@ -866,7 +812,6 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
         state,
         bipartition=bipartition,
         base=base,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
