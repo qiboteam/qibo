@@ -161,17 +161,38 @@ def test_symbolic_term_mul(backend):
 
 
 def test_symbolic_term_reduction(backend):
-    """Test simplifcation of ``SymbolicTerm`` expressions"""
+    """Test simplification of ``SymbolicTerm`` expressions"""
     from qibo.symbols import I, X, Y, Z
 
-    expression = X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)  #  -i * Z(1) * X(2)
-    print(expression)
+    expression = (
+        0.1**2 * X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)
+    )  #  -0.01i * Z(1) * X(2)
     term = terms.SymbolicTerm(1, expression, backend=backend)
-    print([factor for factor in term.factors])
     assert term.target_qubits == (1, 2)
-    assert term.coefficient == -1.0j
-    target_matrix = backend.cast(-1.0j * np.kron(matrices.Z, matrices.X))
+    backend.assert_allclose(term.coefficient, -0.01j)
+    target_matrix = backend.cast(-0.01j * np.kron(matrices.Z, matrices.X))
     backend.assert_allclose(term.matrix, target_matrix)
+
+
+def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
+    """Test simplification of ``SymbolicTerm`` expressions that include Symbol"""
+    from qibo.symbols import Symbol, X, Y, Z
+
+    matrix = np.random.random((2, 2))
+    expression = (
+        Z(0) * (Symbol(0, matrix) ** 2) * (X(0) ** 2) * Y(0)
+    )  #  Z(0) * Symbol(0)**2 * Y(0)
+    # print(expression)
+    term = terms.SymbolicTerm(1, expression, backend=backend)
+    # print(f"{term.matrix_map[0] = }")
+    # print([factor for factor in term.factors])
+    assert term.target_qubits == (0,)
+    target_matrix = backend.cast(matrices.Z @ matrix @ matrix @ matrices.Y)
+    # print(f"{target_matrix = }")
+    # print(f"{matrix @ matrices.Y = }")
+    # print(f"{matrix @ matrix @ matrices.Y = }")
+    backend.assert_allclose(term.matrix, target_matrix)
+    # raise RuntimeError
 
 
 @pytest.mark.parametrize("density_matrix", [False])

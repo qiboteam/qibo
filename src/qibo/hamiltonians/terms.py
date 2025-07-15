@@ -239,7 +239,7 @@ class SymbolicTerm(HamiltonianTerm):
                                 self.matrix_map[q].extend(power * [factor.matrix])
                         else:
                             self.factors.extend(power * [factor])
-                            self.matrix_map[q] = [factor.matrix]
+                            self.matrix_map[q] = power * [factor.matrix]
 
                     else:
                         self.coefficient *= factor.matrix
