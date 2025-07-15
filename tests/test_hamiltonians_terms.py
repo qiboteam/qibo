@@ -160,6 +160,20 @@ def test_symbolic_term_mul(backend):
     backend.assert_allclose((term * 3).matrix, 3 * target_matrix)
 
 
+def test_symbolic_term_reduction(backend):
+    """Test simplifcation of ``SymbolicTerm`` expressions"""
+    from qibo.symbols import I, X, Y, Z
+
+    expression = X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)  #  -i * Z(1) * X(2)
+    print(expression)
+    term = terms.SymbolicTerm(1, expression, backend=backend)
+    print([factor for factor in term.factors])
+    assert term.target_qubits == (1, 2)
+    assert term.coefficient == -1.0j
+    target_matrix = backend.cast(-1.0j * np.kron(matrices.Z, matrices.X))
+    backend.assert_allclose(term.matrix, target_matrix)
+
+
 @pytest.mark.parametrize("density_matrix", [False])
 def test_symbolic_term_call(backend, density_matrix):
     """Test applying ``SymbolicTerm`` to state."""

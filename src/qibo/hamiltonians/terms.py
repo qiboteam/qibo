@@ -195,12 +195,7 @@ class SymbolicTerm(HamiltonianTerm):
                                 while q_factors:
                                     q_factor = q_factors[-1]
                                     # Only simplify if the last term in matrix_map[q] is a Pauli matrix
-                                    if (
-                                        q_factor.__class__ in pauli_mapping
-                                        and self.backend.np.allclose(
-                                            q_factor.matrix, self.matrix_map[q][-1]
-                                        )
-                                    ):
+                                    if q_factor.__class__ in pauli_mapping:
                                         pauli_product = evaluate_pauli_product(
                                             pauli_mapping[q_factor.__class__]
                                             * pauli_mapping[factor.__class__]
