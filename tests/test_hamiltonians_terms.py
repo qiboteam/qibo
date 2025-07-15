@@ -182,17 +182,10 @@ def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
     expression = (
         Z(0) * (Symbol(0, matrix) ** 2) * (X(0) ** 2) * Y(0)
     )  #  Z(0) * Symbol(0)**2 * Y(0)
-    # print(expression)
     term = terms.SymbolicTerm(1, expression, backend=backend)
-    # print(f"{term.matrix_map[0] = }")
-    # print([factor for factor in term.factors])
     assert term.target_qubits == (0,)
     target_matrix = backend.cast(matrices.Z @ matrix @ matrix @ matrices.Y)
-    # print(f"{target_matrix = }")
-    # print(f"{matrix @ matrices.Y = }")
-    # print(f"{matrix @ matrix @ matrices.Y = }")
     backend.assert_allclose(term.matrix, target_matrix)
-    # raise RuntimeError
 
 
 @pytest.mark.parametrize("density_matrix", [False])
