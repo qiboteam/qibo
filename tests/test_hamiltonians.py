@@ -309,7 +309,7 @@ def test_hamiltonian_expectation_from_circuit(backend):
     backend.set_seed(seed)
 
     nshots = 4 * 10**6
-    observable = I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
+    observable = 3.14 + I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
     exp, H, c = non_exact_expectation_test_setup(backend, observable)
     exp_from_samples = H.expectation_from_circuit(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)

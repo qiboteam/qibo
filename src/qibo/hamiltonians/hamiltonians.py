@@ -577,7 +577,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         for res, obs, qmap in zip(results, Z_observables, qubit_maps):
             freq = res.frequencies()
             expval += sum(o.expectation_from_samples(freq, qmap) for o in obs)
-        return expval
+        return self.constant + expval
 
     def expectation_from_samples(self, freq: dict, qubit_map: list = None) -> float:
         """
