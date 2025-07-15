@@ -30,7 +30,6 @@ def qaoa_function_of_layer(backend, layer):
         method="BFGS",
         options={"maxiter": 1},
     )
-    print(final_parameters)
     qaoa.set_parameters(final_parameters)
     return qaoa.execute(initial_state)
 
@@ -40,8 +39,7 @@ def test_tsp(backend, nlayers):
     if nlayers == 4 and backend.platform in ("cupy", "cuquantum"):
         pytest.skip("Failing for cupy and cuquantum.")
     final_state = backend.to_numpy(qaoa_function_of_layer(backend, nlayers))
-    # atol = 4e-5 if backend.platform in ("cupy", "cuquantum") else 1e-5
-    atol = 1e-1
+    atol = 4e-5 if backend.platform in ("cupy", "cuquantum") else 1e-5
     assert_regression_fixture(
         backend, final_state.real, f"tsp_layer{nlayers}_real.out", rtol=1e-3, atol=atol
     )
