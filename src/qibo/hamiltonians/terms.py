@@ -9,6 +9,10 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.symbols import I, X, Y, Z
 
+# For mapping between qibo symbols and sympy Pauli objects
+PAULI_MAPPING = {X: Pauli(1), Y: Pauli(2), Z: Pauli(3)}
+INVERSE_PAULI_MAPPING = {_v: _k for _k, _v in PAULI_MAPPING.items()}
+
 
 class HamiltonianTerm:
     """Term of a :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
@@ -150,30 +154,8 @@ class SymbolicTerm(HamiltonianTerm):
         # Dictionary that maps target qubit ids to a list of matrices that act on each qubit
         self.matrix_map = {}
         if factors != 1:
-            # For mapping between qibo symbols and sympy Pauli objects
-            pauli_mapping = {X: Pauli(1), Y: Pauli(2), Z: Pauli(3)}
-            inverse_pauli_mapping = {_v: _k for _k, _v in pauli_mapping.items()}
-
             for factor in factors.as_ordered_factors():
-                # check if factor has some power ``power`` so that the corresponding
-                # matrix is multiplied ``power`` times
-                if isinstance(factor, sympy.Pow):
-                    factor, power = factor.args
-                    assert isinstance(power, sympy.Integer)
-                    assert isinstance(factor, sympy.Symbol)
-                    # if the symbol is a Pauli (i.e. a qibo symbol) and `power` is even
-                    # the power is the identity, thus the factor vanishes. Otherwise,
-                    # for an odd exponent, it remains unchanged (i.e. `power`=1)
-                    if factor.__class__ in (I, X, Y, Z):
-                        if not int(power) % 2:
-                            factor = sympy.N(1)
-                        else:
-                            power = 1
-                    else:
-                        power = int(power)
-                else:
-                    power = 1
-
+                factor, power = self._compute_power(factor)
                 if isinstance(factor, sympy.Symbol):
                     # Skip any qibo.symbols.I factors
                     if isinstance(factor, I):
@@ -187,51 +169,7 @@ class SymbolicTerm(HamiltonianTerm):
                         if q in self.matrix_map:
                             # Check for possible simplifications only if current factor is X/Y/Z
                             if isinstance(factor, (X, Y, Z)):
-                                q_factors = [
-                                    _factor
-                                    for _factor in self.factors
-                                    if _factor.target_qubit == q
-                                ]
-                                while q_factors:
-                                    q_factor = q_factors[-1]
-                                    # Only simplify if the last term in matrix_map[q] is a Pauli matrix
-                                    if q_factor.__class__ in pauli_mapping:
-                                        pauli_product = evaluate_pauli_product(
-                                            pauli_mapping[q_factor.__class__]
-                                            * pauli_mapping[factor.__class__]
-                                        )
-                                        # Move -1 or sympy.I from the product into the coefficient
-                                        if -1 in pauli_product.atoms():
-                                            pauli_product *= -1
-                                            self.coefficient *= -1
-                                        if sympy.I in pauli_product.atoms():
-                                            pauli_product *= -sympy.I
-                                            self.coefficient *= 1j
-                                        # If pauli_product is not identity, then update the original factor/matrix
-                                        factor_index = (
-                                            len(self.factors)
-                                            - self.factors[::-1].index(q_factor)
-                                            - 1
-                                        )
-                                        if pauli_product in inverse_pauli_mapping:
-                                            factor = inverse_pauli_mapping[
-                                                pauli_product
-                                            ](q)
-                                            factor.backend = self.backend
-                                            self.factors[factor_index] = factor
-                                            self.matrix_map[q][-1] = factor.matrix
-                                        # Otherwise, just remove the factor/matrix
-                                        else:
-                                            self.factors.pop(factor_index)
-                                            self.matrix_map[q].pop(-1)
-                                            if not self.matrix_map[q]:
-                                                del self.matrix_map[q]
-                                        q_factors.pop(-1)
-                                    # X/Y/Z factor wasn't the last term previously => Cannot simplify, just extend
-                                    else:
-                                        self.factors.extend([factor])
-                                        self.matrix_map[q].extend([factor.matrix])
-                                        break
+                                self._simplify_q_factors(factor, q)
                             # Case whereby factor isn't X/Y/Z: Multiply matrix multiple times based on its power,
                             # see the ``SymbolicTerm.matrix`` property for the full matrix calculation
                             else:
@@ -251,6 +189,66 @@ class SymbolicTerm(HamiltonianTerm):
                     raise_error(TypeError, f"Cannot parse factor {factor}.")
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
+
+    @staticmethod
+    def _compute_power(factor):
+        """Break down a factor into a base term and its power, e.g. `X**n` returns `X` and `n`"""
+        if isinstance(factor, sympy.Pow):
+            factor, power = factor.args
+            assert isinstance(power, sympy.Integer)
+            assert isinstance(factor, sympy.Symbol)
+            # if the symbol is a Pauli (i.e. a qibo symbol) and `power` is even
+            # the power is the identity, thus the factor vanishes. Otherwise,
+            # for an odd exponent, it remains unchanged (i.e. `power`=1)
+            if factor.__class__ in (I, X, Y, Z):
+                if not int(power) % 2:
+                    factor = sympy.N(1)
+                else:
+                    power = 1
+            else:
+                power = int(power)
+        else:
+            power = 1
+        return factor, power
+
+    def _simplify_q_factors(self, factor, q):
+        """Simplifies the factors acting on qubit q using Pauli algebra after factor is added to q"""
+        q_factors = [_factor for _factor in self.factors if _factor.target_qubit == q]
+        while q_factors:
+            q_factor = q_factors[-1]
+            # Only simplify if the last term in self.matrix_map[q] is a Pauli matrix
+            if q_factor.__class__ in PAULI_MAPPING:
+                pauli_product = evaluate_pauli_product(
+                    PAULI_MAPPING[q_factor.__class__] * PAULI_MAPPING[factor.__class__]
+                )
+                # Move -1 or sympy.I from the product into the coefficient
+                if -1 in pauli_product.atoms():
+                    pauli_product *= -1
+                    self.coefficient *= -1
+                if sympy.I in pauli_product.atoms():
+                    pauli_product *= -sympy.I
+                    self.coefficient *= 1j
+                # If pauli_product is not identity, then update the original factor/matrix
+                factor_index = (
+                    len(self.factors) - self.factors[::-1].index(q_factor) - 1
+                )
+                if pauli_product in INVERSE_PAULI_MAPPING:
+                    factor = INVERSE_PAULI_MAPPING[pauli_product](q)
+                    factor.backend = self.backend
+                    self.factors[factor_index] = factor
+                    self.matrix_map[q][-1] = factor.matrix
+                # Otherwise, just remove the factor/matrix
+                else:
+                    self.factors.pop(factor_index)
+                    self.matrix_map[q].pop(-1)
+                    if not self.matrix_map[q]:
+                        del self.matrix_map[q]
+                q_factors.pop(-1)
+            # X/Y/Z factor wasn't the last term previously => Cannot simplify, just extend
+            else:
+                self.factors.extend([factor])
+                self.matrix_map[q].extend([factor.matrix])
+                break
 
     @cached_property
     def matrix(self):
