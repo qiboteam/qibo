@@ -2,14 +2,16 @@ import importlib
 import tkinter as tk
 from dataclasses import dataclass, field
 from typing import Union
+from IPython.display import display, clear_output
 
 import matplotlib as mpl
-import numpy as np
 from matplotlib.backends import backend_agg, backend_qtagg, backend_tkagg
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
+
+import numpy as np
 from numpy.typing import ArrayLike
 
 from qibo import hamiltonians
@@ -62,7 +64,6 @@ class Bloch:
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
         # Backends
-        # TO-DO: Add a jupyter backend
         if self.backend == "qtagg":
             mpl.use(self.backend)
             self._backend = importlib.import_module(
@@ -72,6 +73,8 @@ class Bloch:
             mpl.use(self.backend)
         elif self.backend == "agg":
             mpl.use(self.backend)
+        elif self.backend == "jupyter":
+            pass
         else:
             raise_error(
                 ValueError,
@@ -244,12 +247,12 @@ class Bloch:
         self._new_window()
 
         # Clear data
-        self.points = []
-        self.vectors = []
+        self._points = []
+        self._vectors = []
 
         # Clear Color
-        self.color_points = []
-        self.color_vectors = []
+        self._color_points = []
+        self._color_vectors = []
 
     # ----Plot and Save-----
     def _rendering(self):
@@ -258,7 +261,6 @@ class Bloch:
         self._create_sphere()
 
         for color, vector in zip(self._color_vectors, self._vectors):
-            print(f"Componente vettore {vector[0]}, {vector[1]}, {vector[2]}")
             xs3d = vector[0] * np.array([0, 1])
             ys3d = vector[1] * np.array([0, 1])
             zs3d = vector[2] * np.array([0, 1])
@@ -305,15 +307,21 @@ class Bloch:
         canvas.draw()
         root.mainloop()
 
+    def _jupyter_window(self):
+        self._new_window()
+        self._rendering()
+        display(self.fig)
+
     def plot(self):
         "This function plots the sphere."
-
         self._rendering()
 
         if self.backend == "tkagg":
             self._tk_window()
         elif self.backend == "qtagg":
             self._qt_window()
+        elif self.backend == "jupyter":
+            self._jupyter_window()
 
     def save(self, filename="bloch_sphere.pdf"):
         "This function saves the sphere."
