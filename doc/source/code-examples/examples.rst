@@ -382,7 +382,6 @@ The function supports options to control the number of tick labels shown (for la
 
 .. testcode::
 
-    import matplotlib.pyplot as plt
     import numpy as np
     from qibo import Circuit, gates
     from qibo.ui import plot_density_hist
