@@ -2,16 +2,15 @@ import importlib
 import tkinter as tk
 from dataclasses import dataclass, field
 from typing import Union
-from IPython.display import display, clear_output
 
 import matplotlib as mpl
+import numpy as np
+from IPython.display import clear_output, display
 from matplotlib.backends import backend_agg, backend_qtagg, backend_tkagg
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
-
-import numpy as np
 from numpy.typing import ArrayLike
 
 from qibo import hamiltonians
