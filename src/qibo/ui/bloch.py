@@ -180,6 +180,7 @@ class Bloch:
         return x, y, z
 
     def _homogeneous(self, vector):
+        "Helper method to `_broadcasting_semantics()`."
         if len(vector.shape) == 1:
             return [vector]
         elif len(vector.shape) == 2:
@@ -188,6 +189,7 @@ class Bloch:
             raise_error(ValueError, "Only `2D` or `1D` np.ndarray / list is accepted.")
 
     def _broadcasting_semantics(self, vector, mode, color):
+        "This function makes sure that `vector`, `mode`, `color` have the same sizes."
         if isinstance(vector, list):
             vector = np.array(vector)
 
@@ -308,6 +310,7 @@ class Bloch:
         root.mainloop()
 
     def _jupyter_window(self):
+        "Helper method to `plot()` for the `jupyter` backend."
         self._new_window()
         self._rendering()
         display(self.fig)
