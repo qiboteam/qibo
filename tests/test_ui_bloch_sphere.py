@@ -70,7 +70,7 @@ def test_state_clear():
 
     bs.add_state(states)
     bs.plot()
-
+    
     bs.clear()
     bs.plot()
 
@@ -186,3 +186,5 @@ def class_state():
     vector = [[0, 1, 0], [0, 1, 1]]
     bs = Bloch(backend=BACKEND)
     bs.plot()
+
+
