@@ -9,8 +9,15 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
-from qibo.backends import _check_backend, _check_backend_and_local_state, get_backend
+from qibo.backends import (
+    NumpyBackend,
+    _check_backend,
+    _check_backend_and_local_state,
+    get_backend,
+)
 from qibo.config import raise_error
+
+SIMULATION_BACKEND = NumpyBackend()
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -245,19 +252,15 @@ def sample_training_circuit_cdr(
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
-
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
-
     gates_to_replace = []
     for i, gate in enumerate(circuit.queue):
         if isinstance(gate, gates.RZ):
             if not gate.clifford:
                 gates_to_replace.append((i, gate))
-
     if not gates_to_replace:
         raise_error(ValueError, "No non-Clifford RZ gate found, no circuit sampled.")
-
     replacement, distance = [], []
     for _, gate in gates_to_replace:
         rep_gates = np.array(
@@ -420,7 +423,7 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        result = backend.execute_circuit(circ, nshots=nshots)
+        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         val = get_expectation_val_with_readout_mitigation(
@@ -549,7 +552,7 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        result = backend.execute_circuit(circ, nshots=nshots)
+        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
         val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
@@ -1095,7 +1098,9 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
-        circuit_result = backend.execute_circuit(training_circuit, nshots=nshots)
+        circuit_result = SIMULATION_BACKEND.execute_circuit(
+            training_circuit, nshots=nshots
+        )
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
         noisy_expectation = get_expectation_val_with_readout_mitigation(
