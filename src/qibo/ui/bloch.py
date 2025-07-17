@@ -317,11 +317,12 @@ class Bloch:
 
     def plot(self):
         "This function plots the sphere."
-        self._rendering()
-
+    
         if self.backend == "tkagg":
+            self._rendering()
             self._tk_window()
         elif self.backend == "qtagg":
+            self._rendering()
             self._qt_window()
         elif self.backend == "jupyter":
             self._jupyter_window()
