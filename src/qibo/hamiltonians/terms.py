@@ -212,7 +212,7 @@ class SymbolicTerm(HamiltonianTerm):
         return factor, power
 
     def _simplify_q_factors(self, factor, q):
-        """Simplifies the factors acting on qubit q using Pauli algebra after factor is added to q"""
+        """Simplify the factors acting on qubit ``q`` using Pauli algebra after factor is added to ``q``."""
         q_factors = [_factor for _factor in self.factors if _factor.target_qubit == q]
         while q_factors:
             q_factor = q_factors[-1]
