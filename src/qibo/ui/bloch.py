@@ -78,7 +78,7 @@ class Bloch:
         else:
             raise_error(
                 ValueError,
-                "Backend not supported. Try: `qtagg`, `tkagg` (interactive) or `agg` (non-interactive).",
+                "Backend not supported. Try: `qtagg`, `tkagg` (interactive), `agg` (non-interactive) or `jupyter`.",
             )
 
     def _new_window(self):
