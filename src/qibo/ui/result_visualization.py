@@ -40,9 +40,8 @@ def visualize_state(
             To do so, this argument can be set, reducing the number of plotted ticks
             to `n_most_relevant_components`. Default is None.
     """
-
     # Collect amplitude
-    amplitudes = execution_outcome.state()
+    amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
     nqubits = int(np.log2(len(amplitudes)))
 
     bitstrings = generate_bitstring_combinations(nqubits)
