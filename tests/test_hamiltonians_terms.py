@@ -108,8 +108,7 @@ def test_symbolic_term_creation(backend):
     assert term.target_qubits == (0, 1)
     assert len(term.matrix_map) == 2
     backend.assert_allclose(term.matrix_map.get(0)[0], backend.matrices.X)
-    backend.assert_allclose(term.matrix_map.get(1)[0], backend.matrices.Y)
-    backend.assert_allclose(term.matrix_map.get(1)[1], backend.matrices.X)
+    backend.assert_allclose(term.matrix_map.get(1)[0], backend.matrices.Z)
 
 
 def test_symbolic_term_with_power_creation(backend):
@@ -159,6 +158,34 @@ def test_symbolic_term_mul(backend):
     backend.assert_allclose(term.matrix, target_matrix)
     backend.assert_allclose((2 * term).matrix, 2 * target_matrix)
     backend.assert_allclose((term * 3).matrix, 3 * target_matrix)
+
+
+def test_symbolic_term_reduction(backend):
+    """Test simplification of ``SymbolicTerm`` expressions"""
+    from qibo.symbols import I, X, Y, Z
+
+    expression = (
+        0.1**2 * X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)
+    )  #  -0.01i * Z(1) * X(2)
+    term = terms.SymbolicTerm(1, expression, backend=backend)
+    assert term.target_qubits == (1, 2)
+    backend.assert_allclose(term.coefficient, -0.01j)
+    target_matrix = backend.cast(-0.01j * np.kron(matrices.Z, matrices.X))
+    backend.assert_allclose(term.matrix, target_matrix)
+
+
+def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
+    """Test simplification of ``SymbolicTerm`` expressions that include Symbol"""
+    from qibo.symbols import Symbol, X, Y, Z
+
+    matrix = np.random.random((2, 2))
+    expression = (
+        Z(0) * (Symbol(0, matrix) ** 2) * (X(0) ** 2) * Y(0)
+    )  #  Z(0) * Symbol(0)**2 * Y(0)
+    term = terms.SymbolicTerm(1, expression, backend=backend)
+    assert term.target_qubits == (0,)
+    target_matrix = backend.cast(matrices.Z @ matrix @ matrix @ matrices.Y)
+    backend.assert_allclose(term.matrix, target_matrix)
 
 
 @pytest.mark.parametrize("density_matrix", [False])
