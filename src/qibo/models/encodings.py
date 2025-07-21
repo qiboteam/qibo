@@ -123,7 +123,9 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     return circuit
 
 
-def sparse_encoder(data, method:str = "li", nqubits: int = None, backend=None, **kwargs):
+def sparse_encoder(
+    data, method: str = "li", nqubits: int = None, backend=None, **kwargs
+):
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -155,9 +157,9 @@ def sparse_encoder(data, method:str = "li", nqubits: int = None, backend=None, *
         data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
             The addresses :math:`b_{j}` can be either integers or in bitstring
             format of size :math:`n`.
-        method (str, optional): method to be used, either ``li`` or ``farias``. They refer to 
+        method (str, optional): method to be used, either ``li`` or ``farias``. They refer to
             methods in references [1] and [2], respectively.
-            Defaults to ``li`` 
+            Defaults to ``li``
         nqubits (int, optional): total number of qubits in the system.
             To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
             ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
@@ -219,6 +221,7 @@ def sparse_encoder(data, method:str = "li", nqubits: int = None, backend=None, *
 
     return circuit
 
+
 def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
@@ -277,33 +280,34 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
 
     flag = backend.np.zeros(d, dtype=backend.np.int8)
     for bi in bitstrings_sorted:
-        bi_int =  int(''.join(map(str, bi)), 2)
+        bi_int = int("".join(map(str, bi)), 2)
         if bi_int < d:
-            flag[bi_int]=1
+            flag[bi_int] = 1
 
-    data_binary=[]
-    for bi,xi in zip(bitstrings_sorted,data_sorted):
-        bi_int =  int(''.join(map(str, bi)), 2)
+    data_binary = []
+    for bi, xi in zip(bitstrings_sorted, data_sorted):
+        bi_int = int("".join(map(str, bi)), 2)
         if bi_int >= d:
             for k in range(d):
-                if flag[k]==0:
-                    flag[k]=1
-                    sigma[bi_int]=k
-                    sigma[k]=bi_int
-                    data_binary.append((k,xi))
+                if flag[k] == 0:
+                    flag[k] = 1
+                    sigma[bi_int] = k
+                    sigma[k] = bi_int
+                    data_binary.append((k, xi))
                     break
         else:
-            data_binary.append((bi_int,xi))
+            data_binary.append((bi_int, xi))
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
-    circuit_binary      = sparse_encoder(data_binary, method='farias', nqubits=nqubits, backend=backend, **kwargs)
+    circuit_binary = sparse_encoder(
+        data_binary, method="farias", nqubits=nqubits, backend=backend, **kwargs
+    )
     circuit_permutation = permutation_synthesis(sigma)
     circuit = Circuit(nqubits)
     circuit.add([gate for gate in circuit_binary.queue])
     circuit.add([gate for gate in circuit_permutation.queue])
 
     return circuit
-
 
 
 def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
@@ -1971,76 +1975,74 @@ def _add_wbd_gate(
             )
         circuit.add(gates.CNOT(second_register[control - dif], first_register[0]))
 
+
 def _perm_column_ops(
-        indices: list[int], 
-        n:int,
-        backend = None,
-        ):
+    indices: list[int],
+    n: int,
+    backend=None,
+):
     """Return (ell, gate_list) performing duplicate‑col removal + compaction."""
-    backend =_check_backend(backend)
+    backend = _check_backend(backend)
     # flatten the (x_0, x_1),...(x_{2m-2}, x_{2m-1})
     # We construct a matrix composed of
-    # xj to track the changes in xj where xj,k represents the k-th bit and the 
+    # xj to track the changes in xj where xj,k represents the k-th bit and the
     # bits are arranged from the least significant bit to the most significant bit
     indices = list(sum(indices, ()))
-    A=[]
+    A = []
     for x in indices:
-        bits=[]
+        bits = []
         for k in range(n):
-            bits.append((x>>k)&1)
+            bits.append((x >> k) & 1)
         A.append(bits)
     A = backend.np.array(A, dtype=int)
     ncols = A.shape[1]
     # initialize the list of gates
     qgates = []
-    
+
     # number of non-zero columns
     ell = 0
-    flag = backend.np.zeros(n,dtype=int)
+    flag = backend.np.zeros(n, dtype=int)
     for idxj in range(ncols):
-        if backend.np.array_equal(A[:,idxj],backend.np.zeros_like(A[:,idxj])):
+        if backend.np.array_equal(A[:, idxj], backend.np.zeros_like(A[:, idxj])):
             continue
         # else, we count the number of non-zeros columns
         # and flag these columns
-        ell+=1
+        ell += 1
         flag[idxj] = 1
 
         # look for columns that are equal to A[:,idxj]
-        for idxk in range(idxj+1,ncols):
-            if backend.np.array_equal(A[:,idxj],A[:,idxk]):
-                qgates.append(gates.CNOT(n-idxj-1,n-idxk-1))
+        for idxk in range(idxj + 1, ncols):
+            if backend.np.array_equal(A[:, idxj], A[:, idxk]):
+                qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
                 # this should transform the k-th column into an all-zero column
-                A[:,idxk] = backend.np.zeros_like(A[:,idxk])
+                A[:, idxk] = backend.np.zeros_like(A[:, idxk])
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
-    for idxk in range(ell,ncols):
-        if not backend.np.array_equal(A[:,idxk],backend.np.zeros_like(A[:,idxk])):
+    for idxk in range(ell, ncols):
+        if not backend.np.array_equal(A[:, idxk], backend.np.zeros_like(A[:, idxk])):
             for k in range(len(flag)):
-                if flag[k]==0:
-                    flag[k]=1
-                    flag[idxk]=0
+                if flag[k] == 0:
+                    flag[k] = 1
+                    flag[idxk] = 0
 
-                    qgates.append(gates.SWAP(n-idxk-1,n-k-1))
+                    qgates.append(gates.SWAP(n - idxk - 1, n - k - 1))
 
-                    bits = A[:,idxk].copy()
-                    A[:,idxk] = A[:,k]
-                    A[:,k] = bits
+                    bits = A[:, idxk].copy()
+                    A[:, idxk] = A[:, k]
+                    A[:, k] = bits
                     break
 
     return ell, qgates, A
 
-def _perm_row_ops(
-        A, 
-        ell: int, 
-        m: int, 
-        n: int, 
-        backend = None
-        ):
+
+def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
     """Return gates that reduce all rows after row0 to target form."""
-    backend =_check_backend(backend)
-    
-    log2m = int(backend.np.log2(2*m))
-    atilde = backend.np.array([[(x>>k)&1 for k in range(n)] for x in range(2*m)],dtype=int)
+    backend = _check_backend(backend)
+
+    log2m = int(backend.np.log2(2 * m))
+    atilde = backend.np.array(
+        [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
+    )
 
     qgates = []
     nrows = A.shape[0]
@@ -2048,85 +2050,91 @@ def _perm_row_ops(
     # Start with the first row (indexed as row 0)
     for k in range(ncols):
         # If we find a0,k = 1 for any 0 <= k <= n−1
-        if A[0,k]==1:
-            qgates.append(gates.X(n-k-1))
-            A[:,k] = (A[:,k] + 1)%2
+        if A[0, k] == 1:
+            qgates.append(gates.X(n - k - 1))
+            A[:, k] = (A[:, k] + 1) % 2
 
-    for j in range(1,nrows):
-        flag=False
-        for k in range(log2m,ncols):
-            if A[j,k] != 0:
-                flag=True
+    for j in range(1, nrows):
+        flag = False
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
+                flag = True
                 break
-        
-        if flag==False:
+
+        if flag == False:
             # There is no element b_{j},k != 0 for k > {log2m-1}"
-            ctrls = [n-l-1 for l in range(ncols) if A[j][l] != 0]
-            qgates.append(gates.X(n-log2m-1).controlled_by(*ctrls))
+            ctrls = [n - l - 1 for l in range(ncols) if A[j][l] != 0]
+            qgates.append(gates.X(n - log2m - 1).controlled_by(*ctrls))
             ctrls = [l for l in range(ncols) if A[j][l] == 1]
 
-            # check whether the gate is applied on other rows 
-            for l in range(j,nrows):
-                if backend.np.array_equal(A[l,ctrls],backend.np.ones_like(A[l,ctrls])):
-                    A[l,log2m] = (A[l,log2m]+1)%2
-            
+            # check whether the gate is applied on other rows
+            for l in range(j, nrows):
+                if backend.np.array_equal(
+                    A[l, ctrls], backend.np.ones_like(A[l, ctrls])
+                ):
+                    A[l, log2m] = (A[l, log2m] + 1) % 2
+
         # There is always an element b_{j},k != 0 for k > {log2m-1}
-        for k in range(log2m,ncols):
-            if A[j,k] != 0:
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
                 # Element b_{j},{k} != 0, {k} > {log2m-1}"
                 for kprime in range(ell):
-                    if (k == kprime) : continue
+                    if k == kprime:
+                        continue
                     # There is a typo in the paper
                     # b_{j},{kprime} should be different from Ã_{j},{kprime} not Ã_{j},{k}
-                    if (A[j,kprime]==atilde[j,kprime]): continue
-                    
-                    qgates.append(gates.CNOT(n-k-1,n-kprime-1))
-                    # check whether the gate is applied on other rows 
+                    if A[j, kprime] == atilde[j, kprime]:
+                        continue
+
+                    qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
+                    # check whether the gate is applied on other rows
                     for l in range(nrows):
-                        if A[l,k]==1:
-                            A[l,kprime]=(A[l,kprime]+1)%2
+                        if A[l, k] == 1:
+                            A[l, kprime] = (A[l, kprime] + 1) % 2
 
                 # Let us clean the element b_{j},{k}
-                
+
                 # There is another typo in the paper
                 # the control qubits for this gate correspond to the non-zero elements in row j of matrix A, not Ã
-                ctrls = [n-l-1 for l in range(k) if A[j,l] != 0]
-                qgates.append(gates.X(n-k-1).controlled_by(*ctrls))
-                ctrls = [l for l in range(k) if A[j,l] != 0]
+                ctrls = [n - l - 1 for l in range(k) if A[j, l] != 0]
+                qgates.append(gates.X(n - k - 1).controlled_by(*ctrls))
+                ctrls = [l for l in range(k) if A[j, l] != 0]
 
-                # check whether the gate is applied on other rows 
+                # check whether the gate is applied on other rows
                 for l in range(nrows):
-                    if backend.np.array_equal(A[l,ctrls],backend.np.ones_like(A[l,ctrls])):
-                        A[l,k] = (A[l,k]+1)%2
+                    if backend.np.array_equal(
+                        A[l, ctrls], backend.np.ones_like(A[l, ctrls])
+                    ):
+                        A[l, k] = (A[l, k] + 1) % 2
 
     return qgates
 
-def _perm_pair_flip_ops(
-        n:int, 
-        m:int,
-        backend = None
-        ):
+
+def _perm_pair_flip_ops(n: int, m: int, backend=None):
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
-    backend =_check_backend(backend)
+    backend = _check_backend(backend)
     # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
-    prefix = int(backend.np.ceil(backend.np.log2(2*m))) 
+    prefix = int(backend.np.ceil(backend.np.log2(2 * m)))
     x_qubits = list(range(prefix, n))
-    qgates=[gates.X(n-q-1) for q in x_qubits]
-    qgates.append(gates.X(n-1).controlled_by(*range(n-int(np.ceil(math.log2(2*m)))))) # flip qubit 0
-    qgates.extend(gates.X(n-q-1) for q in x_qubits) 
+    qgates = [gates.X(n - q - 1) for q in x_qubits]
+    qgates.append(
+        gates.X(n - 1).controlled_by(*range(n - int(np.ceil(math.log2(2 * m)))))
+    )  # flip qubit 0
+    qgates.extend(gates.X(n - q - 1) for q in x_qubits)
 
     return qgates
+
 
 def permutation_synthesis(
-        sigma:list[int],
-        m:int=2,
-        backend=None,
+    sigma: list[int],
+    m: int = 2,
+    backend=None,
 ):
     """Given permutation sigma on {0,...,d-1} and a power‑of‑two budget m,
     factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
         - each layer has at most m disjoint transpositions
         - each layer moves a power‑of‑two number of indices.
-        Return a circuit synthesis of sigma. 
+        Return a circuit synthesis of sigma.
 
     Args:
         sigma (list[int]): permutation description on {0,...,d-1}.
@@ -2143,21 +2151,15 @@ def permutation_synthesis(
     backend = _check_backend(backend)
 
     if not isinstance(sigma, list):
-        raise_error(
-                TypeError, f"Permutation sigma must be list[int]"
-            )
-        
+        raise_error(TypeError, f"Permutation sigma must be list[int]")
+
     n = int(backend.np.ceil(backend.np.log2(len(sigma))))
-    if sum([abs(s-i) for s,i in zip(sorted(sigma),range(2**n))]) != 0:
-        raise_error(
-                TypeError, "Permutation sigma must contain all indices {0,...,n-1}"
-            )
-        
-    if (m > 0 and (m & (m-1)) != 0):
-        raise_error(
-                TypeError, f"budget m must be a power‑of‑two"
-            )
-        
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
+        raise_error(TypeError, "Permutation sigma must contain all indices {0,...,n-1}")
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(TypeError, f"budget m must be a power‑of‑two")
+
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         decompose_permutation,
     )
@@ -2167,15 +2169,17 @@ def permutation_synthesis(
     # each layer moves a power‑of‑two number of indices
     layers = decompose_permutation(sigma, m)
 
-    circ_gates=[]
+    circ_gates = []
     # in case we have more than one permutation to do, do it in layers
     for layer in layers:
-        m=len(layer)
+        m = len(layer)
         ell, col_gates, A = _perm_column_ops(layer, n, backend)
-        row_gates         = _perm_row_ops(A, ell, m, n, backend)
-        flip_gates        = _perm_pair_flip_ops(n, m, backend)
+        row_gates = _perm_row_ops(A, ell, m, n, backend)
+        flip_gates = _perm_pair_flip_ops(n, m, backend)
 
-        circ_gates += col_gates + row_gates + flip_gates + list(reversed(col_gates+row_gates))
+        circ_gates += (
+            col_gates + row_gates + flip_gates + list(reversed(col_gates + row_gates))
+        )
 
     circ = Circuit(n)
     circ.add(circ_gates)

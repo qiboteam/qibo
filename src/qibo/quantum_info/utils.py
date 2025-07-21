@@ -542,83 +542,82 @@ def _hadamard_transform_1d(array, backend=None):
     return array_copied
 
 
-def _cycles_from_perm(
-        sigma: list[int]
-):
-    """ 
+def _cycles_from_perm(sigma: list[int]):
+    """
     We extract the cylces from a permutation as follows:
         - Treat the permutation as a directed graph of arrows i->sigma(i).
         - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
         - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
     """
-    n, seen, cycles = len(sigma), [False]*len(sigma), []
+    n, seen, cycles = len(sigma), [False] * len(sigma), []
     for i in range(n):
         # Depth‑first walk from every unvisited vertex
-        if seen[i]: continue
+        if seen[i]:
+            continue
         cur, cyc = i, []
         # Disjoint cycles
         while not seen[cur]:
-            seen[cur]=True
+            seen[cur] = True
             cyc.append(cur)
-            cur=sigma[cur]
-        if len(cyc)>1: cycles.append(cyc)
+            cur = sigma[cur]
+        if len(cyc) > 1:
+            cycles.append(cyc)
     return cycles
 
 
-def _star_matchings(
-        cyc: list[int]
-):
+def _star_matchings(cyc: list[int]):
     """
-    Given a cycle (a_1,a_2,...,a_k) with k>=2, the star factorisation expresses it as the ordered 
+    Given a cycle (a_1,a_2,...,a_k) with k>=2, the star factorisation expresses it as the ordered
     product of (k-1) disjoint transpositions that all share the first vertex:
 
         (a_1,a_2),(a_1,a_3),...,(a_1,a_k).
 
     Applied right‑to‑left, this product reproduces the original cycle.
     """
-    hub=cyc[0]
-    return [[(min(hub,v), max(hub,v))] for v in cyc[1:]]
+    hub = cyc[0]
+    return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
 
 
-def _greedy_pack(
-        matchings:list[list[tuple[int, int]]], 
-        m:int
-):
+def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
     """
     Add a matching to the current layer if
         - it shares no vertex with swaps already in the layer, and
         - new layer size #swaps stays a power of two <= m.
     Otherwise flush the layer and start a new one.
-    It works since disjointness keeps swaps commutative, and the power‑of‑two size rule 
+    It works since disjointness keeps swaps commutative, and the power‑of‑two size rule
     aligns exactly with layer constraints.
     """
-    layers:list[list[tuple[int, int]]]=[]
-    cur:list[tuple[int, int]] =[]
-    used=set()
-    def _flush():
-        nonlocal cur,used
-        if cur: layers.append(cur)
-        cur,used=[],set()
+    layers: list[list[tuple[int, int]]] = []
+    cur: list[tuple[int, int]] = []
+    used = set()
 
-    def _verts(layer:list[tuple[int, int]]):
-        for a,b in layer: yield a; yield b
+    def _flush():
+        nonlocal cur, used
+        if cur:
+            layers.append(cur)
+        cur, used = [], set()
+
+    def _verts(layer: list[tuple[int, int]]):
+        for a, b in layer:
+            yield a
+            yield b
 
     for M in matchings:
-        x = len(cur)+len(M)
+        x = len(cur) + len(M)
         # is power of 2 and x<=m
-        legal=(x > 0 and (x & (x-1)) == 0) and x<=m
+        legal = (x > 0 and (x & (x - 1)) == 0) and x <= m
         # shares no vertex with swaps already in the layer
-        if cur and (any(v in used for v in _verts(M)) or not legal): _flush()
+        if cur and (any(v in used for v in _verts(M)) or not legal):
+            _flush()
         cur.extend(M)
         used.update(_verts(M))
-        if len(cur)==m: _flush()
+        if len(cur) == m:
+            _flush()
     _flush()
     return layers
 
-def decompose_permutation(
-        sigma:list[int], 
-        m:int
-):
+
+def decompose_permutation(sigma: list[int], m: int):
     """
     Given a permutation sigma on {0,...,n-1} and a power‑of‑two budget m,
     factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
@@ -639,13 +638,9 @@ def decompose_permutation(
 
     """
     if not isinstance(sigma, list):
-        raise_error(
-                TypeError, f"Permutation sigma must be List[int]"
-            )
-        
-    if (m > 0 and (m & (m-1)) != 0):
-        raise_error(
-                TypeError, f"budget m must be a power‑of‑two"
-            )
-    matchings=[l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
+        raise_error(TypeError, f"Permutation sigma must be List[int]")
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(TypeError, f"budget m must be a power‑of‑two")
+    matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
     return _greedy_pack(matchings, m)
