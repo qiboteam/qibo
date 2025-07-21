@@ -91,6 +91,8 @@ class NumpyBackend(Backend):
     def to_numpy(self, x):
         if self.is_sparse(x):
             return x.toarray()
+        elif isinstance(x, list | tuple):
+            return self.np.asarray(x)
         return x
 
     def compile(self, func):
