@@ -9,7 +9,9 @@ from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     lanczos,
+    matrix_logarithm,
     matrix_power,
+    matrix_sqrt,
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
@@ -240,6 +242,45 @@ def test_matrix_power(backend, power, singular):
         target = float(backend.np.real(backend.np.trace(power)))
 
         assert abs(purity(state, backend=backend) - target) < 1e-5
+
+
+def test_matrix_sqrt(backend):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, pure=False, backend=backend)
+
+    eigvals, eigvecs = backend.calculate_eigenvectors(state)
+    target = backend.np.zeros_like(state)
+    for eigval, eigvec in zip(eigvals, eigvecs.T):
+        target += backend.np.sqrt(eigval) * backend.np.outer(
+            eigvec, backend.np.conj(eigvec)
+        )
+
+    sqrt = matrix_sqrt(state, backend=backend)
+
+    backend.assert_allclose(sqrt, target)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_matrix_log(backend, base):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, pure=False, backend=backend)
+
+    eigvals, eigvecs = backend.calculate_eigenvectors(state)
+    target = backend.np.zeros_like(state)
+    for eigval, eigvec in zip(eigvals, eigvecs.T):
+        target += (backend.np.log(eigval) / float(np.log(base))) * backend.np.outer(
+            eigvec, backend.np.conj(eigvec)
+        )
+
+    sqrt = matrix_logarithm(state, base=base, backend=backend)
+    backend.assert_allclose(sqrt, target)
+
+    sqrt = matrix_logarithm(state, base=base, eigenvectors=eigvecs, eigenvalues=eigvals)
+    backend.assert_allclose(sqrt, target)
 
 
 def test_singular_value_decomposition(backend):

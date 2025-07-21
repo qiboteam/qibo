@@ -418,9 +418,27 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_matrix_exp(
-        self, a, matrix, eigenvectors=None, eigenvalues=None
+        self,
+        matrix,
+        phase: Union[float, int, complex] = 1,
+        eigenvectors=None,
+        eigenvalues=None,
     ):  # pragma: no cover
-        """Calculate matrix exponential of a matrix.
+        """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
+        and ``phase`` :math:`\\theta`.
+
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_log(
+        self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
+    ):  # pragma: no cover
+        """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
+        of a matrix :math:`A`.
+
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
@@ -438,6 +456,19 @@ class Backend(abc.ABC):
             This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
             ``cuquantum``), this method falls back to CPU whenever ``power`` is not
             an integer.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_sqrt(
+        self, matrix, precision_singularity: float = 1e-14
+    ):  # pragma: no cover
+        """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU.
         """
         raise_error(NotImplementedError)
 
