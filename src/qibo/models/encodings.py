@@ -215,7 +215,7 @@ def sparse_encoder(
         )
 
     func = _sparse_encoder_farias if method == "farias" else _sparse_encoder_li
-     
+
     return func(data, nqubits, backend, **kwargs)
 
 
@@ -272,13 +272,18 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     """
     backend = _check_backend(backend)
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
-    bitstrings_sorted = backend.cast([int("".join(map(str, string)), 2) for string in bitstrings_sorted], dtype=backend.np.int8)
+    bitstrings_sorted = backend.cast(
+        [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
+        dtype=backend.np.int8,
+    )
 
     dim = len(data_sorted)
     sigma = [i for i in range(2**nqubits)]
 
     flag = backend.np.zeros(dim, dtype=backend.np.int8)
-    indexes = list(backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int))
+    indexes = list(
+        backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
+    )
     flag[indexes] = 1
 
     data_binary = []
