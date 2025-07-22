@@ -617,7 +617,7 @@ def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(sigma: list[int], m: int):
+def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
     """
     Given a permutation sigma on {0,...,n-1} and a power‑of‑two budget m,
     factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
