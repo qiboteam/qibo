@@ -4,7 +4,7 @@ from functools import reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional, Union
+from typing import Optional, List, Tuple, Union
 
 import numpy as np
 
