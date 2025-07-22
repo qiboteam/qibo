@@ -542,7 +542,7 @@ def _hadamard_transform_1d(array, backend=None):
     return array_copied
 
 
-def _cycles_from_perm(sigma: list[int]):
+def _cycles_from_perm(sigma: List[int]):
     """
     We extract the cylces from a permutation as follows:
         - Treat the permutation as a directed graph of arrows i->sigma(i).
@@ -578,7 +578,7 @@ def _star_matchings(cyc: list[int]):
     return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
 
 
-def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
+def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
     """
     Add a matching to the current layer if
         - it shares no vertex with swaps already in the layer, and
@@ -617,7 +617,7 @@ def _greedy_pack(matchings: list[list[tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(sigma: Union[list[int], tuple[int, ...]], m: int):
+def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
     """
     Given a permutation sigma on {0,...,n-1} and a power‑of‑two budget m,
     factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
