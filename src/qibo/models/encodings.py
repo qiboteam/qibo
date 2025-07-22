@@ -2118,7 +2118,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
 
 
 def permutation_synthesis(
-    sigma: Union[List[int], Tuple[int, ...]],
+    sigma: Union[List[int], tuple[int, ...]],
     m: int = 2,
     backend=None,
 ):
