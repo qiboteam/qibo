@@ -2136,7 +2136,7 @@ def permutation_synthesis(
         Return a circuit synthesis of sigma.
 
     Args:
-        sigma (list[int]): permutation description on {0,...,d-1}.
+        sigma (list[int] or tuple[int]): permutation description on {0,...,d-1}.
         m (int): power‑of‑two budget m (Default:2)
 
     Returns:
@@ -2148,6 +2148,9 @@ def permutation_synthesis(
         `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
     """
     backend = _check_backend(backend)
+
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
 
     if not isinstance(sigma, list):
         raise_error(TypeError, f"Permutation ``sigma`` must be a ``list`` of ``int``.")

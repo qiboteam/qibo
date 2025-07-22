@@ -630,13 +630,16 @@ def decompose_permutation(sigma: list[int], m: int):
         3) Greedy packing – merge swaps into layers while keeping rules.
 
     Args:
-        sigma (List[int]): permutation description on {0,...,n-1}.
+        sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
         m (int): power‑of‑two budget m
 
     Returns:
-        (List[List[Tuple[int, int]]]): list of t layers of paiwise transposition
+        (list[list[tuple[int, int]]]): list of t layers of paiwise transposition
 
     """
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
+
     if not isinstance(sigma, list):
         raise_error(TypeError, f"Permutation sigma must be List[int]")
 
