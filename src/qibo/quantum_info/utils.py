@@ -645,8 +645,11 @@ def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
             TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
         )
 
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(len(sigma)))]) != 0:
+        raise_error(ValueError, "Permutation sigma must contain all indices {0,...,n-1}")
+
     if m > 0 and (m & (m - 1)) != 0:
-        raise_error(TypeError, f"budget m must be a power‑of‑two")
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
 
     matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
 
