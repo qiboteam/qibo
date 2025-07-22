@@ -147,9 +147,9 @@ def sparse_encoder(
         s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
             \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
 
-    where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
+    where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
-    Resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
 
 
@@ -208,18 +208,15 @@ def sparse_encoder(
         _data_test.dtype if "array" in str(type(_data_test)) else type(_data_test)
     )
 
-    match method:
-        case "li":
-            circuit = _sparse_encoder_li(data, nqubits, backend, **kwargs)
-        case "farias":
-            circuit = _sparse_encoder_farias(data, nqubits, backend, **kwargs)
-        case _:
-            raise_error(
-                ValueError,
-                "``method`` should be either ``li`` or ``farias``",
-            )
+    if method not in ("li", "farias"):
+        raise_error(
+            ValueError,
+            f"``method`` should be either ``li`` or ``farias``, but it is {method}",
+        )
 
-    return circuit
+    func = _sparse_encoder_farias if method == "farias" else _sparse_encoder_li
+     
+    return func(data, nqubits, backend, **kwargs)
 
 
 def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
@@ -246,7 +243,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
 
     where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
 
-    Resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
 
 
@@ -275,18 +272,18 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     """
     backend = _check_backend(backend)
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
-    d = len(data_sorted)
+    bitstrings_sorted = backend.cast([int("".join(map(str, string)), 2) for string in bitstrings_sorted], dtype=backend.np.int8)
+
+    dim = len(data_sorted)
     sigma = [i for i in range(2**nqubits)]
 
-    flag = backend.np.zeros(d, dtype=backend.np.int8)
-    for bi in bitstrings_sorted:
-        bi_int = int("".join(map(str, bi)), 2)
-        if bi_int < d:
-            flag[bi_int] = 1
+    flag = backend.np.zeros(dim, dtype=backend.np.int8)
+    indexes = list(backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int))
+    flag[indexes] = 1
 
     data_binary = []
-    for bi, xi in zip(bitstrings_sorted, data_sorted):
-        bi_int = int("".join(map(str, bi)), 2)
+    for bi_int, xi in zip(bitstrings_sorted, data_sorted):
+        bi_int = int(bi_int)
         if bi_int >= d:
             for k in range(d):
                 if flag[k] == 0:
@@ -303,11 +300,8 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         data_binary, method="farias", nqubits=nqubits, backend=backend, **kwargs
     )
     circuit_permutation = permutation_synthesis(sigma)
-    circuit = Circuit(nqubits)
-    circuit.add([gate for gate in circuit_binary.queue])
-    circuit.add([gate for gate in circuit_permutation.queue])
 
-    return circuit
+    return circuit_binary + circuit_permutation
 
 
 def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
@@ -2151,7 +2145,7 @@ def permutation_synthesis(
     backend = _check_backend(backend)
 
     if not isinstance(sigma, list):
-        raise_error(TypeError, f"Permutation sigma must be list[int]")
+        raise_error(TypeError, f"Permutation ``sigma`` must be a ``list`` of ``int``.")
 
     n = int(backend.np.ceil(backend.np.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
