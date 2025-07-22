@@ -2065,9 +2065,7 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
 
             # check whether the gate is applied on other rows
             for l in range(j, nrows):
-                if backend.np.array_equal(
-                    A[l, ctrls], backend.np.ones_like(A[l, ctrls])
-                ):
+                if all(elem == 1 for elem in A[l, ctrls]):
                     A[l, log2m] = (A[l, log2m] + 1) % 2
 
         # There is always an element b_{j},k != 0 for k > {log2m-1}
@@ -2098,9 +2096,7 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
 
                 # check whether the gate is applied on other rows
                 for l in range(nrows):
-                    if backend.np.array_equal(
-                        A[l, ctrls], backend.np.ones_like(A[l, ctrls])
-                    ):
+                    if all(elem == 1 for elem in A[l, ctrls]):
                         A[l, k] = (A[l, k] + 1) % 2
 
     return qgates
@@ -2111,10 +2107,10 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
     backend = _check_backend(backend)
     # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
     prefix = int(backend.np.ceil(backend.np.log2(2 * m)))
-    x_qubits = list(range(prefix, n))
+    x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
     qgates.append(
-        gates.X(n - 1).controlled_by(*range(n - int(np.ceil(math.log2(2 * m)))))
+        gates.X(n - 1).controlled_by(*controls)
     )  # flip qubit 0
     qgates.extend(gates.X(n - q - 1) for q in x_qubits)
 
@@ -2122,7 +2118,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
 
 
 def permutation_synthesis(
-    sigma: list[int],
+    sigma: Union[List[int], Tuple[int, ...]],
     m: int = 2,
     backend=None,
 ):
@@ -2171,18 +2167,16 @@ def permutation_synthesis(
     # each layer moves a power‑of‑two number of indices
     layers = decompose_permutation(sigma, m)
 
-    circ_gates = []
+    circuit = Circuit(n)
     # in case we have more than one permutation to do, do it in layers
     for layer in layers:
         m = len(layer)
         ell, col_gates, A = _perm_column_ops(layer, n, backend)
         row_gates = _perm_row_ops(A, ell, m, n, backend)
         flip_gates = _perm_pair_flip_ops(n, m, backend)
+        col_row = col_gates + row_gates
+        circuit.add(col_row)
+        circuit.add(flip_gates)
+        circuit.add(col_row[::-1])
 
-        circ_gates += (
-            col_gates + row_gates + flip_gates + list(reversed(col_gates + row_gates))
-        )
-
-    circ = Circuit(n)
-    circ.add(circ_gates)
-    return circ
+    return circuit
