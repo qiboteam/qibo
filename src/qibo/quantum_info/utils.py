@@ -641,7 +641,9 @@ def decompose_permutation(sigma: list[int], m: int):
         sigma = list(sigma)
 
     if not isinstance(sigma, (list, tuple)):
-        raise_error(TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s.")
+        raise_error(
+            TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
+        )
 
     if m > 0 and (m & (m - 1)) != 0:
         raise_error(TypeError, f"budget m must be a power‑of‑two")

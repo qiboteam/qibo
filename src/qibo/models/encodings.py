@@ -2150,7 +2150,10 @@ def permutation_synthesis(
         sigma = list(sigma)
 
     if not isinstance(sigma, (list, tuple)):
-        raise_error(TypeError, f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.")
+        raise_error(
+            TypeError,
+            f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
+        )
 
     n = int(backend.np.ceil(backend.np.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
