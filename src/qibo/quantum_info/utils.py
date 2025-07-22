@@ -646,7 +646,9 @@ def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
         )
 
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(len(sigma)))]) != 0:
-        raise_error(ValueError, "Permutation sigma must contain all indices {0,...,n-1}")
+        raise_error(
+            ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
+        )
 
     if m > 0 and (m & (m - 1)) != 0:
         raise_error(ValueError, f"budget m must be a power‑of‑two")
