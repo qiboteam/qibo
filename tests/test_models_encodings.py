@@ -272,7 +272,8 @@ def test_hamming_weight_encoder(
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
-def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
+@pytest.mark.parametrize("method", ["li", "farias"])
+def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
@@ -293,10 +294,10 @@ def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
 
     if integers and not zip_input:
         with pytest.raises(ValueError):
-            circuit = sparse_encoder(data, nqubits=None)
+            circuit = sparse_encoder(data, method, nqubits=None)
 
     _nqubits = nqubits if integers else None
-    circuit = sparse_encoder(data, _nqubits, backend=backend)
+    circuit = sparse_encoder(data, method, _nqubits, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
