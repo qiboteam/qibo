@@ -2005,7 +2005,7 @@ def _perm_column_ops(
         if any(elem != 0 for elem in A[:, idxj]):
             ell += 1
             flag[idxj] = 1
-    
+
             # look for columns that are equal to A[:,idxj]
             for idxk in range(idxj + 1, ncols):
                 if backend.np.array_equal(A[:, idxj], A[:, idxk]):
@@ -2109,9 +2109,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
     prefix = int(backend.np.ceil(backend.np.log2(2 * m)))
     x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
-    qgates.append(
-        gates.X(n - 1).controlled_by(*controls)
-    )  # flip qubit 0
+    qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
     qgates.extend(gates.X(n - q - 1) for q in x_qubits)
 
     return qgates
