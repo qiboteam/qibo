@@ -289,8 +289,8 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     data_binary = []
     for bi_int, xi in zip(bitstrings_sorted, data_sorted):
         bi_int = int(bi_int)
-        if bi_int >= d:
-            for k in range(d):
+        if bi_int >= dim:
+            for k in range(dim):
                 if flag[k] == 0:
                     flag[k] = 1
                     sigma[bi_int] = k
