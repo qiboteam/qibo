@@ -634,14 +634,14 @@ def decompose_permutation(sigma: list[int], m: int):
         m (int): power‑of‑two budget m
 
     Returns:
-        (list[list[tuple[int, int]]]): list of t layers of paiwise transposition
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
 
     """
     if isinstance(sigma, tuple):
         sigma = list(sigma)
 
-    if not isinstance(sigma, list):
-        raise_error(TypeError, f"Permutation sigma must be List[int]")
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s.")
 
     if m > 0 and (m & (m - 1)) != 0:
         raise_error(TypeError, f"budget m must be a power‑of‑two")

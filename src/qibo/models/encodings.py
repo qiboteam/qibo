@@ -1993,7 +1993,7 @@ def _perm_column_ops(
         for k in range(n):
             bits.append((x >> k) & 1)
         A.append(bits)
-    A = backend.np.array(A, dtype=int)
+    A = backend.cast(A, dtype=backend.np.int8)
     ncols = A.shape[1]
     # initialize the list of gates
     qgates = []
@@ -2060,11 +2060,11 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
                 flag = True
                 break
 
-        if flag == False:
+        if not flag:
             # There is no element b_{j},k != 0 for k > {log2m-1}"
-            ctrls = [n - l - 1 for l in range(ncols) if A[j][l] != 0]
+            ctrls = [n - l - 1 for l in range(ncols) if A[j, l] != 0]
             qgates.append(gates.X(n - log2m - 1).controlled_by(*ctrls))
-            ctrls = [l for l in range(ncols) if A[j][l] == 1]
+            ctrls = [l for l in range(ncols) if A[j, l] == 1]
 
             # check whether the gate is applied on other rows
             for l in range(j, nrows):
@@ -2152,8 +2152,8 @@ def permutation_synthesis(
     if isinstance(sigma, tuple):
         sigma = list(sigma)
 
-    if not isinstance(sigma, list):
-        raise_error(TypeError, f"Permutation ``sigma`` must be a ``list`` of ``int``.")
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(TypeError, f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.")
 
     n = int(backend.np.ceil(backend.np.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
