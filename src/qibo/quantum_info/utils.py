@@ -647,5 +647,5 @@ def decompose_permutation(sigma: list[int], m: int):
         raise_error(TypeError, f"budget m must be a power‑of‑two")
 
     matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
-    
+
     return _greedy_pack(matchings, m)
