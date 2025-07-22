@@ -2002,19 +2002,16 @@ def _perm_column_ops(
     ell = 0
     flag = backend.np.zeros(n, dtype=int)
     for idxj in range(ncols):
-        if backend.np.array_equal(A[:, idxj], backend.np.zeros_like(A[:, idxj])):
-            continue
-        # else, we count the number of non-zeros columns
-        # and flag these columns
-        ell += 1
-        flag[idxj] = 1
-
-        # look for columns that are equal to A[:,idxj]
-        for idxk in range(idxj + 1, ncols):
-            if backend.np.array_equal(A[:, idxj], A[:, idxk]):
-                qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
-                # this should transform the k-th column into an all-zero column
-                A[:, idxk] = backend.np.zeros_like(A[:, idxk])
+        if any(elem != 0 for elem in A[:, idxj]):
+            ell += 1
+            flag[idxj] = 1
+    
+            # look for columns that are equal to A[:,idxj]
+            for idxk in range(idxj + 1, ncols):
+                if backend.np.array_equal(A[:, idxj], A[:, idxk]):
+                    qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
+                    # this should transform the k-th column into an all-zero column
+                    A[:, idxk] = 0
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
     for idxk in range(ell, ncols):
