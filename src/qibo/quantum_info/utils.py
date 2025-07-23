@@ -543,8 +543,7 @@ def _hadamard_transform_1d(array, backend=None):
 
 
 def _cycles_from_perm(sigma: List[int]):
-    """
-    We extract the cylces from a permutation as follows:
+    """Extract the cycles from a permutation as follows:
         - Treat the permutation as a directed graph of arrows i->sigma(i).
         - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
         - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
@@ -567,10 +566,12 @@ def _cycles_from_perm(sigma: List[int]):
 
 def _star_matchings(cyc: list[int]):
     """
-    Given a cycle (a_1,a_2,...,a_k) with k>=2, the star factorisation expresses it as the ordered
-    product of (k-1) disjoint transpositions that all share the first vertex:
+    Given a cycle :math:`(a_{1}, \\, a_{2}, \\, \\cdots, \\, a_{k})` with :math:`k \\geq 2`,
+    the star factorization expresses the cycle as the ordered product of :math:`(k-1)` 
+    disjoint transpositions that all share the first vertex:
 
-        (a_1,a_2),(a_1,a_3),...,(a_1,a_k).
+    .. math::
+        (a_{1}, \\, a_{2}), \\, (a_{1}, \\, a_{3}), \\, \\cdots, \\, (a_{1}, \\, a_{k}) \\, .
 
     Applied right‑to‑left, this product reproduces the original cycle.
     """

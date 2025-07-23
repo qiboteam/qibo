@@ -2074,18 +2074,14 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
             if A[j, k] != 0:
                 # Element b_{j},{k} != 0, {k} > {log2m-1}"
                 for kprime in range(ell):
-                    if k == kprime:
-                        continue
                     # There is a typo in the paper
                     # b_{j},{kprime} should be different from Ã_{j},{kprime} not Ã_{j},{k}
-                    if A[j, kprime] == atilde[j, kprime]:
-                        continue
-
-                    qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
-                    # check whether the gate is applied on other rows
-                    for l in range(nrows):
-                        if A[l, k] == 1:
-                            A[l, kprime] = (A[l, kprime] + 1) % 2
+                    if kprime != k and A[j, kprime] != atilde[j, kprime]:
+                        qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
+                        # check whether the gate is applied on other rows
+                        for l in range(nrows):
+                            if A[l, k] == 1:
+                                A[l, kprime] = (A[l, kprime] + 1) % 2
 
                 # Let us clean the element b_{j},{k}
 
@@ -2121,18 +2117,23 @@ def permutation_synthesis(
     m: int = 2,
     backend=None,
 ):
-    """Given permutation sigma on {0,...,d-1} and a power‑of‑two budget m,
-    factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
-        - each layer has at most m disjoint transpositions
+    """Return circuit that implements a given permutation.
+    
+    Given permutation ``sigma`` on :math:`{0, \\, 1, \\, \\dots, \\, d-1}`
+    and a power‑of‑two budget :math:`m`, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
+    such that:
+        - each layer has at most :math:`m` disjoint transpositions;
         - each layer moves a power‑of‑two number of indices.
-        Return a circuit synthesis of sigma.
+
+    The function returns a circuit synthesis of ``sigma``.
 
     Args:
-        sigma (list or tuple): permutation description on {0,...,d-1}.
-        m (int): power‑of‑two budget m (Default:2)
+        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget. Defauls to :math:`2`.
 
     Returns:
-        :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation sigma.
+        :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation ``sigma``.
 
     References:
         1. L. Li, and J. Luo,
