@@ -203,10 +203,6 @@ def sparse_encoder(
     if isinstance(data[0][0], str) and nqubits is None:
         nqubits = len(data[0][0])
 
-    _data_test = data[0][1]
-    _data_test = (
-        _data_test.dtype if "array" in str(type(_data_test)) else type(_data_test)
-    )
 
     if method not in ("li", "farias"):
         raise_error(
