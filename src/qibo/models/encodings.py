@@ -2153,10 +2153,10 @@ def permutation_synthesis(
 
     n = int(backend.np.ceil(backend.np.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
-        raise_error(TypeError, "Permutation sigma must contain all indices {0,...,n-1}")
+        raise_error(ValueError, "Permutation sigma must contain all indices {0,...,n-1}")
 
     if m > 0 and (m & (m - 1)) != 0:
-        raise_error(TypeError, f"budget m must be a power‑of‑two")
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
 
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         decompose_permutation,
