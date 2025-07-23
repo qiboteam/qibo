@@ -293,8 +293,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
             for k in range(dim):
                 if flag[k] == 0:
                     flag[k] = 1
-                    sigma[bi_int] = k
-                    sigma[k] = bi_int
+                    sigma[[bi_int, k]] = [k, bi_int]
                     data_binary.append((k, xi))
                     break
         else:
