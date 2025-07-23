@@ -301,12 +301,12 @@ def test_pqc_integral(backend):
     backend.assert_allclose(fid, 1.0, atol=PRECISION_TOL)
 
 
-@pytest.mark.parametrize("sigma", [tuple(0,2,1,3), [0,2,1,3]])
+@pytest.mark.parametrize("sigma", [tuple(0, 2, 1, 3), [0, 2, 1, 3]])
 def test_decompose_permutation_errors(sigma, backend):
 
     with pytest.raises(TypeError):
         decompose_permutation(backend.np.array(sigma), m=2, backend=backend)
     with pytest.raises(ValueError):
-        decompose_permutation([0,2,1,3,10], m=2, backend=backend)
+        decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
         decompose_permutation(sigma, m=3, backend=backend)
