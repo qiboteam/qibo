@@ -419,7 +419,7 @@ Graph state
 .. autofunction:: qibo.models.encodings.graph_state
 
 Permutation synthesis
-"""""""""""
+"""""""""""""""""""""
 
 .. autofunction:: qibo.models.encodings.permutation_synthesis
 
@@ -2500,7 +2500,7 @@ Parameterized quantum circuit integral
 .. autofunction:: qibo.quantum_info.pqc_integral
 
 Decompose permutation into the fewest pairwise transpositions
-""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.decompose_permutation
 
