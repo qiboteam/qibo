@@ -173,7 +173,7 @@ def sparse_encoder(
         :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
 
     References:
-        1. L. Li, J. Luo,
+        1. L. Li, and J. Luo,
         *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
         `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
         2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
