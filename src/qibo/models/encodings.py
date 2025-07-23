@@ -308,10 +308,10 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit = binary_encoder(data_sorted, backend=backend, **kwargs)
     circuit.queue = circuit.queue[: (dim - 1)]
-    circuit_binary = Circuit(nqubits)
+    circuit_binary = Circuit(nqubits, **kwargs)
     circuit_binary.add(circuit.on_qubits(*range(nqubits - circuit.nqubits, nqubits)))
 
-    circuit_permutation = permutation_synthesis(sigma. **kwargs)
+    circuit_permutation = permutation_synthesis(sigma, **kwargs)
 
     return circuit_binary + circuit_permutation
 
