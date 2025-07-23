@@ -232,7 +232,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
 
 
-    where :math:`\\{x_{j}\\}_{j\\in[s]}` is the non-zero components of :math:`\\mathbf{x}`
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
     and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
     Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
     :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
@@ -311,7 +311,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     circuit_binary = Circuit(nqubits)
     circuit_binary.add(circuit.on_qubits(*range(nqubits - circuit.nqubits, nqubits)))
 
-    circuit_permutation = permutation_synthesis(sigma)
+    circuit_permutation = permutation_synthesis(sigma. **kwargs)
 
     return circuit_binary + circuit_permutation
 
@@ -329,7 +329,7 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
         \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
 
 
-    where :math:`\\{x_{j}\\}_{j\\in[s]}` is the non-zero components of :math:`\\mathbf{x}`
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
     and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
     Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
     :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
@@ -2122,11 +2122,12 @@ def permutation_synthesis(
     sigma: Union[List[int], tuple[int, ...]],
     m: int = 2,
     backend=None,
+    **kwargs
 ):
     """Return circuit that implements a given permutation.
 
-    Given permutation ``sigma`` on :math:`{0, \\, 1, \\, \\dots, \\, d-1}`
-    and a power‑of‑two budget :math:`m`, this function factors ``sigma``
+    Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
     into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
     such that:
         - each layer has at most :math:`m` disjoint transpositions;

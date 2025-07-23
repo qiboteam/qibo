@@ -638,9 +638,10 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
 
 def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
     """
-    Given a permutation sigma on {0,...,n-1} and a power‑of‑two budget m,
-    factor sigma into the fewest layers sigma_1, sigma_2, ..., sigma_t such that
-        - each layer has at most m disjoint transpositions
+     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}` such that:
+        - each layer has at most :math:`m` disjoint transpositions
         - each layer moves a power‑of‑two number of indices.
 
     We do this as follows:
@@ -649,8 +650,8 @@ def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
         3) Greedy packing – merge swaps into layers while keeping rules.
 
     Args:
-        sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
-        m (int): power‑of‑two budget m
+        sigma (list[int] or tuple[int]): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget.
 
     Returns:
         list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
