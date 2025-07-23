@@ -301,14 +301,15 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
 
     sigma = list(sigma)
 
-
-    rem  = int(2**backend.np.ceil(backend.np.log2(dim))) - dim
-    data_sorted = backend.np.pad(data_sorted,(0, rem),'constant', constant_values=(0.))
+    rem = int(2 ** backend.np.ceil(backend.np.log2(dim))) - dim
+    data_sorted = backend.np.pad(
+        data_sorted, (0, rem), "constant", constant_values=(0.0)
+    )
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit = binary_encoder(data_sorted, backend=backend, **kwargs)
-    circuit.queue = circuit.queue[:(dim-1)]
+    circuit.queue = circuit.queue[: (dim - 1)]
     circuit_binary = Circuit(nqubits)
-    circuit_binary.add(circuit.on_qubits(*range(nqubits-circuit.nqubits,nqubits)))
+    circuit_binary.add(circuit.on_qubits(*range(nqubits - circuit.nqubits, nqubits)))
 
     circuit_permutation = permutation_synthesis(sigma)
 
