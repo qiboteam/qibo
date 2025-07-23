@@ -547,6 +547,12 @@ def _cycles_from_perm(sigma: List[int]):
     - Treat the permutation as a directed graph of arrows i->sigma(i).
     - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
     - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
+    
+    Args:
+        sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of disjoint cycles.
     """
     n, seen, cycles = len(sigma), [False] * len(sigma), []
     for i in range(n):
@@ -574,6 +580,12 @@ def _star_matchings(cyc: list[int]):
         (a_{1}, \\, a_{2}), \\, (a_{1}, \\, a_{3}), \\, \\cdots, \\, (a_{1}, \\, a_{k}) \\, .
 
     Applied right‑to‑left, this product reproduces the original cycle.
+
+    Args:
+        cyc (list[list[tuple[int, int]]]): :math:`t` list of disjoint cycles.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of pairwise transpositions.
     """
     hub = cyc[0]
     return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
@@ -587,6 +599,12 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
     Otherwise flush the layer and start a new one.
     It works since disjointness keeps swaps commutative, and the power‑of‑two size rule
     aligns exactly with layer constraints.
+
+    Args:
+        matchings (list[list[tuple[int, int]]]): :math:`t` list of pairwise transpositions.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
     """
     layers: list[list[tuple[int, int]]] = []
     cur: list[tuple[int, int]] = []
