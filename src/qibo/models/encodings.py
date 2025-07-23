@@ -2118,7 +2118,7 @@ def permutation_synthesis(
     backend=None,
 ):
     """Return circuit that implements a given permutation.
-    
+
     Given permutation ``sigma`` on :math:`{0, \\, 1, \\, \\dots, \\, d-1}`
     and a power‑of‑two budget :math:`m`, this function factors ``sigma``
     into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
