@@ -309,7 +309,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     backend.assert_allclose(state, target)
 
 
-@pytest.mark.parametrize("sigma", [tuple(0, 2, 1, 3), [0, 2, 1, 3]])
+@pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
 def test_permutation_synthesis_errors(sigma, backend):
 
     with pytest.raises(TypeError):
