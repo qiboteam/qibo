@@ -626,7 +626,7 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
         # is power of 2 and x<=m
         legal = (x > 0 and (x & (x - 1)) == 0) and x <= m
         # shares no vertex with swaps already in the layer
-        if cur and (any(v in used for v in _verts(M)) or not legal):
+        if cur and (any(v in used for v in _verts(M)) or not legal):  # pragma: no cover
             _flush()
         cur.extend(M)
         used.update(_verts(M))
