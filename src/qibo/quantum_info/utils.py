@@ -547,7 +547,7 @@ def _cycles_from_perm(sigma: List[int]):
     - Treat the permutation as a directed graph of arrows i->sigma(i).
     - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
     - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
-    
+
     Args:
         sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
 
