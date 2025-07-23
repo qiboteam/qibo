@@ -2126,7 +2126,7 @@ def permutation_synthesis(
         Return a circuit synthesis of sigma.
 
     Args:
-        sigma (list[int] or tuple[int]): permutation description on {0,...,d-1}.
+        sigma (list or tuple): permutation description on {0,...,d-1}.
         m (int): power‑of‑two budget m (Default:2)
 
     Returns:
