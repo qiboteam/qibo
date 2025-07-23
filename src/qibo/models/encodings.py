@@ -2157,8 +2157,8 @@ def permutation_synthesis(
             f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
-    n = int(backend.np.ceil(backend.np.log2(len(sigma))))
-    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**n))]) != 0:
+    nqubits = int(backend.np.ceil(backend.np.log2(len(sigma))))
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
         )
@@ -2175,13 +2175,13 @@ def permutation_synthesis(
     # each layer moves a power‑of‑two number of indices
     layers = decompose_permutation(sigma, m)
 
-    circuit = Circuit(n)
+    circuit = Circuit(nqubits)
     # in case we have more than one permutation to do, do it in layers
     for layer in layers:
         m = len(layer)
-        ell, col_gates, A = _perm_column_ops(layer, n, backend)
-        row_gates = _perm_row_ops(A, ell, m, n, backend)
-        flip_gates = _perm_pair_flip_ops(n, m, backend)
+        ell, col_gates, A = _perm_column_ops(layer, nqubits, backend)
+        row_gates = _perm_row_ops(A, ell, m, nqubits, backend)
+        flip_gates = _perm_pair_flip_ops(nqubits, m, backend)
         col_row = col_gates + row_gates
         circuit.add(col_row)
         circuit.add(flip_gates)

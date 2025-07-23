@@ -23,6 +23,7 @@ from qibo.models.encodings import (
     graph_state,
     hamming_weight_encoder,
     phase_encoder,
+    permutation_synthesis,
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
@@ -306,6 +307,16 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
+
+@pytest.mark.parametrize("sigma", [tuple(0,2,1,3), [0,2,1,3]])
+def test_permutation_synthesis_errors(sigma, backend):
+
+    with pytest.raises(TypeError):
+        permutation_synthesis(backend.np.array(sigma), m=2, backend=backend)
+    with pytest.raises(ValueError):
+        permutation_synthesis([0,2,1,3,10], m=2, backend=backend)
+    with pytest.raises(ValueError):
+        permutation_synthesis(sigma, m=3, backend=backend)
 
 
 def test_entangling_layer_errors():
