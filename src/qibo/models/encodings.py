@@ -203,7 +203,6 @@ def sparse_encoder(
     if isinstance(data[0][0], str) and nqubits is None:
         nqubits = len(data[0][0])
 
-
     if method not in ("li", "farias"):
         raise_error(
             ValueError,
