@@ -2133,7 +2133,7 @@ def permutation_synthesis(
         :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation sigma.
 
     References:
-        1. L. Li, J. Luo,
+        1. L. Li, and J. Luo,
         *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
         `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
     """
