@@ -636,7 +636,7 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
+def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None):
     """
      Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
@@ -652,11 +652,15 @@ def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int):
     Args:
         sigma (list[int] or tuple[int]): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
         m (int): power‑of‑two budget.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
         list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
 
     """
+    backend = _check_backend(backend)
+
     if isinstance(sigma, tuple):
         sigma = list(sigma)
 
