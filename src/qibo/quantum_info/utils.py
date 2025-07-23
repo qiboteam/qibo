@@ -636,7 +636,9 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
     return layers
 
 
-def decompose_permutation(sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None):
+def decompose_permutation(
+    sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None
+):
     """
      Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
