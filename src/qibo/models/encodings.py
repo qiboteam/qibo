@@ -278,7 +278,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     )
 
     dim = len(data_sorted)
-    sigma = [i for i in range(2**nqubits)]
+    sigma = np.arange(2**nqubits)
 
     flag = backend.np.zeros(dim, dtype=backend.np.int8)
     indexes = list(
@@ -298,6 +298,8 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
                     break
         else:
             data_binary.append((bi_int, xi))
+
+    sigma = list(sigma)
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = sparse_encoder(
