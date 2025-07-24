@@ -553,16 +553,15 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
                 # build diagonal observable
                 # including the coefficient
-                tmp_obs.append(
-                    SymbolicHamiltonian(
-                        term.coefficient
-                        * prod(
-                            Z(factor.target_qubit) for factor in non_identity_factors
-                        ),
-                        nqubits=circuit.nqubits,
-                        backend=self.backend,
-                    )
+                symb_obs = prod(
+                    Z(factor.target_qubit) for factor in non_identity_factors
                 )
+                symb_obs = SymbolicHamiltonian(
+                    term.coefficient * symb_obs,
+                    nqubits=circuit.nqubits,
+                    backend=self.backend,
+                )
+                tmp_obs.append(symb_obs)
 
             # Get the qubits we want to measure for each term
             qubit_maps.append(sorted(measurements.keys()))
