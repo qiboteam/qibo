@@ -5,10 +5,10 @@ from typing import Union, Optional
 
 import matplotlib as mpl
 import numpy as np
-from IPython.display import clear_output, display
+from IPython.display import display
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
-from mpl_toolkits.mplot3d import Axes3D, proj3d
+from mpl_toolkits.mplot3d import proj3d
 from numpy.typing import ArrayLike
 
 from qibo import hamiltonians
