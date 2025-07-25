@@ -1,7 +1,7 @@
 import importlib
 import tkinter as tk
 from dataclasses import dataclass, field
-from typing import Union, Optional
+from typing import Optional, Union
 
 import matplotlib as mpl
 import numpy as np
@@ -334,8 +334,11 @@ class Bloch:
         elif self.backend == "jupyter":
             self._jupyter_window()
         elif self.backend == "agg":
-            raise_error(ValueError, "The backend `agg` is a non-interactive backend which " \
-            "can be used only to save figures. If you want to plot try `qtagg`, `tkagg`, `jupyter.`")
+            raise_error(
+                ValueError,
+                "The backend `agg` is a non-interactive backend which "
+                "can be used only to save figures. If you want to plot try `qtagg`, `tkagg`, `jupyter.`",
+            )
 
     def save(self, filename="bloch_sphere.pdf"):
         "This function saves the sphere."
