@@ -324,7 +324,7 @@ class Bloch:
 
     def plot(self):
         "This function plots the sphere."
-    
+
         if self.backend == "tkagg":
             self._rendering()
             self._tk_window()
