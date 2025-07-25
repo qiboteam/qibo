@@ -1,13 +1,11 @@
 import importlib
 import tkinter as tk
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Optional
 
 import matplotlib as mpl
 import numpy as np
 from IPython.display import clear_output, display
-from matplotlib.backends import backend_agg, backend_qtagg, backend_tkagg
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
@@ -37,9 +35,13 @@ class Bloch:
 
     It takes advantage of three Matplotlibs's backends: qtagg, tkagg, agg.
     The first two are interactive backends required to display the sphere in a window, the last one is
-    non-interactive and it is used to save the figure."""
+    non-interactive and it is used to save the figure.
+    Moreover, there's an additional option which is "jupyter" (which is not a backend from
+    matplotlib) which is required to display figures in a jupyter notebook (when using this option
+    the notebook requires a special command "%matplolib notebook" in the first cell.).
+    """
 
-    backend: str = "tkagg"
+    backend: Optional[Union["tkagg", "qtagg", "agg", "jupyter"]] = "tkagg"
 
     # Plot style sheets
     STYLE = {
@@ -70,8 +72,14 @@ class Bloch:
             )
         elif self.backend == "tkagg":
             mpl.use(self.backend)
+            self._backend = importlib.import_module(
+                "matplotlib.backends.backend_" + self.backend
+            )
         elif self.backend == "agg":
             mpl.use(self.backend)
+            self._backend = importlib.import_module(
+                "matplotlib.backends.backend_" + self.backend
+            )
         elif self.backend == "jupyter":
             pass
         else:
@@ -302,7 +310,7 @@ class Bloch:
         frame = tk.Frame(root)
 
         # Canvas widget
-        canvas = FigureCanvasTkAgg(self.fig, master=root)
+        canvas = self._backend.FigureCanvasTkAgg(self.fig, master=root)
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         canvas.draw()
@@ -325,11 +333,14 @@ class Bloch:
             self._qt_window()
         elif self.backend == "jupyter":
             self._jupyter_window()
+        elif self.backend == "agg":
+            raise_error(ValueError, "The backend `agg` is a non-interactive backend which " \
+            "can be used only to save figures. If you want to plot try `qtagg`, `tkagg`, `jupyter.`")
 
     def save(self, filename="bloch_sphere.pdf"):
         "This function saves the sphere."
         self._rendering()
 
-        mpl.use("Agg")
-        canvas = backend_agg.FigureCanvas(self.fig)
+        mpl.use("agg")
+        canvas = self._backend.FigureCanvas(self.fig)
         self.fig.savefig(filename)
