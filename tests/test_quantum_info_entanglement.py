@@ -88,18 +88,13 @@ def test_negativity(backend, p):
     backend.assert_allclose(neg, target, atol=1e-10)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 6])
 @pytest.mark.parametrize("channel", [gates.DepolarizingChannel])
-def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
+def test_entanglement_fidelity(backend, channel, nqubits):
     with pytest.raises(TypeError):
-        test = entanglement_fidelity(
-            channel, nqubits=[0], check_hermitian=check_hermitian, backend=backend
-        )
+        test = entanglement_fidelity(channel, nqubits=[0], backend=backend)
     with pytest.raises(ValueError):
-        test = entanglement_fidelity(
-            channel, nqubits=0, check_hermitian=check_hermitian, backend=backend
-        )
+        test = entanglement_fidelity(channel, nqubits=0, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3, 2)
         state = backend.cast(state, dtype=state.dtype)
@@ -107,21 +102,13 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
             channel,
             nqubits,
             state=state,
-            check_hermitian=check_hermitian,
             backend=backend,
-        )
-    with pytest.raises(TypeError):
-        state = random_statevector(2, backend=backend)
-        test = entanglement_fidelity(
-            channel, nqubits, state=state, check_hermitian="False", backend=backend
         )
 
     channel = channel([0, 1], 0.5)
 
     # test on maximally entangled state
-    ent_fid = entanglement_fidelity(
-        channel, nqubits=nqubits, check_hermitian=check_hermitian, backend=backend
-    )
+    ent_fid = entanglement_fidelity(channel, nqubits=nqubits, backend=backend)
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
     # test with a state vector
@@ -130,7 +117,6 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
         channel,
         nqubits=nqubits,
         state=state,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
@@ -141,7 +127,6 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
         channel,
         nqubits=nqubits,
         state=state,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(ent_fid, 1.0, atol=PRECISION_TOL)

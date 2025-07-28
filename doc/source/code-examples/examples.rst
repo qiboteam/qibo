@@ -375,3 +375,29 @@ For example, we can draw the QFT circuit for 5-qubits:
         }
 
         plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
+
+How to visualize the density matrix?
+------------------------------------
+
+Qibo provides a function ``plot_density_hist`` to visualize the real and imaginary parts of a quantum state's density matrix
+as 3D bar plots using matplotlib. This is useful for inspecting the structure of quantum states, especially for small systems.
+The function return, the figure, and axes for the real and the imaginary parts.
+
+The function supports options to control the number of tick labels shown (for large systems), transparency, colors, and figure size.
+
+.. testcode::
+
+    import numpy as np
+    from qibo import Circuit, gates
+    from qibo.ui import plot_density_hist
+
+    # Create the circuit
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RY(0, theta=np.pi/3))
+    circuit.add(gates.RX(1, theta=np.pi/5))
+
+    # Plot the density matrix as a cityscape (real and imaginary parts)
+    plot_density_hist(circuit);

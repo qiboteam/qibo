@@ -123,7 +123,9 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     return circuit
 
 
-def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
+def sparse_encoder(
+    data, method: str = "li", nqubits: int = None, backend=None, **kwargs
+):
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -143,9 +145,189 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
 
     .. math::
         s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
-            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
 
-    where :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
+    where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
+
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+
+    Args:
+        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+            The addresses :math:`b_{j}` can be either integers or in bitstring
+            format of size :math:`n`.
+        method (str, optional): method to be used, either ``li`` or ``farias``. They refer to
+            methods in references [1] and [2], respectively.
+            Defaults to ``li``
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+        2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*,
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        3. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(data, zip):
+        data = list(data)
+
+    # TODO: Fix this mess with qibo native dtypes
+    try:
+        type_test = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        type_test = bool("int" in str(type(data[0][0])))
+
+    if type_test and nqubits is None:
+        raise_error(
+            ValueError,
+            "``nqubits`` must be specified when computational basis states are "
+            + "indidated by integers.",
+        )
+
+    if isinstance(data[0][0], str) and nqubits is None:
+        nqubits = len(data[0][0])
+
+    if method not in ("li", "farias"):
+        raise_error(
+            ValueError,
+            f"``method`` should be either ``li`` or ``farias``, but it is {method}",
+        )
+
+    func = _sparse_encoder_farias if method == "farias" else _sparse_encoder_li
+
+    return func(data, nqubits, backend, **kwargs)
+
+
+def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
+    of the computational basis.
+
+    Consider a sparse-access model, where for a data vector
+    :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}` and
+    :math:`s` non-zero amplitudes, one has access to the data vector
+    :math:`\\mathbf{y}` of the form
+
+    .. math::
+        \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
+
+
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
+    and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
+    Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
+
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+
+    Args:
+        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+            The addresses :math:`b_{j}` can be either integers or in bitstring
+            format of size :math:`n`.
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+    """
+    backend = _check_backend(backend)
+    data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
+    bitstrings_sorted = backend.cast(
+        [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
+        dtype=backend.np.int8,
+    )
+
+    dim = len(data_sorted)
+    sigma = np.arange(2**nqubits)
+
+    flag = backend.np.zeros(dim, dtype=backend.np.int8)
+    indexes = list(
+        backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
+    )
+    flag[indexes] = 1
+
+    data_binary = []
+    for bi_int, xi in zip(bitstrings_sorted, data_sorted):
+        bi_int = int(bi_int)
+        if bi_int >= dim:
+            for k in range(dim):
+                if flag[k] == 0:
+                    flag[k] = 1
+                    sigma[[bi_int, k]] = [k, bi_int]
+                    data_binary.append((k, xi))
+                    break
+        else:
+            data_binary.append((bi_int, xi))
+
+    sigma = list(sigma)
+
+    # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
+    circuit_binary = sparse_encoder(
+        data_binary, method="farias", nqubits=nqubits, backend=backend, **kwargs
+    )
+    circuit_permutation = permutation_synthesis(sigma, **kwargs)
+
+    return circuit_binary + circuit_permutation
+
+
+def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
+    of the computational basis.
+
+    Consider a sparse-access model, where for a data vector
+    :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}` and
+    :math:`s` non-zero amplitudes, one has access to the data vector
+    :math:`\\mathbf{y}` of the form
+
+    .. math::
+        \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
+
+
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
+    and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
+    Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
 
     Resulting circuit parametrizes ``data`` in hyperspherical coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
@@ -1787,3 +1969,209 @@ def _add_wbd_gate(
                 )
             )
         circuit.add(gates.CNOT(second_register[control - dif], first_register[0]))
+
+
+def _perm_column_ops(
+    indices: list[int],
+    n: int,
+    backend=None,
+):
+    """Return (ell, gate_list) performing duplicate‑col removal + compaction."""
+    backend = _check_backend(backend)
+    # flatten the (x_0, x_1),...(x_{2m-2}, x_{2m-1})
+    # We construct a matrix composed of
+    # xj to track the changes in xj where xj,k represents the k-th bit and the
+    # bits are arranged from the least significant bit to the most significant bit
+    indices = list(sum(indices, ()))
+    A = []
+    for x in indices:
+        bits = []
+        for k in range(n):
+            bits.append((x >> k) & 1)
+        A.append(bits)
+    A = backend.cast(A, dtype=backend.np.int8)
+    ncols = A.shape[1]
+    # initialize the list of gates
+    qgates = []
+
+    # number of non-zero columns
+    ell = 0
+    flag = backend.np.zeros(n, dtype=int)
+    for idxj in range(ncols):
+        if any(elem != 0 for elem in A[:, idxj]):
+            ell += 1
+            flag[idxj] = 1
+
+            # look for columns that are equal to A[:,idxj]
+            for idxk in range(idxj + 1, ncols):
+                if backend.np.array_equal(A[:, idxj], A[:, idxk]):
+                    qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
+                    # this should transform the k-th column into an all-zero column
+                    A[:, idxk] = 0
+
+    # Now, we need to swap the ell non-zero columns to the first ell columns
+    for idxk in range(ell, ncols):
+        if not backend.np.array_equal(A[:, idxk], backend.np.zeros_like(A[:, idxk])):
+            for k in range(len(flag)):
+                if flag[k] == 0:
+                    flag[k] = 1
+                    flag[idxk] = 0
+
+                    qgates.append(gates.SWAP(n - idxk - 1, n - k - 1))
+
+                    bits = A[:, idxk].copy()
+                    A[:, idxk] = A[:, k]
+                    A[:, k] = bits
+                    break
+
+    return ell, qgates, A
+
+
+def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
+    """Return gates that reduce all rows after row0 to target form."""
+    backend = _check_backend(backend)
+
+    log2m = int(backend.np.log2(2 * m))
+    atilde = backend.np.array(
+        [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
+    )
+
+    qgates = []
+    nrows = A.shape[0]
+    ncols = A.shape[1]
+    # Start with the first row (indexed as row 0)
+    for k in range(ncols):
+        # If we find a0,k = 1 for any 0 <= k <= n−1
+        if A[0, k] == 1:
+            qgates.append(gates.X(n - k - 1))
+            A[:, k] = (A[:, k] + 1) % 2
+
+    for j in range(1, nrows):
+        flag = False
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
+                flag = True
+                break
+
+        if not flag:
+            # There is no element b_{j},k != 0 for k > {log2m-1}"
+            ctrls = [n - l - 1 for l in range(ncols) if A[j, l] != 0]
+            qgates.append(gates.X(n - log2m - 1).controlled_by(*ctrls))
+            ctrls = [l for l in range(ncols) if A[j, l] == 1]
+
+            # check whether the gate is applied on other rows
+            for l in range(j, nrows):
+                if all(elem == 1 for elem in A[l, ctrls]):
+                    A[l, log2m] = (A[l, log2m] + 1) % 2
+
+        # There is always an element b_{j},k != 0 for k > {log2m-1}
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
+                # Element b_{j},{k} != 0, {k} > {log2m-1}"
+                for kprime in range(ell):
+                    # There is a typo in the paper
+                    # b_{j},{kprime} should be different from Ã_{j},{kprime} not Ã_{j},{k}
+                    if kprime != k and A[j, kprime] != atilde[j, kprime]:
+                        qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
+                        # check whether the gate is applied on other rows
+                        for l in range(nrows):
+                            if A[l, k] == 1:
+                                A[l, kprime] = (A[l, kprime] + 1) % 2
+
+                # Let us clean the element b_{j},{k}
+
+                # There is another typo in the paper
+                # the control qubits for this gate correspond to the non-zero elements in row j of matrix A, not Ã
+                ctrls = [n - l - 1 for l in range(k) if A[j, l] != 0]
+                qgates.append(gates.X(n - k - 1).controlled_by(*ctrls))
+                ctrls = [l for l in range(k) if A[j, l] != 0]
+
+                # check whether the gate is applied on other rows
+                for l in range(nrows):
+                    if all(elem == 1 for elem in A[l, ctrls]):
+                        A[l, k] = (A[l, k] + 1) % 2
+
+    return qgates
+
+
+def _perm_pair_flip_ops(n: int, m: int, backend=None):
+    """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
+    backend = _check_backend(backend)
+    # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
+    prefix = int(backend.np.ceil(backend.np.log2(2 * m)))
+    x_qubits, controls = range(prefix, n), range(n - prefix)
+    qgates = [gates.X(n - q - 1) for q in x_qubits]
+    qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
+    qgates.extend(gates.X(n - q - 1) for q in x_qubits)
+
+    return qgates
+
+
+def permutation_synthesis(
+    sigma: Union[List[int], tuple[int, ...]], m: int = 2, backend=None, **kwargs
+):
+    """Return circuit that implements a given permutation.
+
+    Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
+    such that:
+        - each layer has at most :math:`m` disjoint transpositions;
+        - each layer moves a power‑of‑two number of indices.
+
+    The function returns a circuit synthesis of ``sigma``.
+
+    Args:
+        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget. Defauls to :math:`2`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation ``sigma``.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
+
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(
+            TypeError,
+            f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
+        )
+
+    nqubits = int(backend.np.ceil(backend.np.log2(len(sigma))))
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
+        raise_error(
+            ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
+        )
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
+
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        decompose_permutation,
+    )
+
+    # factor sigma into the fewest layers such that
+    # each layer has at most m disjoint transpositions, and
+    # each layer moves a power‑of‑two number of indices
+    layers = decompose_permutation(sigma, m)
+
+    circuit = Circuit(nqubits)
+    # in case we have more than one permutation to do, do it in layers
+    for layer in layers:
+        m = len(layer)
+        ell, col_gates, A = _perm_column_ops(layer, nqubits, backend)
+        row_gates = _perm_row_ops(A, ell, m, nqubits, backend)
+        flip_gates = _perm_pair_flip_ops(nqubits, m, backend)
+        col_row = col_gates + row_gates
+        circuit.add(col_row)
+        circuit.add(flip_gates)
+        circuit.add(col_row[::-1])
+
+    return circuit

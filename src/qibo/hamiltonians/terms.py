@@ -66,7 +66,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return self.backend.calculate_matrix_exp(x, self.matrix)
+        return self.backend.calculate_matrix_exp(self.matrix, phase=-1j * x)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -259,11 +259,19 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        matrices = [
-            reduce(self.backend.np.matmul, self.matrix_map.get(q))
-            for q in self.target_qubits
-        ]
+        matrices = list(self.qubit_to_matrix_map.values())
         return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
+
+    @cached_property
+    def qubit_to_matrix_map(self) -> dict:
+        """Dictionary mapping each qubit to the corresponding global matrix
+        that acts on it, i.e. the product of the matrices of all the factors
+        acting on it.
+        """
+        return {
+            q: reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            for q in self.target_qubits
+        }
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
@@ -286,6 +294,15 @@ class SymbolicTerm(HamiltonianTerm):
                 backend, state, nqubits, factor.gate, density_matrix
             )
         return self.coefficient * state
+
+    def commute(self, term) -> bool:
+        """Check whether this term commutes with another term."""
+        for q in set(self.target_qubits).intersection(set(term.target_qubits)):
+            m1 = self.qubit_to_matrix_map.get(q)
+            m2 = term.qubit_to_matrix_map.get(q)
+            if not self.backend.np.all(m1 @ m2 == m2 @ m1):
+                return False
+        return True
 
 
 class TermGroup(list):
