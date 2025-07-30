@@ -356,5 +356,4 @@ def test_symbolic_hamiltonian_with_constant(backend):
 
     result = backend.execute_circuit(circuit, nshots=10000)
     result = result.expectation_from_samples(h).real
-    print(result, type(result))
     backend.assert_allclose(result, 1e6, rtol=1e-5, atol=0.0)

@@ -365,10 +365,18 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         form = sympy.expand(self.form)
         terms = []
-        for f, c in form.as_coefficients_dict().items():
-            term = SymbolicTerm(c, f, backend=self.backend)
+        for factors, coeff in form.as_coefficients_dict().items():
+            term = SymbolicTerm(coeff, factors, backend=self.backend)
             if term.target_qubits:
-                terms.append(term)
+                # Check for any terms with the same factors and add their coefficients together
+                found = False
+                for i, _term in enumerate(terms):
+                    if set(_term.factors) == set(term.factors):
+                        found = True
+                        terms[i].coefficient += term.coefficient
+                        break
+                if not found:
+                    terms.append(term)
             else:
                 self.constant += term.coefficient
         return terms
