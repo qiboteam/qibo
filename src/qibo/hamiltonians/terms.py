@@ -192,7 +192,7 @@ class SymbolicTerm(HamiltonianTerm):
 
     @staticmethod
     def _compute_power(factor):
-        """Break down a factor into a base term and its power, e.g. `X**n` returns `X` and `n`. In case the base term is a Pauli also simplifies the power calculation, i.e. return the identity for even `n` and the Pauli itsel for odd `n`."""
+        """Break down a factor into a base term and its power, e.g. `X**n` returns `X` and `n`. In case the base term is a Pauli also simplify the power calculation, i.e. return the identity for even `n` and the Pauli itself for odd `n`."""
         if isinstance(factor, sympy.Pow):
             factor, power = factor.args
             assert isinstance(power, sympy.Integer)
