@@ -1,4 +1,10 @@
-from qibo.transpiler.optimizer import Preprocessing, Rearrange
+from qibo.transpiler.optimizer import (
+    InverseCancellation,
+    Preprocessing,
+    Rearrange,
+    RotationGateFusion,
+    U3GateFusion,
+)
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import (
     Random,
