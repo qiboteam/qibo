@@ -499,14 +499,14 @@ class NumpyMatrices:
         rank = len(q)
         matrix = self.I(2**rank)
 
-        for qubit in q[1:]:
+        for qubit in range(1, rank):
             gmatrix = self.CNOT
             eye = self.I(2 ** (rank - 2))
             gmatrix = self.np.kron(gmatrix, eye)
             original_shape = gmatrix.shape
             gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
-            qubits = [q[0], qubit]
-            indices = qubits + [qub for qub in q if qub not in qubits]
+            qubits = [0, qubit]
+            indices = qubits + [qub for qub in range(rank) if qub not in qubits]
             indices = self.np.argsort(indices)
             transpose_indices = list(indices)
             transpose_indices.extend(indices + rank)
