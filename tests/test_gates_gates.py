@@ -1438,6 +1438,9 @@ def test_deutsch(backend, theta):
 
 @pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
 def test_fanout(backend, qubits):
+    with pytest.raises(ValueError):
+        gate = gates.FanOut(0)
+
     nqubits = len(qubits)
 
     circuit = Circuit(nqubits)
@@ -1445,11 +1448,19 @@ def test_fanout(backend, qubits):
     target = circuit.unitary(backend)
 
     circuit = Circuit(nqubits)
-    circuit.add(gates.FanOut(*qubits))
+    gate = gates.FanOut(*qubits)
+    circuit.add(gate)
     matrix = circuit.unitary(backend)
 
     backend.assert_allclose(matrix, target)
 
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+    assert gate.clifford
 
 @pytest.mark.parametrize(
     "qubits_in,qubits_out",
