@@ -492,6 +492,30 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def FanOut(self, *q):
+        # TODO: remove this loop after refactoring Gate.matrix method.
+
+        # based on Backend.matrix_fused method
+        rank = len(q)
+        matrix = self.I(2**rank)
+
+        for qubit in q[1:]:
+            gmatrix = self.CNOT
+            eye = self.I(2 ** (rank - 2))
+            gmatrix = self.np.kron(gmatrix, eye)
+            original_shape = gmatrix.shape
+            gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
+            qubits = [q[0], qubit]
+            indices = qubits + [qub for qub in q if qub not in qubits]
+            indices = self.np.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(indices + rank)
+            gmatrix = self.np.transpose(gmatrix, transpose_indices)
+            gmatrix = self.np.reshape(gmatrix, original_shape)
+            matrix = gmatrix @ matrix
+
+        return self._cast(matrix, dtype=self.dtype)
+
     def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
         num_qubits_in, num_qubits_out = len(qubits_in), len(qubits_out)
         bitstring_length = num_qubits_in + num_qubits_out
