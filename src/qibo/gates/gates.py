@@ -2657,7 +2657,7 @@ class FanOut(Gate):
 
     Given a register containing :math:`k \\geq 2` qubits, this gate is equivalent
     to :math:`k - 1` :class:`qibo.gates.CNOT` gates in which the control qubit
-    for all CNOTs is the first qubit in the register while the each CNOT has 
+    for all CNOTs is the first qubit in the register while the each CNOT has
     each of the remaining qubits in the register as its target qubit.
 
     Args:
