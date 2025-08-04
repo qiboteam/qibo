@@ -1436,6 +1436,21 @@ def test_deutsch(backend, theta):
         assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
 
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
+def test_fanout(backend, qubits):
+    nqubits = len(qubits)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.CNOT(qubits[0], qubit) for qubit in qubits[1:])
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.FanOut(*qubits))
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+
 @pytest.mark.parametrize(
     "qubits_in,qubits_out",
     [
@@ -1457,13 +1472,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
         nqubits=nqubits,
         initial_state=initial_state,
     )
-    # test decomposition
-    final_state_decompose = apply_gates(
-        backend,
-        gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose(),
-        nqubits=nqubits,
-        initial_state=initial_state,
-    )
 
     matrix = np.eye(2**nqubits, dtype=complex)
     exp, sin, cos = np.exp(1j * phi), np.sin(theta), np.cos(theta)
@@ -1475,7 +1483,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).qasm_label
@@ -1488,6 +1495,17 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
         assert not gates.GeneralizedRBS(
             qubits_in, qubits_out, theta, phi
         ).hamming_weight
+
+    # test decomposition
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1))
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1).decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
 
 
 @pytest.mark.parametrize("seed", [10])
