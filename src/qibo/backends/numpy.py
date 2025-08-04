@@ -134,11 +134,9 @@ class NumpyBackend(Backend):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        # if callable(_matrix):
         if callable(_matrix) and name == "GeneralizedRBS":
             _matrix = _matrix(2 ** len(gate.target_qubits))
-        elif callable(_matrix):
-            # FanOut gate
+        elif callable(_matrix) and name == "FanOut":
             _matrix = _matrix(*gate.init_args)
         return self.cast(_matrix, dtype=_matrix.dtype)
 
