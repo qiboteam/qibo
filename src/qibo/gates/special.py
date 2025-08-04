@@ -12,7 +12,7 @@ class CallbackGate(SpecialGate):
         callback (:class:`qibo.callbacks.Callback`): Callback object to calculate.
     """
 
-    def __init__(self, callback: "Callback"):
+    def __init__(self, callback: "Callback"): # type: ignore
         super().__init__()
         self.name = callback.__class__.__name__
         self.draw_label = "".join([c for c in self.name if c.isupper()])
