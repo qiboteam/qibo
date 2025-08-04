@@ -25,12 +25,16 @@ class GateDecompositions:
             gates.fSim,
         )
         decomposition = self.decompositions[gate.__class__]
-        if gate.parameters:
+
+        if isinstance(gate, gates.FanOut):
+            decomposition = decomposition(gate)
+        elif gate.parameters:
             decomposition = (
                 decomposition(gate, backend)
                 if isinstance(gate, special_gates)
                 else decomposition(gate)
             )
+
         return decomposition
 
     def count_2q(self, gate, backend):
@@ -46,10 +50,7 @@ class GateDecompositions:
     def __call__(self, gate, backend=None):
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
-        return [
-            g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
-            for g in decomposition
-        ]
+        return [g.on_qubits(dict(enumerate(gate.qubits))) for g in decomposition]
 
 
 def _u3_to_gpi2(t, p, l):
@@ -590,6 +591,10 @@ standard_decompositions.add(
         gates.H(2),
         gates.CNOT(0, 1),
     ],
+)
+standard_decompositions.add(
+    gates.FanOut,
+    lambda gate: [gates.CNOT(0, qub) for qub in range(1, len(gate.qubits))],
 )
 standard_decompositions.add(
     gates.GeneralizedRBS,
