@@ -2652,6 +2652,47 @@ class DEUTSCH(ParametrizedGate):
         return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
 
 
+class FanOut(Gate):
+    """The :math:`\\textrm{FanOut}` gate.
+
+    Given a register containing :math:`k \\geq 2` qubits, this gate is equivalent
+    to :math:`k - 1` :class:`qibo.gates.CNOT` gates in which the control qubit
+    for all CNOTs is the first qubit in the register while the each CNOT has 
+    each of the remaining qubits in the register as its target qubit.
+
+    Args:
+        *q (int): Ids of the qubits which the gate acts on.
+            The first id is considered to be the control qubit.
+    """
+
+    def __init__(self, *q):
+        if len(q) < 2:
+            raise_error("``FanOut`` gate must be applied to at least two qubits.")
+
+        super().__init__()
+        self.name = "fanout"
+        self.draw_label = "FO"
+        self.control_qubits = (q[0],)
+        self.target_qubits = q[1:]
+        self.init_args = [*q]
+        self.unitary = True
+
+    @property
+    def clifford(self):
+        return True
+
+    def _base_decompose(self, *free, use_toffolis=True) -> List[Gate]:
+        """Decomposition of :math:`\\text{FanOut}` gate.
+
+        Decompose :math:`\\text{FanOut}` gate :class:`qibo.gates.CNOT`s.
+        """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
+
 class GeneralizedRBS(ParametrizedGate):
     """The generalized (complex) Reconfigurable Beam Splitter gate (:math:`\\text{gRBS}`).
 
