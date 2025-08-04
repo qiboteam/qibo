@@ -1462,6 +1462,7 @@ def test_fanout(backend, qubits):
 
     assert gate.clifford
 
+
 @pytest.mark.parametrize(
     "qubits_in,qubits_out",
     [
