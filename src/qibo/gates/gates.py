@@ -2667,11 +2667,13 @@ class FanOut(Gate):
 
     def __init__(self, *q):
         if len(q) < 2:
-            raise_error("``FanOut`` gate must be applied to at least two qubits.")
+            raise_error(
+                ValueError, "``FanOut`` gate must be applied to at least two qubits."
+            )
 
         super().__init__()
         self.name = "fanout"
-        self.draw_label = "FO"
+        self.draw_label = "X"
         self.control_qubits = (q[0],)
         self.target_qubits = q[1:]
         self.init_args = [*q]
