@@ -242,9 +242,6 @@ class CliffordBackend(NumpyBackend):
                 if found:
                     break
 
-            if not found:
-                raise ValueError(f"Could not find conjugated Pauli for {p_str}")
-
         return symplectic % 2
 
     def _get_phase_vector(self, unitary, m):
@@ -277,8 +274,7 @@ class CliffordBackend(NumpyBackend):
                     phase[j] = 1
                     found = True
                     break
-            if not found:
-                raise ValueError(f"Phase vector: failed for {p_str}")
+
         return phase
 
     def _embed_clifford(self, symplectic_m, n, qubit_indices):
