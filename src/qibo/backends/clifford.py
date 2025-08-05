@@ -1,6 +1,7 @@
 """Module defining the Clifford backend."""
 
 import collections
+import itertools
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from typing import Union
@@ -140,12 +141,180 @@ class CliffordBackend(NumpyBackend):
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         """Apply a gate to a symplectic matrix."""
+        if isinstance(gate, gates.Unitary):
+                symplectic_matrix = self.apply_unitary(gate, symplectic_matrix, nqubits)
+
+                return symplectic_matrix
+        
         operation = getattr(self.engine, gate.__class__.__name__)
-        kwargs = (
-            {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
-        )
+
+        kwargs = {}
+        for param_name in ["theta", "phi"]:
+            if param_name in gate.init_kwargs:
+                kwargs[param_name] = gate.init_kwargs[param_name]
+
 
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
+    
+    def apply_unitary(self, gate, symplectic_matrix, nqubits):
+        """Apply a unitary gate to a symplectic matrix."""
+        temp_matrix = self._clifford_post_execution_reshape(symplectic_matrix, nqubits)
+
+        qubit_indices = list(gate.qubits)
+        m = len(qubit_indices)
+        
+        matrix = gate.matrix()
+        symplectic_m = self._compute_symplectic_matrix(matrix, m)
+        phase_m = self._get_phase_vector(matrix, m)
+
+        symplectic_n = self._embed_clifford(symplectic_m, nqubits, qubit_indices)
+        phase_n = self._embed_phase_vector(phase_m, nqubits, qubit_indices)
+
+        original_symplectic = temp_matrix[:, :2*nqubits].copy()
+        original_phases = temp_matrix[:, 2*nqubits].copy()
+
+        temp_matrix[:, :2*nqubits] = (original_symplectic @ symplectic_n.T) % 2
+        for i in range(2*nqubits):
+            v_old = original_symplectic[i, :]  
+            phase_old = original_phases[i]      
+
+            linear_correction = np.dot(v_old, phase_n) % 2
+            quadratic_correction = self._compute_quadratic_form(v_old, symplectic_n, nqubits)
+
+            total_correction = (linear_correction + quadratic_correction) % 2
+            temp_matrix[i, 2*nqubits] = (phase_old + total_correction) % 2
+
+        result = self._clifford_pre_execution_reshape(temp_matrix)
+        symplectic_matrix[:] = result  
+
+        return symplectic_matrix
+
+    def _pauli_string_to_matrix(self, pauli_str):
+        """Convert Pauli string to matrix (tensor product)."""
+        from qibo import matrices  # pylint: disable=C0415
+
+        pauli_matrices = (getattr(matrices, p) for p in pauli_str)
+        matrix = reduce(np.kron, pauli_matrices)
+        return self.cast(matrix, dtype=matrix.dtype)
+
+    def _pauli_to_binary(self, pauli_str, nqubits):
+        """Convert Pauli string to binary vector of length :math`2*nqubits`."""
+        pauli_symplectic = self.np.zeros((2*nqubits))
+        for q, term in enumerate(pauli_str):
+            if term in ['X', 'Y']:
+                pauli_symplectic[q] = 1
+            if term in ['Z', 'Y']:
+                pauli_symplectic[q + nqubits] = 1
+
+        return pauli_symplectic
+
+    def _compute_symplectic_matrix(self, unitary, m):
+        """Compute symplectic matrix for Clifford unitary on :math`m` qubits."""
+        pauli_gens = []
+        for i in range(m):
+            p = ['I']*m; p[i] = 'X'
+            pauli_gens.append(''.join(p))
+        for i in range(m):
+            p = ['I']*m; p[i] = 'Z'
+            pauli_gens.append(''.join(p))
+
+        symplectic = np.zeros((2*m, 2*m), dtype=int)
+        symplectic = self.cast(symplectic, dtype=symplectic.dtype)
+
+        for i, p_str in enumerate(pauli_gens):
+            pauli = self._pauli_string_to_matrix(p_str)
+            pauli_uconj = unitary @ pauli @ unitary.conj().T
+
+            found = False
+            for candidate_str in itertools.product('IXYZ', repeat=m):
+                candidate_str = ''.join(candidate_str)
+                candidate_P = self._pauli_string_to_matrix(candidate_str)
+                
+                for phase in [1, -1, 1j, -1j]:
+                    if np.allclose(pauli_uconj, phase * candidate_P, atol=1e-10):
+                        v = self._pauli_to_binary(candidate_str, m)
+                        symplectic[:, i] = v
+                        found = True
+                        break
+                if found:
+                    break
+                    
+            if not found:
+                raise ValueError(f"Could not find conjugated Pauli for {p_str}")
+
+        return symplectic % 2
+
+    def _get_phase_vector(self, unitary, m):
+        """Compute phase vector :math`r_U` of length :math`2m` for Clifford unitary.
+        :math`r_U[j] = 0` if :math`U g_j U^\\dagger = +P_j` else :math`1`."""
+        pauli_gens = []
+        for i in range(m):
+            p = ['I']*m; p[i] = 'X'
+            pauli_gens.append(''.join(p))
+        for i in range(m):
+            p = ['I']*m; p[i] = 'Z'
+            pauli_gens.append(''.join(p))
+
+        phase = np.zeros(2*m, dtype=int)
+        for j, p_str in enumerate(pauli_gens):
+            pauli = self._pauli_string_to_matrix(p_str)
+            pauli_uconj = unitary @ pauli @ unitary.conj().T
+
+            found = False
+            for candidate_str in itertools.product('IXYZ', repeat=m):
+                candidate_str = ''.join(candidate_str)
+                candidate_P = self._pauli_string_to_matrix(candidate_str)
+                if np.allclose(pauli_uconj, candidate_P):
+                    phase[j] = 0
+                    found = True
+                    break
+                elif np.allclose(pauli_uconj, -candidate_P):
+                    phase[j] = 1
+                    found = True
+                    break
+            if not found:
+                raise ValueError(f"Phase vector: failed for {p_str}")
+        return phase
+
+    def _embed_clifford(self, symplectic_m, n, qubit_indices):
+        """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
+        symplectic_n = np.eye(2*n, dtype=int)
+        symplectic_n = self.cast(symplectic_n, dtype=symplectic_m.dtype)
+
+        x_indices = qubit_indices
+        z_indices = [q + n for q in qubit_indices]
+        full_indices = x_indices + z_indices
+
+        symplectic_n[np.ix_(full_indices, full_indices)] = symplectic_m
+
+        return symplectic_n % 2
+
+    def _embed_phase_vector(self, phase_m, n, qubit_indices):
+        """Embed m-qubit phase vector into n-qubit system."""
+        phase_n = np.zeros(2*n, dtype=int)
+        phase_n = self.cast(phase_n, dtype=phase_m.dtype)
+        m = len(qubit_indices)
+        
+        qubit_indices = np.array(qubit_indices)
+        phase_n[qubit_indices] = phase_m[:m]
+        phase_n[qubit_indices + n] = phase_m[m:]
+
+        return phase_n
+
+    def _compute_quadratic_form(self, v, symplectic, n):
+        """Compute quadratic form for phase correction."""
+        v_x = v[:n]
+        v_z = v[n:]
+
+        #A = symplectic[:n, :n]      # X-X block
+        B = symplectic[:n, n:]      # X-Z block
+        C = symplectic[n:, :n]      # Z-X block
+        #D = symplectic[n:, n:]      # Z-Z block
+
+        term1 = (v_x.T @ B @ v_z) % 2
+        term2 = (v_z.T @ C @ v_x) % 2
+        
+        return (term1 + term2) % 2
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
@@ -210,9 +379,7 @@ class CliffordBackend(NumpyBackend):
             nqubits = circuit.nqubits
 
             state = self.zero_state(nqubits) if initial_state is None else initial_state
-
             state = self._clifford_pre_execution_reshape(state)
-
             for gate in circuit.queue:
                 gate.apply_clifford(self, state, nqubits)
 
