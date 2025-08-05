@@ -47,7 +47,7 @@ THETAS_1Q = [
     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 ]
 
-AXES = ["RX", "RY", "RZ"]
+AXES = ["RX", "RY", "RZ", "GPI2"]
 
 
 @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
@@ -57,8 +57,8 @@ def test_rotations_1q(backend, theta, axis):
     qubits = np.random.randint(3, size=2)
     H_qubits = np.random.choice(range(3), size=2, replace=False)
     c.add(gates.H(q) for q in H_qubits)
-    c.add(getattr(gates, axis)(qubits[0], theta=theta))
-    c.add(getattr(gates, axis)(qubits[1], theta=theta))
+    c.add(getattr(gates, axis)(qubits[0], theta))
+    c.add(getattr(gates, axis)(qubits[1], theta))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     numpy_state = backend.cast(numpy_state)
@@ -84,7 +84,7 @@ def test_rotations_2q(backend, theta, axis):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-SINGLE_QUBIT_CLIFFORDS = ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG"]
+SINGLE_QUBIT_CLIFFORDS = ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG", "Unitary"]
 
 
 @pytest.mark.parametrize("gate", SINGLE_QUBIT_CLIFFORDS)
@@ -94,15 +94,24 @@ def test_single_qubit_gates(backend, gate):
     qubits = np.random.randint(3, size=2)
     H_qubits = np.random.choice(range(3), size=2, replace=False)
     c.add(gates.H(q) for q in H_qubits)
-    c.add(getattr(gates, gate)(qubits[0]))
-    c.add(getattr(gates, gate)(qubits[1]))
+    if gate == "Unitary":
+        matrix = random_clifford(1,return_circuit=False, backend=backend)
+        gate1 = gates.Unitary(matrix, qubits[0])
+        gate2 = gates.Unitary(matrix, qubits[1])
+        gate1.clifford = True
+        gate2.clifford = True
+        c.add(gate1)
+        c.add(gate2)
+    else:
+        c.add(getattr(gates, gate)(qubits[0]))
+        c.add(getattr(gates, gate)(qubits[1]))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     numpy_state = backend.cast(numpy_state)
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR"]
+TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR", "Unitary"]
 
 
 @pytest.mark.parametrize("gate", TWO_QUBITS_CLIFFORDS)
@@ -112,8 +121,17 @@ def test_two_qubits_gates(backend, gate):
     qubits = np.random.choice(range(5), size=4, replace=False).reshape(2, 2)
     H_qubits = np.random.choice(range(5), size=3, replace=False)
     c.add(gates.H(q) for q in H_qubits)
-    c.add(getattr(gates, gate)(*qubits[0]))
-    c.add(getattr(gates, gate)(*qubits[1]))
+    if gate == "Unitary":
+        matrix = random_clifford(2,return_circuit=False, backend=backend)
+        gate1 = gates.Unitary(matrix, *qubits[0])
+        gate2 = gates.Unitary(matrix, *qubits[1])
+        gate1.clifford = True
+        gate2.clifford = True
+        c.add(gate1)
+        c.add(gate2)
+    else:
+        c.add(getattr(gates, gate)(*qubits[0]))
+        c.add(getattr(gates, gate)(*qubits[1]))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     numpy_state = backend.cast(numpy_state)
