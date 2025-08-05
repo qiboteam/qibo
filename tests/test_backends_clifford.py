@@ -47,10 +47,10 @@ THETAS_1Q = [
     th + 2 * i * np.pi for i in range(2) for th in [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 ]
 
-AXES = ["RX", "RY", "RZ", "GPI2"]
+AXES = ["RX", "RY", "RZ"]
 
 
-@pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
+@pytest.mark.parametrize("axis,theta", list(product(AXES + ["GPI2"], THETAS_1Q)))
 def test_rotations_1q(backend, theta, axis):
     clifford_bkd = construct_clifford_backend(backend)
     c = Circuit(3, density_matrix=True)
