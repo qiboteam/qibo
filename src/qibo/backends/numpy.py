@@ -811,7 +811,7 @@ class NumpyBackend(Backend):
             return expm(phase * matrix)
 
         expd = self.np.exp(phase * eigenvalues)
-        ud = self.np.transpose(np.conj(eigenvectors))
+        ud = self.np.transpose(self.np.conj(eigenvectors))
 
         return (eigenvectors * expd) @ ud
 
