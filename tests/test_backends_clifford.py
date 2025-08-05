@@ -95,7 +95,7 @@ def test_single_qubit_gates(backend, gate):
     H_qubits = np.random.choice(range(3), size=2, replace=False)
     c.add(gates.H(q) for q in H_qubits)
     if gate == "Unitary":
-        matrix = random_clifford(1,return_circuit=False, backend=backend)
+        matrix = random_clifford(1, return_circuit=False, backend=backend)
         gate1 = gates.Unitary(matrix, qubits[0])
         gate2 = gates.Unitary(matrix, qubits[1])
         gate1.clifford = True
@@ -122,7 +122,7 @@ def test_two_qubits_gates(backend, gate):
     H_qubits = np.random.choice(range(5), size=3, replace=False)
     c.add(gates.H(q) for q in H_qubits)
     if gate == "Unitary":
-        matrix = random_clifford(2,return_circuit=False, backend=backend)
+        matrix = random_clifford(2, return_circuit=False, backend=backend)
         gate1 = gates.Unitary(matrix, *qubits[0])
         gate2 = gates.Unitary(matrix, *qubits[1])
         gate1.clifford = True
