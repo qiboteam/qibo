@@ -3,9 +3,8 @@ from typing import Optional
 import numpy as np
 import sympy
 
-import qibo.backends.abstract.Backend
 from qibo import gates
-from qibo.backends import _check_backend, get_backend, matrices
+from qibo.backends import Backend, _check_backend, get_backend, matrices
 from qibo.config import raise_error
 
 

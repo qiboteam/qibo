@@ -9,8 +9,6 @@ from typing import Optional
 import numpy as np
 import sympy
 
-import qibo.backends.abstract.Backend
-from qibo.backends import _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
