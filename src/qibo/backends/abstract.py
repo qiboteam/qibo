@@ -1,7 +1,10 @@
 import abc
 from typing import Optional, Union
 
+from qibo import gates
 from qibo.config import raise_error
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.symbols import Z
 
 
 class Backend(abc.ABC):
@@ -415,6 +418,133 @@ class Backend(abc.ABC):
     ):  # pragma: no cover
         """Calculate expectation value of a density matrix given the observable matrix."""
         raise_error(NotImplementedError)
+
+    def calculate_expectation_from_samples_symbolic(
+        self, hamiltonian, frequencies: dict, qubit_map: Union[tuple[int], list[int]]
+    ):
+        """
+        Calculate the expectation value from the samples.
+        The observable has to be diagonal in the computational basis.
+
+        Args:
+            hamiltonian (SymbolicHamiltonian): observable to calculate the expectation value of.
+            freq (dict): input frequencies of the samples.
+            qubit_map (list): qubit map.
+
+        Returns:
+            (float): the calculated expectation value.
+        """
+        for term in hamiltonian.terms:
+            # pylint: disable=E1101
+            for factor in term.factors:
+                if not isinstance(factor, Z):
+                    raise_error(
+                        NotImplementedError, "Observable is not a Pauli-Z string."
+                    )
+
+        if qubit_map is None:
+            qubit_map = list(range(hamiltonian.nqubits))
+
+        keys = list(frequencies.keys())
+        counts = list(frequencies.values())
+        counts = self.cast(counts, dtype=self.np.float64) / sum(counts)
+        expvals = []
+        for term in hamiltonian.terms:
+            qubits = {
+                factor.target_qubit for factor in term.factors if factor.name[0] != "I"
+            }
+            expvals.extend(
+                [
+                    term.coefficient.real
+                    * (-1) ** [state[qubit_map.index(q)] for q in qubits].count("1")
+                    for state in keys
+                ]
+            )
+        expvals = self.cast(expvals, dtype=counts.dtype).reshape(
+            len(hamiltonian.terms), len(frequencies)
+        )
+        return self.np.sum(expvals @ counts) + hamiltonian.constant.real
+
+    def calculate_expectation_from_circuit(
+        self, hamiltonian, circuit, nshots: int = 1000
+    ):
+        """
+        Calculate the expectation value from a circuit.
+        This even works for observables not completely diagonal in the computational
+        basis, but only diagonal at a term level in a defined basis. Namely, for
+        an observable of the form :math:``H = \\sum_i H_i``, where each :math:``H_i``
+        consists in a `n`-qubits pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`,
+        the expectation value is computed by rotating the input circuit in the suitable
+        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
+        that are then summed to build the global expectation value.
+        Each term of the observable is treated separately, by measuring in the correct
+        basis and re-executing the circuit.
+
+        Args:
+            hamiltonian (SymbolicHamiltonian): observable to calculate the expectation value of.
+            circuit (Circuit): input circuit.
+            nshots (int): number of shots, defaults to 1000.
+
+        Returns:
+            (float): the calculated expectation value.
+        """
+        # from qibo import gates
+        # from qibo.symbols import Z
+        # from qibo.hamiltonians import SymbolicHamiltonian
+
+        rotated_circuits = []
+        Z_observables = []
+        qubit_maps = []
+        # loop over the terms that can be diagonalized simultaneously
+        for terms in hamiltonian.diagonal_terms:
+            # for each term that can be diagonalized simultaneously
+            # extract the coefficient, Z observable and qubit map
+            # the basis rotation, instead, will be the same
+            tmp_obs = []
+            measurements = {}
+            for term in terms:
+                # Only care about non-I terms
+                non_identity_factors = []
+                # prepare the measurement basis and append it to the circuit
+                for factor in term.factors:
+                    if factor.name[0] != "I":
+                        non_identity_factors.append(factor)
+                        q = factor.target_qubit
+                        if q not in measurements:
+                            measurements[q] = gates.M(q, basis=factor.gate.__class__)
+
+                # build diagonal observable
+                # including the coefficient
+                symb_obs = prod(
+                    Z(factor.target_qubit) for factor in non_identity_factors
+                )
+                symb_obs = SymbolicHamiltonian(
+                    term.coefficient * symb_obs,
+                    nqubits=circuit.nqubits,
+                    backend=self,
+                )
+                tmp_obs.append(symb_obs)
+
+            # Get the qubits we want to measure for each term
+            qubit_maps.append(sorted(measurements.keys()))
+            Z_observables.append(tmp_obs)
+
+            circ_copy = circuit.copy(True)
+            circ_copy.add(list(measurements.values()))
+            rotated_circuits.append(circ_copy)
+
+        # execute the circuits
+        results = self.execute_circuits(rotated_circuits, nshots=nshots)
+
+        # construct the expectation value for each diagonal term
+        # and sum all together
+        expval = 0.0
+        for res, obs, qmap in zip(results, Z_observables, qubit_maps):
+            freq = res.frequencies()
+            expval += sum(
+                self.calculate_expectation_from_samples(o, freq, qmap) for o in obs
+            )
+        return hamiltonian.constant + expval
 
     @abc.abstractmethod
     def calculate_matrix_exp(
