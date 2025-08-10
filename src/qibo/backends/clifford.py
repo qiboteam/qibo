@@ -157,37 +157,41 @@ class CliffordBackend(NumpyBackend):
 
     def apply_unitary(self, gate, symplectic_matrix, nqubits):
         """Apply a unitary gate to a symplectic matrix."""
-        temp_matrix = self._clifford_post_execution_reshape(symplectic_matrix, nqubits)
-
+        temp_matrix = self._clifford_post_execution_reshape(symplectic_matrix, nqubits)[
+            :-1, :
+        ]
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
 
-        matrix = gate.matrix()
+        matrix = gate.matrix(backend=super())
         symplectic_m = self._compute_symplectic_matrix(matrix, m)
         phase_m = self._get_phase_vector(matrix, m)
+        phase_m = self.cast(phase_m, dtype=phase_m.dtype)
 
         symplectic_n = self._embed_clifford(symplectic_m, nqubits, qubit_indices)
-        phase_n = self._embed_phase_vector(phase_m, nqubits, qubit_indices)
 
         original_symplectic = temp_matrix[:, : 2 * nqubits].copy()
         original_phases = temp_matrix[:, 2 * nqubits].copy()
 
-        temp_matrix[:, : 2 * nqubits] = (original_symplectic @ symplectic_n.T) % 2
+        temp_matrix[:, : 2 * nqubits] = (original_symplectic @ symplectic_n) % 2
+
         for i in range(2 * nqubits):
             v_old = original_symplectic[i, :]
             phase_old = original_phases[i]
+            x = v_old[qubit_indices]
+            z = v_old[np.array(qubit_indices) + nqubits]
+            v_sub = np.concatenate([x, z])
+            v_sub = self.cast(v_sub, dtype=v_sub.dtype)
 
-            linear_correction = np.dot(v_old, phase_n) % 2
-            quadratic_correction = self._compute_quadratic_form(
-                v_old, symplectic_n, nqubits
-            )
+            linear_correction = np.dot(v_sub, phase_m) % 2
+
+            quadratic_correction = self._compute_quadratic_form(v_sub, symplectic_m, m)
 
             total_correction = (linear_correction + quadratic_correction) % 2
             temp_matrix[i, 2 * nqubits] = (phase_old + total_correction) % 2
 
         result = self._clifford_pre_execution_reshape(temp_matrix)
         symplectic_matrix[:] = result
-
         return symplectic_matrix
 
     def _pauli_string_to_matrix(self, pauli_str):
@@ -236,7 +240,7 @@ class CliffordBackend(NumpyBackend):
                 for phase in [1, -1, 1j, -1j]:
                     if np.allclose(pauli_uconj, phase * candidate_P, atol=1e-10):
                         v = self._pauli_to_binary(candidate_str, m)
-                        symplectic[:, i] = v
+                        symplectic[i, :] = v
                         found = True
                         break
                 if found:
@@ -262,17 +266,14 @@ class CliffordBackend(NumpyBackend):
             pauli = self._pauli_string_to_matrix(p_str)
             pauli_uconj = unitary @ pauli @ unitary.conj().T
 
-            found = False
             for candidate_str in itertools.product("IXYZ", repeat=m):
                 candidate_str = "".join(candidate_str)
                 candidate_P = self._pauli_string_to_matrix(candidate_str)
                 if np.allclose(pauli_uconj, candidate_P):
                     phase[j] = 0
-                    found = True
                     break
                 elif np.allclose(pauli_uconj, -candidate_P):
                     phase[j] = 1
-                    found = True
                     break
 
         return phase
@@ -307,15 +308,38 @@ class CliffordBackend(NumpyBackend):
         v_x = v[:n]
         v_z = v[n:]
 
-        # A = symplectic[:n, :n]      # X-X block
+        A = symplectic[:n, :n]  # X-X block
         B = symplectic[:n, n:]  # X-Z block
         C = symplectic[n:, :n]  # Z-X block
-        # D = symplectic[n:, n:]      # Z-Z block
+        D = symplectic[n:, n:]  # Z-Z block
 
         term1 = (v_x.T @ B @ v_z) % 2
         term2 = (v_z.T @ C @ v_x) % 2
 
-        return (term1 + term2) % 2
+        cross_term1 = 0
+        cross_term2 = 0
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    cross_term1 += (v_x[i] * v_z[j] * A[i, j]) % 2
+                    cross_term2 += (v_z[i] * v_x[j] * D[i, j]) % 2
+
+        diagonal_correction = 0
+        for i in range(n):
+            if v_x[i] == 1 and v_z[i] == 1:
+                x_to_x = A[i, i] == 1
+                x_to_z = B[i, i] == 1
+                z_to_x = C[i, i] == 1
+                z_to_z = D[i, i] == 1
+
+                is_pure_x_to_z_swap = not x_to_x and x_to_z and z_to_x and not z_to_z
+
+                if is_pure_x_to_z_swap:
+                    diagonal_correction += 1
+
+        result = (term1 + term2 + cross_term1 + cross_term2 + diagonal_correction) % 2
+
+        return result
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
