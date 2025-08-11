@@ -9,6 +9,7 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
+    decompose_permutation,
     haar_integral,
     hadamard_transform,
     hamming_distance,
@@ -119,7 +120,7 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
         state, implementation=implementation, backend=backend
     )
 
-    backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
+    backend.assert_allclose(transformed, test_transformed, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -298,3 +299,14 @@ def test_pqc_integral(backend):
     fid = fidelity(pqc_int, pqc_int, backend=backend)
 
     backend.assert_allclose(fid, 1.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
+def test_decompose_permutation_errors(sigma, backend):
+
+    with pytest.raises(TypeError):
+        decompose_permutation(backend.np.array(sigma), m=2, backend=backend)
+    with pytest.raises(ValueError):
+        decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
+    with pytest.raises(ValueError):
+        decompose_permutation(sigma, m=3, backend=backend)

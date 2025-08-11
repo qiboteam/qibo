@@ -1392,8 +1392,11 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 
 .. testcode::
 
+   from qibo import set_dtype
    from qibo.symbols import Z
    from qibo.hamiltonians import SymbolicHamiltonian
+
+   set_dtype("complex128")
 
    backend = qibo.get_backend()
 
@@ -1407,7 +1410,8 @@ the real quantum hardware, instead, we can use a noise model:
 .. testcode::
 
    # Noise-free expected value
-   exact = obs.expectation(backend.execute_circuit(circuit).state())
+   state = backend.execute_circuit(circuit).state()
+   exact = obs.expectation(state)
    print(exact)
    # 0.9096065335014379
 
@@ -1425,8 +1429,10 @@ the real quantum hardware, instead, we can use a noise model:
    )
    noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
-   noisy = obs.expectation(backend.execute_circuit(noise.apply(circuit)).state())
-   print(noisy)
+   noisy_circuit = noise.apply(circuit)
+   noisy_state = backend.execute_circuit(noisy_circuit).state()
+   noisy_exp_val = obs.expectation(noisy_state)
+   print(noisy_exp_val)
    # 0.5647937721701448
 
 .. testoutput::

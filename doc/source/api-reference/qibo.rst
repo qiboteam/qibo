@@ -406,6 +406,23 @@ Greenberger-Horne-Zeilinger (GHZ) state
 
 .. autofunction:: qibo.models.encodings.ghz_state
 
+
+Dicke state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.dicke_state
+
+
+Graph state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.graph_state
+
+Permutation synthesis
+"""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.permutation_synthesis
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -1802,26 +1819,11 @@ von Neumann entropy
 
 .. autofunction:: qibo.quantum_info.von_neumann_entropy
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
 
 Relative von Neumann entropy
 """"""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
-
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and either ``state`` or ``target`` is non-Hermitian,
-    an error will be raised when using `cupy` backend.
 
 
 Mutual information
@@ -1859,15 +1861,6 @@ Entanglement entropy
 
 .. autofunction:: qibo.quantum_info.entanglement_entropy
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
 
 Metrics
 ^^^^^^^
@@ -1891,14 +1884,6 @@ Trace distance
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.trace_distance
-
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if difference
-    between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
-    more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
-    raised when using `cupy` backend.
 
 
 Hilbert-Schmidt inner product
@@ -2021,10 +2006,22 @@ Matrix exponentiation
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
 
 
+Matrix logarithm
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_logarithm
+
+
 Matrix power
 """"""""""""
 
 .. autofunction:: qibo.quantum_info.matrix_power
+
+
+Matrix square root
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_sqrt
 
 
 Singular value decomposition
@@ -2502,6 +2499,11 @@ Parameterized quantum circuit integral
 
 .. autofunction:: qibo.quantum_info.pqc_integral
 
+Decompose permutation into the fewest pairwise transpositions
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.decompose_permutation
+
 
 .. _GST:
 
@@ -2708,6 +2710,90 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
+
+.. _Hamming-weight:
+
+Simulation of Hamming-weight-preserving circuits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This specialised backend in ``qibo`` supports the fast simulation of
+Hamming-weight-preserving circuits.
+Given a quantum state that only contains non-zero amplitudes associated with computational basis
+states of Hamming weight :math:`k`, the :class:`qibo.backends.hamming_weight.HammingWeightBackend` works with
+a compressed representation of quantum states that is restricted to the subspace
+with fixed Hamming weight :math:`k`.
+The dimension of this subspace is :math:`d = \binom{n}{k}`,
+where :math:`n` is the total number of qubits.
+
+As for the other backends, the Hamming-weight backend can be set
+by specifying the engine used for calculation, *i.e.*
+
+.. testcode::  python
+
+    from qibo import set_backend
+
+    set_backend("hamming_weight", platform="numpy")
+
+If not provided, the current global backend is used:
+
+.. testcode::  python
+
+    from qibo import set_backend
+    from qibo.backends import HammingWeightBackend
+
+    # setting numpy as the global backend
+    set_backend("numpy")
+    # the Hamming-weight backend will use the numpy backend as engine
+    backend = HammingWeightBackend()
+
+A Hamming-weight-preserving circuit with Hamming weight :math:`k` can be executed as the following example:
+
+.. testcode::  python
+
+    from qibo import Circuit, gates, set_backend
+    from qibo.backends import HammingWeightBackend
+
+    backend = HammingWeightBackend()
+
+    nqubits = 4
+    circuit = Circuit(nqubits)
+    circuit.add(gates.SWAP(0, 1))
+
+    result = backend.execute_circuit(circuit, weight=2)
+
+    # the above execution is equivalent to the following
+    # that uses the global backend and the ``weight`` kwarg
+    #
+    # set_backend("hamming_weight", platform="numpy")
+    # result = circuit(weight=2)
+
+.. autoclass:: qibo.backends.hamming_weight.HammingWeightBackend
+    :members:
+    :member-order: bysource
+
+
+The results of execution of a circuit through this backend creates a
+:class:`qibo.quantum_info.hamming_weight.HammingWeightResult`
+object that gives access to the final state through the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.state` method.
+The probabilities are computed by the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.probabilities` method.
+If there are no measurements in the circuit or the number of shots is :math:`0`,
+they are calculated from the statevector.
+Otherwise, they are calculated from the samples.
+The final measured samples and frequencies are accessible, respectively, through the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.samples` and the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.frequencies` methods.
+
+It is also possible to recover the standard state representation with the
+:meth:`qibo.quantum_info.hamming_weight.HammingWeightResult.full_state` method.
+Note, however, that this process is inefficient as it involves the construction of
+a statevector with size exponential in the number of qubits.
+
+.. autoclass:: qibo.quantum_info.hamming_weight.HammingWeightResult
+    :members:
+    :member-order: bysource
+
 
 Cloud Backends
 ^^^^^^^^^^^^^^

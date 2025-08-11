@@ -3,9 +3,12 @@ from qibo.models.circuit import Circuit
 from qibo.models.encodings import (
     binary_encoder,
     comp_basis_encoder,
+    dicke_state,
     entangling_layer,
     ghz_state,
+    graph_state,
     hamming_weight_encoder,
+    permutation_synthesis,
     phase_encoder,
     sparse_encoder,
     unary_encoder,

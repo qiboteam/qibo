@@ -1,9 +1,13 @@
+"""Module defines the abstract gate classes Gate, SpecialGate, ParametrizedGate."""
+
 import collections
 import json
+from math import pi
 from typing import List, Sequence, Tuple
 
 import sympy
 
+from qibo import config
 from qibo.backends import _check_backend
 from qibo.config import raise_error
 
@@ -27,6 +31,22 @@ REQUIRED_FIELDS_INIT_KWARGS = [
     "p1",
 ]
 
+GATES_CONTROLLED_BY_DEFAULT = [
+    "cx",
+    "cy",
+    "cz",
+    "csx",
+    "csxdg",
+    "crx",
+    "cry",
+    "crz",
+    "cu1",
+    "cu2",
+    "cu3",
+    "ccx",
+    "ccz",
+]
+
 
 class Gate:
     """The base class for gate implementation.
@@ -48,8 +68,6 @@ class Gate:
     """
 
     def __init__(self):
-        from qibo import config
-
         self.name = None
         self.draw_label = None
         self.is_controlled_by = False
@@ -72,6 +90,11 @@ class Gate:
     @property
     def clifford(self):
         """Return boolean value representing if a Gate is Clifford or not."""
+        return False
+
+    @property
+    def hamming_weight(self):
+        """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
         return False
 
     @property
@@ -105,7 +128,10 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import gates, measurements
+        from qibo.gates import (  # pylint: disable=import-outside-toplevel
+            gates,
+            measurements,
+        )
 
         for mod in (gates, measurements):
             try:
@@ -249,7 +275,7 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, qubit_map) -> "Gate":
+    def on_qubits(self, qubit_map: dict) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -265,12 +291,20 @@ class Gate:
 
                 from qibo import Circuit, gates
                 circuit = Circuit(4)
+
                 # Add some CNOT gates
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
+
+                # equivalent to gates.CNOT(2, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3}))
+                # equivalent to gates.CNOT(3, 0)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0}))
+                # equivalent to gates.CNOT(1, 3)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3}))
+                # equivalent to gates.CNOT(2, 1)
+                circuit.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1}))
+
                 circuit.draw()
+
             .. testoutput::
 
                 0: ───X─────
@@ -278,14 +312,20 @@ class Gate:
                 2: ─o─|─|─o─
                 3: ─X─o─X───
         """
+        # Explicit mention of gates where the method
+        # `.controlled_by` fail. This should be fixed separatedly.
+        qubits = (
+            self.qubits
+            if self.name in GATES_CONTROLLED_BY_DEFAULT
+            else self.target_qubits
+        )
+        qubits = tuple(qubit_map.get(q) for q in qubits)
+        gate = self.__class__(*qubits, **self.init_kwargs)
+
         if self.is_controlled_by:
-            targets = (qubit_map.get(q) for q in self.target_qubits)
             controls = (qubit_map.get(q) for q in self.control_qubits)
-            gate = self.__class__(*targets, **self.init_kwargs)
             gate = gate.controlled_by(*controls)
-        else:
-            qubits = (qubit_map.get(q) for q in self.qubits)
-            gate = self.__class__(*qubits, **self.init_kwargs)
+
         return gate
 
     def _dagger(self) -> "Gate":
@@ -354,18 +394,114 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def decompose(self, *free) -> List["Gate"]:
-        """Decomposes multi-control gates to gates supported by OpenQASM.
+    def _base_decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+        """Base decomposition for gates.
 
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        Returns a list containing the gate itself. Should be overridden by
+        subclasses that support decomposition to simpler gates.
 
         Args:
             free: Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+
+        Returns:
+            list: Synthesis of the original gate in another gate set.
+        """
+        return [self.__class__(*self.init_args, **self.init_kwargs)]
+
+    @staticmethod
+    def _gates_cancel(g1, g2):
+        """Determines if two gates cancel each other.
+
+        Two gates are considered to cancel if:
+          - They are of the same type (class).
+          - They act on the same target and control qubits.
+          - For fixed gates (like H, CX, X, Y, Z, SWAP), they always cancel in pairs.
+          - For parametrized rotation gates (subclasses of _Rn_), their parameters sum to a multiple of 2π.
+
+        Note:
+            Multi-parameter gates are not currently supported by this check.
+
+        Args:
+            g1, g2: Gate instances to compare.
+
+        Returns:
+            bool: True if the gates cancel each other, False otherwise.
+        """
+        if g1.__class__ != g2.__class__:
+            return False
+
+        if g1.target_qubits != g2.target_qubits:
+            return False
+
+        if g1.control_qubits != g2.control_qubits:
+            return False
+
+        # Identity conditions for fixed gates
+        name = g1.name
+        if name in ("h", "cx", "x", "y", "z", "swap", "ecr", "ccx", "ccz"):
+            return True
+
+        # Check for parametrized rotation gates
+        if "_Rn_" in [base.__name__ for base in g1.__class__.__bases__]:
+            theta1 = g1.parameters[0]
+            theta2 = g2.parameters[0]
+            # Check if theta1 + theta2 is a multiple of 2π
+            return bool((theta1 + theta2) % (2 * pi) < 1e-8)
+
+        return False
+
+    def _control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
+        """Returns a mask indicating which gates should be controlled."""
+        left = 0
+        right = len(gates) - 1
+        mask = [True] * len(gates)
+        while left < right:
+            g1, g2 = gates[left], gates[right]
+            if self._gates_cancel(g1, g2):
+                mask[left] = False
+                mask[right] = False
+            left += 1
+            right -= 1
+        return mask
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List["Gate"]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        If the gate is already controlled, it recursively decomposes the base gate and updates
+        the control qubits accordingly.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+            use_toffolis(bool, optional): If ``True``, the decomposition contains only
+                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent
+                representation is used for :class:`qibo.gates.TOFFOLI` gates.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
             list: gates that have the same effect as applying the original gate.
         """
-        return [self.__class__(*self.init_args, **self.init_kwargs)]
+        if self.is_controlled_by:
+            # Step 1: Error check with all controls/targets
+            if set(free) & set(self.qubits):
+                raise_error(
+                    ValueError,
+                    "Cannot decompose multi-controlled ``X`` gate if free "
+                    "qubits coincide with target or controls.",
+                )
+            # Step 2: Decompose base gate without controls
+            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
+            decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
+            mask = self._control_mask_after_stripping(decomposed)
+            for bool_value, gate in zip(mask, decomposed):
+                if bool_value:
+                    gate.is_controlled_by = True
+                    gate.control_qubits += self.control_qubits
+            return decomposed
+        return self._base_decompose(*free, use_toffolis=use_toffolis)
 
     def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
@@ -439,7 +575,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
     def matrix(self, backend=None):  # pragma: no cover
@@ -505,7 +641,7 @@ class ParametrizedGate(Gate):
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
-    def on_qubits(self, qubit_map):
+    def on_qubits(self, qubit_map: dict):
         gate = super().on_qubits(qubit_map)
         gate.parameters = self.parameters
         return gate

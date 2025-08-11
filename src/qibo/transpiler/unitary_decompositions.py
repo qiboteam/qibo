@@ -61,14 +61,13 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     )
     # construct and diagonalize UT_U
     ut_u = backend.np.transpose(u_magic, (1, 0)) @ u_magic
+    ut_u_real = backend.np.real(ut_u) + backend.np.imag(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
-        # eig seems to have a different behavior based on backend/hardware,
-        # use np.round to increase precision seems to fix the issue
-        eigvals, psi_magic = backend.calculate_eigenvectors(
-            np.round(ut_u, decimals=20), hermitian=False
-        )
-    else:
-        eigvals, psi_magic = backend.calculate_eigenvectors(ut_u, hermitian=False)
+        ut_u_real = np.round(ut_u_real, decimals=15)
+
+    eigvals_real, psi_magic = backend.calculate_eigenvectors(ut_u_real, hermitian=True)
+    # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
+    eigvals = backend.np.sum(backend.np.conj(psi_magic) * (ut_u @ psi_magic), 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.np.linalg.qr(psi_magic)
     # write psi in computational basis
@@ -126,11 +125,12 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
 
     See Eq. (A1) in arXiv:quant-ph/0011050.
     Ud is diagonal in the magic and Bell basis.
+    Also returns local unitaries that modify Ud so: pi/4 >= hx >= hy >= |hz|
     """
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
     # this is required so that sum(lambdas) = 0
     # and Ud can be written as exp(-iH)
-    if backend.__class__.__name__ == "TensorflowBackend":
+    if backend.__class__.__name__ == "TensorflowBackend":  # pragma: no cover
         det = np.linalg.det(unitary) ** (1 / 16)
     else:
         det = backend.np.linalg.det(unitary) ** (1 / 16)
@@ -138,17 +138,114 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     ub *= det
     va *= det
     vb *= det
-    u_dagger = backend.np.transpose(
-        backend.np.conj(
-            backend.np.kron(
-                ua,
-                ub,
-            )
-        ),
-        (1, 0),
+    dag = lambda u: backend.np.transpose(backend.np.conj(u), (1, 0))
+    u_dagger = dag(
+        backend.np.kron(
+            ua,
+            ub,
+        )
     )
-    v_dagger = backend.np.transpose(backend.np.conj(backend.np.kron(va, vb)), (1, 0))
+    v_dagger = dag(backend.np.kron(va, vb))
     ud = u_dagger @ unitary @ v_dagger
+
+    lambdas = to_bell_diagonal(ud, backend)
+
+    # We permute to ensure we will have hx >= hy >= hz in the end
+    hx, hy, hz = calculate_h_vector(lambdas, backend)
+
+    # 1. force coefficients to be in pi/4 >= ... >= 0 interval, using pi/2 periodicity and pi/4 symmetry
+    fit = lambda alpha: min(alpha % (np.pi / 2), np.pi / 2 - (alpha % (np.pi / 2)))
+
+    # 2. permute to ensure ordering:
+    alphas_ordered = sorted(
+        [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]), reverse=True
+    )
+
+    correction = {
+        "left_A": matrices.I.copy(),
+        "left_B": matrices.I.copy(),
+        "right_A": matrices.I.copy(),
+        "right_B": matrices.I.copy(),
+    }
+
+    permutation = [x[1] for x in alphas_ordered]
+
+    if permutation[0] == 1:
+        correction["left_A"] @= matrices.S
+        correction["left_B"] @= matrices.S
+        correction["right_A"] = dag(matrices.S) @ correction["right_A"]
+        correction["right_B"] = dag(matrices.S) @ correction["right_B"]
+
+    elif permutation[0] == 2:
+        correction["left_A"] = correction["left_A"] @ matrices.H
+        correction["left_B"] = correction["left_B"] @ matrices.H
+        correction["right_A"] = dag(matrices.H) @ correction["right_A"]
+        correction["right_B"] = dag(matrices.H) @ correction["right_B"]
+
+    if not (permutation[1] == 1 or permutation[2] == 2):
+        correction["left_A"] = correction["left_A"] @ (
+            matrices.S @ matrices.H @ matrices.S
+        )
+        correction["left_B"] = correction["left_B"] @ (
+            matrices.S @ matrices.H @ matrices.S
+        )
+        correction["right_A"] = (
+            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_A"]
+        )
+        correction["right_B"] = (
+            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_B"]
+        )
+
+    # 3. find local corrections to enforce, as possible, conditions on h
+    paulis = ["X", "Y", "Z"]
+    for i, (alpha, _) in enumerate(alphas_ordered):
+        if i < 2:
+            if alpha < 0:
+                alpha += np.pi / 2
+                correction["left_A"] = correction["left_A"] @ (
+                    1j * getattr(matrices, paulis[i])
+                )
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[i]
+                )
+            if (
+                alpha > np.pi / 4
+            ):  # can't conjugate so sign of z alternates to compensate
+                # Swap alpha_i and alpha_z sign
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[(i + 1) % 2]
+                )
+                correction["right_B"] = (
+                    getattr(matrices, paulis[(i + 1) % 2]) @ correction["right_B"]
+                )
+                # Add pi/2 to alpha_i
+                correction["left_A"] = correction["left_A"] @ (
+                    1j * getattr(matrices, paulis[i])
+                )
+                correction["left_B"] = correction["left_B"] @ getattr(
+                    matrices, paulis[i]
+                )
+        elif abs(alpha) > np.pi / 4:
+            correction["left_A"] = correction["left_A"] @ (
+                (1j if alpha < 0 else -1j) * getattr(matrices, paulis[i])
+            )
+            correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
+
+    # 4. apply corrections
+    correction["left_A"] = backend.cast(correction["left_A"])
+    correction["left_B"] = backend.cast(correction["left_B"])
+    correction["right_A"] = backend.cast(correction["right_A"])
+    correction["right_B"] = backend.cast(correction["right_B"])
+    ua = backend.np.matmul(ua, correction["left_A"])
+    ub = backend.np.matmul(ub, correction["left_B"])
+    va = backend.np.matmul(correction["right_A"], va)
+    vb = backend.np.matmul(correction["right_B"], vb)
+    ud = backend.np.matmul(
+        backend.np.kron(dag(correction["left_A"]), dag(correction["left_B"])),
+        backend.np.matmul(
+            ud, backend.np.kron(dag(correction["right_A"]), dag(correction["right_B"]))
+        ),
+    )
     return ua, ub, ud, va, vb
 
 
@@ -162,9 +259,8 @@ def magic_decomposition(unitary, backend=None):
     )
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
-    ua, ub = backend.np.transpose(
-        backend.np.conj(ua_dagger), (1, 0)
-    ), backend.np.transpose(backend.np.conj(ub_dagger), (1, 0))
+    dag = lambda U: backend.np.transpose(backend.np.conj(U), (1, 0))
+    ua, ub = dag(ua_dagger), dag(ub_dagger)
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
 
 
@@ -243,54 +339,80 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend):
     ]
 
 
-def two_qubit_decomposition(q0, q1, unitary, backend):
-    """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
+def _get_z_component(unitary, backend):
+    """Calculates the hz component from a unitary's magic decomposition."""
+    _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
+    ud_diag = to_bell_diagonal(ud, backend=backend)
+    _, _, hz = calculate_h_vector(ud_diag, backend=backend)
+    return float(hz)
+
+
+def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
+    """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
+    # Get magic decomposition
+    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+    ud_diag = to_bell_diagonal(ud, backend=backend)
+    hx, hy, _ = calculate_h_vector(ud_diag, backend=backend)
+    hx, hy = float(hx), float(hy)
+
+    # Get light decomposition
+    gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
+    # Combine with initial and final local unitaries
+    g0, g1 = gatelist[:2]
+    gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
+    gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
+
+    g0, g1 = gatelist[-2:]
+    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    return gatelist
+
+
+def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
+    """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
+    # Get magic decomposition
+    u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+    ud_diag = to_bell_diagonal(ud, backend=backend)
+    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
+    hx, hy, hz = float(hx), float(hy), float(hz)
+
+    # Get full decomposition
+    cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
+
+    # Combine with initial and final local unitaries
+    gatelist = [
+        gates.Unitary(u1, q0),
+        gates.Unitary(backend.cast(H) @ v1, q1),
+    ]
+    gatelist.extend(cnot_dec[1:])
+    g0, g1 = gatelist[-2:]
+    gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+    gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    return gatelist
+
+
+def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
+    """Performs two qubit unitary gate decomposition.
 
     Args:
         q0 (int): index of the first qubit.
         q1 (int): index of the second qubit.
         unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
         backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
+        threshold (float): Threshold for determining if hz component is zero.
 
     Returns:
-        (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
+        list: gates implementing the decomposition
     """
+    # Handle identity case efficiently
+    if backend.np.allclose(
+        unitary, backend.identity_density_matrix(nqubits=2, normalize=False)
+    ):
+        return []
 
-    ud_diag = to_bell_diagonal(unitary, backend=backend)
-    ud = None
-    if ud_diag is None:
-        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
-        ud_diag = to_bell_diagonal(ud, backend=backend)
-
-    hx, hy, hz = calculate_h_vector(ud_diag, backend=backend)
-    hx, hy, hz = float(hx), float(hy), float(hz)
-    if np.allclose([hx, hy, hz], [0, 0, 0]):
-        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
-        gatelist = [gates.Unitary(u4 @ u1, q0), gates.Unitary(v4 @ v1, q1)]
-    elif np.allclose(hz, 0):
-        gatelist = cnot_decomposition_light(q0, q1, hx, hy, backend=backend)
-        if ud is None:
-            return gatelist
-        g0, g1 = gatelist[:2]
-        gatelist[0] = gates.Unitary(backend.cast(g0.parameters[0]) @ u1, q0)
-        gatelist[1] = gates.Unitary(backend.cast(g1.parameters[0]) @ v1, q1)
-
-        g0, g1 = gatelist[-2:]
-        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
-        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    else:
-        cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz, backend=backend)
-        if ud is None:
-            return cnot_dec
-
-        gatelist = [
-            gates.Unitary(u1, q0),
-            gates.Unitary(backend.cast(H) @ v1, q1),
-        ]
-        gatelist.extend(cnot_dec[1:])
-        g0, g1 = gatelist[-2:]
-        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
-        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
-
-    return gatelist
+    z_component = _get_z_component(unitary, backend)
+    if abs(z_component) < threshold:
+        return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
+    return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)

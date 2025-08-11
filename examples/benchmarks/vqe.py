@@ -13,7 +13,7 @@ from qibo import (
     gates,
     get_backend,
     get_device,
-    get_precision,
+    get_dtype,
     get_threads,
     set_backend,
 )
@@ -61,7 +61,7 @@ def main(
             "nlayers": nlayers,
             "fuse": fuse,
             "backend": get_backend(),
-            "precision": get_precision(),
+            "dtype": get_dtype(),
             "device": get_device(),
             "threads": get_threads(),
             "method": method,
