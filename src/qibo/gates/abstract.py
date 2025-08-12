@@ -87,6 +87,8 @@ class Gate:
         self.device_gates = set()
         self.original_gate = None
 
+        self._clifford = False
+
     @property
     def clifford(self):
         """Return boolean value representing if a Gate is Clifford or not."""

@@ -211,7 +211,6 @@ class CliffordBackend(NumpyBackend):
                 pauli_symplectic[q] = 1
             if term in ["Z", "Y"]:
                 pauli_symplectic[q + nqubits] = 1
-
         return pauli_symplectic
 
     def _compute_symplectic_matrix(self, unitary, m):
@@ -246,7 +245,6 @@ class CliffordBackend(NumpyBackend):
                         break
                 if found:
                     break
-
         return symplectic % 2
 
     def _get_phase_vector_hk(self, unitary, m):
@@ -312,8 +310,65 @@ class CliffordBackend(NumpyBackend):
         sv_lows_sv = np.dot(symplectic_vector, lows @ symplectic_vector)
         delta_pd_dot_sv = delta * pd_dot_sv
         new_epsilon = (epsilon + ph_dot_sv + sv_lows_sv + delta_pd_dot_sv) % 2
-
         return new_symplectic_vector, new_epsilon, new_delta
+
+    def _convert_dehaene_to_aaronson(self, dehaene_tableau):
+        """
+        Convert Dehaene-De Moor tableau with two phase columns to Aaronson-Gottesman format.
+
+        Dehaene-De Moor format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase/sign (:math`0=+1`, :math`1=-1`)
+        - Column :math`2n+1`: :math`i`-phase (powers of :math`i`)
+
+        Aaronson-Gottesman format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
+
+        Args:
+            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)` in extended Dehaene-De Moor format.
+
+        Returns:
+            (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
+        """
+        n_rows, n_cols = dehaene_tableau.shape
+        n = (n_cols - 2) // 2
+
+        X_part = dehaene_tableau[:, :n]
+        Z_part = dehaene_tableau[:, n : 2 * n]
+        real_phases = dehaene_tableau[:, -2]
+        i_phases = dehaene_tableau[:, -1]
+
+        final_real_phases = np.zeros_like(real_phases, dtype=np.uint8)
+        for row_idx in range(n_rows - 1):
+            x_vec = X_part[row_idx]
+            z_vec = Z_part[row_idx]
+            real_phase = real_phases[row_idx]
+            i_phase = i_phases[row_idx]
+
+            y_count = np.sum(x_vec & z_vec)
+
+            total_i_power = (i_phase + y_count) % 4
+
+            final_phase = real_phase
+
+            if total_i_power == 2:
+                # i^2 = -1, flip the sign
+                final_phase = (final_phase + 1) % 2
+            elif total_i_power == 1 or total_i_power == 3:
+                if total_i_power == 1:
+                    # i^1 = i: For each Y operator, convert iY → -XZ
+                    final_phase = (final_phase + y_count) % 2
+                elif total_i_power == 3:
+                    # i^3 = -i: For each Y operator, convert -iY → XZ
+                    final_phase = (final_phase + 1 + y_count) % 2
+
+            final_real_phases[row_idx] = final_phase
+
+        aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
+        return aaronson_tableau
 
     def _embed_clifford(self, symplectic_m, n, qubit_indices):
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
@@ -418,7 +473,7 @@ class CliffordBackend(NumpyBackend):
             state = self._clifford_post_execution_reshape(state, nqubits)
 
             if i_phase:
-                state = self.convert_dehaene_to_aaronson(state)
+                state = self._convert_dehaene_to_aaronson(state)
 
             clifford = Clifford(
                 state,
@@ -545,62 +600,3 @@ class CliffordBackend(NumpyBackend):
             generators = self.cast(generators)
 
         return generators, phases
-
-    def convert_dehaene_to_aaronson(self, dehaene_tableau):
-        """
-        Convert Dehaene-De Moor tableau with two phase columns to Aaronson-Gottesman format.
-
-        Dehaene-De Moor format:
-        - Columns :math`0` to :math`n-1`: X components
-        - Columns :math`n` to :math`2n-1`: Z components
-        - Column :math`2n`: real phase/sign (:math`0=+1`, :math`1=-1`)
-        - Column :math`2n+1`: :math`i`-phase (powers of :math`i`)
-
-        Aaronson-Gottesman format:
-        - Columns :math`0` to :math`n-1`: X components
-        - Columns :math`n` to :math`2n-1`: Z components
-        - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
-
-        Args:
-            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)` in extended Dehaene-De Moor format.
-
-        Returns:
-            (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
-        """
-        n_rows, n_cols = dehaene_tableau.shape
-        n = (n_cols - 2) // 2
-
-        X_part = dehaene_tableau[:, :n]
-        Z_part = dehaene_tableau[:, n : 2 * n]
-        real_phases = dehaene_tableau[:, -2]
-        i_phases = dehaene_tableau[:, -1]
-
-        final_real_phases = np.zeros_like(real_phases, dtype=np.uint8)
-        for row_idx in range(n_rows - 1):
-            x_vec = X_part[row_idx]
-            z_vec = Z_part[row_idx]
-            real_phase = real_phases[row_idx]
-            i_phase = i_phases[row_idx]
-
-            y_count = np.sum(x_vec & z_vec)
-
-            total_i_power = (i_phase + y_count) % 4
-
-            final_phase = real_phase
-
-            if total_i_power == 2:
-                # i^2 = -1, flip the sign
-                final_phase = (final_phase + 1) % 2
-            elif total_i_power == 1 or total_i_power == 3:
-                if total_i_power == 1:
-                    # i^1 = i: For each Y operator, convert iY → -XZ
-                    final_phase = (final_phase + y_count) % 2
-                elif total_i_power == 3:
-                    # i^3 = -i: For each Y operator, convert -iY → XZ
-                    final_phase = (final_phase + 1 + y_count) % 2
-
-            final_real_phases[row_idx] = final_phase
-
-        aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
-
-        return aaronson_tableau
