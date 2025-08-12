@@ -1105,7 +1105,6 @@ def ICS(
             training_circuit, nshots=nshots
         )
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
-        print(expectation)
 
         noisy_expectation = get_expectation_val_with_readout_mitigation(
             training_circuit,
