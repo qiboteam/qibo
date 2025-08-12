@@ -143,7 +143,6 @@ class CliffordBackend(NumpyBackend):
         """Apply a gate to a symplectic matrix."""
         if isinstance(gate, gates.Unitary):
             symplectic_matrix = self.apply_unitary(gate, symplectic_matrix, nqubits)
-
             return symplectic_matrix
 
         operation = getattr(self.engine, gate.__class__.__name__)
@@ -158,13 +157,9 @@ class CliffordBackend(NumpyBackend):
     def apply_unitary(self, gate, symplectic_matrix, nqubits):
         """Apply a unitary gate to a symplectic matrix following
         `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
-        symplectic_matrix = self._clifford_post_execution_reshape(
-            symplectic_matrix, nqubits
-        )[:-1, :]
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
-
-        matrix = gate.matrix(backend=super())
+        matrix = gate._parameters[0]
         symplectic_m = self._compute_symplectic_matrix(matrix, m)
         phase_h_m = self._get_phase_vector_hk(matrix, m)
         phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
@@ -188,7 +183,6 @@ class CliffordBackend(NumpyBackend):
             symplectic_matrix[i, 2 * nqubits] = symplectic_pauli[1]
             symplectic_matrix[i, 2 * nqubits + 1] = symplectic_pauli[2]
 
-        symplectic_matrix = self._clifford_pre_execution_reshape(symplectic_matrix)
         return symplectic_matrix
 
     def _pauli_string_to_matrix(self, pauli_str):
@@ -212,7 +206,7 @@ class CliffordBackend(NumpyBackend):
                 pauli_symplectic[q] = 1
             if term in ["Z", "Y"]:
                 pauli_symplectic[q + nqubits] = 1
-        return pauli_symplectic
+        return self.cast(pauli_symplectic, dtype=pauli_symplectic.dtype)
 
     def _compute_symplectic_matrix(self, unitary, m):
         """Compute symplectic matrix for Clifford unitary on :math`m` qubits."""
@@ -280,7 +274,7 @@ class CliffordBackend(NumpyBackend):
                 ):
                     phase[j] = 1
                     break
-        return phase
+        return self.cast(phase, dtype=phase.dtype)
 
     def _get_phase_vector_dk(self, symplectic, m):
         """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
@@ -288,8 +282,9 @@ class CliffordBackend(NumpyBackend):
         """
         u_matrix = np.zeros((2 * m, 2 * m), dtype=int)
         u_matrix[0:m, m : 2 * m] = np.eye(m)
+        u_matrix = self.cast(u_matrix, dtype=u_matrix.dtype)
         d = np.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
-        return d
+        return self.cast(d, dtype=d.dtype)
 
     def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits):
         """Compute the conjugate of a Pauli operator under a symplectic transformation."""
@@ -303,6 +298,8 @@ class CliffordBackend(NumpyBackend):
 
         u_matrix = np.zeros((2 * nqubits, 2 * nqubits), dtype=int)
         u_matrix[0:nqubits, nqubits : 2 * nqubits] = np.eye(nqubits)
+        u_matrix = self.cast(u_matrix, dtype=u_matrix.dtype)
+
         lows = np.tril(
             (
                 symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
@@ -364,7 +361,7 @@ class CliffordBackend(NumpyBackend):
             final_real_phases[row_idx] = final_phase
 
         aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
-        return aaronson_tableau
+        return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
 
     def _embed_clifford(self, symplectic_m, n, qubit_indices):
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
@@ -460,16 +457,17 @@ class CliffordBackend(NumpyBackend):
                 if initial_state is None
                 else initial_state
             )
-            state = self._clifford_pre_execution_reshape(state)
+            if i_phase is False:
+                state = self._clifford_pre_execution_reshape(state)
             for gate in circuit.queue:
-                if i_phase and isinstance(gate, gates.M) is False:
-                    gate = gates.Unitary(gate.matrix(super()), *gate.qubits)
+                if i_phase and not isinstance(gate, (gates.M, gates.Unitary)):
+                    gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
                 state = gate.apply_clifford(self, state, nqubits)
-
-            state = self._clifford_post_execution_reshape(state, nqubits)
 
             if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
+            else:
+                state = self._clifford_post_execution_reshape(state, nqubits)
 
             clifford = Clifford(
                 state,
