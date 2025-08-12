@@ -977,7 +977,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     sampled_circuit = sample_clifford_training_circuit(
-        circuit, seed=local_state, backend=backend
+        circuit, seed=local_state, backend=SIMULATION_BACKEND
     )
 
     result = CLIFORD_BACKEND.execute_circuit(sampled_circuit.invert(), nshots=1)
