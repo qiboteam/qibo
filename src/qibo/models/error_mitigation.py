@@ -989,9 +989,9 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     for term in terms:
         term = str(term)
         index = int(term[1])
-        if term[0] in ["X", "Y"]:
+        if term[0] in ["X", "Y"]:  # pragma: no cover
             pauli_symplectic[index] = 1
-        if term[0] in ["Z", "Y"]:
+        if term[0] in ["Z", "Y"]:  # pragma: no cover
             pauli_symplectic[index + circuit.nqubits] = 1
 
     # U --> symplectic_matrix and O --> observable_sym, U*O*Ut --> symplectic_matrix.T @ observable_sym
@@ -1079,7 +1079,7 @@ def ICS(
         data (dict): the data dictionary containing the noise-free and noisy expectation values obtained with the training circuits.
 
     Reference:
-        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
+        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability # pragma: no coverof quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)

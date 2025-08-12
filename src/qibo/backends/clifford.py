@@ -156,7 +156,8 @@ class CliffordBackend(NumpyBackend):
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
     def apply_unitary(self, gate, symplectic_matrix, nqubits):
-        """Apply a unitary gate to a symplectic matrix."""
+        """Apply a unitary gate to a symplectic matrix following
+        `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
         symplectic_matrix = self._clifford_post_execution_reshape(
             symplectic_matrix, nqubits
         )[:-1, :]
@@ -248,8 +249,8 @@ class CliffordBackend(NumpyBackend):
         return symplectic % 2
 
     def _get_phase_vector_hk(self, unitary, m):
-        """Compute phase vector :math`h` of length :math`2m` for Clifford unitary.
-        :math`h[j] = 0` if :math`h g_j h^\\dagger = i^rP_j` with :math`r=0` or :math`1` else :math`1`.
+        """Compute phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
+        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0` or :math`1` else :math`1`.
         """
         pauli_gens = []
         for i in range(m):
@@ -282,12 +283,16 @@ class CliffordBackend(NumpyBackend):
         return phase
 
     def _get_phase_vector_dk(self, symplectic, m):
+        """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
+        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1` else :math`1`.
+        """
         u_matrix = np.zeros((2 * m, 2 * m), dtype=int)
         u_matrix[0:m, m : 2 * m] = np.eye(m)
         d = np.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
         return d
 
     def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits):
+        """Compute the conjugate of a Pauli operator under a symplectic transformation."""
         symplectic_matrix, phase_h, phase_d = symplectic_gate
         symplectic_vector, epsilon, delta = symplectic_pauli
 
@@ -353,18 +358,9 @@ class CliffordBackend(NumpyBackend):
             total_i_power = (i_phase + y_count) % 4
 
             final_phase = real_phase
-
             if total_i_power == 2:
                 # i^2 = -1, flip the sign
                 final_phase = (final_phase + 1) % 2
-            elif total_i_power == 1 or total_i_power == 3:
-                if total_i_power == 1:
-                    # i^1 = i: For each Y operator, convert iY → -XZ
-                    final_phase = (final_phase + y_count) % 2
-                elif total_i_power == 3:
-                    # i^3 = -i: For each Y operator, convert -iY → XZ
-                    final_phase = (final_phase + 1 + y_count) % 2
-
             final_real_phases[row_idx] = final_phase
 
         aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
