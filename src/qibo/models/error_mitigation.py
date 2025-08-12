@@ -2,22 +2,24 @@
 
 import math
 from inspect import signature
-from itertools import product
 
-import networkx as nx
 import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
 from qibo.backends import (
+    CliffordBackend,
     NumpyBackend,
     _check_backend,
     _check_backend_and_local_state,
     get_backend,
 )
 from qibo.config import raise_error
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.symbols import X, Y, Z
 
 SIMULATION_BACKEND = NumpyBackend()
+CLIFORD_BACKEND = CliffordBackend(engine="numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -927,30 +929,21 @@ def sample_clifford_training_circuit(
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
 
     for i, gate in enumerate(circuit.queue):
-        if isinstance(gate, gates.M):
-            for q in gate.qubits:
-                gate_rand = gates.Unitary(
-                    random_clifford(
-                        1, return_circuit=False, seed=local_state, backend=backend
-                    ),
-                    q,
-                )
-                gate_rand.clifford = True
-                sampled_circuit.add(gate_rand)
-            sampled_circuit.add(gate)
-        else:
-            if i in non_clifford_gates_indices:
-                gate = gates.Unitary(
-                    random_clifford(
-                        len(gate.qubits),
-                        return_circuit=False,
-                        seed=local_state,
-                        backend=backend,
-                    ),
-                    *gate.qubits,
-                )
-                gate.clifford = True
-            sampled_circuit.add(gate)
+        if i in non_clifford_gates_indices:
+            clifford_matrix = random_clifford(
+                len(gate.qubits),
+                return_circuit=False,
+                seed=local_state,
+                backend=backend,
+            )
+
+            gate = gates.Unitary(
+                clifford_matrix,
+                *gate.qubits,
+            )
+
+            gate.clifford = True
+        sampled_circuit.add(gate)
 
     return sampled_circuit
 
@@ -979,44 +972,55 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    from qibo import matrices  # pylint: disable=import-outside-toplevel
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
-        comp_basis_to_pauli,
-        random_clifford,
-        vectorization,
-    )
+    from qibo import gates
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     sampled_circuit = sample_clifford_training_circuit(
         circuit, seed=local_state, backend=backend
     )
-    unitary_matrix = sampled_circuit.unitary(backend=backend)
-    num_qubits = sampled_circuit.nqubits
 
-    comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
-    observable.nqubits = num_qubits
-    observable_liouville = vectorization(
-        backend.np.transpose(backend.np.conj(unitary_matrix), (1, 0))
-        @ observable.matrix
-        @ unitary_matrix,
-        order="row",
-        backend=backend,
+    result = CLIFORD_BACKEND.execute_circuit(sampled_circuit.invert(), nshots=1)
+
+    symplectic_matrix = result.symplectic_matrix[:-1, :-1]
+
+    terms = observable.terms[0].factors
+    pauli_symplectic = backend.np.zeros((2 * circuit.nqubits, 1))
+    for term in terms:
+        term = str(term)
+        index = int(term[1])
+        if term[0] in ["X", "Y"]:
+            pauli_symplectic[index] = 1
+        if term[0] in ["Z", "Y"]:
+            pauli_symplectic[index + circuit.nqubits] = 1
+
+    # U --> symplectic_matrix and O --> observable_sym, U*O*Ut --> symplectic_matrix.T @ observable_sym
+    # To get Ut*O*U we need the symplectic_matrix of the inverse circuit Ut
+    pauli_symplectic = (symplectic_matrix.T @ pauli_symplectic) % 2
+
+    observable = 1
+    for i in range(circuit.nqubits):
+        x_component = pauli_symplectic[i] == 1
+        z_component = pauli_symplectic[i + circuit.nqubits] == 1
+        if x_component and z_component:
+            observable *= Y(i, backend=backend)
+        elif x_component:
+            observable *= X(i, backend=backend)
+        elif z_component:
+            observable *= Z(i, backend=backend)
+    observable = SymbolicHamiltonian(
+        observable, nqubits=circuit.nqubits, backend=backend
     )
-    observable_pauli_liouville = comp_to_pauli @ observable_liouville
 
-    index = int(
-        backend.np.where(backend.np.abs(observable_pauli_liouville) >= 1e-5)[0][0]
-    )
-
-    observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
-
+    terms = observable.terms[0].factors
     adjustment_gates = []
-    for i in range(num_qubits):
-        if observable_pauli[i] in ["X", "Y"]:
-            adjustment_gate = gates.M(i, basis=observable_pauli[i]).basis[0]
+    for term in terms:
+        term = str(term)
+        qubit = int(term[1])
+        if term[0] in ["X", "Y"]:
+            adjustment_gate = gates.M(qubit, basis=term[0]).basis[0]
         else:
-            adjustment_gate = gates.I(i)
+            adjustment_gate = gates.I(qubit)
 
         adjustment_gates.append(adjustment_gate)
 
@@ -1026,7 +1030,6 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         sensitive_circuit.add(gate)
     for gate in sampled_circuit.queue:
         sensitive_circuit.add(gate)
-
     return sensitive_circuit, sampled_circuit, adjustment_gates
 
 
@@ -1102,6 +1105,7 @@ def ICS(
             training_circuit, nshots=nshots
         )
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
+        print(expectation)
 
         noisy_expectation = get_expectation_val_with_readout_mitigation(
             training_circuit,
