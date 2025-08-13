@@ -299,17 +299,15 @@ class Bloch:
         manager = self._backend.new_figure_manager_given_figure(1, self.fig)
         manager.show()
         manager.set_window_title("Bloch Sphere")
-        self._backend.Show().mainloop()
+        show = self._backend.Show()
+        show.mainloop()
+
 
     def _tk_window(self):
         "Helper method to `plot()` for the `tkagg` backend."
 
         root = tk.Tk()
         root.title("Bloch Sphere")
-        # Frame
-        frame = tk.Frame(root)
-
-        # Canvas widget
         canvas = self._backend.FigureCanvasTkAgg(self.fig, master=root)
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
