@@ -1,41 +1,63 @@
 import matplotlib
 import numpy as np
 import pytest
+import tkinter
 
+from matplotlib.figure import Figure
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
+from unittest.mock import patch
 
-BACKEND = "qtagg"
+BACKEND = "tkagg"
 
+@pytest.fixture(params=["tkagg", "qtagg"])
+def BACKEND(request):
+    return request.param
 
-def test_empty_sphere():
-    bs = Bloch(backend=BACKEND)
+def run_test(bs, mock_draw, mock_mainloop):
     bs.plot()
+    mock_draw.assert_called_once()
+    mock_mainloop.assert_called_once()
+
+def patch_qtagg_tkagg(bs):
+    if BACKEND == "tkagg":
+        with patch.object(bs._backend.FigureCanvas, "draw") as mock_draw, \
+         patch("tkinter.Tk.mainloop") as mock_mainloop:
+            run_test(bs, mock_draw, mock_mainloop)
+    elif BACKEND == "qtagg":
+        with patch.object(bs._backend, "Show") as mock_draw:
+            instance = mock_draw.return_value
+            with patch.object(instance, "mainloop") as mock_mainloop:
+                run_test(bs, mock_draw, mock_mainloop)
 
 
-def test_state():
+def test_empty_sphere(BACKEND):
+    bs = Bloch(backend=BACKEND)
+    patch_qtagg_tkagg(bs)
+
+
+def test_state(BACKEND):
     bs = Bloch(backend=BACKEND)
     state = np.array([1 / np.sqrt(2), 1 / np.sqrt(2) * 1j], dtype="complex")
     bs.add_state(state)
-    bs.plot()
+    
 
-
-def test_vector_point():
+def test_vector_point(BACKEND):
     bs = Bloch(backend=BACKEND)
     vector = np.array([0, 0, 1])
     bs.add_vector(vector, mode="point", color="green")
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_multiple_vectors_array():
+def test_multiple_vectors_array(BACKEND):
     bs = Bloch(backend=BACKEND)
     vectors = np.random.normal(size=(100, 3))
     vectors /= np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     bs.add_vector(vectors, color="royalblue")
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_multiple_vectors_list():
+def test_multiple_vectors_list(BACKEND):
     bs = Bloch(backend=BACKEND)
 
     vectors = []
@@ -45,18 +67,18 @@ def test_multiple_vectors_list():
         vectors.append(vector)
 
     bs.add_vector(vectors, color=["royalblue"] * 100)
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_multiple_states():
+def test_multiple_states(BACKEND):
     bs = Bloch(backend=BACKEND)
     states = np.random.normal(size=(100, 2))
     states /= np.linalg.norm(states, axis=1)[:, np.newaxis]
     bs.add_state(states)
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_state_clear():
+def test_state_clear(BACKEND):
     bs = Bloch(backend=BACKEND)
 
     states = np.zeros(shape=(100, 2), dtype="complex")
@@ -69,10 +91,10 @@ def test_state_clear():
         states[i] = state
 
     bs.add_state(states)
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
     bs.clear()
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
 def _circuit():
@@ -83,7 +105,7 @@ def _circuit():
     return circ
 
 
-def test_classification():
+def test_classification(BACKEND):
     bs = Bloch(backend=BACKEND)
     bs.add_state(np.array([1, 0]), color="black")
     bs.add_state(np.array([0, 1]), color="black")
@@ -96,10 +118,10 @@ def test_classification():
         state = _circuit()(np.array([0, 1], dtype="complex")).state()
         bs.add_state(state, mode="point", color="blue")
 
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_multi_classification():
+def test_multi_classification(BACKEND):
     bs = Bloch(backend=BACKEND)
     bs.add_state(np.array([1, 0]), color="black")
     bs.add_state(np.array([0, 1]), color="black")
@@ -119,10 +141,10 @@ def test_multi_classification():
         state = circ(np.array([0, 1], dtype="complex")).state()
         bs.add_state(state, mode="point", color="blue")
 
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_qibo_output():
+def test_qibo_output(BACKEND):
     bs = Bloch(backend=BACKEND)
 
     # --Circuit--
@@ -136,10 +158,10 @@ def test_qibo_output():
     # state
     state = circ().state()
     bs.add_state(state, color="orange")
-    bs.plot()
+    patch_qtagg_tkagg(bs)
 
 
-def test_point_vector_state():
+def test_point_vector_state(BACKEND):
     bs = Bloch(backend=BACKEND)
 
     nqubits = 1
@@ -161,11 +183,10 @@ def test_point_vector_state():
     vector = np.array([1, 0, 0])
     bs.add_vector(vector, mode="vector", color="red")
 
-    bs.plot()
-
+    patch_qtagg_tkagg(bs)
 
 def test_save():
-    bs = Bloch(backend=BACKEND)
+    bs = Bloch(backend="agg")
 
     nqubits = 1
     layers = 2
@@ -178,11 +199,3 @@ def test_save():
     bs.add_state(state, color=["orange"])
     bs.save("bloch.pdf")
 
-
-def class_state():
-
-    circ = _circuit()
-    state = circ().state()
-    vector = [[0, 1, 0], [0, 1, 1]]
-    bs = Bloch(backend=BACKEND)
-    bs.plot()
