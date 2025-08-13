@@ -302,7 +302,6 @@ class Bloch:
         show = self._backend.Show()
         show.mainloop()
 
-
     def _tk_window(self):
         "Helper method to `plot()` for the `tkagg` backend."
 

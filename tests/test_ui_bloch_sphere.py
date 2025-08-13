@@ -1,28 +1,33 @@
+import tkinter
+from unittest.mock import patch
+
 import matplotlib
 import numpy as np
 import pytest
-import tkinter
-
 from matplotlib.figure import Figure
+
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
-from unittest.mock import patch
 
 BACKEND = "tkagg"
+
 
 @pytest.fixture(params=["tkagg", "qtagg"])
 def BACKEND(request):
     return request.param
+
 
 def run_test(bs, mock_draw, mock_mainloop):
     bs.plot()
     mock_draw.assert_called_once()
     mock_mainloop.assert_called_once()
 
+
 def patch_qtagg_tkagg(bs):
     if BACKEND == "tkagg":
-        with patch.object(bs._backend.FigureCanvas, "draw") as mock_draw, \
-         patch("tkinter.Tk.mainloop") as mock_mainloop:
+        with patch.object(bs._backend.FigureCanvas, "draw") as mock_draw, patch(
+            "tkinter.Tk.mainloop"
+        ) as mock_mainloop:
             run_test(bs, mock_draw, mock_mainloop)
     elif BACKEND == "qtagg":
         with patch.object(bs._backend, "Show") as mock_draw:
@@ -40,7 +45,7 @@ def test_state(BACKEND):
     bs = Bloch(backend=BACKEND)
     state = np.array([1 / np.sqrt(2), 1 / np.sqrt(2) * 1j], dtype="complex")
     bs.add_state(state)
-    
+
 
 def test_vector_point(BACKEND):
     bs = Bloch(backend=BACKEND)
@@ -185,6 +190,7 @@ def test_point_vector_state(BACKEND):
 
     patch_qtagg_tkagg(bs)
 
+
 def test_save():
     bs = Bloch(backend="agg")
 
@@ -198,4 +204,3 @@ def test_save():
 
     bs.add_state(state, color=["orange"])
     bs.save("bloch.pdf")
-
