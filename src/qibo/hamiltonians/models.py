@@ -166,6 +166,11 @@ def LABS(nqubits: int, dense: bool = True, backend: Optional[Backend] = None):
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
+
+    References:
+        1. T. Packebusch and S. Mertens, *Low autocorrelation binary sequences*,
+        `J. Phys. A: Math. Theor. 49 (2016) 165001 
+        <https://doi.org/10.1088/1751-8113/49/16/165001>`_.
     """
     if nqubits < 2:
         raise_error(
