@@ -169,7 +169,7 @@ def LABS(nqubits: int, dense: bool = True, backend: Optional[Backend] = None):
 
     References:
         1. T. Packebusch and S. Mertens, *Low autocorrelation binary sequences*,
-        `J. Phys. A: Math. Theor. 49 (2016) 165001 
+        `J. Phys. A: Math. Theor. 49 (2016) 165001
         <https://doi.org/10.1088/1751-8113/49/16/165001>`_.
     """
     if nqubits < 2:
