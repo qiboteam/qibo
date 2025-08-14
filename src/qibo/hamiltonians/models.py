@@ -155,7 +155,7 @@ def LABS(nqubits: int, dense: bool = True, backend: Optional[Backend] = None):
     .. math::
         E(b) = \\sum_{j=1}^{n-1} \\, C_{j}^{2}(b) \\, ;
         \\quad C_{j}(b) = \\sum_{k=0}^{n-j} \\, b_{k} \\, b_{k + j} \\, ,
-    
+
     where :math:`C_{j}(b)` is the :math:`j`-th *autocorrelation* of :math:`b`.
 
     Args:
@@ -179,8 +179,8 @@ def LABS(nqubits: int, dense: bool = True, backend: Optional[Backend] = None):
             symbols.Z(qubit, backend=backend) * symbols.Z(qubit + ind, backend=backend)
             for qubit in range(nqubits - ind)
         )
-        hamiltonian += term ** 2
-    
+        hamiltonian += term**2
+
     hamiltonian = SymbolicHamiltonian(hamiltonian, nqubits=nqubits, backend=backend)
 
     if dense:
