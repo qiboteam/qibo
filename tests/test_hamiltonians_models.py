@@ -5,7 +5,7 @@ import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.hamiltonians.models import XXX, Heisenberg, LABS
+from qibo.hamiltonians.models import LABS, XXX, Heisenberg
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
