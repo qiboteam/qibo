@@ -449,7 +449,6 @@ class CliffordBackend(NumpyBackend):
         try:
             nqubits = circuit.nqubits
             i_phase = False
-            meas = False
             if any(isinstance(gate, gates.Unitary) for gate in circuit.queue):
                 i_phase = True
             state = (
@@ -461,14 +460,16 @@ class CliffordBackend(NumpyBackend):
                 state = self._clifford_pre_execution_reshape(state)
             for gate in circuit.queue:
                 if i_phase:
-                    if not isinstance(gate, (gates.M, gates.Unitary)):
-                        gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
                     if isinstance(gate, gates.M):
-                        state = self._convert_dehaene_to_aaronson(state)
-                        state = self._clifford_pre_execution_reshape(state)
-                        meas = True
+                        if gate.collapse:
+                            raise_error(
+                                NotImplementedError,
+                                "Collapsing measurements with `gates.Unitary` are not implemented in the `CliffordBackend`.",
+                            )
+                    elif not isinstance(gate, gates.Unitary):
+                        gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
                 gate.apply_clifford(self, state, nqubits)
-            if i_phase and not meas:
+            if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
                 state = self._clifford_post_execution_reshape(state, nqubits)
