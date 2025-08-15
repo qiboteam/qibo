@@ -164,7 +164,8 @@ def ZNE(
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
             to simulate noisy computation.
-        nshots (int, optional): Number of shots. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
             equations to obtain the ``gamma`` coefficients. Default is ``False``.
         global_unitary_folding (bool, optional): If ``True``, noise is increased by global unitary folding.
@@ -206,16 +207,22 @@ def ZNE(
             global_unitary_folding,
             insertion_gate=insertion_gate,
         )
-        val = get_expectation_val_with_readout_mitigation(
-            noisy_circuit,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            circuit_result = _execute_circuit(
+                noisy_circuit, qubit_map, noise_model, nshots, backend=backend
+            )
+            val = float(observable.expectation(circuit_result.state()))
+        else:
+            val = get_expectation_val_with_readout_mitigation(
+                noisy_circuit,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
         expected_values.append(val)
 
     expected_values = backend.cast(expected_values, dtype=type(expected_values[0]))
@@ -381,7 +388,8 @@ def CDR(
         observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): observable to be measured.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for simulating
             noisy computation.
-        nshots (int, optional): number of shots. Defaults :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -426,19 +434,26 @@ def CDR(
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
         result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(val)
-        val = get_expectation_val_with_readout_mitigation(
-            circ,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
-        train_val["noisy"].append(val)
+        if nshots is None:
+            val_noiseless = observable.expectation(result.state())
+            circuit_result = _execute_circuit(
+                circ, qubit_map, noise_model, nshots, backend=backend
+            )
+            val_noisy = float(observable.expectation(circuit_result.state()))
+        else:
+            val_noiseless = result.expectation_from_samples(observable)
+            val_noisy = get_expectation_val_with_readout_mitigation(
+                circ,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
+        train_val["noise-free"].append(val_noiseless)
+        train_val["noisy"].append(val_noisy)
 
     nparams = (
         len(signature(model).parameters) - 1
@@ -462,16 +477,22 @@ def CDR(
         train_val_noiseless,
     )
 
-    val = get_expectation_val_with_readout_mitigation(
-        circuit,
-        observable,
-        noise_model,
-        nshots,
-        readout,
-        qubit_map,
-        seed=local_state,
-        backend=backend,
-    )
+    if nshots is None:
+        circuit_result = _execute_circuit(
+            circuit, qubit_map, noise_model, nshots, backend=backend
+        )
+        val = float(observable.expectation(circuit_result.state()))
+    else:
+        val = get_expectation_val_with_readout_mitigation(
+            circuit,
+            observable,
+            noise_model,
+            nshots,
+            readout,
+            qubit_map,
+            seed=local_state,
+            backend=backend,
+        )
     mit_val = model(val, *optimal_params)
 
     if full_output:
@@ -504,7 +525,8 @@ def vnCDR(
         noise_levels (numpy.ndarray): sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for
             simulating noisy computation.
-        nshots (int, optional): number of shots. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -555,20 +577,29 @@ def vnCDR(
 
     for circ in training_circuits:
         result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
+        if nshots is None:
+            val = observable.expectation(result.state())
+        else:
+            val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
-            val = get_expectation_val_with_readout_mitigation(
-                noisy_c,
-                observable,
-                noise_model,
-                nshots,
-                readout,
-                qubit_map,
-                seed=local_state,
-                backend=backend,
-            )
+            if nshots is None:
+                circuit_result = _execute_circuit(
+                    noisy_c, qubit_map, noise_model, nshots, backend=backend
+                )
+                val = float(observable.expectation(circuit_result.state()))
+            else:
+                val = get_expectation_val_with_readout_mitigation(
+                    noisy_c,
+                    observable,
+                    noise_model,
+                    nshots,
+                    readout,
+                    qubit_map,
+                    seed=local_state,
+                    backend=backend,
+                )
             train_val["noisy"].append(float(val.real))
 
     train_val_noisy = train_val["noisy"]
@@ -593,16 +624,22 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
-        expval = get_expectation_val_with_readout_mitigation(
-            noisy_c,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            circuit_result = _execute_circuit(
+                noisy_c, qubit_map, noise_model, nshots, backend=backend
+            )
+            expval = float(observable.expectation(circuit_result.state()))
+        else:
+            expval = get_expectation_val_with_readout_mitigation(
+                noisy_c,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
         val.append(expval)
 
     mit_val = model(
@@ -834,7 +871,7 @@ def get_expectation_val_with_readout_mitigation(
     seed=None,
     backend=None,
 ):
-    """
+    """CDR
     Applies readout error mitigation to the given circuit and observable.
 
     Args:
@@ -1060,7 +1097,8 @@ def ICS(
         qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used.
             Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
-        nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         n_training_samples (int, optional): the number of training samples. Defaults to 10.
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
@@ -1105,18 +1143,26 @@ def ICS(
         circuit_result = CLIFORD_BACKEND.execute_circuit(
             training_circuit_copy, nshots=nshots
         )
-        expectation = observable.expectation_from_samples(circuit_result.frequencies())
-
-        noisy_expectation = get_expectation_val_with_readout_mitigation(
-            training_circuit,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            expectation = observable.expectation(circuit_result.state())
+            circuit_result = _execute_circuit(
+                training_circuit, qubit_map, noise_model, nshots, backend=backend
+            )
+            noisy_expectation = float(observable.expectation(circuit_result.state()))
+        else:
+            expectation = observable.expectation_from_samples(
+                circuit_result.frequencies()
+            )
+            noisy_expectation = get_expectation_val_with_readout_mitigation(
+                training_circuit,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
 
         data["noise-free"].append(expectation)
         data["noisy"].append(noisy_expectation)
@@ -1126,16 +1172,22 @@ def ICS(
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 
-    noisy_expectation = get_expectation_val_with_readout_mitigation(
-        circuit,
-        observable,
-        noise_model,
-        nshots,
-        readout,
-        qubit_map,
-        seed=local_state,
-        backend=backend,
-    )
+    if nshots is None:
+        circuit_result = _execute_circuit(
+            circuit, qubit_map, noise_model, nshots, backend=backend
+        )
+        noisy_expectation = float(observable.expectation(circuit_result.state()))
+    else:
+        noisy_expectation = get_expectation_val_with_readout_mitigation(
+            circuit,
+            observable,
+            noise_model,
+            nshots,
+            readout,
+            qubit_map,
+            seed=local_state,
+            backend=backend,
+        )
     one_dep_squared = (1 - dep_param) ** 2
     dep_std_squared = dep_param_std**2
 
@@ -1185,6 +1237,8 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         circuit.wire_names = qubit_map
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
+        if nshots is None:
+            circuit.density_matrix = True
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     return circuit_result
