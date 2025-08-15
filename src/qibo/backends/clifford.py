@@ -459,8 +459,7 @@ class CliffordBackend(NumpyBackend):
             )
             if i_phase is False:
                 state = self._clifford_pre_execution_reshape(state)
-            circuit_copy = circuit.copy(deep=True)
-            for gate in circuit_copy.queue:
+            for gate in circuit.queue:
                 if i_phase:
                     if not isinstance(gate, (gates.M, gates.Unitary)):
                         gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
@@ -475,7 +474,7 @@ class CliffordBackend(NumpyBackend):
                 state = self._clifford_post_execution_reshape(state, nqubits)
             clifford = Clifford(
                 state,
-                measurements=circuit_copy.measurements,
+                measurements=circuit.measurements,
                 nshots=nshots,
                 _backend=self,
             )

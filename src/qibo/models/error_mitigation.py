@@ -1101,8 +1101,9 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
+        training_circuit_copy = training_circuit.copy(deep=True)
         circuit_result = CLIFORD_BACKEND.execute_circuit(
-            training_circuit, nshots=nshots
+            training_circuit_copy, nshots=nshots
         )
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
