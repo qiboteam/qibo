@@ -142,8 +142,7 @@ class CliffordBackend(NumpyBackend):
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         """Apply a gate to a symplectic matrix."""
         if isinstance(gate, gates.Unitary):
-            symplectic_matrix = self.apply_unitary(gate, symplectic_matrix, nqubits)
-            return symplectic_matrix
+            return self.apply_unitary(gate, symplectic_matrix, nqubits)
 
         operation = getattr(self.engine, gate.__class__.__name__)
 
@@ -450,6 +449,7 @@ class CliffordBackend(NumpyBackend):
         try:
             nqubits = circuit.nqubits
             i_phase = False
+            meas = False
             if any(isinstance(gate, gates.Unitary) for gate in circuit.queue):
                 i_phase = True
             state = (
@@ -459,23 +459,26 @@ class CliffordBackend(NumpyBackend):
             )
             if i_phase is False:
                 state = self._clifford_pre_execution_reshape(state)
-            for gate in circuit.queue:
-                if i_phase and not isinstance(gate, (gates.M, gates.Unitary)):
-                    gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
-                state = gate.apply_clifford(self, state, nqubits)
-
-            if i_phase:
+            circuit_copy = circuit.copy(deep=True)
+            for gate in circuit_copy.queue:
+                if i_phase:
+                    if not isinstance(gate, (gates.M, gates.Unitary)):
+                        gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
+                    if isinstance(gate, gates.M):
+                        state = self._convert_dehaene_to_aaronson(state)
+                        state = self._clifford_pre_execution_reshape(state)
+                        meas = True
+                gate.apply_clifford(self, state, nqubits)
+            if i_phase and not meas:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
                 state = self._clifford_post_execution_reshape(state, nqubits)
-
             clifford = Clifford(
                 state,
-                measurements=circuit.measurements,
+                measurements=circuit_copy.measurements,
                 nshots=nshots,
                 _backend=self,
             )
-
             return clifford
 
         except self.oom_error:  # pragma: no cover
