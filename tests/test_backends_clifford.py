@@ -281,6 +281,16 @@ def test_collapsing_measurements(backend, seed):
         clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
     )
 
+    matrix = random_clifford(1, return_circuit=False, backend=numpy_bkd)
+    gate = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), 0)
+    gate.clifford = True
+    c1 = Circuit(3)
+    c1.add(gate)
+    c1.add(gates.M(0))
+    c1.add(gate)
+    with pytest.raises(NotImplementedError):
+        clifford_bkd.execute_circuit(c1, nshots=1000)
+
 
 def test_non_clifford_error(backend):
     clifford_bkd = construct_clifford_backend(backend)
