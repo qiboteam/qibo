@@ -1012,8 +1012,12 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     """
     from qibo import gates
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
-    backend = CliffordBackend(engine=_get_engine_name(backend))
+    backend_temp, local_state = _check_backend_and_local_state(seed, backend)
+    backend = (
+        CliffordBackend(engine=_get_engine_name(backend_temp))
+        if backend is None
+        else backend_temp
+    )  # pragma: no cover
 
     sampled_circuit = sample_clifford_training_circuit(
         circuit, seed=local_state, backend=backend
