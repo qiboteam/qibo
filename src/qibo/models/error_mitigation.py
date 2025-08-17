@@ -12,6 +12,7 @@ from qibo.backends import (
     NumpyBackend,
     _check_backend,
     _check_backend_and_local_state,
+    _get_engine_name,
     get_backend,
 )
 from qibo.config import raise_error
@@ -996,8 +997,8 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. if ``None``, it uses the current backend.
+        backend (:class:`qibo.backends.CliffordBackend`, optional): Clifford backend to be used
+            in the execution. if ``None``, it uses the `CliffordBackend` with the platform of the current backend as engine.
             Defaults to ``None``.
 
     Returns:
@@ -1012,12 +1013,13 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     from qibo import gates
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = CliffordBackend(engine=_get_engine_name(backend))
 
     sampled_circuit = sample_clifford_training_circuit(
-        circuit, seed=local_state, backend=SIMULATION_BACKEND
+        circuit, seed=local_state, backend=backend
     )
 
-    result = CLIFORD_BACKEND.execute_circuit(sampled_circuit.invert(), nshots=1)
+    result = backend.execute_circuit(sampled_circuit.invert(), nshots=1)
 
     symplectic_matrix = result.symplectic_matrix[:-1, :-1]
 
@@ -1129,9 +1131,9 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, seed=local_state, backend=backend)[
-            0
-        ]
+        error_sensitive_circuit(
+            circuit, observable, seed=local_state, backend=CLIFORD_BACKEND
+        )[0]
         for _ in range(n_training_samples)
     ]
 
