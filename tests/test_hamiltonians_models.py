@@ -64,6 +64,9 @@ def test_maxcut(backend, nqubits, adj_matrix, dense):
 @pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_labs(backend, nqubits, dense):
+    with pytest.raises(ValueError):
+        hamiltonian = LABS(1, dense=dense, backend=backend)
+
     Z = lambda x: symbols.Z(x, backend=backend)
 
     if nqubits == 3:
