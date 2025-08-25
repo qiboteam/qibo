@@ -1,9 +1,9 @@
 """Module defining the Clifford backend."""
 
 import collections
-from itertools import product
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
+from itertools import product
 from typing import Union
 
 import numpy as np
