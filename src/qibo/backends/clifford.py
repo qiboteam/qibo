@@ -1,7 +1,7 @@
 """Module defining the Clifford backend."""
 
 import collections
-import itertools
+from itertools import product
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from typing import Union
@@ -227,7 +227,7 @@ class CliffordBackend(NumpyBackend):
             pauli_uconj = unitary @ pauli @ unitary.conj().T
 
             found = False
-            for candidate_str in itertools.product("IXYZ", repeat=m):
+            for candidate_str in product("IXYZ", repeat=m):
                 candidate_str = "".join(candidate_str)
                 candidate_P = self._pauli_string_to_matrix(candidate_str)
 
@@ -260,7 +260,7 @@ class CliffordBackend(NumpyBackend):
             pauli = self._pauli_string_to_matrix(p_str)
             pauli_uconj = unitary @ pauli @ unitary.conj().T
 
-            for candidate_str in itertools.product("IXYZ", repeat=m):
+            for candidate_str in product("IXYZ", repeat=m):
                 candidate_str = "".join(candidate_str)
                 candidate_P = self._pauli_string_to_matrix(candidate_str)
                 if np.allclose(pauli_uconj, candidate_P) or np.allclose(
