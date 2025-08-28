@@ -658,3 +658,6 @@ class ParametrizedGate(Gate):
         backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)
+
+    def gradient(self, backend=None):
+        raise_error(NotImplemented)
