@@ -538,3 +538,24 @@ class NumpyMatrices:
 
     def Unitary(self, u):
         return self.np.asarray(u, dtype=self.dtype)
+
+    def CallbackGate(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def PartialTrace(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def UnitaryChannel(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def PauliNoiseChannel(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def ResetChannel(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def ThermalRelaxationChannel(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def FusedGate(self):  # pragma: no cover
+        raise_error(NotImplementedError)
