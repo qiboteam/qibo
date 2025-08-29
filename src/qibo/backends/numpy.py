@@ -138,16 +138,17 @@ class NumpyBackend(Backend):
             _matrix = _matrix(2 ** len(gate.target_qubits))
         elif name == "Align":
             _matrix = _matrix(0, 2)
-        elif name == "FanOut":
-            _matrix = _matrix(*gate.init_args)
-        elif name == "GeneralizedRBS":
-            kwargs = dict(gate.init_kwargs)  # copy necessary
-            del kwargs["trainable"]
-            _matrix = _matrix(*gate.init_args, **kwargs)
         elif callable(_matrix):
-            kwargs = dict(gate.init_kwargs)  # copy necessary
-            del kwargs["trainable"]
-            _matrix = _matrix(**kwargs)
+            if name == "FanOut":
+                _matrix = _matrix(*gate.init_args)
+            else:
+                kwargs = dict(gate.init_kwargs)  # copy necessary
+                del kwargs["trainable"]
+                _matrix = (
+                    _matrix(*gate.init_args, **kwargs)
+                    if name == "GeneralizedRBS"
+                    else _matrix(**kwargs)
+                )
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
