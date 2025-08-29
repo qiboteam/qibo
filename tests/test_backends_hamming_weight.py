@@ -242,7 +242,7 @@ def test_n_qubit_gates(backend, weight):
     gate = gates.fSim(0, 1, 0.1, 0.3)
     identity = gates.I(0).matrix(numpy_bkd)
     gate_matrix = gate.matrix(numpy_bkd)
-    gate1_matrix = np.kron(id, gate_matrix)
+    gate1_matrix = np.kron(identity, gate_matrix)
     gate2_matrix = np.kron(gate_matrix, identity)
     gate1 = gates.Unitary(backend.cast(gate1_matrix), 0, 1, 2)
     gate2 = gates.Unitary(backend.cast(gate2_matrix), 0, 1, 2)
