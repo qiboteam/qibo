@@ -2002,3 +2002,22 @@ def test_clifford_condition_update(backend, gate):
 
 
 ###############################################################################
+
+
+@pytest.mark.parametrize(
+    "gate, qubits, params",
+    [
+        ["X", (1,), ()],
+        ["I", (2,), ()],
+        ["I", (2, 3), ()],
+        ["Align", (0,), (1,)],
+        ["FanOut", (0, 2, 3), ()],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1,)],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1, 0.5)],
+    ],
+)
+def test_matrix(backend, gate, qubits, params):
+    gate = getattr(gates, gate)
+    gate = gate(*qubits, *params)
+
+    backend.assert_allclose(gate.matrix(backend), backend.matrix(gate))
