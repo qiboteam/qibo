@@ -64,7 +64,8 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
         raise_error(
             TypeError, f"ngates must be type int, but it is type {type(ngates)}."
         )
-    elif ngates <= 0:
+
+    if ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
@@ -598,11 +599,7 @@ def random_density_matrix(
 
 
 def random_clifford(
-    nqubits: int,
-    return_circuit: bool = True,
-    density_matrix: bool = False,
-    seed=None,
-    backend=None,
+    nqubits: int, return_circuit: bool = True, seed=None, backend=None, **kwargs
 ):
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
     For the mathematical details, see Reference [1].
@@ -611,17 +608,18 @@ def random_clifford(
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` object. Defaults to ``True``.
-        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
-            the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        (ndarray or :class:`qibo.models.Circuit`): Random Clifford operator.
+        :class:`qibo.quantum_info.clifford.Clifford` or :class:`qibo.models.Circuit`:
+        Random Clifford operator.
 
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
