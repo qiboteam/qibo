@@ -698,7 +698,7 @@ def random_clifford(
     cliff = Clifford(tableau)
 
     if return_circuit:
-        return cliff.to_circuit("AG04")
+        return cliff.to_circuit("AG04", **kwargs)
 
     return cliff
 
