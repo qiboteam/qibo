@@ -12,6 +12,7 @@ from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend, _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
+from qibo.quantum_info.clifford import Clifford
 from qibo.quantum_info.superoperator_transformations import (
     choi_to_chi,
     choi_to_kraus,
@@ -184,7 +185,7 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.np.matmul(backend.np.conj(matrix).T, matrix)
+        matrix = backend.np.conj(matrix).T @ matrix
     else:
         matrix = (matrix + backend.np.conj(matrix).T) / 2
 
@@ -235,7 +236,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         D = backend.np.diag(R)
         D = D / backend.np.abs(D)
         R = backend.np.diag(D)
-        unitary = backend.np.matmul(Q, R)
+        unitary = Q @ R
     elif measure is None:
         from scipy.linalg import expm
 
@@ -569,21 +570,16 @@ def random_density_matrix(
             state = random_gaussian_matrix(
                 dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
-            )
+            state = state @ backend.np.transpose(backend.np.conj(state), (1, 0))
             state = state / backend.np.trace(state)
         else:
             nqubits = int(np.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
             state += random_unitary(dims, seed=local_state, backend=backend)
-            state = backend.np.matmul(
-                state,
-                random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
+            state = state @ random_gaussian_matrix(
+                dims, rank, seed=local_state, backend=backend
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
-            )
+            state = state @ backend.np.transpose(backend.np.conj(state), (1, 0))
             state /= backend.np.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
@@ -655,88 +651,59 @@ def random_clifford(
         nqubits, local_state=local_state
     )
 
-    delta_matrix = np.eye(nqubits, dtype=int)
-    delta_matrix_prime = np.copy(delta_matrix)
-
-    gamma_matrix_prime = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix_prime = np.diag(gamma_matrix_prime)
-
-    gamma_matrix = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix = hadamards * gamma_matrix
-    gamma_matrix = np.diag(gamma_matrix)
-
-    # filling off-diagonal elements of gammas and deltas matrices
-    for j in range(nqubits):
-        for k in range(j + 1, nqubits):
-            b = local_state.integers(0, 2)
-            gamma_matrix_prime[k, j] = b
-            gamma_matrix_prime[j, k] = b
-
-            b = local_state.integers(0, 2)
-            delta_matrix_prime[k, j] = b
-
-            if hadamards[k] == 1 and hadamards[j] == 1:  # pragma: no cover
-                b = local_state.integers(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-                if permutations[k] > permutations[j]:
-                    b = local_state.integers(0, 2)
-                    delta_matrix[k, j] = b
-
-            if hadamards[k] == 0 and hadamards[j] == 1:
-                b = local_state.integers(0, 2)
-                delta_matrix[k, j] = b
-                if permutations[k] > permutations[j]:
-                    b = local_state.integers(0, 2)
-                    gamma_matrix[k, j] = b
-                    gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 1
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = local_state.integers(0, 2)
-                gamma_matrix[k, j] = b
-                gamma_matrix[j, k] = b
-
-            if (
-                hadamards[k] == 0
-                and hadamards[j] == 0
-                and permutations[k] < permutations[j]
-            ):  # pragma: no cover
-                b = local_state.integers(0, 2)
-                delta_matrix[k, j] = b
-
-    # get first element of the Borel group
-    clifford_circuit = _operator_from_hadamard_free_group(
-        gamma_matrix, delta_matrix, density_matrix
+    gamma = backend.np.diag(
+        local_state.integers(2, size=nqubits, dtype=backend.np.int8)
     )
-
-    # Apply permutated Hadamard layer
-    for qubit, had in enumerate(hadamards):
-        if had == 1:
-            clifford_circuit.add(gates.H(int(permutations[qubit])))
-
-    # get second element of the Borel group
-    clifford_circuit += _operator_from_hadamard_free_group(
-        gamma_matrix_prime,
-        delta_matrix_prime,
-        density_matrix,
-        random_pauli(
-            nqubits,
-            depth=1,
-            return_circuit=True,
-            density_matrix=density_matrix,
-            seed=local_state,
-            backend=backend,
-        ),
+    gamma_prime = backend.np.diag(
+        local_state.integers(2, size=nqubits, dtype=backend.np.int8)
     )
+    delta = backend.np.eye(nqubits, dtype=backend.np.int8)
+    delta_prime = backend.cast(delta, dtype=delta.dtype)
 
-    if return_circuit is False:
-        clifford_circuit = clifford_circuit.unitary(backend=backend)
+    _fill_tril(gamma, local_state, symmetric=True, backend=backend)
+    _fill_tril(gamma_prime, local_state, symmetric=True, backend=backend)
+    _fill_tril(delta, local_state, symmetric=False, backend=backend)
+    _fill_tril(delta_prime, local_state, symmetric=False, backend=backend)
 
-    return clifford_circuit
+    # For large nqubits numpy.inv function called below can
+    # return invalid output leading to a non-symplectic Clifford
+    # being generated. This can be prevented by manually forcing
+    # block inversion of the matrix.
+    block_inverse_threshold = 50
+
+    # Compute stabilizer table
+    zero = backend.np.zeros((nqubits, nqubits), dtype=np.int8)
+    prod1 = (gamma @ delta) % 2
+    prod2 = (gamma_prime @ delta_prime) % 2
+    inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
+    inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
+    had_free_operator_1 = backend.np.block([[delta, zero], [prod1, inv1]])
+    had_free_operator_2 = backend.np.block([[delta_prime, zero], [prod2, inv2]])
+
+    # Apply qubit permutation
+    table = had_free_operator_2[
+        backend.np.concatenate([permutations, nqubits + permutations])
+    ]
+
+    # Apply layer of Hadamards
+    inds = hadamards * backend.np.arange(1, nqubits + 1)
+    inds = inds[inds > 0] - 1
+    lhs_inds = backend.np.concatenate([inds, inds + nqubits])
+    rhs_inds = backend.np.concatenate([inds + nqubits, inds])
+    table[lhs_inds, :] = table[rhs_inds, :]
+
+    # Apply table
+    tableau = backend.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
+    tableau[:, :-1] = (had_free_operator_1 @ table) % 2
+
+    # Generate random phases
+    tableau[:, -1] = local_state.integers(2, size=2 * nqubits)
+    cliff = Clifford(tableau)
+
+    if return_circuit:
+        return cliff.to_circuit("AG04")
+
+    return cliff
 
 
 def random_pauli(
@@ -1251,3 +1218,85 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = operator @ super_op @ operator
 
     return super_op
+
+
+def _fill_tril(mat, rng, symmetric, backend):
+    """Add symmetric random ints to off-diagonals"""
+    dim = mat.shape[0]
+    # Optimized for low dimensions
+    if dim == 1:
+        return
+
+    if dim <= 4:
+        mat[1, 0] = rng.integers(2, dtype=np.int8)
+        if symmetric:
+            mat[0, 1] = mat[1, 0]
+        if dim > 2:
+            mat[2, 0] = rng.integers(2, dtype=np.int8)
+            mat[2, 1] = rng.integers(2, dtype=np.int8)
+            if symmetric:
+                mat[0, 2] = mat[2, 0]
+                mat[1, 2] = mat[2, 1]
+        if dim > 3:
+            mat[3, 0] = rng.integers(2, dtype=np.int8)
+            mat[3, 1] = rng.integers(2, dtype=np.int8)
+            mat[3, 2] = rng.integers(2, dtype=np.int8)
+            if symmetric:
+                mat[0, 3] = mat[3, 0]
+                mat[1, 3] = mat[3, 1]
+                mat[2, 3] = mat[3, 2]
+        return
+
+    # Use numpy indices for larger dimensions
+    rows, cols = backend.np.tril_indices(dim, -1)
+    vals = rng.integers(2, size=rows.size, dtype=backend.np.int8)
+    mat[(rows, cols)] = vals
+    if symmetric:
+        mat[(cols, rows)] = vals
+
+
+def _inverse_tril(mat, block_inverse_threshold, backend):
+    """Invert a lower-triangular matrix with unit diagonal."""
+    # Optimized inversion function for low dimensions
+    dim = mat.shape[0]
+
+    if dim <= 2:
+        return mat
+
+    if dim <= 5:
+        inv = backend.cast(mat, dtype=mat.dtype, copy=True)
+        inv[2, 0] = mat[2, 0] ^ (mat[1, 0] & mat[2, 1])
+        if dim > 3:
+            inv[3, 1] = mat[3, 1] ^ (mat[2, 1] & mat[3, 2])
+            inv[3, 0] = mat[3, 0] ^ (mat[3, 2] & mat[2, 0]) ^ (mat[1, 0] & inv[3, 1])
+        if dim > 4:
+            inv[4, 2] = (mat[4, 2] ^ (mat[3, 2] & mat[4, 3])) & 1
+            inv[4, 1] = mat[4, 1] ^ (mat[4, 3] & mat[3, 1]) ^ (mat[2, 1] & inv[4, 2])
+            inv[4, 0] = (
+                mat[4, 0]
+                ^ (mat[1, 0] & inv[4, 1])
+                ^ (mat[2, 0] & inv[4, 2])
+                ^ (mat[3, 0] & mat[4, 3])
+            )
+        return inv % 2
+
+    # For higher dimensions we use Numpy's inverse function
+    # however this function tends to fail and result in a non-symplectic
+    # final matrix if n is too large.
+    if dim <= block_inverse_threshold:
+        return backend.cast(backend.np.linalg.inv(mat), backend.np.int8) % 2
+
+    # For very large matrices  we divide the matrix into 4 blocks of
+    # roughly equal size and use the analytic formula for the inverse
+    # of a block lower-triangular matrix:
+    # inv([[A, 0],[C, D]]) = [[inv(A), 0], [inv(D).C.inv(A), inv(D)]]
+    # call the inverse function recursively to compute inv(A) and invD
+
+    dim1 = dim // 2
+    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold)
+    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold)
+    mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
+    inv = backend.np.block(
+        [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
+    )
+    return inv % 2
