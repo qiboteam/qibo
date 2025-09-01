@@ -1293,8 +1293,8 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
     # call the inverse function recursively to compute inv(A) and invD
 
     dim1 = dim // 2
-    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold)
-    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold)
+    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold, backend)
+    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold, backend)
     mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
     inv = backend.np.block(
         [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
