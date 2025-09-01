@@ -2,7 +2,6 @@
 
 import math
 import warnings
-from functools import cache
 from typing import Optional, Union
 
 import numpy as np
@@ -1093,75 +1092,6 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
         del mute_index[k]
 
     return hadamards, permutations
-
-
-@cache
-def _create_S(q):
-    return gates.S(int(q))
-
-
-@cache
-def _create_CZ(cq, tq):
-    return gates.CZ(int(cq), int(tq))
-
-
-@cache
-def _create_CNOT(cq, tq):
-    return gates.CNOT(int(cq), int(tq))
-
-
-def _operator_from_hadamard_free_group(
-    gamma_matrix, delta_matrix, density_matrix: bool = False, pauli_operator=None
-):
-    """Calculates an element :math:`F` of the Hadamard-free group :math:`\\mathcal{F}_{n}`,
-    where :math:`n` is the number of qubits ``nqubits``. For more details,
-    see Reference [1].
-
-    Args:
-        gamma_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
-        delta_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
-        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
-            the circuit would evolve density matrices. Defaults to ``False``.
-        pauli_operator (:class:`qibo.models.Circuit`, optional): a :math:`n`-qubit
-            Pauli operator. If ``None``, it is assumed to be the Identity.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.models.Circuit`: element of the Hadamard-free group.
-
-    Reference:
-        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
-           structure of the Clifford group*.
-           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
-    """
-    if gamma_matrix.shape != delta_matrix.shape:  # pragma: no cover
-        raise_error(
-            ValueError,
-            "gamma_matrix and delta_matrix must have shape (nqubits, nqubits), "
-            + f"but {gamma_matrix.shape} != {delta_matrix.shape}",
-        )
-
-    nqubits = len(gamma_matrix)
-    circuit = Circuit(nqubits, density_matrix=density_matrix)
-
-    if pauli_operator is not None:
-        circuit += pauli_operator
-
-    idx = np.tril_indices(nqubits, k=-1)
-    gamma_ones = gamma_matrix[idx].nonzero()[0]
-    delta_ones = delta_matrix[idx].nonzero()[0]
-
-    S_gates = [_create_S(q) for q in np.diag(gamma_matrix).nonzero()[0]]
-    CZ_gates = [
-        _create_CZ(cq, tq) for cq, tq in zip(idx[1][gamma_ones], idx[0][gamma_ones])
-    ]
-    CNOT_gates = [
-        _create_CNOT(cq, tq) for cq, tq in zip(idx[1][delta_ones], idx[0][delta_ones])
-    ]
-
-    circuit.add(S_gates + CZ_gates + CNOT_gates)
-
-    return circuit
 
 
 def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend):
