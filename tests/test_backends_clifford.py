@@ -291,7 +291,7 @@ def test_stim(backend):
     clifford_stim = CliffordBackend(engine="stim")
 
     nqubits = 3
-    circuit = random_clifford(nqubits, backend=backend)
+    circuit = random_clifford(nqubits, seed=173, backend=backend)
 
     result_qibo = clifford_bkd.execute_circuit(circuit)
     result_stim = clifford_stim.execute_circuit(circuit)
