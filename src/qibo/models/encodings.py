@@ -266,14 +266,22 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
     backend = _check_backend(backend)
+
+    def get_int_type(x:int):
+         # Candidates in increasing size of memory footprint
+        int_types = [backend.np.int8, backend.np.int16, backend.np.int32, backend.np.int64]
+        for dt in int_types:
+            if x <= backend.np.iinfo(dt).max:
+                return  backend.np.dtype(dt)
+
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
-    bitstrings_sorted = backend.cast(
+    bitstrings_sorted = backend.np.array(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
-        dtype=backend.np.int8,
+        dtype=get_int_type(2**nqubits),
     )
 
-    dim = len(data_sorted)
-    sigma = np.arange(2**nqubits)
+    dim   = len(data_sorted)
+    sigma = backend.np.arange(2**nqubits)
 
     flag = backend.np.zeros(dim, dtype=backend.np.int8)
     indexes = list(
@@ -294,13 +302,9 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         else:
             data_binary.append((bi_int, xi))
 
-    sigma = list(sigma)
-
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
-    circuit_binary = sparse_encoder(
-        data_binary, method="farias", nqubits=nqubits, backend=backend, **kwargs
-    )
-    circuit_permutation = permutation_synthesis(sigma, **kwargs)
+    circuit_binary = binary_encoder(backend.np.array([xi for _,xi in data_binary]), "hyperspherical", nqubits=nqubits, backend=backend, **kwargs)
+    circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
 
     return circuit_binary + circuit_permutation
 
@@ -458,7 +462,7 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
 
 
 def binary_encoder(
-    data, parametrization: str = "hyperspherical", backend=None, **kwargs
+    data, parametrization: str = "hyperspherical", nqubits: int = None, backend=None, **kwargs
 ):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
     of the computational basis.
@@ -503,10 +507,12 @@ def binary_encoder(
     backend = _check_backend(backend)
 
     dims = len(data)
-    nqubits = float(np.log2(dims))
-    if not nqubits.is_integer():
+    if (dims & (dims - 1)) != 0 and parametrization == "Hopf":
         raise_error(ValueError, "`data` size must be a power of 2.")
-    nqubits = int(nqubits)
+
+    if nqubits == None:
+        nqubits = int(backend.np.ceil(backend.np.log2(dims)))
+
 
     complex_data = bool(
         "complex" in str(data.dtype)
@@ -1604,132 +1610,301 @@ def _binary_encoder_hyperspherical(
 ):
     backend = _check_backend(backend)
 
-    dims = 2**nqubits
-    last_qubit = nqubits - 1
+    dims = len(data)
 
-    indexes_to_double, lex_order_global = [0], [0]
+    codewords = _binary_codewords(dims, backend=backend)
 
     circuit = Circuit(nqubits, **kwargs)
     if complex_data:
-        circuit.add(gates.U3(last_qubit, 0.0, 0.0, 0.0))
+        circuit += _monotonic_hw_encoder_complex(codewords, data[codewords], nqubits, backend=backend, **kwargs)
     else:
-        circuit.add(gates.RY(last_qubit, 0.0))
-
-    cummul_n_k = 0
-    initial_string = np.array([1] + [0] * (nqubits - 1))
-    for weight in range(1, nqubits):
-        n_choose_k = int(binom(nqubits, weight))
-        cummul_n_k += n_choose_k
-        placeholder = np.random.rand(n_choose_k)
-        if complex_data:
-            placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
-        placeholder = backend.cast(placeholder, dtype=placeholder[0].dtype)
-
-        circuit += hamming_weight_encoder(
-            placeholder,
-            nqubits,
-            weight,
-            full_hwp=True,
-            optimize_controls=False,
-            phase_correction=False,
-            initial_string=initial_string,
-            backend=backend,
-            **kwargs,
-        )
-
-        # add gate to be place between blocks of Hamming-weight encoders
-        gate, lex_order, initial_string, phase_index = _intermediate_gate(
-            initial_string,
-            weight,
-            last_qubit,
-            cummul_n_k,
-            complex_data,
-        )
-        circuit.add(gate)
-        lex_order_global.extend(lex_order)
-        indexes_to_double.append(phase_index)
-
-    # sort data such that the encoding is performed in lexicographical order
-    lex_order_global.append(dims - 1)
-    lex_order_sorted = np.sort(np.copy(lex_order_global))
-    lex_order_global = [
-        np.where(lex_order_sorted == num)[0][0] for num in lex_order_global
-    ]
-    data = data[lex_order_global]
-    del lex_order_global, lex_order_sorted
-
-    _data = backend.np.abs(data) if complex_data else data
-
-    thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-
-    phis = backend.np.zeros(len(thetas) + 1)
-    if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
-        for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
-            )
-    phis = backend.cast(phis, dtype=phis[0].dtype)
-
-    zero_casted = backend.cast(0.0, dtype=backend.np.float64)  # because of GPU backends
-
-    angles = []
-    for k, (theta, phi) in enumerate(zip(thetas, phis)):
-        if k in indexes_to_double:
-            angle = [2 * theta, 2 * phi, zero_casted] if complex_data else [2 * theta]
-        else:
-            angle = [theta, -phi, phi] if complex_data else [theta]
-
-        angles.extend(angle)
-
-    if complex_data:
-        angles[-2] = 2 * _angle_mod_two_pi(
-            (backend.np.angle(data[-1]) - backend.np.angle(data[-2])) / 2
-        )
-        angles[-1] = 2 * _angle_mod_two_pi(
-            (-0.5) * (backend.np.angle(data[-2]) + backend.np.angle(data[-1]))
-            + backend.np.sum(phis[:-2])
-        )
-
-    circuit.set_parameters(angles)
+        circuit += _monotonic_hw_encoder_real(codewords, data[codewords], nqubits, backend=backend, **kwargs)
 
     return circuit
 
+def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, **kwargs):
+    """Implements Algorithm 3 from [1]
 
-def _intermediate_gate(
-    initial_string,
-    weight,
-    last_qubit,
-    cummul_n_k,
-    complex_data,
-):
-    """Calculate where to place the intermediate gate by finding the last string
-    of the previous Hamming-weight block that was encoded"""
+    Args:
+        codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
+        non-decreasing
+        data (complex): data to be encoded. assumed to have the same length as the list of codewords
 
-    # sort data such that the encoding is performed in lexicographical order
-    bitstrings = _ehrlich_algorithm(initial_string, False)
-    initial_string = bitstrings[-1]
-    lex_order = [int(string, 2) for string in bitstrings]
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
 
-    controls = [item.start() for item in finditer("1", initial_string)]
-    index = (
-        initial_string.find("0")
-        if weight % 2 == 0
-        else last_qubit - initial_string[::-1].find("0")
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+    """
+    dims = len(data)
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    bsi = [int(b) for b in format(codewords[0], '0{}b'.format(nqubits))]
+    for i in range(1, dims-1):
+        bsip1 = [int(b) for b in format(codewords[i], '0{}b'.format(nqubits))]
+
+        in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+
+        theta = backend.np.atan2(backend.np.linalg.norm(data[i:],2),data[i-1])
+
+        if len(in_bits)+len(out_bits)==1:
+            circuit.add(gates.RY(*out_bits,2.0*theta).controlled_by(*ctrls))
+        else:
+            circuit.add(gates.RBS(*in_bits,*out_bits,theta).controlled_by(*ctrls))
+
+        bsi = bsip1
+    bsip1 = [int(b) for b in format(codewords[dims-1], '0{}b'.format(nqubits))]
+    
+    in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+
+    theta = backend.np.atan2(data[-1], data[-2])
+
+    if len(in_bits)+len(out_bits)==1:
+        circuit.add(gates.RY(*out_bits,2.0*theta).controlled_by(*ctrls))
+    else:
+        circuit.add(gates.RBS(*in_bits,*out_bits,theta).controlled_by(*ctrls))
+
+    return circuit
+
+def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwargs):
+    """Implements Algorithm 4 from [1]
+
+    Args:
+        codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
+        non-decreasing
+        data (complex): data to be encoded. assumed to have the same length as the list of codewords
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+    """
+    dims = len(data)
+
+    # the angles phi wil be computed on the fly,
+    # so we don't have to keep them in memory
+    def phis(x, k):
+        cumsum = 0.0
+        for i in range(k + 1):
+            val = (-backend.np.angle(x[i]) + cumsum) % (2.0 * np.pi)
+            cumsum += val
+        return val
+
+    circuit = Circuit(nqubits, **kwargs)
+    
+    
+    bsi = [int(b) for b in format(codewords[0], '0{}b'.format(nqubits))]
+    for i in range(1, dims-1):
+        bsip1 = [int(b) for b in format(codewords[i], '0{}b'.format(nqubits))]
+
+        in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+
+        theta = backend.np.atan2(backend.np.linalg.norm(abs(data[i:]),2),abs(data[i-1]))
+
+        if len(in_bits)+len(out_bits)==1:
+            circuit.add(gates.RY(*out_bits, 2.0 * theta).controlled_by(*ctrls))
+            circuit.add(gates.RZ(*out_bits, 2.0 * phis(data,i-1)).controlled_by(*ctrls))
+        else:
+            circuit.add(gates.GeneralizedRBS(in_bits,out_bits, theta, -phis(data,i-1)).controlled_by(*ctrls))    
+        
+        bsi = bsip1
+    bsip1 = [int(b) for b in format(codewords[dims-1], '0{}b'.format(nqubits))]
+    
+    in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+
+    theta = backend.np.atan2(abs(data[-1]), abs(data[-2]))
+
+    if len(in_bits)+len(out_bits)==1:
+        phil    = (0.5*( backend.angle(data[-1])-backend.angle(data[-2])))  % (2.0*np.pi)
+        lambdal = (0.5*(-backend.angle(data[-1])+backend.angle(data[-2])) + phis(data,dims-2))  % (2.0*np.pi)
+
+        circuit.add(gates.U3(*out_bits, 2.0 * theta, 2.0 * phil, 2.0 * lambdal).controlled_by(*ctrls))
+    else:
+        circuit.add(gates.GeneralizedRBS(in_bits,out_bits, theta, -phis(data,dims-2)).controlled_by(*ctrls))
+
+        ctrls   = [i for i in range(len(bsip1)) if (bsip1[i] == 1)]
+        in_bits = [i for i in range(len(bsip1)) if (bsip1[i] == 0)]
+
+        circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
+        circuit.add(gates.U1(in_bits[0], -phis(data,dims-1)).controlled_by(*ctrls))
+        circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
+        
+    return circuit
+
+def _gate_params(bsi, bsip1):
+
+    one_ind_bsi   = set([i for i in range(len(bsi)) if (bsi[i] == 1)])
+    one_ind_bsip1 = set([i for i in range(len(bsip1)) if (bsip1[i] == 1)])
+
+    ctrls    = one_ind_bsi.intersection(one_ind_bsip1)
+    in_bits  = one_ind_bsi.difference(ctrls)
+    out_bits = one_ind_bsip1.difference(ctrls)
+
+    return list(in_bits), list(out_bits), list(ctrls)
+
+def _binary_codewords(dims:int, backend=None):
+    """
+    Return a array of integers produced by `_binary_codewords_ehrlich(d)`, adjusted so that:
+      - Hamming weight is strictly nondecreasing,
+      - Consecutive words have Hamming distance ≤ 2.
+
+    """
+    backend = _check_backend(backend)
+
+    def get_int_type(x:int):
+         # Candidates in increasing size of memory footprint
+        int_types = [backend.np.int8, backend.np.int16, backend.np.int32, backend.np.int64]
+        for dt in int_types:
+            if x <= backend.np.iinfo(dt).max:
+                return  backend.np.dtype(dt)
+            
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_weight,
+        hamming_distance,
     )
-    initial_string = np.array(list(initial_string), dtype=int)
-    initial_string[index] = 1
-    initial_string = initial_string[::-1]
+            
+    cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
 
-    phase_index = cummul_n_k
-    gate = (
-        gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls)
-        if complex_data
-        else gates.RY(index, 0.0).controlled_by(*controls)
-    )
+    cw = backend.np.array([int(bin_cw, 2) for bin_cw in cw_binary], dtype=get_int_type(dims))
 
-    return gate, lex_order, initial_string, phase_index
+    if (dims & (dims - 1)) != 0:
+        n = int(backend.np.floor(backend.np.log2(dims)))
+        dres = 2**n
+        # split the list to fix the order
+        cwres, cw = cw[dres:], cw[:dres]
 
+        # keep weights for O(1) lookups
+        weights = backend.np.array([hamming_weight(int(w)) for w in cw], dtype=get_int_type(n))
+
+        # insert the remainder words at positions that preserve
+        # strictly increasing weights and distance ≤ 2 to neighbors
+        for word in cwres:
+
+            hw = hamming_weight(int(word))
+
+            inserted = False
+            for i in range(len(cw)-1):
+                wi, wj = weights[i], weights[i + 1]
+                if wi <= hw <= wj:
+                    if hamming_distance(int(word), int(cw[i])) <= 2 and hamming_distance(int(word), int(cw[i+1])) <= 2:
+                        cw = backend.np.insert(cw, i+1, word, axis=0)
+                        weights = backend.np.insert(weights, i+1, hw)
+                        inserted = True
+                        break
+            if not inserted:
+                # append if no suitable interior gap is found
+                cw = backend.np.hstack((cw,word))
+                weights = backend.np.hstack((weights,hw))
+
+    return cw
+
+def _binary_codewords_ehrlich(dims: int, backend=None):
+    """
+    Yield fixed-width bitstrings representing integers 0..d-1, arranged so that
+    Hamming weights are strictly nondecreasing. Uses at most hamming_weight(d) calls
+    to `_ehrlich_codewords_up_to_k(k)`; when d is a power of two, exactly one call.
+    """
+    backend = _check_backend(backend)
+
+    if dims <= 0:
+        return
+    
+    # Check power-of-two case: b == 2^k
+    if (dims & (dims - 1)) == 0:
+        k = dims.bit_length() - 1  # since 2^k has bit_length k+1
+        # get_ehrlich_codewords(k) yields k-bit strings for 0..2^k-1 == 0..d-1
+        yield from _ehrlich_codewords_up_to_k(k, False, backend=backend)
+        return
+
+    # General case
+    n = int(max(1, backend.np.ceil(backend.np.log2(dims))))    # width so that 2^(n-1) < b < 2^n
+    # Bits of b in most-significant-bit → least-significant-bit order
+    bits = [(dims >> i) & 1 for i in range(n-1, -1, -1)]
+    prefix = ""
+    flip=False
+    for i, bit in enumerate(bits):
+        k = n - 1 - i
+        if bit == 1:
+            # emit the full 0-prefixed block of width k, using Ehrlich order
+            # flip every other time to keep consecutive codes close
+            for suffix in _ehrlich_codewords_up_to_k(k, flip, backend=backend):
+                yield prefix + "0" + suffix
+            flip = not flip
+            prefix += "1"
+        else:
+            prefix += "0"
+    # no final singleton: we've generated exactly d bitstrings (0..d-1)
+
+def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=None):
+    """
+    Yield all bitstrings with monotonically changing Hamming weight from 0..up2k (or the reverse),
+    such that consecutive strings have Hamming distance ≤ 2. Codewords for each weight are produced
+    by `_ehrlich_algorithm(initial_string, False)` (assumed to return an iterable of bitstrings).
+
+    Args:
+        up2k: Length of the bitstrings and the maximum Hamming weight.
+        reversed_list: If True, generate from weight up2k down to 0; otherwise 0 up to up2k.
+
+    Yields:
+        str: Bitstrings produced by concatenating sequences from Ehrlich's algorithm.
+    """
+
+    if up2k < 0:
+        raise ValueError("up2k must be ≥ 0")
+    
+    if up2k == 0:
+        # Only the empty string by convention; mirror original intent by yielding once.
+        yield ""
+        return
+
+    def ones_left(k: int):
+        # 1...1 0...0  (k ones flush-left)
+        return "1" * k + "0" * (up2k - k)
+
+    def ones_right(k: int):
+        # 0...0 1...1  (k ones flush-right)
+        return "0" * (up2k - k) + "1" * k
+
+    def hamming(a: str, b: str):
+        # Local distance to avoid int(base=2) conversions
+        return sum(c1 != c2 for c1, c2 in zip(a, b))
+
+    # boundary codeword
+    last_emitted = "1" * up2k if reversed_list else "0" * up2k
+    yield last_emitted
+
+    # Iterate weights in the chosen direction (skip endpoints handled above/below)
+    weights = range(up2k - 1, 0, -1) if reversed_list else range(1, up2k)
+
+    for k in weights:
+        # Pick initial string of weight k that is closer to the last emitted string
+        left,right  = ones_left(k), ones_right(k)
+        if hamming(last_emitted, left) <= hamming(last_emitted, right): 
+            initial = left 
+        else:
+            initial = right
+
+        # get Ehrlich sequence
+        k_seq = _ehrlich_algorithm(backend.np.array([int(b) for b in initial]), False)
+
+        # generate in the correct order
+        if reversed_list:
+            for bs in reversed(k_seq):
+                yield bs
+            last_emitted = k_seq[0]  # last yielded in reversed order
+        else:
+            for bs in k_seq:
+                yield bs
+            last_emitted = k_seq[-1]  # last yielded in forward order
+
+    # generate the opposite boundary codeword
+    yield ("0" * up2k) if reversed_list else ("1" * up2k)
 
 def _sort_data_sparse(data, nqubits, backend):
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
