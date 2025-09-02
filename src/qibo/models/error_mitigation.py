@@ -931,8 +931,8 @@ def sample_clifford_training_circuit(
             for q in gate.qubits:
                 gate_rand = gates.Unitary(
                     random_clifford(
-                        1, return_circuit=False, seed=local_state, backend=backend
-                    ),
+                        1, return_circuit=True, seed=local_state, backend=backend
+                    ).unitary(backend),
                     q,
                 )
                 gate_rand.clifford = True
@@ -943,10 +943,10 @@ def sample_clifford_training_circuit(
                 gate = gates.Unitary(
                     random_clifford(
                         len(gate.qubits),
-                        return_circuit=False,
+                        return_circuit=True,
                         seed=local_state,
                         backend=backend,
-                    ),
+                    ).unitary(backend),
                     *gate.qubits,
                 )
                 gate.clifford = True
