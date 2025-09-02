@@ -1747,11 +1747,11 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwar
     theta = backend.np.atan2(abs(data[-1]), abs(data[-2]))
 
     if len(in_bits) + len(out_bits) == 1:
-        phil = (0.5 * (backend.angle(data[-1]) - backend.angle(data[-2]))) % (
+        phil = (0.5 * (backend.np.angle(data[-1]) - backend.np.angle(data[-2]))) % (
             2.0 * np.pi
         )
         lambdal = (
-            0.5 * (-backend.angle(data[-1]) + backend.angle(data[-2]))
+            0.5 * (-backend.np.angle(data[-1]) + backend.np.angle(data[-2]))
             + phis(data, dims - 2)
         ) % (2.0 * np.pi)
 
