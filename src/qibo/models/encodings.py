@@ -1871,9 +1871,9 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
         # 0...0 1...1  (k ones flush-right)
         return "0" * (up2k - k) + "1" * k
 
-    def hamming(a: str, b: str):
-        # Local distance to avoid int(base=2) conversions
-        return sum(c1 != c2 for c1, c2 in zip(a, b))
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_distance,
+    )
 
     # boundary codeword
     last_emitted = "1" * up2k if reversed_list else "0" * up2k
@@ -1885,7 +1885,7 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
     for k in weights:
         # Pick initial string of weight k that is closer to the last emitted string
         left,right  = ones_left(k), ones_right(k)
-        if hamming(last_emitted, left) <= hamming(last_emitted, right): 
+        if hamming_distance(last_emitted, left) <= hamming_distance(last_emitted, right): 
             initial = left 
         else:
             initial = right
