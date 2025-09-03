@@ -555,4 +555,4 @@ def _calculate_negative_power_singular_matrix(
     S = backend.cast(S)
     S_inv = engine.where(engine.abs(S) < precision_singularity, 0.0, S**power)
 
-    return engine.linalg.inv(Vh) @ backend.np.diag(S_inv) @ engine.linalg.inv(U)
+    return engine.linalg.inv(Vh) @ backend.engine.diag(S_inv) @ engine.linalg.inv(U)

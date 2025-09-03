@@ -94,7 +94,7 @@ class VQE:
             loss = loss_func
 
         if method == "cma":
-            dtype = self.hamiltonian.backend.np.float64
+            dtype = self.hamiltonian.backend.engine.float64
             loss = (
                 (lambda p, c, h: loss_func(p, c, h).item())
                 if str(dtype) == "torch.float64"

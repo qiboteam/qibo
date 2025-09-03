@@ -216,7 +216,7 @@ def test_operational_logic(backend):
     # Complex conjugate of a network has to match the complex conjugate of the operator
     backend.assert_allclose(
         network.conj().operator(backend=backend),
-        backend.np.conj(network.operator(backend=backend)),
+        backend.engine.conj(network.operator(backend=backend)),
     )
 
 
@@ -416,7 +416,7 @@ def test_apply(backend):
     )
 
     applied = network.apply(state)
-    target = unitary @ state @ backend.np.conj(unitary).T
+    target = unitary @ state @ backend.engine.conj(unitary).T
 
     backend.assert_allclose(applied, target, atol=1e-8)
 

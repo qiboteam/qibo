@@ -184,9 +184,9 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.np.matmul(backend.np.conj(matrix).T, matrix)
+        matrix = backend.engine.matmul(backend.engine.conj(matrix).T, matrix)
     else:
-        matrix = (matrix + backend.np.conj(matrix).T) / 2
+        matrix = (matrix + backend.engine.conj(matrix).T) / 2
 
     if normalize:
         matrix = matrix / np.linalg.norm(backend.to_numpy(matrix))
@@ -231,11 +231,11 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
         # Tensorflow experi
-        Q, R = backend.np.linalg.qr(unitary)
-        D = backend.np.diag(R)
-        D = D / backend.np.abs(D)
-        R = backend.np.diag(D)
-        unitary = backend.np.matmul(Q, R)
+        Q, R = backend.engine.linalg.qr(unitary)
+        D = backend.engine.diag(R)
+        D = D / backend.engine.abs(D)
+        R = backend.engine.diag(D)
+        unitary = backend.engine.matmul(Q, R)
     elif measure is None:
         from scipy.linalg import expm
 
@@ -351,7 +351,7 @@ def random_quantum_channel(
     else:
         super_op = random_unitary(dims, measure, local_state, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = backend.np.outer(super_op, backend.np.conj(super_op))
+        super_op = backend.engine.outer(super_op, backend.engine.conj(super_op))
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -563,28 +563,28 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=local_state, backend=backend)
-        state = backend.np.outer(state, backend.np.conj(state).T)
+        state = backend.engine.outer(state, backend.engine.conj(state).T)
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
                 dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            state = backend.engine.matmul(
+                state, backend.engine.transpose(backend.engine.conj(state), (1, 0))
             )
-            state = state / backend.np.trace(state)
+            state = state / backend.engine.trace(state)
         else:
             nqubits = int(np.log2(dims))
             state = backend.identity(nqubits)
             state += random_unitary(dims, seed=local_state, backend=backend)
-            state = backend.np.matmul(
+            state = backend.engine.matmul(
                 state,
                 random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
             )
-            state = backend.np.matmul(
-                state, backend.np.transpose(backend.np.conj(state), (1, 0))
+            state = backend.engine.matmul(
+                state, backend.engine.transpose(backend.engine.conj(state), (1, 0))
             )
-            state /= backend.np.trace(state)
+            state /= backend.engine.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
@@ -959,17 +959,17 @@ def random_pauli_hamiltonian(
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
-            eigenvalues[1:], backend.np.transpose(eigenvectors, (1, 0))[1:]
+            eigenvalues[1:], backend.engine.transpose(eigenvectors, (1, 0))[1:]
         ):
-            hamiltonian = hamiltonian + eigenvalue * backend.np.outer(
-                eigenvector, backend.np.conj(eigenvector)
+            hamiltonian = hamiltonian + eigenvalue * backend.engine.outer(
+                eigenvector, backend.engine.conj(eigenvector)
             )
 
     U = comp_basis_to_pauli(
         nqubits, normalize=True, pauli_order=pauli_order, backend=backend
     )
 
-    hamiltonian = backend.np.real(U @ vectorization(hamiltonian, backend=backend))
+    hamiltonian = backend.engine.real(U @ vectorization(hamiltonian, backend=backend))
 
     return hamiltonian, eigenvalues
 
@@ -1219,7 +1219,7 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = random_gaussian_matrix(
         dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
     )
-    super_op = super_op @ backend.np.conj(super_op).T
+    super_op = super_op @ backend.engine.conj(super_op).T
 
     # partial trace implemented with einsum
     super_op_reduced = np.einsum(
@@ -1235,15 +1235,15 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     for eigenvalue, eigenvector in zip(
         backend.cast(eigenvalues), backend.cast(eigenvectors).T
     ):
-        operator = operator + eigenvalue * backend.np.outer(
-            eigenvector, backend.np.conj(eigenvector)
+        operator = operator + eigenvalue * backend.engine.outer(
+            eigenvector, backend.engine.conj(eigenvector)
         )
 
     ops = [backend.identity(2**dims), operator]
     if order == "column":
         ops = ops[::-1]
 
-    operator = backend.np.kron(*ops)
+    operator = backend.engine.kron(*ops)
 
     super_op = operator @ super_op @ operator
 

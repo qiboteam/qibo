@@ -433,7 +433,11 @@ class Backend:
         self, gate, state, nqubits: int, density_matrix: bool = False
     ) -> "ndarray":  # pragma: no cover
         """Apply a gate to state vector."""
-        state = self.reshape(state, nqubits * (2,))
+        shape = nqubits * (2,)
+        if density_matrix:
+            shape *= 2
+
+        state = self.reshape(state, shape=shape)
 
         if gate.is_controlled_by and density_matrix:
             return self._apply_gate_controlled_by_density_matrix(gate, state, nqubits)
@@ -445,7 +449,7 @@ class Backend:
         matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
 
         if density_matrix:
-            matrix_conj = self.engine.conj(matrix)
+            matrix_conj = self.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
@@ -454,10 +458,6 @@ class Backend:
         else:
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
             state = self.engine.einsum(opstring, state, matrix)
-
-        shape = (2**nqubits,)
-        if density_matrix:
-            shape *= 2
 
         return self.reshape(state, shape)
 

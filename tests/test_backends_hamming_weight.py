@@ -41,7 +41,7 @@ def get_full_initial_state(state, weight, nqubits, backend):
     ):
         backend._dict_indexes = backend._get_lexicographical_order(nqubits, weight)
 
-    full_state = backend.np.zeros(2**nqubits, dtype=backend.np.complex128)
+    full_state = backend.engine.zeros(2**nqubits, dtype=backend.engine.complex128)
     for i, j in backend._dict_indexes.values():
         full_state[j] = state[i]
 

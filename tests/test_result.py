@@ -106,5 +106,5 @@ def test_circuitresult_dump_load(backend, agnostic_load):
     loaded_freq = loaded_res.frequencies()
     for state, f in freq.items():
         assert loaded_freq[state] == f
-    assert backend.np.sum(result.state() - backend.cast(loaded_res.state())) == 0
+    assert backend.engine.sum(result.state() - backend.cast(loaded_res.state())) == 0
     remove("tmp.npy")

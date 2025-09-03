@@ -239,11 +239,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        T_2q = backend.np.kron(T, T)
+        T_2q = backend.engine.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = backend.np.linalg.inv(G)
+                G_inv = backend.engine.linalg.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(

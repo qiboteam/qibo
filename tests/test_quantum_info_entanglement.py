@@ -51,7 +51,7 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
     backend.assert_allclose(0.0 <= concur <= np.sqrt(2), True)
     backend.assert_allclose(0.0 <= ent_form <= 1.0, True)
 
-    state = backend.np.kron(
+    state = backend.engine.kron(
         random_density_matrix(2, pure=True, backend=backend),
         random_density_matrix(2, pure=True, backend=backend),
     )

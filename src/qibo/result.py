@@ -295,7 +295,7 @@ class MeasurementOutcomes:
         probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(
-            self.backend.np.sqrt(probs), qubits, nqubits
+            self.backend.engine.sqrt(probs), qubits, nqubits
         )
 
     def has_samples(self):
@@ -330,7 +330,7 @@ class MeasurementOutcomes:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = self.backend.np.concatenate(
+                self._samples = self.backend.engine.concatenate(
                     [gate.result.samples() for gate in self.measurements],
                     axis=1,
                 )
@@ -342,7 +342,7 @@ class MeasurementOutcomes:
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     np.random.shuffle(samples)
-                    samples = self.backend.cast(samples, dtype=self.backend.np.int64)
+                    samples = self.backend.cast(samples, dtype=self.backend.engine.int64)
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)
@@ -354,7 +354,7 @@ class MeasurementOutcomes:
                             [p0.get(q) for q in qubits],
                             [p1.get(q) for q in qubits],
                         ],
-                        dtype=self.backend.np.float64,
+                        dtype=self.backend.engine.float64,
                     )
                     samples = self.backend.apply_bitflips(
                         samples, bitflip_probabilities

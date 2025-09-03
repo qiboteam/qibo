@@ -83,11 +83,11 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = backend.np.random.rand(nqubits)
+    phases = backend.engine.random.rand(nqubits)
 
     gate = getattr(gates, rotation)
     target = reduce(
-        backend.np.kron,
+        backend.engine.kron,
         [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
     )[:, 0]
 
@@ -120,8 +120,8 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
-        target = backend.np.real(target)
-        target /= backend.np.linalg.norm(target)
+        target = backend.engine.real(target)
+        target /= backend.engine.linalg.norm(target)
 
     circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
@@ -157,7 +157,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.np.real(state[indexes])
+    state = backend.engine.real(state[indexes])
 
     backend.assert_allclose(
         state,
@@ -283,7 +283,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
-    target = backend.cast(backend.np.zeros(dims))
+    target = backend.cast(backend.engine.zeros(dims))
     target[indices] = data
 
     if not integers:
@@ -313,7 +313,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
 def test_permutation_synthesis_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        permutation_synthesis(backend.np.array(sigma), m=2, backend=backend)
+        permutation_synthesis(backend.engine.array(sigma), m=2, backend=backend)
     with pytest.raises(ValueError):
         permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
@@ -443,7 +443,7 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = backend.cast(np.random.rand(5), dtype=backend.np.float64)
+    data = backend.cast(np.random.rand(5), dtype=backend.engine.float64)
     test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
@@ -474,7 +474,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.engine.outer(target, backend.engine.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -517,7 +517,7 @@ def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
         state = result.state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.engine.outer(target, backend.engine.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -570,8 +570,8 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
-                initial = backend.np.outer(initial, backend.np.conj(initial.T))
-                target = backend.np.outer(target, backend.np.conj(target.T))
+                initial = backend.engine.outer(initial, backend.engine.conj(initial.T))
+                target = backend.engine.outer(target, backend.engine.conj(target.T))
 
             result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()

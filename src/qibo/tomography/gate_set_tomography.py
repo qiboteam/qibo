@@ -331,15 +331,15 @@ def GST(
             )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
-        gauge_matrix_2q = backend.np.kron(gauge_matrix, gauge_matrix)
+        gauge_matrix_2q = backend.engine.kron(gauge_matrix, gauge_matrix)
         for matrix in matrices:
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
                 gauge_matrix
-                @ backend.np.linalg.inv(empty)
+                @ backend.engine.linalg.inv(empty)
                 @ matrix
-                @ backend.np.linalg.inv(gauge_matrix)
+                @ backend.engine.linalg.inv(gauge_matrix)
             )
         matrices = PL_matrices
 

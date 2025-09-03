@@ -69,19 +69,19 @@ def vectorization(state, order: str = "row", backend=None):
     dims = state.shape[-1]
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.engine.outer(state, backend.engine.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
-        state = backend.np.einsum(
-            "aij,akl->aijkl", state, backend.np.conj(state)
+        state = backend.engine.einsum(
+            "aij,akl->aijkl", state, backend.engine.conj(state)
         ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.engine.reshape(state, (-1, dims**2))
     elif order == "column":
         indices = list(range(len(state.shape)))
         indices[-2:] = reversed(indices[-2:])
-        state = backend.np.transpose(state, indices)
-        state = backend.np.reshape(state, (-1, dims**2))
+        state = backend.engine.transpose(state, indices)
+        state = backend.engine.reshape(state, (-1, dims**2))
     else:
         nqubits = int(np.log2(state.shape[-1]))
 
@@ -89,11 +89,11 @@ def vectorization(state, order: str = "row", backend=None):
         for qubit in range(nqubits):
             new_axis.extend([qubit + nqubits + 1, qubit + 1])
 
-        state = backend.np.reshape(state, [-1] + [2] * 2 * nqubits)
-        state = backend.np.transpose(state, new_axis)
-        state = backend.np.reshape(state, (-1, 2 ** (2 * nqubits)))
+        state = backend.engine.reshape(state, [-1] + [2] * 2 * nqubits)
+        state = backend.engine.transpose(state, new_axis)
+        state = backend.engine.reshape(state, (-1, 2 ** (2 * nqubits)))
 
-    state = backend.np.squeeze(
+    state = backend.engine.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
     )
 
@@ -155,9 +155,9 @@ def unvectorization(state, order: str = "row", backend=None):
     else:
         nqubits = int(np.log2(dim))
         axes_old = list(np.arange(0, 2 * nqubits))
-        state = backend.np.reshape(state, [2] * 2 * nqubits)
-        state = backend.np.transpose(state, axes_old[1::2] + axes_old[0::2])
-        state = backend.np.reshape(state, [2**nqubits] * 2)
+        state = backend.engine.reshape(state, [2] * 2 * nqubits)
+        state = backend.engine.transpose(state, axes_old[1::2] + axes_old[0::2])
+        state = backend.engine.reshape(state, [2**nqubits] * 2)
 
     return state
 
@@ -187,7 +187,7 @@ def to_choi(channel, order: str = "row", backend=None):
     backend = _check_backend(backend)
 
     channel = vectorization(channel, order=order, backend=backend)
-    channel = backend.np.outer(channel, backend.np.conj(channel))
+    channel = backend.engine.outer(channel, backend.engine.conj(channel))
 
     return channel
 
@@ -259,7 +259,7 @@ def to_pauli_liouville(
         nqubits, normalize, pauli_order=pauli_order, backend=backend
     )
 
-    channel = unitary @ channel @ backend.np.conj(unitary).T
+    channel = unitary @ channel @ backend.engine.conj(unitary).T
 
     return channel
 
@@ -518,7 +518,7 @@ def choi_to_kraus(
     if validate_cp:
         norm = float(
             backend.calculate_matrix_norm(
-                choi_super_op - backend.np.conj(choi_super_op).T, order=2
+                choi_super_op - backend.engine.conj(choi_super_op).T, order=2
             )
         )
         if norm > PRECISION_TOL:
@@ -529,7 +529,7 @@ def choi_to_kraus(
             eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
             eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(backend.np.real(eigenvalues) < -PRECISION_TOL))
+            non_cp = bool(any(backend.engine.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
@@ -545,8 +545,8 @@ def choi_to_kraus(
             choi_super_op, backend=backend
         )
         U = U.T
-        coefficients = backend.np.sqrt(coefficients)
-        V = backend.np.conj(V)
+        coefficients = backend.engine.sqrt(coefficients)
+        V = backend.engine.conj(V)
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
@@ -563,8 +563,8 @@ def choi_to_kraus(
         # when choi_super_op is CP
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
-            if backend.np.abs(eig) > precision_tol:
-                eig = backend.np.sqrt(eig)
+            if backend.engine.abs(eig) > precision_tol:
+                eig = backend.engine.sqrt(eig)
                 kraus_ops.append(
                     eig * unvectorization(kraus, order=order, backend=backend)
                 )
@@ -736,7 +736,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        super_op = super_op + backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -875,7 +875,7 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        super_op = super_op + backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -945,7 +945,7 @@ def kraus_to_stinespring(
 
     # only utility is for outer product,
     # so np.conj here to only do it once
-    initial_state_env = backend.np.conj(initial_state_env)
+    initial_state_env = backend.engine.conj(initial_state_env)
 
     stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
@@ -957,9 +957,9 @@ def kraus_to_stinespring(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
-        stinespring = stinespring + backend.np.kron(
+        stinespring = stinespring + backend.engine.kron(
             kraus_op,
-            backend.np.outer(vector_alpha, initial_state_env),
+            backend.engine.outer(vector_alpha, initial_state_env),
         )
         del kraus_op, vector_alpha
 
@@ -1052,7 +1052,7 @@ def liouville_to_pauli(
         backend=backend,
     )
 
-    return comp_to_pauli @ super_op @ backend.np.conj(comp_to_pauli.T)
+    return comp_to_pauli @ super_op @ backend.engine.conj(comp_to_pauli.T)
 
 
 def liouville_to_kraus(
@@ -1253,7 +1253,7 @@ def pauli_to_liouville(
         backend=backend,
     )
 
-    return pauli_to_comp @ pauli_op @ backend.np.conj(pauli_to_comp).T
+    return pauli_to_comp @ pauli_op @ backend.engine.conj(pauli_to_comp).T
 
 
 def pauli_to_choi(
@@ -1981,15 +1981,15 @@ def stinespring_to_kraus(
             initial_state_env, dtype=initial_state_env.dtype
         )
 
-    stinespring = backend.np.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = backend.np.swapaxes(stinespring, 1, 2)
+    stinespring = backend.engine.reshape(stinespring, (dim, dim_env, dim, dim_env))
+    stinespring = backend.engine.swapaxes(stinespring, 1, 2)
 
     kraus_ops = []
     for alpha in range(dim_env):
         vector_alpha = np.zeros(dim_env, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        kraus = backend.np.conj(vector_alpha) @ stinespring @ initial_state_env
+        kraus = backend.engine.conj(vector_alpha) @ stinespring @ initial_state_env
         kraus_ops.append(kraus)
 
     return kraus_ops
@@ -2226,12 +2226,12 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     dim = int(dim)
-    super_op = backend.np.reshape(super_op, [dim] * 4)
+    super_op = backend.engine.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = backend.np.swapaxes(super_op, *axes)
+    super_op = backend.engine.swapaxes(super_op, *axes)
 
-    super_op = backend.np.reshape(super_op, [dim**2, dim**2])
+    super_op = backend.engine.reshape(super_op, [dim**2, dim**2])
 
     return super_op
 
@@ -2290,7 +2290,7 @@ def _individual_kraus_to_liouville(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        kraus_op = backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops

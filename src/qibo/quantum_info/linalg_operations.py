@@ -183,10 +183,10 @@ def partial_transpose(
     nqubits = int(nqubits)
 
     if len(shape) == 1:
-        operator = backend.np.outer(operator, backend.np.conj(operator.T))
+        operator = backend.engine.outer(operator, backend.engine.conj(operator.T))
     elif len(shape) == 3 and shape[1] == 1:
-        operator = backend.np.einsum(
-            "aij,akl->aijkl", operator, backend.np.conj(operator)
+        operator = backend.engine.einsum(
+            "aij,akl->aijkl", operator, backend.engine.conj(operator)
         ).reshape(nstates, dims, dims)
 
     new_shape = list(range(2 * nqubits + 1))
@@ -196,14 +196,14 @@ def partial_transpose(
         new_shape[ind + nqubits] = ind
     new_shape = tuple(new_shape)
 
-    reshaped = backend.np.reshape(operator, [-1] + [2] * (2 * nqubits))
-    reshaped = backend.np.transpose(reshaped, new_shape)
+    reshaped = backend.engine.reshape(operator, [-1] + [2] * (2 * nqubits))
+    reshaped = backend.engine.transpose(reshaped, new_shape)
 
     final_shape = (dims, dims)
     if len(operator.shape) == 3:
         final_shape = (nstates,) + final_shape
 
-    return backend.np.reshape(reshaped, final_shape)
+    return backend.engine.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(
@@ -398,9 +398,9 @@ def schmidt_decomposition(
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
 
-    tensor = backend.np.reshape(state, [2] * nqubits)
-    tensor = backend.np.transpose(tensor, partition + partition_2)
-    tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
+    tensor = backend.engine.reshape(state, [2] * nqubits)
+    tensor = backend.engine.transpose(tensor, partition + partition_2)
+    tensor = backend.engine.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
 
@@ -485,7 +485,7 @@ def lanczos(
     )
 
     omega_prime = matrix @ vector
-    alpha = backend.np.conj(omega_prime.T) @ vector
+    alpha = backend.engine.conj(omega_prime.T) @ vector
     omega = omega_prime - alpha * vector
 
     lanczos_vectors = [vector]
@@ -503,11 +503,11 @@ def lanczos(
         lanczos_vectors.append(vector)
 
         omega_prime = matrix @ vector
-        alpha = backend.np.conj(omega_prime.T) @ vector
+        alpha = backend.engine.conj(omega_prime.T) @ vector
         omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
 
     lanczos_vectors = backend.cast(lanczos_vectors)
-    triadiagonal = backend.np.conj(lanczos_vectors) @ matrix
+    triadiagonal = backend.engine.conj(lanczos_vectors) @ matrix
     lanczos_vectors = lanczos_vectors.T
     triadiagonal = triadiagonal @ lanczos_vectors
 
@@ -534,14 +534,14 @@ def _vector_projection(vector, directions, backend):
 
     if len(directions.shape) == 1:
         return (
-            backend.np.dot(backend.np.conj(vector), directions)
+            backend.engine.dot(backend.engine.conj(vector), directions)
             * directions
-            / backend.np.dot(backend.np.conj(directions), directions)
+            / backend.engine.dot(backend.engine.conj(directions), directions)
         )
 
-    dot_products = backend.np.einsum("j,kj", backend.np.conj(vector), directions)
-    inner_prods = backend.np.diag(
-        backend.np.einsum("jk,lk", backend.np.conj(directions), directions)
+    dot_products = backend.engine.einsum("j,kj", backend.engine.conj(vector), directions)
+    inner_prods = backend.engine.diag(
+        backend.engine.einsum("jk,lk", backend.engine.conj(directions), directions)
     )
 
     return (dot_products / inner_prods).reshape(-1, 1) * directions
@@ -568,6 +568,6 @@ def _gram_schmidt_process(vector, directions, backend):
     projections = _vector_projection(vector, directions, backend=backend)
 
     if len(directions.shape) > 1:
-        projections = backend.np.sum(projections, axis=0)
+        projections = backend.engine.sum(projections, axis=0)
 
     return vector - projections

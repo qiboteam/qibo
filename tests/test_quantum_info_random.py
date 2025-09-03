@@ -49,14 +49,14 @@ def test_uniform_sampling_U3(backend, seed):
 
         expectation_values.append(
             [
-                backend.np.conj(state) @ X @ state,
-                backend.np.conj(state) @ Y @ state,
-                backend.np.conj(state) @ Z @ state,
+                backend.engine.conj(state) @ X @ state,
+                backend.engine.conj(state) @ Y @ state,
+                backend.engine.conj(state) @ Z @ state,
             ]
         )
     expectation_values = backend.cast(expectation_values)
 
-    expectation_values = backend.np.mean(expectation_values, axis=0)
+    expectation_values = backend.engine.mean(expectation_values, axis=0)
 
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
@@ -111,14 +111,14 @@ def test_random_hermitian(backend):
     # test if function returns Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
-    matrix_dagger = backend.np.conj(matrix).T
+    matrix_dagger = backend.engine.conj(matrix).T
     norm = float(backend.calculate_matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
-    matrix_dagger = backend.np.conj(matrix).T
+    matrix_dagger = backend.engine.conj(matrix).T
     norm = float(backend.calculate_matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -129,7 +129,7 @@ def test_random_hermitian(backend):
     # test if function returns normalized Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
-    matrix_dagger = backend.np.conj(matrix).T
+    matrix_dagger = backend.engine.conj(matrix).T
     norm = float(backend.calculate_matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -140,7 +140,7 @@ def test_random_hermitian(backend):
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
-    matrix_dagger = backend.np.conj(matrix).T
+    matrix_dagger = backend.engine.conj(matrix).T
     norm = float(backend.calculate_vector_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -171,9 +171,9 @@ def test_random_unitary(backend, measure):
     # tests if operator is unitary (measure == "haar")
     dims = 4
     matrix = random_unitary(dims, measure=measure, backend=backend)
-    matrix_dagger = backend.np.conj(matrix).T
+    matrix_dagger = backend.engine.conj(matrix).T
     matrix_inv = (
-        backend.np.inverse(matrix)
+        backend.engine.inverse(matrix)
         if backend.platform == "pytorch"
         else np.linalg.inv(matrix)
     )
@@ -240,7 +240,7 @@ def test_random_statevector(backend, dtype, seed):
     )
 
     if dtype is not None:
-        dtype = getattr(backend.np, dtype)
+        dtype = getattr(backend.engine, dtype)
         state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
         backend.assert_allclose(
             abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL, True
@@ -311,7 +311,7 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 )
             norm = np.abs(
                 backend.to_numpy(
-                    norm_function(state - backend.np.conj(state).T, order=2)
+                    norm_function(state - backend.engine.conj(state).T, order=2)
                 )
             )
             backend.assert_allclose(norm < PRECISION_TOL, True)
@@ -475,9 +475,9 @@ def test_random_pauli(
                 True,
             )
     else:
-        matrix = backend.np.transpose(matrix, (1, 0, 2, 3))
-        matrix = [reduce(backend.np.kron, row) for row in matrix]
-        matrix = reduce(backend.np.matmul, matrix)
+        matrix = backend.engine.transpose(matrix, (1, 0, 2, 3))
+        matrix = [reduce(backend.engine.kron, row) for row in matrix]
+        matrix = reduce(backend.engine.matmul, matrix)
 
         if subset is None:
             backend.assert_allclose(
@@ -570,7 +570,7 @@ def test_random_stochastic_matrix(backend):
     # tests if matrix is row-stochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, backend=backend)
-    sum_rows = backend.np.sum(matrix, axis=1)
+    sum_rows = backend.engine.sum(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -581,18 +581,18 @@ def test_random_stochastic_matrix(backend):
         dims, diagonally_dominant=True, max_iterations=1000, backend=backend
     )
 
-    sum_rows = backend.np.sum(matrix, axis=1)
+    sum_rows = backend.engine.sum(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * backend.np.diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * backend.engine.diag(matrix) - sum_rows > 0), True)
 
     # tests if matrix is bistochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, bistochastic=True, backend=backend)
-    sum_rows = backend.np.sum(matrix, axis=1)
-    column_rows = backend.np.sum(matrix, axis=0)
+    sum_rows = backend.engine.sum(matrix, axis=1)
+    column_rows = backend.engine.sum(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -609,8 +609,8 @@ def test_random_stochastic_matrix(backend):
         max_iterations=1000,
         backend=backend,
     )
-    sum_rows = backend.np.sum(matrix, axis=1)
-    column_rows = backend.np.sum(matrix, axis=0)
+    sum_rows = backend.engine.sum(matrix, axis=1)
+    column_rows = backend.engine.sum(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -618,8 +618,8 @@ def test_random_stochastic_matrix(backend):
     backend.assert_allclose(all(column_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(column_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * backend.np.diag(matrix) - sum_rows > 0), True)
-    backend.assert_allclose(all(2 * backend.np.diag(matrix) - column_rows > 0), True)
+    backend.assert_allclose(all(2 * backend.engine.diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * backend.engine.diag(matrix) - column_rows > 0), True)
 
     # tests warning for max_iterations
     dims = 4

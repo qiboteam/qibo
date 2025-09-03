@@ -364,7 +364,7 @@ def _check_backend_and_local_state(seed, backend):
             "CupyBackend",
             "CuQuantumBackend",
         ]:  # pragma: no cover
-            local_state = backend.np.random.default_rng(seed)
+            local_state = backend.engine.random.default_rng(seed)
         else:
             local_state = np.random.default_rng(seed)
     else:

@@ -98,8 +98,8 @@ def test_entropy_in_circuit(backend, density_matrix, base):
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [0.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
-    entropy_spectrum = backend.np.ravel(
-        backend.np.concatenate(entropy.spectrum)
+    entropy_spectrum = backend.engine.ravel(
+        backend.engine.concatenate(entropy.spectrum)
     ).tolist()
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
@@ -234,9 +234,9 @@ def test_entropy_density_matrix(backend):
     u = backend.cast(u, dtype=u.dtype)
     matrix = np.random.random(u.shape[0])
     matrix = backend.cast(matrix, dtype=u.dtype)
-    rho = backend.np.matmul(
-        backend.np.matmul(u, backend.np.diag(5 * matrix)),
-        backend.np.conj(backend.np.transpose(u, (1, 0))),
+    rho = backend.engine.matmul(
+        backend.engine.matmul(u, backend.engine.diag(5 * matrix)),
+        backend.engine.conj(backend.engine.transpose(u, (1, 0))),
     )
     # this is a positive rho
 
@@ -284,7 +284,7 @@ def test_norm(backend, density_matrix, seed):
     if density_matrix:
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
-        target_norm = backend.np.trace(state)
+        target_norm = backend.engine.trace(state)
         final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
@@ -336,7 +336,7 @@ def test_energy(backend, density_matrix):
         from qibo.quantum_info import random_density_matrix
 
         state = random_density_matrix(2**4, backend=backend)
-        target_energy = backend.np.trace(backend.np.matmul(matrix, state))
+        target_energy = backend.engine.trace(backend.engine.matmul(matrix, state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
         from qibo.quantum_info import random_statevector

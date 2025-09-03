@@ -30,7 +30,7 @@ def apply_bitflips(result, p0, p1=None):
             gate._get_bitflip_tuple(gate.qubits, p1),
         )
     noiseless_samples = result.samples()
-    probs = result.backend.cast(probs, dtype=result.backend.np.float64)
+    probs = result.backend.cast(probs, dtype=result.backend.engine.float64)
     return result.backend.apply_bitflips(noiseless_samples, probs)
 
 

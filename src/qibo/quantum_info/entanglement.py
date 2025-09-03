@@ -147,10 +147,10 @@ def negativity(state, bipartition, backend=None):
     backend = _check_backend(backend)
 
     reduced = partial_transpose(state, bipartition, backend)
-    reduced = backend.np.conj(reduced.T) @ reduced
-    norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend=backend))
+    reduced = backend.engine.conj(reduced.T) @ reduced
+    norm = backend.engine.trace(matrix_power(reduced, 1 / 2, backend=backend))
 
-    return backend.np.real((norm - 1) / 2)
+    return backend.engine.real((norm - 1) / 2)
 
 
 def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):

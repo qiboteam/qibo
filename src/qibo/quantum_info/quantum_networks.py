@@ -224,7 +224,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor_to_operator(n)
 
-        operator = self._backend.np.transpose(
+        operator = self._backend.engine.transpose(
             tensor.reshape(tuple(np.repeat(self.partition, 2))), order
         )
 
@@ -293,11 +293,11 @@ class QuantumNetwork:
             dtype=self._tensor.dtype,
         )
         if self._backend.__class__.__name__ == "PyTorchBackend":
-            adjoint = self._backend.np.transpose(reshaped, (1, 0))
+            adjoint = self._backend.engine.transpose(reshaped, (1, 0))
         else:
-            adjoint = self._backend.np.transpose(reshaped)
+            adjoint = self._backend.engine.transpose(reshaped)
 
-        mat_diff = self._backend.np.conj(adjoint) - reshaped
+        mat_diff = self._backend.engine.conj(adjoint) - reshaped
         norm = self._backend.calculate_matrix_norm(mat_diff, order=order)
 
         return float(norm) <= precision_tol
@@ -335,7 +335,7 @@ class QuantumNetwork:
             return False
 
         return all(
-            self._backend.np.real(eigenvalue) >= -precision_tol
+            self._backend.engine.real(eigenvalue) >= -precision_tol
             for eigenvalue in eigenvalues
         )
 
@@ -365,7 +365,7 @@ class QuantumNetwork:
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.QuantumNetwork` object."""
         return self.__class__(
-            self._backend.np.copy(self._tensor),
+            self._backend.engine.copy(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -375,7 +375,7 @@ class QuantumNetwork:
     def conj(self):
         """Returns the conjugate of the quantum network."""
         return self.__class__(
-            self._backend.np.conj(self._tensor),
+            self._backend.engine.conj(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -629,8 +629,8 @@ class QuantumNetwork:
 
         self.system_input = self._check_system_input(self.system_input, self.partition)
 
-        self._einsum = self._backend.np.einsum
-        self._tensordot = self._backend.np.tensordot
+        self._einsum = self._backend.engine.einsum
+        self._tensordot = self._backend.engine.tensordot
         self._tensor = self._backend.cast(self._tensor, dtype=self._tensor.dtype)
 
         if self._pure:
@@ -641,7 +641,7 @@ class QuantumNetwork:
                     + f"Cannot reshape matrix of size {self._tensor.shape} "
                     + f"to partition {self.partition}.",
                 )
-            self._tensor = self._backend.np.reshape(self._tensor, self.partition)
+            self._tensor = self._backend.engine.reshape(self._tensor, self.partition)
         else:
             if np.prod(tuple(self._tensor.shape)) != np.prod(
                 tuple(dim**2 for dim in self.partition)
@@ -653,7 +653,7 @@ class QuantumNetwork:
                     + f"to partition {self.partition}.",
                 )
             matrix_partition = [dim**2 for dim in self.partition]
-            self._tensor = self._backend.np.reshape(self._tensor, matrix_partition)
+            self._tensor = self._backend.engine.reshape(self._tensor, matrix_partition)
 
     def full(self, update: bool = False, backend=None):
         """Convert the internal representation to the full tensor of the network.
@@ -670,9 +670,9 @@ class QuantumNetwork:
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
-        tensor = self._backend.np.copy(self._tensor)
+        tensor = self._backend.engine.copy(self._tensor)
         tensor = backend.cast(tensor, dtype=self._tensor.dtype)
-        conj = backend.np.conj
+        conj = backend.engine.conj
 
         if self.is_pure():
             # Reshapes input matrix based on purity.
@@ -978,7 +978,7 @@ class QuantumChannel(QuantumComb):
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
         operator = self.copy().operator()
-        conj = self._backend.np.conj
+        conj = self._backend.engine.conj
 
         if self.is_pure():
             return self._einsum("ij,lk,il", operator, conj(operator), state)

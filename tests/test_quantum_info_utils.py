@@ -165,7 +165,7 @@ def test_hellinger(backend, validate, kind):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.calculate_vector_norm(backend.np.sqrt(prob_p) - backend.np.sqrt(prob_q))
+        backend.calculate_vector_norm(backend.engine.sqrt(prob_p) - backend.engine.sqrt(prob_q))
         / np.sqrt(2)
     )
 
@@ -305,7 +305,7 @@ def test_pqc_integral(backend):
 def test_decompose_permutation_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        decompose_permutation(backend.np.array(sigma), m=2, backend=backend)
+        decompose_permutation(backend.engine.array(sigma), m=2, backend=backend)
     with pytest.raises(ValueError):
         decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):

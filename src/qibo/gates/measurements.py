@@ -182,10 +182,14 @@ class M(Gate):
     def matrix(self, backend=None):
         """"""
         raise_error(
-            NotImplementedError, "Measurement gates do not have matrix representation."
+            NotImplementedError,
+            "Measurement gates do not have a matrix representation.",
         )
 
-    def apply(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits, density_matrix: bool = False):
+        if density_matrix:
+            return self.apply_density_matrix(backend, state, nqubits)
+
         self.result.backend = backend
         if not self.collapse:
             return state

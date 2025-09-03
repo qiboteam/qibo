@@ -85,10 +85,10 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = self.backend.np.kron(
+        matrix = self.backend.engine.kron(
             term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
-        matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.engine.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -98,8 +98,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = self.backend.np.transpose(matrix, order)
-        matrix = self.backend.np.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = self.backend.engine.transpose(matrix, order)
+        matrix = self.backend.engine.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(
             self.matrix + matrix, *self.target_qubits, backend=self.backend
         )
@@ -260,7 +260,7 @@ class SymbolicTerm(HamiltonianTerm):
             of this term.
         """
         matrices = list(self.qubit_to_matrix_map.values())
-        return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
+        return complex(self.coefficient) * reduce(self.backend.engine.kron, matrices)
 
     @cached_property
     def qubit_to_matrix_map(self) -> dict:
@@ -269,7 +269,7 @@ class SymbolicTerm(HamiltonianTerm):
         acting on it.
         """
         return {
-            q: reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            q: reduce(self.backend.engine.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
         }
 
@@ -300,7 +300,7 @@ class SymbolicTerm(HamiltonianTerm):
         for q in set(self.target_qubits).intersection(set(term.target_qubits)):
             m1 = self.qubit_to_matrix_map.get(q)
             m2 = term.qubit_to_matrix_map.get(q)
-            if not self.backend.np.all(m1 @ m2 == m2 @ m1):
+            if not self.backend.engine.all(m1 @ m2 == m2 @ m1):
                 return False
         return True
 

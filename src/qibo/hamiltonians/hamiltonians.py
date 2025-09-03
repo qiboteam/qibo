@@ -126,22 +126,22 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        diag = self.backend.np.diagonal(obs)
-        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
+        diag = self.backend.engine.diagonal(obs)
+        if self.backend.engine.count_nonzero(obs - self.backend.engine.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
+        diag = self.backend.engine.reshape(diag, self.nqubits * (2,))
         if qubit_map is None:
             qubit_map = range(self.nqubits)
-        diag = self.backend.np.transpose(diag, qubit_map).ravel()
+        diag = self.backend.engine.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
         diag = diag[[int(state, 2) for state in freq.keys()]]
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
         )
-        return self.backend.np.real(self.backend.np.sum(diag * counts))
+        return self.backend.engine.real(self.backend.engine.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -170,7 +170,7 @@ class Hamiltonian(AbstractHamiltonian):
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
         average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
+        return self.backend.engine.sqrt(self.backend.engine.abs(average_h2 - energy**2))
 
     def __add__(self, other):
         if isinstance(other, self.__class__):
@@ -244,13 +244,13 @@ class Hamiltonian(AbstractHamiltonian):
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
         other = self.backend.cast(other)
         if self._eigenvalues is not None:
-            if self.backend.np.real(other) >= 0:  # TODO: check for side effects K.qnp
+            if self.backend.engine.real(other) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if (self.backend.platform == "pytorch") else 0
-                r._eigenvalues = other * self.backend.np.flip(self._eigenvalues, axis)
+                r._eigenvalues = other * self.backend.engine.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
-            if self.backend.np.real(other) > 0:  # TODO: see above
+            if self.backend.engine.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -460,7 +460,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
             result = reduce(
-                self.backend.np.matmul,
+                self.backend.engine.matmul,
                 (self._get_symbol_matrix(subterm) for subterm in factors),
             )
 
@@ -471,7 +471,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             matrix_power = (
                 np.linalg.matrix_power
                 if self.backend.name == "tensorflow"
-                else self.backend.np.linalg.matrix_power
+                else self.backend.engine.linalg.matrix_power
             )
             result = matrix_power(matrix, int(exponent))
 
@@ -615,7 +615,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         keys = list(freq.keys())
         counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=self.backend.np.float64) / sum(counts)
+        counts = self.backend.cast(counts, dtype=self.backend.engine.float64) / sum(counts)
         expvals = []
         for term in self.terms:
             qubits = {
@@ -631,7 +631,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts) + self.constant.real
+        return self.backend.engine.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form

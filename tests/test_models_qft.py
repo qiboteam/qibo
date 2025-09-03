@@ -31,7 +31,7 @@ def exact_qft(
     if backend is not None:
         matrix = backend.cast(matrix, dtype=matrix.dtype)
     if density_matrix:
-        return matrix @ x @ backend.np.conj(matrix).T
+        return matrix @ x @ backend.engine.conj(matrix).T
     return matrix @ x
 
 
@@ -65,9 +65,9 @@ def test_qft_execution(backend, nqubits, random, density_matrix):
         else backend.zero_state(nqubits)
     )
     if density_matrix:
-        initial_state = backend.np.outer(initial_state, backend.np.conj(initial_state))
+        initial_state = backend.engine.outer(initial_state, backend.engine.conj(initial_state))
 
-    final_state = backend.execute_circuit(c, backend.np.copy(initial_state))._state
+    final_state = backend.execute_circuit(c, backend.engine.copy(initial_state))._state
     target_state = exact_qft(initial_state, density_matrix, backend)
     backend.assert_allclose(final_state, target_state, atol=1e-6, rtol=1e-6)
 
