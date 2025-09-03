@@ -694,7 +694,7 @@ class ThermalRelaxationChannel(KrausChannel):
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
             - p_z * backend.cast(state)
-            + p_z * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+            + p_z * backend.apply_gate(Z(0), state, nqubits, density_matrix=True)
         )
 
 
