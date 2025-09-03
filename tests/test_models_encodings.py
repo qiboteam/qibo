@@ -139,7 +139,7 @@ def test_binary_encoder(
         # need to insert zeros at the end of target to get
         # matching shapes
         trail_zeros = backend.np.zeros(
-            backend.np.ceil(int(2 ** backend.np.log2(dims))) - dims, dtype=target.dtype
+            2 ** int(backend.np.ceil(backend.np.log2(dims))) - dims, dtype=target.dtype
         )
         target = backend.np.concatenate((target, trail_zeros))
 
