@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
@@ -161,13 +162,26 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
+    def identity(self, dims: int, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        return self.engine.eye(dims, dtype=dtype)
+
+    def ones(self, shape, dtype=None):
+        if dtype is None:  # pragma: no cover
+            dtype = self.dtype
+        return self.engine.ones(shape, dtype=dtype)
+
+    def outer(self, array_1, array_2):
+        return self.engine.outer(array_1, array_2)
+
     def zeros(self, shape, dtype=None):
         if dtype is None:  # pragma: no cover
             dtype = self.dtype
         return self.engine.zeros(shape, dtype=dtype)
 
     def zero_state(
-        self, nqubits: int, density_matrix: bool = False
+        self, nqubits: int, density_matrix: bool = False, dtype=None
     ) -> "ndarray":  # pragma: no cover
         """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
@@ -180,35 +194,56 @@ class Backend:
         Returns:
             ndarray: Array representation of the :math:`n`-qubit zero state.
         """
-        state = self.zeros(2**nqubits, dtype=self.dtype)
-        state[0] = 1
+        if dtype is None:
+            dtype = self.dtype
 
-        if density_matrix:
-            state = self.engine.outer(state, state)
+        dims = 2**nqubits
+        shape = 2 * (dims,) if density_matrix else dims
+        indexes = [0, 0] if density_matrix else 0
+
+        state = self.zeros(shape, dtype=dtype)
+        state[indexes] = 1
 
         return state
 
-    def identity_density_matrix(
-        self, nqubits: int, normalize: bool = True
+    def plus_state(
+        self, nqubits: int, density_matrix: bool = False, dtype=None
     ):  # pragma: no cover
-        """Generate density matrix
+        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
+        if dtype is None:
+            dtype = self.dtype
+
+        dims = 2**nqubits
+        normalization = dims if density_matrix else math.sqrt(dims)
+        shape = 2 * (dims,) if density_matrix else dims
+
+        state = self.ones(shape, dtype=dtype)
+        state /= normalization
+
+        return state
+
+    def maximally_mixed_state(
+        self, nqubits: int, dtype=None
+    ) -> "ndarray":  # pragma: no cover
+        """Generate the :math:`n`-qubit density matrix for the maximally mixed state.
 
         .. math::
-            \\rho = \\frac{1}{2^\\text{nqubits}} \\, \\sum_{k=0}^{2^\\text{nqubits} - 1} \\,
-                |k \\rangle \\langle k|
+            \\rho = \\frac{I}{2^{n}} \\, ,
 
-        if ``normalize=True``. If ``normalize=False``, returns the unnormalized
-        Identity matrix, which is equivalent to :func:`numpy.eye`.
+        where :math:`I` is the :math:`2^{n} \\times 2^{n}` identity operator.
+
+        Args:
+            nqubits (int): Number of qubits :math:`n`.
+
         """
-        raise_error(NotImplementedError)
+        if dtype is None:
+            dtype = self.dtype
 
-    def plus_state(self, nqubits: int):  # pragma: no cover
-        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
-        raise_error(NotImplementedError)
+        dims = 2**nqubits
+        state = self.identity(dims, dtype=dtype)
+        state /= dims
 
-    def plus_density_matrix(self, nqubits: int):  # pragma: no cover
-        """Generate :math:`|+++\\cdots+\\rangle\\langle+++\\cdots+|` density matrix as an array."""
-        raise_error(NotImplementedError)
+        return state
 
     def matrix(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
         """Convert a :class:`qibo.gates.Gate` to the corresponding matrix."""

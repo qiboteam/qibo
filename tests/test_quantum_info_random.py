@@ -451,7 +451,7 @@ def test_random_pauli(
     result_complete_set = backend.cast(
         result_complete_set, dtype=result_complete_set.dtype
     )
-    result_subset = backend.identity_density_matrix(2, normalize=False)
+    result_subset = backend.identity(4)
 
     matrix = random_pauli(
         qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed, backend

@@ -122,7 +122,7 @@ def test_partial_trace(backend, density_matrix):
 
     traced = partial_trace(state, (1, 2, 3), backend=backend)
 
-    Id = backend.identity_density_matrix(1, normalize=True)
+    Id = backend.maximally_mixed_state(1)
 
     backend.assert_allclose(traced, Id)
 
@@ -133,7 +133,7 @@ def _werner_state(p, backend):
     psi = np.outer(psi, np.conj(psi.T))
     psi = backend.cast(psi, dtype=psi.dtype)
 
-    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+    state = p * psi + (1 - p) * backend.maximally_mixed_state(2)
 
     # partial transpose of two-qubit werner state is known analytically
     transposed = (1 / 4) * np.array(

@@ -529,8 +529,8 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     return state
 
 
-def identity_density_matrix(nqubits, normalize: bool = True):
-    state = np.eye(2**nqubits, dtype="complex128")
-    if normalize is True:  # pragma: no cover
-        state /= 2**nqubits
+def maximally_mixed_state(nqubits: int):
+    dims = 2**nqubits
+    state = np.eye(dims, dtype="complex128")
+    state /= dims
     return state

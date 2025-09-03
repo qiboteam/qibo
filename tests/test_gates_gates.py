@@ -233,7 +233,7 @@ def test_align(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     gate_matrix = gate.matrix(backend)
-    identity = backend.identity_density_matrix(nqubits, normalize=False)
+    identity = backend.identity(2**nqubits)
     backend.assert_allclose(gate_matrix, identity, atol=1e-6)
 
     with pytest.raises(NotImplementedError):

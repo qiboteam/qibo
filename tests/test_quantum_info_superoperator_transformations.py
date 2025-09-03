@@ -375,7 +375,7 @@ def test_to_stinespring(backend, test_a0, partition):
 
     environment = (1, 2)
 
-    global_state = backend.identity_density_matrix(len(environment), normalize=True)
+    global_state = backend.maximally_mixed_state(len(environment))
     global_state = backend.np.kron(state, global_state)
 
     stinespring = to_stinespring(

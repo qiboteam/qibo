@@ -1,7 +1,6 @@
 """Module defining the Numpy backend."""
 
 import collections
-import math
 from typing import Union
 
 import numpy as np
@@ -70,22 +69,6 @@ class NumpyBackend(Backend):
 
     def random_choice(self, a, **kwargs):
         return self.engine.random.choice(a, **kwargs)
-
-    def identity_density_matrix(self, nqubits, normalize: bool = True):
-        state = self.engine.eye(2**nqubits, dtype=self.dtype)
-        if normalize is True:
-            state /= 2**nqubits
-        return state
-
-    def plus_state(self, nqubits):
-        state = self.engine.ones(2**nqubits, dtype=self.dtype)
-        state /= math.sqrt(2**nqubits)
-        return state
-
-    def plus_density_matrix(self, nqubits):
-        state = self.engine.ones(2 * (2**nqubits,), dtype=self.dtype)
-        state /= 2**nqubits
-        return state
 
     def matrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
@@ -337,7 +320,7 @@ class NumpyBackend(Backend):
         lam = gate.init_kwargs["lam"]
         trace = partial_trace(state, q, backend=self)
         trace = self.engine.reshape(trace, 2 * (nqubits - len(q)) * (2,))
-        identity = self.identity_density_matrix(len(q))
+        identity = self.maximally_mixed_state(len(q))
         identity = self.engine.reshape(identity, 2 * len(q) * (2,))
         identity = self.engine.tensordot(trace, identity, 0)
         qubits = list(range(nqubits))

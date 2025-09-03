@@ -575,7 +575,7 @@ def random_density_matrix(
             state = state / backend.np.trace(state)
         else:
             nqubits = int(np.log2(dims))
-            state = backend.identity_density_matrix(nqubits, normalize=False)
+            state = backend.identity(nqubits)
             state += random_unitary(dims, seed=local_state, backend=backend)
             state = backend.np.matmul(
                 state,
@@ -1239,14 +1239,11 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             eigenvector, backend.np.conj(eigenvector)
         )
 
-    if order == "row":
-        operator = backend.np.kron(
-            backend.identity_density_matrix(nqubits, normalize=False), operator
-        )
+    ops = [backend.identity(2**dims), operator]
     if order == "column":
-        operator = backend.np.kron(
-            operator, backend.identity_density_matrix(nqubits, normalize=False)
-        )
+        ops = ops[::-1]
+
+    operator = backend.np.kron(*ops)
 
     super_op = operator @ super_op @ operator
 

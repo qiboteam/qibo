@@ -436,7 +436,7 @@ def test_von_neumann_entropy(backend, base):
     state = backend.cast(state, dtype=state.dtype)
 
     nqubits = 2
-    state = backend.identity_density_matrix(nqubits)
+    state = backend.identity(2**nqubits)
     if base == 2:
         test = 2.0
     elif base == 10:
@@ -474,7 +474,7 @@ def test_relative_von_neumann_entropy(backend, base):
     nqubits = 2
     dims = 2**nqubits
 
-    target = backend.identity_density_matrix(nqubits, normalize=True)
+    target = backend.maximally_mixed_state(nqubits)
 
     state = random_statevector(dims, backend=backend)
     state = backend.np.outer(state, backend.np.conj(state.T))

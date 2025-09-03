@@ -32,7 +32,7 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
 
     if check_purity is True:
         with pytest.raises(NotImplementedError):
-            state = backend.identity_density_matrix(2, normalize=False)
+            state = backend.identity(4)
             test = concurrence(state, bipartition=bipartition, backend=backend)
 
     nqubits = 2
@@ -74,7 +74,7 @@ def test_negativity(backend, p):
     psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
     psi = np.outer(psi, psi.T)
     psi = backend.cast(psi)
-    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+    state = p * psi + (1 - p) * backend.identity(4)
 
     neg = negativity(state, [0], backend=backend)
 
@@ -122,7 +122,7 @@ def test_entanglement_fidelity(backend, channel, nqubits):
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
     # test on maximally mixed state
-    state = backend.identity_density_matrix(nqubits)
+    state = backend.identity(2**nqubits)
     ent_fid = entanglement_fidelity(
         channel,
         nqubits=nqubits,

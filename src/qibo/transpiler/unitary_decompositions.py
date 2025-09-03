@@ -407,9 +407,7 @@ def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
         list: gates implementing the decomposition
     """
     # Handle identity case efficiently
-    if backend.np.allclose(
-        unitary, backend.identity_density_matrix(nqubits=2, normalize=False)
-    ):
+    if backend.np.allclose(unitary, backend.identity(4)):
         return []
 
     z_component = _get_z_component(unitary, backend)

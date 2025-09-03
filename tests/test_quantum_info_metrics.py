@@ -47,7 +47,7 @@ def test_purity_and_impurity(backend):
     backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     dim = 4
-    state = backend.identity_density_matrix(2)
+    state = backend.maximally_mixed_state(2)
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(
         purity(state, backend=backend), 1.0 / dim, atol=PRECISION_TOL
@@ -160,8 +160,8 @@ def test_fidelity_and_infidelity_and_bures(backend):
         target = backend.cast(target, dtype=target.dtype)
         test = fidelity(state, target, backend=backend)
 
-    state = backend.identity_density_matrix(4)
-    target = backend.identity_density_matrix(4)
+    state = backend.maximally_mixed_state(4)
+    target = backend.maximally_mixed_state(4)
     backend.assert_allclose(
         fidelity(state, target, backend=backend),
         1.0,
@@ -303,7 +303,7 @@ def test_diamond_norm(backend, nqubits):
         test_2 = random_unitary(4**nqubits, backend=backend)
         test = diamond_norm(test, test_2)
 
-    unitary = backend.identity_density_matrix(nqubits, normalize=False)
+    unitary = backend.identity(2**nqubits)
     unitary = to_choi(unitary, order="row", backend=backend)
 
     dnorm = diamond_norm(unitary, backend=backend)
