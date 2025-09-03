@@ -115,7 +115,9 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
             dims = 5
             test = np.random.rand(dims)
             test = backend.cast(test, dtype=test.dtype)
-            test = binary_encoder(test, parametrization=parametrization, nqubits=nqubits, backend=backend)
+            test = binary_encoder(
+                test, parametrization=parametrization, nqubits=nqubits, backend=backend
+            )
 
     dims = 2**nqubits
 
@@ -124,7 +126,9 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization, nqubits=nqubits, backend=backend)
+    circuit = binary_encoder(
+        target, parametrization=parametrization, nqubits=nqubits, backend=backend
+    )
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
