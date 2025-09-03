@@ -1175,7 +1175,7 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=N
 
     if architecture == "diagonal":
         phases = [
-            backend.engine.arctan2(backend.calculate_vector_norm(data[k + 1 :]), data[k])
+            backend.engine.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
         phases.append(backend.engine.arctan2(data[-1], data[-2]))

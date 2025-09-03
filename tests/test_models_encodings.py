@@ -161,7 +161,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
 
     backend.assert_allclose(
         state,
-        backend.cast(data, dtype=np.float64) / backend.calculate_vector_norm(data, 2),
+        backend.cast(data, dtype=np.float64) / backend.vector_norm(data, 2),
         rtol=1e-5,
     )
 

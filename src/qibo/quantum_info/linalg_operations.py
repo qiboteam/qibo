@@ -490,7 +490,7 @@ def lanczos(
 
     lanczos_vectors = [vector]
     for _ in range(steps - 1):
-        norm = backend.calculate_vector_norm(omega)
+        norm = backend.vector_norm(omega)
         if norm > precision_tol:
             vector = omega / norm
         else:  # pragma: no cover

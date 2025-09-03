@@ -456,7 +456,7 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
         state = state + 1.0j * backend.cast(
             local_state.standard_normal(dims), dtype=dtype
         )
-    state = state / backend.calculate_vector_norm(state)
+    state = state / backend.vector_norm(state)
 
     return state
 

@@ -217,6 +217,47 @@ class Backend:
     def transpose(self, array, axes: Union[Tuple[int, ...], List[int]]) -> "ndarray":
         return self.engine.transpose(array, axes)
 
+    def vector_norm(
+        self, state, order: Union[int, float, str] = 2, dtype=None
+    ) -> float:  # pragma: no cover
+        """Calculate norm of an :math:`1`-dimensional array.
+
+        For specifications on possible values of the parameter ``order``
+        for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        """
+        if dtype is None:
+            dtype = self.dtype
+
+        state = self.cast(state, dtype=dtype)
+
+        return self.engine.linalg.norm(state, order)
+
+    def matrix_norm(
+        self, state, order: Union[int, float, str] = "nuc"
+    ):  # pragma: no cover
+        """Calculate norm of a :math:`2`-dimensional array.
+
+        Default is the ``nuclear`` norm.
+        If ``order="nuc"``, it returns the nuclear norm of ``state``,
+        assuming ``state`` is Hermitian (also known as trace norm).
+        For specifications on the other  possible values of the
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        """
+        if dtype is None:
+            dtype = self.dtype
+
+        state = self.cast(state, dtype=dtype)
+
+        return self.engine.linalg.norm(state, ord=order)
+
     def zeros(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
         if dtype is None:
             dtype = self.dtype
@@ -588,37 +629,6 @@ class Backend:
 
     def sample_frequencies(self, probabilities, nshots: int):  # pragma: no cover
         """Sample measurement frequencies according to a probability distribution."""
-        raise_error(NotImplementedError)
-
-    def calculate_vector_norm(
-        self, state, order: Union[int, float, str] = 2
-    ):  # pragma: no cover
-        """Calculate norm of an :math:`1`-dimensional array.
-
-        For specifications on possible values of the parameter ``order``
-        for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm
-        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-        """
-        raise_error(NotImplementedError)
-
-    def calculate_matrix_norm(
-        self, state, order: Union[int, float, str] = "nuc"
-    ):  # pragma: no cover
-        """Calculate norm of a :math:`2`-dimensional array.
-
-        Default is the ``nuclear`` norm.
-        If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian (also known as trace norm).
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm
-        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-        """
         raise_error(NotImplementedError)
 
     def calculate_overlap(self, state1, state2):  # pragma: no cover

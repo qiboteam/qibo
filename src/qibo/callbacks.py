@@ -180,12 +180,12 @@ class Norm(Callback):
     """
 
     def apply(self, backend, state):
-        norm = backend.calculate_vector_norm(state)
+        norm = backend.vector_norm(state)
         self.append(norm)
         return norm
 
     def apply_density_matrix(self, backend, state):
-        norm = backend.calculate_matrix_norm(state)
+        norm = backend.matrix_norm(state)
         self.append(norm)
         return norm
 

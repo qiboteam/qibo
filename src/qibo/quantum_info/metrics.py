@@ -34,7 +34,7 @@ def purity(state, backend=None):
         )
 
     if len(state.shape) == 1:
-        pur = backend.engine.real(backend.calculate_vector_norm(state)) ** 2
+        pur = backend.engine.real(backend.vector_norm(state)) ** 2
     else:
         pur = backend.engine.real(backend.engine.trace(backend.engine.matmul(state, state)))
     return float(pur)
@@ -356,7 +356,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if check_unitary is True:
         norm_channel = float(
-            backend.calculate_matrix_norm(
+            backend.matrix_norm(
                 backend.engine.matmul(
                     backend.engine.conj(backend.engine.transpose(channel, (1, 0))), channel
                 )
@@ -367,7 +367,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = float(
-                backend.calculate_vector_norm(
+                backend.vector_norm(
                     backend.engine.matmul(
                         backend.engine.conj(backend.engine.transpose(target, (1, 0))), target
                     )
@@ -678,7 +678,7 @@ def expressibility(
         circuit.nqubits, power_t, samples=None, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = float(backend.calculate_vector_norm(deviation, order=order))
+    fid = float(backend.vector_norm(deviation, order=order))
 
     return fid
 

@@ -409,14 +409,6 @@ class NumpyBackend(Backend):
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
-    def calculate_vector_norm(self, state, order=2):
-        state = self.cast(state)
-        return self.engine.linalg.norm(state, order)
-
-    def calculate_matrix_norm(self, state, order="nuc"):
-        state = self.cast(state)
-        return self.engine.linalg.norm(state, ord=order)
-
     def calculate_overlap(self, state1, state2):
         return self.engine.abs(
             self.engine.sum(self.engine.conj(self.cast(state1)) * self.cast(state2))

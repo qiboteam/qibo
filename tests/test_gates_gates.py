@@ -1350,7 +1350,7 @@ def test_toffoli_congruent(backend):
     target = backend.matrices.TOFFOLI
     target[4, 4] = -1
 
-    assert backend.calculate_matrix_norm(congruent - target) < 1e-8
+    assert backend.matrix_norm(congruent - target) < 1e-8
 
 
 def test_ccz(backend):

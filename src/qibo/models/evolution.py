@@ -81,7 +81,7 @@ class StateEvolution:
     def _create_normalize_state(self, solver):
         if "rk" in solver:
             log.info("Normalizing state during RK solution.")
-            return lambda s: s / self.backend.calculate_vector_norm(s)
+            return lambda s: s / self.backend.vector_norm(s)
         else:
             return lambda s: s
 

@@ -165,7 +165,7 @@ def test_hellinger(backend, validate, kind):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.calculate_vector_norm(backend.engine.sqrt(prob_p) - backend.engine.sqrt(prob_q))
+        backend.vector_norm(backend.engine.sqrt(prob_p) - backend.engine.sqrt(prob_q))
         / np.sqrt(2)
     )
 
@@ -240,7 +240,7 @@ def test_total_variation_distance(backend, validate, kind):
     prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
-    target = float(backend.calculate_vector_norm(prob_p - prob_q, order=1) / 2)
+    target = float(backend.vector_norm(prob_p - prob_q, order=1) / 2)
 
     prob_p = (
         kind(prob_p) if kind is not None else backend.cast(prob_p, dtype=prob_p.dtype)
