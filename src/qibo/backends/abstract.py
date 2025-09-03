@@ -342,7 +342,7 @@ class Backend:
         shape = state.shape
         qubit = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
-        trace = self.partial_trace(state, (q,))
+        trace = self.partial_trace(state, (qubit,))
         trace = self.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_state(nqubits=1, density_matrix=True)
         zero = self.tensordot(trace, zero, 0)
@@ -488,8 +488,8 @@ class Backend:
 
             new_state = (1 - channel.coefficient_sum) * state
             for coeff, gate in zip(channel.coefficients, channel.gates):
-                new_state += coeff * self.apply_gate_density_matrix(
-                    gate, state, nqubits
+                new_state += coeff * self.apply_gate(
+                    gate, state, nqubits, density_matrix=True
                 )
 
             return new_state
@@ -549,38 +549,6 @@ class Backend:
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(NotImplementedError)
 
-    def calculate_symbolic(
-        self,
-        state,
-        nqubits: int,
-        decimals: int = 5,
-        cutoff: float = 1e-10,
-        max_terms: int = 20,
-    ):  # pragma: no cover
-        """Dirac representation of a state vector."""
-        raise_error(NotImplementedError)
-
-    def calculate_symbolic_density_matrix(
-        self,
-        state,
-        nqubits: int,
-        decimals: int = 5,
-        cutoff: float = 1e-10,
-        max_terms: int = 20,
-    ):  # pragma: no cover
-        """Dirac representation of a density matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_probabilities(self, state, qubits, nqubits: int):  # pragma: no cover
-        """Calculate probabilities given a state vector."""
-        raise_error(NotImplementedError)
-
-    def calculate_probabilities_density_matrix(
-        self, state, qubits, nqubits: int
-    ):  # pragma: no cover
-        """Calculate probabilities given a density matrix."""
-        raise_error(NotImplementedError)
-
     def sample_shots(self, probabilities, nshots: int):  # pragma: no cover
         """Sample measurement shots according to a probability distribution."""
         raise_error(NotImplementedError)
@@ -591,8 +559,10 @@ class Backend:
 
     def samples_to_binary(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from decimal representation to binary."""
-        raise_error(NotImplementedError)
-
+        qrange = self.cast(
+            .arange(nqubits - 1, -1, -1, dtype=np.int32), dtype=self.engine.int32
+        )
+        return self.engine.mod(self.engine.right_shift(samples[:, None], qrange), 2)
     def samples_to_decimal(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from binary representation to decimal."""
         raise_error(NotImplementedError)
@@ -838,7 +808,7 @@ class Backend:
 
         return self.reshape(state, shape)
 
-    def _collapse_state(self, state, qubits, shot, nqubits, normalize=True):
+    def _collapse_statevector(self, state, qubits, shot, nqubits, normalize=True):
         state = self.cast(state)
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
