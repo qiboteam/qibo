@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Self, Tuple, Union
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -31,7 +31,7 @@ class Backend:
         self.tensor_types = None
         self.versions = {"qibo": __version__}
 
-    def __reduce__(self) -> Tuple["Backend", tuple]:
+    def __reduce__(self) -> Tuple[Self, tuple]:
         """Allow pickling backend objects that have references to modules."""
         return self.__class__, tuple()
 
@@ -126,6 +126,10 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
+    def set_seed(self, seed: Union[int, None]) -> None:
+        """Set the seed of the random number generator. Works in-place."""
+        self.engine.random.seed(seed)
+
     def set_threads(self, nthreads: int) -> None:  # pragma: no cover
         """Set number of threads for CPU backend simulations that accept it. Works in-place.
 
@@ -167,6 +171,9 @@ class Backend:
     ######## Methods related to array manipulation                                  ########
     ########################################################################################
 
+    def abs(self, array, **kwargs) -> Union[int, float, complex, "ndarray"]:
+        return self.engine.abs(array, **kwargs)
+
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
@@ -191,8 +198,14 @@ class Backend:
     ) -> "ndarray":
         return self.engine.reshape(array, shape=shape, **kwargs)
 
+    def sqrt(self, array):
+        return self.engine.sqrt(array)
+
     def sum(self, array, axis=None, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.sum(array, axis=axis, **kwargs)
+
+    def tensordot(self, array_1, array_2, axes: Union[int, Tuple[int, ...]] = 2):
+        return self.engine.tensordot(array_1, array_2, axes=axes)
 
     def trace(self, array) -> Union[int, float]:
         return self.engine.trace(array)
@@ -209,45 +222,39 @@ class Backend:
     ######## Methods related to the creation and manipulation of quantum objects    ########
     ########################################################################################
 
-    def zero_state(
-        self, nqubits: int, density_matrix: bool = False, dtype=None
-    ) -> "ndarray":  # pragma: no cover
-        """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
+    def depolarizing_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state, dtype=state.dtype)
+        shape = state.shape
+        target_qubits = gate.target_qubits
+        lam = gate.init_kwargs["lam"]
 
-        Args:
-            nqubits (int): Number of qubits :math:`n`.
-            density_matrix (bool, optional): If ``True``, returns the density matrix
-                :math:`\\ketbra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
-                :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
+        trace = self.partial_trace(state, target_qubits)
+        trace = self.reshape(trace, 2 * (nqubits - len(target_qubits)) * (2,))
+        identity = self.maximally_mixed_state(len(target_qubits))
+        identity = self.reshape(identity, 2 * len(target_qubits) * (2,))
+        identity = self.tensordot(trace, identity, 0)
 
-        Returns:
-            ndarray: Array representation of the :math:`n`-qubit zero state.
-        """
-        if dtype is None:
-            dtype = self.dtype
+        qubits = list(range(nqubits))
+        for j in target_qubits:
+            qubits.pop(qubits.index(j))
+        qubits.sort()
+        qubits += list(target_qubits)
 
-        dims = 2**nqubits
-        shape = 2 * (dims,) if density_matrix else dims
-        indexes = [0, 0] if density_matrix else 0
+        qubit_1 = list(range(nqubits - len(target_qubits))) + list(
+            range(2 * (nqubits - len(target_qubits)), 2 * nqubits - len(target_qubits))
+        )
+        qubit_2 = list(
+            range(nqubits - len(target_qubits), 2 * (nqubits - len(target_qubits)))
+        ) + list(range(2 * nqubits - len(target_qubits), 2 * nqubits))
+        qs = [qubit_1, qubit_2]
 
-        state = self.zeros(shape, dtype=dtype)
-        state[indexes] = 1
+        order = []
+        for qj in qs:
+            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            order += qj
 
-        return state
-
-    def plus_state(
-        self, nqubits: int, density_matrix: bool = False, dtype=None
-    ):  # pragma: no cover
-        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
-        if dtype is None:
-            dtype = self.dtype
-
-        dims = 2**nqubits
-        normalization = dims if density_matrix else math.sqrt(dims)
-        shape = 2 * (dims,) if density_matrix else dims
-
-        state = self.ones(shape, dtype=dtype)
-        state /= normalization
+        identity = self.reshape(self.transpose(identity, order), shape)
+        state = (1 - lam) * state + lam * identity
 
         return state
 
@@ -274,33 +281,115 @@ class Backend:
 
         return state
 
+    def partial_trace(
+        self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
+    ) -> "ndarray":
+        state = self.cast(state, dtype=state.dtype)
+        nqubits = math.log2(state.shape[0])
+
+        if not nqubits.is_integer():
+            raise_error(
+                ValueError,
+                "dimension(s) of ``state`` must be a power of 2, "
+                + f"but it is {2**nqubits}.",
+            )
+
+        nqubits = int(nqubits)
+
+        statevector = bool(len(state.shape) == 1)
+
+        factor = 1 if statevector else 2
+        state = self.reshape(state, factor * nqubits * (2,))
+
+        if statevector:
+            axes = 2 * [list(traced_qubits)]
+            rho = self.tensordot(state, self.conj(state), axes)
+            shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
+
+            return self.reshape(rho, shape)
+
+        order = tuple(sorted(traced_qubits))
+        order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
+        order += tuple(elem + nqubits for elem in order)
+        shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
+
+        state = self.transpose(state, order)
+        state = self.reshape(state, shape)
+
+        return self.engine.einsum("abac->bc", state)
+
+    def plus_state(
+        self, nqubits: int, density_matrix: bool = False, dtype=None
+    ):  # pragma: no cover
+        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
+        if dtype is None:
+            dtype = self.dtype
+
+        dims = 2**nqubits
+        normalization = dims if density_matrix else math.sqrt(dims)
+        shape = 2 * (dims,) if density_matrix else dims
+
+        state = self.ones(shape, dtype=dtype)
+        state /= normalization
+
+        return state
+
     def reset_error_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
         """Apply reset error to density matrix."""
-        from qibo.gates import X  # pylint: disable=import-outside-toplevel
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=import-outside-toplevel
-            partial_trace,
-        )
+        from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
 
-        state = self.cast(state)
+        state = self.cast(state, dtype=state.dtype)
         shape = state.shape
-        q = gate.target_qubits[0]
+        qubit = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
-        trace = partial_trace(state, (q,), backend=self)
-        trace = self.engine.reshape(trace, 2 * (nqubits - 1) * (2,))
-        zero = self.zero_state(1, density_matrix=True)
-        zero = self.engine.tensordot(trace, zero, 0)
+        trace = self.partial_trace(state, (q,))
+        trace = self.reshape(trace, 2 * (nqubits - 1) * (2,))
+        zero = self.zero_state(nqubits=1, density_matrix=True)
+        zero = self.tensordot(trace, zero, 0)
         order = list(range(2 * nqubits - 2))
-        order.insert(q, 2 * nqubits - 2)
-        order.insert(q + nqubits, 2 * nqubits - 1)
-        zero = self.engine.reshape(self.engine.transpose(zero, order), shape)
+        order.insert(qubit, 2 * nqubits - 2)
+        order.insert(qubit + nqubits, 2 * nqubits - 1)
+        zero = self.reshape(self.transpose(zero, order), shape)
         state = (1 - p_0 - p_1) * state + p_0 * zero
-        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+
+        return state + p_1 * self.apply_gate(
+            X(qubit), zero, nqubits, density_matrix=True
+        )
 
     def thermal_error_density_matrix(
         self, gate, state, nqubits: int
     ):  # pragma: no cover
         """Apply thermal relaxation error to density matrix."""
-        raise_error(NotImplementedError)
+        state = self.cast(state, dtype=state.dtype)
+        shape = state.shape
+        state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
+        return self.reshape(state, shape)
+
+    def zero_state(
+        self, nqubits: int, density_matrix: bool = False, dtype=None
+    ) -> "ndarray":  # pragma: no cover
+        """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
+
+        Args:
+            nqubits (int): Number of qubits :math:`n`.
+            density_matrix (bool, optional): If ``True``, returns the density matrix
+                :math:`\\ketbra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
+                :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
+
+        Returns:
+            ndarray: Array representation of the :math:`n`-qubit zero state.
+        """
+        if dtype is None:
+            dtype = self.dtype
+
+        dims = 2**nqubits
+        shape = 2 * (dims,) if density_matrix else dims
+        indexes = [0, 0] if density_matrix else 0
+
+        state = self.zeros(shape, dtype=dtype)
+        state[indexes] = 1
+
+        return state
 
     ########################################################################################
     ######## Methods related to circuit execution                                   ########
@@ -490,10 +579,6 @@ class Backend:
         self, state, qubits, nqubits: int
     ):  # pragma: no cover
         """Calculate probabilities given a density matrix."""
-        raise_error(NotImplementedError)
-
-    def set_seed(self, seed):  # pragma: no cover
-        """Set the seed of the random number generator."""
         raise_error(NotImplementedError)
 
     def sample_shots(self, probabilities, nshots: int):  # pragma: no cover
@@ -766,7 +851,7 @@ class Backend:
         state = self.reshape(state, subshape)[int(shot)]
 
         if normalize:
-            norm = self.engine.sqrt(self.sum(self.engine.abs(state) ** 2))
+            norm = self.sqrt(self.sum(self.engine.abs(state) ** 2))
             state = state / norm
 
         state = self._append_zeros(state, qubits, binshot)
