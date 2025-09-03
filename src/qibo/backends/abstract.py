@@ -559,10 +559,9 @@ class Backend:
 
     def samples_to_binary(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from decimal representation to binary."""
-        qrange = self.cast(
-            .arange(nqubits - 1, -1, -1, dtype=np.int32), dtype=self.engine.int32
-        )
+        qrange = (self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32),)
         return self.engine.mod(self.engine.right_shift(samples[:, None], qrange), 2)
+
     def samples_to_decimal(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from binary representation to decimal."""
         raise_error(NotImplementedError)
