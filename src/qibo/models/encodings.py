@@ -278,11 +278,21 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
             if x <= backend.np.iinfo(dt).max:
                 return backend.np.dtype(dt)
 
-    data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
-    bitstrings_sorted = backend.np.array(
+    # TODO: Fix this mess with qibo native data types
+    try:
+        test_dtype = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        test_dtype = bool("int" in str(type(data[0][0])))
+
+    _data = [(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data
+
+    bitstrings_sorted, data_sorted = zip(*_data)
+    bitstrings_sorted = backend.cast(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
         dtype=get_int_type(2**nqubits),
     )
+
+    data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     dim = len(data_sorted)
     sigma = backend.np.arange(2**nqubits)
@@ -293,18 +303,22 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     )
     flag[indexes] = 1
 
-    for bi_int in bitstrings_sorted:
+    data_binary = backend.np.zeros(dim, dtype=data_sorted.dtype)
+    for bi_int,xi in zip(bitstrings_sorted,data_sorted):
         bi_int = int(bi_int)
         if bi_int >= dim:
             for k in range(dim):
                 if flag[k] == 0:
                     flag[k] = 1
                     sigma[[bi_int, k]] = [k, bi_int]
+                    data_binary[k] = xi
                     break
+        else:
+            data_binary[bi_int] = xi
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = binary_encoder(
-        backend.cast(data_sorted, dtype=data_sorted.dtype),
+        backend.cast(data_binary, dtype=data_binary.dtype),
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
