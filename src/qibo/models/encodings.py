@@ -304,7 +304,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = binary_encoder(
-        backend.np.array([xi for xi in data_sorted]),
+        backend.cast(data_sorted, dtype=data_sorted.dtype),
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
