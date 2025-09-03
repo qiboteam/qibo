@@ -318,7 +318,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = binary_encoder(
-        backend.cast(data_binary, dtype=data_binary.dtype),
+        data_binary,
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
@@ -502,12 +502,18 @@ def binary_encoder(
     where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
     of the integer :math:`j`, :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
 
-    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``Hopf`` coordinates
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``hopf`` coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
         data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
+        parametrization (str): choice of circuit parametrization. either ``hyperspherical`` 
+            or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -1875,9 +1881,6 @@ def _binary_codewords_ehrlich(dims: int, backend=None):
     to `_ehrlich_codewords_up_to_k(k)`; when d is a power of two, exactly one call.
     """
     backend = _check_backend(backend)
-
-    if dims <= 0:
-        return
 
     # Check power-of-two case: b == 2^k
     if (dims & (dims - 1)) == 0:

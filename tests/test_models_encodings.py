@@ -102,9 +102,10 @@ def test_phase_encoder(backend, rotation, kind):
 
 
 @pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("not_power_of_two", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_binary_encoder(backend, nqubits, parametrization, complex_data):
+def test_binary_encoder(backend, nqubits, parametrization, complex_data, not_power_of_two):
     if parametrization == "hopf":
         if complex_data:
             pytest.skip(
@@ -119,7 +120,10 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
                 test, parametrization=parametrization, nqubits=nqubits, backend=backend
             )
 
-    dims = 2**nqubits
+    if not_power_of_two:
+        dims = 28
+    else:
+        dims = 2**nqubits
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
@@ -127,7 +131,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
         target /= backend.np.linalg.norm(target)
 
     circuit = binary_encoder(
-        target, parametrization=parametrization, nqubits=nqubits, backend=backend
+        target, parametrization=parametrization, backend=backend
     )
     state = backend.execute_circuit(circuit).state()
 
