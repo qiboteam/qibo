@@ -105,16 +105,17 @@ def test_phase_encoder(backend, rotation, kind):
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_binary_encoder(backend, nqubits, parametrization, complex_data):
-    if parametrization == "hopf" and complex_data:
-        pytest.skip(
-            "``binary_encoder`` in Hopf coordinates not implemented for complex data."
-        )
+    if parametrization == "hopf":
+        if complex_data:
+            pytest.skip(
+                "``binary_encoder`` in Hopf coordinates not implemented for complex data."
+            )
 
-    with pytest.raises(ValueError):
-        dims = 5
-        test = np.random.rand(dims)
-        test = backend.cast(test, dtype=test.dtype)
-        test = binary_encoder(test)
+        with pytest.raises(ValueError):
+            dims = 5
+            test = np.random.rand(dims)
+            test = backend.cast(test, dtype=test.dtype)
+            test = binary_encoder(test, parametrization)
 
     dims = 2**nqubits
 

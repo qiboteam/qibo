@@ -267,7 +267,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     backend = _check_backend(backend)
 
     def get_int_type(x: int):
-        # Candidates in increasing size of memory footprint
+        # Candidates in increasing size of memory usage
         int_types = [
             backend.np.int8,
             backend.np.int16,
@@ -517,7 +517,7 @@ def binary_encoder(
     backend = _check_backend(backend)
 
     dims = len(data)
-    if (dims & (dims - 1)) != 0 and parametrization == "Hopf":
+    if (dims & (dims - 1)) != 0 and parametrization == "hopf":
         raise_error(ValueError, "`data` size must be a power of 2.")
 
     if nqubits == None:
@@ -1795,7 +1795,7 @@ def _binary_codewords(dims: int, backend=None):
     backend = _check_backend(backend)
 
     def get_int_type(x: int):
-        # Candidates in increasing size of memory footprint
+        # Candidates in increasing size of memory usage
         int_types = [
             backend.np.int8,
             backend.np.int16,
