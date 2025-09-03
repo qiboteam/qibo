@@ -1,22 +1,33 @@
-import abc
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
+from qibo import __version__
 from qibo.config import raise_error
 
 
-class Backend(abc.ABC):
+class Backend:
     def __init__(self):
         super().__init__()
-        self.name = "backend"
-        self.platform = None
-
-        self.dtype = "complex128"
-        self.matrices = None
 
         self.device = "/CPU:0"
+        self.dtype = "complex128"
+        self.engine = None
+        self.matrices = None
+        self.name = "backend"
         self.nthreads = 1
-        self.supports_multigpu = False
+        self.numeric_types = (
+            int,
+            float,
+            complex,
+            "complex128",
+            "complex64",
+            "float64",
+            "float32",
+        )
         self.oom_error = MemoryError
+        self.platform = None
+        self.supports_multigpu = False
+        self.tensor_types = None
+        self.versions = {"qibo": __version__}
 
     def __reduce__(self):
         """Allow pickling backend objects that have references to modules."""
@@ -29,28 +40,39 @@ class Backend(abc.ABC):
         return f"{self.name} ({self.platform})"
 
     @property
-    @abc.abstractmethod
     def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
-        """Return the qubit names of the backend. If :class:`SimulationBackend`, return None."""
-        raise_error(NotImplementedError)
+        """Return the qubit names of the backend.
+
+        Returns:
+            List[int] or List[str] or None: For hardware backends, return list of qubit names.
+            For simulation backends, return ``None``.
+        """
+        return None
 
     @property
-    @abc.abstractmethod
     def connectivity(
         self,
-    ) -> Optional[list[tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
-        """Return the available qubit pairs of the backend. If :class:`SimulationBackend`, return None."""
-        raise_error(NotImplementedError)
+    ) -> Optional[List[Tuple[Union[int, str], Union[int, str]]]]:  # pragma: no cover
+        """Return available qubit pairs of the backend.
+
+        Returns:
+            List[Tuple[int]] or List[Tuple[str]] or None: For hardware backends, return
+            available qubit pairs. For simulation backends, return ``None``.
+        """
+        return None
 
     @property
-    @abc.abstractmethod
     def natives(self) -> Optional[list[str]]:  # pragma: no cover
-        """Return the native gates of the backend. If :class:`SimulationBackend`, return None."""
-        raise_error(NotImplementedError)
+        """Return the native gates of the backend.
 
-    @abc.abstractmethod
-    def set_dtype(self, dtype: str):  # pragma: no cover
-        """Set data type of arrays created using the backend.
+        Returns:
+            List[str] or None: For hardware backends, return the native gates of the backend.
+            For the simulation backends, return ``None``.
+        """
+        return None
+
+    def set_dtype(self, dtype: str) -> None:  # pragma: no cover
+        """Set data type of arrays created using the backend. Works in-place.
 
         .. note::
             The data types ``float32`` and ``float64`` are intended to be used when the circuits
@@ -80,28 +102,37 @@ class Backend(abc.ABC):
             dtype (str): the options are the following: ``complex128``, ``complex64``,
                 ``float64``, and ``float32``.
         """
-        raise_error(NotImplementedError)
+        if dtype not in self.numeric_types:
+            raise_error(
+                ValueError,
+                f"Unknown ``dtype`` ``{dtype}``."
+                + f"``dtype`` must be one of the following options: {self.numeric_types}",
+            )
 
-    @abc.abstractmethod
-    def set_device(self, device: str):  # pragma: no cover
-        """Set simulation device.
+        if dtype != self.dtype:
+            self.dtype = dtype
+
+            if self.matrices:
+                self.matrices = self.matrices.__class__(self.dtype)
+
+    def set_device(self, device: str) -> None:  # pragma: no cover
+        """Set simulation device. Works in-place.
 
         Args:
-            device (str): Device such as '/CPU:0', '/GPU:0', etc.
+            device (str): Device index, *e.g.* ``/CPU:0`` for CPU, or ``/GPU:1`` for
+                the second GPU in a multi-GPU environment.
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def set_threads(self, nthreads: int):  # pragma: no cover
-        """Set number of threads for CPU simulation.
+    def set_threads(self, nthreads: int) -> None:  # pragma: no cover
+        """Set number of threads for CPU backend simulations that accept it. Works in-place.
 
         Args:
             nthreads (int): Number of threads.
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def cast(self, x, dtype=None, copy: bool = False):  # pragma: no cover
+    def cast(self, x, dtype=None, copy: bool = False) -> "ndarray":  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
         Args:
@@ -115,35 +146,48 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def is_sparse(self, x):  # pragma: no cover
+    def is_sparse(self, array) -> bool:  # pragma: no cover
         """Determine if a given array is a sparse tensor."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def to_numpy(self, x):  # pragma: no cover
+    def to_numpy(self, array) -> "ndarray":  # pragma: no cover
         """Cast a given array to numpy."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def compile(self, func):  # pragma: no cover
         """Compile the given method.
 
-        Available only for the tensorflow backend.
+        Available only for the ``tensorflow`` backend.
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
-    def zero_state(self, nqubits: int):  # pragma: no cover
-        """Generate :math:`|000 \\cdots 0 \\rangle` state vector as an array."""
-        raise_error(NotImplementedError)
+    def zeros(self, shape, dtype=None):
+        if dtype is None:  # pragma: no cover
+            dtype = self.dtype
+        return self.engine.zeros(shape, dtype=dtype)
 
-    @abc.abstractmethod
-    def zero_density_matrix(self, nqubits: int):  # pragma: no cover
-        """Generate :math:`|000\\cdots0\\rangle\\langle000\\cdots0|` density matrix as an array."""
-        raise_error(NotImplementedError)
+    def zero_state(
+        self, nqubits: int, density_matrix: bool = False
+    ) -> "ndarray":  # pragma: no cover
+        """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
-    @abc.abstractmethod
+        Args:
+            nqubits (int): Number of qubits :math:`n`.
+            density_matrix (bool, optional): If ``True``, returns the density matrix
+                :math:`\\ketbra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
+                :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
+
+        Returns:
+            ndarray: Array representation of the :math:`n`-qubit zero state.
+        """
+        state = self.zeros(2**nqubits, dtype=self.dtype)
+        state[0] = 1
+
+        if density_matrix:
+            state = self.engine.outer(state, state)
+
+        return state
+
     def identity_density_matrix(
         self, nqubits: int, normalize: bool = True
     ):  # pragma: no cover
@@ -158,101 +202,84 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def plus_state(self, nqubits: int):  # pragma: no cover
         """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def plus_density_matrix(self, nqubits: int):  # pragma: no cover
         """Generate :math:`|+++\\cdots+\\rangle\\langle+++\\cdots+|` density matrix as an array."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def matrix(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
         """Convert a :class:`qibo.gates.Gate` to the corresponding matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
         """Equivalent to :meth:`qibo.backends.abstract.Backend.matrix` for parametrized gates."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def apply_gate(self, gate, state, nqubits: int):  # pragma: no cover
         """Apply a gate to state vector."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def apply_gate_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
         """Apply a gate to density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def apply_gate_half_density_matrix(
         self, gate, state, nqubits: int
     ):  # pragma: no cover
         """Apply a gate to one side of the density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def apply_channel(self, channel, state, nqubits: int):  # pragma: no cover
         """Apply a channel to state vector."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def apply_channel_density_matrix(
         self, channel, state, nqubits: int
     ):  # pragma: no cover
         """Apply a channel to density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def collapse_state(
         self, state, qubits, shot, nqubits: int, normalize: bool = True
     ):  # pragma: no cover
         """Collapse state vector according to measurement shot."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def collapse_density_matrix(
         self, state, qubits, shot, nqubits: int, normalize: bool = True
     ):  # pragma: no cover
         """Collapse density matrix according to measurement shot."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def reset_error_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
         """Apply reset error to density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def thermal_error_density_matrix(
         self, gate, state, nqubits: int
     ):  # pragma: no cover
         """Apply thermal relaxation error to density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def execute_circuit(
         self, circuit, initial_state=None, nshots: int = None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit`."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def execute_circuits(
         self, circuits, initial_states=None, nshots: int = None
     ):  # pragma: no cover
         """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def execute_circuit_repeated(
         self, circuit: "qibo.models.circuit.Circuit", nshots: int, initial_state=None
     ):  # pragma: no cover
@@ -263,14 +290,12 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def execute_distributed_circuit(
         self, circuit, initial_state=None, nshots: int = None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_symbolic(
         self,
         state,
@@ -282,7 +307,6 @@ class Backend(abc.ABC):
         """Dirac representation of a state vector."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_symbolic_density_matrix(
         self,
         state,
@@ -294,60 +318,49 @@ class Backend(abc.ABC):
         """Dirac representation of a density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_probabilities(self, state, qubits, nqubits: int):  # pragma: no cover
         """Calculate probabilities given a state vector."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_probabilities_density_matrix(
         self, state, qubits, nqubits: int
     ):  # pragma: no cover
         """Calculate probabilities given a density matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def set_seed(self, seed):  # pragma: no cover
         """Set the seed of the random number generator."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def sample_shots(self, probabilities, nshots: int):  # pragma: no cover
         """Sample measurement shots according to a probability distribution."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def aggregate_shots(self, shots):  # pragma: no cover
         """Collect shots to a single array."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def samples_to_binary(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from decimal representation to binary."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def samples_to_decimal(self, samples, nqubits: int):  # pragma: no cover
         """Convert samples from binary representation to decimal."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_frequencies(self, samples):  # pragma: no cover
         """Calculate measurement frequencies from shots."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def update_frequencies(
         self, frequencies, probabilities, nsamples: int
     ):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def sample_frequencies(self, probabilities, nshots: int):  # pragma: no cover
         """Sample measurement frequencies according to a probability distribution."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_vector_norm(
         self, state, order: Union[int, float, str] = 2
     ):  # pragma: no cover
@@ -361,7 +374,6 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_matrix_norm(
         self, state, order: Union[int, float, str] = "nuc"
     ):  # pragma: no cover
@@ -378,45 +390,38 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_overlap(self, state1, state2):  # pragma: no cover
         """Calculate overlap of two state vectors."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
         """Calculate overlap of two density matrices."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_eigenvalues(
         self, matrix, k: int = 6, hermitian: bool = True
     ):  # pragma: no cover
         """Calculate eigenvalues of a matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_eigenvectors(
         self, matrix, k: int = 6, hermitian: bool = True
     ):  # pragma: no cover
         """Calculate eigenvectors of a matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_expectation_state(
         self, hamiltonian, state, normalize: bool
     ):  # pragma: no cover
         """Calculate expectation value of a state vector given the observable matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_expectation_density_matrix(
         self, hamiltonian, state, normalize: bool
     ):  # pragma: no cover
         """Calculate expectation value of a density matrix given the observable matrix."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_matrix_exp(
         self,
         matrix,
@@ -432,7 +437,6 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_matrix_log(
         self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
     ):  # pragma: no cover
@@ -444,7 +448,6 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_matrix_power(
         self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
     ):  # pragma: no cover
@@ -459,7 +462,6 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_matrix_sqrt(
         self, matrix, precision_singularity: float = 1e-14
     ):  # pragma: no cover
@@ -472,19 +474,16 @@ class Backend(abc.ABC):
         """
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
         """Calculate the Singular Value Decomposition of ``matrix``."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def calculate_jacobian_matrix(
         self, circuit, parameters, initial_state=None, return_complex: bool = True
     ):  # pragma: no cover
         """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
         raise_error(NotImplementedError)
 
-    @abc.abstractmethod
     def assert_allclose(
         self, value, target, rtol: float = 1e-7, atol: float = 0.0
     ):  # pragma: no cover
