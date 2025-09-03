@@ -304,7 +304,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     flag[indexes] = 1
 
     data_binary = backend.np.zeros(dim, dtype=data_sorted.dtype)
-    for bi_int,xi in zip(bitstrings_sorted,data_sorted):
+    for bi_int, xi in zip(bitstrings_sorted, data_sorted):
         bi_int = int(bi_int)
         if bi_int >= dim:
             for k in range(dim):
