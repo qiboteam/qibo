@@ -135,6 +135,12 @@ def test_binary_encoder(
     circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
+    if parametrization == "hyperspherical" and not_power_of_two:
+        # need to insert zeros at the end of target to get
+        # matching shapes
+        trail_zeros  = backend.np.zeros(backend.np.ceil(int(2**backend.np.log2(dims)))-dims, dtype=target.dtype)
+        target = backend.np.concatenate((target,trail_zeros))
+
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
 
