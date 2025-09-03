@@ -293,22 +293,18 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     )
     flag[indexes] = 1
 
-    data_binary = []
-    for bi_int, xi in zip(bitstrings_sorted, data_sorted):
+    for bi_int in bitstrings_sorted:
         bi_int = int(bi_int)
         if bi_int >= dim:
             for k in range(dim):
                 if flag[k] == 0:
                     flag[k] = 1
                     sigma[[bi_int, k]] = [k, bi_int]
-                    data_binary.append((k, xi))
                     break
-        else:
-            data_binary.append((bi_int, xi))
 
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = binary_encoder(
-        backend.np.array([xi for _, xi in data_binary]),
+        backend.np.array([xi for xi in data_sorted]),
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
