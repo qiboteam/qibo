@@ -99,67 +99,6 @@ class NumpyBackend(Backend):
 
         return self.cast(matrix.toarray())
 
-    def reset_error_density_matrix(self, gate, state, nqubits):
-        from qibo.gates import X  # pylint: disable=C0415
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
-            partial_trace,
-        )
-
-        state = self.cast(state)
-        shape = state.shape
-        q = gate.target_qubits[0]
-        p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
-        trace = partial_trace(state, (q,), backend=self)
-        trace = self.engine.reshape(trace, 2 * (nqubits - 1) * (2,))
-        zero = self.zero_state(1, density_matrix=True)
-        zero = self.engine.tensordot(trace, zero, 0)
-        order = list(range(2 * nqubits - 2))
-        order.insert(q, 2 * nqubits - 2)
-        order.insert(q + nqubits, 2 * nqubits - 1)
-        zero = self.engine.reshape(self.engine.transpose(zero, order), shape)
-        state = (1 - p_0 - p_1) * state + p_0 * zero
-        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
-
-    def thermal_error_density_matrix(self, gate, state, nqubits):
-        state = self.cast(state)
-        shape = state.shape
-        state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
-        return self.engine.reshape(state, shape)
-
-    def depolarizing_error_density_matrix(self, gate, state, nqubits):
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
-            partial_trace,
-        )
-
-        state = self.cast(state)
-        shape = state.shape
-        q = gate.target_qubits
-        lam = gate.init_kwargs["lam"]
-        trace = partial_trace(state, q, backend=self)
-        trace = self.engine.reshape(trace, 2 * (nqubits - len(q)) * (2,))
-        identity = self.maximally_mixed_state(len(q))
-        identity = self.engine.reshape(identity, 2 * len(q) * (2,))
-        identity = self.engine.tensordot(trace, identity, 0)
-        qubits = list(range(nqubits))
-        for j in q:
-            qubits.pop(qubits.index(j))
-        qubits.sort()
-        qubits += list(q)
-        qubit_1 = list(range(nqubits - len(q))) + list(
-            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
-        )
-        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
-            range(2 * nqubits - len(q), 2 * nqubits)
-        )
-        qs = [qubit_1, qubit_2]
-        order = []
-        for qj in qs:
-            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
-            order += qj
-        identity = self.engine.reshape(self.engine.transpose(identity, order), shape)
-        state = (1 - lam) * state + lam * identity
-        return state
-
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
@@ -430,9 +369,6 @@ class NumpyBackend(Backend):
         probs = self.engine.abs(self.engine.einsum("abab->a", state))
         probs = self.engine.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
-
-    def set_seed(self, seed):
-        self.engine.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
         return self.random_choice(

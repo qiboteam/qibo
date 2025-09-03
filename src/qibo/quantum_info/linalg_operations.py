@@ -126,39 +126,7 @@ def partial_trace(
 
     backend = _check_backend(backend)
 
-    state = backend.cast(state, dtype=state.dtype)
-    nqubits = math.log2(state.shape[0])
-
-    if not nqubits.is_integer():
-        raise_error(
-            ValueError,
-            "dimension(s) of ``state`` must be a power of 2, "
-            + f"but it is {2**nqubits}.",
-        )
-
-    nqubits = int(nqubits)
-
-    statevector = bool(len(state.shape) == 1)
-
-    factor = 1 if statevector else 2
-    state = backend.np.reshape(state, factor * nqubits * (2,))
-
-    if statevector:
-        axes = 2 * [list(traced_qubits)]
-        rho = backend.np.tensordot(state, backend.np.conj(state), axes)
-        shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
-
-        return backend.np.reshape(rho, shape)
-
-    order = tuple(sorted(traced_qubits))
-    order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
-    order += tuple(k + nqubits for k in order)
-    shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
-
-    state = backend.np.transpose(state, order)
-    state = backend.np.reshape(state, shape)
-
-    return backend.np.einsum("abac->bc", state)
+    return backend.partial_trace(state, traced_qubits)
 
 
 def partial_transpose(
