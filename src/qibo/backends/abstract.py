@@ -232,7 +232,7 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        state = self.cast(state, dtype=dtype)
+        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
 
         return self.engine.linalg.norm(state, order)
 
@@ -254,7 +254,7 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        state = self.cast(state, dtype=dtype)
+        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
 
         return self.engine.linalg.norm(state, ord=order)
 
