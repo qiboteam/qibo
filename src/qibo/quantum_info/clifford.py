@@ -8,7 +8,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import Circuit
-from qibo.backends import CliffordBackend
+from qibo.backends.clifford import CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
