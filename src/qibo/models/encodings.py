@@ -508,7 +508,7 @@ def binary_encoder(
     Args:
         data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
-        parametrization (str): choice of circuit parametrization. either ``hyperspherical`` 
+        parametrization (str): choice of circuit parametrization. either ``hyperspherical``
             or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
         nqubits (int, optional): total number of qubits in the system.
             To be used when :math:`b_j` are integers. If :math:`b_j` are strings and

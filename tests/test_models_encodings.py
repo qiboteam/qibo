@@ -105,7 +105,9 @@ def test_phase_encoder(backend, rotation, kind):
 @pytest.mark.parametrize("not_power_of_two", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_binary_encoder(backend, nqubits, parametrization, complex_data, not_power_of_two):
+def test_binary_encoder(
+    backend, nqubits, parametrization, complex_data, not_power_of_two
+):
     if parametrization == "hopf":
         if complex_data:
             pytest.skip(
@@ -130,9 +132,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data, not_pow
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(
-        target, parametrization=parametrization, backend=backend
-    )
+    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
