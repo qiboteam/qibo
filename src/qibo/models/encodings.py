@@ -1946,7 +1946,7 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
             initial = right
 
         # get Ehrlich sequence
-        k_seq = _ehrlich_algorithm(backend.np.array([int(b) for b in initial]), False)
+        k_seq = _ehrlich_algorithm(backend.np.array([int(b) for b in initial[::-1]]), False)
 
         # generate in the correct order
         if reversed_list:
