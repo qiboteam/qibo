@@ -1,7 +1,7 @@
 """Module defining the Backend class."""
 
 import math
-from typing import List, Optional, Self, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -33,7 +33,7 @@ class Backend:
         self.tensor_types = None
         self.versions = {"qibo": __version__}
 
-    def __reduce__(self) -> Tuple[Self, tuple]:
+    def __reduce__(self) -> Tuple["Backend", tuple]:
         """Allow pickling backend objects that have references to modules."""
         return self.__class__, tuple()
 
