@@ -1,3 +1,5 @@
+"""Module defining the Backend class."""
+
 import math
 from typing import List, Optional, Self, Tuple, Union
 
@@ -138,7 +140,9 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def cast(self, x, dtype=None, copy: bool = False) -> "ndarray":  # pragma: no cover
+    def cast(
+        self, array, dtype=None, copy: bool = False
+    ) -> "ndarray":  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
         Args:
@@ -223,7 +227,7 @@ class Backend:
     ########################################################################################
 
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         target_qubits = gate.target_qubits
         lam = gate.init_kwargs["lam"]
@@ -284,7 +288,8 @@ class Backend:
     def partial_trace(
         self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
     ) -> "ndarray":
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+
         nqubits = math.log2(state.shape[0])
 
         if not nqubits.is_integer():
@@ -338,7 +343,7 @@ class Backend:
         """Apply reset error to density matrix."""
         from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
 
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         qubit = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
@@ -360,7 +365,7 @@ class Backend:
         self, gate, state, nqubits: int
     ):  # pragma: no cover
         """Apply thermal relaxation error to density matrix."""
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.reshape(state, shape)
@@ -468,7 +473,7 @@ class Backend:
                 "gates.",
             )
 
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         state = self.reshape(state, 2 * nqubits * (2,))
         matrix = self.matrix(gate)
 
@@ -484,7 +489,7 @@ class Backend:
         """Apply a ``channel`` to quantum ``state``."""
 
         if density_matrix:
-            state = self.cast(state, dtype=state.dtype)
+            state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
 
             new_state = (1 - channel.coefficient_sum) * state
             for coeff, gate in zip(channel.coefficients, channel.gates):
@@ -549,9 +554,15 @@ class Backend:
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(NotImplementedError)
 
+    ########################################################################################
+    ######## Methods related to the execution and post-processing of measurements   ########
+    ########################################################################################
+
     def sample_shots(self, probabilities, nshots: int):  # pragma: no cover
         """Sample measurement shots according to a probability distribution."""
-        raise_error(NotImplementedError)
+        return self.random_choice(
+            range(len(probabilities)), size=nshots, p=probabilities
+        )
 
     def aggregate_shots(self, shots):  # pragma: no cover
         """Collect shots to a single array."""
@@ -588,7 +599,8 @@ class Backend:
         for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
         """
         raise_error(NotImplementedError)
 
@@ -604,7 +616,8 @@ class Backend:
         parameter ``order`` for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
-        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
         """
         raise_error(NotImplementedError)
 
@@ -786,7 +799,7 @@ class Backend:
     def _collapse_density_matrix(
         self, state, qubits, shot, nqubits: int, normalize: bool = True
     ):  # pragma: no cover
-        state = self.cast(state, dtype=state.dtype)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
         order = list(qubits) + [qubit + nqubits for qubit in qubits]
@@ -808,7 +821,7 @@ class Backend:
         return self.reshape(state, shape)
 
     def _collapse_statevector(self, state, qubits, shot, nqubits, normalize=True):
-        state = self.cast(state)
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
         state = self.reshape(state, nqubits * (2,))

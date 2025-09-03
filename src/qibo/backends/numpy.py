@@ -370,19 +370,8 @@ class NumpyBackend(Backend):
         probs = self.engine.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
-    def sample_shots(self, probabilities, nshots):
-        return self.random_choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
-
     def aggregate_shots(self, shots):
         return self.cast(shots, dtype=shots[0].dtype)
-
-    def samples_to_binary(self, samples, nqubits):
-        qrange = self.cast(
-            np.arange(nqubits - 1, -1, -1, dtype=np.int32), dtype=self.engine.int32
-        )
-        return self.engine.mod(self.engine.right_shift(samples[:, None], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         ### This is faster just staying @ NumPy.
