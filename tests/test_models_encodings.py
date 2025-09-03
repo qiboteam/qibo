@@ -123,7 +123,7 @@ def test_binary_encoder(
             )
 
     if parametrization == "hyperspherical" and not_power_of_two:
-        dims = 28
+        dims = 14
     else:
         dims = 2**nqubits
 

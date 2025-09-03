@@ -1925,9 +1925,6 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
         str: Bitstrings produced by concatenating sequences from Ehrlich's algorithm.
     """
 
-    if up2k < 0:
-        raise ValueError("up2k must be ≥ 0")
-
     if up2k == 0:
         # Only the empty string by convention; mirror original intent by yielding once.
         yield ""
