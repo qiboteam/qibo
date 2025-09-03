@@ -115,7 +115,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
             dims = 5
             test = np.random.rand(dims)
             test = backend.cast(test, dtype=test.dtype)
-            test = binary_encoder(test, parametrization)
+            test = binary_encoder(test, parametrization=parametrization)
 
     dims = 2**nqubits
 
