@@ -2,6 +2,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
+from qibo.backends import einsum_utils
 from qibo.config import raise_error
 
 
@@ -30,11 +31,11 @@ class Backend:
         self.tensor_types = None
         self.versions = {"qibo": __version__}
 
-    def __reduce__(self):
+    def __reduce__(self) -> Tuple["Backend", tuple]:
         """Allow pickling backend objects that have references to modules."""
         return self.__class__, tuple()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.platform is None:
             return self.name
 
@@ -162,23 +163,51 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def identity(self, dims: int, dtype=None):
+    ########################################################################################
+    ######## Methods related to array manipulation                                  ########
+    ########################################################################################
+
+    def conj(self, array) -> "ndarray":
+        return self.engine.conj(array)
+
+    def identity(self, dims: int, dtype=None) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
         return self.engine.eye(dims, dtype=dtype)
 
-    def ones(self, shape, dtype=None):
-        if dtype is None:  # pragma: no cover
+    def ones(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
+        if dtype is None:
             dtype = self.dtype
         return self.engine.ones(shape, dtype=dtype)
 
-    def outer(self, array_1, array_2):
+    def outer(self, array_1, array_2) -> "ndarray":  # pragma: no cover
         return self.engine.outer(array_1, array_2)
 
-    def zeros(self, shape, dtype=None):
-        if dtype is None:  # pragma: no cover
+    def random_choice(self, array, **kwargs) -> "ndarray":  # pragma: no cover
+        return self.engine.random.choice(array, **kwargs)
+
+    def reshape(
+        self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
+    ) -> "ndarray":
+        return self.engine.reshape(array, shape=shape, **kwargs)
+
+    def sum(self, array, axis=None, **kwargs) -> Union[int, float, complex, "ndarray"]:
+        return self.engine.sum(array, axis=axis, **kwargs)
+
+    def trace(self, array) -> Union[int, float]:
+        return self.engine.trace(array)
+
+    def transpose(self, array, axes: Union[Tuple[int, ...], List[int]]) -> "ndarray":
+        return self.engine.transpose(array, axes)
+
+    def zeros(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
+        if dtype is None:
             dtype = self.dtype
         return self.engine.zeros(shape, dtype=dtype)
+
+    ########################################################################################
+    ######## Methods related to the creation and manipulation of quantum objects    ########
+    ########################################################################################
 
     def zero_state(
         self, nqubits: int, density_matrix: bool = False, dtype=None
@@ -245,63 +274,163 @@ class Backend:
 
         return state
 
-    def matrix(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
-        """Convert a :class:`qibo.gates.Gate` to the corresponding matrix."""
-        raise_error(NotImplementedError)
-
-    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
-        """Equivalent to :meth:`qibo.backends.abstract.Backend.matrix` for parametrized gates."""
-        raise_error(NotImplementedError)
-
-    def matrix_fused(self, gate):  # pragma: no cover
-        """Fuse matrices of multiple gates."""
-        raise_error(NotImplementedError)
-
-    def apply_gate(self, gate, state, nqubits: int):  # pragma: no cover
-        """Apply a gate to state vector."""
-        raise_error(NotImplementedError)
-
-    def apply_gate_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
-        """Apply a gate to density matrix."""
-        raise_error(NotImplementedError)
-
-    def apply_gate_half_density_matrix(
-        self, gate, state, nqubits: int
-    ):  # pragma: no cover
-        """Apply a gate to one side of the density matrix."""
-        raise_error(NotImplementedError)
-
-    def apply_channel(self, channel, state, nqubits: int):  # pragma: no cover
-        """Apply a channel to state vector."""
-        raise_error(NotImplementedError)
-
-    def apply_channel_density_matrix(
-        self, channel, state, nqubits: int
-    ):  # pragma: no cover
-        """Apply a channel to density matrix."""
-        raise_error(NotImplementedError)
-
-    def collapse_state(
-        self, state, qubits, shot, nqubits: int, normalize: bool = True
-    ):  # pragma: no cover
-        """Collapse state vector according to measurement shot."""
-        raise_error(NotImplementedError)
-
-    def collapse_density_matrix(
-        self, state, qubits, shot, nqubits: int, normalize: bool = True
-    ):  # pragma: no cover
-        """Collapse density matrix according to measurement shot."""
-        raise_error(NotImplementedError)
-
     def reset_error_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
         """Apply reset error to density matrix."""
-        raise_error(NotImplementedError)
+        from qibo.gates import X  # pylint: disable=import-outside-toplevel
+        from qibo.quantum_info.linalg_operations import (  # pylint: disable=import-outside-toplevel
+            partial_trace,
+        )
+
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits[0]
+        p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
+        trace = partial_trace(state, (q,), backend=self)
+        trace = self.engine.reshape(trace, 2 * (nqubits - 1) * (2,))
+        zero = self.zero_state(1, density_matrix=True)
+        zero = self.engine.tensordot(trace, zero, 0)
+        order = list(range(2 * nqubits - 2))
+        order.insert(q, 2 * nqubits - 2)
+        order.insert(q + nqubits, 2 * nqubits - 1)
+        zero = self.engine.reshape(self.engine.transpose(zero, order), shape)
+        state = (1 - p_0 - p_1) * state + p_0 * zero
+        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
     def thermal_error_density_matrix(
         self, gate, state, nqubits: int
     ):  # pragma: no cover
         """Apply thermal relaxation error to density matrix."""
         raise_error(NotImplementedError)
+
+    ########################################################################################
+    ######## Methods related to circuit execution                                   ########
+    ########################################################################################
+
+    def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
+        """Convert a gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if callable(_matrix):
+            _matrix = _matrix(2 ** len(gate.target_qubits))
+        return self.cast(_matrix, dtype=_matrix.dtype)
+
+    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+        else:
+            _matrix = _matrix(*gate.parameters)
+
+        return self.cast(_matrix, dtype=_matrix.dtype)
+
+    def matrix_fused(self, gate):  # pragma: no cover
+        """Fuse matrices of multiple gates."""
+        raise_error(NotImplementedError)
+
+    def apply_gate(
+        self, gate, state, nqubits: int, density_matrix: bool = False
+    ) -> "ndarray":  # pragma: no cover
+        """Apply a gate to state vector."""
+        state = self.reshape(state, nqubits * (2,))
+
+        if gate.is_controlled_by and density_matrix:
+            return self._apply_gate_controlled_by_density_matrix(gate, state, nqubits)
+
+        if gate.is_controlled_by:
+            return self._apply_gate_controlled_by(gate, state, nqubits)
+
+        matrix = gate.matrix(self)
+        matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
+
+        if density_matrix:
+            matrix_conj = self.engine.conj(matrix)
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
+            state = self.engine.einsum(right, state, matrix_conj)
+            state = self.engine.einsum(left, state, matrix)
+        else:
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            state = self.engine.einsum(opstring, state, matrix)
+
+        shape = (2**nqubits,)
+        if density_matrix:
+            shape *= 2
+
+        return self.reshape(state, shape)
+
+    def apply_gate_half_density_matrix(
+        self, gate, state, nqubits: int
+    ):  # pragma: no cover
+        """Apply a gate to one side of the density matrix."""
+        if gate.is_controlled_by:
+            raise_error(
+                NotImplementedError,
+                "Gate density matrix half call is "
+                "not implemented for ``controlled_by``"
+                "gates.",
+            )
+
+        state = self.cast(state, dtype=state.dtype)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        matrix = self.matrix(gate)
+
+        matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
+        left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+        state = self.engine.einsum(left, state, matrix)
+
+        return self.reshape(state, 2 * (2**nqubits,))
+
+    def apply_channel(
+        self, channel, state, nqubits: int, density_matrix: bool = False
+    ):  # pragma: no cover
+        """Apply a ``channel`` to quantum ``state``."""
+
+        if density_matrix:
+            state = self.cast(state, dtype=state.dtype)
+
+            new_state = (1 - channel.coefficient_sum) * state
+            for coeff, gate in zip(channel.coefficients, channel.gates):
+                new_state += coeff * self.apply_gate_density_matrix(
+                    gate, state, nqubits
+                )
+
+            return new_state
+
+        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
+
+        index = int(self.sample_shots(probabilities, 1)[0])
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = self.apply_gate(gate, state, nqubits)
+
+        return state
+
+    def collapse_state(
+        self,
+        state,
+        qubits: Union[Tuple[int, ...], List[int]],
+        shot: int,
+        nqubits: int,
+        normalize: bool = True,
+        density_matrix: bool = False,
+    ) -> "ndarray":
+        """Collapse state vector according to measurement shot."""
+
+        if density_matrix:
+            return self._collapse_density_matrix(
+                state, qubits, shot, nqubits, normalize
+            )
+
+        return self._collapse_statevector(state, qubits, shot, nqubits, normalize)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots: int = None
@@ -530,3 +659,116 @@ class Backend:
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
+
+    def _apply_gate_controlled_by(self, gate, state, nqubits: int) -> "ndarray":
+        matrix = gate.matrix(self)
+        matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+        ncontrol = len(gate.control_qubits)
+        nactive = nqubits - ncontrol
+        order, targets = einsum_utils.control_order(gate, nqubits)
+        state = self.transpose(state, order)
+        # Apply `einsum` only to the part of the state where all controls
+        # are active. This should be `state[-1]`
+        state = self.reshape(state, (2**ncontrol,) + nactive * (2,))
+        opstring = einsum_utils.apply_gate_string(targets, nactive)
+        updates = self.engine.einsum(opstring, state[-1], matrix)
+        # Concatenate the updated part of the state `updates` with the
+        # part of of the state that remained unaffected `state[:-1]`.
+        state = self.engine.concatenate([state[:-1], updates[None]], axis=0)
+        state = self.reshape(state, nqubits * (2,))
+        # Put qubit indices back to their proper places
+        state = self.transpose(state, einsum_utils.reverse_order(order))
+
+        return self.reshape(state, shape=(2**nqubits,))
+
+    def _apply_gate_controlled_by_density_matrix(
+        self, gate, state, nqubits: int
+    ) -> "ndarray":
+        matrix = gate.matrix(self)
+        matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+        matrixc = self.engine.conj(matrix)
+        ncontrol = len(gate.control_qubits)
+        nactive = nqubits - ncontrol
+        dims_ctrl = 2**ncontrol
+
+        order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
+        state = self.transpose(state, order)
+        state = self.reshape(state, 2 * (dims_ctrl,) + 2 * nactive * (2,))
+
+        leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
+            targets, nactive
+        )
+        state01 = state[: dims_ctrl - 1, dims_ctrl - 1]
+        state01 = self.engine.einsum(rightc, state01, matrixc)
+        state10 = state[dims_ctrl - 1, : dims_ctrl - 1]
+        state10 = self.engine.einsum(leftc, state10, matrix)
+
+        left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
+        state11 = state[dims_ctrl - 1, dims_ctrl - 1]
+        state11 = self.engine.einsum(right, state11, matrixc)
+        state11 = self.engine.einsum(left, state11, matrix)
+
+        state00 = state[range(dims_ctrl - 1)]
+        state00 = state00[:, range(dims_ctrl - 1)]
+        state01 = self.engine.concatenate([state00, state01[:, None]], axis=1)
+        state10 = self.engine.concatenate([state10, state11[None]], axis=0)
+        state = self.engine.concatenate([state01, state10[None]], axis=0)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        state = self.transpose(state, einsum_utils.reverse_order(order))
+
+        return self.reshape(state, 2 * (2**nqubits,))
+
+    def _append_zeros(self, state, qubits, results):
+        """Helper function for the ``collapse_state`` method."""
+        for q, r in zip(qubits, results):
+            state = self.engine.expand_dims(state, q)
+            state = (
+                self.engine.concatenate([self.engine.zeros_like(state), state], q)
+                if r == 1
+                else self.engine.concatenate([state, self.engine.zeros_like(state)], q)
+            )
+        return state
+
+    def _collapse_density_matrix(
+        self, state, qubits, shot, nqubits: int, normalize: bool = True
+    ):  # pragma: no cover
+        state = self.cast(state, dtype=state.dtype)
+        shape = state.shape
+        binshot = list(self.samples_to_binary(shot, len(qubits))[0])
+        order = list(qubits) + [qubit + nqubits for qubit in qubits]
+        order.extend(qubit for qubit in range(nqubits) if qubit not in qubits)
+        order.extend(qubit + nqubits for qubit in range(nqubits) if qubit not in qubits)
+        state = self.reshape(state, 2 * nqubits * (2,))
+        state = self.transpose(state, order)
+        subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
+        state = self.reshape(state, subshape)[int(shot), int(shot)]
+        dims = 2 ** (len(state.shape) // 2)
+
+        if normalize:
+            norm = self.trace(self.reshape(state, 2 * (dims,)))
+            state = state / norm
+
+        qubits = qubits + [qubit + nqubits for qubit in qubits]
+        state = self._append_zeros(state, qubits, 2 * binshot)
+
+        return self.reshape(state, shape)
+
+    def _collapse_state(self, state, qubits, shot, nqubits, normalize=True):
+        state = self.cast(state)
+        shape = state.shape
+        binshot = list(self.samples_to_binary(shot, len(qubits))[0])
+        state = self.reshape(state, nqubits * (2,))
+        order = list(qubits) + [
+            qubit for qubit in range(nqubits) if qubit not in qubits
+        ]
+        state = self.transpose(state, order)
+        subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
+        state = self.reshape(state, subshape)[int(shot)]
+
+        if normalize:
+            norm = self.engine.sqrt(self.sum(self.engine.abs(state) ** 2))
+            state = state / norm
+
+        state = self._append_zeros(state, qubits, binshot)
+
+        return self.engine.reshape(state, shape)
