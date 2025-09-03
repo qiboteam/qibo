@@ -148,26 +148,16 @@ class NumpyBackend(Backend):
 
         try:
             nqubits = circuit.nqubits
+            density_matrix = circuit.density_matrix
 
-            if circuit.density_matrix:
-                state = (
-                    self.zero_state(nqubits, density_matrix=True)
-                    if initial_state is None
-                    else self.cast(initial_state)
-                )
+            state = (
+                self.zero_state(nqubits, density_matrix=density_matrix)
+                if initial_state is None
+                else self.cast(initial_state)
+            )
 
-                for gate in circuit.queue:
-                    state = gate.apply_density_matrix(self, state, nqubits)
-
-            else:
-                state = (
-                    self.zero_state(nqubits)
-                    if initial_state is None
-                    else self.cast(initial_state)
-                )
-
-                for gate in circuit.queue:
-                    state = gate.apply(self, state, nqubits)
+            for gate in circuit.queue:
+                state = gate.apply(self, state, nqubits, density_matrix=density_matrix)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
