@@ -120,7 +120,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
-        target = backend.engine.real(target)
+        target = backend.real(target)
         target /= backend.engine.linalg.norm(target)
 
     circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
@@ -157,7 +157,7 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.engine.real(state[indexes])
+    state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,

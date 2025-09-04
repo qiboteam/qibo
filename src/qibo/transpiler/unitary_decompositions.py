@@ -61,7 +61,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     )
     # construct and diagonalize UT_U
     ut_u = backend.engine.transpose(u_magic, (1, 0)) @ u_magic
-    ut_u_real = backend.engine.real(ut_u) + backend.engine.imag(ut_u)
+    ut_u_real = backend.real(ut_u) + backend.imag(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         ut_u_real = np.round(ut_u_real, decimals=15)
 
@@ -88,7 +88,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     """
     psi_magic = backend.engine.matmul(backend.engine.conj(backend.cast(magic_basis)).T, psi)
     if (
-        backend.engine.real(backend.matrix_norm(backend.engine.imag(psi_magic)))
+        backend.real(backend.matrix_norm(backend.imag(psi_magic)))
         > 1e-6
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")

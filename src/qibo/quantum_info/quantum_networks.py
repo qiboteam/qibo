@@ -335,7 +335,7 @@ class QuantumNetwork:
             return False
 
         return all(
-            self._backend.engine.real(eigenvalue) >= -precision_tol
+            self._backend.real(eigenvalue) >= -precision_tol
             for eigenvalue in eigenvalues
         )
 

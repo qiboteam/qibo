@@ -186,6 +186,9 @@ class Backend:
             dtype = self.dtype
         return self.engine.eye(dims, dtype=dtype)
 
+    def imag(self, array) -> Union[int, float, "ndarray"]:
+        return self.engine.imag(array)
+
     def matrix_norm(
         self, state, order: Union[int, float, str] = "nuc", dtype=None
     ):  # pragma: no cover
@@ -215,6 +218,9 @@ class Backend:
 
     def outer(self, array_1, array_2) -> "ndarray":  # pragma: no cover
         return self.engine.outer(array_1, array_2)
+
+    def real(self, array) -> Union[int, float, "ndarray"]:
+        return self.engine.real(array)
 
     def random_choice(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.random.choice(array, **kwargs)

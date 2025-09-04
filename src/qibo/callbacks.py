@@ -328,20 +328,20 @@ class Gap(Callback):
         hamiltonian.eigenvectors()
         eigvals = hamiltonian.eigenvalues()
         if isinstance(self.mode, int):
-            gap = backend.engine.real(eigvals[self.mode])
+            gap = backend.real(eigvals[self.mode])
             self.append(gap)
             return gap
 
         # case: self.mode == "gap"
         excited = 1
-        gap = backend.engine.real(eigvals[excited] - eigvals[0])
+        gap = backend.real(eigvals[excited] - eigvals[0])
 
         if not self.check_degenerate:
             self.append(gap)
             return gap
 
         while backend.engine.less(gap, EIGVAL_CUTOFF):
-            gap = backend.engine.real(eigvals[excited] - eigvals[0])
+            gap = backend.real(eigvals[excited] - eigvals[0])
             excited += 1
         if excited > 1:
             log.warning(

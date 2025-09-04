@@ -276,7 +276,7 @@ def sample_training_circuit_cdr(
             gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
         )
 
-        distance.append(backend.engine.real(matrix_norm))
+        distance.append(backend.real(matrix_norm))
 
     distance = backend.engine.vstack(distance)
     prob = backend.engine.exp(-(distance**2) / sigma**2)

@@ -141,7 +141,7 @@ class Hamiltonian(AbstractHamiltonian):
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
         )
-        return self.backend.engine.real(self.backend.engine.sum(diag * counts))
+        return self.backend.real(self.backend.engine.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -244,13 +244,13 @@ class Hamiltonian(AbstractHamiltonian):
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
         other = self.backend.cast(other)
         if self._eigenvalues is not None:
-            if self.backend.engine.real(other) >= 0:  # TODO: check for side effects K.qnp
+            if self.backend.real(other) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if (self.backend.platform == "pytorch") else 0
                 r._eigenvalues = other * self.backend.engine.flip(self._eigenvalues, axis)
         if self._eigenvectors is not None:
-            if self.backend.engine.real(other) > 0:  # TODO: see above
+            if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))

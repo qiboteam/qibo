@@ -34,9 +34,9 @@ def purity(state, backend=None):
         )
 
     if len(state.shape) == 1:
-        pur = backend.engine.real(backend.vector_norm(state)) ** 2
+        pur = backend.real(backend.vector_norm(state)) ** 2
     else:
-        pur = backend.engine.real(backend.trace(state @ state))
+        pur = backend.real(backend.trace(state @ state))
     return float(pur)
 
 
@@ -125,7 +125,7 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
 
     inner_product = backend.engine.trace(backend.engine.conj(operator_A.T) @ operator_B)
 
-    return backend.engine.real(inner_product)
+    return backend.real(inner_product)
 
 
 def hilbert_schmidt_distance(state, target, backend=None):
@@ -230,7 +230,7 @@ def fidelity(state, target, backend=None):
             fid = backend.calculate_matrix_sqrt(state)
             fid = fid @ backend.engine.conj(target.T) @ fid
             fid = backend.calculate_matrix_sqrt(fid)
-            fid = backend.engine.real(backend.engine.trace(fid))
+            fid = backend.real(backend.engine.trace(fid))
 
             return fid**2
 
@@ -239,7 +239,7 @@ def fidelity(state, target, backend=None):
         backend.engine.abs(backend.engine.matmul(backend.engine.conj(state), target))
         ** 2
         if len(state.shape) == 1
-        else backend.engine.real(
+        else backend.real(
             backend.engine.trace(backend.engine.matmul(state, target))
         )
     )
@@ -386,7 +386,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        process_fid = backend.engine.real(backend.engine.trace(channel)) / dim**2
+        process_fid = backend.real(backend.engine.trace(channel)) / dim**2
         process_fid = float(process_fid)
 
         return process_fid
@@ -394,7 +394,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     process_fid = backend.engine.matmul(
         backend.engine.transpose(backend.engine.conj(channel), (1, 0)), target
     )
-    process_fid = backend.engine.real(backend.engine.trace(process_fid)) / dim**2
+    process_fid = backend.real(backend.engine.trace(process_fid)) / dim**2
 
     return process_fid
 
@@ -568,8 +568,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
     channel = backend.to_numpy(channel)
 
     channel = backend.engine.transpose(channel, (1, 0))
-    channel_real = backend.engine.real(channel)
-    channel_imag = backend.engine.imag(channel)
+    channel_real = backend.real(channel)
+    channel_imag = backend.imag(channel)
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -836,4 +836,4 @@ def quantum_fisher_information_matrix(
     qfim = jacobian.T @ jacobian
     qfim = qfim - backend.engine.outer(overlaps, backend.engine.conj(overlaps.T))
 
-    return 4 * backend.engine.real(qfim)
+    return 4 * backend.real(qfim)

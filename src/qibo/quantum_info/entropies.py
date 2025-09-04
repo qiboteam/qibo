@@ -530,13 +530,13 @@ def von_neumann_entropy(
 
     ent = backend.calculate_matrix_log(state, base=base)
     ent = -backend.engine.trace(state @ ent)
-    ent = backend.engine.real(ent)
+    ent = backend.real(ent)
 
     if return_spectrum:
         eigenvalues = backend.calculate_eigenvalues(state)
 
         log_prob = backend.engine.where(
-            backend.engine.real(eigenvalues) > 0.0,
+            backend.real(eigenvalues) > 0.0,
             backend.engine.log2(eigenvalues) / np.log2(base),
             0.0,
         )
@@ -616,7 +616,7 @@ def relative_von_neumann_entropy(
         state, base=base, return_spectrum=False, backend=backend
     )
 
-    return backend.engine.real(relative)
+    return backend.real(relative)
 
 
 def mutual_information(state, partition, base: float = 2, backend=None):
@@ -652,7 +652,7 @@ def mutual_information(state, partition, base: float = 2, backend=None):
     state_a = partial_trace(state, partition_b, backend)
     state_b = partial_trace(state, partition, backend)
 
-    return backend.engine.real(
+    return backend.real(
         von_neumann_entropy(state_a, base, False, backend)
         + von_neumann_entropy(state_b, base, False, backend)
         - von_neumann_entropy(state, base, False, backend)

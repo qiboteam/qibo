@@ -154,7 +154,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         probs = [0 for _ in range(2**nqubits)]
         for state, freq in self.frequencies(binary=False).items():
             probs[state] = freq / self.nshots
-        rtype = self.backend.engine.real(probs).dtype
+        rtype = self.backend.real(probs).dtype
         probs = self.backend.cast(probs, dtype=rtype)
         self._probs = probs
 

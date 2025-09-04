@@ -963,7 +963,7 @@ def random_pauli_hamiltonian(
         nqubits, normalize=True, pauli_order=pauli_order, backend=backend
     )
 
-    hamiltonian = backend.engine.real(U @ vectorization(hamiltonian, backend=backend))
+    hamiltonian = backend.real(U @ vectorization(hamiltonian, backend=backend))
 
     return hamiltonian, eigenvalues
 

@@ -529,7 +529,7 @@ def choi_to_kraus(
             eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
             eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(backend.engine.real(eigenvalues) < -PRECISION_TOL))
+            non_cp = bool(any(backend.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
