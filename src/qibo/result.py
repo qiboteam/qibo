@@ -26,12 +26,15 @@ class QuantumState:
     """Data structure to represent the final state after circuit execution.
 
     Args:
-        state (np.ndarray): Input quantum state as np.ndarray.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, the current backend is going to be used.
+        state (ndarray): Input quantum state as ``ndarray``.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
+            If not provided, the global backend is going to be used.
     """
 
     def __init__(self, state, backend=None):
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
         self.backend = _check_backend(backend)
         self.density_matrix = len(state.shape) == 2
@@ -50,16 +53,11 @@ class QuantumState:
                 contains more terms they will be ignored. Defaults to :math:`20`.
 
         Returns:
-            (str): A string representing the state in the computational basis.
+            str: String representing the state in the computational basis.
         """
-        if self.density_matrix:
-            terms = self.backend.calculate_symbolic_density_matrix(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
-        else:
-            terms = self.backend.calculate_symbolic(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
+        terms = self.backend.calculate_symbolic(
+            self._state, self.nqubits, decimals, cutoff, max_terms
+        )
         return " + ".join(terms)
 
     def state(self, numpy: bool = False):
@@ -342,7 +340,9 @@ class MeasurementOutcomes:
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     np.random.shuffle(samples)
-                    samples = self.backend.cast(samples, dtype=self.backend.engine.int64)
+                    samples = self.backend.cast(
+                        samples, dtype=self.backend.engine.int64
+                    )
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)

@@ -211,6 +211,9 @@ class Backend:
 
         return self.engine.linalg.norm(state, ord=order)
 
+    def nonzero(self, array) -> "ndarray":
+        return self.engine.nonzero(array)
+
     def ones(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
         if dtype is None:
             dtype = self.dtype
@@ -229,6 +232,9 @@ class Backend:
         self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
     ) -> "ndarray":
         return self.engine.reshape(array, shape=shape, **kwargs)
+
+    def round(self, array, **kwargs):
+        return self.engine.round(array, **kwargs)
 
     def sqrt(self, array):
         return self.engine.sqrt(array)
@@ -447,6 +453,36 @@ class Backend:
     ######## Methods related to circuit execution                                   ########
     ########################################################################################
 
+    def calculate_symbolic(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        # state = self.to_numpy(state)
+        density_matrix = bool(len(state.shape) == 2)
+        ind_j, ind_k = self.nonzero(state)
+
+        terms = []
+        if density_matrix:
+            for j, k in zip(ind_j, ind_k):
+                b_j = bin(j)[2:].zfill(nqubits)
+                b_k = bin(k)[2:].zfill(nqubits)
+                if self.abs(state[j, k]) >= cutoff:
+                    x = self.round(state[j, k], decimals=decimals)
+                    terms.append(f"{x}|{b_j}><{b_k}|")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    return terms
+        else:
+            for j in ind_j:
+                b = bin(j)[2:].zfill(nqubits)
+                if self.abs(state[j]) >= cutoff:
+                    x = self.round(state[j], decimals=decimals)
+                    terms.append(f"{x}|{b}>")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    return terms
+
+        return terms
+
     def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
@@ -580,10 +616,16 @@ class Backend:
         raise_error(NotImplementedError)
 
     def execute_circuits(
-        self, circuits, initial_states=None, nshots: int = None
+        self, circuits, initial_states=None, nshots: int = None, processes=None
     ):  # pragma: no cover
         """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
-        raise_error(NotImplementedError)
+        from qibo.parallel import (  # pylint: disable=import-outside-toplevel
+            parallel_circuits_execution,
+        )
+
+        return parallel_circuits_execution(
+            circuits, initial_states, nshots, processes, backend=self
+        )
 
     def execute_circuit_repeated(
         self, circuit: "qibo.models.circuit.Circuit", nshots: int, initial_state=None
@@ -599,7 +641,9 @@ class Backend:
         self, circuit, initial_state=None, nshots: int = None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
-        raise_error(NotImplementedError)
+        raise_error(
+            NotImplementedError, f"{self} does not support distributed execution."
+        )
 
     ########################################################################################
     ######## Methods related to the execution and post-processing of measurements   ########

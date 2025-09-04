@@ -189,15 +189,6 @@ class NumpyBackend(Backend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuits(
-        self, circuits, initial_states=None, nshots=1000, processes=None
-    ):
-        from qibo.parallel import parallel_circuits_execution
-
-        return parallel_circuits_execution(
-            circuits, initial_states, nshots, processes, backend=self
-        )
-
     def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         """
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
@@ -295,42 +286,37 @@ class NumpyBackend(Backend):
             circuit._final_state = final_result
             return final_result
 
-    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
-        raise_error(
-            NotImplementedError, f"{self} does not support distributed execution."
-        )
+    # def calculate_symbolic(
+    #     self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    # ):
+    #     state = self.to_numpy(state)
+    #     terms = []
+    #     for i in np.nonzero(state)[0]:
+    #         b = bin(i)[2:].zfill(nqubits)
+    #         if np.abs(state[i]) >= cutoff:
+    #             x = np.round(state[i], decimals)
+    #             terms.append(f"{x}|{b}>")
+    #         if len(terms) >= max_terms:
+    #             terms.append("...")
+    #             return terms
+    #     return terms
 
-    def calculate_symbolic(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):
-        state = self.to_numpy(state)
-        terms = []
-        for i in np.nonzero(state)[0]:
-            b = bin(i)[2:].zfill(nqubits)
-            if np.abs(state[i]) >= cutoff:
-                x = np.round(state[i], decimals)
-                terms.append(f"{x}|{b}>")
-            if len(terms) >= max_terms:
-                terms.append("...")
-                return terms
-        return terms
-
-    def calculate_symbolic_density_matrix(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):
-        state = self.to_numpy(state)
-        terms = []
-        indi, indj = np.nonzero(state)
-        for i, j in zip(indi, indj):
-            bi = bin(i)[2:].zfill(nqubits)
-            bj = bin(j)[2:].zfill(nqubits)
-            if np.abs(state[i, j]) >= cutoff:
-                x = np.round(state[i, j], decimals)
-                terms.append(f"{x}|{bi}><{bj}|")
-            if len(terms) >= max_terms:
-                terms.append("...")
-                return terms
-        return terms
+    # def calculate_symbolic_density_matrix(
+    #     self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    # ):
+    #     state = self.to_numpy(state)
+    #     terms = []
+    #     indi, indj = np.nonzero(state)
+    #     for i, j in zip(indi, indj):
+    #         bi = bin(i)[2:].zfill(nqubits)
+    #         bj = bin(j)[2:].zfill(nqubits)
+    #         if np.abs(state[i, j]) >= cutoff:
+    #             x = np.round(state[i, j], decimals)
+    #             terms.append(f"{x}|{bi}><{bj}|")
+    #         if len(terms) >= max_terms:
+    #             terms.append("...")
+    #             return terms
+    #     return terms
 
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
