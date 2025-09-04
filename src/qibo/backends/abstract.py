@@ -186,6 +186,28 @@ class Backend:
             dtype = self.dtype
         return self.engine.eye(dims, dtype=dtype)
 
+    def matrix_norm(
+        self, state, order: Union[int, float, str] = "nuc", dtype=None
+    ):  # pragma: no cover
+        """Calculate norm of a :math:`2`-dimensional array.
+
+        Default is the ``nuclear`` norm.
+        If ``order="nuc"``, it returns the nuclear norm of ``state``,
+        assuming ``state`` is Hermitian (also known as trace norm).
+        For specifications on the other  possible values of the
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm
+        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        """
+        if dtype is None:
+            dtype = self.dtype
+
+        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
+
+        return self.engine.linalg.norm(state, ord=order)
+
     def ones(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
         if dtype is None:
             dtype = self.dtype
@@ -235,28 +257,6 @@ class Backend:
         state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
 
         return self.engine.linalg.norm(state, order)
-
-    def matrix_norm(
-        self, state, order: Union[int, float, str] = "nuc"
-    ):  # pragma: no cover
-        """Calculate norm of a :math:`2`-dimensional array.
-
-        Default is the ``nuclear`` norm.
-        If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian (also known as trace norm).
-        For specifications on the other  possible values of the
-        parameter ``order`` for the ``tensorflow`` backend, please refer to
-        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
-        For all other backends, please refer to
-        `numpy.linalg.norm
-        <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
-        """
-        if dtype is None:
-            dtype = self.dtype
-
-        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
-
-        return self.engine.linalg.norm(state, ord=order)
 
     def zeros(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
         if dtype is None:

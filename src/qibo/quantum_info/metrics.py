@@ -36,7 +36,7 @@ def purity(state, backend=None):
     if len(state.shape) == 1:
         pur = backend.engine.real(backend.vector_norm(state)) ** 2
     else:
-        pur = backend.engine.real(backend.engine.trace(backend.engine.matmul(state, state)))
+        pur = backend.engine.real(backend.trace(state @ state))
     return float(pur)
 
 
@@ -236,9 +236,12 @@ def fidelity(state, target, backend=None):
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        backend.engine.abs(backend.engine.matmul(backend.engine.conj(state), target)) ** 2
+        backend.engine.abs(backend.engine.matmul(backend.engine.conj(state), target))
+        ** 2
         if len(state.shape) == 1
-        else backend.engine.real(backend.engine.trace(backend.engine.matmul(state, target)))
+        else backend.engine.real(
+            backend.engine.trace(backend.engine.matmul(state, target))
+        )
     )
 
     return fid
@@ -289,7 +292,9 @@ def bures_angle(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    angle = backend.engine.arccos(backend.engine.sqrt(fidelity(state, target, backend=backend)))
+    angle = backend.engine.arccos(
+        backend.engine.sqrt(fidelity(state, target, backend=backend))
+    )
 
     return angle
 
@@ -358,7 +363,8 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         norm_channel = float(
             backend.matrix_norm(
                 backend.engine.matmul(
-                    backend.engine.conj(backend.engine.transpose(channel, (1, 0))), channel
+                    backend.engine.conj(backend.engine.transpose(channel, (1, 0))),
+                    channel,
                 )
                 - backend.engine.eye(dim**2)
             )
@@ -369,7 +375,8 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             norm_target = float(
                 backend.vector_norm(
                     backend.engine.matmul(
-                        backend.engine.conj(backend.engine.transpose(target, (1, 0))), target
+                        backend.engine.conj(backend.engine.transpose(target, (1, 0))),
+                        target,
                     )
                     - backend.engine.eye(dim**2)
                 )
@@ -754,7 +761,8 @@ def frame_potential(
 
             potential += backend.engine.abs(
                 backend.engine.trace(
-                    backend.engine.transpose(backend.engine.conj(unitary_1), (1, 0)) @ unitary_2
+                    backend.engine.transpose(backend.engine.conj(unitary_1), (1, 0))
+                    @ unitary_2
                 )
             ) ** (2 * power_t)
 

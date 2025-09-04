@@ -563,28 +563,22 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=local_state, backend=backend)
-        state = backend.engine.outer(state, backend.engine.conj(state).T)
+        state = backend.outer(state, backend.conj(state))
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
                 dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
-            state = backend.engine.matmul(
-                state, backend.engine.transpose(backend.engine.conj(state), (1, 0))
-            )
-            state = state / backend.engine.trace(state)
+            state = state @ backend.conj(state).T
+            state = state / backend.trace(state)
         else:
-            nqubits = int(np.log2(dims))
-            state = backend.identity(nqubits)
+            state = backend.identity(dims)
             state += random_unitary(dims, seed=local_state, backend=backend)
-            state = backend.engine.matmul(
-                state,
-                random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
+            state = state @ random_gaussian_matrix(
+                dims, rank, seed=local_state, backend=backend
             )
-            state = backend.engine.matmul(
-                state, backend.engine.transpose(backend.engine.conj(state), (1, 0))
-            )
-            state /= backend.engine.trace(state)
+            state = state @ backend.conj(state).T
+            state /= backend.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
@@ -1219,7 +1213,7 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = random_gaussian_matrix(
         dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
     )
-    super_op = super_op @ backend.engine.conj(super_op).T
+    super_op = super_op @ backend.conj(super_op).T
 
     # partial trace implemented with einsum
     super_op_reduced = np.einsum(
@@ -1230,20 +1224,22 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
 
     eigenvalues = np.sqrt(1.0 / eigenvalues)
 
-    operator = np.zeros((dims, dims), dtype=complex)
-    operator = backend.cast(operator, dtype=operator.dtype)
+    operator = backend.zeros((dims, dims), dtype=complex)
     for eigenvalue, eigenvector in zip(
         backend.cast(eigenvalues), backend.cast(eigenvectors).T
     ):
-        operator = operator + eigenvalue * backend.engine.outer(
-            eigenvector, backend.engine.conj(eigenvector)
+        operator = operator + eigenvalue * backend.outer(
+            eigenvector, backend.conj(eigenvector)
         )
 
-    ops = [backend.identity(2**dims), operator]
+    ops = [backend.identity(dims), operator]
     if order == "column":
         ops = ops[::-1]
 
     operator = backend.engine.kron(*ops)
+
+    print(operator.shape)
+    print(super_op.shape)
 
     super_op = operator @ super_op @ operator
 
