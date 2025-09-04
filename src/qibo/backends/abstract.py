@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
 from qibo.backends import einsum_utils
-from qibo.config import log, raise_error
+from qibo.config import SHOT_BATCH_SIZE, log, raise_error
 
 
 class Backend:
@@ -157,9 +157,11 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def is_sparse(self, array) -> bool:  # pragma: no cover
+    def is_sparse(self, array) -> bool:
         """Determine if a given array is a sparse tensor."""
-        raise_error(NotImplementedError)
+        from scipy.sparse import issparse  # pylint: disable=import-outside-toplevel
+
+        return issparse(array)
 
     def to_numpy(self, array) -> "ndarray":  # pragma: no cover
         """Cast a given array to numpy."""
@@ -181,6 +183,9 @@ class Backend:
 
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
+
+    def det(self, array) -> "ndarray":
+        return self.engine.linalg.det(array)
 
     def diag(self, array, **kwargs) -> "ndarray":
         return self.engine.diag(array, **kwargs)
@@ -208,7 +213,7 @@ class Backend:
         return self.engine.exp(array, **kwargs)
 
     def expm(self, array) -> "ndarray":
-        if self.is_sparse(matrix):
+        if self.is_sparse(array):
             from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
                 expm,
             )
@@ -244,6 +249,9 @@ class Backend:
 
     def log10(self, array, **kwargs) -> "ndarray":
         return self.engine.log10(array, **kwargs)
+
+    def matmul(self, array_1, array_2, **kwargs) -> "ndarray":
+        return self.engine.matmul(array_1, array_2, **kwargs)
 
     def matrix_norm(
         self, state, order: Union[int, float, str] = "nuc", dtype=None
@@ -307,7 +315,9 @@ class Backend:
     def trace(self, array) -> Union[int, float]:
         return self.engine.trace(array)
 
-    def transpose(self, array, axes: Union[Tuple[int, ...], List[int]]) -> "ndarray":
+    def transpose(
+        self, array, axes: Union[Tuple[int, ...], List[int]] = None
+    ) -> "ndarray":
         return self.engine.transpose(array, axes)
 
     def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
@@ -421,7 +431,7 @@ class Backend:
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
-        if eigenvectors is None or self.is_sparse(matrix):  # pylint: disable=E1111
+        if eigenvectors is None or self.is_sparse(matrix):
             return self.expm(phase * matrix)
 
         expd = self.exp(phase * eigenvalues)
@@ -449,8 +459,12 @@ class Backend:
 
         return (eigenvectors * log) @ ud
 
-    def calculate_matrix_power(
-        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
+    def matrix_power(
+        self,
+        matrix,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+        dtype=None,
     ):  # pragma: no cover
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
@@ -461,11 +475,30 @@ class Backend:
             ``cuquantum``), this method falls back to CPU whenever ``power`` is not
             an integer.
         """
-        raise_error(NotImplementedError)
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
 
-    def calculate_matrix_sqrt(
-        self, matrix, precision_singularity: float = 1e-14
-    ):  # pragma: no cover
+        if dtype is None:
+            dtype = self.dtype
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return self._negative_power_singular_matrix(
+                    matrix, power, precision_singularity, dtype=dtype
+                )
+
+        from scipy.linalg import (  # pylint: disable=import-outside-toplevel
+            fractional_matrix_power,
+        )
+
+        return fractional_matrix_power(matrix, power)
+
+    def matrix_sqrt(self, array):  # pragma: no cover
         """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
 
         .. note::
@@ -473,13 +506,11 @@ class Backend:
             This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
             ``cuquantum``), this method falls back to CPU.
         """
-        raise_error(NotImplementedError)
+        return self.matrix_power(array, power=0.5)
 
-    def calculate_singular_value_decomposition(
-        self, matrix
-    ):  # pragma: no cover# pragma: no cover
+    def singular_value_decomposition(self, array) -> Tuple["ndarray", ...]:
         """Calculate the Singular Value Decomposition of ``matrix``."""
-        raise_error(NotImplementedError)
+        return self.engine.linalg.svd(array)
 
     def partial_trace(
         self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
@@ -921,7 +952,17 @@ class Backend:
 
     def sample_frequencies(self, probabilities, nshots: int):
         """Sample measurement frequencies according to a probability distribution."""
-        raise_error(NotImplementedError)
+        nprobs = probabilities / self.sum(probabilities)
+        frequencies = self.zeros(len(nprobs), dtype=self.engine.int64)
+
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
+
+        frequencies = self.update_frequencies(
+            frequencies, nprobs, nshots % SHOT_BATCH_SIZE
+        )
+
+        return Counter({i: int(f) for i, f in enumerate(frequencies) if f > 0})
 
     def samples_to_binary(self, samples, nqubits: int):
         """Convert samples from decimal representation to binary."""
@@ -930,7 +971,10 @@ class Backend:
 
     def samples_to_decimal(self, samples, nqubits: int):
         """Convert samples from binary representation to decimal."""
-        raise_error(NotImplementedError)
+        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32)
+        qrange = (2**qrange)[:, None]
+        samples = self.cast(samples, dtype=self.engine.int32)
+        return self.matmul(samples, qrange)[:, 0]
 
     def update_frequencies(self, frequencies, probabilities, nsamples: int):
         samples = self.sample_shots(probabilities, nsamples)
@@ -938,16 +982,31 @@ class Backend:
         frequencies[res] += counts
         return frequencies
 
+    ########################################################################################
+    ######## Helper methods for testing                                             ########
+    ########################################################################################
+
     def assert_allclose(
         self, value, target, rtol: float = 1e-7, atol: float = 0.0
     ):  # pragma: no cover
-        raise_error(NotImplementedError)
+        from qibo.result import (  # pylint: disable=import-outside-toplevel
+            CircuitResult,
+            QuantumState,
+        )
+
+        if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
+            value = value.state()
+        if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
+            target = target.state()
+
+        self.engine.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     def assert_circuitclose(
         self, circuit, target_circuit, rtol: float = 1e-7, atol: float = 0.0
     ):
-        value = self.execute_circuit(circuit)._state
-        target = self.execute_circuit(target_circuit)._state
+        value = self.execute_circuit(circuit).state()
+        target = self.execute_circuit(target_circuit).state()
+
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     ########################################################################################
@@ -1076,7 +1135,7 @@ class Backend:
 
         U, S, Vh = self.singular_value_decomposition(matrix)
         # cast needed because of different dtypes in `torch`
-        S = self.cast(S, dtype=dtype)
+        S = self.cast(S, dtype=dtype)  # pylint: disable=E1111
         S_inv = self.engine.where(self.abs(S) < precision_singularity, 0.0, S**power)
 
         return self.inv(Vh) @ self.diag(S_inv) @ self.inv(U)

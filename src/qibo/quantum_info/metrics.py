@@ -99,7 +99,7 @@ def trace_distance(state, target, backend=None):
 
     distance = state - target
     distance = backend.conj(distance.T) @ distance
-    distance = backend.calculate_matrix_sqrt(distance)
+    distance = backend.matrix_sqrt(distance)
 
     return backend.trace(distance) / 2
 
@@ -229,9 +229,9 @@ def fidelity(state, target, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
-            fid = backend.calculate_matrix_sqrt(state)
+            fid = backend.matrix_sqrt(state)
             fid = fid @ backend.conj(target.T) @ fid
-            fid = backend.calculate_matrix_sqrt(fid)
+            fid = backend.matrix_sqrt(fid)
             fid = backend.real(backend.trace(fid))
 
             return fid**2

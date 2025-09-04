@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import __version__, backends, gates
+from qibo import __version__, gates
 from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
@@ -134,7 +134,11 @@ class QuantumState:
         Returns:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
-        backend = backends.construct_backend("numpy")
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            construct_backend,
+        )
+
+        backend = construct_backend("numpy")
         return cls(payload.get("state"), backend=backend)
 
     @classmethod
@@ -156,7 +160,7 @@ class MeasurementOutcomes:
 
     Args:
         measurements (:class:`qibo.gates.M`): Measurement gates.
-        backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
             If ``None``, then the current backend is used. Defaults to ``None``.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
@@ -472,7 +476,7 @@ class MeasurementOutcomes:
             filename (str): Path to the file containing the :class:`qibo.result.MeasurementOutcomes`.
 
         Returns:
-            A :class:`qibo.result.MeasurementOutcomes` object.
+            :class:`qibo.result.MeasurementOutcomes`: instance of the ``MeasurementOutcomes`` class.
         """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
@@ -482,11 +486,12 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state after circuit execution.
 
     Args:
-        final_state (np.ndarray): Input quantum state as np.ndarray.
-        measurements (qibo.gates.M): The measurement gates containing the measurements.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, then the current backend is going to be used.
-        probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
-        samples (np.darray): Use these samples to generate probabilities and frequencies.
+        final_state (ndarray): Input quantum state as np.ndarray.
+        measurements (:class:`qibo.gates.M`): The measurement gates containing the measurements.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
+            If not provided, then the current backend is going to be used.
+        probabilities (ndarray): Use these probabilities to generate samples and frequencies.
+        samples (ndarray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
     """
 

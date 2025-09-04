@@ -345,7 +345,7 @@ def singular_value_decomposition(matrix, backend=None):
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_singular_value_decomposition(matrix)
+    return backend.singular_value_decomposition(matrix)
 
 
 def schmidt_decomposition(

@@ -1,11 +1,8 @@
 """Module defining the Numpy backend."""
 
-import collections
-from typing import Union
-
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag, fractional_matrix_power, logm
+from scipy.linalg import block_diag
 
 from qibo import __version__
 from qibo.backends.abstract import Backend
@@ -52,9 +49,6 @@ class NumpyBackend(Backend):
             return x.astype(dtype, copy=copy)
 
         return np.asarray(x, dtype=dtype, copy=copy if copy else None)
-
-    def is_sparse(self, array):
-        return sparse.issparse(array)
 
     def to_numpy(self, array):
         if self.is_sparse(array):
@@ -291,54 +285,3 @@ class NumpyBackend(Backend):
         qrange = (2**qrange)[:, None]
         samples = np.asarray(samples.tolist())
         return np.matmul(samples, qrange)[:, 0]
-
-    def sample_frequencies(self, probabilities, nshots):
-        from qibo.config import SHOT_BATCH_SIZE
-
-        nprobs = probabilities / self.engine.sum(probabilities)
-        frequencies = self.zeros(len(nprobs), dtype=self.engine.int64)
-        for _ in range(nshots // SHOT_BATCH_SIZE):
-            frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
-        frequencies = self.update_frequencies(
-            frequencies, nprobs, nshots % SHOT_BATCH_SIZE
-        )
-        return collections.Counter(
-            {i: int(f) for i, f in enumerate(frequencies) if f > 0}
-        )
-
-    def calculate_matrix_power(
-        self,
-        matrix,
-        power: Union[float, int],
-        precision_singularity: float = 1e-14,
-    ):
-        if not isinstance(power, (float, int)):
-            raise_error(
-                TypeError,
-                f"``power`` must be either float or int, but it is type {type(power)}.",
-            )
-
-        if power < 0.0:
-            # negative powers of singular matrices via SVD
-            determinant = self.engine.linalg.det(matrix)
-            if abs(determinant) < precision_singularity:
-                return _calculate_negative_power_singular_matrix(
-                    matrix, power, precision_singularity, self.engine, self
-                )
-
-        return fractional_matrix_power(matrix, power)
-
-    def calculate_matrix_sqrt(self, matrix):
-        return self.calculate_matrix_power(matrix, power=0.5)
-
-    def calculate_singular_value_decomposition(self, matrix):
-        return self.engine.linalg.svd(matrix)
-
-    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
-        if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
-            value = value.state()
-        if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
-            target = target.state()
-        value = self.to_numpy(value)
-        target = self.to_numpy(target)
-        np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
