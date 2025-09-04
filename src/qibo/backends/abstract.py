@@ -730,6 +730,9 @@ class Backend:
 
         return terms
 
+    def compile(self, func):
+        return func
+
     def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
@@ -804,6 +807,10 @@ class Backend:
         else:
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
             state = self.engine.einsum(opstring, state, matrix)
+
+        shape = (2**nqubits,)
+        if density_matrix:
+            shape *= 2
 
         return self.reshape(state, shape)
 

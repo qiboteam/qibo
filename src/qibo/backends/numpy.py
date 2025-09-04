@@ -149,8 +149,11 @@ class NumpyBackend(Backend):
                 else self.cast(initial_state)
             )
 
+            print(state.shape)
+
             for gate in circuit.queue:
                 state = gate.apply(self, state, nqubits, density_matrix=density_matrix)
+                print(state.shape)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
@@ -222,7 +225,9 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
                         gate.substitute_symbols()
-                    state = gate.apply_density_matrix(self, state, nqubits)
+                    state = gate.apply(
+                        self, state, nqubits, density_matrix=circuit.density_matrix
+                    )
             else:
                 if circuit.accelerators:  # pragma: no cover
                     # pylint: disable=E1111
