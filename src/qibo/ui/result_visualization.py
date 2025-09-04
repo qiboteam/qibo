@@ -199,7 +199,7 @@ def plot_density_hist(
     # Create a density matrix from state vector
     if not circuit.density_matrix:
         state = backend.cast(state)
-        state = backend.engine.outer(state, backend.engine.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     nqubits = circuit.nqubits
     row_names = _get_labels(nqubits)

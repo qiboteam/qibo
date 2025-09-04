@@ -39,7 +39,7 @@ def test_rygate_density_matrix(backend):
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_rho = backend.engine.matmul(
-        backend.engine.matmul(matrix, initial_rho), backend.engine.conj(matrix).T
+        backend.engine.matmul(matrix, initial_rho), backend.conj(matrix).T
     )
 
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
@@ -170,7 +170,7 @@ def test_cu1gate_application_twoqubit(backend):
     matrix = np.kron(matrix, np.eye(2))
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_rho = backend.engine.matmul(
-        backend.engine.matmul(matrix, initial_rho), backend.engine.conj(matrix).T
+        backend.engine.matmul(matrix, initial_rho), backend.conj(matrix).T
     )
     backend.assert_allclose(final_rho, target_rho)
 
@@ -221,7 +221,7 @@ def test_controlled_by_random(backend, nqubits):
     """Check controlled_by method on gate."""
 
     initial_psi = random_statevector(2**nqubits, backend=backend)
-    initial_rho = backend.engine.outer(initial_psi, backend.engine.conj(initial_psi))
+    initial_rho = backend.outer(initial_psi, backend.conj(initial_psi))
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
@@ -231,5 +231,5 @@ def test_controlled_by_random(backend, nqubits):
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
     target_psi = backend.execute_circuit(c, backend.engine.copy(initial_psi)).state()
-    target_rho = backend.engine.outer(target_psi, backend.engine.conj(target_psi))
+    target_rho = backend.outer(target_psi, backend.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)

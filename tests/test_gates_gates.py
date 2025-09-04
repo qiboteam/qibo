@@ -494,10 +494,10 @@ def test_u3(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.engine.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.engine.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -590,10 +590,10 @@ def test_cy(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.engine.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.engine.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -633,10 +633,10 @@ def test_cz(backend, seed_state, seed_observable):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.engine.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.engine.conj(target_state).T)
+        backend.cast(backend.conj(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,
@@ -1131,10 +1131,10 @@ def test_rxxyy(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     # testing random expectation value due to global phase difference
     backend.assert_allclose(
-        backend.cast(backend.engine.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.engine.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1298,10 +1298,10 @@ def test_ecr(backend):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
-        backend.cast(backend.engine.conj(final_state_decompose).T)
+        backend.cast(backend.conj(final_state_decompose).T)
         @ observable
         @ final_state_decompose,
-        backend.cast(backend.engine.conj(target_state).T) @ observable @ target_state,
+        backend.cast(backend.conj(target_state).T) @ observable @ target_state,
         atol=1e-6,
     )
 
@@ -1870,7 +1870,7 @@ def test_unitary_dagger(backend, nqubits):
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
     target_state = backend.engine.matmul(matrix, initial_state)
-    target_state = backend.engine.matmul(backend.engine.conj(matrix).T, target_state)
+    target_state = backend.engine.matmul(backend.conj(matrix).T, target_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 

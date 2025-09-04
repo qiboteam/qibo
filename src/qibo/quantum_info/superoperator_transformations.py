@@ -69,10 +69,10 @@ def vectorization(state, order: str = "row", backend=None):
     dims = state.shape[-1]
 
     if len(state.shape) == 1:
-        state = backend.engine.outer(state, backend.engine.conj(state))
+        state = backend.outer(state, backend.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
         state = backend.engine.einsum(
-            "aij,akl->aijkl", state, backend.engine.conj(state)
+            "aij,akl->aijkl", state, backend.conj(state)
         ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
@@ -187,7 +187,7 @@ def to_choi(channel, order: str = "row", backend=None):
     backend = _check_backend(backend)
 
     channel = vectorization(channel, order=order, backend=backend)
-    channel = backend.engine.outer(channel, backend.engine.conj(channel))
+    channel = backend.outer(channel, backend.conj(channel))
 
     return channel
 
@@ -259,7 +259,7 @@ def to_pauli_liouville(
         nqubits, normalize, pauli_order=pauli_order, backend=backend
     )
 
-    channel = unitary @ channel @ backend.engine.conj(unitary).T
+    channel = unitary @ channel @ backend.conj(unitary).T
 
     return channel
 
@@ -518,7 +518,7 @@ def choi_to_kraus(
     if validate_cp:
         norm = float(
             backend.matrix_norm(
-                choi_super_op - backend.engine.conj(choi_super_op).T, order=2
+                choi_super_op - backend.conj(choi_super_op).T, order=2
             )
         )
         if norm > PRECISION_TOL:
@@ -546,7 +546,7 @@ def choi_to_kraus(
         )
         U = U.T
         coefficients = backend.engine.sqrt(coefficients)
-        V = backend.engine.conj(V)
+        V = backend.conj(V)
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
@@ -563,7 +563,7 @@ def choi_to_kraus(
         # when choi_super_op is CP
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
-            if backend.engine.abs(eig) > precision_tol:
+            if backend.abs(eig) > precision_tol:
                 eig = backend.engine.sqrt(eig)
                 kraus_ops.append(
                     eig * unvectorization(kraus, order=order, backend=backend)
@@ -736,8 +736,8 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.engine.outer(
-            kraus_op, backend.engine.conj(kraus_op)
+        super_op = super_op + backend.outer(
+            kraus_op, backend.conj(kraus_op)
         )
         del kraus_op
 
@@ -877,8 +877,8 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.engine.outer(
-            kraus_op, backend.engine.conj(kraus_op)
+        super_op = super_op + backend.outer(
+            kraus_op, backend.conj(kraus_op)
         )
         del kraus_op
 
@@ -949,7 +949,7 @@ def kraus_to_stinespring(
 
     # only utility is for outer product,
     # so np.conj here to only do it once
-    initial_state_env = backend.engine.conj(initial_state_env)
+    initial_state_env = backend.conj(initial_state_env)
 
     stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
@@ -963,7 +963,7 @@ def kraus_to_stinespring(
         kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
         stinespring = stinespring + backend.engine.kron(
             kraus_op,
-            backend.engine.outer(vector_alpha, initial_state_env),
+            backend.outer(vector_alpha, initial_state_env),
         )
         del kraus_op, vector_alpha
 
@@ -1056,7 +1056,7 @@ def liouville_to_pauli(
         backend=backend,
     )
 
-    return comp_to_pauli @ super_op @ backend.engine.conj(comp_to_pauli.T)
+    return comp_to_pauli @ super_op @ backend.conj(comp_to_pauli.T)
 
 
 def liouville_to_kraus(
@@ -1257,7 +1257,7 @@ def pauli_to_liouville(
         backend=backend,
     )
 
-    return pauli_to_comp @ pauli_op @ backend.engine.conj(pauli_to_comp).T
+    return pauli_to_comp @ pauli_op @ backend.conj(pauli_to_comp).T
 
 
 def pauli_to_choi(
@@ -1993,7 +1993,7 @@ def stinespring_to_kraus(
         vector_alpha = np.zeros(dim_env, dtype=complex)
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
-        kraus = backend.engine.conj(vector_alpha) @ stinespring @ initial_state_env
+        kraus = backend.conj(vector_alpha) @ stinespring @ initial_state_env
         kraus_ops.append(kraus)
 
     return kraus_ops
@@ -2294,7 +2294,7 @@ def _individual_kraus_to_liouville(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
+        kraus_op = backend.outer(kraus_op, backend.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops

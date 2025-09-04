@@ -236,7 +236,7 @@ def test_entropy_density_matrix(backend):
     matrix = backend.cast(matrix, dtype=u.dtype)
     rho = backend.engine.matmul(
         backend.engine.matmul(u, backend.engine.diag(5 * matrix)),
-        backend.engine.conj(backend.engine.transpose(u, (1, 0))),
+        backend.conj(backend.engine.transpose(u, (1, 0))),
     )
     # this is a positive rho
 
@@ -284,7 +284,7 @@ def test_norm(backend, density_matrix, seed):
     if density_matrix:
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
-        target_norm = backend.engine.trace(state)
+        target_norm = backend.trace(state)
         final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
@@ -336,7 +336,7 @@ def test_energy(backend, density_matrix):
         from qibo.quantum_info import random_density_matrix
 
         state = random_density_matrix(2**4, backend=backend)
-        target_energy = backend.engine.trace(backend.engine.matmul(matrix, state))
+        target_energy = backend.trace(backend.engine.matmul(matrix, state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
         from qibo.quantum_info import random_statevector

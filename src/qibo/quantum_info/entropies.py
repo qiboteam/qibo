@@ -60,14 +60,14 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
         raise_error(ValueError, "Probability array must sum to 1.")
 
     log_prob = backend.engine.where(
-        prob_dist != 0, backend.engine.log2(prob_dist) / np.log2(base), 0.0
+        prob_dist != 0, backend.log2(prob_dist) / np.log2(base), 0.0
     )
 
     shan_entropy = -backend.engine.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = (
-        backend.engine.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
+        backend.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
     )
 
     return np.real(float(shan_entropy))
@@ -133,7 +133,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
     entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
 
     log_prob_q = backend.engine.where(
-        prob_dist_q != 0.0, backend.engine.log2(prob_dist_q) / np.log2(base), -np.inf
+        prob_dist_q != 0.0, backend.log2(prob_dist_q) / np.log2(base), -np.inf
     )
 
     log_prob = backend.engine.where(prob_dist_p != 0.0, log_prob_q, 0.0)
@@ -254,11 +254,11 @@ def classical_renyi_entropy(
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
     if alpha == np.inf:
-        return -1 * backend.engine.log2(max(prob_dist)) / np.log2(base)
+        return -1 * backend.log2(max(prob_dist)) / np.log2(base)
 
     total_sum = backend.engine.sum(prob_dist**alpha)
 
-    renyi_ent = (1 / (1 - alpha)) * backend.engine.log2(total_sum) / np.log2(base)
+    renyi_ent = (1 / (1 - alpha)) * backend.log2(total_sum) / np.log2(base)
 
     return renyi_ent
 
@@ -348,7 +348,7 @@ def classical_relative_renyi_entropy(
         total_sum = backend.engine.sqrt(prob_dist_p * prob_dist_q)
         total_sum = backend.engine.sum(total_sum)
 
-        return -2 * backend.engine.log2(total_sum) / np.log2(base)
+        return -2 * backend.log2(total_sum) / np.log2(base)
 
     if alpha == 1.0:
         return classical_relative_entropy(
@@ -356,14 +356,14 @@ def classical_relative_renyi_entropy(
         )
 
     if alpha == np.inf:
-        return backend.engine.log2(max(prob_dist_p / prob_dist_q)) / np.log2(base)
+        return backend.log2(max(prob_dist_p / prob_dist_q)) / np.log2(base)
 
     prob_p = prob_dist_p**alpha
     prob_q = prob_dist_q ** (1 - alpha)
 
     total_sum = backend.engine.sum(prob_p * prob_q)
 
-    return (1 / (alpha - 1)) * backend.engine.log2(total_sum) / np.log2(base)
+    return (1 / (alpha - 1)) * backend.log2(total_sum) / np.log2(base)
 
 
 def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
@@ -530,8 +530,8 @@ def von_neumann_entropy(
 
         return 0.0
 
-    ent = backend.calculate_matrix_log(state, base=base)
-    ent = -backend.engine.trace(state @ ent)
+    ent = backend.matrix_log(state, base=base)
+    ent = -backend.trace(state @ ent)
     ent = backend.real(ent)
 
     if return_spectrum:
@@ -539,7 +539,7 @@ def von_neumann_entropy(
 
         log_prob = backend.engine.where(
             backend.real(eigenvalues) > 0.0,
-            backend.engine.log2(eigenvalues) / np.log2(base),
+            backend.log2(eigenvalues) / backend.log2(base),
             0.0,
         )
         log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
@@ -607,13 +607,13 @@ def relative_von_neumann_entropy(
         return 0.0
 
     if len(state.shape) == 1:
-        state = backend.engine.outer(state, backend.engine.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     if len(target.shape) == 1:
-        target = backend.engine.outer(target, backend.engine.conj(target))
+        target = backend.outer(target, backend.conj(target))
 
-    relative = backend.calculate_matrix_log(target, base=base)
-    relative = -backend.engine.trace(state @ relative)
+    relative = backend.matrix_log(target, base=base)
+    relative = -backend.trace(state @ relative)
     relative -= von_neumann_entropy(
         state, base=base, return_spectrum=False, backend=backend
     )
@@ -729,12 +729,12 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     if alpha == np.inf:
         return (
             -1
-            * backend.engine.log2(backend.matrix_norm(state, order=2))
+            * backend.log2(backend.matrix_norm(state, order=2))
             / np.log2(base)
         )
 
-    log = backend.engine.log2(
-        backend.engine.trace(matrix_power(state, alpha, backend=backend))
+    log = backend.log2(
+        backend.trace(matrix_power(state, alpha, backend=backend))
     )
 
     return (1 / (1 - alpha)) * log / np.log2(base)
@@ -828,7 +828,7 @@ def relative_renyi_entropy(
         )
 
     if len(state.shape) == 1:
-        state = backend.engine.outer(state, backend.engine.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     if alpha == 1.0:
         return relative_von_neumann_entropy(state, target, base, backend=backend)
@@ -837,13 +837,13 @@ def relative_renyi_entropy(
         new_state = matrix_power(state, 0.5, backend=backend)
         new_target = matrix_power(target, 0.5, backend=backend)
 
-        log = backend.engine.log2(backend.matrix_norm(new_state @ new_target, order=1))
+        log = backend.log2(backend.matrix_norm(new_state @ new_target, order=1))
 
         return -2 * log / np.log2(base)
 
     log = matrix_power(state, alpha, backend=backend)
     log = log @ matrix_power(target, 1 - alpha, backend=backend)
-    log = backend.engine.log2(backend.engine.trace(log))
+    log = backend.log2(backend.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
 
@@ -900,7 +900,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (
-        backend.engine.trace(matrix_power(state, alpha, backend=backend)) - 1
+        backend.trace(matrix_power(state, alpha, backend=backend)) - 1
     )
 
 
@@ -966,14 +966,14 @@ def relative_tsallis_entropy(
     factor = 1 - alpha
 
     if len(state.shape) == 1:
-        state = backend.engine.outer(state, backend.engine.conj(state.T))
+        state = backend.outer(state, backend.conj(state.T))
 
     if len(target.shape) == 1:
-        target = backend.engine.outer(target, backend.engine.conj(target.T))
+        target = backend.outer(target, backend.conj(target.T))
 
     trace = matrix_power(state, alpha, backend=backend)
     trace = trace @ matrix_power(target, factor, backend=backend)
-    trace = backend.engine.trace(trace)
+    trace = backend.trace(trace)
 
     return (1 - trace) / factor
 

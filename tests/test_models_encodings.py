@@ -474,7 +474,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.engine.outer(target, backend.engine.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -517,7 +517,7 @@ def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
         state = result.state()
 
         if density_matrix:
-            target = backend.engine.outer(target, backend.engine.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -570,8 +570,8 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
-                initial = backend.engine.outer(initial, backend.engine.conj(initial.T))
-                target = backend.engine.outer(target, backend.engine.conj(target.T))
+                initial = backend.outer(initial, backend.conj(initial.T))
+                target = backend.outer(target, backend.conj(target.T))
 
             result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()

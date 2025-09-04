@@ -183,10 +183,10 @@ def partial_transpose(
     nqubits = int(nqubits)
 
     if len(shape) == 1:
-        operator = backend.engine.outer(operator, backend.engine.conj(operator.T))
+        operator = backend.outer(operator, backend.conj(operator.T))
     elif len(shape) == 3 and shape[1] == 1:
         operator = backend.engine.einsum(
-            "aij,akl->aijkl", operator, backend.engine.conj(operator)
+            "aij,akl->aijkl", operator, backend.conj(operator)
         ).reshape(nstates, dims, dims)
 
     new_shape = list(range(2 * nqubits + 1))
@@ -243,7 +243,7 @@ def matrix_exponentiation(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_exp(matrix, phase, eigenvectors, eigenvalues)
+    return backend.matrix_exp(matrix, phase, eigenvectors, eigenvalues)
 
 
 def matrix_logarithm(
@@ -280,7 +280,7 @@ def matrix_logarithm(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_log(matrix, base, eigenvectors, eigenvalues)
+    return backend.matrix_log(matrix, base, eigenvectors, eigenvalues)
 
 
 def matrix_power(
@@ -485,7 +485,7 @@ def lanczos(
     )
 
     omega_prime = matrix @ vector
-    alpha = backend.engine.conj(omega_prime.T) @ vector
+    alpha = backend.conj(omega_prime.T) @ vector
     omega = omega_prime - alpha * vector
 
     lanczos_vectors = [vector]
@@ -503,11 +503,11 @@ def lanczos(
         lanczos_vectors.append(vector)
 
         omega_prime = matrix @ vector
-        alpha = backend.engine.conj(omega_prime.T) @ vector
+        alpha = backend.conj(omega_prime.T) @ vector
         omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
 
     lanczos_vectors = backend.cast(lanczos_vectors)
-    triadiagonal = backend.engine.conj(lanczos_vectors) @ matrix
+    triadiagonal = backend.conj(lanczos_vectors) @ matrix
     lanczos_vectors = lanczos_vectors.T
     triadiagonal = triadiagonal @ lanczos_vectors
 
@@ -533,18 +533,16 @@ def _vector_projection(vector, directions, backend):
         directions = backend.cast(directions, dtype=directions[0].dtype)
 
     if len(directions.shape) == 1:
-        return (
-            backend.engine.dot(backend.engine.conj(vector), directions)
-            * directions
-            / backend.engine.dot(backend.engine.conj(directions), directions)
-        )
+        result = backend.conj(vector) @ directions
+        result *= directions
+        return result / (backend.conj(directions) @ directions)
 
-    dot_products = backend.engine.einsum("j,kj", backend.engine.conj(vector), directions)
+    dot_products = backend.engine.einsum("j,kj", backend.conj(vector), directions)
     inner_prods = backend.engine.diag(
-        backend.engine.einsum("jk,lk", backend.engine.conj(directions), directions)
+        backend.engine.einsum("jk,lk", backend.conj(directions), directions)
     )
 
-    return (dot_products / inner_prods).reshape(-1, 1) * directions
+    return backend.reshape(dot_products / inner_prods, (-1, 1)) * directions
 
 
 def _gram_schmidt_process(vector, directions, backend):

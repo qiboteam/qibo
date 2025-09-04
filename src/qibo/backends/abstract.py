@@ -182,6 +182,9 @@ class Backend:
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
+    def diag(self, array, **kwargs) -> "ndarray":
+        return self.engine.diag(array, **kwargs)
+
     def eig(self, array, **kwargs):
         return self.engine.linalg.eig(array, **kwargs)
 
@@ -201,6 +204,19 @@ class Backend:
     def eigvals(self, array, **kwargs):
         return self.engine.linalg.eigvals(array, **kwargs)
 
+    def exp(self, array, **kwargs):
+        return self.engine.exp(array, **kwargs)
+
+    def expm(self, array) -> "ndarray":
+        if self.is_sparse(matrix):
+            from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
+                expm,
+            )
+        else:
+            from scipy.linalg import expm  # pylint: disable=import-outside-toplevel
+
+        return expm(array)
+
     def identity(self, dims: int, dtype=None) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
@@ -208,6 +224,23 @@ class Backend:
 
     def imag(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.imag(array)
+
+    def inv(self, array) -> "ndarray":
+        return self.engine.linalg.inv(array)
+
+    def log(self, array, **kwargs) -> "ndarray":
+        return self.engine.log(array, **kwargs)
+
+    def logm(self, array, **kwargs) -> "ndarray":
+        from scipy.linalg import logm  # pylint: disable=import-outside-toplevel
+
+        return logm(array, **kwargs)
+
+    def log2(self, array, **kwargs) -> "ndarray":
+        return self.engine.log2(array, **kwargs)
+
+    def log10(self, array, **kwargs) -> "ndarray":
+        return self.engine.log10(array, **kwargs)
 
     def matrix_norm(
         self, state, order: Union[int, float, str] = "nuc", dtype=None
@@ -362,43 +395,56 @@ class Backend:
 
         return exp_val
 
-    def calculate_expectation_density_matrix(
-        self, hamiltonian, state, normalize: bool
-    ):  # pragma: no cover
-        """Calculate expectation value of a density matrix given the observable matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_jacobian_matrix(
+    def jacobian(
         self, circuit, parameters, initial_state=None, return_complex: bool = True
     ):  # pragma: no cover
         """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
-        raise_error(NotImplementedError)
+        raise_error(
+            NotImplementedError,
+            "This method is only implemented in backends that allow automatic differentiation, "
+            + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
+        )
 
-    def calculate_matrix_exp(
+    def matrix_exp(
         self,
         matrix,
         phase: Union[float, int, complex] = 1,
         eigenvectors=None,
         eigenvalues=None,
-    ):  # pragma: no cover
+    ):
         """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
         and ``phase`` :math:`\\theta`.
 
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
-        raise_error(NotImplementedError)
+        if eigenvectors is None or self.is_sparse(matrix):  # pylint: disable=E1111
+            return self.expm(phase * matrix)
 
-    def calculate_matrix_log(
+        expd = self.exp(phase * eigenvalues)
+        ud = self.transpose(self.conj(eigenvectors))
+
+        return (eigenvectors * expd) @ ud
+
+    def matrix_log(
         self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
-    ):  # pragma: no cover
+    ):
         """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
         of a matrix :math:`A`.
 
         If the eigenvectors and eigenvalues are given the matrix diagonalization is
         used for exponentiation.
         """
-        raise_error(NotImplementedError)
+        if eigenvectors is None:
+            # to_numpy and cast needed for GPUs
+            log = self.logm(matrix) / float(self.log(base))
+
+            return log
+
+        log = self.log(eigenvalues) / float(self.log(base))
+        ud = self.transpose(self.conj(eigenvectors))
+
+        return (eigenvectors * log) @ ud
 
     def calculate_matrix_power(
         self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
@@ -1017,6 +1063,20 @@ class Backend:
         state = self._append_zeros(state, qubits, binshot)
 
         return self.engine.reshape(state, shape)
+
+    def _negative_power_singular_matrix(
+        self, matrix, power: Union[float, int], precision_singularity: float, dtype=None
+    ):
+        """Calculate negative power of singular matrix."""
+        if dtype is None:
+            dtype = self.dtype
+
+        U, S, Vh = self.singular_value_decomposition(matrix)
+        # cast needed because of different dtypes in `torch`
+        S = self.cast(S, dtype=dtype)
+        S_inv = self.engine.where(self.abs(S) < precision_singularity, 0.0, S**power)
+
+        return self.inv(Vh) @ self.diag(S_inv) @ self.inv(U)
 
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""

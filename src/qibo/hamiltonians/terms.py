@@ -66,7 +66,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return self.backend.calculate_matrix_exp(self.matrix, phase=-1j * x)
+        return self.backend.matrix_exp(self.matrix, phase=-1j * x)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""

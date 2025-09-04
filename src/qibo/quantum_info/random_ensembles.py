@@ -184,9 +184,9 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.engine.matmul(backend.engine.conj(matrix).T, matrix)
+        matrix = backend.engine.matmul(backend.conj(matrix).T, matrix)
     else:
-        matrix = (matrix + backend.engine.conj(matrix).T) / 2
+        matrix = (matrix + backend.conj(matrix).T) / 2
 
     if normalize:
         matrix = matrix / np.linalg.norm(backend.to_numpy(matrix))
@@ -233,7 +233,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         # Tensorflow experi
         Q, R = backend.engine.linalg.qr(unitary)
         D = backend.engine.diag(R)
-        D = D / backend.engine.abs(D)
+        D = D / backend.abs(D)
         R = backend.engine.diag(D)
         unitary = backend.engine.matmul(Q, R)
     elif measure is None:
@@ -351,7 +351,7 @@ def random_quantum_channel(
     else:
         super_op = random_unitary(dims, measure, local_state, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = backend.engine.outer(super_op, backend.engine.conj(super_op))
+        super_op = backend.outer(super_op, backend.conj(super_op))
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -955,8 +955,8 @@ def random_pauli_hamiltonian(
         for eigenvalue, eigenvector in zip(
             eigenvalues[1:], backend.engine.transpose(eigenvectors, (1, 0))[1:]
         ):
-            hamiltonian = hamiltonian + eigenvalue * backend.engine.outer(
-                eigenvector, backend.engine.conj(eigenvector)
+            hamiltonian = hamiltonian + eigenvalue * backend.outer(
+                eigenvector, backend.conj(eigenvector)
             )
 
     U = comp_basis_to_pauli(

@@ -239,7 +239,7 @@ def test_matrix_power(backend, power, singular):
     else:
         power = matrix_power(state, power, backend=backend)
 
-        target = float(backend.real(backend.engine.trace(power)))
+        target = float(backend.real(backend.trace(power)))
 
         assert abs(purity(state, backend=backend) - target) < 1e-5
 
@@ -270,7 +270,7 @@ def test_matrix_log(backend, base):
     eigvals, eigvecs = backend.eigenvectors(state)
     target = backend.zeros_like(state)
     for eigval, eigvec in zip(eigvals, eigvecs.T):
-        target += (backend.engine.log(eigval) / float(np.log(base))) * backend.outer(
+        target += (backend.log(eigval) / float(np.log(base))) * backend.outer(
             eigvec, backend.conj(eigvec)
         )
 
@@ -300,7 +300,7 @@ def test_singular_value_decomposition(backend):
         bitstring = f"{k:0{2}b}"
         a, b = int(bitstring[0]), int(bitstring[1])
         ket = backend.engine.kron(base[a], base[b])
-        state = state + coeff * backend.engine.outer(ket, ket.T)
+        state = state + coeff * backend.outer(ket, ket.T)
 
     _, S, _ = singular_value_decomposition(state, backend=backend)
 
@@ -332,9 +332,9 @@ def test_schmidt_decomposition(backend):
     backend.assert_allclose(recovered, state)
 
     # entropy test
-    coeffs = backend.engine.abs(S) ** 2
+    coeffs = backend.abs(S) ** 2
     entropy = backend.engine.where(
-        backend.engine.abs(S) < 1e-10, 0.0, backend.engine.log(coeffs)
+        backend.abs(S) < 1e-10, 0.0, backend.log(coeffs)
     )
     entropy = -backend.engine.sum(coeffs * entropy)
 
@@ -360,7 +360,7 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     )
 
     backend.assert_allclose(
-        tridiag, backend.engine.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
+        tridiag, backend.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
     )
 
     eigvals, eigvectors = backend.engine.linalg.eigh(tridiag)
@@ -394,7 +394,7 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
     # testing several projections
     target = backend.cast(
         [
-            backend.engine.dot(backend.engine.conj(state), direction) * direction
+            backend.engine.dot(backend.conj(state), direction) * direction
             for direction in directions
         ]
     )

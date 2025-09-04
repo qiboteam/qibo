@@ -133,7 +133,7 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
         backend=backend,
     )
 
-    assert backend.engine.abs(exact - estimate) <= backend.engine.abs(exact - noisy)
+    assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -190,7 +190,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert backend.engine.abs(exact - estimate) <= backend.engine.abs(exact - noisy)
+    assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -271,7 +271,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert backend.engine.abs(exact - estimate) <= backend.engine.abs(exact - noisy)
+    assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
 
 
 @pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
@@ -309,7 +309,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
         c, obs, noise, nshots, readout, backend=backend
     )
 
-    assert backend.engine.abs(true_val - mit_val) <= backend.engine.abs(true_val - noisy_val)
+    assert backend.abs(true_val - mit_val) <= backend.abs(true_val - noisy_val)
 
 
 @pytest.mark.parametrize("nqubits", [3])
@@ -373,4 +373,4 @@ def test_ics(backend, nqubits, noise, full_output, readout):
     if full_output:
         estimate = estimate[0]
 
-    assert backend.engine.abs(exact - estimate) <= backend.engine.abs(exact - noisy)
+    assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)

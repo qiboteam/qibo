@@ -110,7 +110,7 @@ def pauli_basis(
         else:
             nonzero = backend.engine.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
-        indices = nonzero(backend.engine.abs(basis))  # abs needed because of ``tensorflow``
+        indices = nonzero(backend.abs(basis))  # abs needed because of ``tensorflow``
         basis = basis[indices].reshape(-1, dim)
         indices = indices[1].reshape(-1, dim)
 
@@ -195,7 +195,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = backend.engine.conj(elements)
+        elements = backend.conj(elements)
 
         return elements, indexes
 
@@ -209,7 +209,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = backend.engine.conj(unitary)
+    unitary = backend.conj(unitary)
 
     return unitary
 

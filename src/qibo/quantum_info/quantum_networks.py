@@ -297,7 +297,7 @@ class QuantumNetwork:
         else:
             adjoint = self._backend.engine.transpose(reshaped)
 
-        mat_diff = self._backend.engine.conj(adjoint) - reshaped
+        mat_diff = self._backend.conj(adjoint) - reshaped
         norm = self._backend.matrix_norm(mat_diff, order=order)
 
         return float(norm) <= precision_tol
@@ -375,7 +375,7 @@ class QuantumNetwork:
     def conj(self):
         """Returns the conjugate of the quantum network."""
         return self.__class__(
-            self._backend.engine.conj(self._tensor),
+            self._backend.conj(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -672,7 +672,7 @@ class QuantumNetwork:
             backend = self._backend
         tensor = self._backend.engine.copy(self._tensor)
         tensor = backend.cast(tensor, dtype=self._tensor.dtype)
-        conj = backend.engine.conj
+        conj = backend.conj
 
         if self.is_pure():
             # Reshapes input matrix based on purity.
@@ -978,7 +978,7 @@ class QuantumChannel(QuantumComb):
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
         operator = self.copy().operator()
-        conj = self._backend.engine.conj
+        conj = self._backend.conj
 
         if self.is_pure():
             return self._einsum("ij,lk,il", operator, conj(operator), state)

@@ -392,7 +392,7 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
     # sort data by HW of the bitstrings
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
     # calculate phases
-    _data_sorted = backend.engine.abs(data_sorted) if complex_data else data_sorted
+    _data_sorted = backend.abs(data_sorted) if complex_data else data_sorted
     thetas = _generate_rbs_angles(
         _data_sorted, architecture="diagonal", backend=backend
     )
@@ -745,7 +745,7 @@ def hamming_weight_encoder(
     del lex_order, lex_order_sorted
 
     # Calculate all gate phases necessary to encode the amplitudes.
-    _data = backend.engine.abs(data) if complex_data else data
+    _data = backend.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
     phis = backend.engine.zeros(len(thetas) + 1)
     if complex_data:
@@ -1658,7 +1658,7 @@ def _binary_encoder_hyperspherical(
     data = data[lex_order_global]
     del lex_order_global, lex_order_sorted
 
-    _data = backend.engine.abs(data) if complex_data else data
+    _data = backend.abs(data) if complex_data else data
 
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
 
@@ -2031,7 +2031,7 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
     """Return gates that reduce all rows after row0 to target form."""
     backend = _check_backend(backend)
 
-    log2m = int(backend.engine.log2(2 * m))
+    log2m = int(backend.log2(2 * m))
     atilde = backend.engine.array(
         [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
     )
@@ -2098,7 +2098,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
     backend = _check_backend(backend)
     # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
-    prefix = int(backend.engine.ceil(backend.engine.log2(2 * m)))
+    prefix = int(backend.engine.ceil(backend.log2(2 * m)))
     x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
     qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
@@ -2144,7 +2144,7 @@ def permutation_synthesis(
             f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
-    nqubits = int(backend.engine.ceil(backend.engine.log2(len(sigma))))
+    nqubits = int(backend.engine.ceil(backend.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"

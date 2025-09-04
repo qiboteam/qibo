@@ -371,7 +371,7 @@ def test_to_stinespring(backend, test_a0, partition):
     test_a0_ = backend.cast(test_a0)
     state = random_density_matrix(2, seed=8, backend=backend)
 
-    target = test_a0_ @ state @ backend.engine.conj(test_a0_.T)
+    target = test_a0_ @ state @ backend.conj(test_a0_.T)
 
     environment = (1, 2)
 
@@ -381,7 +381,7 @@ def test_to_stinespring(backend, test_a0, partition):
     stinespring = to_stinespring(
         test_a0_, partition=partition, nqubits=len(environment) + 1, backend=backend
     )
-    stinespring = stinespring @ global_state @ backend.engine.conj(stinespring.T)
+    stinespring = stinespring @ global_state @ backend.conj(stinespring.T)
     stinespring = partial_trace(stinespring, traced_qubits=environment, backend=backend)
 
     backend.assert_allclose(stinespring, target, atol=PRECISION_TOL)
@@ -472,11 +472,11 @@ def test_choi_to_kraus(
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ backend.engine.conj(a0).T
-    evolution_a1 = a1 @ state @ backend.engine.conj(a1).T
+    evolution_a0 = a0 @ state @ backend.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ backend.engine.conj(test_a0).T
-    test_evolution_a1 = test_a1 @ state @ backend.engine.conj(test_a1).T
+    test_evolution_a0 = test_a0 @ state @ backend.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -495,9 +495,9 @@ def test_choi_to_kraus(
             test_coefficients,
         ):
             state = random_density_matrix(2, backend=backend)
-            evolution = left @ state @ backend.engine.conj(right).T
+            evolution = left @ state @ backend.conj(right).T
             test_evolution = (
-                test_coeff**2 * test_left @ state @ backend.engine.conj(test_right).T
+                test_coeff**2 * test_left @ state @ backend.conj(test_right).T
             )
 
             backend.assert_allclose(evolution, test_evolution, atol=2 * PRECISION_TOL)
@@ -578,8 +578,8 @@ def test_choi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.engine.outer(v_0, v_0))
-        @ backend.engine.conj(stinespring).T
+        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.conj(stinespring).T
     )
 
     # partial trace of the environment
@@ -592,7 +592,7 @@ def test_choi_to_stinespring(
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         state_final = (
-            state_final + backend.engine.conj(vector_alpha) @ stinespring @ vector_alpha
+            state_final + backend.conj(vector_alpha) @ stinespring @ vector_alpha
         )
 
     backend.assert_allclose(state_final, state_final_test, atol=PRECISION_TOL)
@@ -656,11 +656,11 @@ def test_liouville_to_kraus(backend, order, test_a0, test_a1):
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ backend.engine.conj(a0).T
-    evolution_a1 = a1 @ state @ backend.engine.conj(a1).T
+    evolution_a0 = a0 @ state @ backend.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ backend.engine.conj(test_a0).T
-    test_evolution_a1 = test_a1 @ state @ backend.engine.conj(test_a1).T
+    test_evolution_a0 = test_a0 @ state @ backend.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=PRECISION_TOL)
@@ -728,8 +728,8 @@ def test_liouville_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.engine.outer(v_0, v_0))
-        @ backend.engine.conj(stinespring).T
+        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.conj(stinespring).T
     )
 
     # partial trace of the environment
@@ -742,7 +742,7 @@ def test_liouville_to_stinespring(
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         state_final = (
-            state_final + backend.engine.conj(vector_alpha) @ stinespring @ vector_alpha
+            state_final + backend.conj(vector_alpha) @ stinespring @ vector_alpha
         )
 
     backend.assert_allclose(state_final, state_final_test, atol=PRECISION_TOL)
@@ -909,11 +909,11 @@ def test_pauli_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ backend.engine.conj(a0).T
-    evolution_a1 = a1 @ state @ backend.engine.conj(a1).T
+    evolution_a0 = a0 @ state @ backend.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ backend.engine.conj(test_a0).T
-    test_evolution_a1 = test_a1 @ state @ backend.engine.conj(test_a1).T
+    test_evolution_a0 = test_a0 @ state @ backend.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -985,8 +985,8 @@ def test_pauli_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.engine.outer(v_0, v_0))
-        @ backend.engine.conj(stinespring).T
+        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.conj(stinespring).T
     )
 
     # partial trace of the environment
@@ -999,7 +999,7 @@ def test_pauli_to_stinespring(
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         state_final = (
-            state_final + backend.engine.conj(vector_alpha) @ stinespring @ vector_alpha
+            state_final + backend.conj(vector_alpha) @ stinespring @ vector_alpha
         )
 
     backend.assert_allclose(state_final, aux * state_final_test, atol=PRECISION_TOL)
@@ -1093,11 +1093,11 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
 
     state = random_density_matrix(2, backend=backend)
 
-    evolution_a0 = a0 @ state @ backend.engine.conj(a0).T
-    evolution_a1 = a1 @ state @ backend.engine.conj(a1).T
+    evolution_a0 = a0 @ state @ backend.conj(a0).T
+    evolution_a1 = a1 @ state @ backend.conj(a1).T
 
-    test_evolution_a0 = test_a0 @ state @ backend.engine.conj(test_a0).T
-    test_evolution_a1 = test_a1 @ state @ backend.engine.conj(test_a1).T
+    test_evolution_a0 = test_a0 @ state @ backend.conj(test_a0).T
+    test_evolution_a1 = test_a1 @ state @ backend.conj(test_a1).T
 
     backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
     backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
@@ -1142,8 +1142,8 @@ def test_chi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.engine.outer(v_0, v_0))
-        @ backend.engine.conj(stinespring).T
+        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.conj(stinespring).T
     )
 
     # partial trace of the environment
@@ -1156,7 +1156,7 @@ def test_chi_to_stinespring(
         vector_alpha[alpha] = 1.0
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         state_final = (
-            state_final + backend.engine.conj(vector_alpha) @ stinespring @ vector_alpha
+            state_final + backend.conj(vector_alpha) @ stinespring @ vector_alpha
         )
 
     backend.assert_allclose(state_final, aux * state_final_test, atol=PRECISION_TOL)

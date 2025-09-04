@@ -8,10 +8,9 @@ from scipy import sparse
 from scipy.linalg import block_diag, fractional_matrix_power, logm
 
 from qibo import __version__
-from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
@@ -307,40 +306,6 @@ class NumpyBackend(Backend):
             {i: int(f) for i, f in enumerate(frequencies) if f > 0}
         )
 
-    def calculate_matrix_exp(
-        self,
-        matrix,
-        phase: Union[float, int, complex] = 1,
-        eigenvectors=None,
-        eigenvalues=None,
-    ):
-        if eigenvectors is None or self.is_sparse(matrix):
-            if self.is_sparse(matrix):
-                from scipy.sparse.linalg import expm
-            else:
-                from scipy.linalg import expm
-
-            return expm(phase * matrix)
-
-        expd = self.engine.exp(phase * eigenvalues)
-        ud = self.engine.transpose(np.conj(eigenvectors))
-
-        return (eigenvectors * expd) @ ud
-
-    def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
-        if eigenvectors is None:
-            # to_numpy and cast needed for GPUs
-            matrix_log = logm(self.to_numpy(matrix)) / float(np.log(base))
-            matrix_log = self.cast(matrix_log, dtype=matrix_log.dtype)
-
-            return matrix_log
-
-        # log = self.engine.diag(self.engine.log(eigenvalues) / float(np.log(base)))
-        log = self.engine.log(eigenvalues) / float(np.log(base))
-        ud = self.engine.transpose(np.conj(eigenvectors))
-
-        return (eigenvectors * log) @ ud
-
     def calculate_matrix_power(
         self,
         matrix,
@@ -369,15 +334,6 @@ class NumpyBackend(Backend):
     def calculate_singular_value_decomposition(self, matrix):
         return self.engine.linalg.svd(matrix)
 
-    def calculate_jacobian_matrix(
-        self, circuit, parameters=None, initial_state=None, return_complex: bool = True
-    ):
-        raise_error(
-            NotImplementedError,
-            "This method is only implemented in backends that allow automatic differentiation, "
-            + "e.g. ``PytorchBackend`` and ``TensorflowBackend``.",
-        )
-
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
             value = value.state()
@@ -386,15 +342,3 @@ class NumpyBackend(Backend):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
-
-
-def _calculate_negative_power_singular_matrix(
-    matrix, power: Union[float, int], precision_singularity: float, engine, backend
-):
-    """Calculate negative power of singular matrix."""
-    U, S, Vh = backend.calculate_singular_value_decomposition(matrix)
-    # cast needed because of different dtypes in `torch`
-    S = backend.cast(S)
-    S_inv = engine.where(engine.abs(S) < precision_singularity, 0.0, S**power)
-
-    return engine.linalg.inv(Vh) @ backend.engine.diag(S_inv) @ engine.linalg.inv(U)

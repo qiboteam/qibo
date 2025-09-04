@@ -279,7 +279,7 @@ def sample_training_circuit_cdr(
         distance.append(backend.real(matrix_norm))
 
     distance = backend.engine.vstack(distance)
-    prob = backend.engine.exp(-(distance**2) / sigma**2)
+    prob = backend.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(
         range(len(gates_to_replace)),
@@ -997,7 +997,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
     observable.nqubits = num_qubits
     observable_liouville = vectorization(
-        backend.engine.transpose(backend.engine.conj(unitary_matrix), (1, 0))
+        backend.engine.transpose(backend.conj(unitary_matrix), (1, 0))
         @ observable.matrix
         @ unitary_matrix,
         order="row",
@@ -1006,7 +1006,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     observable_pauli_liouville = comp_to_pauli @ observable_liouville
 
     index = int(
-        backend.engine.where(backend.engine.abs(observable_pauli_liouville) >= 1e-5)[0][0]
+        backend.engine.where(backend.abs(observable_pauli_liouville) >= 1e-5)[0][0]
     )
 
     observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]

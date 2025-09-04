@@ -99,8 +99,8 @@ class Channel(Gate):
             kraus_op.append(gate)
             kraus_op = kraus_op.matrix(backend)
             kraus_op = vectorization(kraus_op, order=order, backend=backend)
-            super_op = super_op + coeff * backend.engine.outer(
-                kraus_op, backend.engine.conj(kraus_op)
+            super_op = super_op + coeff * backend.outer(
+                kraus_op, backend.conj(kraus_op)
             )
             del kraus_op
 
@@ -181,7 +181,7 @@ class Channel(Gate):
         )
 
         super_op = (
-            unitary @ super_op @ backend.engine.transpose(backend.engine.conj(unitary), (1, 0))
+            unitary @ super_op @ backend.engine.transpose(backend.conj(unitary), (1, 0))
         )
 
         return super_op

@@ -49,9 +49,9 @@ def test_uniform_sampling_U3(backend, seed):
 
         expectation_values.append(
             [
-                backend.engine.conj(state) @ X @ state,
-                backend.engine.conj(state) @ Y @ state,
-                backend.engine.conj(state) @ Z @ state,
+                backend.conj(state) @ X @ state,
+                backend.conj(state) @ Y @ state,
+                backend.conj(state) @ Z @ state,
             ]
         )
     expectation_values = backend.cast(expectation_values)
@@ -111,14 +111,14 @@ def test_random_hermitian(backend):
     # test if function returns Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
-    matrix_dagger = backend.engine.conj(matrix).T
+    matrix_dagger = backend.conj(matrix).T
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
-    matrix_dagger = backend.engine.conj(matrix).T
+    matrix_dagger = backend.conj(matrix).T
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -129,7 +129,7 @@ def test_random_hermitian(backend):
     # test if function returns normalized Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
-    matrix_dagger = backend.engine.conj(matrix).T
+    matrix_dagger = backend.conj(matrix).T
     norm = float(backend.matrix_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -140,7 +140,7 @@ def test_random_hermitian(backend):
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
-    matrix_dagger = backend.engine.conj(matrix).T
+    matrix_dagger = backend.conj(matrix).T
     norm = float(backend.vector_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -171,7 +171,7 @@ def test_random_unitary(backend, measure):
     # tests if operator is unitary (measure == "haar")
     dims = 4
     matrix = random_unitary(dims, measure=measure, backend=backend)
-    matrix_dagger = backend.engine.conj(matrix).T
+    matrix_dagger = backend.conj(matrix).T
     matrix_inv = (
         backend.engine.inverse(matrix)
         if backend.platform == "pytorch"
@@ -307,7 +307,7 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 )
             norm = np.abs(
                 backend.to_numpy(
-                    norm_function(state - backend.engine.conj(state).T, order=2)
+                    norm_function(state - backend.conj(state).T, order=2)
                 )
             )
             backend.assert_allclose(norm < PRECISION_TOL, True)

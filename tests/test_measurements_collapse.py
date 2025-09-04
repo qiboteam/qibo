@@ -55,7 +55,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         slicer[q], slicer[q + nqubits] = 1 - r, r
         target_rho = assign_value(target_rho, tuple(slicer), 0)
     target_rho = backend.engine.reshape(target_rho, initial_rho.shape)
-    target_rho = target_rho / backend.engine.trace(target_rho)
+    target_rho = target_rho / backend.trace(target_rho)
     backend.assert_allclose(final_rho, target_rho)
 
 

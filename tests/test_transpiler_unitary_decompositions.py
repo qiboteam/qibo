@@ -63,7 +63,7 @@ def test_eigenbasis_entanglement(backend, seed):
     states, eigvals = calculate_psi(unitary, backend=backend)
     eigvals = backend.cast(eigvals, dtype=eigvals.dtype)
 
-    backend.assert_allclose(backend.engine.abs(eigvals), np.ones(4))
+    backend.assert_allclose(backend.abs(eigvals), np.ones(4))
 
     for state in states.T:
         state = partial_trace(state, [1], backend=backend)
@@ -84,7 +84,7 @@ def test_u_decomposition(backend, seed):
     r"""Check that U_A\dagger U_B\dagger |psi_k tilde> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
     psi, eigvals = calculate_psi(unitary, backend=backend)
-    psi_tilde = backend.engine.conj(backend.engine.sqrt(eigvals)) * backend.engine.matmul(
+    psi_tilde = backend.conj(backend.engine.sqrt(eigvals)) * backend.engine.matmul(
         unitary, psi
     )
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
@@ -101,7 +101,7 @@ def test_ud_eigenvalues(backend, seed):
     backend.assert_allclose(unitary_recon, unitary)
 
     ud_bell = (
-        backend.engine.transpose(backend.engine.conj(backend.cast(bell_basis)), (1, 0))
+        backend.engine.transpose(backend.conj(backend.cast(bell_basis)), (1, 0))
         @ ud
         @ backend.cast(bell_basis)
     )

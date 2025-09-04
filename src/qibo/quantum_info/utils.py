@@ -230,10 +230,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.engine.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.engine.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
@@ -366,10 +366,10 @@ def total_variation_distance(
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.engine.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.engine.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     tvd = backend.vector_norm(prob_dist_p - prob_dist_q, order=1)
@@ -440,7 +440,7 @@ def haar_integral(
                 random_statevector(dim, backend=backend), (-1, 1)
             )
 
-            rho = haar_state @ backend.engine.conj(haar_state).T
+            rho = haar_state @ backend.conj(haar_state).T
 
             rand_unit_density = rand_unit_density + reduce(
                 backend.engine.kron, [rho] * power_t
