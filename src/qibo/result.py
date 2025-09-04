@@ -99,12 +99,9 @@ class QuantumState:
         if qubits is None:
             qubits = tuple(range(self.nqubits))
 
-        if self.density_matrix:
-            return self.backend.calculate_probabilities_density_matrix(
-                self._state, qubits, self.nqubits
-            )
-
-        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
+        return self.backend.calculate_probabilities(
+            self._state, qubits, self.nqubits, density_matrix=self.density_matrix
+        )
 
     def __str__(self):
         return self.symbolic()

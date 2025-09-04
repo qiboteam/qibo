@@ -286,88 +286,12 @@ class NumpyBackend(Backend):
             circuit._final_state = final_result
             return final_result
 
-    # def calculate_symbolic(
-    #     self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    # ):
-    #     state = self.to_numpy(state)
-    #     terms = []
-    #     for i in np.nonzero(state)[0]:
-    #         b = bin(i)[2:].zfill(nqubits)
-    #         if np.abs(state[i]) >= cutoff:
-    #             x = np.round(state[i], decimals)
-    #             terms.append(f"{x}|{b}>")
-    #         if len(terms) >= max_terms:
-    #             terms.append("...")
-    #             return terms
-    #     return terms
-
-    # def calculate_symbolic_density_matrix(
-    #     self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    # ):
-    #     state = self.to_numpy(state)
-    #     terms = []
-    #     indi, indj = np.nonzero(state)
-    #     for i, j in zip(indi, indj):
-    #         bi = bin(i)[2:].zfill(nqubits)
-    #         bj = bin(j)[2:].zfill(nqubits)
-    #         if np.abs(state[i, j]) >= cutoff:
-    #             x = np.round(state[i, j], decimals)
-    #             terms.append(f"{x}|{bi}><{bj}|")
-    #         if len(terms) >= max_terms:
-    #             terms.append("...")
-    #             return terms
-    #     return terms
-
-    def _order_probabilities(self, probs, qubits, nqubits):
-        """Arrange probabilities according to the given ``qubits`` ordering."""
-        unmeasured, reduced = [], {}
-        for i in range(nqubits):
-            if i in qubits:
-                reduced[i] = i - len(unmeasured)
-            else:
-                unmeasured.append(i)
-        return self.engine.transpose(probs, [reduced.get(i) for i in qubits])
-
-    def calculate_probabilities(self, state, qubits, nqubits):
-        rtype = self.engine.real(state).dtype
-        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = self.engine.reshape(self.engine.abs(state) ** 2, nqubits * (2,))
-        probs = self.engine.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
-        return self._order_probabilities(probs, qubits, nqubits).ravel()
-
-    def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        order = tuple(sorted(qubits))
-        order += tuple(i for i in range(nqubits) if i not in qubits)
-        order = order + tuple(i + nqubits for i in order)
-        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        state = self.engine.reshape(state, 2 * nqubits * (2,))
-        state = self.engine.reshape(self.engine.transpose(state, order), shape)
-        probs = self.engine.abs(self.engine.einsum("abab->a", state))
-        probs = self.engine.reshape(probs, len(qubits) * (2,))
-        return self._order_probabilities(probs, qubits, nqubits).ravel()
-
-    def aggregate_shots(self, shots):
-        return self.cast(shots, dtype=shots[0].dtype)
-
     def samples_to_decimal(self, samples, nqubits):
         ### This is faster just staying @ NumPy.
         qrange = np.arange(nqubits - 1, -1, -1, dtype=np.int32)
         qrange = (2**qrange)[:, None]
         samples = np.asarray(samples.tolist())
         return np.matmul(samples, qrange)[:, 0]
-
-    def calculate_frequencies(self, samples):
-        # Samples are a list of strings so there is no advantage in using other backends
-        res, counts = np.unique(samples, return_counts=True)
-        res = self.to_numpy(res).tolist()
-        counts = self.to_numpy(counts).tolist()
-        return collections.Counter(dict(zip(res, counts)))
-
-    def update_frequencies(self, frequencies, probabilities, nsamples):
-        samples = self.sample_shots(probabilities, nsamples)
-        res, counts = self.engine.unique(samples, return_counts=True)
-        frequencies[res] += counts
-        return frequencies
 
     def sample_frequencies(self, probabilities, nshots):
         from qibo.config import SHOT_BATCH_SIZE
@@ -394,16 +318,6 @@ class NumpyBackend(Backend):
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
-
-    def calculate_overlap(self, state1, state2):
-        return self.engine.abs(
-            self.engine.sum(self.engine.conj(self.cast(state1)) * self.cast(state2))
-        )
-
-    def calculate_overlap_density_matrix(self, state1, state2):
-        return self.engine.trace(
-            self.engine.matmul(self.engine.conj(self.cast(state1)).T, self.cast(state2))
-        )
 
     def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
         if self.is_sparse(matrix):

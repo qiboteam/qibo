@@ -1,6 +1,7 @@
 """Module defining the Backend class."""
 
 import math
+from collections import Counter
 from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
@@ -251,6 +252,9 @@ class Backend:
     def transpose(self, array, axes: Union[Tuple[int, ...], List[int]]) -> "ndarray":
         return self.engine.transpose(array, axes)
 
+    def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
+        return self.engine.unique(array, **kwargs)
+
     def vector_norm(
         self, state, order: Union[int, float, str] = 2, dtype=None
     ) -> float:  # pragma: no cover
@@ -337,6 +341,16 @@ class Backend:
         state /= dims
 
         return state
+
+    def overlap_statevector(self, state_1, state_2, dtype=None):
+        """Calculate overlap of two pure quantum states."""
+        if dtype is None:
+            dtype = self.dtype
+
+        state_1 = self.cast(state_1, dtype=dtype)
+        state_2 = self.cast(state_2, dtype=dtype)
+
+        return self.sum(self.conj(state_1) * state_2)
 
     def partial_trace(
         self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
@@ -649,44 +663,60 @@ class Backend:
     ######## Methods related to the execution and post-processing of measurements   ########
     ########################################################################################
 
-    def sample_shots(self, probabilities, nshots: int):  # pragma: no cover
+    def aggregate_shots(self, shots) -> "ndarray":
+        """Collect shots to a single array."""
+        return self.cast(shots, dtype=shots[0].dtype)  # pylint: disable=E1111
+
+    def calculate_frequencies(self, samples):
+        """Calculate measurement frequencies from shots."""
+        res, counts = self.unique(samples, return_counts=True)
+        res = self.to_numpy(res).tolist()
+        counts = self.to_numpy(counts).tolist()
+        return Counter(dict(zip(res, counts)))
+
+    def calculate_probabilities(
+        self, state, qubits, nqubits, density_matrix: bool = False
+    ):
+        if density_matrix:
+            order = tuple(sorted(qubits))
+            order += tuple(i for i in range(nqubits) if i not in qubits)
+            order = order + tuple(i + nqubits for i in order)
+            shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+            state = self.reshape(state, 2 * nqubits * (2,))
+            state = self.reshape(self.transpose(state, order), shape)
+            probs = self.abs(self.engine.einsum("abab->a", state))
+            probs = self.reshape(probs, len(qubits) * (2,))
+        else:
+            rtype = self.real(state).dtype
+            unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+            state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
+            probs = self.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
+    def sample_shots(self, probabilities, nshots: int):
         """Sample measurement shots according to a probability distribution."""
         return self.random_choice(
             range(len(probabilities)), size=nshots, p=probabilities
         )
 
-    def aggregate_shots(self, shots):  # pragma: no cover
-        """Collect shots to a single array."""
-        raise_error(NotImplementedError)
-
-    def samples_to_binary(self, samples, nqubits: int):  # pragma: no cover
+    def samples_to_binary(self, samples, nqubits: int):
         """Convert samples from decimal representation to binary."""
         qrange = (self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32),)
         return self.engine.mod(self.engine.right_shift(samples[:, None], qrange), 2)
 
-    def samples_to_decimal(self, samples, nqubits: int):  # pragma: no cover
+    def samples_to_decimal(self, samples, nqubits: int):
         """Convert samples from binary representation to decimal."""
         raise_error(NotImplementedError)
 
-    def calculate_frequencies(self, samples):  # pragma: no cover
-        """Calculate measurement frequencies from shots."""
-        raise_error(NotImplementedError)
+    def update_frequencies(self, frequencies, probabilities, nsamples: int):
+        samples = self.sample_shots(probabilities, nsamples)
+        res, counts = self.unique(samples, return_counts=True)
+        frequencies[res] += counts
+        return frequencies
 
-    def update_frequencies(
-        self, frequencies, probabilities, nsamples: int
-    ):  # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def sample_frequencies(self, probabilities, nshots: int):  # pragma: no cover
+    def sample_frequencies(self, probabilities, nshots: int):
         """Sample measurement frequencies according to a probability distribution."""
-        raise_error(NotImplementedError)
-
-    def calculate_overlap(self, state1, state2):  # pragma: no cover
-        """Calculate overlap of two state vectors."""
-        raise_error(NotImplementedError)
-
-    def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
-        """Calculate overlap of two density matrices."""
         raise_error(NotImplementedError)
 
     def calculate_eigenvalues(
@@ -786,6 +816,10 @@ class Backend:
         value = self.execute_circuit(circuit)._state
         target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
+
+    ########################################################################################
+    ######## Helper methods                                                         ########
+    ########################################################################################
 
     def _apply_gate_controlled_by(self, gate, state, nqubits: int) -> "ndarray":
         matrix = gate.matrix(self)
@@ -899,3 +933,13 @@ class Backend:
         state = self._append_zeros(state, qubits, binshot)
 
         return self.engine.reshape(state, shape)
+
+    def _order_probabilities(self, probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        unmeasured, reduced = [], {}
+        for i in range(nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return self.transpose(probs, [reduced.get(i) for i in qubits])

@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 from qibo.config import raise_error
+from qibo.quantum_info.metrics import fidelity
 
 
 class Callback:
@@ -209,12 +210,12 @@ class Overlap(Callback):
         self.state = state
 
     def apply(self, backend, state):
-        overlap = backend.calculate_overlap(self.state, state)
+        overlap = backend.overlap_statevector(self.state, state)
         self.append(overlap)
         return overlap
 
     def apply_density_matrix(self, backend, state):
-        overlap = backend.calculate_overlap_density_matrix(self.state, state)
+        overlap = fidelity(self.state, state, backend=backend)
         self.append(overlap)
         return overlap
 
