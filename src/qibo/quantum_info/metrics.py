@@ -292,7 +292,7 @@ def bures_angle(state, target, backend=None):
     backend = _check_backend(backend)
 
     angle = backend.engine.arccos(
-        backend.engine.sqrt(fidelity(state, target, backend=backend))
+        backend.sqrt(fidelity(state, target, backend=backend))
     )
 
     return angle
@@ -320,8 +320,8 @@ def bures_distance(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    sqrt_fid = backend.engine.sqrt(fidelity(state, target, backend=backend))
-    distance = backend.engine.sqrt(2 * (1 - sqrt_fid))
+    sqrt_fid = backend.sqrt(fidelity(state, target, backend=backend))
+    distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
 
@@ -556,7 +556,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
     channel = backend.to_numpy(channel)
 
-    channel = backend.engine.transpose(channel, (1, 0))
+    channel = backend.transpose(channel, (1, 0))
     channel_real = backend.real(channel)
     channel_imag = backend.imag(channel)
 
@@ -750,7 +750,7 @@ def frame_potential(
 
             potential += backend.abs(
                 backend.trace(
-                    backend.engine.transpose(backend.conj(unitary_1), (1, 0))
+                    backend.transpose(backend.conj(unitary_1), (1, 0))
                     @ unitary_2
                 )
             ) ** (2 * power_t)

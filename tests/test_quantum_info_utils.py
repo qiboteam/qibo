@@ -165,7 +165,7 @@ def test_hellinger(backend, validate, kind):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.vector_norm(backend.engine.sqrt(prob_p) - backend.engine.sqrt(prob_q))
+        backend.vector_norm(backend.sqrt(prob_p) - backend.sqrt(prob_q))
         / np.sqrt(2)
     )
 

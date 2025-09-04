@@ -275,7 +275,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     dim = len(data_sorted)
     sigma = np.arange(2**nqubits)
 
-    flag = backend.engine.zeros(dim, dtype=backend.engine.int8)
+    flag = backend.zeros(dim, dtype=backend.engine.int8)
     indexes = list(
         backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
     )
@@ -396,12 +396,12 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
     thetas = _generate_rbs_angles(
         _data_sorted, architecture="diagonal", backend=backend
     )
-    phis = backend.engine.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1)
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.engine.angle(data_sorted[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data_sorted[k]) + backend.engine.sum(phis[:k])
+                -backend.engine.angle(data_sorted[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -747,12 +747,12 @@ def hamming_weight_encoder(
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = backend.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-    phis = backend.engine.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1)
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.engine.angle(data[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data[k]) + backend.engine.sum(phis[:k])
+                -backend.engine.angle(data[k]) + backend.sum(phis[:k])
             )
 
     last_qubit = nqubits - 1
@@ -991,7 +991,7 @@ def graph_state(matrix, backend=None, **kwargs):
     circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     # since the matrix is symmetric, we only need the upper triangular part
-    rows, columns = backend.engine.nonzero(backend.engine.triu(matrix))
+    rows, columns = backend.nonzero(backend.engine.triu(matrix))
     circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
@@ -1561,10 +1561,10 @@ def _binary_encoder_hopf(
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = backend.engine.reshape(base_strings, (-1, 2))
+    base_strings = backend.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        base_strings = backend.engine.reshape(base_strings[:, 0], (-1, 2))
+        base_strings = backend.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 
@@ -1662,12 +1662,12 @@ def _binary_encoder_hyperspherical(
 
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
 
-    phis = backend.engine.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1)
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.engine.angle(data[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data[k]) + backend.engine.sum(phis[:k])
+                -backend.engine.angle(data[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -1688,7 +1688,7 @@ def _binary_encoder_hyperspherical(
         )
         angles[-1] = 2 * _angle_mod_two_pi(
             (-0.5) * (backend.engine.angle(data[-2]) + backend.engine.angle(data[-1]))
-            + backend.engine.sum(phis[:-2])
+            + backend.sum(phis[:-2])
         )
 
     circuit.set_parameters(angles)
@@ -1996,7 +1996,7 @@ def _perm_column_ops(
 
     # number of non-zero columns
     ell = 0
-    flag = backend.engine.zeros(n, dtype=int)
+    flag = backend.zeros(n, dtype=int)
     for idxj in range(ncols):
         if any(elem != 0 for elem in A[:, idxj]):
             ell += 1

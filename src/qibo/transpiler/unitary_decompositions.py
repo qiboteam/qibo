@@ -26,7 +26,7 @@ def u3_decomposition(unitary, backend):
     """
     unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
-    su2 = unitary / backend.engine.sqrt(backend.engine.linalg.det(unitary))
+    su2 = unitary / backend.sqrt(backend.det(unitary))
     theta = 2 * backend.engine.arctan2(
         backend.abs(su2[1, 0]), backend.abs(su2[0, 0])
     )
@@ -57,19 +57,19 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     unitary = backend.cast(unitary)
     # write unitary in magic basis
     u_magic = (
-        backend.engine.transpose(backend.conj(magic_basis), (1, 0))
+        backend.transpose(backend.conj(magic_basis), (1, 0))
         @ unitary
         @ magic_basis
     )
     # construct and diagonalize UT_U
-    ut_u = backend.engine.transpose(u_magic, (1, 0)) @ u_magic
+    ut_u = backend.transpose(u_magic, (1, 0)) @ u_magic
     ut_u_real = backend.real(ut_u) + backend.imag(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         ut_u_real = np.round(ut_u_real, decimals=15)
 
     eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
-    eigvals = backend.engine.sum(backend.conj(psi_magic) * (ut_u @ psi_magic), 0)
+    eigvals = backend.sum(backend.conj(psi_magic) * (ut_u @ psi_magic), 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.engine.linalg.qr(psi_magic)
     # write psi in computational basis
@@ -109,19 +109,19 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     phase = (
         1j
         * np.sqrt(2)
-        * backend.engine.sum(
+        * backend.sum(
             backend.engine.multiply(backend.conj(ef_), psi_bar[2])
         )
     )
     v0 = backend.cast(np.asarray([1, 0]))
     v1 = backend.cast(np.asarray([0, 1]))
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = backend.engine.tensordot(
+    ua = backend.tensordot(
         v0, backend.conj(e), 0
-    ) + phase * backend.engine.tensordot(v1, backend.conj(e_), 0)
-    ub = backend.engine.tensordot(v0, backend.conj(f), 0) + backend.conj(
+    ) + phase * backend.tensordot(v1, backend.conj(e_), 0)
+    ub = backend.tensordot(v0, backend.conj(f), 0) + backend.conj(
         phase
-    ) * backend.engine.tensordot(v1, backend.conj(f_), 0)
+    ) * backend.tensordot(v1, backend.conj(f_), 0)
     return ua, ub
 
 
@@ -138,12 +138,12 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     if backend.__class__.__name__ == "TensorflowBackend":  # pragma: no cover
         det = np.linalg.det(unitary) ** (1 / 16)
     else:
-        det = backend.engine.linalg.det(unitary) ** (1 / 16)
+        det = backend.det(unitary) ** (1 / 16)
     ua *= det
     ub *= det
     va *= det
     vb *= det
-    dag = lambda u: backend.engine.transpose(backend.conj(u), (1, 0))
+    dag = lambda u: backend.transpose(backend.conj(u), (1, 0))
     u_dagger = dag(
         backend.kron(
             ua,
@@ -261,11 +261,11 @@ def magic_decomposition(unitary, backend=None):
     unitary = backend.cast(unitary)
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = backend.conj(
-        backend.engine.sqrt(eigvals)
+        backend.sqrt(eigvals)
     ) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
-    dag = lambda U: backend.engine.transpose(backend.conj(U), (1, 0))
+    dag = lambda U: backend.transpose(backend.conj(U), (1, 0))
     ua, ub = dag(ua_dagger), dag(ub_dagger)
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
 
@@ -276,13 +276,13 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     bell_basis = backend.cast(bell_basis)
 
     ud_bell = (
-        backend.engine.transpose(backend.conj(bell_basis), (1, 0))
+        backend.transpose(backend.conj(bell_basis), (1, 0))
         @ ud
         @ bell_basis
     )
-    ud_diag = backend.engine.diag(ud_bell)
+    ud_diag = backend.diag(ud_bell)
     if not backend.engine.allclose(
-        backend.engine.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6
+        backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6
     ):  # pragma: no cover
         return None
     uprod = backend.to_numpy(backend.engine.prod(ud_diag))

@@ -283,7 +283,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
-    target = backend.cast(backend.engine.zeros(dims))
+    target = backend.cast(backend.zeros(dims))
     target[indices] = data
 
     if not integers:

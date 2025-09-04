@@ -54,7 +54,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.engine.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -63,7 +63,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
         prob_dist != 0, backend.log2(prob_dist) / np.log2(base), 0.0
     )
 
-    shan_entropy = -backend.engine.sum(prob_dist * log_prob)
+    shan_entropy = -backend.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = (
@@ -120,9 +120,9 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
             ValueError,
             "All elements of the probability array must be between 0. and 1..",
         )
-    total_sum_p = backend.engine.sum(prob_dist_p)
+    total_sum_p = backend.sum(prob_dist_p)
 
-    total_sum_q = backend.engine.sum(prob_dist_q)
+    total_sum_q = backend.sum(prob_dist_q)
 
     if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
@@ -138,7 +138,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     log_prob = backend.engine.where(prob_dist_p != 0.0, log_prob_q, 0.0)
 
-    relative = backend.engine.sum(prob_dist_p * log_prob)
+    relative = backend.sum(prob_dist_p * log_prob)
 
     return entropy_p - relative
 
@@ -242,7 +242,7 @@ def classical_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.engine.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -256,7 +256,7 @@ def classical_renyi_entropy(
     if alpha == np.inf:
         return -1 * backend.log2(max(prob_dist)) / np.log2(base)
 
-    total_sum = backend.engine.sum(prob_dist**alpha)
+    total_sum = backend.sum(prob_dist**alpha)
 
     renyi_ent = (1 / (1 - alpha)) * backend.log2(total_sum) / np.log2(base)
 
@@ -335,8 +335,8 @@ def classical_relative_renyi_entropy(
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum_p = backend.engine.sum(prob_dist_p)
-    total_sum_q = backend.engine.sum(prob_dist_q)
+    total_sum_p = backend.sum(prob_dist_p)
+    total_sum_q = backend.sum(prob_dist_q)
 
     if np.abs(float(total_sum_p) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "First probability array must sum to 1.")
@@ -345,8 +345,8 @@ def classical_relative_renyi_entropy(
         raise_error(ValueError, "Second probability array must sum to 1.")
 
     if alpha == 0.5:
-        total_sum = backend.engine.sqrt(prob_dist_p * prob_dist_q)
-        total_sum = backend.engine.sum(total_sum)
+        total_sum = backend.sqrt(prob_dist_p * prob_dist_q)
+        total_sum = backend.sum(total_sum)
 
         return -2 * backend.log2(total_sum) / np.log2(base)
 
@@ -361,7 +361,7 @@ def classical_relative_renyi_entropy(
     prob_p = prob_dist_p**alpha
     prob_q = prob_dist_q ** (1 - alpha)
 
-    total_sum = backend.engine.sum(prob_p * prob_q)
+    total_sum = backend.sum(prob_p * prob_q)
 
     return (1 / (alpha - 1)) * backend.log2(total_sum) / np.log2(base)
 
@@ -419,7 +419,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    total_sum = backend.engine.sum(prob_dist)
+    total_sum = backend.sum(prob_dist)
 
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
@@ -428,7 +428,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
     total_sum = prob_dist**alpha
-    total_sum = backend.engine.sum(total_sum)
+    total_sum = backend.sum(total_sum)
 
     return (1 / (alpha - 1)) * (1 - total_sum)
 
@@ -480,7 +480,7 @@ def classical_relative_tsallis_entropy(
     element_wise = prob_dist_p**alpha
     element_wise = element_wise * _q_logarithm(prob_dist_p / prob_dist_q, alpha)
 
-    return backend.engine.sum(element_wise)
+    return backend.sum(element_wise)
 
 
 def von_neumann_entropy(

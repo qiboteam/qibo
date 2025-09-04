@@ -294,7 +294,7 @@ class MeasurementOutcomes:
         probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(
-            self.backend.engine.sqrt(probs), qubits, nqubits
+            self.backend.sqrt(probs), qubits, nqubits
         )
 
     def has_samples(self):

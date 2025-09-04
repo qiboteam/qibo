@@ -122,22 +122,24 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        diag = self.backend.engine.diagonal(obs)
-        if self.backend.engine.count_nonzero(obs - self.backend.engine.diag(diag)) != 0:
+        diag = self.backend.diag(obs)
+        if self.backend.engine.count_nonzero(obs - self.backend.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
-                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+                "Observable is not diagonal. Expectation of non diagonal observables starting "
+                + "from samples is currently supported for "
+                + "`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        diag = self.backend.engine.reshape(diag, self.nqubits * (2,))
+        diag = self.backend.reshape(diag, self.nqubits * (2,))
         if qubit_map is None:
             qubit_map = range(self.nqubits)
-        diag = self.backend.engine.transpose(diag, qubit_map).ravel()
+        diag = self.backend.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
         diag = diag[[int(state, 2) for state in freq.keys()]]
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
         )
-        return self.backend.real(self.backend.engine.sum(diag * counts))
+        return self.backend.real(self.backend.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -166,7 +168,7 @@ class Hamiltonian(AbstractHamiltonian):
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
         average_h2 = self.backend.expectation_value(h2, state, normalize=True)
-        return self.backend.engine.sqrt(self.backend.abs(average_h2 - energy**2))
+        return self.backend.sqrt(self.backend.abs(average_h2 - energy**2))
 
     def __add__(self, other):
         if isinstance(other, self.__class__):
@@ -631,7 +633,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.engine.sum(expvals @ counts) + self.constant.real
+        return self.backend.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form

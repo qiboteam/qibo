@@ -390,7 +390,7 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         for param in params[:-1]:
             elem = float(target[-1] * backend.engine.sin(param) ** 2)
             target.append(elem)
-        target = 4 * backend.engine.diag(backend.cast(target, dtype=np.float64))
+        target = 4 * backend.diag(backend.cast(target, dtype=np.float64))
 
         # numerical qfim from quantum_info
         circuit = unary_encoder(data, "diagonal")

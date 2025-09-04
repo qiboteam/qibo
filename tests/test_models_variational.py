@@ -164,7 +164,7 @@ def test_vqe(backend, method, options, compile, filename):
     backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
-    state = backend.engine.ones(2**nqubits) / np.sqrt(2**nqubits)
+    state = backend.ones(2**nqubits) / np.sqrt(2**nqubits)
     energy_fluctuation = v.energy_fluctuation(state)
     assert energy_fluctuation >= 0
     backend.set_threads(n_threads)

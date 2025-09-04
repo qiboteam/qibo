@@ -230,15 +230,15 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
         backend.vector_norm(
-            backend.engine.sqrt(prob_dist_p) - backend.engine.sqrt(prob_dist_q)
+            backend.sqrt(prob_dist_p) - backend.sqrt(prob_dist_q)
         )
         / np.sqrt(2)
     )
@@ -317,7 +317,7 @@ def hellinger_shot_error(
     hellinger_error = hellinger_fidelity(
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
-    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.engine.sum(
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.sum(
         np.sqrt(prob_dist_q * (1 - prob_dist_p))
         + np.sqrt(prob_dist_p * (1 - prob_dist_q))
     )
@@ -366,10 +366,10 @@ def total_variation_distance(
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.abs(backend.engine.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.abs(backend.engine.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     tvd = backend.vector_norm(prob_dist_p - prob_dist_q, order=1)
@@ -436,7 +436,7 @@ def haar_integral(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
         for _ in range(samples):
-            haar_state = backend.engine.reshape(
+            haar_state = backend.reshape(
                 random_statevector(dim, backend=backend), (-1, 1)
             )
 
@@ -464,8 +464,8 @@ def haar_integral(
     integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
     integral = backend.cast(integral, dtype=integral.dtype)
     for indices in permutations_list:
-        integral = integral + backend.engine.reshape(
-            backend.engine.transpose(identity, indices), (-1, dim**power_t)
+        integral = integral + backend.reshape(
+            backend.transpose(identity, indices), (-1, dim**power_t)
         )
     integral = integral * normalization
 

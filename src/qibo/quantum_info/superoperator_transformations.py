@@ -76,12 +76,12 @@ def vectorization(state, order: str = "row", backend=None):
         ).reshape(state.shape[0], dims, dims)
 
     if order == "row":
-        state = backend.engine.reshape(state, (-1, dims**2))
+        state = backend.reshape(state, (-1, dims**2))
     elif order == "column":
         indices = list(range(len(state.shape)))
         indices[-2:] = reversed(indices[-2:])
-        state = backend.engine.transpose(state, indices)
-        state = backend.engine.reshape(state, (-1, dims**2))
+        state = backend.transpose(state, indices)
+        state = backend.reshape(state, (-1, dims**2))
     else:
         nqubits = int(np.log2(state.shape[-1]))
 
@@ -89,9 +89,9 @@ def vectorization(state, order: str = "row", backend=None):
         for qubit in range(nqubits):
             new_axis.extend([qubit + nqubits + 1, qubit + 1])
 
-        state = backend.engine.reshape(state, [-1] + [2] * 2 * nqubits)
-        state = backend.engine.transpose(state, new_axis)
-        state = backend.engine.reshape(state, (-1, 2 ** (2 * nqubits)))
+        state = backend.reshape(state, [-1] + [2] * 2 * nqubits)
+        state = backend.transpose(state, new_axis)
+        state = backend.reshape(state, (-1, 2 ** (2 * nqubits)))
 
     state = backend.engine.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
@@ -155,9 +155,9 @@ def unvectorization(state, order: str = "row", backend=None):
     else:
         nqubits = int(np.log2(dim))
         axes_old = list(np.arange(0, 2 * nqubits))
-        state = backend.engine.reshape(state, [2] * 2 * nqubits)
-        state = backend.engine.transpose(state, axes_old[1::2] + axes_old[0::2])
-        state = backend.engine.reshape(state, [2**nqubits] * 2)
+        state = backend.reshape(state, [2] * 2 * nqubits)
+        state = backend.transpose(state, axes_old[1::2] + axes_old[0::2])
+        state = backend.reshape(state, [2**nqubits] * 2)
 
     return state
 
@@ -545,7 +545,7 @@ def choi_to_kraus(
             choi_super_op, backend=backend
         )
         U = U.T
-        coefficients = backend.engine.sqrt(coefficients)
+        coefficients = backend.sqrt(coefficients)
         V = backend.conj(V)
 
         kraus_left, kraus_right = [], []
@@ -564,7 +564,7 @@ def choi_to_kraus(
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
             if backend.abs(eig) > precision_tol:
-                eig = backend.engine.sqrt(eig)
+                eig = backend.sqrt(eig)
                 kraus_ops.append(
                     eig * unvectorization(kraus, order=order, backend=backend)
                 )
@@ -1985,7 +1985,7 @@ def stinespring_to_kraus(
             initial_state_env, dtype=initial_state_env.dtype
         )
 
-    stinespring = backend.engine.reshape(stinespring, (dim, dim_env, dim, dim_env))
+    stinespring = backend.reshape(stinespring, (dim, dim_env, dim, dim_env))
     stinespring = backend.engine.swapaxes(stinespring, 1, 2)
 
     kraus_ops = []
@@ -2230,12 +2230,12 @@ def _reshuffling(super_op, order: str = "row", backend=None):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     dim = int(dim)
-    super_op = backend.engine.reshape(super_op, [dim] * 4)
+    super_op = backend.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
     super_op = backend.engine.swapaxes(super_op, *axes)
 
-    super_op = backend.engine.reshape(super_op, [dim**2, dim**2])
+    super_op = backend.reshape(super_op, [dim**2, dim**2])
 
     return super_op
 

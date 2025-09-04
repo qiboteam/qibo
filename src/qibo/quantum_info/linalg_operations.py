@@ -196,14 +196,14 @@ def partial_transpose(
         new_shape[ind + nqubits] = ind
     new_shape = tuple(new_shape)
 
-    reshaped = backend.engine.reshape(operator, [-1] + [2] * (2 * nqubits))
-    reshaped = backend.engine.transpose(reshaped, new_shape)
+    reshaped = backend.reshape(operator, [-1] + [2] * (2 * nqubits))
+    reshaped = backend.transpose(reshaped, new_shape)
 
     final_shape = (dims, dims)
     if len(operator.shape) == 3:
         final_shape = (nstates,) + final_shape
 
-    return backend.engine.reshape(reshaped, final_shape)
+    return backend.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(
@@ -398,9 +398,9 @@ def schmidt_decomposition(
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
 
-    tensor = backend.engine.reshape(state, [2] * nqubits)
-    tensor = backend.engine.transpose(tensor, partition + partition_2)
-    tensor = backend.engine.reshape(tensor, (2 ** len(partition), -1))
+    tensor = backend.reshape(state, [2] * nqubits)
+    tensor = backend.transpose(tensor, partition + partition_2)
+    tensor = backend.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
 
@@ -538,7 +538,7 @@ def _vector_projection(vector, directions, backend):
         return result / (backend.conj(directions) @ directions)
 
     dot_products = backend.engine.einsum("j,kj", backend.conj(vector), directions)
-    inner_prods = backend.engine.diag(
+    inner_prods = backend.diag(
         backend.engine.einsum("jk,lk", backend.conj(directions), directions)
     )
 
@@ -566,6 +566,6 @@ def _gram_schmidt_process(vector, directions, backend):
     projections = _vector_projection(vector, directions, backend=backend)
 
     if len(directions.shape) > 1:
-        projections = backend.engine.sum(projections, axis=0)
+        projections = backend.sum(projections, axis=0)
 
     return vector - projections

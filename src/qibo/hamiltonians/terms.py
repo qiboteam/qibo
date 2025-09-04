@@ -88,7 +88,7 @@ class HamiltonianTerm:
         matrix = self.backend.kron(
             term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
-        matrix = self.backend.engine.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -98,8 +98,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = self.backend.engine.transpose(matrix, order)
-        matrix = self.backend.engine.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = self.backend.transpose(matrix, order)
+        matrix = self.backend.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(
             self.matrix + matrix, *self.target_qubits, backend=self.backend
         )

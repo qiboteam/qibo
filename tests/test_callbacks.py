@@ -235,8 +235,8 @@ def test_entropy_density_matrix(backend):
     matrix = np.random.random(u.shape[0])
     matrix = backend.cast(matrix, dtype=u.dtype)
     rho = backend.matmul(
-        backend.matmul(u, backend.engine.diag(5 * matrix)),
-        backend.conj(backend.engine.transpose(u, (1, 0))),
+        backend.matmul(u, backend.diag(5 * matrix)),
+        backend.conj(backend.transpose(u, (1, 0))),
     )
     # this is a positive rho
 

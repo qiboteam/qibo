@@ -180,9 +180,7 @@ class Channel(Gate):
             nqubits, normalize, pauli_order=pauli_order, backend=backend
         )
 
-        super_op = (
-            unitary @ super_op @ backend.engine.transpose(backend.conj(unitary), (1, 0))
-        )
+        super_op = unitary @ super_op @ backend.transpose(backend.conj(unitary), (1, 0))
 
         return super_op
 

@@ -232,9 +232,9 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
         # Tensorflow experi
         Q, R = backend.engine.linalg.qr(unitary)
-        D = backend.engine.diag(R)
+        D = backend.diag(R)
         D = D / backend.abs(D)
-        R = backend.engine.diag(D)
+        R = backend.diag(D)
         unitary = backend.matmul(Q, R)
     elif measure is None:
         from scipy.linalg import expm
@@ -953,7 +953,7 @@ def random_pauli_hamiltonian(
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
-            eigenvalues[1:], backend.engine.transpose(eigenvectors, (1, 0))[1:]
+            eigenvalues[1:], backend.transpose(eigenvectors, (1, 0))[1:]
         ):
             hamiltonian = hamiltonian + eigenvalue * backend.outer(
                 eigenvector, backend.conj(eigenvector)

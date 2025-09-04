@@ -50,10 +50,10 @@ def test_commutator(backend):
     )
 
     comm = commutator(X, I)
-    backend.assert_allclose(comm, backend.engine.zeros((2, 2)))
+    backend.assert_allclose(comm, backend.zeros((2, 2)))
 
     comm = commutator(X, X)
-    backend.assert_allclose(comm, backend.engine.zeros((2, 2)))
+    backend.assert_allclose(comm, backend.zeros((2, 2)))
 
     comm = commutator(X, Y)
     backend.assert_allclose(comm, 2j * Z)
@@ -92,10 +92,10 @@ def test_anticommutator(backend):
     backend.assert_allclose(anticomm, 2 * I)
 
     anticomm = anticommutator(X, Y)
-    backend.assert_allclose(anticomm, backend.engine.zeros((2, 2)))
+    backend.assert_allclose(anticomm, backend.zeros((2, 2)))
 
     anticomm = anticommutator(X, Z)
-    backend.assert_allclose(anticomm, backend.engine.zeros((2, 2)))
+    backend.assert_allclose(anticomm, backend.zeros((2, 2)))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -333,7 +333,7 @@ def test_schmidt_decomposition(backend):
     # entropy test
     coeffs = backend.abs(S) ** 2
     entropy = backend.engine.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
-    entropy = -backend.engine.sum(coeffs * entropy)
+    entropy = -backend.sum(coeffs * entropy)
 
     assert entropy < 1e-14
 
@@ -347,7 +347,7 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     dims = 2**nqubits
     hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
 
-    eigvals_target, eigvectors_target = backend.engine.linalg.eigh(hamiltonian)
+    eigvals_target, eigvectors_target = backend.eigh(hamiltonian)
 
     if initial_vector:
         initial_vector = random_statevector(dims, seed=20, backend=backend)
@@ -360,7 +360,7 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
         tridiag, backend.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
     )
 
-    eigvals, eigvectors = backend.engine.linalg.eigh(tridiag)
+    eigvals, eigvectors = backend.eigh(tridiag)
     eigs = list(zip(eigvals, eigvectors.T))
     eigs.sort()
     eigvectors = [row[1] for row in eigs]

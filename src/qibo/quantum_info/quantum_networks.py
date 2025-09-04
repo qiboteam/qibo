@@ -224,7 +224,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor_to_operator(n)
 
-        operator = self._backend.engine.transpose(
+        operator = self._backend.transpose(
             tensor.reshape(tuple(np.repeat(self.partition, 2))), order
         )
 
@@ -293,9 +293,9 @@ class QuantumNetwork:
             dtype=self._tensor.dtype,
         )
         if self._backend.__class__.__name__ == "PyTorchBackend":
-            adjoint = self._backend.engine.transpose(reshaped, (1, 0))
+            adjoint = self._backend.transpose(reshaped, (1, 0))
         else:
-            adjoint = self._backend.engine.transpose(reshaped)
+            adjoint = self._backend.transpose(reshaped)
 
         mat_diff = self._backend.conj(adjoint) - reshaped
         norm = self._backend.matrix_norm(mat_diff, order=order)
@@ -641,7 +641,7 @@ class QuantumNetwork:
                     + f"Cannot reshape matrix of size {self._tensor.shape} "
                     + f"to partition {self.partition}.",
                 )
-            self._tensor = self._backend.engine.reshape(self._tensor, self.partition)
+            self._tensor = self._backend.reshape(self._tensor, self.partition)
         else:
             if np.prod(tuple(self._tensor.shape)) != np.prod(
                 tuple(dim**2 for dim in self.partition)
@@ -653,7 +653,7 @@ class QuantumNetwork:
                     + f"to partition {self.partition}.",
                 )
             matrix_partition = [dim**2 for dim in self.partition]
-            self._tensor = self._backend.engine.reshape(self._tensor, matrix_partition)
+            self._tensor = self._backend.reshape(self._tensor, matrix_partition)
 
     def full(self, update: bool = False, backend=None):
         """Convert the internal representation to the full tensor of the network.

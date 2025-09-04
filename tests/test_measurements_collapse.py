@@ -44,7 +44,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     final_rho = backend.execute_circuit(c, backend.engine.copy(initial_rho), nshots=1)
 
     samples = r.samples()[0]
-    target_rho = backend.engine.reshape(initial_rho, 2 * nqubits * (2,))
+    target_rho = backend.reshape(initial_rho, 2 * nqubits * (2,))
     for q, r in zip(targets, samples):
         r = int(r)
         slicer = 2 * nqubits * [slice(None)]
@@ -54,7 +54,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         target_rho = assign_value(target_rho, tuple(slicer), 0)
         slicer[q], slicer[q + nqubits] = 1 - r, r
         target_rho = assign_value(target_rho, tuple(slicer), 0)
-    target_rho = backend.engine.reshape(target_rho, initial_rho.shape)
+    target_rho = backend.reshape(target_rho, initial_rho.shape)
     target_rho = target_rho / backend.trace(target_rho)
     backend.assert_allclose(final_rho, target_rho)
 

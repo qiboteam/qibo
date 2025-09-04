@@ -219,8 +219,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = backend.engine.reshape(matrix_real, (-1))
-    dzi = backend.engine.reshape(matrix_imag, (-1))
+    dzr = backend.reshape(matrix_real, (-1))
+    dzi = backend.reshape(matrix_imag, (-1))
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)

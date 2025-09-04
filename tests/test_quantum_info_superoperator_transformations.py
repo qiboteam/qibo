@@ -416,7 +416,7 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = backend.engine.swapaxes(
-        backend.engine.reshape(test_superop * aux, [2] * 4), *axes
+        backend.reshape(test_superop * aux, [2] * 4), *axes
     ).reshape([4, 4])
 
     pauli_op = choi_to_pauli(
@@ -517,7 +517,7 @@ def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = backend.engine.swapaxes(
-        backend.engine.reshape(test_superop * aux, [2] * 4), *axes
+        backend.reshape(test_superop * aux, [2] * 4), *axes
     ).reshape([4, 4])
 
     chi_matrix = choi_to_chi(
@@ -583,7 +583,7 @@ def test_choi_to_stinespring(
     )
 
     # partial trace of the environment
-    stinespring = backend.engine.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = backend.engine.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
@@ -606,9 +606,9 @@ def test_liouville_to_choi(backend, order, test_superop):
     choi = liouville_to_choi(test_superop, order=order, backend=backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = backend.engine.reshape(test_superop, [2] * 4)
+    test_choi = backend.reshape(test_superop, [2] * 4)
     test_choi = backend.engine.swapaxes(test_choi, *axes)
-    test_choi = backend.engine.reshape(test_choi, (4, 4))
+    test_choi = backend.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
@@ -733,7 +733,7 @@ def test_liouville_to_stinespring(
     )
 
     # partial trace of the environment
-    stinespring = backend.engine.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = backend.engine.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
@@ -873,8 +873,8 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = backend.engine.swapaxes(backend.engine.reshape(test_superop, [2] * 4), *axes)
-    test_choi = backend.engine.reshape(test_choi, (4, 4))
+    test_choi = backend.engine.swapaxes(backend.reshape(test_superop, [2] * 4), *axes)
+    test_choi = backend.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(test_choi, choi_super_op, atol=PRECISION_TOL)
 
@@ -990,7 +990,7 @@ def test_pauli_to_stinespring(
     )
 
     # partial trace of the environment
-    stinespring = backend.engine.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = backend.engine.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
@@ -1019,7 +1019,7 @@ def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = backend.engine.swapaxes(
-        backend.engine.reshape(test_superop, [2] * 4), *axes
+        backend.reshape(test_superop, [2] * 4), *axes
     ).reshape([4, 4])
 
     choi_super_op = chi_to_choi(
@@ -1147,7 +1147,7 @@ def test_chi_to_stinespring(
     )
 
     # partial trace of the environment
-    stinespring = backend.engine.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = backend.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = backend.engine.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
     state_final = backend.cast(state_final, dtype=state_final.dtype)
@@ -1360,8 +1360,8 @@ def test_reshuffling(backend, order, test_superop):
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = backend.engine.reshape(
-        backend.engine.swapaxes(backend.engine.reshape(test_superop, [2] * 4), *axes), [4, 4]
+    test_choi = backend.reshape(
+        backend.engine.swapaxes(backend.reshape(test_superop, [2] * 4), *axes), [4, 4]
     )
 
     reshuffled = _reshuffling(test_choi, order, backend=backend)

@@ -26,11 +26,11 @@ def test_general_channel(backend):
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
     target_state = backend.matmul(
         backend.matmul(m_1, initial_state),
-        backend.engine.transpose(backend.conj(m_1), (1, 0)),
+        backend.transpose(backend.conj(m_1), (1, 0)),
     )
     target_state = target_state + backend.matmul(
         backend.matmul(m_2, initial_state),
-        backend.engine.transpose(backend.conj(m_2), (1, 0)),
+        backend.transpose(backend.conj(m_2), (1, 0)),
     )
 
     channel1 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
@@ -273,9 +273,9 @@ def test_amplitude_damping_channel(backend):
     final_state = channel.apply_density_matrix(
         backend, backend.engine.copy(initial_state), 1
     )
-    target_state = kraus_0 @ initial_state @ backend.engine.transpose(
+    target_state = kraus_0 @ initial_state @ backend.transpose(
         backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.engine.transpose(
+    ) + kraus_1 @ initial_state @ backend.transpose(
         backend.conj(kraus_1), (1, 0)
     )
 
@@ -301,9 +301,9 @@ def test_phase_damping_channel(backend):
     final_state = channel.apply_density_matrix(
         backend, backend.engine.copy(initial_state), 1
     )
-    target_state = kraus_0 @ initial_state @ backend.engine.transpose(
+    target_state = kraus_0 @ initial_state @ backend.transpose(
         backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.engine.transpose(
+    ) + kraus_1 @ initial_state @ backend.transpose(
         backend.conj(kraus_1), (1, 0)
     )
 
@@ -364,7 +364,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         ones = backend.cast(ones, dtype=ones.dtype)
 
         target_state = (1 - p_0 - p_1 - p_z) * initial_state + p_z * z_rho
-        target_state += backend.engine.reshape(
+        target_state += backend.reshape(
             p_0 * zeros + p_1 * ones, initial_state.shape
         )
 
@@ -431,7 +431,7 @@ def test_reset_channel(backend):
     zeros = backend.cast(zeros, dtype=zeros.dtype)
     ones = backend.cast(ones, dtype=ones.dtype)
 
-    target_state = 0.6 * initial_state + 0.2 * backend.engine.reshape(
+    target_state = 0.6 * initial_state + 0.2 * backend.reshape(
         zeros + ones, initial_state.shape
     )
 

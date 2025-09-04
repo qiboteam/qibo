@@ -467,7 +467,7 @@ def test_random_pauli(
                 True,
             )
     else:
-        matrix = backend.engine.transpose(matrix, (1, 0, 2, 3))
+        matrix = backend.transpose(matrix, (1, 0, 2, 3))
         matrix = [reduce(backend.engine.kron, row) for row in matrix]
         matrix = reduce(backend.engine.matmul, matrix)
 
@@ -560,7 +560,7 @@ def test_random_stochastic_matrix(backend):
     # tests if matrix is row-stochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, backend=backend)
-    sum_rows = backend.engine.sum(matrix, axis=1)
+    sum_rows = backend.sum(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -571,18 +571,18 @@ def test_random_stochastic_matrix(backend):
         dims, diagonally_dominant=True, max_iterations=1000, backend=backend
     )
 
-    sum_rows = backend.engine.sum(matrix, axis=1)
+    sum_rows = backend.sum(matrix, axis=1)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * backend.engine.diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * backend.diag(matrix) - sum_rows > 0), True)
 
     # tests if matrix is bistochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, bistochastic=True, backend=backend)
-    sum_rows = backend.engine.sum(matrix, axis=1)
-    column_rows = backend.engine.sum(matrix, axis=0)
+    sum_rows = backend.sum(matrix, axis=1)
+    column_rows = backend.sum(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -599,8 +599,8 @@ def test_random_stochastic_matrix(backend):
         max_iterations=1000,
         backend=backend,
     )
-    sum_rows = backend.engine.sum(matrix, axis=1)
-    column_rows = backend.engine.sum(matrix, axis=0)
+    sum_rows = backend.sum(matrix, axis=1)
+    column_rows = backend.sum(matrix, axis=0)
 
     backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
@@ -608,9 +608,9 @@ def test_random_stochastic_matrix(backend):
     backend.assert_allclose(all(column_rows < 1 + PRECISION_TOL), True)
     backend.assert_allclose(all(column_rows > 1 - PRECISION_TOL), True)
 
-    backend.assert_allclose(all(2 * backend.engine.diag(matrix) - sum_rows > 0), True)
+    backend.assert_allclose(all(2 * backend.diag(matrix) - sum_rows > 0), True)
     backend.assert_allclose(
-        all(2 * backend.engine.diag(matrix) - column_rows > 0), True
+        all(2 * backend.diag(matrix) - column_rows > 0), True
     )
 
     # tests warning for max_iterations

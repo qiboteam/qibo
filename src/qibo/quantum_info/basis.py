@@ -106,7 +106,7 @@ def pauli_basis(
 
     if vectorize and sparse:
         if backend.platform == "pytorch":
-            nonzero = lambda x: backend.engine.nonzero(x, as_tuple=True)
+            nonzero = lambda x: backend.nonzero(x, as_tuple=True)
         else:
             nonzero = backend.engine.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)

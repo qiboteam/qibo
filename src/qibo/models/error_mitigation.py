@@ -221,7 +221,7 @@ def ZNE(
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
     gamma = backend.cast(gamma, dtype=gamma.dtype)
 
-    return backend.engine.sum(gamma * expected_values)
+    return backend.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
@@ -285,7 +285,7 @@ def sample_training_circuit_cdr(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
-        p=backend.to_numpy(backend.engine.sum(prob, -1) / backend.engine.sum(prob)),
+        p=backend.to_numpy(backend.sum(prob, -1) / backend.sum(prob)),
     )
 
     gates_to_replace = np.array([gates_to_replace[i] for i in index])
@@ -540,7 +540,7 @@ def vnCDR(
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if model is None:
-        model = lambda x, *params: backend.engine.sum(x * backend.engine.vstack(params), axis=0)
+        model = lambda x, *params: backend.sum(x * backend.engine.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -571,7 +571,7 @@ def vnCDR(
 
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
-    noisy_array = backend.engine.reshape(noisy_array, (-1, len(noise_levels)))
+    noisy_array = backend.reshape(noisy_array, (-1, len(noise_levels)))
     params = local_state.random(len(noise_levels))
     params = backend.cast(params, dtype=params.dtype)
     train_val_noiseless = train_val["noise-free"]
@@ -997,7 +997,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
     observable.nqubits = num_qubits
     observable_liouville = vectorization(
-        backend.engine.transpose(backend.conj(unitary_matrix), (1, 0))
+        backend.transpose(backend.conj(unitary_matrix), (1, 0))
         @ observable.matrix
         @ unitary_matrix,
         order="row",

@@ -80,7 +80,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self.nqubits, self.weight
         )
 
-        state = self.backend.engine.zeros(2**self.nqubits, dtype=self.backend.engine.complex128)
+        state = self.backend.zeros(2**self.nqubits, dtype=self.backend.engine.complex128)
         state = self.backend.cast(state, dtype=state.dtype)
         indices = list(self.backend._dict_indexes.values())
         indices.sort()
@@ -162,7 +162,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self.backend._dict_indexes = None
 
         return self.backend.calculate_full_probabilities(
-            self.backend.engine.sqrt(probs), qubits, nqubits
+            self.backend.sqrt(probs), qubits, nqubits
         )
 
     def samples(self, binary: bool = True, registers: bool = False):

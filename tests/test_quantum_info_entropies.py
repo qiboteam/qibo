@@ -401,7 +401,7 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
         target = classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
     else:
         target = ((prob_dist_p / prob_dist_q) ** (1 - alpha) - 1) / (1 - alpha)
-        target = backend.engine.sum(prob_dist_p**alpha * target)
+        target = backend.sum(prob_dist_p**alpha * target)
 
     if kind is not None:
         prob_dist_p = kind(prob_dist_p)
