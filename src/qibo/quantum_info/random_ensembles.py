@@ -1238,9 +1238,6 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
 
     operator = backend.engine.kron(*ops)
 
-    print(operator.shape)
-    print(super_op.shape)
-
     super_op = operator @ super_op @ operator
 
     return super_op

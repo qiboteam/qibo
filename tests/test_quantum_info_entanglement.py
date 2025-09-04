@@ -74,7 +74,7 @@ def test_negativity(backend, p):
     psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
     psi = np.outer(psi, psi.T)
     psi = backend.cast(psi)
-    state = p * psi + (1 - p) * backend.identity(4)
+    state = p * psi + (1 - p) * backend.maximally_mixed_state(2)
 
     neg = negativity(state, [0], backend=backend)
 
