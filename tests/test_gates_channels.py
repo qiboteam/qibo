@@ -35,18 +35,14 @@ def test_general_channel(backend):
 
     channel1 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
     assert channel1.target_qubits == (0, 1)
-    final_state = backend.apply_channel_density_matrix(
-        channel1, backend.engine.copy(initial_state), 2
-    )
+    final_state = backend.apply_channel(channel1, backend.engine.copy(initial_state), 2)
     backend.assert_allclose(final_state, target_state)
 
     a_1 = gates.Unitary(a_1, 1)
     a_2 = gates.Unitary(a_2, 0, 1)
     channel2 = gates.KrausChannel([(1,), (0, 1)], [a_1, a_2])
     assert channel2.target_qubits == (0, 1)
-    final_state = backend.apply_channel_density_matrix(
-        channel2, backend.engine.copy(initial_state), 2
-    )
+    final_state = backend.apply_channel(channel2, backend.engine.copy(initial_state), 2)
     backend.assert_allclose(final_state, target_state)
 
     with pytest.raises(NotImplementedError):
@@ -145,14 +141,10 @@ def test_unitary_channel(backend):
 
     channel = gates.UnitaryChannel(qubits, matrices_)
     initial_state = random_density_matrix(2**4, backend=backend)
-    final_state = backend.apply_channel_density_matrix(
-        channel, backend.engine.copy(initial_state), 4
-    )
+    final_state = backend.apply_channel(channel, backend.engine.copy(initial_state), 4)
 
     eye = backend.identity(2)
-    ma_1 = backend.kron(
-        backend.kron(a_1, eye), backend.kron(eye, eye)
-    )
+    ma_1 = backend.kron(backend.kron(a_1, eye), backend.kron(eye, eye))
     ma_2 = backend.kron(backend.kron(eye, eye), a_2)
     ma_1 = backend.cast(ma_1, dtype=ma_1.dtype)
     ma_2 = backend.cast(ma_2, dtype=ma_2.dtype)
@@ -212,9 +204,7 @@ def test_pauli_noise_channel(backend, pauli_order):
     initial_state = random_density_matrix(2**2, backend=backend)
     qubits = (1,)
     channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
-    final_state = backend.apply_channel_density_matrix(
-        channel, backend.engine.copy(initial_state), 2
-    )
+    final_state = backend.apply_channel(channel, backend.engine.copy(initial_state), 2)
     gate = gates.X(1)
     target_state = backend.apply_gate(
         gate, backend.engine.copy(initial_state), 2, density_matrix=True

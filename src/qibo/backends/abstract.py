@@ -702,65 +702,6 @@ class Backend:
     ######## Methods related to circuit execution                                   ########
     ########################################################################################
 
-    def calculate_symbolic(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):
-        # state = self.to_numpy(state)
-        density_matrix = bool(len(state.shape) == 2)
-        ind_j, ind_k = self.nonzero(state)
-
-        terms = []
-        if density_matrix:
-            for j, k in zip(ind_j, ind_k):
-                b_j = bin(j)[2:].zfill(nqubits)
-                b_k = bin(k)[2:].zfill(nqubits)
-                if self.abs(state[j, k]) >= cutoff:
-                    x = self.round(state[j, k], decimals=decimals)
-                    terms.append(f"{x}|{b_j}><{b_k}|")
-                if len(terms) >= max_terms:
-                    terms.append("...")
-                    return terms
-        else:
-            for j in ind_j:
-                b = bin(j)[2:].zfill(nqubits)
-                if self.abs(state[j]) >= cutoff:
-                    x = self.round(state[j], decimals=decimals)
-                    terms.append(f"{x}|{b}>")
-                if len(terms) >= max_terms:
-                    terms.append("...")
-                    return terms
-
-        return terms
-
-    def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
-        """Convert a gate to its matrix representation in the computational basis."""
-        name = gate.__class__.__name__
-        _matrix = getattr(self.matrices, name)
-        if callable(_matrix):
-            _matrix = _matrix(2 ** len(gate.target_qubits))
-        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
-
-    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
-        """Convert a parametrized gate to its matrix representation in the computational basis."""
-        name = gate.__class__.__name__
-
-        _matrix = getattr(self.matrices, name)
-        if name == "GeneralizedRBS":
-            _matrix = _matrix(
-                qubits_in=gate.init_args[0],
-                qubits_out=gate.init_args[1],
-                theta=gate.init_kwargs["theta"],
-                phi=gate.init_kwargs["phi"],
-            )
-        else:
-            _matrix = _matrix(*gate.parameters)
-
-        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
-
-    def matrix_fused(self, gate):  # pragma: no cover
-        """Fuse matrices of multiple gates."""
-        raise_error(NotImplementedError)
-
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         sprobs = self.random_sample(noiseless_samples.shape)
         sprobs = self.cast(sprobs, dtype="float64")  # pylint: disable=E1111
@@ -777,10 +718,11 @@ class Backend:
 
         return noisy_samples
 
-    def apply_gate(
-        self, gate, state, nqubits: int, density_matrix: bool = False
-    ) -> "ndarray":  # pragma: no cover
-        """Apply a gate to state vector."""
+    def apply_gate(self, gate, state, nqubits: int) -> "ndarray":
+        """Apply a gate to quantum state."""
+
+        density_matrix = bool(len(state.shape) == 2)
+
         shape = nqubits * (2,)
         if density_matrix:
             shape *= 2
@@ -835,19 +777,17 @@ class Backend:
 
         return self.reshape(state, 2 * (2**nqubits,))
 
-    def apply_channel(
-        self, channel, state, nqubits: int, density_matrix: bool = False
-    ):  # pragma: no cover
+    def apply_channel(self, channel, state, nqubits: int):
         """Apply a ``channel`` to quantum ``state``."""
+
+        density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
             state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
 
             new_state = (1 - channel.coefficient_sum) * state
             for coeff, gate in zip(channel.coefficients, channel.gates):
-                new_state += coeff * self.apply_gate(
-                    gate, state, nqubits, density_matrix=True
-                )
+                new_state += coeff * self.apply_gate(gate, state, nqubits)
 
             return new_state
 
@@ -859,6 +799,36 @@ class Backend:
             state = self.apply_gate(gate, state, nqubits)
 
         return state
+
+    def calculate_symbolic(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
+        # state = self.to_numpy(state)
+        density_matrix = bool(len(state.shape) == 2)
+        ind_j, ind_k = self.nonzero(state)
+
+        terms = []
+        if density_matrix:
+            for j, k in zip(ind_j, ind_k):
+                b_j = bin(j)[2:].zfill(nqubits)
+                b_k = bin(k)[2:].zfill(nqubits)
+                if self.abs(state[j, k]) >= cutoff:
+                    x = self.round(state[j, k], decimals=decimals)
+                    terms.append(f"{x}|{b_j}><{b_k}|")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    return terms
+        else:
+            for j in ind_j:
+                b = bin(j)[2:].zfill(nqubits)
+                if self.abs(state[j]) >= cutoff:
+                    x = self.round(state[j], decimals=decimals)
+                    terms.append(f"{x}|{b}>")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    return terms
+
+        return terms
 
     def collapse_state(
         self,
@@ -914,6 +884,35 @@ class Backend:
             NotImplementedError, f"{self} does not support distributed execution."
         )
 
+    def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
+        """Convert a gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        _matrix = getattr(self.matrices, name)
+        if callable(_matrix):
+            _matrix = _matrix(2 ** len(gate.target_qubits))
+        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
+
+    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+
+        _matrix = getattr(self.matrices, name)
+        if name == "GeneralizedRBS":
+            _matrix = _matrix(
+                qubits_in=gate.init_args[0],
+                qubits_out=gate.init_args[1],
+                theta=gate.init_kwargs["theta"],
+                phi=gate.init_kwargs["phi"],
+            )
+        else:
+            _matrix = _matrix(*gate.parameters)
+
+        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
+
+    def matrix_fused(self, gate):  # pragma: no cover
+        """Fuse matrices of multiple gates."""
+        raise_error(NotImplementedError)
+
     ########################################################################################
     ######## Methods related to the execution and post-processing of measurements   ########
     ########################################################################################
@@ -943,7 +942,7 @@ class Backend:
             probs = self.reshape(probs, len(qubits) * (2,))
         else:
             rtype = self.real(state).dtype
-            unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+            unmeasured_qubits = tuple(set(list(range(nqubits))) ^ set(qubits))
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
             probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
             probs = self.sum(probs, axis=unmeasured_qubits)

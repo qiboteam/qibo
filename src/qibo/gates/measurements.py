@@ -186,7 +186,9 @@ class M(Gate):
             "Measurement gates do not have a matrix representation.",
         )
 
-    def apply(self, backend, state, nqubits, density_matrix: bool = False):
+    def apply(self, backend, state, nqubits):
+        density_matrix = bool(len(state.shape) == 2)
+
         if density_matrix:
             return self.apply_density_matrix(backend, state, nqubits)
 
