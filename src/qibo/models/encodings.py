@@ -2011,7 +2011,7 @@ def _perm_column_ops(
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
     for idxk in range(ell, ncols):
-        if not backend.engine.array_equal(A[:, idxk], backend.engine.zeros_like(A[:, idxk])):
+        if not backend.engine.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
             for k in range(len(flag)):
                 if flag[k] == 0:
                     flag[k] = 1

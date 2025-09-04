@@ -74,13 +74,13 @@ class Hamiltonian(AbstractHamiltonian):
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
-            self._eigenvalues = self.backend.calculate_eigenvalues(self.matrix, k)
+            self._eigenvalues = self.backend.eigenvalues(self.matrix, k=k)
         return self._eigenvalues
 
     def eigenvectors(self, k=6):
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.backend.calculate_eigenvectors(
-                self.matrix, k
+            self._eigenvalues, self._eigenvectors = self.backend.eigenvectors(
+                self.matrix, k=k
             )
         return self._eigenvectors
 
@@ -101,28 +101,27 @@ class Hamiltonian(AbstractHamiltonian):
         return self._exp.get("result")
 
     def expectation(self, state, normalize=False):
-        if isinstance(state, self.backend.tensor_types):
-            state = self.backend.cast(state)
-            shape = tuple(state.shape)
-            if len(shape) == 1:  # state vector
-                return self.backend.calculate_expectation_state(self, state, normalize)
+        if not isinstance(state, self.backend.tensor_types):
+            raise_error(
+                TypeError,
+                "Cannot calculate Hamiltonian expectation "
+                + f"value for state of type {type(state)}",
+            )
 
-            if len(shape) == 2:  # density matrix
-                return self.backend.calculate_expectation_density_matrix(
-                    self, state, normalize
-                )
+        state = self.backend.cast(state, dtype=state.dtype)
+        shape = tuple(state.shape)
 
+        if len(shape) not in (1, 2):
             raise_error(
                 ValueError,
                 "Cannot calculate Hamiltonian expectation value "
                 + f"for state of shape {shape}",
             )
 
-        raise_error(
-            TypeError,
-            "Cannot calculate Hamiltonian expectation "
-            + f"value for state of type {type(state)}",
-        )
+        if len(shape) == 1:  # state vector
+            return self.backend.calculate_expectation_state(self, state, normalize)
+
+        return self.backend.calculate_expectation_density_matrix(self, state, normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
@@ -248,7 +247,9 @@ class Hamiltonian(AbstractHamiltonian):
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if (self.backend.platform == "pytorch") else 0
-                r._eigenvalues = other * self.backend.engine.flip(self._eigenvalues, axis)
+                r._eigenvalues = other * self.backend.engine.flip(
+                    self._eigenvalues, axis
+                )
         if self._eigenvectors is not None:
             if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
@@ -615,7 +616,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         keys = list(freq.keys())
         counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=self.backend.engine.float64) / sum(counts)
+        counts = self.backend.cast(counts, dtype=self.backend.engine.float64) / sum(
+            counts
+        )
         expvals = []
         for term in self.terms:
             qubits = {

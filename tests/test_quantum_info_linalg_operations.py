@@ -250,12 +250,10 @@ def test_matrix_sqrt(backend):
 
     state = random_density_matrix(dims, pure=False, backend=backend)
 
-    eigvals, eigvecs = backend.calculate_eigenvectors(state)
-    target = backend.engine.zeros_like(state)
+    eigvals, eigvecs = backend.eigenvectors(state)
+    target = backend.zeros_like(state)
     for eigval, eigvec in zip(eigvals, eigvecs.T):
-        target += backend.engine.sqrt(eigval) * backend.engine.outer(
-            eigvec, backend.engine.conj(eigvec)
-        )
+        target += backend.sqrt(eigval) * backend.outer(eigvec, backend.conj(eigvec))
 
     sqrt = matrix_sqrt(state, backend=backend)
 
@@ -269,11 +267,11 @@ def test_matrix_log(backend, base):
 
     state = random_density_matrix(dims, pure=False, backend=backend)
 
-    eigvals, eigvecs = backend.calculate_eigenvectors(state)
-    target = backend.engine.zeros_like(state)
+    eigvals, eigvecs = backend.eigenvectors(state)
+    target = backend.zeros_like(state)
     for eigval, eigvec in zip(eigvals, eigvecs.T):
-        target += (backend.engine.log(eigval) / float(np.log(base))) * backend.engine.outer(
-            eigvec, backend.engine.conj(eigvec)
+        target += (backend.engine.log(eigval) / float(np.log(base))) * backend.outer(
+            eigvec, backend.conj(eigvec)
         )
 
     sqrt = matrix_logarithm(state, base=base, backend=backend)
@@ -326,8 +324,7 @@ def test_schmidt_decomposition(backend):
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
     # recovering original state
-    recovered = np.zeros_like(state.shape, dtype=complex)
-    recovered = backend.cast(recovered, dtype=recovered.dtype)
+    recovered = backend.zeros_like(state.shape, dtype=complex)
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
             recovered = recovered + coeff * backend.engine.kron(u, vh)
@@ -336,7 +333,9 @@ def test_schmidt_decomposition(backend):
 
     # entropy test
     coeffs = backend.engine.abs(S) ** 2
-    entropy = backend.engine.where(backend.engine.abs(S) < 1e-10, 0.0, backend.engine.log(coeffs))
+    entropy = backend.engine.where(
+        backend.engine.abs(S) < 1e-10, 0.0, backend.engine.log(coeffs)
+    )
     entropy = -backend.engine.sum(coeffs * entropy)
 
     assert entropy < 1e-14

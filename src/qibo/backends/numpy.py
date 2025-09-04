@@ -307,41 +307,6 @@ class NumpyBackend(Backend):
             {i: int(f) for i, f in enumerate(frequencies) if f > 0}
         )
 
-    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        sprobs = self.cast(np.random.random(noiseless_samples.shape), dtype="float64")
-        flip_0 = self.cast(
-            sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
-        )
-        flip_1 = self.cast(
-            sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
-        )
-        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
-        noisy_samples = noisy_samples - noiseless_samples * flip_1
-        return noisy_samples
-
-    def calculate_eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
-        if self.is_sparse(matrix):
-            log.warning(
-                "Calculating sparse matrix eigenvectors because "
-                "sparse modules do not provide ``eigvals`` method."
-            )
-            return self.calculate_eigenvectors(matrix, k=k)[0]
-        if hermitian:
-            return np.linalg.eigvalsh(matrix)
-        return np.linalg.eigvals(matrix)
-
-    def calculate_eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
-        if self.is_sparse(matrix):
-            if k < matrix.shape[0]:
-                from scipy.sparse.linalg import eigsh
-
-                return eigsh(matrix, k=k, which="SA")
-            else:  # pragma: no cover
-                matrix = self.to_numpy(matrix)
-        if hermitian:
-            return np.linalg.eigh(matrix)
-        return np.linalg.eig(matrix)
-
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.engine.conj(state)
         hstate = hamiltonian @ state

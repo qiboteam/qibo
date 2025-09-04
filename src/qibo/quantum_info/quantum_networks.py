@@ -329,10 +329,10 @@ class QuantumNetwork:
             dtype=self._tensor.dtype,
         )
 
-        if self.is_hermitian():
-            eigenvalues = self._backend.calculate_eigenvalues(reshaped)
-        else:
+        if not self.is_hermitian():
             return False
+
+        eigenvalues = self._backend.eigenvalues(reshaped)
 
         return all(
             self._backend.real(eigenvalue) >= -precision_tol

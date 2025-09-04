@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple, Union
 
 from qibo import __version__
 from qibo.backends import einsum_utils
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 
 
 class Backend:
@@ -182,6 +182,25 @@ class Backend:
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
+    def eig(self, array, **kwargs):
+        return self.engine.linalg.eig(array, **kwargs)
+
+    def eigh(self, array, **kwargs):
+        return self.engine.linalg.eigh(array, **kwargs)
+
+    def eigsh(self, array, **kwargs):
+        from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
+            eigsh,
+        )
+
+        return eigsh(array, **kwargs)
+
+    def eigvalsh(self, array, **kwargs):
+        return self.engine.linalg.eigvalsh(array, **kwargs)
+
+    def eigvals(self, array, **kwargs):
+        return self.engine.linalg.eigvals(array, **kwargs)
+
     def identity(self, dims: int, dtype=None) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
@@ -225,6 +244,9 @@ class Backend:
 
     def real(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.real(array)
+
+    def random_sample(self, size: int):
+        return self.engine.random.random(size)
 
     def random_choice(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.random.choice(array, **kwargs)
@@ -278,6 +300,154 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
         return self.engine.zeros(shape, dtype=dtype)
+
+    def zeros_like(self, array, dtype=None, **kwargs) -> "ndarray":
+        return self.engine.zeros_like(array, dtype=dtype, **kwargs)
+
+    ########################################################################################
+    ######## Methods related to linear algebra operations                           ########
+    ########################################################################################
+
+    def eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
+        """Calculate eigenvalues of a matrix."""
+        if self.is_sparse(matrix):
+            log.warning(
+                "Calculating sparse matrix eigenvectors because "
+                "sparse modules do not provide ``eigvals`` method."
+            )
+            return self.eigenvectors(matrix, k=k)[0]
+
+        if hermitian:
+            return self.eigvalsh(matrix)
+
+        return self.eigvals(matrix)
+
+    def eigenvectors(
+        self, matrix, k: int = 6, hermitian: bool = True
+    ):  # pragma: no cover
+        """Calculate eigenvectors of a matrix."""
+        if self.is_sparse(matrix):
+            if k < matrix.shape[0]:
+                return self.eigsh(matrix, k=k, which="SA")
+
+            matrix = self.to_numpy(matrix)  # pragma: no cover
+
+        if hermitian:
+            return self.eigh(matrix)
+
+        return self.eig(matrix)
+
+    def calculate_expectation_state(
+        self, hamiltonian, state, normalize: bool
+    ):  # pragma: no cover
+        """Calculate expectation value of a state vector given the observable matrix."""
+        raise_error(NotImplementedError)
+
+    def calculate_expectation_density_matrix(
+        self, hamiltonian, state, normalize: bool
+    ):  # pragma: no cover
+        """Calculate expectation value of a density matrix given the observable matrix."""
+        raise_error(NotImplementedError)
+
+    def calculate_jacobian_matrix(
+        self, circuit, parameters, initial_state=None, return_complex: bool = True
+    ):  # pragma: no cover
+        """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
+        raise_error(NotImplementedError)
+
+    def calculate_matrix_exp(
+        self,
+        matrix,
+        phase: Union[float, int, complex] = 1,
+        eigenvectors=None,
+        eigenvalues=None,
+    ):  # pragma: no cover
+        """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
+        and ``phase`` :math:`\\theta`.
+
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    def calculate_matrix_log(
+        self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
+    ):  # pragma: no cover
+        """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
+        of a matrix :math:`A`.
+
+        If the eigenvectors and eigenvalues are given the matrix diagonalization is
+        used for exponentiation.
+        """
+        raise_error(NotImplementedError)
+
+    def calculate_matrix_power(
+        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
+    ):  # pragma: no cover
+        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
+        i.e. :math:`A^{\\alpha}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
+            an integer.
+        """
+        raise_error(NotImplementedError)
+
+    def calculate_matrix_sqrt(
+        self, matrix, precision_singularity: float = 1e-14
+    ):  # pragma: no cover
+        """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU.
+        """
+        raise_error(NotImplementedError)
+
+    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
+        """Calculate the Singular Value Decomposition of ``matrix``."""
+        raise_error(NotImplementedError)
+
+    def partial_trace(
+        self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
+    ) -> "ndarray":
+        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+
+        nqubits = math.log2(state.shape[0])
+
+        if not nqubits.is_integer():
+            raise_error(
+                ValueError,
+                "dimension(s) of ``state`` must be a power of 2, "
+                + f"but it is {2**nqubits}.",
+            )
+
+        nqubits = int(nqubits)
+
+        statevector = bool(len(state.shape) == 1)
+
+        factor = 1 if statevector else 2
+        state = self.reshape(state, factor * nqubits * (2,))
+
+        if statevector:
+            axes = 2 * [list(traced_qubits)]
+            rho = self.tensordot(state, self.conj(state), axes)
+            shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
+
+            return self.reshape(rho, shape)
+
+        order = tuple(sorted(traced_qubits))
+        order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
+        order += tuple(elem + nqubits for elem in order)
+        shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
+
+        state = self.transpose(state, order)
+        state = self.reshape(state, shape)
+
+        return self.engine.einsum("abac->bc", state)
 
     ########################################################################################
     ######## Methods related to the creation and manipulation of quantum objects    ########
@@ -351,44 +521,6 @@ class Backend:
         state_2 = self.cast(state_2, dtype=dtype)
 
         return self.sum(self.conj(state_1) * state_2)
-
-    def partial_trace(
-        self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
-    ) -> "ndarray":
-        state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
-
-        nqubits = math.log2(state.shape[0])
-
-        if not nqubits.is_integer():
-            raise_error(
-                ValueError,
-                "dimension(s) of ``state`` must be a power of 2, "
-                + f"but it is {2**nqubits}.",
-            )
-
-        nqubits = int(nqubits)
-
-        statevector = bool(len(state.shape) == 1)
-
-        factor = 1 if statevector else 2
-        state = self.reshape(state, factor * nqubits * (2,))
-
-        if statevector:
-            axes = 2 * [list(traced_qubits)]
-            rho = self.tensordot(state, self.conj(state), axes)
-            shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
-
-            return self.reshape(rho, shape)
-
-        order = tuple(sorted(traced_qubits))
-        order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
-        order += tuple(elem + nqubits for elem in order)
-        shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
-
-        state = self.transpose(state, order)
-        state = self.reshape(state, shape)
-
-        return self.engine.einsum("abac->bc", state)
 
     def plus_state(
         self, nqubits: int, density_matrix: bool = False, dtype=None
@@ -525,6 +657,21 @@ class Backend:
     def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
+
+    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+        sprobs = self.cast(self.random_sample(noiseless_samples.shape), dtype="float64")
+
+        flip_0 = self.cast(
+            sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
+        )
+        flip_1 = self.cast(
+            sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
+        )
+
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
+        noisy_samples = noisy_samples - noiseless_samples * flip_1
+
+        return noisy_samples
 
     def apply_gate(
         self, gate, state, nqubits: int, density_matrix: bool = False
@@ -700,6 +847,10 @@ class Backend:
             range(len(probabilities)), size=nshots, p=probabilities
         )
 
+    def sample_frequencies(self, probabilities, nshots: int):
+        """Sample measurement frequencies according to a probability distribution."""
+        raise_error(NotImplementedError)
+
     def samples_to_binary(self, samples, nqubits: int):
         """Convert samples from decimal representation to binary."""
         qrange = (self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32),)
@@ -714,96 +865,6 @@ class Backend:
         res, counts = self.unique(samples, return_counts=True)
         frequencies[res] += counts
         return frequencies
-
-    def sample_frequencies(self, probabilities, nshots: int):
-        """Sample measurement frequencies according to a probability distribution."""
-        raise_error(NotImplementedError)
-
-    def calculate_eigenvalues(
-        self, matrix, k: int = 6, hermitian: bool = True
-    ):  # pragma: no cover
-        """Calculate eigenvalues of a matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_eigenvectors(
-        self, matrix, k: int = 6, hermitian: bool = True
-    ):  # pragma: no cover
-        """Calculate eigenvectors of a matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_expectation_state(
-        self, hamiltonian, state, normalize: bool
-    ):  # pragma: no cover
-        """Calculate expectation value of a state vector given the observable matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_expectation_density_matrix(
-        self, hamiltonian, state, normalize: bool
-    ):  # pragma: no cover
-        """Calculate expectation value of a density matrix given the observable matrix."""
-        raise_error(NotImplementedError)
-
-    def calculate_matrix_exp(
-        self,
-        matrix,
-        phase: Union[float, int, complex] = 1,
-        eigenvectors=None,
-        eigenvalues=None,
-    ):  # pragma: no cover
-        """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
-        and ``phase`` :math:`\\theta`.
-
-        If the eigenvectors and eigenvalues are given the matrix diagonalization is
-        used for exponentiation.
-        """
-        raise_error(NotImplementedError)
-
-    def calculate_matrix_log(
-        self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
-    ):  # pragma: no cover
-        """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
-        of a matrix :math:`A`.
-
-        If the eigenvectors and eigenvalues are given the matrix diagonalization is
-        used for exponentiation.
-        """
-        raise_error(NotImplementedError)
-
-    def calculate_matrix_power(
-        self, matrix, power: Union[float, int], precision_singularity: float = 1e-14
-    ):  # pragma: no cover
-        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
-        i.e. :math:`A^{\\alpha}`.
-
-        .. note::
-            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
-            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
-            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
-            an integer.
-        """
-        raise_error(NotImplementedError)
-
-    def calculate_matrix_sqrt(
-        self, matrix, precision_singularity: float = 1e-14
-    ):  # pragma: no cover
-        """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
-
-        .. note::
-            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
-            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
-            ``cuquantum``), this method falls back to CPU.
-        """
-        raise_error(NotImplementedError)
-
-    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
-        """Calculate the Singular Value Decomposition of ``matrix``."""
-        raise_error(NotImplementedError)
-
-    def calculate_jacobian_matrix(
-        self, circuit, parameters, initial_state=None, return_complex: bool = True
-    ):  # pragma: no cover
-        """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
-        raise_error(NotImplementedError)
 
     def assert_allclose(
         self, value, target, rtol: float = 1e-7, atol: float = 0.0
@@ -884,9 +945,9 @@ class Backend:
         for q, r in zip(qubits, results):
             state = self.engine.expand_dims(state, q)
             state = (
-                self.engine.concatenate([self.engine.zeros_like(state), state], q)
+                self.engine.concatenate([self.zeros_like(state), state], q)
                 if r == 1
-                else self.engine.concatenate([state, self.engine.zeros_like(state)], q)
+                else self.engine.concatenate([state, self.zeros_like(state)], q)
             )
         return state
 

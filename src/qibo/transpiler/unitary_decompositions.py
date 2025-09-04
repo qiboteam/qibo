@@ -27,7 +27,9 @@ def u3_decomposition(unitary, backend):
     unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / backend.engine.sqrt(backend.engine.linalg.det(unitary))
-    theta = 2 * backend.engine.arctan2(backend.engine.abs(su2[1, 0]), backend.engine.abs(su2[0, 0]))
+    theta = 2 * backend.engine.arctan2(
+        backend.engine.abs(su2[1, 0]), backend.engine.abs(su2[0, 0])
+    )
     plus = backend.engine.angle(su2[1, 1])
     minus = backend.engine.angle(su2[1, 0])
     phi = plus + minus
@@ -65,7 +67,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
         ut_u_real = np.round(ut_u_real, decimals=15)
 
-    eigvals_real, psi_magic = backend.calculate_eigenvectors(ut_u_real, hermitian=True)
+    eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
     eigvals = backend.engine.sum(backend.engine.conj(psi_magic) * (ut_u @ psi_magic), 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
@@ -86,10 +88,11 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     Returns:
         (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
     """
-    psi_magic = backend.engine.matmul(backend.engine.conj(backend.cast(magic_basis)).T, psi)
+    psi_magic = backend.engine.matmul(
+        backend.engine.conj(backend.cast(magic_basis)).T, psi
+    )
     if (
-        backend.real(backend.matrix_norm(backend.imag(psi_magic)))
-        > 1e-6
+        backend.real(backend.matrix_norm(backend.imag(psi_magic))) > 1e-6
     ):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = backend.cast(psi.T, copy=True)
@@ -106,14 +109,16 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     phase = (
         1j
         * np.sqrt(2)
-        * backend.engine.sum(backend.engine.multiply(backend.engine.conj(ef_), psi_bar[2]))
+        * backend.engine.sum(
+            backend.engine.multiply(backend.engine.conj(ef_), psi_bar[2])
+        )
     )
     v0 = backend.cast(np.asarray([1, 0]))
     v1 = backend.cast(np.asarray([0, 1]))
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = backend.engine.tensordot(v0, backend.engine.conj(e), 0) + phase * backend.engine.tensordot(
-        v1, backend.engine.conj(e_), 0
-    )
+    ua = backend.engine.tensordot(
+        v0, backend.engine.conj(e), 0
+    ) + phase * backend.engine.tensordot(v1, backend.engine.conj(e_), 0)
     ub = backend.engine.tensordot(v0, backend.engine.conj(f), 0) + backend.engine.conj(
         phase
     ) * backend.engine.tensordot(v1, backend.engine.conj(f_), 0)
@@ -243,7 +248,8 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     ud = backend.engine.matmul(
         backend.engine.kron(dag(correction["left_A"]), dag(correction["left_B"])),
         backend.engine.matmul(
-            ud, backend.engine.kron(dag(correction["right_A"]), dag(correction["right_B"]))
+            ud,
+            backend.engine.kron(dag(correction["right_A"]), dag(correction["right_B"])),
         ),
     )
     return ua, ub, ud, va, vb
@@ -254,9 +260,9 @@ def magic_decomposition(unitary, backend=None):
 
     unitary = backend.cast(unitary)
     psi, eigvals = calculate_psi(unitary, backend=backend)
-    psi_tilde = backend.engine.conj(backend.engine.sqrt(eigvals)) * backend.engine.matmul(
-        unitary, psi
-    )
+    psi_tilde = backend.engine.conj(
+        backend.engine.sqrt(eigvals)
+    ) * backend.engine.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
     dag = lambda U: backend.engine.transpose(backend.engine.conj(U), (1, 0))
@@ -270,7 +276,9 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     bell_basis = backend.cast(bell_basis)
 
     ud_bell = (
-        backend.engine.transpose(backend.engine.conj(bell_basis), (1, 0)) @ ud @ bell_basis
+        backend.engine.transpose(backend.engine.conj(bell_basis), (1, 0))
+        @ ud
+        @ bell_basis
     )
     ud_diag = backend.engine.diag(ud_bell)
     if not backend.engine.allclose(

@@ -933,7 +933,7 @@ def random_pauli_hamiltonian(
 
     hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
 
-    eigenvalues, eigenvectors = backend.calculate_eigenvectors(hamiltonian)
+    eigenvalues, eigenvectors = backend.eigenvectors(hamiltonian)
     if backend.platform == "tensorflow":
         eigenvalues = backend.to_numpy(eigenvalues)
         eigenvectors = backend.to_numpy(eigenvectors)

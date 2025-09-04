@@ -526,7 +526,7 @@ def choi_to_kraus(
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
-            eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+            eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
             eigenvectors = eigenvectors.T
 
             non_cp = bool(any(backend.real(eigenvalues) < -PRECISION_TOL))
@@ -534,7 +534,7 @@ def choi_to_kraus(
         non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
-        eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+        eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
         eigenvectors = eigenvectors.T
 
     if non_cp:
@@ -736,7 +736,9 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
+        super_op = super_op + backend.engine.outer(
+            kraus_op, backend.engine.conj(kraus_op)
+        )
         del kraus_op
 
     return super_op
@@ -875,7 +877,9 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.engine.outer(kraus_op, backend.engine.conj(kraus_op))
+        super_op = super_op + backend.engine.outer(
+            kraus_op, backend.engine.conj(kraus_op)
+        )
         del kraus_op
 
     return super_op

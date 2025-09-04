@@ -352,22 +352,20 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
         H1 = hamiltonians.Hamiltonian(5, m, backend=backend)
 
     H1_eigen = sorted(backend.to_numpy(H1.eigenvalues()))
-    hH1_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(H1.matrix)))
+    hH1_eigen = sorted(backend.to_numpy(backend.eigenvalues(H1.matrix)))
     backend.assert_allclose(sorted(H1_eigen), hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
     H2_eigen = sorted(backend.to_numpy(H2.eigenvalues()))
-    hH2_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(c1 * H1.matrix)))
+    hH2_eigen = sorted(backend.to_numpy(backend.eigenvalues(c1 * H1.matrix)))
     backend.assert_allclose(H2_eigen, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     if sparse_type is None:
         H3_eigen = sorted(backend.to_numpy(H3.eigenvalues()))
-        hH3_eigen = sorted(
-            backend.to_numpy(backend.calculate_eigenvalues(H1.matrix * c2))
-        )
+        hH3_eigen = sorted(backend.to_numpy(backend.eigenvalues(H1.matrix * c2)))
         backend.assert_allclose(H3_eigen, hH3_eigen)
     else:
         assert H3._eigenvalues is None

@@ -66,7 +66,9 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     shan_entropy = -backend.engine.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    shan_entropy = backend.engine.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
+    shan_entropy = (
+        backend.engine.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
+    )
 
     return np.real(float(shan_entropy))
 
@@ -533,7 +535,7 @@ def von_neumann_entropy(
     ent = backend.real(ent)
 
     if return_spectrum:
-        eigenvalues = backend.calculate_eigenvalues(state)
+        eigenvalues = backend.eigenvalues(state)
 
         log_prob = backend.engine.where(
             backend.real(eigenvalues) > 0.0,
@@ -731,7 +733,9 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             / np.log2(base)
         )
 
-    log = backend.engine.log2(backend.engine.trace(matrix_power(state, alpha, backend=backend)))
+    log = backend.engine.log2(
+        backend.engine.trace(matrix_power(state, alpha, backend=backend))
+    )
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -833,9 +837,7 @@ def relative_renyi_entropy(
         new_state = matrix_power(state, 0.5, backend=backend)
         new_target = matrix_power(target, 0.5, backend=backend)
 
-        log = backend.engine.log2(
-            backend.matrix_norm(new_state @ new_target, order=1)
-        )
+        log = backend.engine.log2(backend.matrix_norm(new_state @ new_target, order=1))
 
         return -2 * log / np.log2(base)
 
