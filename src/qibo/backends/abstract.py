@@ -337,11 +337,30 @@ class Backend:
 
         return self.eig(matrix)
 
-    def calculate_expectation_state(
-        self, hamiltonian, state, normalize: bool
+    def expectation_value(
+        self, hamiltonian, state, normalize: bool = False, dtype=None
     ):  # pragma: no cover
         """Calculate expectation value of a state vector given the observable matrix."""
-        raise_error(NotImplementedError)
+        if dtype is None:
+            dtype = self.dtype
+
+        hamiltonian = self.cast(hamiltonian, dtype=dtype)  # pylint: disable=E1111
+        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
+
+        density_matrix = bool(len(state.shape) == 2)
+
+        prod = hamiltonian @ state
+        exp_val = (
+            self.trace(prod) if density_matrix else self.sum(self.conj(state) * prod)
+        )
+        exp_val = self.real(exp_val)
+
+        if normalize:
+            norm = self.trace(state) if density_matrix else self.abs(state) ** 2
+            norm = self.real(norm)
+            exp_val /= norm
+
+        return exp_val
 
     def calculate_expectation_density_matrix(
         self, hamiltonian, state, normalize: bool

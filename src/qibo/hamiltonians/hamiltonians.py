@@ -118,10 +118,7 @@ class Hamiltonian(AbstractHamiltonian):
                 + f"for state of shape {shape}",
             )
 
-        if len(shape) == 1:  # state vector
-            return self.backend.calculate_expectation_state(self, state, normalize)
-
-        return self.backend.calculate_expectation_density_matrix(self, state, normalize)
+        return self.backend.expectation_value(self, state, normalize=normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
@@ -168,7 +165,7 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        average_h2 = self.backend.expectation_value(h2, state, normalize=True)
         return self.backend.engine.sqrt(self.backend.engine.abs(average_h2 - energy**2))
 
     def __add__(self, other):

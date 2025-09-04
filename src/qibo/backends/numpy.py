@@ -307,21 +307,6 @@ class NumpyBackend(Backend):
             {i: int(f) for i, f in enumerate(frequencies) if f > 0}
         )
 
-    def calculate_expectation_state(self, hamiltonian, state, normalize):
-        statec = self.engine.conj(state)
-        hstate = hamiltonian @ state
-        ev = self.engine.real(self.engine.sum(statec * hstate))
-        if normalize:
-            ev /= self.engine.sum(self.engine.square(self.engine.abs(state)))
-        return ev
-
-    def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
-        ev = self.engine.real(self.engine.trace(self.cast(hamiltonian @ state)))
-        if normalize:
-            norm = self.engine.real(self.engine.trace(state))
-            ev /= norm
-        return ev
-
     def calculate_matrix_exp(
         self,
         matrix,
