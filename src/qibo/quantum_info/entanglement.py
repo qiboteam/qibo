@@ -208,9 +208,9 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     # necessary because this function do support repeated execution,
     # so it has to default to density matrices
     if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
-    state_final = backend.apply_channel(channel, state, nqubits, density_matrix=True)
+    state_final = backend.apply_channel(channel, state, nqubits)
 
     entang_fidelity = fidelity(state_final, state, backend=backend)
 

@@ -89,23 +89,21 @@ def test_negativity(backend, p):
 
 
 @pytest.mark.parametrize("nqubits", [4, 6])
-@pytest.mark.parametrize("channel", [gates.DepolarizingChannel])
-def test_entanglement_fidelity(backend, channel, nqubits):
+def test_entanglement_fidelity(backend, nqubits):
+    channel = gates.DepolarizingChannel([0, 1], 0.5)
+
     with pytest.raises(TypeError):
         test = entanglement_fidelity(channel, nqubits=[0], backend=backend)
     with pytest.raises(ValueError):
         test = entanglement_fidelity(channel, nqubits=0, backend=backend)
     with pytest.raises(TypeError):
-        state = np.random.rand(2, 3, 2)
-        state = backend.cast(state, dtype=state.dtype)
+        state = backend.random_sample((2, 3, 2))
         test = entanglement_fidelity(
             channel,
             nqubits,
             state=state,
             backend=backend,
         )
-
-    channel = channel([0, 1], 0.5)
 
     # test on maximally entangled state
     ent_fid = entanglement_fidelity(channel, nqubits=nqubits, backend=backend)
@@ -122,7 +120,7 @@ def test_entanglement_fidelity(backend, channel, nqubits):
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
     # test on maximally mixed state
-    state = backend.identity(2**nqubits)
+    state = backend.maximally_mixed_state(nqubits)
     ent_fid = entanglement_fidelity(
         channel,
         nqubits=nqubits,

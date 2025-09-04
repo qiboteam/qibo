@@ -431,12 +431,10 @@ def test_von_neumann_entropy(backend, base):
         von_neumann_entropy(state, backend=backend), 0.0, atol=PRECISION_TOL
     )
 
-    state = np.array([1.0, 0.0, 0.0, 0.0])
-    state = np.outer(state, state)
-    state = backend.cast(state, dtype=state.dtype)
+    state = backend.zero_state(2, density_matrix=True)
 
     nqubits = 2
-    state = backend.identity(2**nqubits)
+    state = backend.maximally_mixed_state(nqubits)
     if base == 2:
         test = 2.0
     elif base == 10:
@@ -620,9 +618,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 )
             elif alpha == np.inf:
                 state_outer = (
-                    backend.outer(state, backend.conj(state.T))
-                    if state_flag
-                    else state
+                    backend.outer(state, backend.conj(state.T)) if state_flag else state
                 )
                 target_outer = (
                     backend.outer(target, backend.conj(target.T))
@@ -632,9 +628,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 new_state = matrix_power(state_outer, 0.5, backend=backend)
                 new_target = matrix_power(target_outer, 0.5, backend=backend)
 
-                log = backend.log2(
-                    backend.matrix_norm(new_state @ new_target, order=1)
-                )
+                log = backend.log2(backend.matrix_norm(new_state @ new_target, order=1))
 
                 log = -2 * log / np.log2(base)
             else:
