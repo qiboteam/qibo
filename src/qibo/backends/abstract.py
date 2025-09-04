@@ -330,7 +330,7 @@ class Backend:
             if k < matrix.shape[0]:
                 return self.eigsh(matrix, k=k, which="SA")
 
-            matrix = self.to_numpy(matrix)  # pragma: no cover
+            matrix = self.to_numpy(matrix)  # pylint: disable=E1111
 
         if hermitian:
             return self.eigh(matrix)
@@ -426,7 +426,9 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def calculate_singular_value_decomposition(self, matrix):  # pragma: no cover
+    def calculate_singular_value_decomposition(
+        self, matrix
+    ):  # pragma: no cover# pragma: no cover
         """Calculate the Singular Value Decomposition of ``matrix``."""
         raise_error(NotImplementedError)
 
@@ -681,12 +683,12 @@ class Backend:
         sprobs = self.random_sample(noiseless_samples.shape)
         sprobs = self.cast(sprobs, dtype="float64")  # pylint: disable=E1111
 
-        flip_0 = self.cast(
+        flip_0 = self.cast(  # pylint: disable=E1111
             sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
-        )  # pylint: disable=E1111
-        flip_1 = self.cast(
+        )
+        flip_1 = self.cast(  # pylint: disable=E1111
             sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
-        )  # pylint: disable=E1111
+        )
 
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
