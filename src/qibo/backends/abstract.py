@@ -689,10 +689,12 @@ class Backend:
 
         dims = 2**nqubits
         shape = 2 * (dims,) if density_matrix else dims
-        indexes = [0, 0] if density_matrix else [0]
 
         state = self.zeros(shape, dtype=dtype)
-        state[*indexes] = 1
+        if density_matrix:
+            state[0, 0] = 1
+        else:
+            state[0] = 1
 
         return state
 
