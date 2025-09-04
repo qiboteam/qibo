@@ -536,8 +536,8 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        state_1 = self.cast(state_1, dtype=dtype)
-        state_2 = self.cast(state_2, dtype=dtype)
+        state_1 = self.cast(state_1, dtype=dtype)  # pylint: disable=E1111
+        state_2 = self.cast(state_2, dtype=dtype)  # pylint: disable=E1111
 
         return self.sum(self.conj(state_1) * state_2)
 
@@ -654,7 +654,7 @@ class Backend:
         _matrix = getattr(self.matrices, name)
         if callable(_matrix):
             _matrix = _matrix(2 ** len(gate.target_qubits))
-        return self.cast(_matrix, dtype=_matrix.dtype)
+        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
     def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
         """Convert a parametrized gate to its matrix representation in the computational basis."""
@@ -671,21 +671,22 @@ class Backend:
         else:
             _matrix = _matrix(*gate.parameters)
 
-        return self.cast(_matrix, dtype=_matrix.dtype)
+        return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
     def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        sprobs = self.cast(self.random_sample(noiseless_samples.shape), dtype="float64")
+        sprobs = self.random_sample(noiseless_samples.shape)
+        sprobs = self.cast(sprobs, dtype="float64")  # pylint: disable=E1111
 
         flip_0 = self.cast(
             sprobs < bitflip_probabilities[0], dtype=noiseless_samples.dtype
-        )
+        )  # pylint: disable=E1111
         flip_1 = self.cast(
             sprobs < bitflip_probabilities[1], dtype=noiseless_samples.dtype
-        )
+        )  # pylint: disable=E1111
 
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
         noisy_samples = noisy_samples - noiseless_samples * flip_1
@@ -856,7 +857,8 @@ class Backend:
             rtype = self.real(state).dtype
             unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
-            probs = self.sum(self.cast(state, dtype=rtype), axis=unmeasured_qubits)
+            probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
+            probs = self.sum(probs, axis=unmeasured_qubits)
 
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
