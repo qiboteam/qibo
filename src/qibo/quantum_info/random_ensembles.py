@@ -1236,7 +1236,7 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     if order == "column":
         ops = ops[::-1]
 
-    operator = backend.engine.kron(*ops)
+    operator = backend.kron(*ops)
 
     super_op = operator @ super_op @ operator
 

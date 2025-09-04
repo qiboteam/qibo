@@ -961,7 +961,7 @@ def kraus_to_stinespring(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
-        stinespring = stinespring + backend.engine.kron(
+        stinespring = stinespring + backend.kron(
             kraus_op,
             backend.outer(vector_alpha, initial_state_env),
         )

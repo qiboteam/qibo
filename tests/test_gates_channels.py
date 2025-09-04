@@ -21,7 +21,7 @@ def test_general_channel(backend):
         * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     )
     initial_state = random_density_matrix(2**2, backend=backend)
-    m_1 = backend.engine.kron(backend.identity(2), a_1)
+    m_1 = backend.kron(backend.identity(2), a_1)
     m_1 = backend.cast(m_1, dtype=m_1.dtype)
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
     target_state = backend.engine.matmul(
@@ -150,10 +150,10 @@ def test_unitary_channel(backend):
     )
 
     eye = backend.identity(2)
-    ma_1 = backend.engine.kron(
-        backend.engine.kron(a_1, eye), backend.engine.kron(eye, eye)
+    ma_1 = backend.kron(
+        backend.kron(a_1, eye), backend.kron(eye, eye)
     )
-    ma_2 = backend.engine.kron(backend.engine.kron(eye, eye), a_2)
+    ma_2 = backend.kron(backend.kron(eye, eye), a_2)
     ma_1 = backend.cast(ma_1, dtype=ma_1.dtype)
     ma_2 = backend.cast(ma_2, dtype=ma_2.dtype)
     target_state = (
@@ -354,9 +354,9 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
             gate.init_kwargs["p_1"],
             gate.init_kwargs["p_z"],
         )
-        m_z = backend.engine.kron(
+        m_z = backend.kron(
             backend.cast(matrices.Z),
-            backend.engine.kron(backend.cast(matrices.I), backend.cast(matrices.I)),
+            backend.kron(backend.cast(matrices.I), backend.cast(matrices.I)),
         )
         m_z = backend.cast(m_z, dtype=m_z.dtype)
         z_rho = m_z @ initial_state @ m_z

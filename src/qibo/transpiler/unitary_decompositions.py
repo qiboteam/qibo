@@ -105,7 +105,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     e_, _, f_ = schmidt_decomposition(e_f_, [0], backend=backend)
     e_, f_ = e_[:, 0], f_[0]
     # find exp(1j * delta) using (A5a)
-    ef_ = backend.engine.kron(e, f_)
+    ef_ = backend.kron(e, f_)
     phase = (
         1j
         * np.sqrt(2)
@@ -145,12 +145,12 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     vb *= det
     dag = lambda u: backend.engine.transpose(backend.conj(u), (1, 0))
     u_dagger = dag(
-        backend.engine.kron(
+        backend.kron(
             ua,
             ub,
         )
     )
-    v_dagger = dag(backend.engine.kron(va, vb))
+    v_dagger = dag(backend.kron(va, vb))
     ud = u_dagger @ unitary @ v_dagger
 
     lambdas = to_bell_diagonal(ud, backend)
@@ -246,10 +246,10 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     va = backend.engine.matmul(correction["right_A"], va)
     vb = backend.engine.matmul(correction["right_B"], vb)
     ud = backend.engine.matmul(
-        backend.engine.kron(dag(correction["left_A"]), dag(correction["left_B"])),
+        backend.kron(dag(correction["left_A"]), dag(correction["left_B"])),
         backend.engine.matmul(
             ud,
-            backend.engine.kron(dag(correction["right_A"]), dag(correction["right_B"])),
+            backend.kron(dag(correction["right_A"]), dag(correction["right_B"])),
         ),
     )
     return ua, ub, ud, va, vb

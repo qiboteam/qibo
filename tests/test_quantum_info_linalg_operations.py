@@ -299,7 +299,7 @@ def test_singular_value_decomposition(backend):
     for k, coeff in enumerate(coeffs):
         bitstring = f"{k:0{2}b}"
         a, b = int(bitstring[0]), int(bitstring[1])
-        ket = backend.engine.kron(base[a], base[b])
+        ket = backend.kron(base[a], base[b])
         state = state + coeff * backend.outer(ket, ket.T)
 
     _, S, _ = singular_value_decomposition(state, backend=backend)
@@ -319,7 +319,7 @@ def test_schmidt_decomposition(backend):
 
     state_A = random_statevector(4, seed=10, backend=backend)
     state_B = random_statevector(4, seed=11, backend=backend)
-    state = backend.engine.kron(state_A, state_B)
+    state = backend.kron(state_A, state_B)
 
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
@@ -327,7 +327,7 @@ def test_schmidt_decomposition(backend):
     recovered = backend.zeros_like(state.shape, dtype=complex)
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
-            recovered = recovered + coeff * backend.engine.kron(u, vh)
+            recovered = recovered + coeff * backend.kron(u, vh)
 
     backend.assert_allclose(recovered, state)
 

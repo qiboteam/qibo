@@ -85,7 +85,7 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = self.backend.engine.kron(
+        matrix = self.backend.kron(
             term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
         matrix = self.backend.engine.reshape(matrix, 2 * len(self) * (2,))

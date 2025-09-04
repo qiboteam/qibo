@@ -228,6 +228,9 @@ class Backend:
     def inv(self, array) -> "ndarray":
         return self.engine.linalg.inv(array)
 
+    def kron(self, array_1, array_2) -> "ndarray":
+        return self.engine.kron(array_1, array_2)
+
     def log(self, array, **kwargs) -> "ndarray":
         return self.engine.log(array, **kwargs)
 

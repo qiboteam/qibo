@@ -72,10 +72,10 @@ def test_from_symbolic_with_complex_numbers(backend):
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
-    target_matrix = (1 + 2j) * backend.engine.kron(backend.matrices.X, backend.matrices.X)
-    target_matrix += 2 * backend.engine.kron(backend.matrices.Y, backend.matrices.Y)
-    target_matrix -= 3j * backend.engine.kron(backend.matrices.X, backend.matrices.Y)
-    target_matrix += 1j * backend.engine.kron(backend.matrices.Y, backend.matrices.X)
+    target_matrix = (1 + 2j) * backend.kron(backend.matrices.X, backend.matrices.X)
+    target_matrix += 2 * backend.kron(backend.matrices.Y, backend.matrices.Y)
+    target_matrix -= 3j * backend.kron(backend.matrices.X, backend.matrices.Y)
+    target_matrix += 1j * backend.kron(backend.matrices.Y, backend.matrices.X)
     backend.assert_allclose(final_matrix, target_matrix)
 
 
@@ -104,29 +104,29 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend):
     )
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     final_matrix = ham.matrix
-    target_matrix = backend.engine.kron(
-        backend.engine.kron(backend.matrices.X, backend.matrices.Y),
-        backend.engine.kron(backend.matrices.Z, backend.matrices.I()),
+    target_matrix = backend.kron(
+        backend.kron(backend.matrices.X, backend.matrices.Y),
+        backend.kron(backend.matrices.Z, backend.matrices.I()),
     )
-    target_matrix += 0.5 * backend.engine.kron(
-        backend.engine.kron(backend.matrices.Y, backend.matrices.Z),
-        backend.engine.kron(backend.matrices.I(), backend.matrices.X),
+    target_matrix += 0.5 * backend.kron(
+        backend.kron(backend.matrices.Y, backend.matrices.Z),
+        backend.kron(backend.matrices.I(), backend.matrices.X),
     )
-    target_matrix += backend.engine.kron(
-        backend.engine.kron(backend.matrices.Z, backend.matrices.I()),
-        backend.engine.kron(backend.matrices.X, backend.matrices.I()),
+    target_matrix += backend.kron(
+        backend.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.kron(backend.matrices.X, backend.matrices.I()),
     )
-    target_matrix += -3 * backend.engine.kron(
-        backend.engine.kron(backend.matrices.I(), backend.matrices.X),
-        backend.engine.kron(backend.matrices.I(), backend.matrices.Y),
+    target_matrix += -3 * backend.kron(
+        backend.kron(backend.matrices.I(), backend.matrices.X),
+        backend.kron(backend.matrices.I(), backend.matrices.Y),
     )
-    target_matrix += backend.engine.kron(
-        backend.engine.kron(backend.matrices.I(), backend.matrices.I()),
-        backend.engine.kron(backend.matrices.Y, backend.matrices.I()),
+    target_matrix += backend.kron(
+        backend.kron(backend.matrices.I(), backend.matrices.I()),
+        backend.kron(backend.matrices.Y, backend.matrices.I()),
     )
-    target_matrix += 1.5 * backend.engine.kron(
-        backend.engine.kron(backend.matrices.I(), backend.matrices.Z),
-        backend.engine.kron(backend.matrices.I(), backend.matrices.I()),
+    target_matrix += 1.5 * backend.kron(
+        backend.kron(backend.matrices.I(), backend.matrices.Z),
+        backend.kron(backend.matrices.I(), backend.matrices.I()),
     )
     target_matrix -= 2 * backend.matrices.I(2**4)
     backend.assert_allclose(final_matrix, target_matrix)
@@ -142,16 +142,16 @@ def test_hamiltonian_with_identity_symbol(backend):
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
-    target_matrix = backend.engine.kron(
-        backend.engine.kron(backend.matrices.X, backend.matrices.I()),
-        backend.engine.kron(backend.matrices.Z, backend.matrices.I()),
+    target_matrix = backend.kron(
+        backend.kron(backend.matrices.X, backend.matrices.I()),
+        backend.kron(backend.matrices.Z, backend.matrices.I()),
     )
     target_matrix += 0.5 * np.kron(
-        backend.engine.kron(backend.matrices.Y, backend.matrices.Z),
-        backend.engine.kron(backend.matrices.I(), backend.matrices.I()),
+        backend.kron(backend.matrices.Y, backend.matrices.Z),
+        backend.kron(backend.matrices.I(), backend.matrices.I()),
     )
-    target_matrix += backend.engine.kron(
-        backend.engine.kron(backend.matrices.Z, backend.matrices.I()),
-        backend.engine.kron(backend.matrices.X, backend.matrices.I()),
+    target_matrix += backend.kron(
+        backend.kron(backend.matrices.Z, backend.matrices.I()),
+        backend.kron(backend.matrices.X, backend.matrices.I()),
     )
     backend.assert_allclose(final_matrix, target_matrix)

@@ -376,7 +376,7 @@ def test_to_stinespring(backend, test_a0, partition):
     environment = (1, 2)
 
     global_state = backend.maximally_mixed_state(len(environment))
-    global_state = backend.engine.kron(state, global_state)
+    global_state = backend.kron(state, global_state)
 
     stinespring = to_stinespring(
         test_a0_, partition=partition, nqubits=len(environment) + 1, backend=backend
@@ -578,7 +578,7 @@ def test_choi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.kron(state, backend.outer(v_0, v_0))
         @ backend.conj(stinespring).T
     )
 
@@ -728,7 +728,7 @@ def test_liouville_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.kron(state, backend.outer(v_0, v_0))
         @ backend.conj(stinespring).T
     )
 
@@ -985,7 +985,7 @@ def test_pauli_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.kron(state, backend.outer(v_0, v_0))
         @ backend.conj(stinespring).T
     )
 
@@ -1142,7 +1142,7 @@ def test_chi_to_stinespring(
     # action of stinespring channel on state + environment
     stinespring = (
         stinespring
-        @ backend.engine.kron(state, backend.outer(v_0, v_0))
+        @ backend.kron(state, backend.outer(v_0, v_0))
         @ backend.conj(stinespring).T
     )
 

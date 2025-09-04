@@ -503,7 +503,7 @@ def test_mutual_information(backend, base):
 
     state_a = random_density_matrix(4, backend=backend)
     state_b = random_density_matrix(4, backend=backend)
-    state = backend.engine.kron(state_a, state_b)
+    state = backend.kron(state_a, state_b)
 
     backend.assert_allclose(
         mutual_information(state, [0, 1], base, backend),
@@ -804,7 +804,7 @@ def test_entanglement_entropy(backend, bipartition, base):
     backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
 
     # Product state
-    state = backend.engine.kron(
+    state = backend.kron(
         random_statevector(2, backend=backend), random_statevector(2, backend=backend)
     )
 

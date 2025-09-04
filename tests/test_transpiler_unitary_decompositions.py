@@ -31,7 +31,7 @@ def bell_unitary(hx, hy, hz, backend):
 
 def assert_single_qubits(backend, psi, ua, ub):
     """Assert UA, UB map the maximally entangled basis ``psi`` to the magic basis."""
-    uaub = backend.to_numpy(backend.engine.kron(ua, ub))
+    uaub = backend.to_numpy(backend.kron(ua, ub))
     psi = backend.to_numpy(psi)
     for i, j in zip(range(4), [0, 1, 3, 2]):
         final_state = np.matmul(uaub, psi[:, i])
@@ -97,7 +97,7 @@ def test_ud_eigenvalues(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
     ua, ub, ud, va, vb = magic_decomposition(unitary, backend=backend)
     # Check kron
-    unitary_recon = backend.engine.kron(ua, ub) @ ud @ backend.engine.kron(va, vb)
+    unitary_recon = backend.kron(ua, ub) @ ud @ backend.kron(va, vb)
     backend.assert_allclose(unitary_recon, unitary)
 
     ud_bell = (
