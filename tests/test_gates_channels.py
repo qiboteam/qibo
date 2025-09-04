@@ -206,9 +206,7 @@ def test_pauli_noise_channel(backend, pauli_order):
     channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
     final_state = backend.apply_channel(channel, backend.engine.copy(initial_state), 2)
     gate = gates.X(1)
-    target_state = backend.apply_gate(
-        gate, backend.engine.copy(initial_state), 2, density_matrix=True
-    )
+    target_state = backend.apply_gate(gate, backend.engine.copy(initial_state), 2)
     target_state = 0.3 * target_state + 0.7 * initial_state
     backend.assert_allclose(final_state, target_state)
 

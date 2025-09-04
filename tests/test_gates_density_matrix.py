@@ -11,7 +11,7 @@ from qibo.quantum_info import random_density_matrix, random_statevector
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     state = backend.cast(backend.engine.copy(initial_state))
     for gate in gatelist:
-        state = backend.apply_gate(gate, state, nqubits, density_matrix=True)
+        state = backend.apply_gate(gate, state, nqubits)
     return backend.to_numpy(state)
 
 
@@ -24,7 +24,7 @@ def test_hgate_density_matrix(backend):
     matrix = np.array([[1 + 0j, 1], [1 + 0j, -1]]) / np.sqrt(2)
     matrix = np.kron(np.eye(2), matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    target_rho = backend.engine.matmul(backend.engine.matmul(matrix, initial_rho), matrix)
+    target_rho = backend.matmul(backend.matmul(matrix, initial_rho), matrix)
     backend.assert_allclose(final_rho, target_rho)
 
 

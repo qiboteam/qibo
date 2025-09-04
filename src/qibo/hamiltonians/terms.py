@@ -120,8 +120,10 @@ class HamiltonianTerm:
         # TODO: improve this and understand why it works
         if isinstance(gate, bool) or gate is None:
             gate = self.gate
+
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
+
         return backend.apply_gate(gate, state, nqubits)  # pylint: disable=E1102
 
 

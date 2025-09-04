@@ -657,9 +657,7 @@ class Backend:
         zero = self.reshape(self.transpose(zero, order), shape)
         state = (1 - p_0 - p_1) * state + p_0 * zero
 
-        return state + p_1 * self.apply_gate(
-            X(qubit), zero, nqubits, density_matrix=True
-        )
+        return state + p_1 * self.apply_gate(X(qubit), zero, nqubits)
 
     def thermal_error_density_matrix(
         self, gate, state, nqubits: int

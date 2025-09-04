@@ -146,7 +146,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
         ).state()
         if int(m.symbols[0].outcome()):
             target_state = backend.apply_gate(
-                gates.RX(2, theta=np.pi / 4), target_state, 4, density_matrix=True
+                gates.RX(2, theta=np.pi / 4), target_state, 4
             )
         target_states.append(backend.to_numpy(target_state))
 
@@ -192,7 +192,9 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     r = c.add(gates.M(0, 1, 2, collapse=True))
     c.add(gates.RY(1, theta=np.pi * r.symbols[0] / 5))
     c.add(gates.RX(3, theta=np.pi * r.symbols[2] / 3))
-    final_state = backend.execute_circuit(c, backend.engine.copy(initial_state), nshots=1)
+    final_state = backend.execute_circuit(
+        c, backend.engine.copy(initial_state), nshots=1
+    )
 
     backend.set_seed(123)
     c = Circuit(4, density_matrix=True)
@@ -203,13 +205,9 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     # not including in coverage because outcomes are probabilistic and may
     # not occur for the CI run
     if int(m.symbols[0].outcome()):  # pragma: no cover
-        target_state = backend.apply_gate(
-            gates.RY(1, theta=np.pi / 5), target_state, 4, density_matrix=True
-        )
+        target_state = backend.apply_gate(gates.RY(1, theta=np.pi / 5), target_state, 4)
     if int(m.symbols[2].outcome()):  # pragma: no cover
-        target_state = backend.apply_gate(
-            gates.RX(3, theta=np.pi / 3), target_state, 4, density_matrix=True
-        )
+        target_state = backend.apply_gate(gates.RX(3, theta=np.pi / 3), target_state, 4)
     backend.assert_allclose(final_state, target_state)
 
 
