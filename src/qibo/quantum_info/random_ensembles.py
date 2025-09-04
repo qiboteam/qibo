@@ -184,7 +184,7 @@ def random_hermitian(
     matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
-        matrix = backend.engine.matmul(backend.conj(matrix).T, matrix)
+        matrix = backend.matmul(backend.conj(matrix).T, matrix)
     else:
         matrix = (matrix + backend.conj(matrix).T) / 2
 
@@ -235,7 +235,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         D = backend.engine.diag(R)
         D = D / backend.abs(D)
         R = backend.engine.diag(D)
-        unitary = backend.engine.matmul(Q, R)
+        unitary = backend.matmul(Q, R)
     elif measure is None:
         from scipy.linalg import expm
 

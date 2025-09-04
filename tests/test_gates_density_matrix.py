@@ -38,8 +38,8 @@ def test_rygate_density_matrix(backend):
     phase = np.exp(1j * theta / 2.0)
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    target_rho = backend.engine.matmul(
-        backend.engine.matmul(matrix, initial_rho), backend.conj(matrix).T
+    target_rho = backend.matmul(
+        backend.matmul(matrix, initial_rho), backend.conj(matrix).T
     )
 
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
@@ -169,8 +169,8 @@ def test_cu1gate_application_twoqubit(backend):
     matrix[3, 3] = np.exp(1j * theta)
     matrix = np.kron(matrix, np.eye(2))
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    target_rho = backend.engine.matmul(
-        backend.engine.matmul(matrix, initial_rho), backend.conj(matrix).T
+    target_rho = backend.matmul(
+        backend.matmul(matrix, initial_rho), backend.conj(matrix).T
     )
     backend.assert_allclose(final_rho, target_rho)
 

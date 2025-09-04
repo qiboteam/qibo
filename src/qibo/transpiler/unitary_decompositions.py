@@ -73,7 +73,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.engine.linalg.qr(psi_magic)
     # write psi in computational basis
-    psi = backend.engine.matmul(magic_basis, psi_magic)
+    psi = backend.matmul(magic_basis, psi_magic)
     return psi, eigvals
 
 
@@ -88,7 +88,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     Returns:
         (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
     """
-    psi_magic = backend.engine.matmul(
+    psi_magic = backend.matmul(
         backend.conj(backend.cast(magic_basis)).T, psi
     )
     if (
@@ -241,13 +241,13 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     correction["left_B"] = backend.cast(correction["left_B"])
     correction["right_A"] = backend.cast(correction["right_A"])
     correction["right_B"] = backend.cast(correction["right_B"])
-    ua = backend.engine.matmul(ua, correction["left_A"])
-    ub = backend.engine.matmul(ub, correction["left_B"])
-    va = backend.engine.matmul(correction["right_A"], va)
-    vb = backend.engine.matmul(correction["right_B"], vb)
-    ud = backend.engine.matmul(
+    ua = backend.matmul(ua, correction["left_A"])
+    ub = backend.matmul(ub, correction["left_B"])
+    va = backend.matmul(correction["right_A"], va)
+    vb = backend.matmul(correction["right_B"], vb)
+    ud = backend.matmul(
         backend.kron(dag(correction["left_A"]), dag(correction["left_B"])),
-        backend.engine.matmul(
+        backend.matmul(
             ud,
             backend.kron(dag(correction["right_A"]), dag(correction["right_B"])),
         ),
@@ -262,7 +262,7 @@ def magic_decomposition(unitary, backend=None):
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = backend.conj(
         backend.engine.sqrt(eigvals)
-    ) * backend.engine.matmul(unitary, psi)
+    ) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
     dag = lambda U: backend.engine.transpose(backend.conj(U), (1, 0))

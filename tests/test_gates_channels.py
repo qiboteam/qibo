@@ -24,12 +24,12 @@ def test_general_channel(backend):
     m_1 = backend.kron(backend.identity(2), a_1)
     m_1 = backend.cast(m_1, dtype=m_1.dtype)
     m_2 = backend.cast(a_2, dtype=a_2.dtype)
-    target_state = backend.engine.matmul(
-        backend.engine.matmul(m_1, initial_state),
+    target_state = backend.matmul(
+        backend.matmul(m_1, initial_state),
         backend.engine.transpose(backend.conj(m_1), (1, 0)),
     )
-    target_state = target_state + backend.engine.matmul(
-        backend.engine.matmul(m_2, initial_state),
+    target_state = target_state + backend.matmul(
+        backend.matmul(m_2, initial_state),
         backend.engine.transpose(backend.conj(m_2), (1, 0)),
     )
 
@@ -150,8 +150,8 @@ def test_unitary_channel(backend):
     ma_2 = backend.cast(ma_2, dtype=ma_2.dtype)
     target_state = (
         0.3 * initial_state
-        + 0.4 * backend.engine.matmul(ma_1, backend.engine.matmul(initial_state, ma_1))
-        + 0.3 * backend.engine.matmul(ma_2, backend.engine.matmul(initial_state, ma_2))
+        + 0.4 * backend.matmul(ma_1, backend.matmul(initial_state, ma_1))
+        + 0.3 * backend.matmul(ma_2, backend.matmul(initial_state, ma_2))
     )
     backend.assert_allclose(final_state, target_state)
 

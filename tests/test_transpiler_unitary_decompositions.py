@@ -84,7 +84,7 @@ def test_u_decomposition(backend, seed):
     r"""Check that U_A\dagger U_B\dagger |psi_k tilde> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
     psi, eigvals = calculate_psi(unitary, backend=backend)
-    psi_tilde = backend.conj(backend.engine.sqrt(eigvals)) * backend.engine.matmul(
+    psi_tilde = backend.conj(backend.engine.sqrt(eigvals)) * backend.matmul(
         unitary, psi
     )
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
