@@ -114,7 +114,6 @@ def test_partial_trace(backend, density_matrix):
         test = partial_trace(state, 1, backend=backend)
 
     nqubits = 4
-
     circuit = Circuit(nqubits, density_matrix=density_matrix)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, qubit + 1) for qubit in range(1, nqubits - 1))
@@ -333,9 +332,7 @@ def test_schmidt_decomposition(backend):
 
     # entropy test
     coeffs = backend.abs(S) ** 2
-    entropy = backend.engine.where(
-        backend.abs(S) < 1e-10, 0.0, backend.log(coeffs)
-    )
+    entropy = backend.engine.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
     entropy = -backend.engine.sum(coeffs * entropy)
 
     assert entropy < 1e-14

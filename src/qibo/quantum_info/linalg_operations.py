@@ -303,7 +303,7 @@ def matrix_power(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_power(matrix, power, precision_singularity)
+    return backend.matrix_power(matrix, power, precision_singularity)
 
 
 def matrix_sqrt(matrix, backend=None):
