@@ -170,9 +170,9 @@ class Backend:
     def compile(self, func):  # pragma: no cover
         """Compile the given method.
 
-        Available only for the ``tensorflow`` backend.
+        Available only for the ``TensorflowBackend`` in ``qiboml``.
         """
-        raise_error(NotImplementedError)
+        return func
 
     ########################################################################################
     ######## Methods related to array manipulation                                  ########
@@ -729,9 +729,6 @@ class Backend:
                     return terms
 
         return terms
-
-    def compile(self, func):
-        return func
 
     def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
         """Convert a gate to its matrix representation in the computational basis."""
