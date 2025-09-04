@@ -559,7 +559,7 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    def apply(self, backend, state, nqubits: int, density_matrix: bool):
+    def apply(self, backend, state, nqubits: int, density_matrix: bool = False):
         return backend.apply_gate(self, state, nqubits, density_matrix=density_matrix)
 
     def apply_clifford(self, backend, state, nqubits):
