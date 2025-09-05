@@ -166,15 +166,15 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
 
     nmeas = 1 if nqubits == 1 else nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits, nmeas)
+    circuit = get_circuit(nqubits, nmeas)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=10000)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
     noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = CDR(
