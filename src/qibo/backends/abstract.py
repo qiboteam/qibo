@@ -508,10 +508,6 @@ class Backend:
         """
         return self.matrix_power(array, power=0.5)
 
-    def singular_value_decomposition(self, array) -> Tuple["ndarray", ...]:
-        """Calculate the Singular Value Decomposition of ``matrix``."""
-        return self.engine.linalg.svd(array)
-
     def partial_trace(
         self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
     ) -> "ndarray":
@@ -549,6 +545,10 @@ class Backend:
         state = self.reshape(state, shape)
 
         return self.engine.einsum("abac->bc", state)
+
+    def singular_value_decomposition(self, array) -> Tuple["ndarray", ...]:
+        """Calculate the Singular Value Decomposition of ``matrix``."""
+        return self.engine.linalg.svd(array)
 
     ########################################################################################
     ######## Methods related to the creation and manipulation of quantum objects    ########
@@ -803,7 +803,10 @@ class Backend:
     ):
         # state = self.to_numpy(state)
         density_matrix = bool(len(state.shape) == 2)
-        ind_j, ind_k = self.nonzero(state)
+        ind_j = self.nonzero(state)
+        if density_matrix:
+            ind_k = ind_j[1]
+        ind_j = ind_j[0]
 
         terms = []
         if density_matrix:

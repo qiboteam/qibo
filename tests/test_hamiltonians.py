@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.symbols import I, X, Y, Z
 
@@ -53,16 +53,16 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
         c1 = dtype(4.5)
         if use_eye:
             return a + c1 * backend.to_numpy(backend.matrices.I(a.shape[0])) - b
-        else:
-            return a + c1 - b
+
+        return a + c1 - b
 
     def transformation_d(a, b, use_eye=False):
         c1 = dtype(10.5)
         c2 = dtype(2)
         if use_eye:
             return c1 * backend.to_numpy(backend.matrices.I(a.shape[0])) - a + c2 * b
-        else:
-            return c1 - a + c2 * b
+
+        return c1 - a + c2 * b
 
     if sparse_type is None:
         H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
