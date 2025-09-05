@@ -390,11 +390,9 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        hamiltonian = self.cast(hamiltonian, dtype=dtype)  # pylint: disable=E1111
-        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
-
         density_matrix = bool(len(state.shape) == 2)
 
+        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
         prod = hamiltonian @ state
         exp_val = (
             self.trace(prod) if density_matrix else self.sum(self.conj(state) * prod)

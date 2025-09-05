@@ -301,8 +301,8 @@ def test_norm(backend, density_matrix, seed):
 def test_overlap(backend, nqubits, density_matrix, seed):
     dims = 2**nqubits
     if density_matrix:
-        state0 = random_density_matrix(dims, seed=seed, backend=backend)
-        state1 = random_density_matrix(dims, seed=seed + 1, backend=backend)
+        state0 = random_density_matrix(dims, seed=seed, pure=True, backend=backend)
+        state1 = random_density_matrix(dims, seed=seed + 1, pure=True, backend=backend)
     else:
         state0 = random_statevector(dims, seed=seed, backend=backend)
         state1 = random_statevector(dims, seed=seed + 1, backend=backend)
@@ -312,14 +312,10 @@ def test_overlap(backend, nqubits, density_matrix, seed):
 
     if density_matrix:
         final_overlap = overlap.apply_density_matrix(backend, state1)
-        target_overlap = np.trace(
-            np.transpose(np.conj(backend.to_numpy(state0))) @ backend.to_numpy(state1)
-        )
+        target_overlap = backend.trace(state0 @ state1)
     else:
         final_overlap = overlap.apply(backend, state1)
-        target_overlap = np.abs(
-            np.sum(np.conj(backend.to_numpy(state0)) * backend.to_numpy(state1))
-        )
+        target_overlap = backend.sum(backend.conj(state0) * state1)
 
     backend.assert_allclose(final_overlap, target_overlap)
 
