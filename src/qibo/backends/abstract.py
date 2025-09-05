@@ -187,6 +187,9 @@ class Backend:
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
+    def copy(self, array, **kwargs) -> "ndarray":
+        return self.engine.copy(array, **kwargs)
+
     def det(self, array) -> "ndarray":
         return self.engine.linalg.det(array)
 

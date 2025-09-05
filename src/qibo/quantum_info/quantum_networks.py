@@ -365,7 +365,7 @@ class QuantumNetwork:
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.QuantumNetwork` object."""
         return self.__class__(
-            self._backend.engine.copy(self._tensor),
+            self._backend.copy(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -670,7 +670,7 @@ class QuantumNetwork:
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
-        tensor = self._backend.engine.copy(self._tensor)
+        tensor = self._backend.copy(self._tensor)
         tensor = backend.cast(tensor, dtype=self._tensor.dtype)
         conj = backend.conj
 

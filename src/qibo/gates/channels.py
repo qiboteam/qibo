@@ -31,12 +31,13 @@ class Channel(Gate):
         )
 
     def apply(self, backend, state, nqubits):  # pragma: no cover
-        raise_error(
-            NotImplementedError,
-            f"{self.__class__.__name__} cannot be applied to state vector.",
-        )
+        statevector = bool(len(state.shape) == 1)
+        if statevector:
+            raise_error(
+                NotImplementedError,
+                f"{self.__class__.__name__} cannot be applied to statevector.",
+            )
 
-    def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel(self, state, nqubits)
 
     def apply_clifford(self, backend, state, nqubits):

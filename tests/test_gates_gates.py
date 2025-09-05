@@ -1938,9 +1938,9 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     initial_state = random_statevector(2**nqubits, backend=backend)
-    target_state = backend.apply_gate(gate, backend.engine.copy(initial_state), nqubits)
+    target_state = backend.apply_gate(gate, backend.copy(initial_state), nqubits)
     dgates = gate.decompose(*free, use_toffolis=use_toffolis)
-    final_state = backend.engine.copy(initial_state)
+    final_state = backend.copy(initial_state)
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)
     backend.assert_allclose(final_state, target_state, atol=1e-6)

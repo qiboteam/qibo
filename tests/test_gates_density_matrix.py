@@ -9,7 +9,7 @@ from qibo.quantum_info import random_density_matrix, random_statevector
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
-    state = backend.cast(backend.engine.copy(initial_state))
+    state = backend.cast(backend.copy(initial_state))
     for gate in gatelist:
         state = backend.apply_gate(gate, state, nqubits)
     return backend.to_numpy(state)
@@ -85,7 +85,7 @@ def test_controlled_by_one_qubit_gates(backend, gate_name):
     nqubits = 2
     initial_rho = random_density_matrix(2**nqubits, seed=1, backend=backend)
     gate = getattr(gates, gate_name)(1).controlled_by(0)
-    final_rho = apply_gates(backend, [gate], 2, backend.engine.copy(initial_rho))
+    final_rho = apply_gates(backend, [gate], 2, backend.copy(initial_rho))
 
     matrix = backend.to_numpy(backend.matrix(getattr(gates, gate_name)(1)))
     cmatrix = np.eye(4, dtype=matrix.dtype)
@@ -203,7 +203,7 @@ def test_controlled_with_effect(backend):
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3).controlled_by(0, 2))
     final_rho = backend.execute_circuit(
-        c, backend.engine.copy(backend.cast(initial_rho))
+        c, backend.copy(backend.cast(initial_rho))
     ).state()
 
     c = Circuit(4, density_matrix=True)
@@ -211,7 +211,7 @@ def test_controlled_with_effect(backend):
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3))
     target_rho = backend.execute_circuit(
-        c, backend.engine.copy(backend.cast(initial_rho))
+        c, backend.copy(backend.cast(initial_rho))
     ).state()
     backend.assert_allclose(final_rho, target_rho)
 
@@ -225,11 +225,11 @@ def test_controlled_by_random(backend, nqubits):
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    final_rho = backend.execute_circuit(c, backend.engine.copy(initial_rho)).state()
+    final_rho = backend.execute_circuit(c, backend.copy(initial_rho)).state()
 
     c = Circuit(nqubits)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    target_psi = backend.execute_circuit(c, backend.engine.copy(initial_psi)).state()
+    target_psi = backend.execute_circuit(c, backend.copy(initial_psi)).state()
     target_rho = backend.outer(target_psi, backend.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)
