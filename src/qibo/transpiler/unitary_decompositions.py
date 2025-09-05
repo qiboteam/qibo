@@ -30,8 +30,8 @@ def u3_decomposition(unitary, backend):
     theta = 2 * backend.engine.arctan2(
         backend.abs(su2[1, 0]), backend.abs(su2[0, 0])
     )
-    plus = backend.engine.angle(su2[1, 1])
-    minus = backend.engine.angle(su2[1, 0])
+    plus = backend.angle(su2[1, 1])
+    minus = backend.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
     # explicit conversion to float to avoid issue on GPU
@@ -296,7 +296,7 @@ def calculate_h_vector(ud_diag, backend):
 
     See Eq. (4)-(5) in arXiv:quant-ph/0307177.
     """
-    lambdas = -backend.engine.angle(ud_diag)
+    lambdas = -backend.angle(ud_diag)
     hx = (lambdas[0] + lambdas[2]) / 2.0
     hy = (lambdas[1] + lambdas[2]) / 2.0
     hz = (lambdas[0] + lambdas[1]) / 2.0

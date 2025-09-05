@@ -396,12 +396,12 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
     thetas = _generate_rbs_angles(
         _data_sorted, architecture="diagonal", backend=backend
     )
-    phis = backend.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.engine.angle(data_sorted[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data_sorted[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data_sorted[k]) + backend.sum(phis[:k])
+                -backend.angle(data_sorted[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -747,12 +747,15 @@ def hamming_weight_encoder(
     # Calculate all gate phases necessary to encode the amplitudes.
     _data = backend.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-    phis = backend.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.engine.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
+            print(data[k])
+            print(backend.angle(data[k]), type(backend.angle(data[k])))
+            print(phis[:k])
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data[k]) + backend.sum(phis[:k])
+                -backend.angle(data[k]) + backend.sum(phis[:k])
             )
 
     last_qubit = nqubits - 1
@@ -1662,12 +1665,12 @@ def _binary_encoder_hyperspherical(
 
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
 
-    phis = backend.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.engine.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.engine.angle(data[k]) + backend.sum(phis[:k])
+                -backend.angle(data[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -1684,10 +1687,10 @@ def _binary_encoder_hyperspherical(
 
     if complex_data:
         angles[-2] = 2 * _angle_mod_two_pi(
-            (backend.engine.angle(data[-1]) - backend.engine.angle(data[-2])) / 2
+            (backend.angle(data[-1]) - backend.angle(data[-2])) / 2
         )
         angles[-1] = 2 * _angle_mod_two_pi(
-            (-0.5) * (backend.engine.angle(data[-2]) + backend.engine.angle(data[-1]))
+            (-0.5) * (backend.angle(data[-2]) + backend.angle(data[-1]))
             + backend.sum(phis[:-2])
         )
 

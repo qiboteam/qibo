@@ -181,6 +181,9 @@ class Backend:
     def abs(self, array, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.abs(array, **kwargs)
 
+    def angle(self, array, **kwargs) -> "ndarray":
+        return self.engine.angle(array, **kwargs)
+
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
