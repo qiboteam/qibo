@@ -510,7 +510,7 @@ class DepolarizingChannel(PauliNoiseChannel):
         self.init_args = [qubits]
         self.init_kwargs = {"lam": lam}
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):
         return backend.depolarizing_error_density_matrix(self, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):
@@ -665,7 +665,7 @@ class ThermalRelaxationChannel(KrausChannel):
         parameters = self.init_args[1:] + [self.init_kwargs["excited_population"]]
         return self.__class__(qubit, parameters)
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):
         qubit = self.target_qubits[0]
 
         if self.t_1 < self.t_2:
@@ -873,7 +873,7 @@ class ResetChannel(KrausChannel):
         self.name = "ResetChannel"
         self.draw_label = "R"
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):

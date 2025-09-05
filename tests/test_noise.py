@@ -419,7 +419,7 @@ def test_readout_error(backend, density_matrix):
         noise.apply(circuit), initial_state=backend.copy(state)
     )
 
-    target_state = gates.ReadoutErrorChannel(0, P).apply_density_matrix(
+    target_state = gates.ReadoutErrorChannel(0, P).apply(
         backend, backend.copy(state), nqubits
     )
 

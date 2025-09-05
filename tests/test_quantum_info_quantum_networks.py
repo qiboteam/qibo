@@ -270,7 +270,7 @@ def test_with_states(backend):
         channel.to_choi(backend=backend), (dims, dims), backend=backend, inverse=True
     )
 
-    state_output = channel.apply_density_matrix(backend, state, nqubits)
+    state_output = channel.apply(backend, state, nqubits)
     state_output_network = network_channel.apply(state)
     state_output_link = network_state.link_product("ij,jk -> ik", network_channel)
 

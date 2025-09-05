@@ -529,6 +529,10 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     return state
 
 
+def identity(dims: int):
+    return np.eye(dims, dtype="complex128")
+
+
 def maximally_mixed_state(nqubits: int):
     dims = 2**nqubits
     state = np.eye(dims, dtype="complex128")

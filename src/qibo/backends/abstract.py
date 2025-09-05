@@ -561,6 +561,8 @@ class Backend:
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
+        if len(shape) == 1:
+            shape *= 2
         target_qubits = gate.target_qubits
         lam = gate.init_kwargs["lam"]
 

@@ -27,10 +27,6 @@ class TimeStepChecker(Callback):
     def apply(self, backend, state):
         assert_states_equal(backend, state, next(self.target_states), atol=self.atol)
 
-    def apply_density_matrix(self, backend, state):  # pragma: no cover
-        raise_error(NotImplementedError)
-
-
 def test_state_evolution_init(backend):
     ham = Z(2, backend=backend)
     evolution = StateEvolution(ham, dt=1)

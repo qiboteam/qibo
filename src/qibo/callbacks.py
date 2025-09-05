@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 
-from qibo.config import raise_error
+from qibo.config import EIGVAL_CUTOFF, log, raise_error
 
 
 class Callback:
@@ -48,9 +48,6 @@ class Callback:
         return self._results[k]
 
     def apply(self, backend, state):  # pragma: no cover
-        pass
-
-    def apply_density_matrix(self, backend, state):  # pragma: no cover
         pass
 
 
@@ -124,7 +121,9 @@ class EntanglementEntropy(Callback):
             ]
 
     def apply(self, backend, state):
-        from qibo.quantum_info.entropies import entanglement_entropy
+        from qibo.quantum_info.entropies import (
+            entanglement_entropy,
+        )  # pylint: disable=import-outside-toplevel
 
         entropy, spectrum = entanglement_entropy(
             state,
@@ -134,12 +133,11 @@ class EntanglementEntropy(Callback):
             backend=backend,
         )
         self.append(entropy)
+
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
-        return entropy
 
-    def apply_density_matrix(self, backend, state):
-        return self.apply(backend, state)
+        return entropy
 
 
 class State(Callback):
@@ -166,10 +164,6 @@ class State(Callback):
         self.append(backend.cast(state, copy=self.copy))
         return state
 
-    def apply_density_matrix(self, backend, state):
-        self.append(backend.cast(state, copy=self.copy))
-        return state
-
 
 class Norm(Callback):
     """State norm callback.
@@ -180,12 +174,10 @@ class Norm(Callback):
     """
 
     def apply(self, backend, state):
-        norm = backend.vector_norm(state)
-        self.append(norm)
-        return norm
-
-    def apply_density_matrix(self, backend, state):
-        norm = backend.matrix_norm(state)
+        density_matrix = bool(len(state.shape) == 2)
+        norm = (
+            backend.matrix_norm(state) if density_matrix else backend.vector_norm(state)
+        )
         self.append(norm)
         return norm
 
@@ -209,16 +201,15 @@ class Overlap(Callback):
         self.state = state
 
     def apply(self, backend, state):
-        overlap = backend.overlap_statevector(self.state, state)
-        self.append(overlap)
-        return overlap
+        density_matrix = bool(len(state.shape) == 2)
+        if density_matrix:
+            from qibo.quantum_info.metrics import (  # pylint: disable=import-outside-toplevel
+                fidelity,
+            )
 
-    def apply_density_matrix(self, backend, state):
-        from qibo.quantum_info.metrics import (  # pylint: disable=import-outside-toplevel
-            fidelity,
-        )
-
-        overlap = fidelity(self.state, state, backend=backend)
+            overlap = fidelity(self.state, state, backend=backend)
+        else:
+            overlap = backend.overlap_statevector(self.state, state)
         self.append(overlap)
         return overlap
 
@@ -245,12 +236,6 @@ class Energy(Callback):
         self.hamiltonian = hamiltonian
 
     def apply(self, backend, state):
-        assert type(self.hamiltonian.backend) == type(backend)
-        expectation = self.hamiltonian.expectation(state)
-        self.append(expectation)
-        return expectation
-
-    def apply_density_matrix(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
         expectation = self.hamiltonian.expectation(state)
         self.append(expectation)
@@ -310,21 +295,28 @@ class Gap(Callback):
         if not isinstance(mode, (int, str)):
             raise_error(
                 TypeError,
-                f"Gap callback mode should be integer or string but is {type(mode)}.",
+                f"Gap callback mode should be type ``int`` or ``str``, but is {type(mode)}.",
             )
-        elif isinstance(mode, str) and mode != "gap":
+
+        if isinstance(mode, str) and mode != "gap":
             raise_error(ValueError, f"Unsupported mode {mode} for gap callback.")
+
         self.mode = mode
         self.check_degenerate = check_degenerate
         self.evolution = None
 
     def apply(self, backend, state):
-        from qibo.config import EIGVAL_CUTOFF, log
+        density_matrix = bool(len(state.shape) == 2)
+        if density_matrix:
+            raise_error(
+                NotImplementedError,
+                "Gap callback is not implemented for density matrices.",
+            )
 
         if self.evolution is None:
             raise_error(
                 RuntimeError,
-                "Gap callback can only be used in " "adiabatic evolution models.",
+                "Gap callback can only be used in adiabatic evolution models.",
             )
         hamiltonian = self.evolution.solver.current_hamiltonian  # pylint: disable=E1101
         assert type(hamiltonian.backend) == type(backend)
@@ -353,9 +345,3 @@ class Gap(Callback):
             )
         self.append(gap)
         return gap
-
-    def apply_density_matrix(self, backend, state):
-        raise_error(
-            NotImplementedError,
-            "Gap callback is not implemented for " "density matrices.",
-        )

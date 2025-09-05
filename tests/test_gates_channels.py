@@ -317,9 +317,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     initial_state = random_density_matrix(2**3, backend=backend)
     gate = gates.ThermalRelaxationChannel(0, [t_1, t_2, time, excpop])
-    final_state = gate.apply(
-        backend, backend.copy(initial_state), 3
-    )
+    final_state = gate.apply(backend, backend.copy(initial_state), 3)
 
     if t_2 > t_1:
         p_0, p_1, exp = (
@@ -327,15 +325,15 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
             gate.init_kwargs["p_1"],
             gate.init_kwargs["e_t2"],
         )
-        matrix = np.diag([1 - p_1, p_1, p_0, 1 - p_0])
+        matrix = backend.diag([1 - p_1, p_1, p_0, 1 - p_0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
-        matrix = matrix.reshape(4 * (2,))
+        matrix = backend.reshape(matrix, 4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950
-        target_state = backend.copy(initial_state).reshape(6 * (2,))
-        target_state = np.einsum(
+        target_state = backend.reshape(backend.copy(initial_state), 6 * (2,))
+        target_state = backend.engine.einsum(
             "abcd,aJKcjk->bJKdjk", matrix, backend.to_numpy(target_state)
         )
-        target_state = target_state.reshape(initial_state.shape)
+        target_state = backend.reshape(target_state, initial_state.shape)
     else:
         p_0, p_1, p_z = (
             gate.init_kwargs["p_0"],
@@ -343,32 +341,26 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
             gate.init_kwargs["p_z"],
         )
         m_z = backend.kron(
-            backend.cast(matrices.Z),
-            backend.kron(backend.cast(matrices.I), backend.cast(matrices.I)),
+            backend.matrices.Z,
+            backend.kron(backend.matrices.I(2), backend.matrices.I(2)),
         )
-        m_z = backend.cast(m_z, dtype=m_z.dtype)
         z_rho = m_z @ initial_state @ m_z
 
-        trace = backend.to_numpy(partial_trace(initial_state, (0,), backend=backend))
-        trace = np.reshape(trace, 4 * (2,))
-        zeros = np.tensordot(
-            trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0
+        trace = partial_trace(initial_state, (0,), backend=backend)
+        trace = backend.reshape(trace, 4 * (2,))
+        zeros = backend.tensordot(
+            trace, backend.cast([[1, 0], [0, 0]], dtype=trace.dtype), axes=0
         )
-        ones = np.tensordot(
-            trace, np.array([[0, 0], [0, 1]], dtype=trace.dtype), axes=0
+        ones = backend.tensordot(
+            trace, backend.cast([[0, 0], [0, 1]], dtype=trace.dtype), axes=0
         )
-        zeros = np.transpose(zeros, [4, 0, 1, 5, 2, 3])
-        ones = np.transpose(ones, [4, 0, 1, 5, 2, 3])
-
-        zeros = backend.cast(zeros, dtype=zeros.dtype)
-        ones = backend.cast(ones, dtype=ones.dtype)
+        zeros = backend.transpose(zeros, [4, 0, 1, 5, 2, 3])
+        ones = backend.transpose(ones, [4, 0, 1, 5, 2, 3])
 
         target_state = (1 - p_0 - p_1 - p_z) * initial_state + p_z * z_rho
         target_state += backend.reshape(
             p_0 * zeros + p_1 * ones, initial_state.shape
         )
-
-    target_state = backend.cast(target_state, dtype=target_state.dtype)
 
     backend.assert_allclose(final_state, target_state)
 

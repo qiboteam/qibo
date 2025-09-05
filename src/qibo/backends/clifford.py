@@ -70,7 +70,7 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{engine}` is not supported for Clifford Simulation.",
             )
 
-        self.np = self.engine.np
+        self.np = self.engine.engine
 
         self.name = "clifford"
 

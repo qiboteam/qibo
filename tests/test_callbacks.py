@@ -285,7 +285,7 @@ def test_norm(backend, density_matrix, seed):
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
         target_norm = backend.trace(state)
-        final_norm = norm.apply_density_matrix(backend, state)
+        final_norm = norm.apply(backend, state)
     else:
         norm.nqubits = 2
         state = random_statevector(2**norm.nqubits, seed=seed, backend=backend)
@@ -311,7 +311,7 @@ def test_overlap(backend, nqubits, density_matrix, seed):
     overlap.nqubits = nqubits
 
     if density_matrix:
-        final_overlap = overlap.apply_density_matrix(backend, state1)
+        final_overlap = overlap.apply(backend, state1)
         target_overlap = backend.trace(state0 @ state1)
     else:
         final_overlap = overlap.apply(backend, state1)
@@ -333,7 +333,7 @@ def test_energy(backend, density_matrix):
 
         state = random_density_matrix(2**4, backend=backend)
         target_energy = backend.trace(backend.matmul(matrix, state))
-        final_energy = energy.apply_density_matrix(backend, state)
+        final_energy = energy.apply(backend, state)
     else:
         from qibo.quantum_info import random_statevector
 
@@ -396,4 +396,5 @@ def test_gap_errors():
         gap.apply(None, np.ones(4))
     # not implemented for density matrices
     with pytest.raises(NotImplementedError):
-        gap.apply_density_matrix(None, np.zeros(8))
+        gap.apply(None, np.zeros((8, 8)))
+
