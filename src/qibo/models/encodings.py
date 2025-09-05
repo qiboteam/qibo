@@ -751,9 +751,6 @@ def hamming_weight_encoder(
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
-            print(data[k])
-            print(backend.angle(data[k]), type(backend.angle(data[k])))
-            print(phis[:k])
             phis[k] = _angle_mod_two_pi(
                 -backend.angle(data[k]) + backend.sum(phis[:k])
             )
