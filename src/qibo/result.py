@@ -340,7 +340,7 @@ class MeasurementOutcomes:
                     samples = np.concatenate(
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
-                    np.random.shuffle(samples)
+                    self.backend.shuffle(samples)
                     samples = self.backend.cast(
                         samples, dtype=self.backend.engine.int64
                     )

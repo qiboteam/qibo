@@ -309,6 +309,9 @@ class Backend:
     def round(self, array, **kwargs):
         return self.engine.round(array, **kwargs)
 
+    def shuffle(self, array, **kwargs) -> "ndarray":
+        self.engine.random.shuffle(array, **kwargs)
+
     def sqrt(self, array):
         return self.engine.sqrt(array)
 
