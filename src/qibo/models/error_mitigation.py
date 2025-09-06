@@ -278,7 +278,7 @@ def sample_training_circuit_cdr(
 
         distance.append(backend.real(matrix_norm))
 
-    distance = backend.engine.vstack(distance)
+    distance = backend.vstack(distance)
     prob = backend.exp(-(distance**2) / sigma**2)
 
     index = local_state.choice(

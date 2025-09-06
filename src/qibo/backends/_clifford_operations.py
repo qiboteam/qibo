@@ -529,9 +529,40 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     return state
 
 
-def identity(dims: int):
-    return np.eye(dims, dtype="complex128")
+random = np.random
 
+def abs(array, **kwargs):
+    return np.abs(array, **kwargs)
+
+def copy(array):
+    return np.copy(array)
+
+def eye(dims: int, dtype="complex128"):
+    return np.eye(dims, dtype=dtype)
+
+def kron(array_1, array_2):
+    return np.kron(array_1, array_2)
+
+def sum(array, axis=None, **kwargs):
+    return np.sum(array, axis=axis, **kwargs)
+
+def real(array):
+    return np.real(array)
+
+def reshape(array, shape, **kwargs):
+    return np.reshape(array, shape, **kwargs)
+
+def transpose(array, axes=None):
+    return np.transpose(array, axes)
+
+def vstack(arrays, **kwargs):
+    return np.vstack(arrays, **kwargs)
+
+def zeros(shape, dtype="complex128"):
+    return np.zeros(shape, dtype=dtype)
+
+def identity(dims: int, dtype="complex128"):
+    return eye(dims, dtype=dtype)
 
 def maximally_mixed_state(nqubits: int):
     dims = 2**nqubits

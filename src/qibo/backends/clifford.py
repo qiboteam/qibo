@@ -70,7 +70,7 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{engine}` is not supported for Clifford Simulation.",
             )
 
-        self.np = self.engine.engine
+        self.np = self.engine
 
         self.name = "clifford"
 
@@ -103,7 +103,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Symplectic matrix for the zero state.
         """
-        identity = self.np.eye(nqubits)
+        identity = self.np.identity(nqubits)
         symplectic_matrix = self.np.zeros(
             (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
         )

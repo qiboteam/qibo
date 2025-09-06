@@ -351,6 +351,9 @@ class Backend:
 
         return self.engine.linalg.norm(state, order)
 
+    def vstack(self, arrays, **kwargs) -> "ndarray":
+        return self.engine.vstack(arrays, **kwargs)
+
     def zeros(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
         if dtype is None:
             dtype = self.dtype
