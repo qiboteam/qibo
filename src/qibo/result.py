@@ -361,9 +361,8 @@ class MeasurementOutcomes:
                         samples, bitflip_probabilities
                     )
                 # register samples to individual gate ``MeasurementResult``
-                qubit_map = {
-                    q: i for i, q in enumerate(self.measurement_gate.target_qubits)
-                }
+                qubit_map = self.measurement_gate.target_qubits
+                qubit_map = dict(zip(qubit_map, range(len(qubit_map))))
                 self._samples = samples
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
