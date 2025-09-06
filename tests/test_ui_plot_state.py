@@ -19,7 +19,7 @@ BASEPATH = str(Path(__file__).parent / "test_plot_state_ui_images")
 IMAGE_TOLERANCE = 255
 
 
-def test_complex_circuit_state():
+def test_complex_circuit_state(backend):
     """Test for simple circuit plot state"""
     nqubits = 2
     circuit = Circuit(nqubits)
@@ -28,7 +28,7 @@ def test_complex_circuit_state():
     circuit.add(gates.CZ(0, 1))
     circuit.add(gates.RY(0, theta=np.pi / 3))
     circuit.add(gates.RX(1, theta=np.pi / 5))
-    fig, _, _ = plot_density_hist(circuit)
+    fig, _, _ = plot_density_hist(circuit, backend=backend)
 
     temp_file_path = fig2png(fig)
     base_image_path = f"{BASEPATH}/test_complex_circuit_state_nqubits_{nqubits}.png"
@@ -42,13 +42,13 @@ def test_complex_circuit_state():
     )
 
 
-def test_simple_circuit_state():
+def test_simple_circuit_state(backend):
     """Test for simple circuit plot state"""
     nqubits = 2
     circuit = Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
-    fig, _, _ = plot_density_hist(circuit)
+    fig, _, _ = plot_density_hist(circuit, backend=backend)
 
     temp_file_path = fig2png(fig)
     base_image_path = f"{BASEPATH}/test_simple_circuit_state_nqubits_{nqubits}.png"
@@ -62,13 +62,13 @@ def test_simple_circuit_state():
     )
 
 
-def test_simple_circuit_state_hadamard():
+def test_simple_circuit_state_hadamard(backend):
     """Test for simple circuit plot state with Hadamard gates"""
     nqubits = 2
     circuit = Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
-    fig, _, _ = plot_density_hist(circuit)
+    fig, _, _ = plot_density_hist(circuit, backend=backend)
 
     temp_file_path = fig2png(fig)
     base_image_path = (
@@ -84,7 +84,7 @@ def test_simple_circuit_state_hadamard():
     )
 
 
-def test_simple_title_circuit_colors_state():
+def test_simple_title_circuit_colors_state(backend):
     """Test for simple circuit plot state with title, alpha and custom colors"""
     nqubits = 2
     circuit = Circuit(nqubits)
@@ -92,7 +92,11 @@ def test_simple_title_circuit_colors_state():
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
     fig, _, _ = plot_density_hist(
-        circuit, title="Density plot", alpha=0.5, colors=["green", "purple"]
+        circuit,
+        title="Density plot",
+        alpha=0.5,
+        colors=["green", "purple"],
+        backend=backend,
     )
 
     temp_file_path = fig2png(fig)
@@ -109,14 +113,14 @@ def test_simple_title_circuit_colors_state():
     )
 
 
-def test_title_circuit_state():
+def test_title_circuit_state(backend):
     """Test for simple circuit plot state with title"""
     nqubits = 3
     circuit = Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(0, 2))
-    fig, _, _ = plot_density_hist(circuit, title="Test Circuit State")
+    fig, _, _ = plot_density_hist(circuit, title="Test Circuit State", backend=backend)
 
     temp_file_path = fig2png(fig)
     base_image_path = f"{BASEPATH}/test_title_circuit_state_nqubits_{nqubits}.png"
@@ -130,7 +134,7 @@ def test_title_circuit_state():
     )
 
 
-def test_simple_circuit_greater_relevant__labels():
+def test_simple_circuit_greater_relevant__labels(backend):
     """Test for simple circuit plot state with a bigger number of relevant axes labels"""
     nqubits = 3
     circuit = Circuit(nqubits)
@@ -138,7 +142,7 @@ def test_simple_circuit_greater_relevant__labels():
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(0, 2))
     fig, _, _ = plot_density_hist(
-        circuit, title="Test Circuit State", n_most_relevant_components=10
+        circuit, title="Test Circuit State", n_most_relevant_components=10, backend=backend
     )
 
     temp_file_path = fig2png(fig)
@@ -153,7 +157,7 @@ def test_simple_circuit_greater_relevant__labels():
     )
 
 
-def test_simple_circuit_relevant_labels():
+def test_simple_circuit_relevant_labels(backend):
     """Test for simple circuit plot state with relevant axes labels"""
     nqubits = 2
     circuit = Circuit(nqubits)
@@ -167,6 +171,7 @@ def test_simple_circuit_relevant_labels():
         alpha=0.5,
         colors=["green", "brown"],
         n_most_relevant_components=2,
+        backend=backend
     )
 
     temp_file_path = fig2png(fig)
