@@ -530,6 +530,7 @@ def _clifford_post_execution_reshape(state, nqubits: int):
 
 
 random = np.random
+float64 = np.float64
 
 def abs(array, **kwargs):
     return np.abs(array, **kwargs)

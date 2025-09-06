@@ -178,7 +178,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = CDR(
-        circuit=c,
+        circuit=circuit,
         observable=obs,
         noise_model=noise,
         nshots=10000,
