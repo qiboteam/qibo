@@ -304,7 +304,7 @@ class Backend:
     def reshape(
         self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
     ) -> "ndarray":
-        return self.engine.reshape(array, shape=shape, **kwargs)
+        return self.engine.reshape(array, shape, **kwargs)
 
     def round(self, array, **kwargs):
         return self.engine.round(array, **kwargs)
