@@ -1129,9 +1129,9 @@ class Backend:
 
     def samples_to_decimal(self, samples, nqubits: int):
         """Convert samples from binary representation to decimal."""
-        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32)
+        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
         qrange = (2**qrange)[:, None]
-        samples = self.cast(samples, dtype=self.engine.int32)  # pylint: disable=E1111
+        samples = self.cast(samples, dtype=self.int32)  # pylint: disable=E1111
         return self.matmul(samples, qrange)[:, 0]
 
     def update_frequencies(self, frequencies, probabilities, nsamples: int):

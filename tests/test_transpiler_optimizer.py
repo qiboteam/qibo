@@ -1,4 +1,3 @@
-import networkx as nx
 import pytest
 
 from qibo import gates
@@ -34,12 +33,12 @@ def test_preprocessing_add(star_connectivity):
     assert new_circuit.nqubits == 5
 
 
-def test_fusion():
+def test_fusion(backend):
     circuit = Circuit(2)
     circuit.add(gates.X(0))
     circuit.add(gates.Z(0))
     circuit.add(gates.Y(0))
     circuit.add(gates.X(1))
     fusion = Rearrange(max_qubits=1)
-    fused_circ = fusion(circuit)
+    fused_circ = fusion(circuit, backend=backend)
     assert isinstance(fused_circ.queue[0], gates.Unitary)
