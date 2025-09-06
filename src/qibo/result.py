@@ -342,7 +342,7 @@ class MeasurementOutcomes:
                     )
                     self.backend.shuffle(samples)
                     samples = self.backend.cast(
-                        samples, dtype=self.backend.engine.int64
+                        samples, dtype=self.backend.int64
                     )
                 else:
                     # generate new samples
@@ -355,7 +355,7 @@ class MeasurementOutcomes:
                             [p0.get(q) for q in qubits],
                             [p1.get(q) for q in qubits],
                         ],
-                        dtype=self.backend.engine.float64,
+                        dtype=self.backend.float64,
                     )
                     samples = self.backend.apply_bitflips(
                         samples, bitflip_probabilities

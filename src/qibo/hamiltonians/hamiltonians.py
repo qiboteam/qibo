@@ -615,7 +615,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         keys = list(freq.keys())
         counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=self.backend.engine.float64) / sum(
+        counts = self.backend.cast(counts, dtype=self.backend.float64) / sum(
             counts
         )
         expvals = []

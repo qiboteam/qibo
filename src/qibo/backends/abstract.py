@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple, Union
 from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.config import SHOT_BATCH_SIZE, log, raise_error
+from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class Backend:
@@ -23,10 +24,6 @@ class Backend:
             int,
             float,
             complex,
-            "complex128",
-            "complex64",
-            "float64",
-            "float32",
         )
         self.oom_error = MemoryError
         self.platform = None
@@ -107,11 +104,14 @@ class Backend:
             dtype (str): the options are the following: ``complex128``, ``complex64``,
                 ``float64``, and ``float32``.
         """
-        if dtype not in self.numeric_types:
+        dtypes_str = ("float32", "float64", "complex64", "complex128")
+
+        if dtype not in self.numeric_types and dtype not in dtypes_str:
             raise_error(
                 ValueError,
-                f"Unknown ``dtype`` ``{dtype}``."
-                + f"``dtype`` must be one of the following options: {self.numeric_types}",
+                f"Unknown ``dtype`` ``{dtype}``. For this backend ({self}), "
+                + f"``dtype`` must be either one of the following string: {dtypes_str}, "
+                + f"or one of the following options: {self.numeric_types}",
             )
 
         if dtype != self.dtype:
@@ -175,6 +175,38 @@ class Backend:
         return func
 
     ########################################################################################
+    ######## Methods related to data types                                          ########
+    ########################################################################################
+
+    @property
+    def complex64(self):
+        return getattr(self.engine, "complex64")
+
+    @property
+    def complex128(self):
+        return getattr(self.engine, "complex128")
+
+    @property
+    def float32(self):
+        return getattr(self.engine, "float32")
+
+    @property
+    def float64(self):
+        return getattr(self.engine, "float64")
+
+    @property
+    def int8(self):
+        return getattr(self.engine, "int8")
+
+    @property
+    def int32(self):
+        return getattr(self.engine, "int32")
+
+    @property
+    def int64(self):
+        return getattr(self.engine, "int64")
+
+    ########################################################################################
     ######## Methods related to array manipulation                                  ########
     ########################################################################################
 
@@ -184,11 +216,24 @@ class Backend:
     def angle(self, array, **kwargs) -> "ndarray":
         return self.engine.angle(array, **kwargs)
 
+    def argsort(self, array, axis=None, **kwargs) -> "ndarray":
+        return self.engine.argsort(array, axis, **kwargs)
+
+    def block_diag(self, *arrays) -> "ndarray":
+        from scipy.linalg import block_diag  # pylint: disable=import-outside-toplevel
+
+        return block_diag(*arrays)
+
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
     def copy(self, array, **kwargs) -> "ndarray":
         return self.engine.copy(array, **kwargs)
+
+    def csr_matrix(self, array):
+        from scipy.sparse import csr_matrix  # pylint: disable=import-outside-toplevel
+
+        return csr_matrix(array)
 
     def det(self, array) -> "ndarray":
         return self.engine.linalg.det(array)
@@ -228,9 +273,13 @@ class Backend:
 
         return expm(array)
 
-    def identity(self, dims: int, dtype=None) -> "ndarray":
+    def identity(self, dims: int, dtype=None, sparse: bool = False) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
+
+        if sparse:
+            return self._identity_sparse(dims, dtype)
+
         return self.engine.eye(dims, dtype=dtype)
 
     def imag(self, array) -> Union[int, float, "ndarray"]:
@@ -862,10 +911,69 @@ class Backend:
         return self._collapse_statevector(state, qubits, shot, nqubits, normalize)
 
     def execute_circuit(
-        self, circuit, initial_state=None, nshots: int = None
+        self, circuit, initial_state=None, nshots: int = 1000
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit`."""
-        raise_error(NotImplementedError)
+        nqubits = circuit.nqubits
+        density_matrix = circuit.density_matrix
+
+        if isinstance(initial_state, type(circuit)):
+            if not bool(initial_state.density_matrix == density_matrix):
+                raise_error(
+                    ValueError,
+                    f"Cannot set circuit with density_matrix {initial_state.density_matrix} as"
+                    + f"initial state for circuit with density_matrix {density_matrix}.",
+                )
+
+            if not bool(
+                initial_state.accelerators == circuit.accelerators
+            ):  # pragma: no cover
+                raise_error(
+                    ValueError,
+                    f"Cannot set circuit with accelerators {initial_state.density_matrix} as"
+                    + f"initial state for circuit with accelerators {density_matrix}.",
+                )
+
+            return self.execute_circuit(initial_state + circuit, None, nshots)
+
+        if initial_state is not None:
+            initial_state = self.cast(initial_state, dtype=initial_state.dtype)
+            valid_shape = 2 * (2**nqubits,) if density_matrix else (2**nqubits,)
+            if tuple(initial_state.shape) != valid_shape:
+                raise_error(
+                    ValueError,
+                    f"Given initial state has shape {initial_state.shape}"
+                    + f"instead of the expected {valid_shape}.",
+                )
+
+        if circuit.repeated_execution:
+            if not circuit.measurements and not circuit.has_collapse:
+                raise_error(
+                    RuntimeError,
+                    "Attempting to perform noisy simulation with `density_matrix=False` "
+                    + "and no Measurement gate in the Circuit. If you wish to retrieve the "
+                    + "statistics of the outcomes please include measurements in the circuit, "
+                    + "otherwise set `density_matrix=True` to recover the final state.",
+                )
+
+            return self.execute_circuit_repeated(circuit, nshots, initial_state)
+
+        if circuit.accelerators:  # pragma: no cover
+            return self.execute_distributed_circuit(circuit, initial_state, nshots)
+
+        try:
+            result = self._execute_circuit(
+                circuit, initial_state=initial_state, nshots=nshots
+            )
+        except self.oom_error:
+            raise_error(
+                RuntimeError,
+                f"State does not fit in {self.device} memory."
+                "Please switch the execution device to a "
+                "different one using ``qibo.set_device``.",
+            )
+
+        return result
 
     def execute_circuits(
         self, circuits, initial_states=None, nshots: int = None, processes=None
@@ -922,9 +1030,41 @@ class Backend:
 
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
-    def matrix_fused(self, gate):  # pragma: no cover
+    def matrix_fused(self, fgate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
-        raise_error(NotImplementedError)
+        rank = len(fgate.target_qubits)
+        matrix = self.identity(2**rank, sparse=True)
+
+        for gate in fgate.gates:
+            gmatrix = gate.matrix(self)
+            # add controls if controls were instantiated using
+            # the ``Gate.controlled_by`` method
+            num_controls = len(gate.control_qubits)
+            if num_controls > 0:
+                gmatrix = self.block_diag(
+                    self.identity(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
+                )
+            # Kronecker product with identity is needed to make the
+            # original matrix have shape (2**rank x 2**rank)
+            eye = self.identity(2 ** (rank - len(gate.qubits)))
+            gmatrix = self.kron(gmatrix, eye)
+            # Transpose the new matrix indices so that it targets the
+            # target qubits of the original gate
+            original_shape = gmatrix.shape
+            gmatrix = self.reshape(gmatrix, 2 * rank * (2,))
+
+            qubits = list(gate.qubits)
+            indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
+            indices = self.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(indices + rank)
+            gmatrix = self.transpose(gmatrix, transpose_indices)
+            gmatrix = self.reshape(gmatrix, original_shape)
+            # fuse the individual gate matrix to the total ``FusedGate`` matrix
+            # we are using sparse matrices to improve perfomances
+            matrix = self.csr_matrix(gmatrix) @ matrix
+
+        return self.cast(matrix.toarray(), dtype=matrix.dtype)
 
     ########################################################################################
     ######## Methods related to the execution and post-processing of measurements   ########
@@ -1143,6 +1283,49 @@ class Backend:
         state = self._append_zeros(state, qubits, binshot)
 
         return self.engine.reshape(state, shape)
+
+    def _execute_circuit(self, circuit, initial_state=None, nshots=1000):
+        nqubits = circuit.nqubits
+        density_matrix = circuit.density_matrix
+
+        state = (
+            self.zero_state(nqubits, density_matrix=density_matrix)
+            if initial_state is None
+            else self.cast(initial_state, dtype=initial_state.dtype)
+        )
+
+        for gate in circuit.queue:
+            state = gate.apply(self, state, nqubits)
+
+        if circuit.has_unitary_channel:
+            # here we necessarily have `density_matrix=True`, otherwise
+            # execute_circuit_repeated would have been called
+            if circuit.measurements:
+                circuit._final_state = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=nshots
+                )
+                return circuit._final_state
+
+            circuit._final_state = QuantumState(state, backend=self)
+            return circuit._final_state
+
+        if circuit.measurements:
+            circuit._final_state = CircuitResult(
+                state, circuit.measurements, backend=self, nshots=nshots
+            )
+            return circuit._final_state
+
+        circuit._final_state = QuantumState(state, backend=self)
+
+        return circuit._final_state
+
+    def _identity_sparse(self, dims: int, dtype=None):
+        from scipy.sparse import eye  # pylint: disable=import-outside-toplevel
+
+        if dtype is None:
+            dtype = self.dtype
+
+        return eye(dims, dtype=dtype)
 
     def _negative_power_singular_matrix(
         self, matrix, power: Union[float, int], precision_singularity: float, dtype=None

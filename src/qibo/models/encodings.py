@@ -1671,7 +1671,7 @@ def _binary_encoder_hyperspherical(
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
-    zero_casted = backend.cast(0.0, dtype=backend.engine.float64)  # because of GPU backends
+    zero_casted = backend.cast(0.0, dtype=backend.float64)  # because of GPU backends
 
     angles = []
     for k, (theta, phi) in enumerate(zip(thetas, phis)):

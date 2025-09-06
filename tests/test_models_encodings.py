@@ -443,7 +443,7 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = backend.cast(np.random.rand(5), dtype=backend.engine.float64)
+    data = backend.cast(np.random.rand(5), dtype=backend.float64)
     test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 

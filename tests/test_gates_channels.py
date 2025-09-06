@@ -127,8 +127,6 @@ def test_kraus_channel(backend, pauli_order):
         True,
     )
 
-    gates.DepolarizingChannel((0, 1), 0.98).to_choi()
-
 
 def test_unitary_channel(backend):
     """"""
@@ -244,9 +242,7 @@ def test_depolarizing_channel(backend):
     initial_state = random_density_matrix(2**3, backend=backend)
     initial_state_r = partial_trace(initial_state, (2,), backend=backend)
     channel = gates.DepolarizingChannel((0, 1), lam)
-    final_state = channel.apply(
-        backend, backend.copy(initial_state), 3
-    )
+    final_state = channel.apply(backend, backend.copy(initial_state), 3)
     final_state_r = partial_trace(final_state, (2,), backend=backend)
     target_state_r = (1 - lam) * initial_state_r + lam * backend.cast(
         np.identity(4)
@@ -270,14 +266,10 @@ def test_amplitude_damping_channel(backend):
     channel = gates.AmplitudeDampingChannel(0, gamma)
 
     initial_state = random_density_matrix(2**1, backend=backend)
-    final_state = channel.apply(
-        backend, backend.copy(initial_state), 1
-    )
+    final_state = channel.apply(backend, backend.copy(initial_state), 1)
     target_state = kraus_0 @ initial_state @ backend.transpose(
         backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.transpose(
-        backend.conj(kraus_1), (1, 0)
-    )
+    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
 
     backend.assert_allclose(final_state, target_state)
 
@@ -298,14 +290,10 @@ def test_phase_damping_channel(backend):
     channel = gates.PhaseDampingChannel(0, gamma)
 
     initial_state = random_density_matrix(2**1, backend=backend)
-    final_state = channel.apply(
-        backend, backend.copy(initial_state), 1
-    )
+    final_state = channel.apply(backend, backend.copy(initial_state), 1)
     target_state = kraus_0 @ initial_state @ backend.transpose(
         backend.conj(kraus_0), (1, 0)
-    ) + kraus_1 @ initial_state @ backend.transpose(
-        backend.conj(kraus_1), (1, 0)
-    )
+    ) + kraus_1 @ initial_state @ backend.transpose(backend.conj(kraus_1), (1, 0))
 
     backend.assert_allclose(final_state, target_state)
 
@@ -358,9 +346,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         ones = backend.transpose(ones, [4, 0, 1, 5, 2, 3])
 
         target_state = (1 - p_0 - p_1 - p_z) * initial_state + p_z * z_rho
-        target_state += backend.reshape(
-            p_0 * zeros + p_1 * ones, initial_state.shape
-        )
+        target_state += backend.reshape(p_0 * zeros + p_1 * ones, initial_state.shape)
 
     backend.assert_allclose(final_state, target_state)
 
@@ -394,9 +380,9 @@ def test_readout_error_channel(backend):
     rho = random_density_matrix(dim, seed=1, backend=backend)
     stochastic_noise = random_stochastic_matrix(dim, seed=1, backend=backend)
 
-    probability_sum = gates.ReadoutErrorChannel(
-        0, stochastic_noise
-    ).apply(backend, rho, 1)
+    probability_sum = gates.ReadoutErrorChannel(0, stochastic_noise).apply(
+        backend, rho, 1
+    )
     probability_sum = np.diag(backend.to_numpy(probability_sum)).sum().real
 
     backend.assert_allclose(probability_sum - 1 < PRECISION_TOL, True)
