@@ -328,7 +328,7 @@ class MeasurementOutcomes:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = self.backend.engine.concatenate(
+                self._samples = self.backend.concatenate(
                     [gate.result.samples() for gate in self.measurements],
                     axis=1,
                 )
@@ -336,7 +336,7 @@ class MeasurementOutcomes:
                 if self._frequencies is not None:
                     # generate samples that respect the existing frequencies
                     frequencies = self.frequencies(binary=False)
-                    samples = np.concatenate(
+                    samples = self.backend.concatenate(
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     self.backend.shuffle(samples)

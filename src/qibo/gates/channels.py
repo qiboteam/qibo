@@ -511,7 +511,12 @@ class DepolarizingChannel(PauliNoiseChannel):
         self.init_kwargs = {"lam": lam}
 
     def apply(self, backend, state, nqubits):
-        return backend.depolarizing_error_density_matrix(self, state, nqubits)
+        density_matrix = bool(len(state.shape) == 2)
+
+        if density_matrix:
+            return backend.depolarizing_error_density_matrix(self, state, nqubits)
+        
+        return super().apply(backend, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):
         _qubits = _get_new_qubit_map(self, self.init_args[0], qubit_map)

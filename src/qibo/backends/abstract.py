@@ -224,6 +224,9 @@ class Backend:
 
         return block_diag(*arrays)
 
+    def concatenate(self, tup, **kwargs) -> "ndarray":
+        return self.engine.concatenate(tup, **kwargs)
+
     def conj(self, array) -> "ndarray":
         return self.engine.conj(array)
 
@@ -624,8 +627,6 @@ class Backend:
     def depolarizing_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
-        if len(shape) == 1:
-            shape *= 2
         target_qubits = gate.target_qubits
         lam = gate.init_kwargs["lam"]
 
@@ -646,7 +647,8 @@ class Backend:
         )
         qubit_2 = list(
             range(nqubits - len(target_qubits), 2 * (nqubits - len(target_qubits)))
-        ) + list(range(2 * nqubits - len(target_qubits), 2 * nqubits))
+        )
+        qubit_2 += list(range(2 * nqubits - len(target_qubits), 2 * nqubits))
         qs = [qubit_1, qubit_2]
 
         order = []
