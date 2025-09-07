@@ -828,7 +828,7 @@ class Backend:
 
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         state = self.reshape(state, 2 * nqubits * (2,))
-        matrix = self.matrix(gate)
+        matrix = gate.matrix(self)
 
         matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
         left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)

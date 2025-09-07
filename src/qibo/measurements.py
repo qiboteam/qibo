@@ -176,6 +176,7 @@ class MeasurementResult:
                 of shape `(nshots,)`.
         """
         backend = _check_backend(backend)
+
         if self._samples is None:
             if self.circuit is None:
                 raise_error(
@@ -183,7 +184,7 @@ class MeasurementResult:
                 )
             # calculate samples for the whole circuit so that
             # individual register samples are registered here
-            self.circuit.final_state.samples()
+            self.circuit.final_state.samples(backend=backend)
 
         if binary:
             return self._samples
@@ -210,10 +211,12 @@ class MeasurementResult:
                 the keys of the `Counter` are integers.
         """
         backend = _check_backend(backend)
+
         if self._frequencies is None:
             self._frequencies = backend.calculate_frequencies(
-                self.samples(binary=False)
+                self.samples(binary=False, backend=backend)
             )
+
         if binary:
             qubits = self.target_qubits
             return frequencies_to_binary(self._frequencies, len(qubits))

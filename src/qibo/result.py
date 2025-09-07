@@ -236,7 +236,6 @@ class MeasurementOutcomes:
                 )
                 # register frequencies to individual gate ``MeasurementResult``
                 qubit_map = {q: i for i, q in enumerate(qubits)}
-                reg_frequencies = {}
                 binary_frequencies = frequencies_to_binary(
                     self._frequencies, len(qubits)
                 )
@@ -257,7 +256,7 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.frequencies(binary)
+                gate.register_name: gate.result.frequencies(binary, backend=self.backend)
                 for gate in self.measurements
             }
 

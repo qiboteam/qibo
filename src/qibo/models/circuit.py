@@ -1054,7 +1054,7 @@ class Circuit:
         self.compiled.executor = backend.compile(executor)
         if self.measurements:
             self.compiled.result = lambda state, nshots: CircuitResult(
-                state, self.measurements, backend, nshots=nshots
+                state, self.measurements, backend=backend, nshots=nshots
             )
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
