@@ -330,6 +330,9 @@ class Backend:
 
         return self.engine.linalg.norm(state, ord=order)
 
+    def mean(self, array, **kwargs) -> Union[float, complex, "ndarray"]:
+        return self.engine.mean(array, **kwargs)
+
     def nonzero(self, array) -> "ndarray":
         return self.engine.nonzero(array)
 
@@ -363,6 +366,9 @@ class Backend:
 
     def sqrt(self, array):
         return self.engine.sqrt(array)
+
+    def std(self, array, **kwargs) -> Union[float, "ndarray"]:
+        return self.engine.std(array, **kwargs)
 
     def sum(self, array, axis=None, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.sum(array, axis=axis, **kwargs)
@@ -461,7 +467,9 @@ class Backend:
         exp_val = self.real(exp_val)
 
         if normalize:
-            norm = self.trace(state) if density_matrix else self.sum(self.abs(state) ** 2)
+            norm = (
+                self.trace(state) if density_matrix else self.sum(self.abs(state) ** 2)
+            )
             norm = self.real(norm)
             exp_val /= norm
 
@@ -937,7 +945,9 @@ class Backend:
             return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if initial_state is not None:
-            initial_state = self.cast(initial_state, dtype=initial_state.dtype)  # pylint: disable=E1111
+            initial_state = self.cast(
+                initial_state, dtype=initial_state.dtype
+            )  # pylint: disable=E1111
             valid_shape = 2 * (2**nqubits,) if density_matrix else (2**nqubits,)
             if tuple(initial_state.shape) != valid_shape:
                 raise_error(
@@ -994,8 +1004,94 @@ class Backend:
 
         Useful for noise simulation using state vectors or for simulating gates
         controlled by measurement outcomes.
+
+        Execute the circuit `nshots` times to retrieve probabilities, frequencies
+        and samples. Note that this method is called only if a unitary channel
+        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
+        if some collapsing measurement is performed.
         """
-        raise_error(NotImplementedError)
+        density_matrix = circuit.density_matrix
+
+        if circuit.has_collapse and not circuit.measurements and not density_matrix:
+            raise_error(
+                RuntimeError,
+                "The circuit contains only collapsing measurements (`collapse=True`) but "
+                + "`density_matrix=False`. Please set `density_matrix=True` to retrieve "
+                + "the final state after execution.",
+            )
+
+        results, final_states = [], []
+        nqubits = circuit.nqubits
+
+        if not density_matrix:
+            samples = []
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+
+        state_copy = (
+            self.zero_state(nqubits, density_matrix=density_matrix)
+            if initial_state is None
+            else self.cast(initial_state, copy=True)
+        )
+
+        for _ in range(nshots):
+            state = state_copy
+
+            if not density_matrix and circuit.accelerators:  # pragma: no cover
+                state = self.execute_distributed_circuit(circuit, state)
+            else:
+                for gate in circuit.queue:
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply(self, state, nqubits)
+
+            if density_matrix:
+                final_states.append(state)
+
+            if circuit.measurements:
+                result = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=1
+                )
+                sample = result.samples()[0]
+                results.append(sample)
+                if not density_matrix:
+                    samples.append("".join([str(int(s)) for s in sample]))
+                for gate in circuit.measurements:
+                    gate.result.reset()
+
+        if density_matrix:  # this implies also it has_collapse
+            assert circuit.has_collapse
+            final_state = self.mean(final_states, axis=0)
+            if circuit.measurements:
+                final_result = CircuitResult(
+                    final_state,
+                    circuit.measurements,
+                    backend=self,
+                    samples=self.aggregate_shots(results),
+                    nshots=nshots,
+                )
+            else:
+                final_result = QuantumState(final_state, backend=self)
+
+            circuit._final_state = final_result
+
+            return final_result
+
+        final_result = MeasurementOutcomes(
+            circuit.measurements,
+            backend=self,
+            samples=self.aggregate_shots(results),
+            nshots=nshots,
+        )
+        final_result._repeated_execution_frequencies = self.calculate_frequencies(
+            samples
+        )
+
+        circuit._final_state = final_result
+
+        return final_result
 
     def execute_distributed_circuit(
         self, circuit, initial_state=None, nshots: int = None
