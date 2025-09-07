@@ -184,7 +184,7 @@ class MeasurementResult:
                 )
             # calculate samples for the whole circuit so that
             # individual register samples are registered here
-            self.circuit.final_state.samples(backend=backend)
+            self.circuit.final_state.samples()
 
         if binary:
             return self._samples
