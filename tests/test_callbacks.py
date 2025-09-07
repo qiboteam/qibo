@@ -85,13 +85,13 @@ def test_entropy_switch_partition(backend):
 def test_entropy_in_circuit(backend, density_matrix, base):
     """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True, base=base)
-    c = Circuit(2, density_matrix=density_matrix)
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.H(0))
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    circuit = Circuit(2, density_matrix=density_matrix)
+    circuit.add(gates.CallbackGate(entropy))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CallbackGate(entropy))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CallbackGate(entropy))
+    state = backend.execute_circuit(circuit)
 
     target = [0, 0, np.log(2)] / np.log(base)
     values = [backend.to_numpy(x) for x in entropy]
@@ -397,4 +397,3 @@ def test_gap_errors():
     # not implemented for density matrices
     with pytest.raises(NotImplementedError):
         gap.apply(None, np.zeros((8, 8)))
-

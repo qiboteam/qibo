@@ -350,11 +350,17 @@ class Backend:
     def real(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.real(array)
 
-    def random_sample(self, size: int):
-        return self.engine.random.random(size)
-
     def random_choice(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.random.choice(array, **kwargs)
+
+    def random_integers(self, low, high=None, size=None, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        
+        return self.engine.random.randint(low, high, size=size, dtype=dtype)
+
+    def random_sample(self, size: int):
+        return self.engine.random.random(size)
 
     def reshape(
         self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
