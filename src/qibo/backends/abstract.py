@@ -947,7 +947,7 @@ class Backend:
             return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if initial_state is not None:
-            initial_state = self.cast(
+            initial_state = self.cast(  # pylint: disable=E1111
                 initial_state, dtype=initial_state.dtype
             )  # pylint: disable=E1111
             valid_shape = 2 * (2**nqubits,) if density_matrix else (2**nqubits,)
@@ -1042,7 +1042,9 @@ class Backend:
             state = state_copy
 
             if not density_matrix and circuit.accelerators:  # pragma: no cover
-                state = self.execute_distributed_circuit(circuit, state)
+                state = self.execute_distributed_circuit(  # pylint: disable=E1111
+                    circuit, state
+                )
             else:
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
