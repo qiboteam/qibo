@@ -461,7 +461,7 @@ class Backend:
         exp_val = self.real(exp_val)
 
         if normalize:
-            norm = self.trace(state) if density_matrix else self.abs(state) ** 2
+            norm = self.trace(state) if density_matrix else self.sum(self.abs(state) ** 2)
             norm = self.real(norm)
             exp_val /= norm
 
@@ -1147,11 +1147,6 @@ class Backend:
     def assert_allclose(
         self, value, target, rtol: float = 1e-7, atol: float = 0.0
     ):  # pragma: no cover
-        from qibo.result import (  # pylint: disable=import-outside-toplevel
-            CircuitResult,
-            QuantumState,
-        )
-
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
             value = value.state()
         if isinstance(target, CircuitResult) or isinstance(target, QuantumState):

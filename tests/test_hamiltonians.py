@@ -89,10 +89,18 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
     HT3 = transformation_c(H1, H2)
     HT4 = transformation_d(H1, H2)
 
-    backend.assert_allclose(hH1, HT1.matrix)
-    backend.assert_allclose(hH2, HT2.matrix)
-    backend.assert_allclose(hH3, HT3.matrix)
-    backend.assert_allclose(hH4, HT4.matrix)
+    target_1, target_2 = HT1.matrix, HT2.matrix
+    target_3, target_4 = HT3.matrix, HT4.matrix
+    if sparse_type is not None:
+        hH1, target_1 = hH1.toarray(), target_1.toarray()
+        hH2, target_2 = hH2.toarray(), target_2.toarray()
+        hH3 = backend.engine.asarray(hH3)
+        hH4 = backend.engine.asarray(hH4)
+
+    backend.assert_allclose(hH1, target_1)
+    backend.assert_allclose(hH2, target_2)
+    backend.assert_allclose(hH3, target_3)
+    backend.assert_allclose(hH4, target_4)
 
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
@@ -118,10 +126,18 @@ def test_hamiltonian_addition(backend, sparse_type):
 
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
-    backend.assert_allclose(H.matrix, matrix)
+    target = H.matrix
+    if sparse_type is not None:
+        target, matrix = target.toarray(), matrix.toarray()
+    backend.assert_allclose(matrix, target)
+
+
     H = H1 - 0.5 * H2
     matrix = H1.matrix - 0.5 * H2.matrix
-    backend.assert_allclose(H.matrix, matrix)
+    target = H.matrix
+    if sparse_type is not None:
+        target, matrix = target.toarray(), matrix.toarray()
+    backend.assert_allclose(matrix, target)
 
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
     H2 = hamiltonians.XXZ(nqubits=3, delta=0.1, backend=backend)
@@ -177,8 +193,12 @@ def test_hamiltonian_matmul(backend, sparse_type):
         with pytest.raises(NotImplementedError):
             _ = H1 @ H2
     else:
-        backend.assert_allclose((H1 @ H2).matrix, (m1 @ m2))
-        backend.assert_allclose((H2 @ H1).matrix, (m2 @ m1))
+        matrix_1, matrix_2 = (H1 @ H2).matrix, (H2 @ H1).matrix
+        target_1, target_2 = m1 @ m2, m2 @ m1
+        if sparse_type is not None:
+            matrix_1, matrix_2 = matrix_1.toarray(), matrix_2.toarray()
+        backend.assert_allclose(matrix_1, target_1)
+        backend.assert_allclose(matrix_2, target_2)
 
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
@@ -463,8 +483,12 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
     H1 = construct_hamiltonian()
     _ = H1.eigenvectors()
 
-    backend.assert_allclose(H.exp(0.5), target_matrix, atol=1e-6)
-    backend.assert_allclose(H1.exp(0.5), target_matrix, atol=1e-6)
+    matrix_1, matrix_2 = H.exp(0.5), H1.exp(0.5)
+    if sparse_type is not None:
+        matrix_1, matrix_2 = matrix_1.toarray(), matrix_2.toarray()
+
+    backend.assert_allclose(matrix_1, target_matrix, atol=1e-6)
+    backend.assert_allclose(matrix_2, target_matrix, atol=1e-6)
 
 
 def test_hamiltonian_energy_fluctuation(backend):
