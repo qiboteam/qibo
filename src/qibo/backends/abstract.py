@@ -937,7 +937,7 @@ class Backend:
             return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if initial_state is not None:
-            initial_state = self.cast(initial_state, dtype=initial_state.dtype)
+            initial_state = self.cast(initial_state, dtype=initial_state.dtype)  # pylint: disable=E1111
             valid_shape = 2 * (2**nqubits,) if density_matrix else (2**nqubits,)
             if tuple(initial_state.shape) != valid_shape:
                 raise_error(
