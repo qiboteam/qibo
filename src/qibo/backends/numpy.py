@@ -15,7 +15,7 @@ class NumpyBackend(Backend):
         self.engine = np
         self.name = "numpy"
         self.matrices = NumpyMatrices(self.dtype)
-        self.tensor_types = np.ndarray
+        self.tensor_types = (self.engine.ndarray,)
         self.numeric_types += (
             self.int8,
             self.int32,

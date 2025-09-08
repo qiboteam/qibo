@@ -43,7 +43,7 @@ def test_compiling_twice_exception(backend):
     circuit.add([gates.H(0), gates.H(1)])
     circuit.compile()
     with pytest.raises(RuntimeError):
-        circuit.compile()
+        circuit.compile(backend)
 
 
 @pytest.mark.linux
@@ -61,15 +61,16 @@ def test_repeated_execute(backend, accelerators):
             circuit = Circuit(4, accelerators, density_matrix=True)
     else:
         circuit = Circuit(4, accelerators, density_matrix=True)
-        thetas = np.random.random(4)
-        circuit.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-        target_state = backend.execute_circuit(circuit).state()
+        circuit.add(gates.RY(qubit, 0.1 * qubit) for qubit in range(4))
+        target_state = backend.real(backend.execute_circuit(circuit).state())
         circuit.has_collapse = True
         if accelerators is not None:
             with pytest.raises(NotImplementedError):
                 final_state = backend.execute_circuit(circuit, nshots=20)
         else:
-            final_state = backend.execute_circuit(circuit, nshots=20).state()
+            final_state = backend.real(
+                backend.execute_circuit(circuit, nshots=20).state()
+            )
             backend.assert_allclose(final_state, target_state)
 
 

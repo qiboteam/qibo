@@ -28,7 +28,7 @@ class Backend:
         self.oom_error = MemoryError
         self.platform = None
         self.supports_multigpu = False
-        self.tensor_types = None
+        self.tensor_types = ()
         self.versions = {"qibo": __version__}
 
     def __reduce__(self) -> Tuple["Backend", tuple]:
@@ -1114,7 +1114,7 @@ class Backend:
             NotImplementedError, f"{self} does not support distributed execution."
         )
 
-    def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":  # pragma: no cover
+    def matrix(self, gate: "qibo.gates.abstract.Gate") -> "ndarray":
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
@@ -1122,7 +1122,7 @@ class Backend:
             _matrix = _matrix(2 ** len(gate.target_qubits))
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
-    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):  # pragma: no cover
+    def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
 
@@ -1139,7 +1139,7 @@ class Backend:
 
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
-    def matrix_fused(self, fgate):  # pragma: no cover
+    def matrix_fused(self, fgate):
         """Fuse matrices of multiple gates."""
         rank = len(fgate.target_qubits)
         matrix = self.identity(2**rank, sparse=True)
@@ -1345,7 +1345,12 @@ class Backend:
         return state
 
     def _collapse_density_matrix(
-        self, state, qubits, shot, nqubits: int, normalize: bool = True
+        self,
+        state,
+        qubits: Union[Tuple[int, ...], List[int]],
+        shot,
+        nqubits: int,
+        normalize: bool = True,
     ):  # pragma: no cover
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
@@ -1368,7 +1373,14 @@ class Backend:
 
         return self.reshape(state, shape)
 
-    def _collapse_statevector(self, state, qubits, shot, nqubits, normalize=True):
+    def _collapse_statevector(
+        self,
+        state,
+        qubits: Union[Tuple[int, ...], List[int]],
+        shot,
+        nqubits: int,
+        normalize: bool = True,
+    ):
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
