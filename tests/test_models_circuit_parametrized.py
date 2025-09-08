@@ -139,7 +139,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     # execute once
     final_state = backend.execute_circuit(circuit)
 
-    target_c = Circuit(4)
+    target_circuit = Circuit(4)
     target_circuit.add(gates.RX(0, theta=params[0]))
     target_circuit.add(gates.Unitary(params[1], 1, 2))
     circuit.set_parameters(trainable_params)

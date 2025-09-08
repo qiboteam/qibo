@@ -393,13 +393,13 @@ def test_circuit_serialization_with_wire_names():
 
     transpiler = Passes(passes=[Sabre()], connectivity=Graph([wire_names]))
 
-    c, _ = transpiler(c)
-    new_c, _ = transpiler(new_c)
+    circuit, _ = transpiler(circuit)
+    new_circuit, _ = transpiler(new_circuit)
     assert new_circuit.wire_names == circuit.wire_names
 
     with pytest.raises(PlacementError):
         circuit.wire_names = ["c", "b"]
-        transpiler(c)
+        transpiler(circuit)
 
 
 def test_circuit_light_cone():
