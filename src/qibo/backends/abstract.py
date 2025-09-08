@@ -263,6 +263,9 @@ class Backend:
     def eigvals(self, array, **kwargs):
         return self.engine.linalg.eigvals(array, **kwargs)
 
+    def empty(self, shape, **kwargs) -> "ndarray":
+        return self.engine.empty(shape, **kwargs)
+
     def exp(self, array, **kwargs):
         return self.engine.exp(array, **kwargs)
 
@@ -356,7 +359,7 @@ class Backend:
     def random_integers(self, low, high=None, size=None, dtype=None):
         if dtype is None:
             dtype = self.dtype
-        
+
         return self.engine.random.randint(low, high, size=size, dtype=dtype)
 
     def random_sample(self, size: int):
