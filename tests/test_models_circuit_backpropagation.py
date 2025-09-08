@@ -26,10 +26,10 @@ def test_variable_backpropagation():
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with backend.tf.GradientTape() as tape:
-        c = Circuit(1)
-        c.add(gates.X(0))
-        c.add(gates.RZ(0, theta))
-        result = backend.execute_circuit(c)
+        circuit = Circuit(1)
+        circuit.add(gates.X(0))
+        circuit.add(gates.RZ(0, theta))
+        result = backend.execute_circuit(circuit)
         loss = backend.tf.math.real(result.state()[-1])
     grad = tape.gradient(loss, theta)
     grad = backend.tf.math.real(grad)
@@ -48,10 +48,10 @@ def test_two_variables_backpropagation():
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with backend.tf.GradientTape() as tape:
-        c = Circuit(2)
-        c.add(gates.RX(0, theta[0]))
-        c.add(gates.RY(1, theta[1]))
-        result = backend.execute_circuit(c)
+        circuit = Circuit(2)
+        circuit.add(gates.RX(0, theta[0]))
+        circuit.add(gates.RY(1, theta[1]))
+        result = backend.execute_circuit(circuit)
         loss = backend.tf.math.real(result.state()[0])
     grad = tape.gradient(loss, theta)
 

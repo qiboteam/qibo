@@ -131,7 +131,6 @@ def test_hamiltonian_addition(backend, sparse_type):
         target, matrix = target.toarray(), matrix.toarray()
     backend.assert_allclose(matrix, target)
 
-
     H = H1 - 0.5 * H2
     matrix = H1.matrix - 0.5 * H2.matrix
     target = H.matrix
@@ -282,14 +281,14 @@ def test_hamiltonian_expectation_errors(backend):
 def non_exact_expectation_test_setup(backend, observable):
 
     nqubits = 3
-    c = Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for q in range(nqubits):
-        c.add(gates.RX(q, np.random.rand()))
+        circuit.add(gates.RX(q, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
-    final_state = backend.execute_circuit(c.copy(True)).state()
+    final_state = backend.execute_circuit(circuit.copy(True)).state()
     exp = H.expectation(final_state)
-    return exp, H, c
+    return exp, H, circuit
 
 
 def test_hamiltonian_expectation_from_samples(backend):
@@ -298,9 +297,9 @@ def test_hamiltonian_expectation_from_samples(backend):
 
     nshots = 4 * 10**6
     observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
-    exp, H, c = non_exact_expectation_test_setup(backend, observable)
-    c.add(gates.M(*range(c.nqubits)))
-    freq = backend.execute_circuit(c, nshots=nshots).frequencies()
+    exp, H, circuit = non_exact_expectation_test_setup(backend, observable)
+    circuit.add(gates.M(*range(circuit.nqubits)))
+    freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
     exp_from_samples = H.expectation_from_samples(freq)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 

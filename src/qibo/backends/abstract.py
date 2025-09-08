@@ -920,7 +920,7 @@ class Backend:
         normalize: bool = True,
         density_matrix: bool = False,
     ) -> "ndarray":
-        """Collapse state vector according to measurement shot."""
+        """Collapse quantum state according to measurement shot."""
 
         if density_matrix:
             return self._collapse_density_matrix(

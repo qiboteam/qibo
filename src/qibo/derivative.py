@@ -70,25 +70,25 @@ def parameter_shift(
 
             # defining a dummy circuit
             def circuit(nqubits = 1):
-                c = Circuit(nqubits = 1)
-                c.add(gates.RY(q = 0, theta = 0))
-                c.add(gates.RX(q = 0, theta = 0))
-                c.add(gates.M(0))
+                circ = Circuit(nqubits = 1)
+                circ.add(gates.RY(q = 0, theta = 0))
+                circ.add(gates.RX(q = 0, theta = 0))
+                circ.add(gates.M(0))
 
-                return c
+                return circ
 
             # initializing the circuit
-            c = circuit(nqubits = 1)
+            circ = circuit(nqubits = 1)
 
             # some parameters
             test_params = np.random.randn(2)
-            c.set_parameters(test_params)
+            circ.set_parameters(test_params)
 
             test_hamiltonian = hamiltonian()
 
             # running the psr with respect to the two parameters
-            grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
-            grad_1 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=1)
+            grad_0 = parameter_shift(circuit=circ, hamiltonian=test_hamiltonian, parameter_index=0)
+            grad_1 = parameter_shift(circuit=circ, hamiltonian=test_hamiltonian, parameter_index=1)
 
     """
 

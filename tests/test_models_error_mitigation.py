@@ -35,21 +35,21 @@ def get_circuit(nqubits, nmeas=None):
     hz = 0.5
     hx = 0.5
     dt = 0.25
-    c = Circuit(nqubits, density_matrix=True)
-    c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
-    c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-    c.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
-    c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-    c.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
-    c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.M(*range(nmeas)))
+    circuit = Circuit(nqubits, density_matrix=True)
+    circuit.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+    circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+    circuit.add(gates.M(*range(nmeas)))
 
-    return c
+    return circuit
 
 
 backend = construct_backend("numpy")
@@ -109,19 +109,19 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     else:
         nmeas = nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits, nmeas)
+    circuit = get_circuit(nqubits, nmeas)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=10000)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
     noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = ZNE(
-        circuit=c,
+        circuit=circuit,
         observable=obs,
         noise_levels=np.array(range(4)),
         noise_model=noise,
@@ -199,24 +199,24 @@ def test_sample_training_circuit(nqubits):
     hz = -2
     hx = 1
     dt = np.pi / 4
-    c = Circuit(nqubits, density_matrix=True)
-    c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
-    c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-    c.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
-    c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-    c.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
-    c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
-    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.M(q) for q in range(nqubits))
+    circuit = Circuit(nqubits, density_matrix=True)
+    circuit.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+    circuit.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+    circuit.add(gates.M(q) for q in range(nqubits))
 
     with pytest.raises(ValueError):
-        sample_training_circuit_cdr(c)
+        sample_training_circuit_cdr(circuit)
     with pytest.raises(ValueError):
-        sample_clifford_training_circuit(c)
+        sample_clifford_training_circuit(circuit)
 
 
 @pytest.mark.parametrize(
@@ -246,18 +246,18 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     else:
         backend.set_threads(1)
     # Define the circuit
-    c = get_circuit(nqubits)
+    circuit = get_circuit(nqubits)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(backend.execute_circuit(c).state())
+    exact = obs.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=10000)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
     noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = vnCDR(
-        circuit=c,
+        circuit=circuit,
         observable=obs,
         backend=backend,
         noise_levels=range(3),
@@ -298,15 +298,15 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # get noise free expected val
-    c = get_circuit(nqubits, nmeas)
-    true_state = backend.execute_circuit(c, nshots=nshots)
+    circuit = get_circuit(nqubits, nmeas)
+    true_state = backend.execute_circuit(circuit, nshots=nshots)
     true_val = true_state.expectation_from_samples(obs)
     # get noisy expected val
-    state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
     noisy_val = state.expectation_from_samples(obs)
 
     mit_val = get_expectation_val_with_readout_mitigation(
-        c, obs, noise, nshots, readout, backend=backend
+        circuit, obs, noise, nshots, readout, backend=backend
     )
 
     assert backend.abs(true_val - mit_val) <= backend.abs(true_val - noisy_val)

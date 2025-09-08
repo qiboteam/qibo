@@ -82,15 +82,15 @@ def get_noisy_circuit(
 
     if global_unitary_folding:
 
-        copy_c = Circuit(**circuit.init_kwargs)
+        copy_circuit = Circuit(**circuit.init_kwargs)
         for g in circuit.queue:
             if not isinstance(g, gates.M):
-                copy_c.add(g)
+                copy_circuit.add(g)
 
-        noisy_circuit = copy_c
+        noisy_circuit = copy_circuit
 
         for _ in range(num_insertions):
-            noisy_circuit += copy_c.invert() + copy_c
+            noisy_circuit += copy_circuit.invert() + copy_circuit
 
         for m in circuit.measurements:
             noisy_circuit.add(m)
@@ -540,7 +540,9 @@ def vnCDR(
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if model is None:
-        model = lambda x, *params: backend.sum(x * backend.engine.vstack(params), axis=0)
+        model = lambda x, *params: backend.sum(
+            x * backend.engine.vstack(params), axis=0
+        )
 
     if readout is None:
         readout = {}

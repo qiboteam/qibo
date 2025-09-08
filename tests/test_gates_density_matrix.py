@@ -181,14 +181,14 @@ def test_controlled_by_no_effect(backend):
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1
 
-    c = Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
+    circuit = Circuit(4, density_matrix=True)
+    circuit.add(gates.X(0))
+    circuit.add(gates.SWAP(1, 3).controlled_by(0, 2))
+    final_rho = backend.execute_circuit(circuit, np.copy(initial_rho)).state()
 
-    c = Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    target_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
+    circuit = Circuit(4, density_matrix=True)
+    circuit.add(gates.X(0))
+    target_rho = backend.execute_circuit(circuit, np.copy(initial_rho)).state()
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -198,20 +198,20 @@ def test_controlled_with_effect(backend):
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1
 
-    c = Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
-    c.add(gates.SWAP(1, 3).controlled_by(0, 2))
+    circuit = Circuit(4, density_matrix=True)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(2))
+    circuit.add(gates.SWAP(1, 3).controlled_by(0, 2))
     final_rho = backend.execute_circuit(
-        c, backend.copy(backend.cast(initial_rho))
+        circuit, backend.copy(backend.cast(initial_rho))
     ).state()
 
-    c = Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
-    c.add(gates.SWAP(1, 3))
+    circuit = Circuit(4, density_matrix=True)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(2))
+    circuit.add(gates.SWAP(1, 3))
     target_rho = backend.execute_circuit(
-        c, backend.copy(backend.cast(initial_rho))
+        circuit, backend.copy(backend.cast(initial_rho))
     ).state()
     backend.assert_allclose(final_rho, target_rho)
 
@@ -222,14 +222,14 @@ def test_controlled_by_random(backend, nqubits):
 
     initial_psi = random_statevector(2**nqubits, backend=backend)
     initial_rho = backend.outer(initial_psi, backend.conj(initial_psi))
-    c = Circuit(nqubits, density_matrix=True)
-    c.add(gates.RX(1, theta=0.789).controlled_by(2))
-    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    final_rho = backend.execute_circuit(c, backend.copy(initial_rho)).state()
+    circuit = Circuit(nqubits, density_matrix=True)
+    circuit.add(gates.RX(1, theta=0.789).controlled_by(2))
+    circuit.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
+    final_rho = backend.execute_circuit(circuit, backend.copy(initial_rho)).state()
 
-    c = Circuit(nqubits)
-    c.add(gates.RX(1, theta=0.789).controlled_by(2))
-    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    target_psi = backend.execute_circuit(c, backend.copy(initial_psi)).state()
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RX(1, theta=0.789).controlled_by(2))
+    circuit.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
+    target_psi = backend.execute_circuit(circuit, backend.copy(initial_psi)).state()
     target_rho = backend.outer(target_psi, backend.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)

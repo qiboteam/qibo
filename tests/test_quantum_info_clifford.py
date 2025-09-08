@@ -49,12 +49,12 @@ def test_clifford_from_circuit(backend, measurement):
     if not clifford_backend:
         return
 
-    c = random_clifford(3, backend=backend)
+    circuit = random_clifford(3, backend=backend)
     if measurement:
-        c.add(gates.M(*np.random.choice(3, size=2, replace=False)))
+        circuit.add(gates.M(*np.random.choice(3, size=2, replace=False)))
 
-    result = clifford_backend.execute_circuit(c)
-    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
+    result = clifford_backend.execute_circuit(circuit)
+    obj = Clifford.from_circuit(circuit, engine=_get_engine_name(backend))
     backend.assert_allclose(obj.state(), result.state())
     if measurement:
         backend.assert_allclose(obj.probabilities(), result.probabilities())
@@ -149,10 +149,10 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
         return
 
     nqubits = 3
-    c = Circuit(nqubits)
-    c.add(gates.X(2))
-    c.add(gates.H(0))
-    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.X(2))
+    circuit.add(gates.H(0))
+    obj = Clifford.from_circuit(circuit, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
             reduce(np.kron, [getattr(matrices, gate) for gate in generator])
@@ -219,10 +219,10 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
         return
 
     nqubits = 3
-    c = Circuit(nqubits)
-    c.add(gates.X(2))
-    c.add(gates.H(0))
-    obj = Clifford.from_circuit(c, engine=_get_engine_name(backend))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.X(2))
+    circuit.add(gates.H(0))
+    obj = Clifford.from_circuit(circuit, engine=_get_engine_name(backend))
     if return_array:
         true_generators = [
             reduce(np.kron, [getattr(matrices, gate) for gate in generator])

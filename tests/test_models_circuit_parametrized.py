@@ -39,35 +39,35 @@ def test_rx_parameter_setter(backend):
 def test_set_parameters_with_list(backend, trainable):
     """Check updating parameters of circuit with list."""
     params = [0.123, 0.456, (0.789, 0.321)]
-    c = Circuit(3)
+    circuit = Circuit(3)
     if trainable:
-        c.add(gates.RX(0, theta=0.0, trainable=trainable))
+        circuit.add(gates.RX(0, theta=0.0, trainable=trainable))
     else:
-        c.add(gates.RX(0, theta=params[0], trainable=trainable))
-    c.add(gates.RY(1, theta=0.0))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.fSim(0, 2, theta=0.0, phi=0.0))
-    c.add(gates.H(2))
+        circuit.add(gates.RX(0, theta=params[0], trainable=trainable))
+    circuit.add(gates.RY(1, theta=0.0))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.fSim(0, 2, theta=0.0, phi=0.0))
+    circuit.add(gates.H(2))
     # execute once
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(circuit)
 
-    target_c = Circuit(3)
-    target_c.add(gates.RX(0, theta=params[0]))
-    target_c.add(gates.RY(1, theta=params[1]))
-    target_c.add(gates.CZ(1, 2))
-    target_c.add(gates.fSim(0, 2, theta=params[2][0], phi=params[2][1]))
-    target_c.add(gates.H(2))
+    target_circuit = Circuit(3)
+    target_circuit.add(gates.RX(0, theta=params[0]))
+    target_circuit.add(gates.RY(1, theta=params[1]))
+    target_circuit.add(gates.CZ(1, 2))
+    target_circuit.add(gates.fSim(0, 2, theta=params[2][0], phi=params[2][1]))
+    target_circuit.add(gates.H(2))
 
     # Attempt using a flat np.ndarray/list
     for new_params in (np.random.random(4), list(np.random.random(4))):
         if trainable:
-            c.set_parameters(new_params)
+            circuit.set_parameters(new_params)
         else:
             new_params[0] = params[0]
-            c.set_parameters(new_params[1:])
+            circuit.set_parameters(new_params[1:])
     target_params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
-    target_c.set_parameters(target_params)
-    backend.assert_circuitclose(c, target_c)
+    target_circuit.set_parameters(target_params)
+    backend.assert_circuitclose(circuit, target_circuit)
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -79,31 +79,31 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
     else:
         trainable_params = [0.1, 0.3, (0.4, 0.5)]
 
-    c = Circuit(3, accelerators)
-    c.add(gates.RX(0, theta=0.0))
+    circuit = Circuit(3, accelerators)
+    circuit.add(gates.RX(0, theta=0.0))
     if trainable:
-        c.add(gates.CRY(0, 1, theta=0.0, trainable=trainable))
+        circuit.add(gates.CRY(0, 1, theta=0.0, trainable=trainable))
     else:
-        c.add(gates.CRY(0, 1, theta=params[1], trainable=trainable))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.U1(2, theta=0.0))
-    c.add(gates.CU2(0, 2, phi=0.0, lam=0.0))
+        circuit.add(gates.CRY(0, 1, theta=params[1], trainable=trainable))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.U1(2, theta=0.0))
+    circuit.add(gates.CU2(0, 2, phi=0.0, lam=0.0))
     if trainable:
-        c.add(gates.U3(1, theta=0.0, phi=0.0, lam=0.0, trainable=trainable))
+        circuit.add(gates.U3(1, theta=0.0, phi=0.0, lam=0.0, trainable=trainable))
     else:
-        c.add(gates.U3(1, *params[4], trainable=trainable))
+        circuit.add(gates.U3(1, *params[4], trainable=trainable))
     # execute once
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(circuit)
 
-    target_c = Circuit(3)
-    target_c.add(gates.RX(0, theta=params[0]))
-    target_c.add(gates.CRY(0, 1, theta=params[1]))
-    target_c.add(gates.CZ(1, 2))
-    target_c.add(gates.U1(2, theta=params[2]))
-    target_c.add(gates.CU2(0, 2, *params[3]))
-    target_c.add(gates.U3(1, *params[4]))
-    c.set_parameters(trainable_params)
-    backend.assert_circuitclose(c, target_c)
+    target_circuit = Circuit(3)
+    target_circuit.add(gates.RX(0, theta=params[0]))
+    target_circuit.add(gates.CRY(0, 1, theta=params[1]))
+    target_circuit.add(gates.CZ(1, 2))
+    target_circuit.add(gates.U1(2, theta=params[2]))
+    target_circuit.add(gates.CU2(0, 2, *params[3]))
+    target_circuit.add(gates.U3(1, *params[4]))
+    circuit.set_parameters(trainable_params)
+    backend.assert_circuitclose(circuit, target_circuit)
 
     # Attempt using a flat list
     npparams = np.random.random(8)
@@ -113,67 +113,67 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
         npparams[1] = params[1]
         npparams[5:] = params[4]
         trainable_params = np.delete(npparams, [1, 5, 6, 7])
-    target_c = Circuit(3)
-    target_c.add(gates.RX(0, theta=npparams[0]))
-    target_c.add(gates.CRY(0, 1, theta=npparams[1]))
-    target_c.add(gates.CZ(1, 2))
-    target_c.add(gates.U1(2, theta=npparams[2]))
-    target_c.add(gates.CU2(0, 2, *npparams[3:5]))
-    target_c.add(gates.U3(1, *npparams[5:]))
-    c.set_parameters(trainable_params)
-    backend.assert_circuitclose(c, target_c)
+    target_circuit = Circuit(3)
+    target_circuit.add(gates.RX(0, theta=npparams[0]))
+    target_circuit.add(gates.CRY(0, 1, theta=npparams[1]))
+    target_circuit.add(gates.CZ(1, 2))
+    target_circuit.add(gates.U1(2, theta=npparams[2]))
+    target_circuit.add(gates.CU2(0, 2, *npparams[3:5]))
+    target_circuit.add(gates.U3(1, *npparams[5:]))
+    circuit.set_parameters(trainable_params)
+    backend.assert_circuitclose(circuit, target_circuit)
 
 
 @pytest.mark.parametrize("trainable", [True, False])
 def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     params = [0.1234, np.random.random((4, 4))]
-    c = Circuit(4, accelerators)
-    c.add(gates.RX(0, theta=0.0))
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.RX(0, theta=0.0))
     if trainable:
-        c.add(gates.Unitary(np.zeros((4, 4)), 1, 2, trainable=trainable))
+        circuit.add(gates.Unitary(np.zeros((4, 4)), 1, 2, trainable=trainable))
         trainable_params = list(params)
     else:
-        c.add(gates.Unitary(params[1], 1, 2, trainable=trainable))
+        circuit.add(gates.Unitary(params[1], 1, 2, trainable=trainable))
         trainable_params = [params[0]]
     # execute once
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(circuit)
 
     target_c = Circuit(4)
-    target_c.add(gates.RX(0, theta=params[0]))
-    target_c.add(gates.Unitary(params[1], 1, 2))
-    c.set_parameters(trainable_params)
-    backend.assert_circuitclose(c, target_c)
+    target_circuit.add(gates.RX(0, theta=params[0]))
+    target_circuit.add(gates.Unitary(params[1], 1, 2))
+    circuit.set_parameters(trainable_params)
+    backend.assert_circuitclose(circuit, target_circuit)
 
     # Attempt using a flat list / np.ndarray
     new_params = np.random.random(17)
     if trainable:
-        c.set_parameters(new_params)
+        circuit.set_parameters(new_params)
     else:
-        c.set_parameters(new_params[:1])
+        circuit.set_parameters(new_params[:1])
         new_params[1:] = params[1].ravel()
-    target_c = Circuit(4)
-    target_c.add(gates.RX(0, theta=new_params[0]))
-    target_c.add(gates.Unitary(new_params[1:].reshape((4, 4)), 1, 2))
-    backend.assert_circuitclose(c, target_c)
+    target_circuit = Circuit(4)
+    target_circuit.add(gates.RX(0, theta=new_params[0]))
+    target_circuit.add(gates.Unitary(new_params[1:].reshape((4, 4)), 1, 2))
+    backend.assert_circuitclose(circuit, target_circuit)
 
 
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_gate_fusion(backend, trainable):
     """Check updating parameters of fused circuit."""
     params = np.random.random(9)
-    c = Circuit(5)
-    c.add(gates.RX(0, theta=params[0], trainable=trainable))
-    c.add(gates.RY(1, theta=params[1]))
-    c.add(gates.CZ(0, 1))
-    c.add(gates.RX(2, theta=params[2]))
-    c.add(gates.RY(3, theta=params[3], trainable=trainable))
-    c.add(gates.fSim(2, 3, theta=params[4], phi=params[5]))
-    c.add(gates.RX(4, theta=params[6]))
-    c.add(gates.RZ(0, theta=params[7], trainable=trainable))
-    c.add(gates.RZ(1, theta=params[8]))
-    fused_c = c.fuse()
-    backend.assert_circuitclose(fused_c, c)
+    circuit = Circuit(5)
+    circuit.add(gates.RX(0, theta=params[0], trainable=trainable))
+    circuit.add(gates.RY(1, theta=params[1]))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RX(2, theta=params[2]))
+    circuit.add(gates.RY(3, theta=params[3], trainable=trainable))
+    circuit.add(gates.fSim(2, 3, theta=params[4], phi=params[5]))
+    circuit.add(gates.RX(4, theta=params[6]))
+    circuit.add(gates.RZ(0, theta=params[7], trainable=trainable))
+    circuit.add(gates.RZ(1, theta=params[8]))
+    fused_circuit = circuit.fuse()
+    backend.assert_circuitclose(fused_circuit, circuit)
 
     if trainable:
         new_params = np.random.random(9)
@@ -187,28 +187,28 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
         new_params_list.append(new_params[6])
         new_params_list.append(new_params[8])
 
-    c.set_parameters(new_params_list)
-    fused_c.set_parameters(new_params_list)
-    backend.assert_circuitclose(fused_c, c)
+    circuit.set_parameters(new_params_list)
+    fused_circuit.set_parameters(new_params_list)
+    backend.assert_circuitclose(fused_circuit, circuit)
 
 
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_light_cone(backend, trainable):
     """Check updating parameters of light cone circuit."""
     params = np.random.random(4)
-    c = Circuit(4)
-    c.add(gates.RX(0, theta=params[0], trainable=trainable))
-    c.add(gates.RY(1, theta=params[1]))
-    c.add(gates.CZ(0, 1))
-    c.add(gates.RX(2, theta=params[2]))
-    c.add(gates.RY(3, theta=params[3], trainable=trainable))
-    c.add(gates.CZ(2, 3))
+    circuit = Circuit(4)
+    circuit.add(gates.RX(0, theta=params[0], trainable=trainable))
+    circuit.add(gates.RY(1, theta=params[1]))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RX(2, theta=params[2]))
+    circuit.add(gates.RY(3, theta=params[3], trainable=trainable))
+    circuit.add(gates.CZ(2, 3))
     if trainable:
-        c.set_parameters(np.random.random(4))
+        circuit.set_parameters(np.random.random(4))
     else:
-        c.set_parameters(np.random.random(2))
-    target_state = backend.execute_circuit(c).state()
-    lc, _ = c.light_cone(1, 2)
+        circuit.set_parameters(np.random.random(2))
+    target_state = backend.execute_circuit(circuit).state()
+    lc, _ = circuit.light_cone(1, 2)
     final_state = backend.execute_circuit(lc).state()
     backend.assert_allclose(final_state, target_state)
 
@@ -233,8 +233,8 @@ def test_variable_theta():
     cvar.add(gates.RY(1, theta2))
     final_state = backend.execute_circuit(cvar).state()
 
-    c = Circuit(2)
-    c.add(gates.RX(0, 0.1234))
-    c.add(gates.RY(1, 0.4321))
-    target_state = backend.execute_circuit(c).state()
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, 0.1234))
+    circuit.add(gates.RY(1, 0.4321))
+    target_state = backend.execute_circuit(circuit).state()
     backend.assert_allclose(final_state, target_state)

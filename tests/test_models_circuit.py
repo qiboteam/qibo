@@ -48,8 +48,8 @@ def test_queue_class():
 
 
 def test_circuit_init():
-    c = Circuit(2)
-    assert c.nqubits == 2
+    circuit = Circuit(2)
+    assert circuit.nqubits == 2
 
 
 def test_resolve_qubits():
@@ -75,8 +75,8 @@ def test_circuit_init_resolve_qubits():
     assert a.nqubits == 3 and a.wire_names == [0, 1, 2]
     b = Circuit(3, wire_names=["a", "b", "c"])
     assert b.nqubits == 3 and b.wire_names == ["a", "b", "c"]
-    c = Circuit(["a", "b", "c"])
-    assert c.nqubits == 3 and c.wire_names == ["a", "b", "c"]
+    circuit = Circuit(["a", "b", "c"])
+    assert circuit.nqubits == 3 and circuit.wire_names == ["a", "b", "c"]
     d = Circuit(wire_names=["x", "y", "z"])
     assert d.nqubits == 3 and d.wire_names == ["x", "y", "z"]
 
@@ -87,21 +87,21 @@ def test_circuit_init_resolve_qubits_err():
     with pytest.raises(ValueError):
         b = Circuit(3, wire_names=["a", "b"])
     with pytest.raises(ValueError):
-        c = Circuit(["a", "b", "c"], wire_names=["x", "y"])
+        circuit = Circuit(["a", "b", "c"], wire_names=["x", "y"])
 
 
 def test_eigenstate(backend):
     nqubits = 3
-    c = Circuit(nqubits)
-    c.add(gates.M(*list(range(nqubits))))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.M(*list(range(nqubits))))
     c2 = initialize(nqubits, eigenstate="-")
-    assert backend.execute_circuit(c, nshots=100, initial_state=c2).frequencies() == {
-        "111": 100
-    }
+    assert backend.execute_circuit(
+        circuit, nshots=100, initial_state=c2
+    ).frequencies() == {"111": 100}
     c2 = initialize(nqubits, eigenstate="+")
-    assert backend.execute_circuit(c, nshots=100, initial_state=c2).frequencies() == {
-        "000": 100
-    }
+    assert backend.execute_circuit(
+        circuit, nshots=100, initial_state=c2
+    ).frequencies() == {"000": 100}
 
     with pytest.raises(NotImplementedError):
         c2 = initialize(nqubits, eigenstate="x")
@@ -110,11 +110,11 @@ def test_eigenstate(backend):
 def test_initialize(backend):
     nqubits = 3
     for gate in [gates.X, gates.Y, gates.Z]:
-        c = Circuit(nqubits)
-        c.add(gates.M(*list(range(nqubits)), basis=gate))
+        circuit = Circuit(nqubits)
+        circuit.add(gates.M(*list(range(nqubits)), basis=gate))
         c2 = initialize(nqubits, basis=gate)
         assert backend.execute_circuit(
-            c, nshots=100, initial_state=c2
+            circuit, nshots=100, initial_state=c2
         ).frequencies() == {"000": 100}
 
 
@@ -125,53 +125,53 @@ def test_circuit_init_errors(nqubits):
 
 
 def test_circuit_constructor():
-    c = Circuit(5)
-    assert isinstance(c, Circuit)
-    assert not c.density_matrix
-    c = Circuit(5, density_matrix=True)
-    assert isinstance(c, Circuit)
-    assert c.density_matrix
-    c = Circuit(5, accelerators={"/GPU:0": 2})
+    circuit = Circuit(5)
+    assert isinstance(circuit, Circuit)
+    assert not circuit.density_matrix
+    circuit = Circuit(5, density_matrix=True)
+    assert isinstance(circuit, Circuit)
+    assert circuit.density_matrix
+    circuit = Circuit(5, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
         Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 
 
 def test_circuit_add():
-    c = Circuit(2)
+    circuit = Circuit(2)
     g1, g2, g3 = gates.H(0), gates.H(1), gates.CNOT(0, 1)
-    c.add(g1)
-    c.add(g2)
-    c.add(g3)
-    assert c.depth == 2
-    assert c.ngates == 3
-    assert list(c.queue) == [g1, g2, g3]
+    circuit.add(g1)
+    circuit.add(g2)
+    circuit.add(g3)
+    assert circuit.depth == 2
+    assert circuit.ngates == 3
+    assert list(circuit.queue) == [g1, g2, g3]
 
 
 def test_circuit_add_errors():
-    c = Circuit(2)
+    circuit = Circuit(2)
     with pytest.raises(TypeError):
-        c.add(0)
+        circuit.add(0)
     with pytest.raises(ValueError):
-        c.add(gates.H(2))
-    c._final_state = 0
+        circuit.add(gates.H(2))
+    circuit._final_state = 0
     with pytest.raises(RuntimeError):
-        c.add(gates.H(1))
+        circuit.add(gates.H(1))
 
 
 def test_circuit_add_iterable():
-    c = Circuit(2)
+    circuit = Circuit(2)
     # adding list
     gatelist = [gates.H(0), gates.H(1), gates.CNOT(0, 1)]
-    c.add(gatelist)
-    assert c.depth == 2
-    assert c.ngates == 3
-    assert list(c.queue) == gatelist
+    circuit.add(gatelist)
+    assert circuit.depth == 2
+    assert circuit.ngates == 3
+    assert list(circuit.queue) == gatelist
     # adding tuple
     gatetuple = (gates.H(0), gates.H(1), gates.CNOT(0, 1))
-    c.add(gatetuple)
-    assert c.depth == 4
-    assert c.ngates == 6
-    assert isinstance(c.queue[-1], gates.CNOT)
+    circuit.add(gatetuple)
+    assert circuit.depth == 4
+    assert circuit.ngates == 6
+    assert isinstance(circuit.queue[-1], gates.CNOT)
 
 
 def test_circuit_add_generator():
@@ -182,11 +182,11 @@ def test_circuit_add_generator():
         yield gates.H(1)
         yield gates.CNOT(0, 1)
 
-    c = Circuit(2)
-    c.add(gen())
-    assert c.depth == 2
-    assert c.ngates == 3
-    assert isinstance(c.queue[-1], gates.CNOT)
+    circuit = Circuit(2)
+    circuit.add(gen())
+    assert circuit.depth == 2
+    assert circuit.ngates == 3
+    assert isinstance(circuit.queue[-1], gates.CNOT)
 
 
 def test_circuit_add_nested_generator():
@@ -195,94 +195,98 @@ def test_circuit_add_nested_generator():
         yield gates.H(1)
         yield gates.CNOT(0, 1)
 
-    c = Circuit(2)
-    c.add(gen() for _ in range(3))
-    assert c.depth == 6
-    assert c.ngates == 9
-    assert isinstance(c.queue[2], gates.CNOT)
-    assert isinstance(c.queue[5], gates.CNOT)
-    assert isinstance(c.queue[7], gates.H)
+    circuit = Circuit(2)
+    circuit.add(gen() for _ in range(3))
+    assert circuit.depth == 6
+    assert circuit.ngates == 9
+    assert isinstance(circuit.queue[2], gates.CNOT)
+    assert isinstance(circuit.queue[5], gates.CNOT)
+    assert isinstance(circuit.queue[7], gates.H)
 
 
 def test_add_measurement():
-    c = Circuit(5)
+    circuit = Circuit(5)
     g1 = gates.M(0, 2, register_name="a")
     g2 = gates.M(3, register_name="b")
-    c.add([g1, g2])
-    assert len(c.queue) == 2
-    assert c.measurement_tuples == {"a": (0, 2), "b": (3,)}
+    circuit.add([g1, g2])
+    assert len(circuit.queue) == 2
+    assert circuit.measurement_tuples == {"a": (0, 2), "b": (3,)}
     assert g1.target_qubits == (0, 2)
     assert g2.target_qubits == (3,)
 
 
 def test_add_measurement_collapse():
-    c = Circuit(3)
-    c.add(gates.X(0))
-    c.add(gates.M(0, 1))
-    c.add(gates.X(1))
-    c.add(gates.M(1))
-    c.add(gates.X(2))
-    c.add(gates.M(2))
-    assert len(c.queue) == 6
+    circuit = Circuit(3)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0, 1))
+    circuit.add(gates.X(1))
+    circuit.add(gates.M(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.M(2))
+    assert len(circuit.queue) == 6
     # assert that the first measurement was switched to collapse automatically
-    assert c.queue[1].collapse
-    assert len(c.measurements) == 2
+    assert circuit.queue[1].collapse
+    assert len(circuit.measurements) == 2
 
 
 # :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 
 def test_gate_types():
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.X(2))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.TOFFOLI(0, 1, 2))
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
     target_counter = Counter({gates.H: 2, gates.X: 1, gates.CNOT: 2, gates.TOFFOLI: 1})
-    assert c.ngates == 6
-    assert c.gate_types == target_counter
+    assert circuit.ngates == 6
+    assert circuit.gate_types == target_counter
 
 
 def test_gate_names():
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.X(2))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.TOFFOLI(0, 1, 2))
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
     target_counter = Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
-    assert c.ngates == 6
-    assert c.gate_names == target_counter
+    assert circuit.ngates == 6
+    assert circuit.gate_names == target_counter
 
 
 def test_gates_of_type():
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.X(1))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.TOFFOLI(0, 1, 2))
-    c.add(gates.H(2))
-    h_gates = c.gates_of_type(gates.H)
-    cx_gates = c.gates_of_type("cx")
-    assert h_gates == [(0, c.queue[0]), (1, c.queue[1]), (6, c.queue[6])]
-    assert cx_gates == [(2, c.queue[2]), (4, c.queue[4])]
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.X(1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.H(2))
+    h_gates = circuit.gates_of_type(gates.H)
+    cx_gates = circuit.gates_of_type("cx")
+    assert h_gates == [
+        (0, circuit.queue[0]),
+        (1, circuit.queue[1]),
+        (6, circuit.queue[6]),
+    ]
+    assert cx_gates == [(2, circuit.queue[2]), (4, circuit.queue[4])]
     with pytest.raises(TypeError):
-        c.gates_of_type(5)
+        circuit.gates_of_type(5)
 
 
 def test_summary():
-    c = Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 2))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.TOFFOLI(0, 1, 2))
-    c.add(gates.H(2))
+    circuit = Circuit(3)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    circuit.add(gates.H(2))
     target_summary = "\n".join(
         [
             "Circuit depth = 5",
@@ -294,7 +298,7 @@ def test_summary():
             "ccx: 1",
         ]
     )
-    assert c.summary() == target_summary
+    assert circuit.summary() == target_summary
 
 
 @pytest.mark.parametrize("measurements", [False, True])
@@ -331,11 +335,11 @@ def test_circuit_addition_errors():
 
 
 def test_circuit_on_qubits():
-    c = Circuit(3)
-    c.add([gates.H(0), gates.X(1), gates.Y(2)])
-    c.add([gates.CNOT(0, 1), gates.CZ(1, 2)])
-    c.add(gates.H(1).controlled_by(0, 2))
-    new_gates = list(c.on_qubits(2, 5, 4))
+    circuit = Circuit(3)
+    circuit.add([gates.H(0), gates.X(1), gates.Y(2)])
+    circuit.add([gates.CNOT(0, 1), gates.CZ(1, 2)])
+    circuit.add(gates.H(1).controlled_by(0, 2))
+    new_gates = list(circuit.on_qubits(2, 5, 4))
     assert new_gates[0].target_qubits == (2,)
     assert new_gates[1].target_qubits == (5,)
     assert new_gates[2].target_qubits == (4,)
@@ -348,32 +352,32 @@ def test_circuit_on_qubits():
 
 
 def test_circuit_on_qubits_errors():
-    smallc = Circuit(2)
-    smallc.add(gates.H(i) for i in range(2))
+    small_circuit = Circuit(2)
+    small_circuit.add(gates.H(i) for i in range(2))
     with pytest.raises(ValueError):
-        next(smallc.on_qubits(0, 1, 2))
+        next(small_circuit.on_qubits(0, 1, 2))
 
     from qibo.callbacks import Callback
 
-    smallc = Circuit(4)
-    smallc.add(gates.CallbackGate(Callback()))
+    small_circuit = Circuit(4)
+    small_circuit.add(gates.CallbackGate(Callback()))
     with pytest.raises(NotImplementedError):
-        next(smallc.on_qubits(0, 1, 2, 3))
+        next(small_circuit.on_qubits(0, 1, 2, 3))
 
 
 def test_circuit_serialization():
-    c = Circuit(4)
-    c.add(gates.RY(2, theta=0).controlled_by(0, 1))
-    c.add(gates.RX(3, theta=0))
-    c.add(gates.CNOT(1, 3))
-    c.add(gates.RZ(2, theta=0).controlled_by(0, 3))
+    circuit = Circuit(4)
+    circuit.add(gates.RY(2, theta=0).controlled_by(0, 1))
+    circuit.add(gates.RX(3, theta=0))
+    circuit.add(gates.CNOT(1, 3))
+    circuit.add(gates.RZ(2, theta=0).controlled_by(0, 3))
 
-    raw = c.raw
+    raw = circuit.raw
     assert isinstance(raw, dict)
     assert Circuit.from_dict(raw).raw == raw
 
-    c.add(gates.M(0))
-    raw = c.raw
+    circuit.add(gates.M(0))
+    raw = circuit.raw
     assert isinstance(raw, dict)
     assert Circuit.from_dict(raw).raw == raw
 
@@ -381,20 +385,20 @@ def test_circuit_serialization():
 def test_circuit_serialization_with_wire_names():
 
     wire_names = ["a", "b"]
-    c = Circuit(2, wire_names=wire_names)
-    raw = c.raw
+    circuit = Circuit(2, wire_names=wire_names)
+    raw = circuit.raw
     assert "wire_names" in raw
-    new_c = Circuit.from_dict(raw)
-    assert new_c.wire_names == c.wire_names
+    new_circuit = Circuit.from_dict(raw)
+    assert new_circuit.wire_names == circuit.wire_names
 
     transpiler = Passes(passes=[Sabre()], connectivity=Graph([wire_names]))
 
     c, _ = transpiler(c)
     new_c, _ = transpiler(new_c)
-    assert new_c.wire_names == c.wire_names
+    assert new_circuit.wire_names == circuit.wire_names
 
     with pytest.raises(PlacementError):
-        c.wire_names = ["c", "b"]
+        circuit.wire_names = ["c", "b"]
         transpiler(c)
 
 
@@ -402,13 +406,13 @@ def test_circuit_light_cone():
     from qibo import __version__
 
     nqubits = 10
-    c = Circuit(nqubits)
-    c.add(gates.RY(i, theta=0) for i in range(nqubits))
-    c.add(gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2))
-    c.add(gates.RY(i, theta=0) for i in range(nqubits))
-    c.add(gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2))
-    c.add(gates.CZ(0, nqubits - 1))
-    sc, qubit_map = c.light_cone(4, 5)
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RY(i, theta=0) for i in range(nqubits))
+    circuit.add(gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2))
+    circuit.add(gates.RY(i, theta=0) for i in range(nqubits))
+    circuit.add(gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2))
+    circuit.add(gates.CZ(0, nqubits - 1))
+    sc, qubit_map = circuit.light_cone(4, 5)
     target_qasm = f"""// Generated by QIBO {__version__}
 OPENQASM 2.0;
 include "qelib1.inc";
@@ -433,15 +437,15 @@ cz q[3],q[4];"""
 
 
 def test_circuit_light_cone_controlled_by():
-    c = Circuit(4)
-    c.add(gates.RY(2, theta=0).controlled_by(0, 1))
-    c.add(gates.RX(3, theta=0))
-    sc, qubit_map = c.light_cone(3)
+    circuit = Circuit(4)
+    circuit.add(gates.RY(2, theta=0).controlled_by(0, 1))
+    circuit.add(gates.RX(3, theta=0))
+    sc, qubit_map = circuit.light_cone(3)
     assert qubit_map == {3: 0}
     assert sc.nqubits == 1
     assert len(sc.queue) == 1
     assert isinstance(sc.queue[0], gates.RX)
-    sc, qubit_map = c.light_cone(2)
+    sc, qubit_map = circuit.light_cone(2)
     assert qubit_map == {0: 0, 1: 1, 2: 2}
     assert sc.nqubits == 3
     assert len(sc.queue) == 1
@@ -486,39 +490,39 @@ def test_circuit_copy_with_measurements(deep):
 
 @pytest.mark.parametrize("measurements", [False, True])
 def test_circuit_invert(measurements):
-    c = Circuit(3)
+    circuit = Circuit(3)
     gatelist = [gates.H(0), gates.X(1), gates.Y(2), gates.CNOT(0, 1), gates.CZ(1, 2)]
-    c.add(gatelist)
+    circuit.add(gatelist)
     if measurements:
-        c.add(gates.M(0, 2))
-    invc = c.invert()
-    for g1, g2 in zip(invc.queue, gatelist[::-1]):
+        circuit.add(gates.M(0, 2))
+    inv_circuit = circuit.invert()
+    for g1, g2 in zip(inv_circuit.queue, gatelist[::-1]):
         g2 = g2.dagger()
         assert isinstance(g1, g2.__class__)
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert invc.measurement_tuples == {"register0": (0, 2)}
+        assert inv_circuit.measurement_tuples == {"register0": (0, 2)}
 
 
 @pytest.mark.parametrize("measurements", [False, True])
 def test_circuit_decompose(measurements):
-    c = Circuit(4)
-    c.add([gates.H(0), gates.X(1), gates.Y(2)])
-    c.add([gates.CZ(0, 1), gates.CNOT(2, 3), gates.TOFFOLI(0, 1, 3)])
+    circuit = Circuit(4)
+    circuit.add([gates.H(0), gates.X(1), gates.Y(2)])
+    circuit.add([gates.CZ(0, 1), gates.CNOT(2, 3), gates.TOFFOLI(0, 1, 3)])
     if measurements:
-        c.add(gates.M(0, 2))
-    decompc = c.decompose()
+        circuit.add(gates.M(0, 2))
+    decomp_circuitircuit = circuit.decompose()
 
     dgates = []
-    for gate in c.queue:
+    for gate in circuit.queue:
         dgates.extend(gate.decompose())
-    for g1, g2 in zip(decompc.queue, dgates):
+    for g1, g2 in zip(decomp_circuitircuit.queue, dgates):
         assert isinstance(g1, g2.__class__)
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert decompc.measurement_tuples == {"register0": (0, 2)}
+        assert decomp_circuitircuit.measurement_tuples == {"register0": (0, 2)}
 
 
 @pytest.mark.parametrize("measurements", [False, True])
@@ -535,28 +539,28 @@ def test_circuit_with_pauli_noise(measurements, noise_map):
         circuit = Circuit(1)
         circuit.with_pauli_noise(n_map)
 
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    circuit = Circuit(2)
+    circuit.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     if measurements:
-        c.add(gates.M(0, 1))
-    noisyc = c.with_pauli_noise(noise_map)
+        circuit.add(gates.M(0, 1))
+    noisycircuit = circuit.with_pauli_noise(noise_map)
 
     if not isinstance(noise_map, dict):
         noise_map = {0: noise_map, 1: noise_map}
-    targetc = Circuit(2)
-    targetc.add(gates.H(0))
-    targetc.add(gates.PauliNoiseChannel(0, noise_map[0]))
-    targetc.add(gates.H(1))
-    targetc.add(gates.PauliNoiseChannel(1, noise_map[1]))
-    targetc.add(gates.CNOT(0, 1))
-    targetc.add(gates.PauliNoiseChannel(0, noise_map[0]))
-    targetc.add(gates.PauliNoiseChannel(1, noise_map[1]))
-    for g1, g2 in zip(noisyc.queue, targetc.queue):
+    targetcircuit = Circuit(2)
+    targetcircuit.add(gates.H(0))
+    targetcircuit.add(gates.PauliNoiseChannel(0, noise_map[0]))
+    targetcircuit.add(gates.H(1))
+    targetcircuit.add(gates.PauliNoiseChannel(1, noise_map[1]))
+    targetcircuit.add(gates.CNOT(0, 1))
+    targetcircuit.add(gates.PauliNoiseChannel(0, noise_map[0]))
+    targetcircuit.add(gates.PauliNoiseChannel(1, noise_map[1]))
+    for g1, g2 in zip(noisycircuit.queue, targetcircuit.queue):
         assert isinstance(g1, g2.__class__)
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert noisyc.measurement_tuples == {"register0": (0, 1)}
+        assert noisycircuit.measurement_tuples == {"register0": (0, 1)}
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -619,22 +623,22 @@ def test_circuit_set_parameters_with_list(trainable):
     """Check updating parameters of circuit with list."""
     params = [0.123, 0.456, (0.789, 0.321)]
 
-    c = Circuit(3)
+    circuit = Circuit(3)
     if trainable:
-        c.add(gates.RX(0, theta=0, trainable=trainable))
+        circuit.add(gates.RX(0, theta=0, trainable=trainable))
     else:
-        c.add(gates.RX(0, theta=params[0], trainable=trainable))
-    c.add(gates.RY(1, theta=0))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.fSim(0, 2, theta=0, phi=0))
-    c.add(gates.H(2))
+        circuit.add(gates.RX(0, theta=params[0], trainable=trainable))
+    circuit.add(gates.RY(1, theta=0))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.fSim(0, 2, theta=0, phi=0))
+    circuit.add(gates.H(2))
     if trainable:
-        c.set_parameters(params)
-        assert c.queue[0].parameters == (params[0],)
+        circuit.set_parameters(params)
+        assert circuit.queue[0].parameters == (params[0],)
     else:
-        c.set_parameters(params[1:])
-    assert c.queue[1].parameters == (params[1],)
-    assert c.queue[3].parameters == params[2]
+        circuit.set_parameters(params[1:])
+    assert circuit.queue[1].parameters == (params[1],)
+    assert circuit.queue[3].parameters == params[2]
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -654,41 +658,41 @@ def test_circuit_set_parameters_with_dictionary(trainable):
     c2.add(gates.CZ(1, 2))
     c2.add(gates.CU1(0, 2, theta=0))
     c2.add(gates.H(2))
-    c = c1 + c2
+    circuit = c1 + c2
 
     if trainable:
-        params_dict = {c.queue[i]: p for i, p in zip([2, 3, 5], params)}
-        c.set_parameters(params_dict)
-        assert c.queue[2].parameters == (params[0],)
+        params_dict = {circuit.queue[i]: p for i, p in zip([2, 3, 5], params)}
+        circuit.set_parameters(params_dict)
+        assert circuit.queue[2].parameters == (params[0],)
     else:
-        params_dict = {c.queue[3]: params[1], c.queue[5]: params[2]}
-        c.set_parameters(params_dict)
-    assert c.queue[3].parameters == (params[1],)
-    assert c.queue[5].parameters == (params[2],)
+        params_dict = {circuit.queue[3]: params[1], circuit.queue[5]: params[2]}
+        circuit.set_parameters(params_dict)
+    assert circuit.queue[3].parameters == (params[1],)
+    assert circuit.queue[5].parameters == (params[2],)
 
     # test not passing all parametrized gates
-    c.set_parameters({c.queue[5]: 0.7891})
+    circuit.set_parameters({circuit.queue[5]: 0.7891})
     if trainable:
-        assert c.queue[2].parameters == (params[0],)
-    assert c.queue[3].parameters == (params[1],)
-    assert c.queue[5].parameters == (0.7891,)
+        assert circuit.queue[2].parameters == (params[0],)
+    assert circuit.queue[3].parameters == (params[1],)
+    assert circuit.queue[5].parameters == (0.7891,)
 
 
 def test_circuit_set_parameters_errors():
     """Check updating parameters errors."""
-    c = Circuit(2)
-    c.add(gates.RX(0, theta=0.789))
-    c.add(gates.RX(1, theta=0.789))
-    c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
+    circuit = Circuit(2)
+    circuit.add(gates.RX(0, theta=0.789))
+    circuit.add(gates.RX(1, theta=0.789))
+    circuit.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
 
     with pytest.raises(KeyError):
-        c.set_parameters({gates.RX(0, theta=1.0): 0.568})
+        circuit.set_parameters({gates.RX(0, theta=1.0): 0.568})
     with pytest.raises(ValueError):
-        c.set_parameters([0.12586])
+        circuit.set_parameters([0.12586])
     with pytest.raises(TypeError):
-        c.set_parameters({0.3568})
+        circuit.set_parameters({0.3568})
     with pytest.raises(ValueError):
-        c.queue[2].parameters = [0.1234, 0.4321, 0.156]
+        circuit.queue[2].parameters = [0.1234, 0.4321, 0.156]
 
 
 def test_circuit_draw():
@@ -927,12 +931,12 @@ def test_circuit_draw_callbacks(capsys, legend):
     from qibo.callbacks import EntanglementEntropy
 
     entropy = EntanglementEntropy([0])
-    c = Circuit(2, wire_names=["q0", "q1"])
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.H(0))
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CallbackGate(entropy))
+    circuit = Circuit(2, wire_names=["q0", "q1"])
+    circuit.add(gates.CallbackGate(entropy))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CallbackGate(entropy))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CallbackGate(entropy))
 
     ref = "q0: ─EE─H─EE─o─EE─\n" + "q1: ─EE───EE─X─EE─"
 
@@ -944,7 +948,7 @@ def test_circuit_draw_callbacks(capsys, legend):
             + "| EntanglementEntropy | EE       |"
         )
 
-    c.draw(legend=legend)
+    circuit.draw(legend=legend)
     out, _ = capsys.readouterr()
     assert out.rstrip("\n") == ref
 

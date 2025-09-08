@@ -190,7 +190,7 @@ class M(Gate):
         density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
-            return self.apply_density_matrix(backend, state, nqubits)
+            return self._apply_density_matrix(backend, state, nqubits)
 
         self.result.backend = backend
         if not self.collapse:
@@ -203,7 +203,7 @@ class M(Gate):
         # collapse state
         return backend.collapse_state(state, qubits, shot, nqubits)
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def _apply_density_matrix(self, backend, state, nqubits):
         self.result.backend = backend
         if not self.collapse:
             return state
