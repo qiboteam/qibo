@@ -1,18 +1,26 @@
-"""Test methods defined in `qibo/core/callbacks.py`."""
+"""Test methods defined in `qibo/core/py`."""
 
 import numpy as np
 import pytest
 
-from qibo import callbacks, gates, hamiltonians
-
-# Absolute testing tolerance for the cases of zero entanglement entropy
+from qibo import gates
+from qibo.callbacks import (
+    Callback,
+    Energy,
+    EntanglementEntropy,
+    Gap,
+    Norm,
+    Overlap,
+    State,
+)
 from qibo.config import PRECISION_TOL
+from qibo.hamiltonians import TFIM, X
 from qibo.models import AdiabaticEvolution, Circuit
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
 
 def test_abstract_callback_properties():
-    callback = callbacks.Callback()
+    callback = Callback()
     callback.nqubits = 5
     callback.append(1)
     callback.extend([2, 3])
@@ -21,21 +29,21 @@ def test_abstract_callback_properties():
 
 
 def test_creating_callbacks():
-    callback = callbacks.EntanglementEntropy()
-    callback = callbacks.EntanglementEntropy([1, 2], compute_spectrum=True)
-    callback = callbacks.Norm()
-    callback = callbacks.Overlap(0)
-    callback = callbacks.Energy("test")
-    callback = callbacks.Gap()
-    callback = callbacks.Gap(2)
+    callback = EntanglementEntropy()
+    callback = EntanglementEntropy([1, 2], compute_spectrum=True)
+    callback = Norm()
+    callback = Overlap(0)
+    callback = Energy("test")
+    callback = Gap()
+    callback = Gap(2)
     with pytest.raises(ValueError):
-        callback = callbacks.Gap("test")
+        callback = Gap("test")
     with pytest.raises(TypeError):
-        callback = callbacks.Gap(1.0)
+        callback = Gap(1.0)
 
 
 def test_getitem_bad_indexing(backend):
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.RY(0, 0.1234))
     c.add(gates.CNOT(0, 1))
@@ -50,7 +58,7 @@ def test_getitem_bad_indexing(backend):
 
 def test_entropy_product_state(backend):
     """Check that the |++> state has zero entropy."""
-    entropy = callbacks.EntanglementEntropy()
+    entropy = EntanglementEntropy()
     entropy.nqubits = 2
     state = np.ones(4) / 2.0
     result = entropy.apply(backend, state)
@@ -59,7 +67,7 @@ def test_entropy_product_state(backend):
 
 def test_entropy_singlet_state(backend):
     """Check that the singlet state has maximum entropy."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
     entropy.nqubits = 2
     state = np.zeros(4)
     state[0], state[-1] = 1, 1
@@ -70,7 +78,7 @@ def test_entropy_singlet_state(backend):
 
 def test_entropy_switch_partition(backend):
     """Check that partition is switched to the largest counterpart."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
     entropy.nqubits = 5
     # Prepare ghz state of 5 qubits
     state = np.zeros(2**5)
@@ -84,7 +92,7 @@ def test_entropy_switch_partition(backend):
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_entropy_in_circuit(backend, density_matrix, base):
     """Check that entropy calculation works in circuit."""
-    entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True, base=base)
+    entropy = EntanglementEntropy([0], compute_spectrum=True, base=base)
     circuit = Circuit(2, density_matrix=density_matrix)
     circuit.add(gates.CallbackGate(entropy))
     circuit.add(gates.H(0))
@@ -123,7 +131,7 @@ def test_entropy_in_distributed_circuit(
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
     target_state = backend.execute_circuit(target_c)
 
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
     c = Circuit(4, accelerators)
     for gate in gateconf:
         if gate == "H":
@@ -144,7 +152,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     target_c.add([gates.RY(0, 0.1234), gates.CNOT(0, 1)])
     target_state = backend.execute_circuit(target_c)
 
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = EntanglementEntropy([0])
     c = Circuit(4, accelerators)
     c.add(gates.RY(0, 0.1234))
     c.add(gates.CallbackGate(entropy))
@@ -183,7 +191,7 @@ def test_entropy_multiple_executions(backend, accelerators):
 def test_entropy_large_circuit(backend, accelerators):
     """Check that entropy calculation works for variational like circuit."""
     thetas = np.pi * np.random.random((3, 8))
-    target_entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
+    target_entropy = EntanglementEntropy([0, 2, 4, 5])
     target_entropy.nqubits = 8
     c1 = Circuit(8)
     c1.add(gates.RY(i, thetas[0, i]) for i in range(8))
@@ -204,7 +212,7 @@ def test_entropy_large_circuit(backend, accelerators):
     state3 = backend.execute_circuit(c1 + c2 + c3).state()
     e3 = target_entropy.apply(backend, state3)
 
-    entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
+    entropy = EntanglementEntropy([0, 2, 4, 5])
     c = Circuit(8, accelerators)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.RY(i, thetas[0, i]) for i in range(8))
@@ -240,7 +248,7 @@ def test_entropy_density_matrix(backend):
     )
     # this is a positive rho
 
-    entropy = callbacks.EntanglementEntropy([1, 3])
+    entropy = EntanglementEntropy([1, 3])
     entropy.nqubits = 4
     final_ent = entropy.apply(backend, rho)
 
@@ -257,7 +265,7 @@ def test_entropy_density_matrix(backend):
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("copy", [False, True])
 def test_state_callback(backend, density_matrix, copy):
-    statec = callbacks.State(copy=copy)
+    statec = State(copy=copy)
     c = Circuit(2, density_matrix=density_matrix)
     c.add(gates.H(0))
     c.add(gates.CallbackGate(statec))
@@ -280,7 +288,7 @@ def test_state_callback(backend, density_matrix, copy):
 @pytest.mark.parametrize("seed", list(range(1, 5 + 1)))
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_norm(backend, density_matrix, seed):
-    norm = callbacks.Norm()
+    norm = Norm()
     if density_matrix:
         norm.nqubits = 1
         state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
@@ -307,7 +315,7 @@ def test_overlap(backend, nqubits, density_matrix, seed):
         state0 = random_statevector(dims, seed=seed, backend=backend)
         state1 = random_statevector(dims, seed=seed + 1, backend=backend)
 
-    overlap = callbacks.Overlap(state0)
+    overlap = Overlap(state0)
     overlap.nqubits = nqubits
 
     if density_matrix:
@@ -325,7 +333,7 @@ def test_energy(backend, density_matrix):
     from qibo import hamiltonians
 
     ham = hamiltonians.TFIM(4, h=1.0, backend=backend)
-    energy = callbacks.Energy(ham)
+    energy = Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     if density_matrix:
@@ -349,9 +357,9 @@ def test_energy(backend, density_matrix):
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("check_degenerate", [False, True])
 def test_gap(backend, dense, check_degenerate):
-    h0 = hamiltonians.X(4, dense=dense, backend=backend)
+    h0 = X(4, dense=dense, backend=backend)
     h = 0 if check_degenerate else 1
-    h1 = hamiltonians.TFIM(4, h=h, dense=dense, backend=backend)
+    h1 = TFIM(4, h=h, dense=dense, backend=backend)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
@@ -363,9 +371,9 @@ def test_gap(backend, dense, check_degenerate):
     if check_degenerate:
         targets["gap"][-1] = eigvals[3] - eigvals[0]
 
-    gap = callbacks.Gap(check_degenerate=check_degenerate)
-    ground = callbacks.Gap(0)
-    excited = callbacks.Gap(1)
+    gap = Gap(check_degenerate=check_degenerate)
+    ground = Gap(0)
+    excited = Gap(1)
     evolution = AdiabaticEvolution(
         h0, h1, lambda t: t, dt=1e-1, callbacks=[gap, ground, excited]
     )
@@ -385,12 +393,12 @@ def test_gap_errors():
     """Check errors in gap callback instantiation."""
     # invalid string ``mode``
     with pytest.raises(ValueError):
-        gap = callbacks.Gap("test")
+        gap = Gap("test")
     # invalid ``mode`` type
     with pytest.raises(TypeError):
-        gap = callbacks.Gap([])
+        gap = Gap([])
 
-    gap = callbacks.Gap()
+    gap = Gap()
     # call before setting evolution model
     with pytest.raises(RuntimeError):
         gap.apply(None, np.ones(4))

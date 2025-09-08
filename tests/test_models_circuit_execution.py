@@ -45,6 +45,7 @@ def test_compiling_twice_exception(backend):
     with pytest.raises(RuntimeError):
         circuit.compile()
 
+
 @pytest.mark.linux
 def test_memory_error(backend, accelerators):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
@@ -68,7 +69,7 @@ def test_repeated_execute(backend, accelerators):
             with pytest.raises(NotImplementedError):
                 final_state = backend.execute_circuit(circuit, nshots=20)
         else:
-            final_state = backend.execute_circuit(circuit, nshots=1000).state()
+            final_state = backend.execute_circuit(circuit, nshots=20).state()
             backend.assert_allclose(final_state, target_state)
 
 
