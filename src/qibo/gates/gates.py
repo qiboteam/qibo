@@ -627,6 +627,17 @@ class _Rn_(ParametrizedGate):
     def generator_eigenvalue(self):
         return 0.5
 
+    def gradient(self, backend=None) -> "Gate":
+        """Gradient of the Gate."""
+        backend = _check_backend(backend=backend)
+        return Unitary(
+            -1j
+            * self.generator_eigenvalue()
+            * self.generator(backend)
+            @ backend.matrix_parametrized(self),
+            *self.target_qubits,
+        )
+
 
 class RX(_Rn_):
     """Rotation around the X-axis of the Bloch sphere.
@@ -663,15 +674,9 @@ class RX(_Rn_):
     def qasm_label(self):
         return "rx"
 
-    def gradient(self, backend=None):
-        backend = _check_backend(backend=backend)
-        return Unitary(
-            -1j
-            * self.generator_eigenvalue()
-            * backend.matrices.X
-            @ backend.matrix_parametrized(self),
-            *self.target_qubits,
-        )
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.X
 
 
 class RY(_Rn_):
@@ -709,15 +714,9 @@ class RY(_Rn_):
     def qasm_label(self):
         return "ry"
 
-    def gradient(self, backend=None):
-        backend = _check_backend(backend=backend)
-        return Unitary(
-            -1j
-            * self.generator_eigenvalue()
-            * backend.matrices.Y
-            @ backend.matrix_parametrized(self),
-            *self.target_qubits,
-        )
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.Y
 
 
 class RZ(_Rn_):
@@ -753,15 +752,9 @@ class RZ(_Rn_):
     def qasm_label(self):
         return "rz"
 
-    def gradient(self, backend=None):
-        backend = _check_backend(backend=backend)
-        return Unitary(
-            -1j
-            * self.generator_eigenvalue()
-            * backend.matrices.Z
-            @ backend.matrix_parametrized(self),
-            *self.target_qubits,
-        )
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.Z
 
 
 class PRX(ParametrizedGate):
