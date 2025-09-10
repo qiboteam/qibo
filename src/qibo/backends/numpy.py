@@ -139,16 +139,8 @@ class NumpyBackend(Backend):
         elif name == "Align":
             _matrix = _matrix(0, 2)
         elif callable(_matrix):
-            if name == "FanOut":
-                _matrix = _matrix(*gate.init_args)
-            else:
-                kwargs = dict(gate.init_kwargs)  # copy necessary
-                del kwargs["trainable"]
-                _matrix = (
-                    _matrix(*gate.init_args, **kwargs)
-                    if name == "GeneralizedRBS"
-                    else _matrix(**kwargs)
-                )
+            return self.matrix_parametrized(gate)
+
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
@@ -162,6 +154,8 @@ class NumpyBackend(Backend):
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
+        elif name == "FanOut":
+            _matrix = _matrix(*gate.init_args)
         else:
             _matrix = _matrix(*gate.parameters)
         return self.cast(_matrix, dtype=_matrix.dtype)
