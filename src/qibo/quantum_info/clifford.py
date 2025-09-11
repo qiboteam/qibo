@@ -101,7 +101,7 @@ class Clifford:
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    def to_circuit(self, algorithm: Optional[str] = "AG04"):
+    def to_circuit(self, algorithm: Optional[str] = "AG04", **kwargs):
         """Converts symplectic matrix into a Clifford circuit.
 
         Args:
@@ -110,6 +110,8 @@ class Clifford:
                 If ``BM20`` and ``Clifford.nqubits <= 3``, uses the decomposition algorithm from
                 `Bravyi & Maslov (2020) <https://arxiv.org/abs/2003.09412>`_.
                 Defaults to ``AG04``.
+            kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+                For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: circuit composed of Clifford gates.
@@ -124,9 +126,9 @@ class Clifford:
             raise_error(ValueError, f"``algorithm`` {algorithm} not found.")
 
         if algorithm == "BM20":
-            return _decomposition_BM20(self)
+            return _decomposition_BM20(self, **kwargs)
 
-        return _decomposition_AG04(self)
+        return _decomposition_AG04(self, **kwargs)
 
     def generators(self, return_array: bool = False):
         """Extracts the generators of stabilizers and destabilizers.

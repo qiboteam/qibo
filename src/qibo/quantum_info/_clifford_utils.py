@@ -102,11 +102,13 @@ def _string_product(operators: list):
     return f"{phases}{result}"
 
 
-def _decomposition_AG04(clifford):
+def _decomposition_AG04(clifford, **kwargs):
     """Returns a Clifford object decomposed into a circuit based on Aaronson-Gottesman method.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
@@ -118,17 +120,20 @@ def _decomposition_AG04(clifford):
     """
     nqubits = clifford.nqubits
 
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, **kwargs)
     if clifford._backend.platform == "cupy":  # pragma: no cover
         raise_error(
             NotImplementedError,
-            "``AG04`` algorithm currently not supported with the ``cupy`` engine, please use the ``BM20`` algorithm instead or switch clifford engine.",
+            "``AG04`` algorithm currently not supported with the ``cupy`` engine, "
+            + "please use the ``BM20`` algorithm instead or switch clifford engine.",
         )
 
     clifford_copy = clifford.copy(deep=True)
 
     if nqubits == 1:
-        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
+        return _single_qubit_clifford_decomposition(
+            clifford_copy.symplectic_matrix, **kwargs
+        )
 
     for k in range(nqubits):
         # put a 1 one into position by permuting and using Hadamards(i,i)
@@ -150,12 +155,14 @@ def _decomposition_AG04(clifford):
     return circuit.invert()
 
 
-def _decomposition_BM20(clifford):
+def _decomposition_BM20(clifford, **kwargs):
     """Optimal CNOT-cost decomposition of a Clifford operator on :math:`n \\in \\{2, 3 \\}`
     into a circuit based on Bravyi-Maslov method.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
@@ -173,9 +180,11 @@ def _decomposition_BM20(clifford):
         )
 
     if nqubits == 1:
-        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
+        return _single_qubit_clifford_decomposition(
+            clifford_copy.symplectic_matrix, **kwargs
+        )
 
-    inverse_circuit = Circuit(nqubits)
+    inverse_circuit = Circuit(nqubits, **kwargs)
 
     cnot_cost = _cnot_cost(clifford_copy)
 
@@ -191,7 +200,8 @@ def _decomposition_BM20(clifford):
         single_qubit_circuit = _single_qubit_clifford_decomposition(
             clifford_copy.engine.np.append(
                 clifford_copy.symplectic_matrix[position][:, position + [-1]], last_row
-            ).reshape(3, 3)
+            ).reshape(3, 3),
+            **kwargs,
         )
         if len(single_qubit_circuit.queue) > 0:
             for gate in single_qubit_circuit.queue:
@@ -205,7 +215,7 @@ def _decomposition_BM20(clifford):
     return circuit
 
 
-def _single_qubit_clifford_decomposition(symplectic_matrix):
+def _single_qubit_clifford_decomposition(symplectic_matrix, **kwargs):
     """Decompose symplectic matrix of a single-qubit Clifford into a Clifford circuit.
 
     Args:
@@ -214,7 +224,7 @@ def _single_qubit_clifford_decomposition(symplectic_matrix):
     Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
     """
-    circuit = Circuit(nqubits=1)
+    circuit = Circuit(nqubits=1, **kwargs)
 
     destabilizer_phase, stabilizer_phase = symplectic_matrix[:-1, -1]
     if destabilizer_phase and not stabilizer_phase:
