@@ -134,8 +134,13 @@ class NumpyBackend(Backend):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        if callable(_matrix):
+        if name == "I":
             _matrix = _matrix(2 ** len(gate.target_qubits))
+        elif name == "Align":
+            _matrix = _matrix(0, 2)
+        elif callable(_matrix):
+            return self.matrix_parametrized(gate)
+
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
@@ -149,6 +154,8 @@ class NumpyBackend(Backend):
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
+        elif name == "FanOut":
+            _matrix = _matrix(*gate.init_args)
         else:
             _matrix = _matrix(*gate.parameters)
         return self.cast(_matrix, dtype=_matrix.dtype)
@@ -809,7 +816,7 @@ class NumpyBackend(Backend):
             return expm(phase * matrix)
 
         expd = self.np.exp(phase * eigenvalues)
-        ud = self.np.transpose(np.conj(eigenvectors))
+        ud = self.np.transpose(self.np.conj(eigenvectors))
 
         return (eigenvectors * expd) @ ud
 

@@ -968,6 +968,14 @@ Deutsch
     :member-order: bysource
 
 
+Fan-out
+"""""""
+
+.. autoclass:: qibo.gates.FanOut
+    :members:
+    :member-order: bysource
+
+
 Generalized Reconfigurable Beam Splitter (RBS)
 """"""""""""""""""""""""""""""""""""""""""""""
 

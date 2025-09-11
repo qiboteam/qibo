@@ -25,12 +25,16 @@ class GateDecompositions:
             gates.fSim,
         )
         decomposition = self.decompositions[gate.__class__]
-        if gate.parameters:
+
+        if isinstance(gate, gates.FanOut):
+            decomposition = decomposition(gate)
+        elif gate.parameters:
             decomposition = (
                 decomposition(gate, backend)
                 if isinstance(gate, special_gates)
                 else decomposition(gate)
             )
+
         return decomposition
 
     def count_2q(self, gate, backend):
@@ -46,10 +50,7 @@ class GateDecompositions:
     def __call__(self, gate, backend=None):
         """Decompose a gate."""
         decomposition = self._check_instance(gate, backend)
-        return [
-            g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
-            for g in decomposition
-        ]
+        return [g.on_qubits(dict(enumerate(gate.qubits))) for g in decomposition]
 
 
 def _u3_to_gpi2(t, p, l):
@@ -443,10 +444,10 @@ def _decomposition_generalized_RBS(ins, outs, theta, phi, controls):
     list_gates = []
     list_gates.append(gates.X(ins[-1]))
     list_gates.append(gates.X(outs[0]))
-    for target in ins[:-1]:
-        list_gates.append(gates.CNOT(ins[-1], target))
-    for target in outs[1:][::-1]:
-        list_gates.append(gates.CNOT(outs[0], target))
+    if len(ins) >= 2:
+        list_gates.append(gates.FanOut(ins[-1], *ins[:-1]))
+    if len(outs) >= 2:
+        list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
     list_gates.append(gates.X(ins[-1]))
     list_gates.append(gates.X(outs[0]))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
@@ -456,10 +457,10 @@ def _decomposition_generalized_RBS(ins, outs, theta, phi, controls):
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
     list_gates.append(gates.X(outs[0]))
     list_gates.append(gates.X(ins[-1]))
-    for target in outs[1:]:
-        list_gates.append(gates.CNOT(outs[0], target))
-    for target in ins[:-1][::-1]:
-        list_gates.append(gates.CNOT(ins[-1], target))
+    if len(outs) >= 2:
+        list_gates.append(gates.FanOut(outs[0], *outs[1:]))
+    if len(ins) >= 2:
+        list_gates.append(gates.FanOut(ins[-1], *ins[:-1][::-1]))
     list_gates.append(gates.X(outs[0]))
     list_gates.append(gates.X(ins[-1]))
 
@@ -590,6 +591,10 @@ standard_decompositions.add(
         gates.H(2),
         gates.CNOT(0, 1),
     ],
+)
+standard_decompositions.add(
+    gates.FanOut,
+    lambda gate: [gates.CNOT(0, qub) for qub in range(1, len(gate.qubits))],
 )
 standard_decompositions.add(
     gates.GeneralizedRBS,

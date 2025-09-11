@@ -46,6 +46,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cu3",
     "ccx",
     "ccz",
+    "fanout",
 ]
 
 

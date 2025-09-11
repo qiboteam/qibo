@@ -240,10 +240,10 @@ def test_n_qubit_gates(backend, weight):
     initial_state = random_statevector(dim, backend=backend, seed=1237)
 
     gate = gates.fSim(0, 1, 0.1, 0.3)
-    id = gates.I(0).matrix(numpy_bkd)
+    identity = gates.I(0).matrix(numpy_bkd)
     gate_matrix = gate.matrix(numpy_bkd)
-    gate1_matrix = np.kron(id, gate_matrix)
-    gate2_matrix = np.kron(gate_matrix, id)
+    gate1_matrix = np.kron(identity, gate_matrix)
+    gate2_matrix = np.kron(gate_matrix, identity)
     gate1 = gates.Unitary(backend.cast(gate1_matrix), 0, 1, 2)
     gate2 = gates.Unitary(backend.cast(gate2_matrix), 0, 1, 2)
     gate1.hamming_weight = True
