@@ -751,9 +751,7 @@ def hamming_weight_encoder(
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.angle(data[k]) + backend.sum(phis[:k])
-            )
+            phis[k] = _angle_mod_two_pi(-backend.angle(data[k]) + backend.sum(phis[:k]))
 
     last_qubit = nqubits - 1
 
@@ -1666,9 +1664,7 @@ def _binary_encoder_hyperspherical(
     if complex_data:
         phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.angle(data[k]) + backend.sum(phis[:k])
-            )
+            phis[k] = _angle_mod_two_pi(-backend.angle(data[k]) + backend.sum(phis[:k]))
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
     zero_casted = backend.cast(0.0, dtype=backend.float64)  # because of GPU backends

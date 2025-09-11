@@ -750,8 +750,7 @@ def frame_potential(
 
             potential += backend.abs(
                 backend.trace(
-                    backend.transpose(backend.conj(unitary_1), (1, 0))
-                    @ unitary_2
+                    backend.transpose(backend.conj(unitary_1), (1, 0)) @ unitary_2
                 )
             ) ** (2 * power_t)
 

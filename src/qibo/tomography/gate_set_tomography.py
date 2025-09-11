@@ -336,10 +336,7 @@ def GST(
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
-                gauge_matrix
-                @ backend.inv(empty)
-                @ matrix
-                @ backend.inv(gauge_matrix)
+                gauge_matrix @ backend.inv(empty) @ matrix @ backend.inv(gauge_matrix)
             )
         matrices = PL_matrices
 

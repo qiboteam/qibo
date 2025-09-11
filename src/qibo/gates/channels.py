@@ -515,7 +515,7 @@ class DepolarizingChannel(PauliNoiseChannel):
 
         if density_matrix:
             return backend.depolarizing_error_density_matrix(self, state, nqubits)
-        
+
         return super().apply(backend, state, nqubits)
 
     def on_qubits(self, qubit_map: dict):

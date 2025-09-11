@@ -517,9 +517,7 @@ def choi_to_kraus(
 
     if validate_cp:
         norm = float(
-            backend.matrix_norm(
-                choi_super_op - backend.conj(choi_super_op).T, order=2
-            )
+            backend.matrix_norm(choi_super_op - backend.conj(choi_super_op).T, order=2)
         )
         if norm > PRECISION_TOL:
             non_cp = True
@@ -736,9 +734,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        super_op = super_op + backend.outer(
-            kraus_op, backend.conj(kraus_op)
-        )
+        super_op = super_op + backend.outer(kraus_op, backend.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -877,9 +873,7 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.outer(
-            kraus_op, backend.conj(kraus_op)
-        )
+        super_op = super_op + backend.outer(kraus_op, backend.conj(kraus_op))
         del kraus_op
 
     return super_op

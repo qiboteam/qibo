@@ -66,9 +66,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     shan_entropy = -backend.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    shan_entropy = (
-        backend.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
-    )
+    shan_entropy = backend.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
     return np.real(float(shan_entropy))
 
@@ -727,15 +725,9 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
         return von_neumann_entropy(state, base=base, backend=backend)
 
     if alpha == np.inf:
-        return (
-            -1
-            * backend.log2(backend.matrix_norm(state, order=2))
-            / np.log2(base)
-        )
+        return -1 * backend.log2(backend.matrix_norm(state, order=2)) / np.log2(base)
 
-    log = backend.log2(
-        backend.trace(matrix_power(state, alpha, backend=backend))
-    )
+    log = backend.log2(backend.trace(matrix_power(state, alpha, backend=backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 

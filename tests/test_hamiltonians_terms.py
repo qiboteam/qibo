@@ -51,9 +51,7 @@ def test_hamiltonian_term_gates(backend):
     final_state = term(backend, backend.copy(initial_state), nqubits)
     circuit = Circuit(nqubits)
     circuit.add(gates.Unitary(matrix, 1, 2))
-    target_state = backend.execute_circuit(
-        circuit, backend.copy(initial_state)
-    ).state()
+    target_state = backend.execute_circuit(circuit, backend.copy(initial_state)).state()
     backend.assert_allclose(final_state, target_state)
 
 

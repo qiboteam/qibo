@@ -142,7 +142,10 @@ def test_simple_circuit_greater_relevant__labels(backend):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(0, 2))
     fig, _, _ = plot_density_hist(
-        circuit, title="Test Circuit State", n_most_relevant_components=10, backend=backend
+        circuit,
+        title="Test Circuit State",
+        n_most_relevant_components=10,
+        backend=backend,
     )
 
     temp_file_path = fig2png(fig)
@@ -171,7 +174,7 @@ def test_simple_circuit_relevant_labels(backend):
         alpha=0.5,
         colors=["green", "brown"],
         n_most_relevant_components=2,
-        backend=backend
+        backend=backend,
     )
 
     temp_file_path = fig2png(fig)

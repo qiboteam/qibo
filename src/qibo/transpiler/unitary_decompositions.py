@@ -27,9 +27,7 @@ def u3_decomposition(unitary, backend):
     unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / backend.sqrt(backend.det(unitary))
-    theta = 2 * backend.engine.arctan2(
-        backend.abs(su2[1, 0]), backend.abs(su2[0, 0])
-    )
+    theta = 2 * backend.engine.arctan2(backend.abs(su2[1, 0]), backend.abs(su2[0, 0]))
     plus = backend.angle(su2[1, 1])
     minus = backend.angle(su2[1, 0])
     phi = plus + minus
@@ -57,9 +55,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     unitary = backend.cast(unitary)
     # write unitary in magic basis
     u_magic = (
-        backend.transpose(backend.conj(magic_basis), (1, 0))
-        @ unitary
-        @ magic_basis
+        backend.transpose(backend.conj(magic_basis), (1, 0)) @ unitary @ magic_basis
     )
     # construct and diagonalize UT_U
     ut_u = backend.transpose(u_magic, (1, 0)) @ u_magic
@@ -88,9 +84,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     Returns:
         (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
     """
-    psi_magic = backend.matmul(
-        backend.conj(backend.cast(magic_basis)).T, psi
-    )
+    psi_magic = backend.matmul(backend.conj(backend.cast(magic_basis)).T, psi)
     if (
         backend.real(backend.matrix_norm(backend.imag(psi_magic))) > 1e-6
     ):  # pragma: no cover
@@ -109,16 +103,14 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     phase = (
         1j
         * np.sqrt(2)
-        * backend.sum(
-            backend.engine.multiply(backend.conj(ef_), psi_bar[2])
-        )
+        * backend.sum(backend.engine.multiply(backend.conj(ef_), psi_bar[2]))
     )
     v0 = backend.cast(np.asarray([1, 0]))
     v1 = backend.cast(np.asarray([0, 1]))
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = backend.tensordot(
-        v0, backend.conj(e), 0
-    ) + phase * backend.tensordot(v1, backend.conj(e_), 0)
+    ua = backend.tensordot(v0, backend.conj(e), 0) + phase * backend.tensordot(
+        v1, backend.conj(e_), 0
+    )
     ub = backend.tensordot(v0, backend.conj(f), 0) + backend.conj(
         phase
     ) * backend.tensordot(v1, backend.conj(f_), 0)
@@ -260,9 +252,7 @@ def magic_decomposition(unitary, backend=None):
 
     unitary = backend.cast(unitary)
     psi, eigvals = calculate_psi(unitary, backend=backend)
-    psi_tilde = backend.conj(
-        backend.sqrt(eigvals)
-    ) * backend.matmul(unitary, psi)
+    psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde, backend=backend)
     dag = lambda U: backend.transpose(backend.conj(U), (1, 0))
@@ -275,11 +265,7 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis)
 
-    ud_bell = (
-        backend.transpose(backend.conj(bell_basis), (1, 0))
-        @ ud
-        @ bell_basis
-    )
+    ud_bell = backend.transpose(backend.conj(bell_basis), (1, 0)) @ ud @ bell_basis
     ud_diag = backend.diag(ud_bell)
     if not backend.engine.allclose(
         backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6

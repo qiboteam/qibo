@@ -306,9 +306,7 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                     purity(state, backend=backend) >= 1.0 - PRECISION_TOL, True
                 )
             norm = np.abs(
-                backend.to_numpy(
-                    norm_function(state - backend.conj(state).T, order=2)
-                )
+                backend.to_numpy(norm_function(state - backend.conj(state).T, order=2))
             )
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
@@ -609,9 +607,7 @@ def test_random_stochastic_matrix(backend):
     backend.assert_allclose(all(column_rows > 1 - PRECISION_TOL), True)
 
     backend.assert_allclose(all(2 * backend.diag(matrix) - sum_rows > 0), True)
-    backend.assert_allclose(
-        all(2 * backend.diag(matrix) - column_rows > 0), True
-    )
+    backend.assert_allclose(all(2 * backend.diag(matrix) - column_rows > 0), True)
 
     # tests warning for max_iterations
     dims = 4

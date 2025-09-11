@@ -121,9 +121,9 @@ class EntanglementEntropy(Callback):
             ]
 
     def apply(self, backend, state):
-        from qibo.quantum_info.entropies import (
+        from qibo.quantum_info.entropies import (  # pylint: disable=import-outside-toplevel
             entanglement_entropy,
-        )  # pylint: disable=import-outside-toplevel
+        )
 
         entropy, spectrum = entanglement_entropy(
             state,

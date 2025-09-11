@@ -318,7 +318,9 @@ class Clifford:
             if binary:
                 return {
                     gate.register_name: frequencies_to_binary(
-                        self._backend.calculate_frequencies(gate.result.samples(False, backend=self._backend)),
+                        self._backend.calculate_frequencies(
+                            gate.result.samples(False, backend=self._backend)
+                        ),
                         len(gate.target_qubits),
                     )
                     for gate in self.measurements

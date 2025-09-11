@@ -4,8 +4,8 @@ from scipy.linalg import expm
 
 from qibo.callbacks import Callback, Energy
 from qibo.config import raise_error
+from qibo.hamiltonians import TFIM, AdiabaticHamiltonian, X, Z
 from qibo.models import AdiabaticEvolution, StateEvolution
-from qibo.hamiltonians import AdiabaticHamiltonian, TFIM, X, Z
 
 
 def assert_states_equal(backend, state, target_state, atol=0):
@@ -26,6 +26,7 @@ class TimeStepChecker(Callback):
 
     def apply(self, backend, state):
         assert_states_equal(backend, state, next(self.target_states), atol=self.atol)
+
 
 def test_state_evolution_init(backend):
     ham = Z(2, backend=backend)

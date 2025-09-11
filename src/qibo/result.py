@@ -256,7 +256,9 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.frequencies(binary, backend=self.backend)
+                gate.register_name: gate.result.frequencies(
+                    binary, backend=self.backend
+                )
                 for gate in self.measurements
             }
 
@@ -340,9 +342,7 @@ class MeasurementOutcomes:
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
                     self.backend.shuffle(samples)
-                    samples = self.backend.cast(
-                        samples, dtype=self.backend.int64
-                    )
+                    samples = self.backend.cast(samples, dtype=self.backend.int64)
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)
