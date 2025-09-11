@@ -2,6 +2,7 @@
 
 import collections
 import json
+from abc import abstractmethod
 from math import pi
 from typing import List, Sequence, Tuple
 
@@ -552,6 +553,14 @@ class Gate:
             f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
         )
 
+    @abstractmethod
+    def generator(self, backend):
+        """This function returns the gate's generator.
+
+        Returns:
+            array: generator.
+        """
+
     def basis_rotation(self):
         """Transformation required to rotate the basis for measuring the gate."""
         raise_error(
@@ -658,3 +667,10 @@ class ParametrizedGate(Gate):
         backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)
+
+    @abstractmethod
+    def gradient(self, backend=None) -> Gate:
+        """Returns Unitary with gate's gradient.
+
+        Only gates with a single parameter are currently supported.
+        """
