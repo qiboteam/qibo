@@ -30,7 +30,7 @@ def apply_bitflips(result, p0, p1=None):
             gate._get_bitflip_tuple(gate.qubits, p1),
         )
     noiseless_samples = result.samples()
-    probs = result.backend.cast(probs, dtype=result.backend.np.float64)
+    probs = result.backend.cast(probs, dtype=result.backend.float64)
     return result.backend.apply_bitflips(noiseless_samples, probs)
 
 
@@ -176,6 +176,7 @@ class MeasurementResult:
                 of shape `(nshots,)`.
         """
         backend = _check_backend(backend)
+
         if self._samples is None:
             if self.circuit is None:
                 raise_error(
@@ -210,10 +211,12 @@ class MeasurementResult:
                 the keys of the `Counter` are integers.
         """
         backend = _check_backend(backend)
+
         if self._frequencies is None:
             self._frequencies = backend.calculate_frequencies(
-                self.samples(binary=False)
+                self.samples(binary=False, backend=backend)
             )
+
         if binary:
             qubits = self.target_qubits
             return frequencies_to_binary(self._frequencies, len(qubits))

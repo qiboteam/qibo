@@ -8,7 +8,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import Circuit
-from qibo.backends import CliffordBackend
+from qibo.backends.clifford import CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
@@ -262,7 +262,7 @@ class Clifford:
                         [p0.get(q) for q in measured_qubits],
                         [p1.get(q) for q in measured_qubits],
                     ],
-                    dtype=self._backend.np.float64,
+                    dtype=self._backend.float64,
                 )
                 samples = self._backend.cast(samples, dtype="int32")
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
@@ -277,7 +277,7 @@ class Clifford:
 
         if registers:
             return {
-                gate.register_name: gate.result.samples(binary)
+                gate.register_name: gate.result.samples(binary, backend=self._backend)
                 for gate in self.measurements
             }
 
@@ -318,7 +318,9 @@ class Clifford:
             if binary:
                 return {
                     gate.register_name: frequencies_to_binary(
-                        self._backend.calculate_frequencies(gate.result.samples(False)),
+                        self._backend.calculate_frequencies(
+                            gate.result.samples(False, backend=self._backend)
+                        ),
                         len(gate.target_qubits),
                     )
                     for gate in self.measurements
@@ -326,7 +328,7 @@ class Clifford:
 
             return {
                 gate.register_name: self._backend.calculate_frequencies(
-                    gate.result.samples(False)
+                    gate.result.samples(False, backend=self._backend)
                 )
                 for gate in self.measurements
             }
@@ -415,9 +417,7 @@ class Clifford:
             phases = self._backend.cast(phases)
 
             operators = generators * phases.reshape(-1, 1, 1)
-            identity = self.engine.identity_density_matrix(
-                self.nqubits, normalize=False
-            )
+            identity = self._backend.identity(2**self.nqubits)
             operators = self._backend.cast([(g, identity) for g in operators])
 
             return self._backend.cast(
