@@ -9,7 +9,7 @@ from scipy import sparse
 from scipy.linalg import block_diag, fractional_matrix_power, logm
 
 from qibo import __version__
-from qibo.backends import einsum_utils, permutations
+from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
@@ -212,7 +212,7 @@ class NumpyBackend(Backend):
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             shape = state.shape
-            fwd_perm, inv_perm = permutations(gate.qubits, nqubits)
+            fwd_perm, inv_perm = einsum_utils.permutations(gate.qubits, nqubits)
             state = self.np.transpose(state, fwd_perm)
             state = self.np.reshape(state, (2 ** len(gate.qubits), -1))
             state = matrix @ state
