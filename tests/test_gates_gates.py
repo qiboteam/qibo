@@ -1527,7 +1527,6 @@ def test_unitary(backend, nqubits):
 
 
 def test_unitary_initialization(backend):
-
     matrix = np.random.random((4, 4))
     gate = gates.Unitary(matrix, 0, 1)
     backend.assert_allclose(gate.parameters[0], matrix, atol=1e-6)
@@ -1972,3 +1971,20 @@ def test_clifford_condition_update(backend, gate):
 
 
 ###############################################################################
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.RX(0, 0.123),
+        gates.RY(0, 0.123),
+        gates.RZ(0, 0.123),
+    ],
+)
+def test_gradient_rn(backend, gate):
+    """Test gradient for Rn gates"""
+    generator = gate.generator(backend)
+    target_gradient = (
+        -1j * gate.generator_eigenvalue() * (generator @ gate.matrix(backend))
+    )
+    backend.assert_allclose(gate.gradient(backend).matrix(backend), target_gradient)
