@@ -3,6 +3,7 @@ from typing import List, Tuple, Union
 
 import numpy as np
 
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 from qibo.parameter import Parameter
@@ -623,6 +624,20 @@ class _Rn_(ParametrizedGate):
             gate = super().controlled_by(*q)
         return gate
 
+    def generator_eigenvalue(self):
+        return 0.5
+
+    def gradient(self, backend=None) -> "Gate":
+        """Gradient of the Gate."""
+        backend = _check_backend(backend=backend)
+        return Unitary(
+            -1j
+            * self.generator_eigenvalue()
+            * self.generator(backend)
+            @ backend.matrix_parametrized(self),
+            *self.target_qubits,
+        )
+
 
 class RX(_Rn_):
     """Rotation around the X-axis of the Bloch sphere.
@@ -659,8 +674,9 @@ class RX(_Rn_):
     def qasm_label(self):
         return "rx"
 
-    def generator_eigenvalue(self):
-        return 0.5
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.X
 
 
 class RY(_Rn_):
@@ -698,8 +714,9 @@ class RY(_Rn_):
     def qasm_label(self):
         return "ry"
 
-    def generator_eigenvalue(self):
-        return 0.5
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.Y
 
 
 class RZ(_Rn_):
@@ -735,8 +752,9 @@ class RZ(_Rn_):
     def qasm_label(self):
         return "rz"
 
-    def generator_eigenvalue(self):
-        return 0.5
+    def generator(self, backend=None):
+        backend = _check_backend(backend)
+        return backend.matrices.Z
 
 
 class PRX(ParametrizedGate):
