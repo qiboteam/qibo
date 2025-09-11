@@ -88,6 +88,8 @@ class Gate:
         self.device_gates = set()
         self.original_gate = None
 
+        self._clifford = False
+
     @property
     def clifford(self):
         """Return boolean value representing if a Gate is Clifford or not."""
@@ -352,6 +354,9 @@ class Gate:
         new_gate = self._dagger()
         new_gate.is_controlled_by = self.is_controlled_by
         new_gate.control_qubits = self.control_qubits
+        if hasattr(self, "_clifford"):
+            new_gate._clifford = self._clifford
+
         return new_gate
 
     def check_controls(func):  # pylint: disable=E0213

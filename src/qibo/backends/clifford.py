@@ -3,6 +3,7 @@
 import collections
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
+from itertools import product
 from typing import Union
 
 import numpy as np
@@ -94,7 +95,7 @@ class CliffordBackend(NumpyBackend):
 
         return collections.Counter(dict(zip(res, counts)))
 
-    def zero_state(self, nqubits: int):
+    def zero_state(self, nqubits: int, i_phase=False):
         """Construct the zero state :math`\\ket{00...00}`.
 
         Args:
@@ -104,9 +105,9 @@ class CliffordBackend(NumpyBackend):
             ndarray: Symplectic matrix for the zero state.
         """
         identity = self.np.eye(nqubits)
-        symplectic_matrix = self.np.zeros(
-            (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
-        )
+        ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
+
+        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=bool)
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
@@ -140,12 +141,251 @@ class CliffordBackend(NumpyBackend):
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         """Apply a gate to a symplectic matrix."""
+        if isinstance(gate, gates.Unitary):
+            return self.apply_unitary(gate, symplectic_matrix, nqubits)
+
         operation = getattr(self.engine, gate.__class__.__name__)
-        kwargs = (
-            {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
-        )
+
+        kwargs = {}
+        for param_name in ["theta", "phi"]:
+            if param_name in gate.init_kwargs:
+                kwargs[param_name] = gate.init_kwargs[param_name]
 
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
+
+    def apply_unitary(self, gate, symplectic_matrix, nqubits):
+        """Apply a unitary gate to a symplectic matrix following
+        `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
+        qubit_indices = list(gate.qubits)
+        m = len(qubit_indices)
+        matrix = gate._parameters[0]
+        symplectic_m = self._compute_symplectic_matrix(matrix, m)
+        phase_h_m = self._get_phase_vector_hk(matrix, m)
+        phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
+
+        symplectic_n = self._embed_clifford(symplectic_m, nqubits, qubit_indices)
+        phase_h_n = self._embed_phase_vector(phase_h_m, nqubits, qubit_indices)
+        phase_d_n = self._embed_phase_vector(phase_d_m, nqubits, qubit_indices)
+
+        symplectic_gate = [symplectic_n, phase_h_n, phase_d_n]
+        for i in range(2 * nqubits):
+            symplectic_pauli = [
+                symplectic_matrix[i, : 2 * nqubits],
+                symplectic_matrix[i, 2 * nqubits],
+                symplectic_matrix[i, 2 * nqubits + 1],
+            ]
+            symplectic_pauli = self._conjugate_pauli(
+                symplectic_gate, symplectic_pauli, nqubits
+            )
+
+            symplectic_matrix[i, : 2 * nqubits] = symplectic_pauli[0]
+            symplectic_matrix[i, 2 * nqubits] = symplectic_pauli[1]
+            symplectic_matrix[i, 2 * nqubits + 1] = symplectic_pauli[2]
+
+        return symplectic_matrix
+
+    def _pauli_string_to_matrix(self, pauli_str):
+        """Convert Pauli string to matrix (tensor product)."""
+        from qibo import matrices  # pylint: disable=C0415
+
+        pauli_matrices = []
+        for p in pauli_str:
+            matrix = getattr(matrices, p)
+            if p == "Y":
+                matrix = 1j * matrix
+            pauli_matrices.append(matrix)
+        matrix = reduce(np.kron, pauli_matrices)
+        return self.cast(matrix, dtype=matrix.dtype)
+
+    def _pauli_to_binary(self, pauli_str, nqubits):
+        """Convert Pauli string to binary vector of length :math`2*nqubits`."""
+        pauli_symplectic = self.np.zeros(2 * nqubits)
+        for q, term in enumerate(pauli_str):
+            if term in ["X", "Y"]:
+                pauli_symplectic[q] = 1
+            if term in ["Z", "Y"]:
+                pauli_symplectic[q + nqubits] = 1
+        return self.cast(pauli_symplectic, dtype=pauli_symplectic.dtype)
+
+    def _compute_symplectic_matrix(self, unitary, m):
+        """Compute symplectic matrix for Clifford unitary on :math`m` qubits."""
+        pauli_gens = []
+        for i in range(m):
+            p = ["I"] * m
+            p[i] = "X"
+            pauli_gens.append("".join(p))
+        for i in range(m):
+            p = ["I"] * m
+            p[i] = "Z"
+            pauli_gens.append("".join(p))
+
+        symplectic = np.zeros((2 * m, 2 * m), dtype=int)
+        symplectic = self.cast(symplectic, dtype=symplectic.dtype)
+
+        for i, p_str in enumerate(pauli_gens):
+            pauli = self._pauli_string_to_matrix(p_str)
+            pauli_uconj = unitary @ pauli @ unitary.conj().T
+
+            found = False
+            for candidate_str in product("IXYZ", repeat=m):
+                candidate_str = "".join(candidate_str)
+                candidate_P = self._pauli_string_to_matrix(candidate_str)
+
+                for phase in [1, -1, 1j, -1j]:
+                    if np.allclose(pauli_uconj, phase * candidate_P, atol=1e-10):
+                        v = self._pauli_to_binary(candidate_str, m)
+                        symplectic[i, :] = v
+                        found = True
+                        break
+                if found:
+                    break
+        return symplectic % 2
+
+    def _get_phase_vector_hk(self, unitary, m):
+        """Compute phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
+        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0` or :math`1` else :math`1`.
+        """
+        pauli_gens = []
+        for i in range(m):
+            p = ["I"] * m
+            p[i] = "X"
+            pauli_gens.append("".join(p))
+        for i in range(m):
+            p = ["I"] * m
+            p[i] = "Z"
+            pauli_gens.append("".join(p))
+
+        phase = np.zeros(2 * m, dtype=int)
+        for j, p_str in enumerate(pauli_gens):
+            pauli = self._pauli_string_to_matrix(p_str)
+            pauli_uconj = unitary @ pauli @ unitary.conj().T
+
+            for candidate_str in product("IXYZ", repeat=m):
+                candidate_str = "".join(candidate_str)
+                candidate_P = self._pauli_string_to_matrix(candidate_str)
+                if np.allclose(pauli_uconj, candidate_P) or np.allclose(
+                    pauli_uconj, 1j * candidate_P
+                ):
+                    phase[j] = 0
+                    break
+                elif np.allclose(pauli_uconj, -candidate_P) or np.allclose(
+                    pauli_uconj, -1j * candidate_P
+                ):
+                    phase[j] = 1
+                    break
+        return self.cast(phase, dtype=phase.dtype)
+
+    def _get_phase_vector_dk(self, symplectic, m):
+        """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
+        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1` else :math`1`.
+        """
+        u_matrix = np.zeros((2 * m, 2 * m), dtype=int)
+        u_matrix[0:m, m : 2 * m] = np.eye(m)
+        u_matrix = self.cast(u_matrix, dtype=u_matrix.dtype)
+        d = np.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
+        return self.cast(d, dtype=d.dtype)
+
+    def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits):
+        """Compute the conjugate of a Pauli operator under a symplectic transformation."""
+        symplectic_matrix, phase_h, phase_d = symplectic_gate
+        symplectic_vector, epsilon, delta = symplectic_pauli
+
+        new_symplectic_vector = (symplectic_matrix.T @ symplectic_vector) % 2
+
+        pd_dot_sv = np.dot(phase_d, symplectic_vector) % 2
+        new_delta = (delta + pd_dot_sv) % 2
+
+        u_matrix = np.zeros((2 * nqubits, 2 * nqubits), dtype=int)
+        u_matrix[0:nqubits, nqubits : 2 * nqubits] = np.eye(nqubits)
+        u_matrix = self.cast(u_matrix, dtype=u_matrix.dtype)
+
+        lows = np.tril(
+            (
+                symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
+                + np.outer(phase_d, phase_d)
+            )
+            % 2
+        )
+
+        ph_dot_sv = np.dot(phase_h, symplectic_vector)
+        sv_lows_sv = np.dot(symplectic_vector, lows @ symplectic_vector)
+        delta_pd_dot_sv = delta * pd_dot_sv
+        new_epsilon = (epsilon + ph_dot_sv + sv_lows_sv + delta_pd_dot_sv) % 2
+        return new_symplectic_vector, new_epsilon, new_delta
+
+    def _convert_dehaene_to_aaronson(self, dehaene_tableau):
+        """
+        Convert Dehaene-De Moor tableau with two phase columns to Aaronson-Gottesman format.
+
+        Dehaene-De Moor format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase/sign (:math`0=+1`, :math`1=-1`)
+        - Column :math`2n+1`: :math`i`-phase (powers of :math`i`)
+
+        Aaronson-Gottesman format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
+
+        Args:
+            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)` in extended Dehaene-De Moor format.
+
+        Returns:
+            (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
+        """
+        n_rows, n_cols = dehaene_tableau.shape
+        n = (n_cols - 2) // 2
+
+        X_part = dehaene_tableau[:, :n]
+        Z_part = dehaene_tableau[:, n : 2 * n]
+        real_phases = dehaene_tableau[:, -2]
+        i_phases = dehaene_tableau[:, -1]
+
+        final_real_phases = np.zeros_like(real_phases, dtype=np.uint8)
+        for row_idx in range(n_rows - 1):
+            x_vec = X_part[row_idx]
+            z_vec = Z_part[row_idx]
+            real_phase = real_phases[row_idx]
+            i_phase = i_phases[row_idx]
+
+            y_count = np.sum(x_vec & z_vec)
+
+            total_i_power = (i_phase + y_count) % 4
+
+            final_phase = real_phase
+            if total_i_power == 2:
+                # i^2 = -1, flip the sign
+                final_phase = (final_phase + 1) % 2
+            final_real_phases[row_idx] = final_phase
+
+        aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
+        return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
+
+    def _embed_clifford(self, symplectic_m, n, qubit_indices):
+        """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
+        symplectic_n = np.eye(2 * n, dtype=int)
+        symplectic_n = self.cast(symplectic_n, dtype=symplectic_m.dtype)
+
+        x_indices = qubit_indices
+        z_indices = [q + n for q in qubit_indices]
+        full_indices = x_indices + z_indices
+
+        symplectic_n[np.ix_(full_indices, full_indices)] = symplectic_m
+
+        return symplectic_n % 2
+
+    def _embed_phase_vector(self, phase_m, n, qubit_indices):
+        """Embed m-qubit phase vector into n-qubit system."""
+        phase_n = np.zeros(2 * n, dtype=int)
+        phase_n = self.cast(phase_n, dtype=phase_m.dtype)
+        m = len(qubit_indices)
+
+        qubit_indices = np.array(qubit_indices)
+        phase_n[qubit_indices] = phase_m[:m]
+        phase_n[qubit_indices + n] = phase_m[m:]
+
+        return phase_n
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
@@ -208,23 +448,37 @@ class CliffordBackend(NumpyBackend):
 
         try:
             nqubits = circuit.nqubits
-
-            state = self.zero_state(nqubits) if initial_state is None else initial_state
-
-            state = self._clifford_pre_execution_reshape(state)
-
+            i_phase = False
+            if any(isinstance(gate, gates.Unitary) for gate in circuit.queue):
+                i_phase = True
+            state = (
+                self.zero_state(nqubits, i_phase)
+                if initial_state is None
+                else initial_state
+            )
+            if i_phase is False:
+                state = self._clifford_pre_execution_reshape(state)
             for gate in circuit.queue:
+                if i_phase:
+                    if isinstance(gate, gates.M):
+                        if gate.collapse:
+                            raise_error(
+                                NotImplementedError,
+                                "Collapsing measurements with `gates.Unitary` are not implemented in the `CliffordBackend`.",
+                            )
+                    elif not isinstance(gate, gates.Unitary):
+                        gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
                 gate.apply_clifford(self, state, nqubits)
-
-            state = self._clifford_post_execution_reshape(state, nqubits)
-
+            if i_phase:
+                state = self._convert_dehaene_to_aaronson(state)
+            else:
+                state = self._clifford_post_execution_reshape(state, nqubits)
             clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
                 nshots=nshots,
                 _backend=self,
             )
-
             return clifford
 
         except self.oom_error:  # pragma: no cover
