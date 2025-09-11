@@ -2,6 +2,7 @@ import abc
 from typing import Optional, Union
 
 from qibo.config import raise_error
+from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
 class Backend(abc.ABC):
@@ -269,6 +270,92 @@ class Backend(abc.ABC):
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(NotImplementedError)
+
+    def expectation_diagonal_observable(
+        self,
+        circuit: "Circuit",
+        observable: "AbstractHamiltonian",
+        nshots: Optional[int] = None,
+    ) -> float:
+        """Compute the expectation value of an observable diagonal in the computational basis."""
+        if observable.__class__.__name__ == "Hamiltonian":
+            return self.expectation_diagonal_observable_dense(
+                circuit, observable, nshots
+            )
+        return self.expectation_diagonal_observable_symbolic(
+            circuit, observable, nshots
+        )
+
+    def expectation_diagonal_observable_dense(
+        self,
+        circuit: "Circuit",
+        observable: "Hamiltonian",
+        nshots: Optional[int] = None,
+    ) -> float:
+        """Compute the expectation value of a dense hamiltonian diagonal in the computational basis."""
+        result = (
+            circuit._final_state
+            if circuit._final_state is not None
+            else self.execute_circuit(circuit, nshots)
+        )
+
+        if nshots is None:
+            state = result.state()
+            if circuit.density_matrix:
+                return self.calculate_expectation_state(observable, state, False)
+            return self.calculate_expectation_density_matrix(observable, state, False)
+
+        freq = result.frequencies()
+        obs = observable.matrix
+        diag = self.np.diagonal(obs)
+        if self.np.count_nonzero(obs - self.np.diag(diag)) != 0:
+            raise_error(
+                NotImplementedError,
+                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+            )
+        diag = self.np.reshape(diag, obs.nqubits * (2,))
+        # select only the elements with non-zero counts
+        diag = diag[[int(state, 2) for state in freq.keys()]]
+        counts = self.cast(list(freq.values()), dtype=diag.dtype) / sum(freq.values())
+        return self.np.real(self.np.sum(diag * counts))
+
+    def expectation_diagonal_observable_symbolic(
+        self,
+        circuit: "Circuit",
+        observable: "SymbolicHamiltonian",
+        nshots: Optional[int] = None,
+    ) -> float:
+        """Compute the expectation value of an observable diagonal in the computational basis."""
+        if nshots is None:
+            return self.expectation_diagonal_observable_dense(
+                circuit, observable.dense(), nshots
+            )
+
+        result = (
+            circuit._final_state
+            if circuit._final_state is not None
+            else self.execute_circuit(circuit, nshots)
+        )
+        freq = result.frequencies()
+        keys = list(freq.keys())
+        counts = list(freq.values())
+        counts = self.cast(counts, dtype=self.np.float64) / sum(counts)
+        expvals = []
+        for term in observable.terms:
+            qubits = {
+                factor.target_qubit for factor in term.factors if factor.name[0] != "I"
+            }
+            expvals.extend(
+                [
+                    term.coefficient.real
+                    * (-1) ** [state[q] for q in qubits].count("1")
+                    for state in keys
+                ]
+            )
+        expvals = self.cast(expvals, dtype=counts.dtype).reshape(
+            len(observable.terms), len(freq)
+        )
+        return self.np.sum(expvals @ counts) + observable.constant.real
 
     @abc.abstractmethod
     def calculate_symbolic(

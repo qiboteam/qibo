@@ -8,11 +8,12 @@ import numpy as np
 from scipy import sparse
 from scipy.linalg import block_diag, fractional_matrix_power, logm
 
-from qibo import __version__
+from qibo import Circuit, __version__
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
+from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
