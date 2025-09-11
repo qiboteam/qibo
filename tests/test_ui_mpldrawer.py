@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
+from matplotlib.testing.compare import compare_images
 
 from qibo import Circuit, callbacks, construct_backend, gates
 from qibo.models import QFT
@@ -20,11 +21,13 @@ from qibo.ui.mpldrawer import (
     plot_circuit,
 )
 
-from .utils import match_figure_image
+from .utils import fig2png
 
 matplotlib.use("agg")
 
 BASEPATH = str(Path(__file__).parent / "test_ui_array_images")
+
+IMAGE_TOLERANCE = 0
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
@@ -36,11 +39,15 @@ def test_plot_circuit(nqubits):
     circuit.add(gates.M(0))
     circuit.add(gates.M(1))
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_plot_circuit_{nqubits}.png"
     assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_plot_circuit_" + str(nqubits) + ".npy"
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
 
 
@@ -50,11 +57,15 @@ def test_circuit_measure(nqubits):
     circuit = Circuit(nqubits)
     circuit.add(gates.M(qubit) for qubit in range(nqubits - 1))
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_circuit_measure_{nqubits}.png"
     assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_circuit_measure_" + str(nqubits) + ".npy"
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
 
 
@@ -76,11 +87,15 @@ def test_bigger_circuit_gates(nqubits):
     circuit.add(gates.X(0))
     circuit.add(gates.M(qubit) for qubit in range(2))
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_bigger_circuit_gates_{nqubits}.png"
     assert (
-        match_figure_image(
-            fig, BASEPATH + "/test_bigger_circuit_gates_" + str(nqubits) + ".npy"
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
 
 
@@ -119,25 +134,29 @@ def test_complex_circuit(clustered):
     circuit.add(gates.M(qubit) for qubit in range(2))
     _, fig1 = plot_circuit(circuit.invert(), cluster_gates=clustered, scale=0.70)
     _, fig2 = plot_circuit(circuit, cluster_gates=clustered, scale=0.70)
-    assert (
-        match_figure_image(
-            fig1,
-            BASEPATH
-            + "/test_complex_circuit_fig1_"
-            + ("true" if clustered else "false")
-            + ".npy",
-        )
-        == True
+    temp_file_path1 = fig2png(fig1)
+    base_image_path1 = (
+        f"{BASEPATH}/test_complex_circuit_fig1_{"true" if clustered else "false"}.png"
+    )
+    temp_file_path2 = fig2png(fig2)
+    base_image_path2 = (
+        f"{BASEPATH}/test_complex_circuit_fig2_{"true" if clustered else "false"}.png"
     )
     assert (
-        match_figure_image(
-            fig2,
-            BASEPATH
-            + "/test_complex_circuit_fig2_"
-            + ("true" if clustered else "false")
-            + ".npy",
+        compare_images(
+            base_image_path1,
+            temp_file_path1,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
+    )
+    assert (
+        compare_images(
+            base_image_path2,
+            temp_file_path2,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 
@@ -146,7 +165,16 @@ def test_align_gate():
     circuit = Circuit(3)
     circuit.add(gates.Align(0))
     _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_align_gate.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_align_gate.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -157,15 +185,17 @@ def test_circuit_fused_gates(clustered):
     _, fig = plot_circuit(
         circuit.fuse(), scale=0.8, cluster_gates=clustered, style="quantumspain"
     )
+    temp_file_path = fig2png(fig)
+    base_image_path = (
+        f"{BASEPATH}/test_circuit_fused_gates_{"true" if clustered else "false"}.png"
+    )
     assert (
-        match_figure_image(
-            fig,
-            BASEPATH
-            + "/test_circuit_fused_gates_"
-            + ("true" if clustered else "false")
-            + ".npy",
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
 
 
@@ -173,7 +203,16 @@ def test_empty_circuit():
     """Test for printing empty circuit"""
     circuit = Circuit(2)
     _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_empty_circuit.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_empty_circuit.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 @pytest.mark.parametrize("clustered", [False, True])
@@ -187,15 +226,15 @@ def test_circuit_entangled_entropy(clustered):
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CallbackGate(entropy))
     _, fig = plot_circuit(circuit, scale=0.8, cluster_gates=clustered)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_circuit_entangled_entropy_{"true" if clustered else "false"}.png"
     assert (
-        match_figure_image(
-            fig,
-            BASEPATH
-            + "/test_circuit_entangled_entropy_"
-            + ("true" if clustered else "false")
-            + ".npy",
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
 
 
@@ -221,7 +260,16 @@ def test_layered_circuit():
     ansatz.add(gates.RY(q, theta=0) for q in range(nqubits))
     ansatz.add(gates.M(qubit) for qubit in range(2))
     _, fig = plot_circuit(ansatz)
-    assert match_figure_image(fig, BASEPATH + "/test_layered_circuit.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_layered_circuit.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 def test_fused_gates():
@@ -233,7 +281,16 @@ def test_fused_gates():
     circuit.add(gates.X(1))
     circuit.add(gates.H(1))
     _, fig = plot_circuit(circuit.fuse(), scale=0.8, cluster_gates=False)
-    assert match_figure_image(fig, BASEPATH + "/test_fused_gates.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_fused_gates.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 def test_fuse_cluster():
@@ -244,7 +301,16 @@ def test_fuse_cluster():
     circuit.add(gates.X(1))
     circuit.add(gates.M(qubit) for qubit in range(2))
     _, fig = plot_circuit(circuit.fuse())
-    assert match_figure_image(fig, BASEPATH + "/test_fuse_cluster.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_fuse_cluster.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 def test_plot_unitaries():
@@ -258,7 +324,16 @@ def test_plot_unitaries():
     circuit.add(gates.Unitary(random_unitary(2, backend=backend, seed=42), 4))
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=42), 0, 2, 5))
     _, fig = plot_circuit(circuit)
-    assert match_figure_image(fig, BASEPATH + "/test_plot_unitaries.npy") == True
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_plot_unitaries.png"
+    assert (
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
+    )
 
 
 def test_plot_unitaries_same_init():
@@ -273,8 +348,15 @@ def test_plot_unitaries_same_init():
     circuit.add(gates.Unitary(array, 2, 1, 3))
 
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_plot_unitaries_same_init.png"
     assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_same_init.npy") == True
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 
@@ -288,9 +370,15 @@ def test_plot_unitaries_different_init():
     circuit.add(gates.Unitary(random_unitary(8, backend=backend, seed=44), 2, 1, 3))
 
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_plot_unitaries_different_init.png"
     assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_unitaries_different_init.npy")
-        == True
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 
@@ -331,9 +419,15 @@ def test_plot_global_unitaries_as_circuit():
     circuit.wire_names = ["q_a", "q_b", "q_c", "q_d", "q_e"]
 
     _, fig = plot_circuit(circuit)
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/test_plot_global_unitaries_as_circuit.png"
     assert (
-        match_figure_image(fig, BASEPATH + "/test_plot_global_unitaries_as_circuit.npy")
-        == True
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 
@@ -386,13 +480,26 @@ def test_plot_circuit_internal():
 
     ax1 = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=0.7)
     ax2 = _plot_quantum_circuit(gates_plot, inits, params, [], scale=0.7)
+
+    temp_file_path1 = fig2png(ax1.figure)
+    base_image_path1 = f"{BASEPATH}/test_plot_circuit_internal_ax1.png"
+    temp_file_path2 = fig2png(ax2.figure)
+    base_image_path2 = f"{BASEPATH}/test_plot_circuit_internal_ax2.png"
     assert (
-        match_figure_image(ax1.figure, BASEPATH + "/test_plot_circuit_internal_ax1.npy")
-        == True
+        compare_images(
+            base_image_path1,
+            temp_file_path1,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
     assert (
-        match_figure_image(ax2.figure, BASEPATH + "/test_plot_circuit_internal_ax2.npy")
-        == True
+        compare_images(
+            base_image_path2,
+            temp_file_path2,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 

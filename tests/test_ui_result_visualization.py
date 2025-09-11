@@ -6,15 +6,18 @@ import matplotlib
 import matplotlib.pyplot
 import numpy as np
 import pytest
+from matplotlib.testing.compare import compare_images
 
 from qibo import Circuit, construct_backend, gates
 from qibo.ui.result_visualization import visualize_state
 
-from .utils import match_figure_image
+from .utils import fig2png
 
 matplotlib.use("agg")
 
 BASEPATH = str(Path(__file__).parent / "test_ui_array_images")
+
+IMAGE_TOLERANCE = 0
 
 
 def build_circuit(nqubits, measurements=True):
@@ -44,8 +47,15 @@ def test_visualize_state(mode):
         mode=mode,
     )
 
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/state_visualization_{mode}_3q.png"
     assert (
-        match_figure_image(fig, f"{BASEPATH}/state_visualization_{mode}_3q.npy") == True
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
+        )
+        == None
     )
 
 
@@ -81,10 +91,13 @@ def test_n_most_relevant_components():
         mode="probabilities",
         n_most_relevant_components=4,
     )
-
+    temp_file_path = fig2png(fig)
+    base_image_path = f"{BASEPATH}/state_visualization_probabilities_3q_lim.png"
     assert (
-        match_figure_image(
-            fig, f"{BASEPATH}/state_visualization_probabilities_3q_lim.npy"
+        compare_images(
+            base_image_path,
+            temp_file_path,
+            tol=IMAGE_TOLERANCE,
         )
-        == True
+        == None
     )
