@@ -19,6 +19,9 @@ class Backend(abc.ABC):
         self.supports_multigpu = False
         self.oom_error = MemoryError
 
+        # computation engine
+        self.np = None
+
     def __reduce__(self):
         """Allow pickling backend objects that have references to modules."""
         return self.__class__, tuple()
