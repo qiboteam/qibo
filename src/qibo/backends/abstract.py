@@ -370,11 +370,11 @@ class Backend(abc.ABC):
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
-            diagonal_terms_observables (List[List[str]]): the strings defining the observable for each group of terms, e.g.
+            diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables for each group of terms, e.g.
             [['IXZ', 'YII'], ['IYZ', 'XIZ']].
             diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on, e.g.
             [[(0,1,2), (1,3)], [(2,1,3), (2,4)]].
-            diagonal_terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
+            diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
             nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
             exact expectation value will be compute starting from the state. Defaults to ``None``.
