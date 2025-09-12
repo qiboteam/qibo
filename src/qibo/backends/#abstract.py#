@@ -1,6 +1,6 @@
 import abc
 from functools import reduce
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union, List, Tuple
 
 from qibo.config import raise_error
 
@@ -319,7 +319,7 @@ class Backend(abc.ABC):
         circuit: "Circuit",
         terms_qubits: List[Tuple[int, ...]],
         terms_coefficients: List[float],
-        constant: float = 0.0,
+        constant: float = 0.,
         nshots: Optional[int] = None,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the computational basis.
@@ -347,7 +347,8 @@ class Backend(abc.ABC):
         for qubits, coefficient in zip(terms_qubits, terms_coefficients):
             expvals.extend(
                 [
-                    coefficient * (-1) ** [state[q] for q in qubits].count("1")
+                    coefficient
+                    * (-1) ** [state[q] for q in qubits].count("1")
                     for state in keys
                 ]
             )
@@ -357,24 +358,24 @@ class Backend(abc.ABC):
         return self.np.sum(expvals @ counts) + constant
 
     def expectation_observable_symbolic(
-        self,
-        circuit,
-        diagonal_terms_observables: List[List[str]],
-        diagonal_terms_qubits: List[List[Tuple[int, ...]]],
-        diagonal_terms_coefficients: List[List[float]],
-        constant: float = 0.0,
-        nshots: Optional[int] = None,
+            self,
+            circuit,
+            diagonal_terms_observables: List[List[str]],
+            diagonal_terms_qubits: List[List[Tuple[int, ...]]],
+            diagonal_terms_coefficients: List[List[float]],
+            constant: float = 0.,
+            nshots: Optional[int] = None,
     ) -> float:
         """Compute the expectation value of a general symbolic observable defined by groups of terms
         that can be diagonalized simultaneously.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
-            diagonal_terms_observables (List[List[str]]): the strings defining the observable for each group of terms, e.g.
+            diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables for each group of terms, e.g.
             [['IXZ', 'YII'], ['IYZ', 'XIZ']].
             diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on, e.g.
             [[(0,1,2), (1,3)], [(2,1,3), (2,4)]].
-            diagonal_terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
+            diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
             nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
             exact expectation value will be compute starting from the state. Defaults to ``None``.
@@ -387,9 +388,7 @@ class Backend(abc.ABC):
         matrices = []
         qubit_maps = []
         # loop over the terms that can be diagonalized simultaneously
-        for term_qubits, term_observables in zip(
-            diagonal_terms_qubits, diagonal_terms_observables
-        ):
+        for term_qubits, term_observables in zip(diagonal_terms_qubits, diagonal_terms_observables):
             # for each term that can be diagonalized simultaneously
             # extract the coefficient, Z observable and qubit map
             # the basis rotation, instead, will be the same
@@ -400,9 +399,7 @@ class Backend(abc.ABC):
                 # prepare the measurement basis and append it to the circuit
                 for qubit, factor in zip(qubits, observable):
                     if factor != "I" and qubit not in measurements:
-                        measurements[qubit] = gates.M(
-                            qubit, basis=getattr(gates, factor)
-                        )
+                        measurements[qubit] = gates.M(qubit, basis=getattr(gates, factor))
                     if nshots is None:
                         matrix.append(getattr(self.matrices, factor))
             # Get the qubits we want to measure for each term
@@ -424,26 +421,12 @@ class Backend(abc.ABC):
         # and sum all together
         expval = 0.0
         if nshots is None:
-            for circ, terms_qubits, terms_coefficients, matrix in zip(
-                rotated_circuits,
-                diagonal_terms_qubits,
-                diagonal_terms_coefficients,
-                matrices,
-            ):
+            for circ, terms_qubits, terms_coefficients, matrix in zip(rotated_circuits, diagonal_terms_qubits, diagonal_terms_coefficients, matrices):
                 nqubits = int(self.np.log2(matrix.shape[-1]))
-                expval += self.expectation_diagonal_observable_dense(
-                    circ, matrix, nqubits, nshots
-                )
+                expval += self.expectation_diagonal_observable_dense(circ, matrix, nqubits, nshots)
         else:
-            for circ, terms_qubits, terms_coefficients, qmap in zip(
-                rotated_circuits,
-                diagonal_terms_qubits,
-                diagonal_terms_coefficients,
-                qubit_maps,
-            ):
-                expval += self.expectation_diagonal_observable_symbolic(
-                    circ, terms_qubits, terms_coefficients, nshots
-                )
+            for circ, terms_qubits, terms_coefficients, qmap in zip(rotated_circuits, diagonal_terms_qubits, diagonal_terms_coefficients, qubit_maps):
+                expval += self.expectation_diagonal_observable_symbolic(circ, terms_qubits, terms_coefficients, nshots)
         return constant + expval
 
     @abc.abstractmethod
