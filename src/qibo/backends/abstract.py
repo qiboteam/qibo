@@ -280,6 +280,8 @@ class Backend(abc.ABC):
         observable: "ndarray",
         nqubits: int,
         nshots: Optional[int] = None,
+        normalize: bool = False,
+        qubit_map: Optional[Tuple[int, ...]] = None,
     ) -> float:
         """Compute the expectation value of a dense hamiltonian diagonal in the computational basis.
 
@@ -301,8 +303,10 @@ class Backend(abc.ABC):
         if nshots is None:
             state = result.state()
             if circuit.density_matrix:
-                return self.calculate_expectation_state(observable, state, False)
-            return self.calculate_expectation_density_matrix(observable, state, False)
+                return self.calculate_expectation_state(observable, state, normalize)
+            return self.calculate_expectation_density_matrix(
+                observable, state, normalize
+            )
 
         freq = result.frequencies()
         diag = self.np.diagonal(observable)
@@ -312,6 +316,9 @@ class Backend(abc.ABC):
                 "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
         diag = self.np.reshape(diag, nqubits * (2,))
+        if qubit_map is None:
+            qubit_map = tuple(range(nqubits))
+        diag = self.np.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
         diag = diag[[int(state, 2) for state in freq.keys()]]
         counts = self.cast(list(freq.values()), dtype=diag.dtype) / sum(freq.values())
@@ -320,20 +327,23 @@ class Backend(abc.ABC):
     def expectation_diagonal_observable_symbolic(
         self,
         circuit: "Circuit",
+        nqubits: int,
         terms_qubits: List[Tuple[int, ...]],
         terms_coefficients: List[float],
         constant: float = 0.0,
         nshots: Optional[int] = None,
+        qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the computational basis.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
+            nqubits (int): number of qubits of the observable.
             terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal) symbolic observable is acting on.
             terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
-            nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
-            exact expectation value will be compute starting from the state. Defaults to ``None``.
+            nshots (int, optional): how many shots to execute the circuit with. Defaults to ``None``.
+            qubit_map (Tuple[int, ...]): custom qubit ordering.
         Returns:
             (float) the calculated expectation value.
         """
@@ -342,6 +352,10 @@ class Backend(abc.ABC):
             if circuit._final_state is not None
             else self.execute_circuit(circuit, nshots=nshots)
         )
+        if qubit_map is None:
+            qubit_map = range(nqubits)
+        qubit_map = list(qubit_map)
+
         freq = result.frequencies()
         keys = list(freq.keys())
         counts = list(freq.values())
@@ -350,7 +364,8 @@ class Backend(abc.ABC):
         for qubits, coefficient in zip(terms_qubits, terms_coefficients):
             expvals.extend(
                 [
-                    coefficient * (-1) ** [state[q] for q in qubits].count("1")
+                    coefficient
+                    * (-1) ** [state[qubit_map.index(q)] for q in qubits].count("1")
                     for state in keys
                 ]
             )
@@ -362,9 +377,10 @@ class Backend(abc.ABC):
     def expectation_observable_symbolic(
         self,
         circuit,
+        diagonal_terms_coefficients: List[List[float]],
         diagonal_terms_observables: List[List[str]],
         diagonal_terms_qubits: List[List[Tuple[int, ...]]],
-        diagonal_terms_coefficients: List[List[float]],
+        nqubits: int,
         constant: float = 0.0,
         nshots: Optional[int] = None,
     ) -> float:
@@ -373,11 +389,12 @@ class Backend(abc.ABC):
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
+            diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
             diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables for each group of terms, e.g.
             [['IXZ', 'YII'], ['IYZ', 'XIZ']].
             diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on, e.g.
             [[(0,1,2), (1,3)], [(2,1,3), (2,4)]].
-            diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
+            nqubits (int): number of qubits of the observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
             nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
             exact expectation value will be compute starting from the state. Defaults to ``None``.
@@ -394,8 +411,10 @@ class Backend(abc.ABC):
             diagonal_terms_qubits, diagonal_terms_observables
         ):
             # for each term that can be diagonalized simultaneously
-            # extract the coefficient, Z observable and qubit map
-            # the basis rotation, instead, will be the same
+            # preapare the basis rotation for the measurement
+            # if nshots is None, additionally construct the matrix of
+            # the global observable
+
             measurements = {}
             matrix = []
             for qubits, observable in zip(term_qubits, term_observables):
@@ -445,7 +464,13 @@ class Backend(abc.ABC):
                 qubit_maps,
             ):
                 expval += self.expectation_diagonal_observable_symbolic(
-                    circ, terms_qubits, terms_coefficients, nshots
+                    circ,
+                    nqubits,
+                    terms_qubits,
+                    terms_coefficients,
+                    constant,
+                    nshots,
+                    qmap,
                 )
         return constant + expval
 

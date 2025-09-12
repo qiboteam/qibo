@@ -3,8 +3,7 @@
 import operator
 from functools import cache, cached_property, reduce
 from itertools import chain
-from math import prod
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import sympy
@@ -100,48 +99,10 @@ class Hamiltonian(AbstractHamiltonian):
             )
         return self._exp.get("result")
 
-    def expectation(self, state, normalize=False):
-        if isinstance(state, self.backend.tensor_types):
-            state = self.backend.cast(state)
-            shape = tuple(state.shape)
-            if len(shape) == 1:  # state vector
-                return self.backend.calculate_expectation_state(self, state, normalize)
-
-            if len(shape) == 2:  # density matrix
-                return self.backend.calculate_expectation_density_matrix(
-                    self, state, normalize
-                )
-
-            raise_error(
-                ValueError,
-                "Cannot calculate Hamiltonian expectation value "
-                + f"for state of shape {shape}",
-            )
-
-        raise_error(
-            TypeError,
-            "Cannot calculate Hamiltonian expectation "
-            + f"value for state of type {type(state)}",
+    def expectation(self, circuit, nshots=None, normalize=False, qubit_map=None):
+        return self.backend.expectation_diagonal_observable_dense(
+            circuit, self.matrix, self.nqubits, nshots, normalize, qubit_map
         )
-
-    def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.matrix
-        diag = self.backend.np.diagonal(obs)
-        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
-            raise_error(
-                NotImplementedError,
-                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
-            )
-        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
-        if qubit_map is None:
-            qubit_map = range(self.nqubits)
-        diag = self.backend.np.transpose(diag, qubit_map).ravel()
-        # select only the elements with non-zero counts
-        diag = diag[[int(state, 2) for state in freq.keys()]]
-        counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
-            freq.values()
-        )
-        return self.backend.np.real(self.backend.np.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -410,6 +371,31 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             terms = [term for i, term in enumerate(terms) if i not in removable_indices]
         return diagonal_terms
 
+    @cached_property
+    def diagonal_simple_terms(
+        self,
+    ) -> Tuple[List[List[float]], List[List[str]], List[List[Tuple[int, ...]]]]:
+        """A simpler (more framework agnostic) representation of the simultaneously
+        diagonalizable terms of the hamiltonian, defined as: their scalar coefficients,
+        the strings of the names of their observables and the qubits they act on.
+
+        Returns:
+            Tuple[List[List[float]], List[List[str]], List[List[Tuple[int, ...]]]]
+        """
+        terms_qubits = []
+        terms_coefficients = []
+        terms_observables = []
+        for terms in self.diagonal_terms:
+            tmp_qubits, tmp_coeffs, tmp_obs = [], [], []
+            for term in terms:
+                tmp_qubits.append(term.target_qubits)
+                tmp_coeffs.append(term.coefficient)
+                tmp_obs.append("".join(factor.name[0] for factor in term.factors))
+            terms_qubits.append(tmp_qubits)
+            terms_coefficients.append(tmp_coeffs)
+            terms_observables.append(tmp_obs)
+        return terms_coefficients, terms_observables, terms_qubits
+
     @property
     def matrix(self):
         """Returns the full matrix representation.
@@ -513,10 +499,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, state, normalize=False):
-        return Hamiltonian.expectation(self, state, normalize)
-
-    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:  # type: ignore
+    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
@@ -536,102 +519,16 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             (float): the calculated expectation value.
         """
-        from qibo import gates
-
-        rotated_circuits = []
-        Z_observables = []
-        qubit_maps = []
-        # loop over the terms that can be diagonalized simultaneously
-        for terms in self.diagonal_terms:
-            # for each term that can be diagonalized simultaneously
-            # extract the coefficient, Z observable and qubit map
-            # the basis rotation, instead, will be the same
-            tmp_obs = []
-            measurements = {}
-            for term in terms:
-                # Only care about non-I terms
-                non_identity_factors = []
-                # prepare the measurement basis and append it to the circuit
-                for factor in term.factors:
-                    if factor.name[0] != "I":
-                        non_identity_factors.append(factor)
-                        q = factor.target_qubit
-                        if q not in measurements:
-                            measurements[q] = gates.M(q, basis=factor.gate.__class__)
-
-                # build diagonal observable
-                # including the coefficient
-                symb_obs = prod(
-                    Z(factor.target_qubit) for factor in non_identity_factors
-                )
-                symb_obs = SymbolicHamiltonian(
-                    term.coefficient * symb_obs,
-                    nqubits=circuit.nqubits,
-                    backend=self.backend,
-                )
-                tmp_obs.append(symb_obs)
-
-            # Get the qubits we want to measure for each term
-            qubit_maps.append(sorted(measurements.keys()))
-            Z_observables.append(tmp_obs)
-
-            circ_copy = circuit.copy(True)
-            circ_copy.add(list(measurements.values()))
-            rotated_circuits.append(circ_copy)
-
-        # execute the circuits
-        results = self.backend.execute_circuits(rotated_circuits, nshots=nshots)
-
-        # construct the expectation value for each diagonal term
-        # and sum all together
-        expval = 0.0
-        for res, obs, qmap in zip(results, Z_observables, qubit_maps):
-            freq = res.frequencies()
-            expval += sum(o.expectation_from_samples(freq, qmap) for o in obs)
-        return self.constant + expval
-
-    def expectation_from_samples(self, freq: dict, qubit_map: list = None) -> float:
-        """
-        Calculate the expectation value from the samples.
-        The observable has to be diagonal in the computational basis.
-
-        Args:
-            freq (dict): input frequencies of the samples.
-            qubit_map (list): qubit map.
-
-        Returns:
-            (float): the calculated expectation value.
-        """
-        for term in self.terms:
-            # pylint: disable=E1101
-            for factor in term.factors:
-                if not isinstance(factor, Z):
-                    raise_error(
-                        NotImplementedError, "Observable is not a Pauli-Z string."
-                    )
-
-        if qubit_map is None:
-            qubit_map = list(range(self.nqubits))
-
-        keys = list(freq.keys())
-        counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=self.backend.np.float64) / sum(counts)
-        expvals = []
-        for term in self.terms:
-            qubits = {
-                factor.target_qubit for factor in term.factors if factor.name[0] != "I"
-            }
-            expvals.extend(
-                [
-                    term.coefficient.real
-                    * (-1) ** [state[qubit_map.index(q)] for q in qubits].count("1")
-                    for state in keys
-                ]
-            )
-        expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
-            len(self.terms), len(freq)
+        terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
+        return self.backend.expectation_observable_symbolic(
+            circuit,
+            terms_coefficients,
+            terms_observables,
+            terms_qubits,
+            self.nqubits,
+            self.constant.real,
+            nshots,
         )
-        return self.backend.np.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form
