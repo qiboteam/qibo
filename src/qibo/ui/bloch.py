@@ -1,6 +1,6 @@
 import tkinter as tk
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Union
 
 import matplotlib as mpl
 import numpy as np
@@ -266,5 +266,3 @@ class Bloch:
         self.ax.set_aspect("equal")
         self.ax.axis("off")
         self.fig.tight_layout()
-
-    
