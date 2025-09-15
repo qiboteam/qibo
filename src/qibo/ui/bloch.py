@@ -64,30 +64,6 @@ class Bloch:
         self.fig = Figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
-        # Backends
-        if self.backend == "qtagg":
-            mpl.use(self.backend)
-            self._backend = importlib.import_module(
-                "matplotlib.backends.backend_" + self.backend
-            )
-        elif self.backend == "tkagg":
-            mpl.use(self.backend)
-            self._backend = importlib.import_module(
-                "matplotlib.backends.backend_" + self.backend
-            )
-        elif self.backend == "agg":
-            mpl.use(self.backend)
-            self._backend = importlib.import_module(
-                "matplotlib.backends.backend_" + self.backend
-            )
-        elif self.backend == "jupyter":
-            pass
-        else:
-            raise_error(
-                ValueError,
-                "Backend not supported. Try: `qtagg`, `tkagg` (interactive), `agg` (non-interactive) or `jupyter`.",
-            )
-
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
         self.fig = Figure(figsize=self.STYLE["figure.figsize"])
