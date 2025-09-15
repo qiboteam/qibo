@@ -239,7 +239,7 @@ class Bloch:
         self._color_vectors = []
 
     # ----Plot and Save-----
-    def _rendering(self):
+    def plot(self):
         """This function creates the empty sphere and plots the vectors and points on it."""
 
         self._create_sphere()
@@ -269,53 +269,4 @@ class Bloch:
         self.ax.axis("off")
         self.fig.tight_layout()
 
-    def _qt_window(self):
-        "Helper method to `plot()` for the `qtagg` backend."
-        manager = self._backend.new_figure_manager_given_figure(1, self.fig)
-        manager.show()
-        manager.set_window_title("Bloch Sphere")
-        show = self._backend.Show()
-        show.mainloop()
-
-    def _tk_window(self):
-        "Helper method to `plot()` for the `tkagg` backend."
-
-        root = tk.Tk()
-        root.title("Bloch Sphere")
-        canvas = self._backend.FigureCanvasTkAgg(self.fig, master=root)
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        canvas.draw()
-        root.mainloop()
-
-    def _jupyter_window(self):
-        "Helper method to `plot()` for the `jupyter` backend."
-        self._new_window()
-        self._rendering()
-        display(self.fig)
-
-    def plot(self):
-        "This function plots the sphere."
-
-        if self.backend == "tkagg":
-            self._rendering()
-            self._tk_window()
-        elif self.backend == "qtagg":
-            self._rendering()
-            self._qt_window()
-        elif self.backend == "jupyter":
-            self._jupyter_window()
-        elif self.backend == "agg":
-            raise_error(
-                ValueError,
-                "The backend `agg` is a non-interactive backend which "
-                "can be used only to save figures. If you want to plot try `qtagg`, `tkagg`, `jupyter.`",
-            )
-
-    def save(self, filename="bloch_sphere.pdf"):
-        "This function saves the sphere."
-        self._rendering()
-
-        mpl.use("agg")
-        canvas = self._backend.FigureCanvas(self.fig)
-        self.fig.savefig(filename)
+    
