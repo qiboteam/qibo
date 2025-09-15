@@ -100,8 +100,22 @@ class Hamiltonian(AbstractHamiltonian):
         return self._exp.get("result")
 
     def expectation(self, circuit, nshots=None, normalize=False, qubit_map=None):
+        if nshots is None:
+            result = (
+                circuit._final_state
+                if circuit._final_state is not None
+                else self.backend.execute_circuit(circuit, nshots=nshots)
+            )
+            state = result.state()
+            if circuit.density_matrix:
+                return self.backend.calculate_expectation_density_matrix(
+                    self.matrix, state, normalize
+                )
+            return self.backend.calculate_expectation_state(
+                self.matrix, state, normalize
+            )
         return self.backend.expectation_diagonal_observable_dense(
-            circuit, self.matrix, self.nqubits, nshots, normalize, qubit_map
+            circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
 
     def eye(self, dim: Optional[int] = None):
@@ -389,7 +403,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             tmp_qubits, tmp_coeffs, tmp_obs = [], [], []
             for term in terms:
                 tmp_qubits.append(term.target_qubits)
-                tmp_coeffs.append(term.coefficient)
+                tmp_coeffs.append(term.coefficient.real)
                 tmp_obs.append("".join(factor.name[0] for factor in term.factors))
             terms_qubits.append(tmp_qubits)
             terms_coefficients.append(tmp_coeffs)
@@ -499,7 +513,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
+    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None, normalize: bool = False) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
@@ -519,6 +533,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             (float): the calculated expectation value.
         """
+        if nshots is None:
+            return self.dense.expectation(circuit, nshots=nshots, normalize=normalize)
+
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
         return self.backend.expectation_observable_symbolic(
             circuit,

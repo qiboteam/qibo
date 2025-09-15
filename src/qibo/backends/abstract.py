@@ -1,5 +1,4 @@
 import abc
-from functools import reduce
 from typing import List, Optional, Tuple, Union
 
 from qibo.config import raise_error
@@ -279,8 +278,7 @@ class Backend(abc.ABC):
         circuit: "Circuit",
         observable: "ndarray",
         nqubits: int,
-        nshots: Optional[int] = None,
-        normalize: bool = False,
+        nshots: int,
         qubit_map: Optional[Tuple[int, ...]] = None,
     ) -> float:
         """Compute the expectation value of a dense hamiltonian diagonal in the computational basis.
@@ -299,14 +297,6 @@ class Backend(abc.ABC):
             if circuit._final_state is not None
             else self.execute_circuit(circuit, nshots=nshots)
         )
-
-        if nshots is None:
-            state = result.state()
-            if circuit.density_matrix:
-                return self.calculate_expectation_state(observable, state, normalize)
-            return self.calculate_expectation_density_matrix(
-                observable, state, normalize
-            )
 
         freq = result.frequencies()
         diag = self.np.diagonal(observable)
@@ -330,8 +320,8 @@ class Backend(abc.ABC):
         nqubits: int,
         terms_qubits: List[Tuple[int, ...]],
         terms_coefficients: List[float],
-        constant: float = 0.0,
-        nshots: Optional[int] = None,
+        constant: float,
+        nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the computational basis.
@@ -381,8 +371,8 @@ class Backend(abc.ABC):
         diagonal_terms_observables: List[List[str]],
         diagonal_terms_qubits: List[List[Tuple[int, ...]]],
         nqubits: int,
-        constant: float = 0.0,
-        nshots: Optional[int] = None,
+        constant: float,
+        nshots: int,
     ) -> float:
         """Compute the expectation value of a general symbolic observable defined by groups of terms
         that can be diagonalized simultaneously.
@@ -403,11 +393,11 @@ class Backend(abc.ABC):
         """
         from qibo import gates
 
+        # breakpoint()
         rotated_circuits = []
-        matrices = []
         qubit_maps = []
         # loop over the terms that can be diagonalized simultaneously
-        for term_qubits, term_observables in zip(
+        for terms_qubits, terms_observables in zip(
             diagonal_terms_qubits, diagonal_terms_observables
         ):
             # for each term that can be diagonalized simultaneously
@@ -416,8 +406,9 @@ class Backend(abc.ABC):
             # the global observable
 
             measurements = {}
-            matrix = []
-            for qubits, observable in zip(term_qubits, term_observables):
+            for qubits, observable in zip(terms_qubits, terms_observables):
+                if set(observable) == {"I"}:
+                    constant += 1.0
                 # Only care about non-I terms
                 # prepare the measurement basis and append it to the circuit
                 for qubit, factor in zip(qubits, observable):
@@ -425,12 +416,9 @@ class Backend(abc.ABC):
                         measurements[qubit] = gates.M(
                             qubit, basis=getattr(gates, factor)
                         )
-                    if nshots is None:
-                        matrix.append(getattr(self.matrices, factor))
+
             # Get the qubits we want to measure for each term
             qubit_maps.append(sorted(measurements.keys()))
-            if nshots is None:
-                matrices.append(reduce(self.np.kron, matrix))
 
             circ_copy = circuit.copy(True)
             circ_copy.add(list(measurements.values()))
@@ -440,38 +428,29 @@ class Backend(abc.ABC):
         # the results are saved in the circuit._final_state
         # that are used inside the calculation of the expectation
         # values
-        _ = self.execute_circuits(rotated_circuits, nshots=nshots)
+        if len(rotated_circuits) > 1:
+            _ = self.execute_circuits(rotated_circuits, nshots=nshots)
+        else:
+            _ = self.execute_circuit(rotated_circuits[0], nshots=nshots)
 
         # construct the expectation value for each diagonal term
         # and sum all together
         expval = 0.0
-        if nshots is None:
-            for circ, terms_qubits, terms_coefficients, matrix in zip(
-                rotated_circuits,
-                diagonal_terms_qubits,
-                diagonal_terms_coefficients,
-                matrices,
-            ):
-                nqubits = int(self.np.log2(matrix.shape[-1]))
-                expval += self.expectation_diagonal_observable_dense(
-                    circ, matrix, nqubits, nshots
-                )
-        else:
-            for circ, terms_qubits, terms_coefficients, qmap in zip(
-                rotated_circuits,
-                diagonal_terms_qubits,
-                diagonal_terms_coefficients,
-                qubit_maps,
-            ):
-                expval += self.expectation_diagonal_observable_symbolic(
-                    circ,
-                    nqubits,
-                    terms_qubits,
-                    terms_coefficients,
-                    constant,
-                    nshots,
-                    qmap,
-                )
+        for circ, terms_qubits, terms_coefficients, qmap in zip(
+            rotated_circuits,
+            diagonal_terms_qubits,
+            diagonal_terms_coefficients,
+            qubit_maps,
+        ):
+            expval += self.expectation_diagonal_observable_symbolic(
+                circ,
+                nqubits,
+                sorted(terms_qubits),
+                terms_coefficients,
+                constant,
+                nshots,
+                qmap,
+            )
         return constant + expval
 
     @abc.abstractmethod
