@@ -40,8 +40,6 @@ class Bloch:
     the notebook requires a special command "%matplolib notebook" in the first cell.).
     """
 
-    backend: Optional[Union["tkagg", "qtagg", "agg", "jupyter"]] = "tkagg"
-
     # Plot style sheets
     STYLE = {
         "figure.figsize": (6, 6),
