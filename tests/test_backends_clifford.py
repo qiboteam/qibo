@@ -229,10 +229,10 @@ def test_initial_state(backend):
     initial_symplectic_matrix = tmp.symplectic_matrix
     initial_state = numpy_bkd.execute_circuit(state).state()
     initial_state = np.outer(initial_state, np.transpose(np.conj(initial_state)))
-    c = random_clifford(3, density_matrix=True, backend=backend)
-    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
+    circ = random_clifford(3, density_matrix=True, backend=backend)
+    numpy_state = numpy_bkd.execute_circuit(circ, initial_state=initial_state).state()
     clifford_state = clifford_bkd.execute_circuit(
-        c, initial_state=initial_symplectic_matrix
+        circ, initial_state=initial_symplectic_matrix
     ).state()
     backend.assert_allclose(numpy_state, clifford_state)
 
@@ -291,7 +291,7 @@ def test_stim(backend):
     clifford_stim = CliffordBackend(engine="stim")
 
     nqubits = 3
-    circuit = random_clifford(nqubits, backend=backend)
+    circuit = random_clifford(nqubits, seed=173, backend=backend)
 
     result_qibo = clifford_bkd.execute_circuit(circuit)
     result_stim = clifford_stim.execute_circuit(circuit)
