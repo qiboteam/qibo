@@ -342,6 +342,7 @@ def _single_shot_pauli_outcome(pauli_word: str, bitstring: str) -> int:
     eigenvalue = (-1) ** sum(int(bitstring[i]) for i in indices_not_id)
     return eigenvalue
 
+
 def get_expval_from_linear_comb_of_paulis_from_samples(
     circuit: Circuit,
     lin_comb_pauli: list[tuple[float, str]] | dict[str, list[tuple[float, str]]],
