@@ -33,10 +33,12 @@ def purity(state, backend=None):
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if len(state.shape) == 1:
-        pur = backend.np.real(backend.calculate_vector_norm(state)) ** 2
-    else:
-        pur = backend.np.real(backend.np.trace(backend.np.matmul(state, state)))
+    pur = (
+        backend.real(backend.vector_norm(state)) ** 2
+        if len(state.shape) == 1
+        else backend.real(backend.trace(state @ state))
+    )
+
     return float(pur)
 
 
@@ -92,14 +94,14 @@ def trace_distance(state, target, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     distance = state - target
-    distance = backend.np.conj(distance.T) @ distance
-    distance = backend.calculate_matrix_sqrt(distance)
+    distance = backend.conj(distance.T) @ distance
+    distance = backend.matrix_sqrt(distance)
 
-    return backend.np.trace(distance) / 2
+    return backend.trace(distance) / 2
 
 
 def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
@@ -123,9 +125,9 @@ def hilbert_schmidt_inner_product(operator_A, operator_B, backend=None):
     """
     backend = _check_backend(backend)
 
-    inner_product = backend.np.trace(backend.np.conj(operator_A.T) @ operator_B)
+    inner_product = backend.trace(backend.conj(operator_A.T) @ operator_B)
 
-    return backend.np.real(inner_product)
+    return backend.real(inner_product)
 
 
 def hilbert_schmidt_distance(state, target, backend=None):
@@ -170,8 +172,8 @@ def hilbert_schmidt_distance(state, target, backend=None):
         )
 
     if len(state.shape) == 1:
-        state = backend.np.outer(backend.np.conj(state), state)
-        target = backend.np.outer(backend.np.conj(target), target)
+        state = backend.outer(backend.conj(state), state)
+        target = backend.outer(backend.conj(target), target)
 
     difference = state - target
 
@@ -227,18 +229,18 @@ def fidelity(state, target, backend=None):
             abs(purity_state - 1) > PRECISION_TOL
             and abs(purity_target - 1) > PRECISION_TOL
         ):
-            fid = backend.calculate_matrix_sqrt(state)
-            fid = fid @ backend.np.conj(target.T) @ fid
-            fid = backend.calculate_matrix_sqrt(fid)
-            fid = backend.np.real(backend.np.trace(fid))
+            fid = backend.matrix_sqrt(state)
+            fid = fid @ backend.conj(target.T) @ fid
+            fid = backend.matrix_sqrt(fid)
+            fid = backend.real(backend.trace(fid))
 
             return fid**2
 
     # if any of the states is pure, perform lighter calculation
     fid = (
-        backend.np.abs(backend.np.matmul(backend.np.conj(state), target)) ** 2
+        backend.abs(backend.conj(state) @ target) ** 2
         if len(state.shape) == 1
-        else backend.np.real(backend.np.trace(backend.np.matmul(state, target)))
+        else backend.real(backend.trace(state @ target))
     )
 
     return fid
@@ -289,7 +291,9 @@ def bures_angle(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    angle = backend.np.arccos(backend.np.sqrt(fidelity(state, target, backend=backend)))
+    angle = backend.engine.arccos(
+        backend.sqrt(fidelity(state, target, backend=backend))
+    )
 
     return angle
 
@@ -316,8 +320,8 @@ def bures_distance(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    sqrt_fid = backend.np.sqrt(fidelity(state, target, backend=backend))
-    distance = backend.np.sqrt(2 * (1 - sqrt_fid))
+    sqrt_fid = backend.sqrt(fidelity(state, target, backend=backend))
+    distance = backend.sqrt(2 * (1 - sqrt_fid))
 
     return distance
 
@@ -356,22 +360,16 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if check_unitary is True:
         norm_channel = float(
-            backend.calculate_matrix_norm(
-                backend.np.matmul(
-                    backend.np.conj(backend.np.transpose(channel, (1, 0))), channel
-                )
-                - backend.np.eye(dim**2)
+            backend.matrix_norm(
+                (backend.conj(channel.T) @ channel) - backend.identity(dim**2)
             )
         )
         if target is None and norm_channel > PRECISION_TOL:
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = float(
-                backend.calculate_vector_norm(
-                    backend.np.matmul(
-                        backend.np.conj(backend.np.transpose(target, (1, 0))), target
-                    )
-                    - backend.np.eye(dim**2)
+                backend.vector_norm(
+                    (backend.conj(target.T) @ target) - backend.identity(dim**2)
                 )
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
@@ -379,15 +377,13 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        process_fid = backend.np.real(backend.np.trace(channel)) / dim**2
+        process_fid = backend.real(backend.trace(channel)) / dim**2
         process_fid = float(process_fid)
 
         return process_fid
 
-    process_fid = backend.np.matmul(
-        backend.np.transpose(backend.np.conj(channel), (1, 0)), target
-    )
-    process_fid = backend.np.real(backend.np.trace(process_fid)) / dim**2
+    process_fid = backend.conj(channel.T) @ target
+    process_fid = backend.real(backend.trace(process_fid)) / dim**2
 
     return process_fid
 
@@ -560,9 +556,9 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
 
     channel = backend.to_numpy(channel)
 
-    channel = backend.np.transpose(channel, (1, 0))
-    channel_real = backend.np.real(channel)
-    channel_imag = backend.np.imag(channel)
+    channel = backend.transpose(channel, (1, 0))
+    channel_real = backend.real(channel)
+    channel_imag = backend.imag(channel)
 
     dim = int(np.sqrt(channel.shape[0]))
 
@@ -678,7 +674,7 @@ def expressibility(
         circuit.nqubits, power_t, samples=None, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = float(backend.calculate_vector_norm(deviation, order=order))
+    fid = float(backend.vector_norm(deviation, order=order))
 
     return fid
 
@@ -752,9 +748,9 @@ def frame_potential(
             unitary_2.set_parameters(params_2)
             unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
 
-            potential += backend.np.abs(
-                backend.np.trace(
-                    backend.np.transpose(backend.np.conj(unitary_1), (1, 0)) @ unitary_2
+            potential += backend.abs(
+                backend.trace(
+                    backend.transpose(backend.conj(unitary_1), (1, 0)) @ unitary_2
                 )
             ) ** (2 * power_t)
 
@@ -809,9 +805,7 @@ def quantum_fisher_information_matrix(
         parameters = circuit.get_parameters()
         parameters = backend.cast(parameters, dtype=float).flatten()
 
-    jacobian = backend.calculate_jacobian_matrix(
-        circuit, parameters, initial_state, return_complex
-    )
+    jacobian = backend.jacobian(circuit, parameters, initial_state, return_complex)
 
     if return_complex:
         jacobian = jacobian[0] + 1j * jacobian[1]
@@ -826,6 +820,6 @@ def quantum_fisher_information_matrix(
     overlaps = jacobian.T @ state
 
     qfim = jacobian.T @ jacobian
-    qfim = qfim - backend.np.outer(overlaps, backend.np.conj(overlaps.T))
+    qfim = qfim - backend.outer(overlaps, backend.conj(overlaps.T))
 
-    return 4 * backend.np.real(qfim)
+    return 4 * backend.real(qfim)

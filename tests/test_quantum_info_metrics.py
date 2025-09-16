@@ -41,13 +41,13 @@ def test_purity_and_impurity(backend):
     backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
-    state = backend.np.outer(backend.np.conj(state), state)
+    state = backend.outer(backend.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state, backend=backend), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(impurity(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     dim = 4
-    state = backend.identity_density_matrix(2)
+    state = backend.maximally_mixed_state(2)
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(
         purity(state, backend=backend), 1.0 / dim, atol=PRECISION_TOL
@@ -85,8 +85,8 @@ def test_trace_distance(backend):
         atol=PRECISION_TOL,
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         trace_distance(state, target, backend=backend),
         0.0,
@@ -133,8 +133,8 @@ def test_hilbert_schmidt_distance(backend):
         hilbert_schmidt_distance(state, target, backend=backend), 0.0
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         hilbert_schmidt_distance(state, target, backend=backend), 0.0
     )
@@ -160,8 +160,8 @@ def test_fidelity_and_infidelity_and_bures(backend):
         target = backend.cast(target, dtype=target.dtype)
         test = fidelity(state, target, backend=backend)
 
-    state = backend.identity_density_matrix(4)
-    target = backend.identity_density_matrix(4)
+    state = backend.maximally_mixed_state(4)
+    target = backend.maximally_mixed_state(4)
     backend.assert_allclose(
         fidelity(state, target, backend=backend),
         1.0,
@@ -193,8 +193,8 @@ def test_fidelity_and_infidelity_and_bures(backend):
         atol=PRECISION_TOL,
     )
 
-    state = backend.np.outer(backend.np.conj(state), state)
-    target = backend.np.outer(backend.np.conj(target), target)
+    state = backend.outer(backend.conj(state), state)
+    target = backend.outer(backend.conj(target), target)
     backend.assert_allclose(
         fidelity(state, target, backend=backend),
         1.0,
@@ -303,7 +303,7 @@ def test_diamond_norm(backend, nqubits):
         test_2 = random_unitary(4**nqubits, backend=backend)
         test = diamond_norm(test, test_2)
 
-    unitary = backend.identity_density_matrix(nqubits, normalize=False)
+    unitary = backend.identity(2**nqubits)
     unitary = to_choi(unitary, order="row", backend=backend)
 
     dnorm = diamond_norm(unitary, backend=backend)
@@ -388,9 +388,9 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
 
         target = [1]
         for param in params[:-1]:
-            elem = float(target[-1] * backend.np.sin(param) ** 2)
+            elem = float(target[-1] * backend.engine.sin(param) ** 2)
             target.append(elem)
-        target = 4 * backend.np.diag(backend.cast(target, dtype=np.float64))
+        target = 4 * backend.diag(backend.cast(target, dtype=np.float64))
 
         # numerical qfim from quantum_info
         circuit = unary_encoder(data, "diagonal")

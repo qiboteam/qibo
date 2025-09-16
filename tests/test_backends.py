@@ -93,8 +93,8 @@ def test_matrix_rotations(backend, gate, target_matrix):
 
 
 def test_plus_density_matrix(backend):
-    matrix = backend.plus_density_matrix(4)
-    target_matrix = np.ones((16, 16)) / 16
+    matrix = backend.plus_state(4, density_matrix=True)
+    target_matrix = backend.ones((16, 16)) / 16
     backend.assert_allclose(matrix, target_matrix)
 
 

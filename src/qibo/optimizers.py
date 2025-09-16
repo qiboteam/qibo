@@ -294,7 +294,7 @@ def sgd(
 def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):
 
     vparams = initial_parameters
-    optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
+    optimizer = getattr(backend.engine.optim, sgd_options["optimizer"])(
         params=[vparams], lr=sgd_options["learning_rate"]
     )
 
