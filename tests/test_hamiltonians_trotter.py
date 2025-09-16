@@ -4,8 +4,6 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians, symbols
-from qibo.backends import NumpyBackend
-from qibo.quantum_info import random_hermitian, random_statevector
 from qibo.quantum_info.random_ensembles import random_clifford
 
 

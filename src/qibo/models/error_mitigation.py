@@ -862,6 +862,13 @@ def get_expectation_val_with_readout_mitigation(
     if readout is None:  # pragma: no cover
         readout = {}
 
+    qubits, coefficients = [], []
+    for term in observable.terms:
+        qubits.append(term.target_qubits)
+        coefficients.append(term.coefficient.real)
+
+    circuit.add(gates.M(*{q for qq in qubits for q in qq}))
+
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
             circuit,
@@ -882,10 +889,18 @@ def get_expectation_val_with_readout_mitigation(
                 readout.get("ibu_iters", None),
             )
 
-    exp_val = circuit_result.expectation_from_samples(observable)
+    exp_val = observable.backend.expectation_diagonal_observable_symbolic(
+        circuit, observable.nqubits, qubits, coefficients, nshots=nshots
+    )
 
     if "ncircuits" in readout:
-        return float(exp_val / circuit_result_cal.expectation_from_samples(observable))
+        circuit._final_state = circuit_result_cal
+        return float(
+            exp_val
+            / observable.backend.expectation_diagonal_observable_symbolic(
+                circuit, observable.nqubits, qubits, coefficients, nshots=nshots
+            )
+        )
 
     return float(exp_val)
 
@@ -1173,8 +1188,6 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Returns:
         qibo.states.CircuitResult: The result of the circuit execution.
     """
-    from qibo.transpiler.pipeline import Passes
-
     if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover

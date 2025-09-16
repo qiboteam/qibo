@@ -28,9 +28,7 @@ def get_noise_model(error, gate, resp_matrix=[False, None]):
     return noise
 
 
-def get_circuit(nqubits, nmeas=None):
-    if nmeas is None:
-        nmeas = nqubits
+def get_circuit(nqubits):
     # Define the circuit
     hz = 0.5
     hx = 0.5
@@ -47,7 +45,6 @@ def get_circuit(nqubits, nmeas=None):
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
     c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.M(*range(nmeas)))
 
     return c
 
@@ -109,19 +106,19 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     else:
         nmeas = nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits, nmeas)
+    c = get_circuit(nqubits)
+    c_copy = c.copy(True)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(c)
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=10000)
-    noisy = state.expectation_from_samples(obs)
+    noisy = obs.expectation(noise.apply(c), nshots=10000)
     # Mitigated expected value
     estimate = ZNE(
-        circuit=c,
+        circuit=c_copy,
         observable=obs,
         noise_levels=np.array(range(4)),
         noise_model=noise,
@@ -166,13 +163,14 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
 
     nmeas = 1 if nqubits == 1 else nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits, nmeas)
+    c = get_circuit(nqubits)
+    c_copy = c.copy(True)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(c)
     # Noisy expected value without mitigation
     state = backend.execute_circuit(noise.apply(c), nshots=10000)
     noisy = state.expectation_from_samples(obs)

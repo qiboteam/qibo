@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import __version__, backends, gates
+from qibo import Circuit, __version__, backends, gates
 from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
@@ -404,6 +404,29 @@ class MeasurementOutcomes:
             p1 (float): Probability of the 1->0 flip.
         """
         return apply_bitflips(self, p0, p1)
+
+    def expectation_from_samples(self, observable):
+        """Computes the real expectation value of a diagonal observable from frequencies.
+
+        Args:
+            observable (Hamiltonian/SymbolicHamiltonian): diagonal observable in the
+                computational basis.
+
+        Returns:
+            (float): expectation value from samples.
+        """
+        # freq = self.frequencies(binary=True)
+        qubit_map = self.measurement_gate.qubits
+        qubits, coefficients = [], []
+        for term in observable.terms:
+            qubits.append(term.target_qubits)
+            coefficients.append(term.coefficient.real)
+        circuit = Circuit(1)
+        circuit._final_state = self
+        return self.backend.expectation_diagonal_observable_symbolic(
+            circuit, observable.nqubits, qubit_map, coefficients, nshots=self.nshots
+        )
+        # return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
         """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""
