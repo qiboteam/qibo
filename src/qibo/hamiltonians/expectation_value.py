@@ -1,15 +1,11 @@
-from qibo import Circuit, gates
-from qibo.backends import _check_backend, matrices
-
-import numpy as np
-
-from scipy.sparse import csr_matrix, kron, identity
-
 from functools import reduce
 
-import collections
-
 import networkx as nx
+import numpy as np
+from scipy.sparse import csr_matrix, identity, kron
+
+from qibo import Circuit, gates
+from qibo.backends import _check_backend, matrices
 
 PAULI_MATRICES_SPARSE = {
     "I": identity(2, format="csr"),
@@ -330,6 +326,7 @@ def _measure_circuit_pauli_word_operator(
 
     return qc
 
+
 def _single_shot_pauli_outcome(pauli_word: str, bitstring: str) -> int:
     """Returns the outcome (eigenvalue) of the respective Pauli word given the
     measured bitstring
@@ -439,17 +436,13 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
             mask = np.array([p != "I" for p in pauli_word])
 
             # eigenvalue: (-1)^(sum of bits at non-identity positions)
-            vals = (-1) ** np.sum(
-                measured_bitstrings_array[:, mask], axis=1
-            )
+            vals = (-1) ** np.sum(measured_bitstrings_array[:, mask], axis=1)
             eigenvals_given_bitstring.append(vals)
             coefs.append(coef)
 
         # in rows: each pauli in the group
         # in columns: the eigenvalue of the respective measured bitstring
-        eigenvals_given_bitstring = np.array(
-            eigenvals_given_bitstring, dtype=float
-        )
+        eigenvals_given_bitstring = np.array(eigenvals_given_bitstring, dtype=float)
         coefs = np.array(coefs, dtype=float)
 
         # let's get the average using the counts as weights!
