@@ -423,9 +423,11 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
+        observable.backend = SIMULATION_BACKEND
+        val = observable.expectation(circ, nshots=nshots)
         train_val["noise-free"].append(val)
+        circ._final_state = None
+        observable.backend = backend
         val = get_expectation_val_with_readout_mitigation(
             circ,
             observable,
@@ -552,9 +554,12 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(float(val.real))
+        # result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
+        # val = result.expectation_from_samples(observable)
+        observable.backend = SIMULATION_BACKEND
+        val = observable.expectation(circ, nshots=nshots)
+        train_val["noise-free"].append(val)
+        observable.backend = backend
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
             val = get_expectation_val_with_readout_mitigation(
@@ -567,7 +572,7 @@ def vnCDR(
                 seed=local_state,
                 backend=backend,
             )
-            train_val["noisy"].append(float(val.real))
+            train_val["noisy"].append(val)
 
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
@@ -1113,11 +1118,10 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
-        circuit_result = SIMULATION_BACKEND.execute_circuit(
-            training_circuit, nshots=nshots
-        )
-        expectation = observable.expectation_from_samples(circuit_result.frequencies())
-
+        observable.backend = SIMULATION_BACKEND
+        expectation = observable.expectation(training_circuit)
+        training_circuit._final_state = None
+        observable.backend = backend
         noisy_expectation = get_expectation_val_with_readout_mitigation(
             training_circuit,
             observable,

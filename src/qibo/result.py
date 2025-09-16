@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import Circuit, __version__, backends, gates
+from qibo import __version__, backends, gates
 from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
@@ -415,6 +415,8 @@ class MeasurementOutcomes:
         Returns:
             (float): expectation value from samples.
         """
+        from qibo import Circuit
+
         # freq = self.frequencies(binary=True)
         qubit_map = self.measurement_gate.qubits
         qubits, coefficients = [], []
