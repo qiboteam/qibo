@@ -241,30 +241,13 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
     circuit = random_clifford(h.nqubits, density_matrix=density_matrix, backend=backend)
     state = backend.execute_circuit(circuit).state()
     if density_matrix:
-        # state = random_density_matrix(2**h.nqubits, backend=backend)
         state = backend.to_numpy(state)
-        # state = state + state.T.conj()
-        norm = np.trace(state)
         target_ev = np.trace(matrix.dot(state)).real
     else:
-        # state = random_statevector(2**h.nqubits, backend=backend)
         state = backend.to_numpy(state)
-        norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
     backend.assert_allclose(h.expectation(circuit), target_ev)
-    backend.assert_allclose(h.expectation(circuit, normalize=True), target_ev / norm)
-
-
-"""
-def test_hamiltonian_expectation_errors(backend):
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5, backend=backend)
-    state = np.random.rand(4, 4, 4) + 1j * np.random.rand(4, 4, 4)
-    with pytest.raises(ValueError):
-        h.expectation(state)
-    with pytest.raises(TypeError):
-        h.expectation("test")
-"""
 
 
 def non_exact_expectation_test_setup(backend, observable):
@@ -290,24 +273,6 @@ def test_hamiltonian_expectation_from_samples(backend):
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 
-@pytest.mark.parametrize("qmap", (None, [1, 0]))
-def test_hamiltonian_expectation_from_samples_with_some_zero_counts(backend, qmap):
-    """Test Hamiltonian expectation value calculation."""
-    backend.set_seed(12)
-
-    freq = {"01": 48, "11": 52}
-    observable = SymbolicHamiltonian(
-        2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(1), nqubits=2, backend=backend
-    ).dense
-    # switch the matrix indices if qmap is inverted
-    indices = [1, 3] if qmap is None else [2, 3]
-    true_val = (
-        freq["01"] / 100 * observable.matrix[indices[0], indices[0]]
-        + freq["11"] / 100 * observable.matrix[indices[1], indices[1]]
-    )
-    backend.assert_allclose(observable.expectation_from_samples(freq, qmap), true_val)
-
-
 def test_hamiltonian_expectation_from_circuit(backend):
     """Test Hamiltonian expectation value calculation."""
     seed = 12
@@ -318,15 +283,8 @@ def test_hamiltonian_expectation_from_circuit(backend):
         3.14 + I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
     )
     exp, H, c = non_exact_expectation_test_setup(backend, observable)
-    exp_from_samples = H.expectation_from_circuit(c, nshots=nshots)
+    exp_from_samples = H.expectation(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
-
-
-def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs = random_density_matrix(4, backend=backend)
-    h = hamiltonians.Hamiltonian(2, obs, backend=backend)
-    with pytest.raises(NotImplementedError):
-        h.expectation_from_samples(None, qubit_map=None)
 
 
 @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
@@ -479,8 +437,10 @@ def test_hamiltonian_energy_fluctuation(backend):
     # define hamiltonian
     ham = hamiltonians.XXZ(nqubits=2, backend=backend)
     # take ground state and zero state
-    ground_state = ham.ground_state()
-    zero_state = backend.np.ones(2**2) / np.sqrt(2**2)
+    ground_state = Circuit(2)
+    ground_state.add([gates.H(0), gates.CNOT(0, 1), gates.Z(1), gates.X(1)])
+    zero_state = Circuit(2)
+    zero_state.add([gates.H(0), gates.H(1)])
     # collect energy fluctuations
     gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
     zs_energy_fluctuation = ham.energy_fluctuation(zero_state)

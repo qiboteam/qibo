@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Optional
 
 from qibo.config import raise_error
 
@@ -65,35 +66,18 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def expectation(self, state, normalize=False):  # pragma: no cover
+    def expectation(self, circuit, nshots: Optional[int] = None):  # pragma: no cover
         """Computes the real expectation value for a given state.
 
         Args:
-            state (ndarray): state in which to calculate the expectation value.
-            normalize (bool, optional): If ``True``, the expectation value
-                :math:`\\ell_{2}`-normalized. Defaults to ``False``.
+            circuit (Circuit): circuit to calculate the expectation value from.
+        If the circuit has already been executed, this will just make use of the cached
+        result, otherwise it will execute the circuit.
+            nshots (int, optional): number of shots to calculate the expectation value, if ``None``
+        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            float: real number corresponding to the expectation value.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def expectation_from_samples(self, freq, qubit_map=None):  # pragma: no cover
-        """Computes the expectation value of a diagonal observable,
-        given computational-basis measurement frequencies.
-
-        Args:
-            freq (collections.Counter): the keys are the observed values in binary form
-                and the values the corresponding frequencies, that is the number
-                of times each measured value/bitstring appears.
-            qubit_map (tuple): Mapping between frequencies and qubits.
-                If ``None``, then defaults to
-                :math:`[1, \\, 2, \\, \\cdots, \\, \\mathrm{len}(\\mathrm{key})]`.
-                Defaults to ``None``.
-
-        Returns:
-            float: real number corresponding to the expectation value.
+            float: the expectation value.
         """
         raise_error(NotImplementedError)
 

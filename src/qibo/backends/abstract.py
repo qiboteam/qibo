@@ -273,6 +273,25 @@ class Backend(abc.ABC):
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(NotImplementedError)
 
+    def expectation_observable_dense(self, circuit: "Circuit", observable: "ndarray"):
+        """Compute the expectation value of a generic dense hamiltonian starting from the state.
+
+        Args:
+            circuit (Circuit): the circuit to calculate the expectation value from.
+            observable (ndarray): the matrix corresponding to the observable.
+        Returns:
+            (float) the calculated expectation value.
+        """
+        result = (
+            circuit._final_state
+            if circuit._final_state is not None
+            else self.execute_circuit(circuit)
+        )
+        state = result.state()
+        if circuit.density_matrix:
+            return self.calculate_expectation_density_matrix(observable, state, False)
+        return self.calculate_expectation_state(observable, state, False)
+
     def expectation_diagonal_observable_dense(
         self,
         circuit: "Circuit",
@@ -281,14 +300,15 @@ class Backend(abc.ABC):
         nshots: int,
         qubit_map: Optional[Tuple[int, ...]] = None,
     ) -> float:
-        """Compute the expectation value of a dense hamiltonian diagonal in the computational basis.
+        """Compute the expectation value of a dense hamiltonian diagonal in a defined basis
+        starting from the samples.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
             observable (ndarray): the (diagonal) matrix corresponding to the observable.
             nqubits (int): the number of qubits of the observable.
-            nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
-            exact expectation value will be compute starting from the state. Defaults to ``None``.
+            nshots (int): how many shots to execute the circuit with.
+            qubit_map (Tuple[int, ...], optional): optional qubits reordering.
         Returns:
             (float) the calculated expectation value.
         """
@@ -320,7 +340,6 @@ class Backend(abc.ABC):
         nqubits: int,
         terms_qubits: List[Tuple[int, ...]],
         terms_coefficients: List[float],
-        constant: float,
         nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
     ) -> float:
@@ -362,7 +381,7 @@ class Backend(abc.ABC):
         expvals = self.cast(expvals, dtype=counts.dtype).reshape(
             len(terms_coefficients), len(freq)
         )
-        return self.np.sum(expvals @ counts) + constant
+        return self.np.sum(expvals @ counts)
 
     def expectation_observable_symbolic(
         self,
@@ -393,7 +412,6 @@ class Backend(abc.ABC):
         """
         from qibo import gates
 
-        # breakpoint()
         rotated_circuits = []
         qubit_maps = []
         # loop over the terms that can be diagonalized simultaneously
@@ -418,7 +436,7 @@ class Backend(abc.ABC):
                         )
 
             # Get the qubits we want to measure for each term
-            qubit_maps.append(sorted(measurements.keys()))
+            qubit_maps.append(measurements.keys())
 
             circ_copy = circuit.copy(True)
             circ_copy.add(list(measurements.values()))
@@ -445,9 +463,8 @@ class Backend(abc.ABC):
             expval += self.expectation_diagonal_observable_symbolic(
                 circ,
                 nqubits,
-                sorted(terms_qubits),
+                terms_qubits,
                 terms_coefficients,
-                constant,
                 nshots,
                 qmap,
             )

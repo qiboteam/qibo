@@ -99,21 +99,9 @@ class Hamiltonian(AbstractHamiltonian):
             )
         return self._exp.get("result")
 
-    def expectation(self, circuit, nshots=None, normalize=False, qubit_map=None):
+    def expectation(self, circuit, nshots=None, qubit_map=None):
         if nshots is None:
-            result = (
-                circuit._final_state
-                if circuit._final_state is not None
-                else self.backend.execute_circuit(circuit, nshots=nshots)
-            )
-            state = result.state()
-            if circuit.density_matrix:
-                return self.backend.calculate_expectation_density_matrix(
-                    self.matrix, state, normalize
-                )
-            return self.backend.calculate_expectation_state(
-                self.matrix, state, normalize
-            )
+            return self.backend.expectation_observable_dense(circuit, self.matrix)
         return self.backend.expectation_diagonal_observable_dense(
             circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
@@ -124,7 +112,7 @@ class Hamiltonian(AbstractHamiltonian):
             dim = int(self.matrix.shape[0])
         return self.backend.cast(self.backend.matrices.I(dim), dtype=self.matrix.dtype)
 
-    def energy_fluctuation(self, state):
+    def energy_fluctuation(self, circuit):
         """
         Evaluate energy fluctuation:
 
@@ -135,16 +123,15 @@ class Hamiltonian(AbstractHamiltonian):
         for a given state :math:`\\ket{\\mu}`.
 
         Args:
-            state (ndarray): quantum state to be used to compute the energy fluctuation.
+            circuit (Circuit): circuit to compute the energy fluctuation from.
 
         Returns:
             float: Energy fluctuation value.
         """
-        state = self.backend.cast(state)
-        energy = self.expectation(state)
+        energy = self.expectation(circuit)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        average_h2 = h2.expectation(circuit)
         return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
 
     def __add__(self, other):
@@ -513,7 +500,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None, normalize: bool = False) -> float:  # type: ignore
+    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
         """
         Calculate the expectation value from a circuit.
         This even works for observables not completely diagonal in the computational
@@ -534,7 +521,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             (float): the calculated expectation value.
         """
         if nshots is None:
-            return self.dense.expectation(circuit, nshots=nshots, normalize=normalize)
+            return self.dense.expectation(circuit, nshots=nshots)
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
         return self.backend.expectation_observable_symbolic(
