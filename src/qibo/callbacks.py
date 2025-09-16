@@ -240,9 +240,9 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
-    def apply(self, backend, state):
+    def apply(self, backend, circuit):
         assert type(self.hamiltonian.backend) == type(backend)
-        expectation = self.hamiltonian.expectation(state)
+        expectation = self.hamiltonian.expectation(circuit)
         self.append(expectation)
         return expectation
 

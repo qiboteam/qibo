@@ -819,6 +819,8 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 circuit.set_parameters(params)
         """
+        # reset the final state
+        self._final_state = None
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:

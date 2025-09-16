@@ -8,7 +8,11 @@ from qibo import callbacks, gates, hamiltonians
 # Absolute testing tolerance for the cases of zero entanglement entropy
 from qibo.config import PRECISION_TOL
 from qibo.models import AdiabaticEvolution, Circuit
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_statevector,
+)
 
 
 def test_abstract_callback_properties():
@@ -332,21 +336,17 @@ def test_energy(backend, density_matrix):
     energy = callbacks.Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
+    circ = random_clifford(4, density_matrix=density_matrix, backend=backend)
+    state = circ().state()
     if density_matrix:
-        from qibo.quantum_info import random_density_matrix
-
-        state = random_density_matrix(2**4, backend=backend)
         target_energy = backend.np.trace(backend.np.matmul(matrix, state))
-        final_energy = energy.apply_density_matrix(backend, state)
+        final_energy = energy.apply_density_matrix(backend, circ)
     else:
-        from qibo.quantum_info import random_statevector
-
-        state = random_statevector(2**4, backend=backend)
         target_energy = np.matmul(
             np.conj(backend.to_numpy(state)),
             np.matmul(backend.to_numpy(matrix), backend.to_numpy(state)),
         )
-        final_energy = energy.apply(backend, state)
+        final_energy = energy.apply(backend, circ)
     backend.assert_allclose(final_energy, target_energy)
 
 
