@@ -3,6 +3,7 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from sympy.core import basic
 
 from qibo import __version__, backends, gates
 from qibo.config import raise_error
@@ -417,18 +418,25 @@ class MeasurementOutcomes:
         """
         from qibo import Circuit
 
-        # freq = self.frequencies(binary=True)
-        qubit_map = self.measurement_gate.qubits
-        qubits, coefficients = [], []
-        for term in observable.terms:
-            qubits.append(term.target_qubits)
-            coefficients.append(term.coefficient.real)
         circuit = Circuit(1)
         circuit._final_state = self
-        return self.backend.expectation_diagonal_observable_symbolic(
-            circuit, observable.nqubits, qubit_map, coefficients, nshots=self.nshots
+        if observable.__class__.__name__ == "SymbolicHamiltonian":
+            qubits, coefficients = [], []
+            for term in observable.terms:
+                qubits.append(
+                    [
+                        factor.target_qubit
+                        for factor in term.factors
+                        if factor.__class__.__name__ != "I"
+                    ]
+                )
+                coefficients.append(term.coefficient.real)
+            return self.backend.expectation_diagonal_observable_symbolic(
+                circuit, observable.nqubits, qubits, coefficients, nshots=self.nshots
+            )
+        return observable.backend.expectation_diagonal_observable_dense(
+            circuit, observable.matrix, observable.nqubits, nshots=self.nshots
         )
-        # return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
         """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""
