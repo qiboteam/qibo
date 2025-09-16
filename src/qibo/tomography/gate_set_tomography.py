@@ -207,9 +207,7 @@ def _gate_tomography(
                     new_circ = noise_model.apply(new_circ)
                 if transpiler is not None:
                     new_circ, _ = transpiler(new_circ)
-                exp_val = observable.expectation_from_samples(
-                    backend.execute_circuit(new_circ, nshots=nshots).frequencies()
-                )
+                exp_val = observable.expectation(new_circ, nshots=nshots)
             matrix_jk[j, k] = exp_val
     return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 

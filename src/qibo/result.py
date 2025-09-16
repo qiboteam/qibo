@@ -405,20 +405,6 @@ class MeasurementOutcomes:
         """
         return apply_bitflips(self, p0, p1)
 
-    def expectation_from_samples(self, observable):
-        """Computes the real expectation value of a diagonal observable from frequencies.
-
-        Args:
-            observable (Hamiltonian/SymbolicHamiltonian): diagonal observable in the
-                computational basis.
-
-        Returns:
-            (float): expectation value from samples.
-        """
-        freq = self.frequencies(binary=True)
-        qubit_map = self.measurement_gate.qubits
-        return observable.expectation_from_samples(freq, qubit_map)
-
     def to_dict(self):
         """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""
         args = {

@@ -6,6 +6,7 @@ import pytest
 from qibo import hamiltonians, symbols
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian, random_statevector
+from qibo.quantum_info.random_ensembles import random_clifford
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
@@ -75,22 +76,23 @@ def test_trotter_hamiltonian_operator_add_and_sub(backend, nqubits=3):
     backend.assert_allclose(dense.matrix, target_ham.matrix)
 
 
-@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
-def test_trotter_hamiltonian_matmul(backend, nqubits, normalize):
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_trotter_hamiltonian_matmul(backend, nqubits):
     """Test Trotter Hamiltonian expectation value."""
-    state = random_statevector(2**nqubits, backend=backend)
+    state = random_clifford(nqubits, backend=backend)
 
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False, backend=backend)
     dense_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
 
-    trotter_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
+    trotter_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
     backend.assert_allclose(trotter_ev, target_ev)
 
-    trotter_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
+    trotter_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
     backend.assert_allclose(trotter_ev, target_ev)
 
+    state = state().state()
     trotter_matmul = local_ham @ state
     target_matmul = dense_ham @ state
     backend.assert_allclose(trotter_matmul, target_matmul)
