@@ -18,6 +18,7 @@ PAULI_MATRICES_SPARSE = {
     "Z": csr_matrix(matrices.Z, dtype=complex),
 }
 
+
 def pauli_word_to_sparse(pauli_word: str) -> csr_matrix:
     """Converts a Pauli word represented as a string into its sparse matrix representation.
 
@@ -38,6 +39,7 @@ def pauli_word_to_sparse(pauli_word: str) -> csr_matrix:
     )
 
     return pauli_word_sparse
+
 
 def get_expval_from_linear_comb_of_paulis_from_statevector(
     circuit: Circuit, lin_comb_pauli: list[tuple[float, str]], backend=None
@@ -221,9 +223,7 @@ def _group_commuting_paulis(
     ]
 
     # bring the coefs
-    map_pauli_word_coef = {
-        pauli_word: coef for coef, pauli_word in lin_comb_pauli
-    }
+    map_pauli_word_coef = {pauli_word: coef for coef, pauli_word in lin_comb_pauli}
     term_groups = [
         [(map_pauli_word_coef.get(pauli_word), pauli_word) for pauli_word in group]
         for group in term_groups
@@ -330,36 +330,20 @@ def _measure_circuit_pauli_word_operator(
 
     return qc
 
-
-def _get_expval_single_pauli_word_from_counts(
-    pauli_word: str, counts: collections.Counter
-) -> tuple[float, float]:
-    """Computes the expected value of the Pauli word and the respective standard error,
-    based on the counts resulting from a measurement.
+def _single_shot_pauli_outcome(pauli_word: str, bitstring: str) -> int:
+    """Returns the outcome (eigenvalue) of the respective Pauli word given the
+    measured bitstring
 
     Args:
-        pauli_word (str): Single pauli word represented as a string, e.g.: `XYZIY`.
-        counts (collections.Counter): Counter with counts resulting from measurement,
-            in the format `Counter({"bitstring": count})`
+        pauli_word (str): Measured Pauli word
+        bitstring (str): Measured bitstring
 
     Returns:
-        tuple[float, float]: Expected value of the Pauli word and the respective standard error.
+        int: Eigenvalue (either -1 or +1)
     """
-
-    # indices of qubits where the pauli (which is not identity) acts
     indices_not_id = [i for i, pauli in enumerate(pauli_word) if pauli != "I"]
-
-    nshots = counts.total()
-
-    eigenvalues_distribution = []
-    for bitstring, count in counts.items():
-        eigenvalue = (-1) ** sum(int(bitstring[i]) for i in indices_not_id)
-        eigenvalues_distribution += [eigenvalue] * count
-
-    expectation = np.mean(eigenvalues_distribution)
-    std_error = np.std(eigenvalues_distribution) / np.sqrt(nshots)
-
-    return expectation, std_error
+    eigenvalue = (-1) ** sum(int(bitstring[i]) for i in indices_not_id)
+    return eigenvalue
 
 
 def get_expval_from_linear_comb_of_paulis_from_samples(
@@ -379,7 +363,7 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
             already grouped in mutually-commuting terms or not, depending on the type of input:
 
              The input can be provided in two formats:
-            
+
             1. **Dictionary with grouped mutually-commuting terms {pauli_word_measure: [(coef, pauli_word)]}**.
                 Example - Heisenberg XXZ model Hamiltonian on `n=4` qubits with `delta=0.5`:
 
@@ -417,35 +401,51 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
 
     if isinstance(lin_comb_pauli, list):
         # group paulis if not already grouped
-        groupings_measurement = _get_groupings_commuting_terms_from_linear_comb_of_paulis(
-            lin_comb_pauli
+        groupings_measurement = (
+            _get_groupings_commuting_terms_from_linear_comb_of_paulis(lin_comb_pauli)
         )
     else:
         groupings_measurement = lin_comb_pauli
 
-    # now, perform measurements
-    expval = 0
-    SE_list = []
+    expval = 0.0
+    var_total = 0.0
+
     for measured_pauli, group in groupings_measurement.items():
 
-        circuit_measd_pauli = _measure_circuit_pauli_word_operator(
-            circuit, measured_pauli
-        )
+        circuit_measd_pauli = _measure_circuit_pauli_word_operator(circuit, measured_pauli)
         result_measd_pauli = circuit_measd_pauli(nshots=nshots)
         counts_measd_pauli = result_measd_pauli.frequencies(binary=True)
 
+        # getting a list of all measured bitstrings
+        shots = []
+        for bitstring, freq in counts_measd_pauli.items():
+            shots.extend([bitstring] * freq)
+
+        # create a matrix of eigenvalues for each pauli word given the measured bitstring
+        # each pauli in the group on the rows, eigenvalues of respective pauli given measured bitsstring in columns
+        eigenvals_given_bitstring = []
+        coefs = []
         for coef, pauli_word in group:
+            # geting pauli word eigenvalue
+            eigenvals_given_bitstring.append([
+                _single_shot_pauli_outcome(pauli_word, bitstring) for bitstring in shots
+            ])
+            coefs.append(coef)
 
-            expval_single_pauli, error_single_pauli = (
-                _get_expval_single_pauli_word_from_counts(
-                    pauli_word, counts_measd_pauli
-                )
-            )
-            expval += coef * expval_single_pauli
+        eigenvals_given_bitstring = np.array(eigenvals_given_bitstring, dtype=float)
+        coefs = np.array(coefs)
 
-            SE_list.append((coef**2) * (error_single_pauli**2))
+        # means and covariances
+        mu = eigenvals_given_bitstring.mean(axis=1)
+        cov = (eigenvals_given_bitstring @ eigenvals_given_bitstring.T) / nshots - np.outer(mu, mu)
 
-    # error propagation
-    expval_error = np.sqrt(np.array(SE_list).sum())
+        expval += coefs @ mu
+        var_total += coefs @ cov @ coefs
 
-    return expval, expval_error
+    # final SE
+    expval_SE = np.sqrt(var_total / nshots)
+
+    # 95% CI
+    expval_95_CI = (expval - 1.96 * expval_SE, expval + 1.96 * expval_SE)
+
+    return expval, expval_SE, expval_95_CI
