@@ -412,38 +412,61 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
 
     for measured_pauli, group in groupings_measurement.items():
 
-        circuit_measd_pauli = _measure_circuit_pauli_word_operator(circuit, measured_pauli)
+        circuit_measd_pauli = _measure_circuit_pauli_word_operator(
+            circuit, measured_pauli
+        )
         result_measd_pauli = circuit_measd_pauli(nshots=nshots)
         counts_measd_pauli = result_measd_pauli.frequencies(binary=True)
 
-        # getting a list of all measured bitstrings
-        shots = []
-        for bitstring, freq in counts_measd_pauli.items():
-            shots.extend([bitstring] * freq)
+        # array with each bitstring measured (used below)
+        # each column is one qubit, each row is one unique measured bitstring
+        # i transform to integer to sum it easily below
+        measured_bitstrings_array = np.array(
+            [[int(b) for b in bitstr] for bitstr in counts_measd_pauli.keys()]
+        )
+        # counts of each measured bitstring - will be used below as weights
+        counts_weights = np.array(list(counts_measd_pauli.values()), dtype=int)
+        nshots_group = counts_weights.sum()
 
-        # create a matrix of eigenvalues for each pauli word given the measured bitstring
-        # each pauli in the group on the rows, eigenvalues of respective pauli given measured bitsstring in columns
+        # create a matrix of eigenvalues for each Pauli word given the measured bitstrings
         eigenvals_given_bitstring = []
         coefs = []
+
         for coef, pauli_word in group:
-            # geting pauli word eigenvalue
-            eigenvals_given_bitstring.append([
-                _single_shot_pauli_outcome(pauli_word, bitstring) for bitstring in shots
-            ])
+
+            # indices of qubits that are not identity - i used this as mask
+            # to get the 1s in qubits pisitions which are not I below
+            mask = np.array([p != "I" for p in pauli_word])
+
+            # eigenvalue: (-1)^(sum of bits at non-identity positions)
+            vals = (-1) ** np.sum(
+                measured_bitstrings_array[:, mask], axis=1
+            )
+            eigenvals_given_bitstring.append(vals)
             coefs.append(coef)
 
-        eigenvals_given_bitstring = np.array(eigenvals_given_bitstring, dtype=float)
-        coefs = np.array(coefs)
+        # in rows: each pauli in the group
+        # in columns: the eigenvalue of the respective measured bitstring
+        eigenvals_given_bitstring = np.array(
+            eigenvals_given_bitstring, dtype=float
+        )
+        coefs = np.array(coefs, dtype=float)
 
-        # means and covariances
-        mu = eigenvals_given_bitstring.mean(axis=1)
-        cov = (eigenvals_given_bitstring @ eigenvals_given_bitstring.T) / nshots - np.outer(mu, mu)
+        # let's get the average using the counts as weights!
+        mu = np.average(eigenvals_given_bitstring, axis=1, weights=counts_weights)
+        cov_pop = (
+            eigenvals_given_bitstring * counts_weights
+        ) @ eigenvals_given_bitstring.T / nshots_group - np.outer(mu, mu)
 
+        # variance of the mean: divide by total shots in this group
+        cov_mean = cov_pop / nshots_group
+
+        # acumulate expectation value and variance
         expval += coefs @ mu
-        var_total += coefs @ cov @ coefs
+        var_total += coefs @ cov_mean @ coefs
 
-    # final SE
-    expval_SE = np.sqrt(var_total / nshots)
+    # final standard error
+    expval_SE = np.sqrt(var_total)
 
     # 95% CI
     expval_95_CI = (expval - 1.96 * expval_SE, expval + 1.96 * expval_SE)
