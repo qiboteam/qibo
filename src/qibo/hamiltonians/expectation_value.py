@@ -342,13 +342,12 @@ def _single_shot_pauli_outcome(pauli_word: str, bitstring: str) -> int:
     eigenvalue = (-1) ** sum(int(bitstring[i]) for i in indices_not_id)
     return eigenvalue
 
-
 def get_expval_from_linear_comb_of_paulis_from_samples(
     circuit: Circuit,
     lin_comb_pauli: list[tuple[float, str]] | dict[str, list[tuple[float, str]]],
     nshots: int,
     backend=None,
-) -> float:
+) -> tuple[float, float, list[float]]:
     """Computes the the expected value of an observable represented as a linear combination
     of Pauli words with respect to the state prepared by the circuit, from the counts resulting
     from finite measurements specified by `nshots`
@@ -391,7 +390,8 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
 
     Returns:
-        float: The computed expected value.
+        tuple[float, float, list[float]]: The computed expected value, the respective standard error,
+            and the 95% confidence interval for the expected value (list with lower and upper bound)
     """
 
     backend = _check_backend(backend)
@@ -462,6 +462,6 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
     expval_SE = np.sqrt(var_total)
 
     # 95% CI
-    expval_95_CI = (expval - 1.96 * expval_SE, expval + 1.96 * expval_SE)
+    expval_95_CI = [expval - 1.96 * expval_SE, expval + 1.96 * expval_SE]
 
     return expval, expval_SE, expval_95_CI
