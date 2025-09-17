@@ -9,6 +9,7 @@ class AbstractHamiltonian:
 
     def __init__(self):
         self._nqubits = None
+        self.backend = None
 
     @property
     def nqubits(self):
@@ -21,6 +22,16 @@ class AbstractHamiltonian:
         if n < 1:
             raise_error(ValueError, f"nqubits must be a positive integer but is {n}")
         self._nqubits = n
+
+    @property
+    @abstractmethod
+    def matrix(self):
+        """Returns the full matrix representation.
+
+        For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
+        matrix, depending on how the Hamiltonian was created.
+        """
+        pass
 
     @abstractmethod
     def eigenvalues(self, k=6):  # pragma: no cover
