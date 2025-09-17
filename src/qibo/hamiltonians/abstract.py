@@ -113,3 +113,10 @@ class AbstractHamiltonian:
     def __matmul__(self, o):  # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
         raise_error(NotImplementedError)
+
+    def expectation_from_state(self, state: "ndarray", normalize: bool = False):
+        if len(state.shape) == 2:
+            return self.backend.calculate_expectation_density_matrix(
+                state, self.matrix, normalize
+            )
+        return self.backend.calculate_expectation_state(state, self.matrix, normalize)

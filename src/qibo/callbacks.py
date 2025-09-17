@@ -240,15 +240,25 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
-    def apply(self, backend, circuit):
+    def apply(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
-        expectation = self.hamiltonian.expectation(circuit)
+        if state.__class__.__name__ == "Circuit":
+            expectation = self.hamiltonian.expectation(state)
+        else:
+            expectation = self.hamiltonian.backend.calculate_expectation_state(
+                self.hamiltonian.matrix, state, False
+            )
         self.append(expectation)
         return expectation
 
     def apply_density_matrix(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
-        expectation = self.hamiltonian.expectation(state)
+        if state.__class__.__name__ == "Circuit":
+            expectation = self.hamiltonian.expectation(state)
+        else:
+            expectation = self.hamiltonian.backend.calculate_expectation_density_matrix(
+                self.hamiltonian.matrix, state, False
+            )
         self.append(expectation)
         return expectation
 
