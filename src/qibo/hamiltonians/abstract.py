@@ -9,7 +9,6 @@ class AbstractHamiltonian:
 
     def __init__(self):
         self._nqubits = None
-        self.backend = None
 
     @property
     def nqubits(self):
