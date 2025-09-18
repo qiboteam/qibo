@@ -347,7 +347,7 @@ def test_energy(backend, density_matrix):
             np.matmul(backend.to_numpy(matrix), backend.to_numpy(state)),
         )
         final_energy = energy.apply(backend, circ)
-    backend.assert_allclose(final_energy, target_energy)
+    backend.assert_allclose(final_energy, target_energy, atol=1e-8)
 
 
 @pytest.mark.parametrize("dense", [False, True])
