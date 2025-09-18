@@ -248,10 +248,15 @@ def _get_measure_pauli_from_commuting_terms(group: list[tuple[float, str]]) -> s
     measurement_basis = {}
 
     for _, pauli_word in group:
+        if pauli_word == "I"*len(pauli_word):
+            continue
         for qubit_position, pauli_operator in enumerate(pauli_word):
             if pauli_operator == "I" or qubit_position in measurement_basis:
                 continue
             measurement_basis[qubit_position] = pauli_operator
+
+    # order by keys
+    measurement_basis = dict(sorted(measurement_basis.items()))
 
     return "".join(list(measurement_basis.values()))
 
@@ -325,22 +330,6 @@ def _measure_circuit_pauli_word_operator(
         qc.add(gates.M(qubit))
 
     return qc
-
-
-def _single_shot_pauli_outcome(pauli_word: str, bitstring: str) -> int:
-    """Returns the outcome (eigenvalue) of the respective Pauli word given the
-    measured bitstring
-
-    Args:
-        pauli_word (str): Measured Pauli word
-        bitstring (str): Measured bitstring
-
-    Returns:
-        int: Eigenvalue (either -1 or +1)
-    """
-    indices_not_id = [i for i, pauli in enumerate(pauli_word) if pauli != "I"]
-    eigenvalue = (-1) ** sum(int(bitstring[i]) for i in indices_not_id)
-    return eigenvalue
 
 
 def get_expval_from_linear_comb_of_paulis_from_samples(
@@ -466,3 +455,78 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
     expval_95_CI = [expval - 1.96 * expval_SE, expval + 1.96 * expval_SE]
 
     return expval, expval_SE, expval_95_CI
+
+def get_expval_from_linear_comb_of_paulis_from_samples_ungrouped(
+    circuit: Circuit,
+    lin_comb_pauli: list[tuple[float, str]],
+    nshots: int,
+    backend=None,
+) -> tuple[float, float, list[float]]:
+    """Computes the the expected value of an observable represented as a linear combination
+    of Pauli words with respect to the state prepared by the circuit, from the counts resulting
+    from finite measurements specified by `nshots`.
+    NO GROUPING OF COMMUTING TERMS IS PERFORMED!!! -> mainly for test, or if grouping is too expensive
+
+    Args:
+        circuit (Circuit): Quantum circuit preparing the state with which the expected value will be computed.
+        lin_comb_pauli (list[tuple[float, str]]: Observable whose expected value
+            will be calculated, explicitly represented as a linear combination of Pauli words, not grouped in
+            mutually-commuting terms - the number of measurements will be the number of terms!!!
+            Example - Heisenberg XXZ model Hamiltonian on `n=4` qubits with `delta=0.5`:
+
+                    [(1.0, 'XXII'),
+                    (1.0, 'IXXI'),
+                    (1.0, 'IIXX'),
+                    (1.0, 'XIIX'),
+                    (1.0, 'YYII'),
+                    (1.0, 'IYYI'),
+                    (1.0, 'IIYY'),
+                    (1.0, 'YIIY'),
+                    (0.5, 'ZZII'),
+                    (0.5, 'IZZI'),
+                    (0.5, 'IIZZ'),
+                    (0.5, 'ZIIZ')]
+
+        nshots (int): Number of shots (samples) for measurement
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+
+    Returns:
+        tuple[float, float, list[float]]: The computed expected value, the respective standard error,
+            and the 95% confidence interval for the expected value (list with lower and upper bound)
+    """
+
+    backend = _check_backend(backend)
+
+    expval_total = 0.0
+    var_total = 0.0
+
+    for coef, pauli_word in lin_comb_pauli:
+
+        meas_circ = _measure_circuit_pauli_word_operator(circuit, pauli_word)
+        result = meas_circ(nshots=nshots)
+        counts = result.frequencies(binary=True)
+
+        bitstrings = np.array([[int(b) for b in bitstr] for bitstr in counts.keys()])
+        weights = np.array(list(counts.values()), dtype=int)
+        nshots_group = weights.sum()
+
+        # mask out non-identity positions
+        mask = np.array([p != "I" for p in pauli_word])
+        # eigenvalues \pm 1
+        eigenvals = (-1) ** np.sum(bitstrings[:, mask], axis=1)
+
+        # weighted mean (expectation value for this Pauli)
+        mu = np.sum(eigenvals * weights) / nshots_group
+
+        # variance of the sample mean for ±1 outcomes
+        var_mu = (1 - mu**2) / nshots_group
+
+        # accumulate contribution
+        expval_total += coef * mu
+        var_total += (coef**2) * var_mu
+
+    expval_SE = np.sqrt(var_total)
+    expval_95_CI = [expval_total - 1.96 * expval_SE, expval_total + 1.96 * expval_SE]
+
+    return expval_total, expval_SE, expval_95_CI
