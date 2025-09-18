@@ -126,7 +126,9 @@ class AbstractHamiltonian:
 
     def expectation_from_state(self, state: "ndarray", normalize: bool = False):
         if len(state.shape) == 2:
-            return self.backend.calculate_expectation_density_matrix(
+            return self.backend.calculate_expectation_density_matrix(  # pylint: disable=no-member
                 state, self.matrix, normalize
             )
-        return self.backend.calculate_expectation_state(state, self.matrix, normalize)
+        return self.backend.calculate_expectation_state(  # pylint: disable=no-member
+            state, self.matrix, normalize
+        )
