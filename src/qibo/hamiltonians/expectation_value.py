@@ -184,6 +184,9 @@ def _group_commuting_paulis(
             from the input observable, contatning coeficient and Pauli word [[(coef, pauli_word)]]
     """
 
+    # sorting by pauli wprds seems to help getting less groupings - TO-DO: understand why!!!!
+    lin_comb_pauli = sorted(lin_comb_pauli, key=lambda x: x[-1])
+
     # get pauli words in symbolic notation "XIXYZ" -> "X0 X2 Y3 Z4"
     pauli_terms = [
         _pauli_word_std_str_to_symbolic_str(pauli_word)
@@ -248,7 +251,7 @@ def _get_measure_pauli_from_commuting_terms(group: list[tuple[float, str]]) -> s
     measurement_basis = {}
 
     for _, pauli_word in group:
-        if pauli_word == "I" * len(pauli_word):
+        if pauli_word == "I"*len(pauli_word):
             continue
         for qubit_position, pauli_operator in enumerate(pauli_word):
             if pauli_operator == "I" or qubit_position in measurement_basis:
@@ -455,7 +458,6 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
     expval_95_CI = [expval - 1.96 * expval_SE, expval + 1.96 * expval_SE]
 
     return expval, expval_SE, expval_95_CI
-
 
 def get_expval_from_linear_comb_of_paulis_from_samples_ungrouped(
     circuit: Circuit,
