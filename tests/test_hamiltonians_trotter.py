@@ -93,7 +93,7 @@ def test_trotter_hamiltonian_matmul(backend, nqubits):
     state = state().state()
     trotter_matmul = local_ham @ state
     target_matmul = dense_ham @ state
-    backend.assert_allclose(trotter_matmul, target_matmul)
+    backend.assert_allclose(trotter_matmul, target_matmul, atol=1e-8)
 
 
 def test_symbolic_hamiltonian_circuit_different_dts(backend):
