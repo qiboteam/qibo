@@ -77,7 +77,7 @@ class AbstractHamiltonian:
 
     @abstractmethod
     def expectation(self, circuit, nshots: Optional[int] = None):  # pragma: no cover
-        """Computes the real expectation value for a given state.
+        """Computes the expectation value for a given circuit.
 
         Args:
             circuit (Circuit): circuit to calculate the expectation value from.

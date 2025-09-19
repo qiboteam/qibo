@@ -100,8 +100,25 @@ class Hamiltonian(AbstractHamiltonian):
         return self._exp.get("result")
 
     def expectation(self, circuit, nshots=None, qubit_map=None):
+        """Computes the expectation value for a given circuit. This works only for diagonal
+        observables if ``nshots != None``.
+
+        Args:
+            circuit (Circuit): circuit to calculate the expectation value from.
+        If the circuit has already been executed, this will just make use of the cached
+        result, otherwise it will execute the circuit.
+            nshots (int, optional): number of shots to calculate the expectation value, if ``None``
+        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
+
+        Returns:
+            float: the expectation value.
+        """
         if nshots is None:
             return self.backend.expectation_observable_dense(circuit, self.matrix)
+        from qibo import gates
+
+        circuit = circuit.copy(True)
+        circuit.add(gates.M(*range(self.nqubits)))
         return self.backend.expectation_diagonal_observable_dense(
             circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
@@ -111,6 +128,16 @@ class Hamiltonian(AbstractHamiltonian):
         frequencies: Dict[str | int, int],
         qubit_map: Optional[Tuple[int, ...]] = None,
     ):
+        """Compute the expectation value starting from some samples, works only for diagonal
+        observables.
+
+        Args:
+            frequencies (Dict[str | int, int]): the dictionary of samples.
+            qubit_map (Tuple[int, ...], optional): optional qubit reordering.
+
+        Returns:
+            (float) the expectation value.
+        """
         from qibo import Circuit
 
         circuit = Circuit(1)
@@ -519,24 +546,17 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self._calculate_dense_from_form()
 
     def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
-        """
-        Calculate the expectation value from a circuit.
-        This even works for observables not completely diagonal in the computational
-        basis, but only diagonal at a term level in a defined basis. Namely, for
-        an observable of the form :math:``H = \\sum_i H_i``, where each :math:``H_i``
-        consists in a `n`-qubits pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`,
-        the expectation value is computed by rotating the input circuit in the suitable
-        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
-        that are then summed to build the global expectation value.
-        Each term of the observable is treated separately, by measuring in the correct
-        basis and re-executing the circuit.
+        """Computes the expectation value for a given circuit.
 
         Args:
-            circuit (Circuit): input circuit.
-            nshots (int): number of shots, defaults to 1000.
+            circuit (Circuit): circuit to calculate the expectation value from.
+        If the circuit has already been executed, this will just make use of the cached
+        result, otherwise it will execute the circuit.
+            nshots (int, optional): number of shots to calculate the expectation value, if ``None``
+        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            (float): the calculated expectation value.
+            float: the expectation value.
         """
         if nshots is None:
             return self.dense.expectation(circuit, nshots=nshots)
@@ -557,6 +577,17 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         frequencies: Dict[str | int, int],
         qubit_map: Optional[Tuple[int, ...]] = None,
     ):
+        """Compute the expectation value starting from some samples, works only for diagonal
+        observables.
+
+        Args:
+            frequencies (Dict[str | int, int]): the dictionary of samples.
+            qubit_map (Tuple[int, ...], optional): optional qubit reordering.
+
+        Returns:
+            (float) the expectation value.
+        """
+
         from qibo import Circuit
 
         circuit = Circuit(1)

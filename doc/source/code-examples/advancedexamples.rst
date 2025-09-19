@@ -1372,7 +1372,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    # Include the measurements
-   circuit.add(gates.M(*range(nqubits)))
+   #circuit.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
    circuit.draw()
@@ -1392,13 +1392,13 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 
 .. testcode::
 
-   from qibo import set_dtype
+   from qibo import set_dtype, get_backend
    from qibo.symbols import Z
    from qibo.hamiltonians import SymbolicHamiltonian
 
    set_dtype("complex128")
 
-   backend = qibo.get_backend()
+   backend = get_backend()
 
    # Define the observable
    obs = np.prod([Z(i) for i in range(nqubits)])
@@ -1410,8 +1410,7 @@ the real quantum hardware, instead, we can use a noise model:
 .. testcode::
 
    # Noise-free expected value
-   state = backend.execute_circuit(circuit).state()
-   exact = obs.expectation(state)
+   exact = obs.expectation(circuit)
    print(exact)
    # 0.9096065335014379
 
@@ -1419,7 +1418,7 @@ the real quantum hardware, instead, we can use a noise model:
    from qibo.quantum_info import random_stochastic_matrix
 
    # Define the noise model
-   noise =  NoiseModel()
+   noise = NoiseModel()
    # depolarizing error after each CNOT
    noise.add(DepolarizingError(0.1), gates.CNOT)
    # readout error
@@ -1430,8 +1429,7 @@ the real quantum hardware, instead, we can use a noise model:
    noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
    noisy_circuit = noise.apply(circuit)
-   noisy_state = backend.execute_circuit(noisy_circuit).state()
-   noisy_exp_val = obs.expectation(noisy_state)
+   noisy_exp_val = obs.expectation(noisy_circuit)
    print(noisy_exp_val)
    # 0.5647937721701448
 
@@ -2101,12 +2099,17 @@ constructing each symbol:
 
 .. _hamexpectation-example:
 
-How to calculate expectation values using samples?
+How to calculate expectation values?
 --------------------------------------------------
 
 It is possible to calculate the expectation value of a :class:`qibo.hamiltonians.Hamiltonian`
-on a given state using the :meth:`qibo.hamiltonians.Hamiltonian.expectation` method,
-which can be called on a state or density matrix. For example
+or a :class:`qibo.hamiltonians.SymbolicHamiltonian` starting from different objects.
+The recommended way is to use the :meth:`qibo.hamiltonians.Hamiltonian.expectation` or the :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` methods,
+which calculate the expectation values starting from an input :class:`qibo.models.circuit.Circuit`. If the circuit has
+been executed already, the cached result contained in ``circuit.final_state`` will be used, otherwise the circuit will be executed.
+This is the most flexible way for calculating expectation values and offers the broader support.
+For instance, in order to calculate the exact expectation value, thus using the quantum state prepared by the circuit,
+of an ``XXZ`` hamiltonian:
 
 
 .. testcode::
@@ -2121,22 +2124,22 @@ which can be called on a state or density matrix. For example
     circuit.add(gates.CNOT(2, 3))
 
     hamiltonian = XXZ(4)
-
-    result = circuit()
-    expectation_value = hamiltonian.expectation(result.state())
+    expectation_value = hamiltonian.expectation(circuit)
+    # this is equivalent to explicit state calculation
+    state = circuit().state()
+    expectation_value = hamiltonian.expectation_from_state(state)
 
 In this example, the circuit will be simulated to obtain the final state vector
 and the corresponding expectation value will be calculated through exact matrix
-multiplication with the Hamiltonian matrix.
-If a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used instead, the expectation
-value will be calculated as a sum of expectation values of local terms, allowing
-calculations of more qubits with lower memory consumption. The calculation of each
-local term still requires the state vector.
+multiplication with the Hamiltonian matrix. Alternatively, one can explicitly
+extract the final quantum state and calculate the expectation value directly
+from that with the :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_state` method,
+as shown.
 
-When executing a circuit on real hardware, usually only measurements of the state are
-available, not the state vector. Qibo provides :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
-to allow calculation of expectation values directly from such samples:
-
+However, when executing a circuit on real hardware, usually only measurements of the state are
+available, not the state vector itself. Therefore, :meth:`qibo.hamiltonians.Hamiltonian.expectation`
+and :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` support a further ``nshots`` argument
+to trigger the calculation of expectation values directly from the samples:
 
 .. testcode::
 
@@ -2148,25 +2151,31 @@ to allow calculation of expectation values directly from such samples:
     circuit.add(gates.CNOT(0, 1))
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(2, 3))
-    circuit.add(gates.M(*range(4)))
 
     hamiltonian = hamiltonians.Z(4)
 
+    expectation_value = hamiltonian.expectation(circuit, nshots=1024)
+    # this is equivalent to explicit sample calculation
+    # the measurements need to be manually added though
+    circuit.add(gates.M(*range(4)))
     result = circuit(nshots=1024)
-    expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
+    frequencies = result.frequencies()
+    expectation_value = hamiltonian.expectation_from_samples(frequencies)
 
 
-This example simulates the circuit similarly to the previous one but calculates
+This example executes the circuit similarly to the previous one but calculates
 the expectation value using the frequencies of shots, instead of the exact state vector.
-This can also be invoked directly from the ``result`` object:
+As before, one can also manually extract the shots and use the :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
+(or :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation_from_samples`) method as shown above,
+or even invoke it directly from the ``result`` object:
 
 .. testcode::
 
     expectation_value = result.expectation_from_samples(hamiltonian)
 
-
-For Hamiltonians that are not diagonal in the computational basis, or that are sum of terms that cannot be
-diagonalised simultaneously, one has to calculate the expectation value starting from the circuit:
+There is one fundamental difference in this case, though.
+The :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation` also supports (Symbolic) Hamiltonians that are not diagonal in a
+single given basis:
 
 .. testcode::
 
@@ -2184,14 +2193,21 @@ diagonalised simultaneously, one has to calculate the expectation value starting
    # while calculating the expectation value
 
    hamiltonian = SymbolicHamiltonian(3 * Z(2) * (1 - X(1)) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
-   expectation_value = hamiltonian.expectation_from_circuit(circuit)
+   expectation_value = hamiltonian.expectation(circuit)
 
-What is happening under the hood in this case, is that the expectation value is calculated for each term
-individually by measuring the circuit in the correct (rotated) basis. All the contributions are then
-summed to recover the global expectation value. This means, in particular, that several copies of the
-circuit are parallely executed, one for each term of the Hamiltonian. Note that, at the moment, no
-check is performed to verify whether a subset of the terms could be diagonalised simultaneously, but
-rather each term is treated separately every time.
+What is happening under the hood in this case, is that the expectation value is calculated individually
+for each group of simultaneously diagonalizable terms by measuring the circuit in the correct (rotated) basis.
+All the contributions are then summed to recover the global expectation value. This means, in particular,
+that several copies of the circuit are parallely executed, one for each group of terms.
+
+For dense hamiltonians, instead, the :meth:`qibo.hamiltonians.Hamiltonian.expectation` works only for diagonal
+observables when ``nshots != None``, as no method for the decomposition of a matrix in groups of diagonal terms
+is implemented yet.
+
+The same is true for explicit shots extraction and expectation value calculation through the
+:meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples` or
+:meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation_from_samples` methods, as the passed
+set of samples is associated to only a single fixed measurement basis (the one manually appended to the circuit).
 
 
 .. _tutorials_transpiler:

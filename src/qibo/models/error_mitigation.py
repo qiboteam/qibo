@@ -868,6 +868,8 @@ def get_expectation_val_with_readout_mitigation(
         readout = {}
 
     if len(circuit.measurements) == 0:
+        circuit = circuit.copy()
+        circuit._final_state = None
         qubits = [
             factor.target_qubit
             for term in observable.terms
