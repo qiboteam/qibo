@@ -6,7 +6,11 @@ import sympy
 
 from qibo import Circuit, gates
 from qibo.hamiltonians import TFIM, XXZ, Hamiltonian, SymbolicHamiltonian
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_statevector,
+)
 from qibo.symbols import I, Symbol, X, Y, Z
 
 
@@ -229,21 +233,21 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix):
     backend.assert_allclose(local_matmul, target_matmul)
 
 
-@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
-def test_symbolic_hamiltonian_state_expectation(backend, nqubits, normalize):
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_symbolic_hamiltonian_state_expectation(backend, nqubits):
     local_ham = (
         SymbolicHamiltonian(symbolic_tfim(nqubits, backend, h=1.0), backend=backend) + 2
     )
     dense_ham = TFIM(nqubits, h=1.0, backend=backend) + 2
 
-    state = random_statevector(2**nqubits, backend=backend)
+    state = random_clifford(nqubits, backend=backend)
 
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
+    local_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
     backend.assert_allclose(local_ev, target_ev)
 
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
+    local_ev = local_ham.expectation(state)
+    target_ev = dense_ham.expectation(state)
     backend.assert_allclose(local_ev, target_ev)
 
 
@@ -261,7 +265,7 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
     dense_matrix = np.kron(backend.to_numpy(dense_ham.matrix), np.eye(4))
     dense_ham = Hamiltonian(5, dense_matrix, backend=backend)
 
-    state = random_statevector(2**5, backend=backend)
+    state = random_clifford(5, backend=backend)
 
     if give_nqubits:
         local_ev = local_ham.expectation(state)
@@ -279,13 +283,13 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
 
 
 @pytest.mark.parametrize(
-    "observable,qubit_map",
+    "observable",
     [
-        (2 * Z(0) * Z(3) + Z(0) * Z(2), [0, 1, 2, 3]),
-        (Z(1) + Z(3), [0, 1, 3]),
+        2 * Z(0) * Z(3) + Z(0) * Z(2),
+        Z(1) + Z(3),
     ],
 )
-def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
+def test_hamiltonian_expectation_from_samples(backend, observable):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(0)
     hamiltonian = SymbolicHamiltonian(observable, backend=backend)
@@ -294,12 +298,9 @@ def test_hamiltonian_expectation_from_samples(backend, observable, qubit_map):
     c.add(gates.RX(1, np.random.rand()))
     c.add(gates.RX(2, np.random.rand()))
     c.add(gates.RX(3, np.random.rand()))
-    c.add(gates.M(*qubit_map))
     nshots = 10**5
-    result = backend.execute_circuit(c, nshots=nshots)
-    freq = result.frequencies(binary=True)
-    from_samples = hamiltonian.expectation_from_samples(freq, qubit_map=qubit_map)
-    from_state = hamiltonian.expectation(result.state())
+    from_samples = hamiltonian.expectation(c, nshots=nshots)
+    from_state = hamiltonian.expectation(c)
     backend.assert_allclose(from_samples, from_state, atol=20 / np.sqrt(nshots))
 
 
@@ -313,11 +314,7 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix):
     ) * X(1, backend=backend)
     local_ham = SymbolicHamiltonian(form, backend=backend)
 
-    state = (
-        random_density_matrix(4, backend=backend)
-        if density_matrix
-        else random_statevector(4, backend=backend)
-    )
+    state = random_clifford(2, density_matrix=density_matrix, backend=backend)
     local_ev = local_ham.expectation(state)
     target_ev = local_ham.dense.expectation(state)
     backend.assert_allclose(local_ev, target_ev)
@@ -351,9 +348,6 @@ def test_trotter_hamiltonian_operation_errors(backend):
 def test_symbolic_hamiltonian_with_constant(backend):
     circuit = Circuit(1)
     circuit.add(gates.H(0))
-    circuit.add(gates.M(0))
     h = SymbolicHamiltonian(1e6 - Z(0), backend=backend)
-
-    result = backend.execute_circuit(circuit, nshots=10000)
-    result = result.expectation_from_samples(h).real
+    result = h.expectation(circuit)
     backend.assert_allclose(result, 1e6, rtol=1e-5, atol=0.0)

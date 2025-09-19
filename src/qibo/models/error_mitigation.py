@@ -214,7 +214,7 @@ def ZNE(
             circuit_result = _execute_circuit(
                 noisy_circuit, qubit_map, noise_model, nshots, backend=backend
             )
-            val = float(observable.expectation(circuit_result.state()))
+            val = observable.expectation_from_state(circuit_result.state())
         else:
             val = get_expectation_val_with_readout_mitigation(
                 noisy_circuit,
@@ -436,15 +436,15 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
+        observable.backend = SIMULATION_BACKEND
+        val_noiseless = observable.expectation(circ, nshots)
+        observable.backend = backend
         if nshots is None:
-            val_noiseless = observable.expectation(result.state())
             circuit_result = _execute_circuit(
                 circ, qubit_map, noise_model, nshots, backend=backend
             )
-            val_noisy = float(observable.expectation(circuit_result.state()))
+            val_noisy = observable.expectation_from_state(circuit_result.state())
         else:
-            val_noiseless = result.expectation_from_samples(observable)
             val_noisy = get_expectation_val_with_readout_mitigation(
                 circ,
                 observable,
@@ -484,7 +484,7 @@ def CDR(
         circuit_result = _execute_circuit(
             circuit, qubit_map, noise_model, nshots, backend=backend
         )
-        val = float(observable.expectation(circuit_result.state()))
+        val = observable.expectation_from_state(circuit_result.state())
     else:
         val = get_expectation_val_with_readout_mitigation(
             circuit,
@@ -579,11 +579,9 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        if nshots is None:
-            val = observable.expectation(result.state())
-        else:
-            val = result.expectation_from_samples(observable)
+        observable.backend = SIMULATION_BACKEND
+        val = observable.expectation(circ, nshots)
+        observable.backend = backend
         train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
@@ -591,7 +589,7 @@ def vnCDR(
                 circuit_result = _execute_circuit(
                     noisy_c, qubit_map, noise_model, nshots, backend=backend
                 )
-                val = float(observable.expectation(circuit_result.state()))
+                val = float(observable.expectation_from_state(circuit_result.state()))
             else:
                 val = get_expectation_val_with_readout_mitigation(
                     noisy_c,
@@ -631,7 +629,7 @@ def vnCDR(
             circuit_result = _execute_circuit(
                 noisy_c, qubit_map, noise_model, nshots, backend=backend
             )
-            expval = float(observable.expectation(circuit_result.state()))
+            expval = float(observable.expectation_from_state(circuit_result.state()))
         else:
             expval = get_expectation_val_with_readout_mitigation(
                 noisy_c,
@@ -904,6 +902,17 @@ def get_expectation_val_with_readout_mitigation(
     if readout is None:  # pragma: no cover
         readout = {}
 
+    if len(circuit.measurements) == 0:
+        circuit = circuit.copy()
+        circuit._final_state = None
+        qubits = [
+            factor.target_qubit
+            for term in observable.terms
+            for factor in term.factors
+            if factor.__class__.__name__ != "I"
+        ]
+        circuit.add(gates.M(*qubits))
+
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
             circuit,
@@ -1156,19 +1165,18 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        circuit_result = CLIFFORD_BACKEND.execute_circuit(
-            training_circuit_copy, nshots=nshots
-        )
+        observable.backend = CLIFFORD_BACKEND
+        expectation = observable.expectation(training_circuit_copy, nshots)
+        observable.backend = backend
+
         if nshots is None:
-            expectation = observable.expectation(circuit_result.state())
             circuit_result = _execute_circuit(
                 training_circuit, qubit_map, noise_model, nshots, backend=backend
             )
-            noisy_expectation = float(observable.expectation(circuit_result.state()))
-        else:
-            expectation = observable.expectation_from_samples(
-                circuit_result.frequencies()
+            noisy_expectation = observable.expectation_from_state(
+                circuit_result.state()
             )
+        else:
             noisy_expectation = get_expectation_val_with_readout_mitigation(
                 training_circuit,
                 observable,
@@ -1245,8 +1253,6 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
     Returns:
         qibo.states.CircuitResult: The result of the circuit execution.
     """
-    from qibo.transpiler.pipeline import Passes
-
     if backend is None:  # pragma: no cover
         backend = get_backend()
     elif backend.name == "qibolab":  # pragma: no cover
