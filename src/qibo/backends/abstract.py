@@ -62,12 +62,13 @@ class Backend(abc.ABC):
             matrices will raise a casting error.
 
         .. note::
-            List of gates that have a real-valued matrix representation:
+            List of gates that always admit a real-valued matrix representation:
             :class:`qibo.gates.I`, :class:`qibo.gates.X`, :class:`qibo.gates.Z`,
             :class:`qibo.gates.H`, :class:`qibo.gates.Align`, :class:`qibo.gates.RY`,
             :class:`qibo.gates.CNOT`, :class:`qibo.gates.CZ`, :class:`qibo.gates.CRY`,
             :class:`qibo.gates.SWAP`, :class:`qibo.gates.FSWAP`, :class:`qibo.gates.GIVENS`,
-            :class:`qibo.gates.RBS`, :class:`qibo.gates.TOFFOLI`, and :class:`qibo.gates.CCZ`.
+            :class:`qibo.gates.RBS`, :class:`qibo.gates.TOFFOLI`, :class:`qibo.gates.CCZ`,
+            and :class:`qibo.gates.FanOut`.
 
         .. note::
             The following parametrized gates can have real-valued matrix representations

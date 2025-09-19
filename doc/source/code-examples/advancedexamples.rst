@@ -1371,8 +1371,6 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
    circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-   # Include the measurements
-   #circuit.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
    circuit.draw()
@@ -1386,7 +1384,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
 
    ...
 
-remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
+remember to initialize the circuit with ``density_matrix=True`` for expectation value calculation.
 
 As observable we can simply take :math:`Z_0 Z_1 Z_2` :
 

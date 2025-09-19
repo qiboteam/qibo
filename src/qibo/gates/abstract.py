@@ -46,6 +46,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cu3",
     "ccx",
     "ccz",
+    "fanout",
 ]
 
 
@@ -87,6 +88,8 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
+
+        self._clifford = False
 
     @property
     def clifford(self):
@@ -352,6 +355,9 @@ class Gate:
         new_gate = self._dagger()
         new_gate.is_controlled_by = self.is_controlled_by
         new_gate.control_qubits = self.control_qubits
+        if hasattr(self, "_clifford"):
+            new_gate._clifford = self._clifford
+
         return new_gate
 
     def check_controls(func):  # pylint: disable=E0213
