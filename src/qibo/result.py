@@ -416,27 +416,8 @@ class MeasurementOutcomes:
         Returns:
             (float): expectation value from samples.
         """
-        from qibo import Circuit
 
-        circuit = Circuit(1)
-        circuit._final_state = self
-        if observable.__class__.__name__ == "SymbolicHamiltonian":
-            qubits, coefficients = [], []
-            for term in observable.terms:
-                qubits.append(
-                    [
-                        factor.target_qubit
-                        for factor in term.factors
-                        if factor.__class__.__name__ != "I"
-                    ]
-                )
-                coefficients.append(term.coefficient.real)
-            return self.backend.expectation_diagonal_observable_symbolic(
-                circuit, observable.nqubits, qubits, coefficients, nshots=self.nshots
-            )
-        return observable.backend.expectation_diagonal_observable_dense(
-            circuit, observable.matrix, observable.nqubits, nshots=self.nshots
-        )
+        return observable.expectation_from_samples(self.frequencies())
 
     def to_dict(self):
         """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""

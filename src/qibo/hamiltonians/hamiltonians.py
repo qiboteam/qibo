@@ -3,7 +3,7 @@
 import operator
 from functools import cache, cached_property, reduce
 from itertools import chain
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import sympy
@@ -104,6 +104,24 @@ class Hamiltonian(AbstractHamiltonian):
             return self.backend.expectation_observable_dense(circuit, self.matrix)
         return self.backend.expectation_diagonal_observable_dense(
             circuit, self.matrix, self.nqubits, nshots, qubit_map
+        )
+
+    def expectation_from_samples(
+        self,
+        frequencies: Dict[str | int, int],
+        qubit_map: Optional[Tuple[int, ...]] = None,
+    ):
+        from qibo import Circuit
+
+        circuit = Circuit(1)
+
+        class TMP:
+            def frequencies(self):
+                return frequencies
+
+        circuit._final_state = TMP()
+        return self.backend.expectation_diagonal_observable_dense(
+            circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
     def eye(self, dim: Optional[int] = None):
@@ -532,6 +550,34 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.nqubits,
             self.constant.real,
             nshots,
+        )
+
+    def expectation_from_samples(
+        self,
+        frequencies: Dict[str | int, int],
+        qubit_map: Optional[Tuple[int, ...]] = None,
+    ):
+        from qibo import Circuit
+
+        circuit = Circuit(1)
+
+        class TMP:
+            def frequencies(self):
+                return frequencies
+
+        circuit._final_state = TMP()
+        qubits, coefficients = [], []
+        for term in self.terms:
+            qubits.append(
+                [
+                    factor.target_qubit
+                    for factor in term.factors
+                    if factor.__class__.__name__ != "I"
+                ]
+            )
+            coefficients.append(term.coefficient.real)
+        return self.backend.expectation_diagonal_observable_symbolic(
+            circuit, self.nqubits, qubits, coefficients, nshots=1, qubit_map=qubit_map
         )
 
     def _compose(self, other, operator):

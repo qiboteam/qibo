@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Dict, Optional, Tuple
 
 from qibo.config import raise_error
 
@@ -91,6 +91,31 @@ class AbstractHamiltonian:
         """
         raise_error(NotImplementedError)
 
+    def expectation_from_state(self, state: "ndarray", normalize: bool = False):
+        """Compute the expectation value starting from a quantum state.
+
+        Args:
+            state (ndarray): the quantum state.
+            normalize (bool): whether to normalize the input state. Defaults to ``False``.
+        Returns:
+            (float) the expectation value.
+        """
+        if len(state.shape) == 2:
+            return self.backend.calculate_expectation_density_matrix(  # pylint: disable=no-member
+                self.matrix, state, normalize
+            )
+        return self.backend.calculate_expectation_state(  # pylint: disable=no-member
+            self.matrix, state, normalize
+        )
+
+    @abstractmethod
+    def expectation_from_samples(
+        self,
+        frequencies: Dict[str | int, int],
+        qubit_map: Optional[Tuple[int, ...]] = None,
+    ):
+        pass
+
     @abstractmethod
     def __add__(self, o):  # pragma: no cover
         """Add operator."""
@@ -123,12 +148,3 @@ class AbstractHamiltonian:
     def __matmul__(self, o):  # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
         raise_error(NotImplementedError)
-
-    def expectation_from_state(self, state: "ndarray", normalize: bool = False):
-        if len(state.shape) == 2:
-            return self.backend.calculate_expectation_density_matrix(  # pylint: disable=no-member
-                self.matrix, state, normalize
-            )
-        return self.backend.calculate_expectation_state(  # pylint: disable=no-member
-            self.matrix, state, normalize
-        )

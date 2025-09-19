@@ -867,12 +867,14 @@ def get_expectation_val_with_readout_mitigation(
     if readout is None:  # pragma: no cover
         readout = {}
 
-    qubits, coefficients = [], []
-    for term in observable.terms:
-        qubits.append(term.target_qubits)
-        coefficients.append(term.coefficient.real)
-
-    circuit.add(gates.M(*{q for qq in qubits for q in qq}))
+    if len(circuit.measurements) == 0:
+        qubits = [
+            factor.target_qubit
+            for term in observable.terms
+            for factor in term.factors
+            if factor.__class__.__name__ != "I"
+        ]
+        circuit.add(gates.M(*qubits))
 
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
@@ -894,18 +896,10 @@ def get_expectation_val_with_readout_mitigation(
                 readout.get("ibu_iters", None),
             )
 
-    exp_val = observable.backend.expectation_diagonal_observable_symbolic(
-        circuit, observable.nqubits, qubits, coefficients, nshots=nshots
-    )
+    exp_val = circuit_result.expectation_from_samples(observable)
 
     if "ncircuits" in readout:
-        circuit._final_state = circuit_result_cal
-        return float(
-            exp_val
-            / observable.backend.expectation_diagonal_observable_symbolic(
-                circuit, observable.nqubits, qubits, coefficients, nshots=nshots
-            )
-        )
+        return float(exp_val / circuit_result_cal.expectation_from_samples(observable))
 
     return float(exp_val)
 
