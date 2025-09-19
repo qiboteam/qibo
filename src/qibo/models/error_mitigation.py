@@ -1,7 +1,9 @@
 """Error Mitigation Methods."""
 
 import math
+from functools import reduce
 from inspect import signature
+from operator import mul
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -20,7 +22,7 @@ from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
 
 SIMULATION_BACKEND = NumpyBackend()
-CLIFORD_BACKEND = CliffordBackend(engine="numpy")
+CLIFFORD_BACKEND = CliffordBackend(engine="numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -1041,16 +1043,24 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     # To get Ut*O*U we need the symplectic_matrix of the inverse circuit Ut
     pauli_symplectic = (symplectic_matrix.T @ pauli_symplectic) % 2
 
-    observable = 1
-    for i in range(circuit.nqubits):
-        x_component = pauli_symplectic[i] == 1
-        z_component = pauli_symplectic[i + circuit.nqubits] == 1
-        if x_component and z_component:
-            observable *= Y(i, backend=backend)
-        elif x_component:
-            observable *= X(i, backend=backend)
-        elif z_component:
-            observable *= Z(i, backend=backend)
+    x_component = pauli_symplectic[: circuit.nqubits] == 1
+    z_component = pauli_symplectic[circuit.nqubits :] == 1
+    y_obs = reduce(
+        mul,
+        [Y(i, backend=backend) for i in (x_component * z_component).nonzero()[0]],
+        1,
+    )
+    x_obs = reduce(
+        mul,
+        [X(i, backend=backend) for i in (x_component * ~z_component).nonzero()[0]],
+        1,
+    )
+    z_obs = reduce(
+        mul,
+        [Z(i, backend=backend) for i in (z_component * ~x_component).nonzero()[0]],
+        1,
+    )
+    observable = y_obs * x_obs * z_obs
     observable = SymbolicHamiltonian(
         observable, nqubits=circuit.nqubits, backend=backend
     )
@@ -1136,7 +1146,7 @@ def ICS(
 
     training_circuits = [
         error_sensitive_circuit(
-            circuit, observable, seed=local_state, backend=CLIFORD_BACKEND
+            circuit, observable, seed=local_state, backend=CLIFFORD_BACKEND
         )[0]
         for _ in range(n_training_samples)
     ]
@@ -1146,7 +1156,7 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        circuit_result = CLIFORD_BACKEND.execute_circuit(
+        circuit_result = CLIFFORD_BACKEND.execute_circuit(
             training_circuit_copy, nshots=nshots
         )
         if nshots is None:
