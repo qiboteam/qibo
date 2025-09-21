@@ -63,7 +63,7 @@ class Bloch:
         mpl.rcParams['toolbar'] = 'None'
         self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
-
+        self.fig.canvas.manager.set_window_title("Bloch sphere")
 
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
@@ -229,7 +229,7 @@ class Bloch:
 
     def clear(self):
         """This function clears the sphere."""
-
+        plt.close()
         self._new_window()
 
         # Clear data
@@ -241,7 +241,7 @@ class Bloch:
         self._color_vectors = []
 
     # ----Plot-----
-    def plot(self):
+    def render(self):
         """This function creates the empty sphere and plots the vectors and points on it."""
 
         self._create_sphere()
