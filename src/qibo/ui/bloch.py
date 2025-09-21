@@ -1,11 +1,9 @@
-import tkinter as tk
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
 import matplotlib as mpl
 import numpy as np
-from IPython.display import display
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from numpy.typing import ArrayLike
@@ -55,15 +53,20 @@ class Bloch:
     _color_points: list = field(default_factory=list)
     _color_vectors: list = field(default_factory=list)
 
+    # Backend
+    backend: str = "tkagg"
+
     # Figure and axis
     def __post_init__(self):
         # Figure
-        self.fig = Figure(figsize=self.STYLE["figure.figsize"])
+        mpl.use(self.backend)
+        self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
+
 
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
-        self.fig = Figure(figsize=self.STYLE["figure.figsize"])
+        self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
     # -----Sphere-----
@@ -236,7 +239,7 @@ class Bloch:
         self._color_points = []
         self._color_vectors = []
 
-    # ----Plot and Save-----
+    # ----Plot-----
     def plot(self):
         """This function creates the empty sphere and plots the vectors and points on it."""
 
@@ -266,5 +269,3 @@ class Bloch:
         self.ax.set_aspect("equal")
         self.ax.axis("off")
         self.fig.tight_layout()
-
-    
