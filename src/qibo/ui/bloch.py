@@ -14,11 +14,26 @@ from qibo.symbols import X, Y, Z
 
 
 class Arrow3D(FancyArrowPatch):
+    """This class creates the arrows for the Bloch sphere."""
+
     def __init__(self, xs, ys, zs, *args, **kwargs):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
-    def do_3d_projection(self, renderer=None):
+    def do_3d_projection(self):
+        """This function performs the 3D projection of the arrow rendering.
+
+        This method is automatically called by Matplotlib's 3D axis
+        to transform the arrow's 3D coordinates into 2D screen coordinates,
+        handling perspective and position for correct display.
+
+        Args:
+            None.
+
+        Returns:
+            float: The minimum z-depth of the projected arrow's points.
+            This is used by Matplotlib to determine the drawing order of the objects.
+        """
         xs3d, ys3d, zs3d = self._verts3d
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
