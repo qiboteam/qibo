@@ -60,6 +60,7 @@ class Bloch:
     def __post_init__(self):
         # Figure
         mpl.use(self.backend)
+        mpl.rcParams['toolbar'] = 'None'
         self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
 
