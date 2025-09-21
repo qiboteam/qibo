@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import Union
 
 import matplotlib as mpl
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from numpy.typing import ArrayLike
@@ -60,10 +60,9 @@ class Bloch:
     def __post_init__(self):
         # Figure
         mpl.use(self.backend)
-        mpl.rcParams['toolbar'] = 'None'
+        mpl.rcParams["toolbar"] = "None"
         self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
-
 
     def _new_window(self):
         """It creates a new Figure object and it adds to it a new Axis."""
