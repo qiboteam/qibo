@@ -5,7 +5,6 @@ from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
 
 
-
 def _circuit():
     circ = Circuit(1)
     circ.add(gates.RY(q=0, theta=np.random.randn() * 0.1))
@@ -13,10 +12,12 @@ def _circuit():
     circ.add(gates.RZ(q=0, theta=np.random.randn() * 0.1))
     return circ
 
+
 def test_empty_sphere():
     bs = Bloch()
     bs.render()
     plt.show()
+
 
 def test_state():
     bs = Bloch()
@@ -55,6 +56,7 @@ def test_multiple_vectors_list():
     bs.add_vector(vectors, color=["royalblue"] * 100)
     bs.render()
     plt.show()
+
 
 def test_multiple_states():
     bs = Bloch()
@@ -196,7 +198,7 @@ def test_many_spheres():
         circ = _circuit()
         state = circ(np.array([0, 1], dtype="complex")).state()
         bs.add_state(state, mode="point", color="blue")
-    
+
     bs.render()
     plt.show()
     bs.clear()
@@ -205,11 +207,10 @@ def test_many_spheres():
         circ = _circuit()
         state = circ(np.array([0, 1], dtype="complex")).state()
         bs.add_state(state, mode="point", color="red")
-    
+
     bs.render()
     plt.show()
     bs.clear()
 
     bs.render()
     plt.show()
-
