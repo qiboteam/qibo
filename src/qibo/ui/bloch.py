@@ -45,12 +45,21 @@ class Arrow3D(FancyArrowPatch):
 class Bloch:
     """This class creates a Bloch sphere."""
 
+    @staticmethod
+    def _make_style():
+        _STYLE = {
+            "figure.figsize": (6, 6),
+            "lines.linewidth": 0.9,
+        }
+        return _STYLE
+
+    @staticmethod
+    def _make_style_text():
+        return {"text.color": "black", "font.size": 19}
+
     # Plot style sheets
-    STYLE = {
-        "figure.figsize": (6, 6),
-        "lines.linewidth": 0.9,
-    }
-    STYLE_TEXT = {"text.color": "black", "font.size": 19}
+    STYLE_TEXT: dict = field(default_factory=_make_style_text)
+    STYLE: dict = field(default_factory=_make_style)
 
     # Data
     _points: list = field(default_factory=list)
@@ -59,6 +68,8 @@ class Bloch:
     # Color data
     _color_points: list = field(default_factory=list)
     _color_vectors: list = field(default_factory=list)
+
+    _shown: bool = False
 
     def __post_init__(self):
         # No toolbar
@@ -341,6 +352,9 @@ class Bloch:
         Returns:
             None
         """
+        if self._shown == True:
+            self._new_window()
+        self._shown = True
 
         self._create_sphere()
 

@@ -1,5 +1,8 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+
+mpl.use("agg")
 
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
