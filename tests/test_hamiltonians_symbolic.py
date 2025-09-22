@@ -351,3 +351,11 @@ def test_symbolic_hamiltonian_with_constant(backend):
     h = SymbolicHamiltonian(1e6 - Z(0), backend=backend)
     result = h.expectation(circuit)
     backend.assert_allclose(result, 1e6, rtol=1e-5, atol=0.0)
+
+
+def test_symbolic_hamiltonian_repr():
+    h = XXZ(3, dense=False)
+    assert (
+        str(h)
+        == "-(-X2*X0 - Y2*Y0 - 0.5*Z2*Z0) - (-X0*X1 - X1*X2 - Y0*Y1 - Y1*Y2 - 0.5*Z0*Z1 - 0.5*Z1*Z2)"
+    )

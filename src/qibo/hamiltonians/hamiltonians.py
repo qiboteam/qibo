@@ -3,6 +3,7 @@
 import operator
 from functools import cache, cached_property, reduce
 from itertools import chain
+from logging import warn
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -113,6 +114,12 @@ class Hamiltonian(AbstractHamiltonian):
         Returns:
             float: the expectation value.
         """
+        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+            warn(
+                "Calculation of expectation values starting from the state is deprecated, use the ``expectation_from_state`` method if you really need it, or simply pass the circuit you want to calculate the expectation value from."
+            )
+            return self.expectation_from_state(circuit)
+
         if nshots is None:
             return self.backend.expectation_observable_dense(circuit, self.matrix)
 
@@ -562,6 +569,12 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Returns:
             float: the expectation value.
         """
+        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+            warn(
+                "Calculation of expectation values starting from the state is deprecated, use the ``expectation_from_state`` method if you really need it, or simply pass the circuit you want to calculate the expectation value from."
+            )
+            return self.expectation_from_state(circuit)
+
         if nshots is None:
             return self.dense.expectation(circuit, nshots=nshots)
 

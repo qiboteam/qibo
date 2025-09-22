@@ -5,6 +5,7 @@ import pytest
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians.models import XXZ
 from qibo.quantum_info.random_ensembles import (
     random_clifford,
     random_density_matrix,
@@ -274,6 +275,14 @@ def test_hamiltonian_expectation_from_samples(backend, dense):
         H = H.dense
     exp_from_samples = H.expectation(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
+
+
+def test_hamiltonian_expectation_from_samples_non_diagonal_error():
+    nshots = 1000
+    c = Circuit(3)
+    h = XXZ(3, delta=0.5, dense=True)
+    with pytest.raises(NotImplementedError):
+        h.expectation(c, nshots=nshots)
 
 
 def test_hamiltonian_expectation_from_circuit(backend):
