@@ -356,7 +356,6 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
         backend.set_threads(1)
 
     """Test that ICS reduces the noise."""
-    nshots = 10000
     # Define the circuit
     circuit = get_circuit(nqubits)
     c_copy = circuit.copy(True)
