@@ -79,8 +79,7 @@ class Hamiltonian(AbstractHamiltonian):
     @backend.setter
     def backend(self, new_backend: Backend):
         self._backend = new_backend
-        if self._matrix is not None:
-            self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
+        self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
