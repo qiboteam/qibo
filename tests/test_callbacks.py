@@ -337,17 +337,20 @@ def test_energy(backend, density_matrix):
     matrix = backend.to_numpy(ham.matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     circ = random_clifford(4, density_matrix=density_matrix, backend=backend)
-    state = circ().state()
+    state = backend.execute_circuit(circ).state()
     if density_matrix:
         target_energy = backend.np.trace(backend.np.matmul(matrix, state))
         final_energy = energy.apply_density_matrix(backend, circ)
+        final_energy_from_state = energy.apply_density_matrix(backend, state)
     else:
         target_energy = np.matmul(
             np.conj(backend.to_numpy(state)),
             np.matmul(backend.to_numpy(matrix), backend.to_numpy(state)),
         )
         final_energy = energy.apply(backend, circ)
+        final_energy_from_state = energy.apply(backend, state)
     backend.assert_allclose(final_energy, target_energy, atol=1e-8)
+    backend.assert_allclose(final_energy_from_state, target_energy, atol=1e-8)
 
 
 @pytest.mark.parametrize("dense", [False, True])

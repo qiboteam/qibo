@@ -262,13 +262,16 @@ def non_exact_expectation_test_setup(backend, observable):
     return exp, H, c
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize("dense", [True, False])
+def test_hamiltonian_expectation_from_samples(backend, dense):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(12)
 
     nshots = 4 * 10**6
     observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
     exp, H, c = non_exact_expectation_test_setup(backend, observable)
+    if dense:
+        H = H.dense
     exp_from_samples = H.expectation(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 

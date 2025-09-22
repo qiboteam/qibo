@@ -426,8 +426,6 @@ class Backend(abc.ABC):
 
             measurements = {}
             for qubits, observable in zip(terms_qubits, terms_observables):
-                if set(observable) == {"I"}:
-                    constant += 1.0
                 # Only care about non-I terms
                 # prepare the measurement basis and append it to the circuit
                 for qubit, factor in zip(qubits, observable):

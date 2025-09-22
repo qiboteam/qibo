@@ -24,7 +24,7 @@ class AbstractHamiltonian:
 
     @property
     @abstractmethod
-    def matrix(self):
+    def matrix(self):  # pragma: no cover
         """Returns the full matrix representation.
 
         For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
@@ -113,7 +113,7 @@ class AbstractHamiltonian:
         self,
         frequencies: Dict[str | int, int],
         qubit_map: Optional[Tuple[int, ...]] = None,
-    ):
+    ):  # pragma: no cover
         pass
 
     @abstractmethod

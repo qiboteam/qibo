@@ -115,6 +115,7 @@ class Hamiltonian(AbstractHamiltonian):
         """
         if nshots is None:
             return self.backend.expectation_observable_dense(circuit, self.matrix)
+
         from qibo import gates
 
         circuit = circuit.copy(True)
@@ -339,6 +340,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.nqubits = (
             _calculate_nqubits_from_form(form) if nqubits is None else nqubits
         )
+
+    def __repr__(self):
+        return str(self.form)
 
     @cached_property
     def dense(self) -> "MatrixHamiltonian":  # type: ignore

@@ -245,9 +245,7 @@ class Energy(Callback):
         if state.__class__.__name__ == "Circuit":
             expectation = self.hamiltonian.expectation(state)
         else:
-            expectation = self.hamiltonian.backend.calculate_expectation_state(
-                self.hamiltonian.matrix, state, False
-            )
+            expectation = self.hamiltonian.expectation_from_state(state, False)
         self.append(expectation)
         return expectation
 
@@ -256,9 +254,7 @@ class Energy(Callback):
         if state.__class__.__name__ == "Circuit":
             expectation = self.hamiltonian.expectation(state)
         else:
-            expectation = self.hamiltonian.backend.calculate_expectation_density_matrix(
-                self.hamiltonian.matrix, state, False
-            )
+            expectation = self.hamiltonian.expectation_from_state(state, False)
         self.append(expectation)
         return expectation
 
