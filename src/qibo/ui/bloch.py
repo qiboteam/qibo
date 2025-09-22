@@ -60,13 +60,7 @@ class Bloch:
     _color_points: list = field(default_factory=list)
     _color_vectors: list = field(default_factory=list)
 
-    # Backend
-    backend: str = "tkagg"
-
     def __post_init__(self):
-        # Backend
-        mpl.use(self.backend)
-
         # No toolbar
         mpl.rcParams["toolbar"] = "None"
 
@@ -81,6 +75,7 @@ class Bloch:
         """It creates a new Figure object and it adds to it a new Axis."""
         self.fig = plt.figure(figsize=self.STYLE["figure.figsize"])
         self.ax = self.fig.add_subplot(projection="3d", elev=30, azim=30)
+        self.fig.canvas.manager.set_window_title("Bloch sphere")
 
     # -----Sphere-----
     def _sphere_surface(self):
