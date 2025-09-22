@@ -344,7 +344,8 @@ class Backend(abc.ABC):
         nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
     ) -> float:
-        """Compute the expectation value of a symbolic observable diagonal in the computational basis.
+        """Compute the expectation value of a symbolic observable diagonal in the computational basis,
+        starting from the samples.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
@@ -352,7 +353,7 @@ class Backend(abc.ABC):
             terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal) symbolic observable is acting on.
             terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
-            nshots (int, optional): how many shots to execute the circuit with. Defaults to ``None``.
+            nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...]): custom qubit ordering.
         Returns:
             (float) the calculated expectation value.
@@ -395,7 +396,7 @@ class Backend(abc.ABC):
         nshots: int,
     ) -> float:
         """Compute the expectation value of a general symbolic observable defined by groups of terms
-        that can be diagonalized simultaneously.
+        that can be diagonalized simultaneously, starting from the samples.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
@@ -405,9 +406,8 @@ class Backend(abc.ABC):
             diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on, e.g.
             [[(0,1,2), (1,3)], [(2,1,3), (2,4)]].
             nqubits (int): number of qubits of the observable.
-            constant (float): the constant term of the observable. Defaults to ``0.``.
-            nshots (int, optional): how many shots to execute the circuit with, if ``None`` the
-            exact expectation value will be compute starting from the state. Defaults to ``None``.
+            constant (float): the constant term of the observable.
+            nshots (int): how many shots to execute the circuit with.
         Returns:
             (float) the calculated expectation value.
         """
