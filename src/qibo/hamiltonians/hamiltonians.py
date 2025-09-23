@@ -420,6 +420,22 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return terms
 
     @cached_property
+    def simple_terms(self) -> Tuple[List[float], List[str], List[Tuple[int, ...]]]:
+        """A simpler (more framework agnostic) representation of the of terms
+        composing the Hamiltonian, defined as: their scalar coefficients,
+        the strings of the names of their observables and the qubits they act on
+
+        Returns:
+            (Tuple[List[float], List[str], List[Tuple[int, ...]]])
+        """
+        term_coefficients, terms, term_qubits = [], [], []
+        for term in self.terms:
+            term_coefficients.append(term.coefficient)
+            terms.append("".join(factor.__class__.__name__ for factor in term.factors))
+            term_qubits.append(tuple(factor.target_qubit for factor in term.factors))
+        return term_coefficients, terms, term_qubits
+
+    @cached_property
     def diagonal_terms(self) -> list[list[SymbolicTerm]]:
         """List of terms that can be diagonalized simultaneously, i.e. that
         commute with each other. In detail each element of the list is a sublist
@@ -597,7 +613,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             return self.expectation_from_state(circuit)
 
         if nshots is None:
-            return self.dense.expectation(circuit, nshots=nshots)
+            terms_coefficients, terms, term_qubits = self.simple_terms
+            return self.backend.expectation_observable_symbolic_from_state(
+                circuit, terms, term_qubits, terms_coefficients, self.nqubits
+            )
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
         return self.backend.expectation_observable_symbolic(

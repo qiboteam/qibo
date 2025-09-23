@@ -1,5 +1,8 @@
 import abc
+from string import ascii_letters
 from typing import List, Optional, Tuple, Union
+
+from scipy.sparse import _matrix
 
 from qibo.config import raise_error
 
@@ -468,6 +471,85 @@ class Backend(abc.ABC):
                 qmap,
             )
         return constant + expval
+
+    def expectation_observable_symbolic_from_state(
+        self,
+        circuit: "Circuit",
+        terms: List[str],
+        term_qubits: List[Tuple[int, ...]],
+        term_coefficients: List[float],
+        nqubits: int,
+    ):
+        # get the final state
+        result = (
+            circuit._final_state
+            if circuit._final_state is not None
+            else self.execute_circuit(circuit)
+        )
+        # get the state and separate in the single qubits
+        # subspaces
+        state = result.state()
+        N = len(state.shape) * nqubits
+        shape = N * (2,)
+        state = self.np.reshape(state, shape)
+        # state indices for the contraction
+        if circuit.density_matrix:
+            state_indices = [ascii_letters[i] for i in range(N)]
+        else:
+            state_indices = [ascii_letters[i] for i in range(2 * N)]
+            state_dag_indices = state_indices[:nqubits]
+            state_indices = state_indices[nqubits:]
+            state_dag_string = "".join(state_dag_indices)
+        state_string = "".join(state_indices)
+
+        # for each term construct the the separate
+        # matrices acting on the single qubits
+        # and contract them with the corresponding
+        # subspace
+        expval = 0.0
+        for term, qubits, coefficient in zip(terms, term_qubits, term_coefficients):
+            term_matrices = {
+                qubit: getattr(self.matrices, factor)
+                for factor, qubit in zip(term, qubits)
+                if factor != "I"
+            }
+            qubits, matrices = zip(*term_matrices.items())
+            if circuit.density_matrix:
+                obs_indices = [
+                    state_indices[i + nqubits] + state_indices[i] for i in qubits
+                ]
+                obs_string = ",".join(obs_indices)
+                new_string = state_string[:]
+                for q in set(range(nqubits)) - set(qubits):
+                    new_string = (
+                        new_string[:q] + new_string[q + nqubits] + new_string[q + 1 :]
+                    )
+                expval += self.np.real(
+                    coefficient
+                    * self.np.einsum(
+                        f"{obs_string},{new_string}->",
+                        *matrices,
+                        state,
+                    )
+                )
+            else:
+                obs_indices = [state_dag_indices[i] + state_indices[i] for i in qubits]
+                obs_string = ",".join(obs_indices)
+                new_string = state_string[:]
+                for q in set(range(nqubits)) - set(qubits):
+                    new_string = (
+                        new_string[:q] + state_dag_string[q] + new_string[q + 1 :]
+                    )
+                expval += self.np.real(
+                    coefficient
+                    * self.np.einsum(
+                        f"{state_dag_string},{obs_string},{new_string}->",
+                        self.np.conj(state),
+                        *matrices,
+                        state,
+                    )
+                )
+        return expval
 
     @abc.abstractmethod
     def calculate_symbolic(
