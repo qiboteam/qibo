@@ -157,6 +157,7 @@ def test_binary_encoder(
         trail_zeros = backend.np.zeros(
             2 ** int(backend.np.ceil(backend.np.log2(dims))) - dims, dtype=target.dtype
         )
+        trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
         target = backend.np.concatenate((target, trail_zeros))
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
