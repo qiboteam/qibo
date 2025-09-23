@@ -103,10 +103,12 @@ def test_phase_encoder(backend, rotation, kind):
 
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("not_power_of_two", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_binary_encoder(
-    backend, nqubits, parametrization, complex_data, not_power_of_two
+    backend, nqubits, parametrization, complex_data, not_power_of_two, custom_codewords, keep_antictrls
 ):
     if parametrization == "hopf":
         if complex_data:
@@ -132,7 +134,10 @@ def test_binary_encoder(
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
+    
+    codewords = backend.np.arange(dims) if custom_codewords else None
+
+    circuit = binary_encoder(target, parametrization=parametrization, backend=backend, codewords=codewords, keep_antictrls=keep_antictrls)
     state = backend.execute_circuit(circuit).state()
 
     if parametrization == "hyperspherical" and not_power_of_two:

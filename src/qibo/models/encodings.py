@@ -266,18 +266,6 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     """
     backend = _check_backend(backend)
 
-    def get_int_type(x: int):
-        # Candidates in increasing size of memory usage
-        int_types = [
-            backend.np.int8,
-            backend.np.int16,
-            backend.np.int32,
-            backend.np.int64,
-        ]
-        for dt in int_types:
-            if x <= backend.np.iinfo(dt).max:
-                return backend.np.dtype(dt)
-
     # TODO: Fix this mess with qibo native data types
     try:
         test_dtype = bool("int" in str(data[0][0].dtype))
@@ -289,7 +277,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     bitstrings_sorted, data_sorted = zip(*_data)
     bitstrings_sorted = backend.cast(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
-        dtype=get_int_type(2**nqubits),
+        dtype=_get_int_type(2**nqubits, backend=backend),
     )
 
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
@@ -322,6 +310,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
+        keep_antictrls=True,
         **kwargs,
     )
     circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
@@ -486,6 +475,8 @@ def binary_encoder(
     parametrization: str = "hyperspherical",
     nqubits: int = None,
     backend=None,
+    codewords=None,
+    keep_antictrls:bool = False,
     **kwargs,
 ):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
@@ -553,7 +544,7 @@ def binary_encoder(
         )
 
     return _binary_encoder_hyperspherical(
-        data, nqubits, complex_data=complex_data, backend=backend, **kwargs
+        data, nqubits, complex_data=complex_data, backend=backend, codewords=codewords, keep_antictrls=keep_antictrls, **kwargs
     )
 
 
@@ -1635,28 +1626,29 @@ def _binary_encoder_hopf(
 
 
 def _binary_encoder_hyperspherical(
-    data, nqubits, complex_data: bool, backend=None, **kwargs
+    data, nqubits, complex_data: bool, backend=None, codewords=None, keep_antictrls:bool=False, **kwargs
 ):
     backend = _check_backend(backend)
 
     dims = len(data)
 
-    codewords = _binary_codewords(dims, backend=backend)
+    if codewords is None:
+        codewords = _binary_codewords(dims, backend=backend)
 
     circuit = Circuit(nqubits, **kwargs)
     if complex_data:
         circuit += _monotonic_hw_encoder_complex(
-            codewords, data[codewords], nqubits, backend=backend, **kwargs
+            codewords, data[codewords], nqubits, backend=backend, keep_antictrls=keep_antictrls, **kwargs
         )
     else:
         circuit += _monotonic_hw_encoder_real(
-            codewords, data[codewords], nqubits, backend=backend, **kwargs
+            codewords, data[codewords], nqubits, backend=backend, keep_antictrls=keep_antictrls, **kwargs
         )
 
     return circuit
 
 
-def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, **kwargs):
+def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, keep_antictrls:bool=False, **kwargs):
     """Implements Algorithm 3 from [1]
 
     Args:
@@ -1680,31 +1672,54 @@ def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, **kwargs)
     for i in range(1, dims - 1):
         bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
 
-        in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+        in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
         theta = backend.np.atan2(backend.np.linalg.norm(data[i:], 2), data[i - 1])
 
-        if len(in_bits) + len(out_bits) == 1:
-            circuit.add(gates.RY(*out_bits, 2.0 * theta).controlled_by(*ctrls))
-        else:
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
+        targ_bits = len(in_bits) + len(out_bits)
+        if targ_bits == 1:
+            targ_gate = out_bits if len(out_bits) > 0 else in_bits
+            sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+            circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls))
+        elif targ_bits == 2:
             circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
+        else:
+            circuit.add(gates.GeneralizedRBS(tuple(in_bits), tuple(out_bits), theta=theta).controlled_by(*ctrls))
+
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
 
         bsi = bsip1
     bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
 
-    in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+    in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
     theta = backend.np.atan2(data[-1], data[-2])
 
-    if len(in_bits) + len(out_bits) == 1:
-        circuit.add(gates.RY(*out_bits, 2.0 * theta).controlled_by(*ctrls))
-    else:
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
+    targ_bits = len(in_bits) + len(out_bits)
+    if targ_bits == 1:
+        targ_gate = out_bits if len(out_bits) > 0 else in_bits
+        sign_angle = 1.0 if len(out_bits) > 0 else -1.0            
+        circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls))
+
+    elif targ_bits == 2:
         circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
+    else:
+        circuit.add(gates.GeneralizedRBS(tuple(in_bits), tuple(out_bits), theta=theta).controlled_by(*ctrls))        
+
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
 
     return circuit
 
 
-def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwargs):
+def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_antictrls:bool=False, **kwargs):
     """Implements Algorithm 4 from [1]
 
     Args:
@@ -1737,16 +1752,21 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwar
     for i in range(1, dims - 1):
         bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
 
-        in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+        in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
         theta = backend.np.atan2(
             backend.np.linalg.norm(abs(data[i:]), 2), abs(data[i - 1])
         )
 
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
         if len(in_bits) + len(out_bits) == 1:
-            circuit.add(gates.RY(*out_bits, 2.0 * theta).controlled_by(*ctrls))
+            targ_gate = out_bits if len(out_bits) > 0 else in_bits
+            sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+            circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle* theta).controlled_by(*ctrls))
             circuit.add(
-                gates.RZ(*out_bits, 2.0 * phis(data, i - 1)).controlled_by(*ctrls)
+                gates.RZ(*targ_gate, 2.0 * sign_angle * phis(data, i - 1)).controlled_by(*ctrls)
             )
         else:
             circuit.add(
@@ -1754,14 +1774,19 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwar
                     in_bits, out_bits, theta, -phis(data, i - 1)
                 ).controlled_by(*ctrls)
             )
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
 
         bsi = bsip1
     bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
 
-    in_bits, out_bits, ctrls = _gate_params(bsi, bsip1)
+    in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
     theta = backend.np.atan2(abs(data[-1]), abs(data[-2]))
 
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+    
     if len(in_bits) + len(out_bits) == 1:
         phil = (0.5 * (backend.np.angle(data[-1]) - backend.np.angle(data[-2]))) % (
             2.0 * np.pi
@@ -1771,11 +1796,13 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwar
             + phis(data, dims - 2)
         ) % (2.0 * np.pi)
 
+        targ_gate = out_bits if len(out_bits) > 0 else in_bits
+        sign_angle = 1.0 if len(out_bits) > 0 else -1.0
         circuit.add(
-            gates.U3(*out_bits, 2.0 * theta, 2.0 * phil, 2.0 * lambdal).controlled_by(
+            gates.U3(*targ_gate, 2.0 * sign_angle * theta, 2.0  * sign_angle * phil, 2.0 * sign_angle * lambdal).controlled_by(
                 *ctrls
             )
-        )
+        )     
     else:
         circuit.add(
             gates.GeneralizedRBS(
@@ -1790,19 +1817,30 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, **kwar
         circuit.add(gates.U1(in_bits[0], -phis(data, dims - 1)).controlled_by(*ctrls))
         circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
 
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
     return circuit
 
 
-def _gate_params(bsi, bsip1):
+def _gate_params(bsi, bsip1, keep_antictrls:bool=False):
 
-    one_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 1)}
-    one_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 1)}
+    one_ind_bsi   = set([i for i in range(len(bsi)) if (bsi[i] == 1)])
+    one_ind_bsip1 = set([i for i in range(len(bsip1)) if (bsip1[i] == 1)])
 
-    ctrls = one_ind_bsi.intersection(one_ind_bsip1)
-    in_bits = one_ind_bsi.difference(ctrls)
+    ctrls  =  one_ind_bsi.intersection(one_ind_bsip1)
+
+    actrls=[]
+    if keep_antictrls:
+        zero_ind_bsi   = set([i for i in range(len(bsi)) if (bsi[i] == 0)])
+        zero_ind_bsip1 = set([i for i in range(len(bsip1)) if (bsip1[i] == 0)])
+        actrls = zero_ind_bsi.intersection(zero_ind_bsip1)
+        ctrls  = ctrls.union(actrls)
+
+    in_bits  = one_ind_bsi.difference(ctrls)
     out_bits = one_ind_bsip1.difference(ctrls)
 
-    return list(in_bits), list(out_bits), list(ctrls)
+    return list(in_bits), list(out_bits), list(ctrls), list(actrls)
 
 
 def _binary_codewords(dims: int, backend=None):
@@ -1814,18 +1852,6 @@ def _binary_codewords(dims: int, backend=None):
     """
     backend = _check_backend(backend)
 
-    def get_int_type(x: int):
-        # Candidates in increasing size of memory usage
-        int_types = [
-            backend.np.int8,
-            backend.np.int16,
-            backend.np.int32,
-            backend.np.int64,
-        ]
-        for dt in int_types:
-            if x <= backend.np.iinfo(dt).max:
-                return backend.np.dtype(dt)
-
     from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
         hamming_distance,
         hamming_weight,
@@ -1834,7 +1860,7 @@ def _binary_codewords(dims: int, backend=None):
     cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
 
     cw = backend.np.array(
-        [int(bin_cw, 2) for bin_cw in cw_binary], dtype=get_int_type(dims)
+        [int(bin_cw, 2) for bin_cw in cw_binary], dtype=_get_int_type(dims, backend=backend)
     )
 
     if (dims & (dims - 1)) != 0:
@@ -1845,7 +1871,7 @@ def _binary_codewords(dims: int, backend=None):
 
         # keep weights for O(1) lookups
         weights = backend.np.array(
-            [hamming_weight(int(w)) for w in cw], dtype=get_int_type(n)
+            [hamming_weight(int(w)) for w in cw], dtype=_get_int_type(n, backend=backend)
         )
 
         # insert the remainder words at positions that preserve
@@ -1974,6 +2000,20 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
 
     # generate the opposite boundary codeword
     yield ("0" * up2k) if reversed_list else ("1" * up2k)
+
+def _get_int_type(x: int, backend=None):
+    # Candidates in increasing size of memory usage
+
+    backend = _check_backend(backend)
+    int_types = [
+        backend.np.int8,
+        backend.np.int16,
+        backend.np.int32,
+        backend.np.int64,
+    ]
+    for dt in int_types:
+        if x <= backend.np.iinfo(dt).max:
+            return backend.np.dtype(dt)
 
 
 def _sort_data_sparse(data, nqubits, backend):
