@@ -251,7 +251,7 @@ def _get_measure_pauli_from_commuting_terms(group: list[tuple[float, str]]) -> s
     measurement_basis = {}
 
     for _, pauli_word in group:
-        if pauli_word == "I"*len(pauli_word):
+        if pauli_word == "I" * len(pauli_word):
             continue
         for qubit_position, pauli_operator in enumerate(pauli_word):
             if pauli_operator == "I" or qubit_position in measurement_basis:
@@ -458,6 +458,7 @@ def get_expval_from_linear_comb_of_paulis_from_samples(
     expval_95_CI = [expval - 1.96 * expval_SE, expval + 1.96 * expval_SE]
 
     return expval, expval_SE, expval_95_CI
+
 
 def get_expval_from_linear_comb_of_paulis_from_samples_ungrouped(
     circuit: Circuit,
