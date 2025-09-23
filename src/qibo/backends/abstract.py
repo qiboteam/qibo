@@ -480,19 +480,35 @@ class Backend(abc.ABC):
         term_coefficients: List[float],
         nqubits: int,
     ):
+        """
+        Compute the expectation value of a general symbolic observable that is a sum of terms
+        starting from the state. In particular, each term of the observable is contracted with
+        the corresponding subspace defined by the qubits it acts on.
+
+        Args:
+            circuit (Circuit): the circuit to calculate the expectation value from.
+            terms (List[str]): the lists of strings defining the observables for each term, e.g.
+            ['ZXZ', 'YI', 'IYZ', 'X'].
+            term_coefficients (List[float]): the coefficients of each term.
+            term_qubits (List[Tuple[int, ...]]): the qubits each term is acting on, e.g.
+            [(0,1,2), (1,3), (2,1,3), (4,)].
+            nqubits (int): number of qubits of the observable.
+        Returns:
+            (float) the calculated expectation value.
+        """
         # get the final state
         result = (
             circuit._final_state
             if circuit._final_state is not None
             else self.execute_circuit(circuit)
         )
-        # get the state and separate in the single qubits
+        # get the state and separate it in the single qubits
         # subspaces
         state = result.state()
         N = len(state.shape) * nqubits
         shape = N * (2,)
         state = self.np.reshape(state, shape)
-        # state indices for the contraction
+        # prepare the state indices for the contraction
         if circuit.density_matrix:
             state_indices = [ascii_letters[i] for i in range(N)]
         else:
@@ -502,18 +518,21 @@ class Backend(abc.ABC):
             state_dag_string = "".join(state_dag_indices)
         state_string = "".join(state_indices)
 
-        # for each term construct the the separate
-        # matrices acting on the single qubits
+        # for each term get the matrices
+        # acting on the separate qubits
         # and contract them with the corresponding
-        # subspace
+        # subspace of the state
         expval = 0.0
         for term, qubits, coefficient in zip(terms, term_qubits, term_coefficients):
+            # per qubit matrices
             term_matrices = {
                 qubit: getattr(self.matrices, factor)
                 for factor, qubit in zip(term, qubits)
                 if factor != "I"
             }
             qubits, matrices = zip(*term_matrices.items())
+            # prepare the observable/state indices
+            # for contraction
             if circuit.density_matrix:
                 obs_indices = [
                     state_indices[i + nqubits] + state_indices[i] for i in qubits
@@ -524,6 +543,10 @@ class Backend(abc.ABC):
                     new_string = (
                         new_string[:q] + new_string[q + nqubits] + new_string[q + 1 :]
                     )
+                # contraction:
+                # for a 3 qubits density matrix and an observable
+                # acting on qubits (0,1), you have
+                # "da,fc,abcdbf->"
                 expval += self.np.real(
                     coefficient
                     * self.np.einsum(
@@ -540,6 +563,10 @@ class Backend(abc.ABC):
                     new_string = (
                         new_string[:q] + state_dag_string[q] + new_string[q + 1 :]
                     )
+                # contraction:
+                # for a 3 qubits density matrix and an observable
+                # acting on qubits (0,1), you have
+                # "abc,ad,cf,dbf->"
                 expval += self.np.real(
                     coefficient
                     * self.np.einsum(

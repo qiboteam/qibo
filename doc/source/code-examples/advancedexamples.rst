@@ -2129,7 +2129,12 @@ of an ``XXZ`` hamiltonian:
 
 In this example, the circuit will be simulated to obtain the final state vector
 and the corresponding expectation value will be calculated through exact matrix
-multiplication with the Hamiltonian matrix. Alternatively, one can explicitly
+multiplication with the Hamiltonian matrix.
+If a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used instead, the expectation
+value will be calculated as a sum of expectation values of local terms, allowing
+calculations of more qubits with lower memory consumption. The calculation of each
+local term still requires the state vector.
+Alternatively, one can explicitly
 extract the final quantum state and calculate the expectation value directly
 from that with the :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_state` method,
 as shown.
