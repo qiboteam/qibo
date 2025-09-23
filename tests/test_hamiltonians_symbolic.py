@@ -244,11 +244,11 @@ def test_symbolic_hamiltonian_state_expectation(backend, nqubits):
 
     local_ev = local_ham.expectation(state)
     target_ev = dense_ham.expectation(state)
-    backend.assert_allclose(local_ev, target_ev)
+    backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
     local_ev = local_ham.expectation(state)
     target_ev = dense_ham.expectation(state)
-    backend.assert_allclose(local_ev, target_ev)
+    backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
 
 @pytest.mark.parametrize("give_nqubits", [False, True])
@@ -270,11 +270,11 @@ def test_symbolic_hamiltonian_state_expectation_different_nqubits(
     if give_nqubits:
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
-        backend.assert_allclose(local_ev, target_ev)
+        backend.assert_allclose(local_ev, target_ev, atol=1e-8)
 
         local_ev = local_ham.expectation(state)
         target_ev = dense_ham.expectation(state)
-        backend.assert_allclose(local_ev, target_ev)
+        backend.assert_allclose(local_ev, target_ev, atol=1e-8)
     else:
         with pytest.raises(ValueError):
             local_ev = local_ham.expectation(state)

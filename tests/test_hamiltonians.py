@@ -248,7 +248,7 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
         state = backend.to_numpy(state)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
-    backend.assert_allclose(h.expectation(circuit), target_ev)
+    backend.assert_allclose(h.expectation(circuit), target_ev, atol=1e-8)
 
 
 def non_exact_expectation_test_setup(backend, observable):

@@ -13,7 +13,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import Symbol, Z
+from qibo.symbols import PauliSymbol, Symbol, Z
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -613,9 +613,18 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             return self.expectation_from_state(circuit)
 
         if nshots is None:
+            if not all(
+                isinstance(factor, PauliSymbol)
+                for term in self.terms
+                for factor in term.factors
+            ):
+                return self.dense.expectation(circuit)
             terms_coefficients, terms, term_qubits = self.simple_terms
-            return self.backend.expectation_observable_symbolic_from_state(
-                circuit, terms, term_qubits, terms_coefficients, self.nqubits
+            return (
+                self.constant
+                + self.backend.expectation_observable_symbolic_from_state(
+                    circuit, terms, term_qubits, terms_coefficients, self.nqubits
+                )
             )
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
