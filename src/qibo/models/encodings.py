@@ -476,7 +476,7 @@ def binary_encoder(
     nqubits: int = None,
     backend=None,
     codewords=None,
-    keep_antictrls:bool = False,
+    keep_antictrls: bool = False,
     **kwargs,
 ):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
@@ -544,7 +544,13 @@ def binary_encoder(
         )
 
     return _binary_encoder_hyperspherical(
-        data, nqubits, complex_data=complex_data, backend=backend, codewords=codewords, keep_antictrls=keep_antictrls, **kwargs
+        data,
+        nqubits,
+        complex_data=complex_data,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+        **kwargs,
     )
 
 
@@ -1626,7 +1632,13 @@ def _binary_encoder_hopf(
 
 
 def _binary_encoder_hyperspherical(
-    data, nqubits, complex_data: bool, backend=None, codewords=None, keep_antictrls:bool=False, **kwargs
+    data,
+    nqubits,
+    complex_data: bool,
+    backend=None,
+    codewords=None,
+    keep_antictrls: bool = False,
+    **kwargs,
 ):
     backend = _check_backend(backend)
 
@@ -1638,17 +1650,29 @@ def _binary_encoder_hyperspherical(
     circuit = Circuit(nqubits, **kwargs)
     if complex_data:
         circuit += _monotonic_hw_encoder_complex(
-            codewords, data[codewords], nqubits, backend=backend, keep_antictrls=keep_antictrls, **kwargs
+            codewords,
+            data[codewords],
+            nqubits,
+            backend=backend,
+            keep_antictrls=keep_antictrls,
+            **kwargs,
         )
     else:
         circuit += _monotonic_hw_encoder_real(
-            codewords, data[codewords], nqubits, backend=backend, keep_antictrls=keep_antictrls, **kwargs
+            codewords,
+            data[codewords],
+            nqubits,
+            backend=backend,
+            keep_antictrls=keep_antictrls,
+            **kwargs,
         )
 
     return circuit
 
 
-def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, keep_antictrls:bool=False, **kwargs):
+def _monotonic_hw_encoder_real(
+    codewords, data, nqubits, backend=None, keep_antictrls: bool = False, **kwargs
+):
     """Implements Algorithm 3 from [1]
 
     Args:
@@ -1683,11 +1707,17 @@ def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, keep_anti
         if targ_bits == 1:
             targ_gate = out_bits if len(out_bits) > 0 else in_bits
             sign_angle = 1.0 if len(out_bits) > 0 else -1.0
-            circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls))
+            circuit.add(
+                gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+            )
         elif targ_bits == 2:
             circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
         else:
-            circuit.add(gates.GeneralizedRBS(tuple(in_bits), tuple(out_bits), theta=theta).controlled_by(*ctrls))
+            circuit.add(
+                gates.GeneralizedRBS(
+                    tuple(in_bits), tuple(out_bits), theta=theta
+                ).controlled_by(*ctrls)
+            )
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1705,13 +1735,19 @@ def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, keep_anti
     targ_bits = len(in_bits) + len(out_bits)
     if targ_bits == 1:
         targ_gate = out_bits if len(out_bits) > 0 else in_bits
-        sign_angle = 1.0 if len(out_bits) > 0 else -1.0            
-        circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls))
+        sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+        circuit.add(
+            gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+        )
 
     elif targ_bits == 2:
         circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
     else:
-        circuit.add(gates.GeneralizedRBS(tuple(in_bits), tuple(out_bits), theta=theta).controlled_by(*ctrls))        
+        circuit.add(
+            gates.GeneralizedRBS(
+                tuple(in_bits), tuple(out_bits), theta=theta
+            ).controlled_by(*ctrls)
+        )
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
@@ -1719,7 +1755,9 @@ def _monotonic_hw_encoder_real(codewords, data, nqubits, backend=None, keep_anti
     return circuit
 
 
-def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_antictrls:bool=False, **kwargs):
+def _monotonic_hw_encoder_complex(
+    codewords, data, nqubits, backend=None, keep_antictrls: bool = False, **kwargs
+):
     """Implements Algorithm 4 from [1]
 
     Args:
@@ -1764,9 +1802,13 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_a
         if len(in_bits) + len(out_bits) == 1:
             targ_gate = out_bits if len(out_bits) > 0 else in_bits
             sign_angle = 1.0 if len(out_bits) > 0 else -1.0
-            circuit.add(gates.RY(*targ_gate, 2.0 * sign_angle* theta).controlled_by(*ctrls))
             circuit.add(
-                gates.RZ(*targ_gate, 2.0 * sign_angle * phis(data, i - 1)).controlled_by(*ctrls)
+                gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+            )
+            circuit.add(
+                gates.RZ(
+                    *targ_gate, 2.0 * sign_angle * phis(data, i - 1)
+                ).controlled_by(*ctrls)
             )
         else:
             circuit.add(
@@ -1786,7 +1828,7 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_a
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
-    
+
     if len(in_bits) + len(out_bits) == 1:
         phil = (0.5 * (backend.np.angle(data[-1]) - backend.np.angle(data[-2]))) % (
             2.0 * np.pi
@@ -1799,10 +1841,13 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_a
         targ_gate = out_bits if len(out_bits) > 0 else in_bits
         sign_angle = 1.0 if len(out_bits) > 0 else -1.0
         circuit.add(
-            gates.U3(*targ_gate, 2.0 * sign_angle * theta, 2.0  * sign_angle * phil, 2.0 * sign_angle * lambdal).controlled_by(
-                *ctrls
-            )
-        )     
+            gates.U3(
+                *targ_gate,
+                2.0 * sign_angle * theta,
+                2.0 * sign_angle * phil,
+                2.0 * sign_angle * lambdal,
+            ).controlled_by(*ctrls)
+        )
     else:
         circuit.add(
             gates.GeneralizedRBS(
@@ -1823,21 +1868,21 @@ def _monotonic_hw_encoder_complex(codewords, data, nqubits, backend=None, keep_a
     return circuit
 
 
-def _gate_params(bsi, bsip1, keep_antictrls:bool=False):
+def _gate_params(bsi, bsip1, keep_antictrls: bool = False):
 
-    one_ind_bsi   = set([i for i in range(len(bsi)) if (bsi[i] == 1)])
-    one_ind_bsip1 = set([i for i in range(len(bsip1)) if (bsip1[i] == 1)])
+    one_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 1)}
+    one_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 1)}
 
-    ctrls  =  one_ind_bsi.intersection(one_ind_bsip1)
+    ctrls = one_ind_bsi.intersection(one_ind_bsip1)
 
-    actrls=[]
+    actrls = []
     if keep_antictrls:
-        zero_ind_bsi   = set([i for i in range(len(bsi)) if (bsi[i] == 0)])
-        zero_ind_bsip1 = set([i for i in range(len(bsip1)) if (bsip1[i] == 0)])
+        zero_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 0)}
+        zero_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 0)}
         actrls = zero_ind_bsi.intersection(zero_ind_bsip1)
-        ctrls  = ctrls.union(actrls)
+        ctrls = ctrls.union(actrls)
 
-    in_bits  = one_ind_bsi.difference(ctrls)
+    in_bits = one_ind_bsi.difference(ctrls)
     out_bits = one_ind_bsip1.difference(ctrls)
 
     return list(in_bits), list(out_bits), list(ctrls), list(actrls)
@@ -1860,7 +1905,8 @@ def _binary_codewords(dims: int, backend=None):
     cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
 
     cw = backend.np.array(
-        [int(bin_cw, 2) for bin_cw in cw_binary], dtype=_get_int_type(dims, backend=backend)
+        [int(bin_cw, 2) for bin_cw in cw_binary],
+        dtype=_get_int_type(dims, backend=backend),
     )
 
     if (dims & (dims - 1)) != 0:
@@ -1871,7 +1917,8 @@ def _binary_codewords(dims: int, backend=None):
 
         # keep weights for O(1) lookups
         weights = backend.np.array(
-            [hamming_weight(int(w)) for w in cw], dtype=_get_int_type(n, backend=backend)
+            [hamming_weight(int(w)) for w in cw],
+            dtype=_get_int_type(n, backend=backend),
         )
 
         # insert the remainder words at positions that preserve
@@ -2000,6 +2047,7 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
 
     # generate the opposite boundary codeword
     yield ("0" * up2k) if reversed_list else ("1" * up2k)
+
 
 def _get_int_type(x: int, backend=None):
     # Candidates in increasing size of memory usage
