@@ -721,7 +721,11 @@ def random_clifford(
     integers = backend.cast(integers, dtype=integers.dtype)
     tableau[:, -1] = integers
 
-    engine = backend.platform if backend.name in ("qibojit", "qiboml") else backend.name
+    engine = (
+        backend.platform
+        if backend.name in ("clifford", "qibojit", "qiboml")
+        else backend.name
+    )
     cliff = Clifford(tableau, engine=engine)
 
     if return_circuit:
