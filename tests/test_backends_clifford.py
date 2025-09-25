@@ -90,30 +90,31 @@ SINGLE_QUBIT_CLIFFORDS = ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG", "Un
 @pytest.mark.parametrize("gate", SINGLE_QUBIT_CLIFFORDS)
 def test_single_qubit_gates(backend, gate):
     clifford_bkd = construct_clifford_backend(backend)
-    c = Circuit(3, density_matrix=True)
-    c_numpy = Circuit(3, density_matrix=True)
+    circuit = Circuit(3, density_matrix=True)
+    circuit_numpy = circuit.copy(deep=True)
     qubits = np.random.randint(3, size=2)
     H_qubits = np.random.choice(range(3), size=2, replace=False)
-    c.add(gates.H(q) for q in H_qubits)
+    circuit.add(gates.H(q) for q in H_qubits)
     if gate == "Unitary":
-        c_numpy.add(gates.H(q) for q in H_qubits)
-        matrix = random_clifford(1, return_circuit=False, backend=numpy_bkd)
+        circuit_numpy.add(gates.H(q) for q in H_qubits)
+        matrix = random_clifford(1, return_circuit=True, backend=numpy_bkd)
+        matrix = matrix.unitary(numpy_bkd)
         gate1_numpy = gates.Unitary(matrix, qubits[0])
         gate2_numpy = gates.Unitary(matrix, qubits[1])
         gate1 = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), qubits[0])
         gate2 = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), qubits[1])
         gate1.clifford = True
         gate2.clifford = True
-        c.add(gate1)
-        c.add(gate2)
-        c_numpy.add(gate1_numpy)
-        c_numpy.add(gate2_numpy)
+        circuit.add(gate1)
+        circuit.add(gate2)
+        circuit_numpy.add(gate1_numpy)
+        circuit_numpy.add(gate2_numpy)
     else:
-        c.add(getattr(gates, gate)(qubits[0]))
-        c.add(getattr(gates, gate)(qubits[1]))
-        c_numpy = c
-    clifford_state = clifford_bkd.execute_circuit(c).state()
-    numpy_state = numpy_bkd.execute_circuit(c_numpy).state()
+        circuit.add(getattr(gates, gate)(qubits[0]))
+        circuit.add(getattr(gates, gate)(qubits[1]))
+        circuit_numpy = circuit
+    clifford_state = clifford_bkd.execute_circuit(circuit).state()
+    numpy_state = numpy_bkd.execute_circuit(circuit_numpy).state()
     numpy_state = backend.cast(numpy_state)
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
@@ -124,30 +125,31 @@ TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR", "Un
 @pytest.mark.parametrize("gate", TWO_QUBITS_CLIFFORDS)
 def test_two_qubits_gates(backend, gate):
     clifford_bkd = construct_clifford_backend(backend)
-    c = Circuit(5, density_matrix=True)
-    c_numpy = Circuit(5, density_matrix=True)
+    circuit = Circuit(5, density_matrix=True)
+    circuit_numpy = circuit.copy(deep=True)
     qubits = np.random.choice(range(5), size=4, replace=False).reshape(2, 2)
     H_qubits = np.random.choice(range(5), size=3, replace=False)
-    c.add(gates.H(q) for q in H_qubits)
+    circuit.add(gates.H(q) for q in H_qubits)
     if gate == "Unitary":
-        c_numpy.add(gates.H(q) for q in H_qubits)
-        matrix = random_clifford(2, return_circuit=False, backend=numpy_bkd)
+        circuit_numpy.add(gates.H(q) for q in H_qubits)
+        matrix = random_clifford(2, return_circuit=True, backend=numpy_bkd)
+        matrix = matrix.unitary(numpy_bkd)
         gate1_numpy = gates.Unitary(matrix, *qubits[0])
         gate2_numpy = gates.Unitary(matrix, *qubits[1])
         gate1 = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), *qubits[0])
         gate2 = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), *qubits[1])
         gate1.clifford = True
         gate2.clifford = True
-        c.add(gate1)
-        c.add(gate2)
-        c_numpy.add(gate1_numpy)
-        c_numpy.add(gate2_numpy)
+        circuit.add(gate1)
+        circuit.add(gate2)
+        circuit_numpy.add(gate1_numpy)
+        circuit_numpy.add(gate2_numpy)
     else:
-        c.add(getattr(gates, gate)(*qubits[0]))
-        c.add(getattr(gates, gate)(*qubits[1]))
-        c_numpy = c
-    clifford_state = clifford_bkd.execute_circuit(c).state()
-    numpy_state = numpy_bkd.execute_circuit(c_numpy).state()
+        circuit.add(getattr(gates, gate)(*qubits[0]))
+        circuit.add(getattr(gates, gate)(*qubits[1]))
+        circuit_numpy = circuit
+    clifford_state = clifford_bkd.execute_circuit(circuit).state()
+    numpy_state = numpy_bkd.execute_circuit(circuit_numpy).state()
     numpy_state = backend.cast(numpy_state)
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
@@ -172,17 +174,17 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
     nqubits, nshots = 3, 200
     clifford_bkd = construct_clifford_backend(backend)
 
-    c = random_clifford(nqubits, seed=1, backend=backend)
-    c.density_matrix = True
-    c_copy = c.copy()
-    c.add(gates.M(*MEASURED_QUBITS))
-    c_copy.add(gates.M(*MEASURED_QUBITS))
+    circuit = random_clifford(nqubits, seed=1, backend=backend)
+    circuit.density_matrix = True
+    circuit_copy = circuit.copy(deep=True)
+    circuit.add(gates.M(*MEASURED_QUBITS))
+    circuit_copy.add(gates.M(*MEASURED_QUBITS))
 
     numpy_bkd.set_seed(2024)
-    numpy_result = numpy_bkd.execute_circuit(c, nshots=nshots)
+    numpy_result = numpy_bkd.execute_circuit(circuit, nshots=nshots)
 
     clifford_bkd.set_seed(2024)
-    clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=nshots)
+    clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=nshots)
 
     backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
 

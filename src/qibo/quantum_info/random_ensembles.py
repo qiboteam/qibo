@@ -651,11 +651,16 @@ def random_clifford(
     gamma = backend.np.diag(
         local_state.integers(2, size=nqubits, dtype=backend.np.int8)
     )
+    gamma = backend.cast(gamma, dtype=gamma.dtype)
+
     gamma_prime = backend.np.diag(
         local_state.integers(2, size=nqubits, dtype=backend.np.int8)
     )
+    gamma_prime = backend.cast(gamma, dtype=gamma_prime.dtype)
+
     delta = backend.np.eye(nqubits, dtype=backend.np.int8)
-    delta_prime = backend.cast(delta, dtype=delta.dtype)
+    delta = backend.cast(delta, dtype=delta.dtype)
+    delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     _fill_tril(gamma, local_state, symmetric=True, backend=backend)
     _fill_tril(gamma_prime, local_state, symmetric=True, backend=backend)
@@ -670,12 +675,29 @@ def random_clifford(
 
     # Compute stabilizer table
     zero = backend.np.zeros((nqubits, nqubits), dtype=np.int8)
+    zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
     inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
-    had_free_operator_1 = backend.np.block([[delta, zero], [prod1, inv1]])
-    had_free_operator_2 = backend.np.block([[delta_prime, zero], [prod2, inv2]])
+
+    # backend.np.block cannot be used below because there is no cupy equivalent
+    # hence the necessity for three backend.np.concatenate's
+    had_free_operator_1 = backend.np.concatenate(
+        [
+            backend.np.concatenate([delta, zero], axis=1),
+            backend.np.concatenate([prod1, inv1], axis=1),
+        ],
+        axis=0,
+    )
+    # had_free_operator_2 = backend.np.block([[delta_prime, zero], [prod2, inv2]])
+    had_free_operator_2 = backend.np.concatenate(
+        [
+            backend.np.concatenate([delta_prime, zero], axis=1),
+            backend.np.concatenate([prod2, inv2], axis=1),
+        ],
+        axis=0,
+    )
 
     # Apply qubit permutation
     table = had_free_operator_2[
@@ -691,16 +713,20 @@ def random_clifford(
 
     # Apply table
     tableau = backend.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
+    tableau = backend.cast(tableau, dtype=tableau.dtype)
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
-    tableau[:, -1] = local_state.integers(2, size=2 * nqubits)
+    integers = local_state.integers(2, size=2 * nqubits)
+    integers = backend.cast(integers, dtype=integers.dtype)
+    tableau[:, -1] = integers
 
     engine = backend.platform if backend.name in ("qibojit", "qiboml") else backend.name
     cliff = Clifford(tableau, engine=engine)
 
     if return_circuit:
-        return cliff.to_circuit("AG04", **kwargs)
+        method = "BM20" if engine == "cupy" else "AG04"
+        return cliff.to_circuit(method, **kwargs)
 
     return cliff
 
