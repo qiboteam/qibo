@@ -349,14 +349,15 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
     cnot_10 = cnot_10.unitary(backend)
     cnot_10 = backend.to_numpy(cnot_10)
 
-    result_single = matrices.H @ matrices.SDG @ matrices.Y
+    result_single = matrices.H @ matrices.Y
 
-    result_two = np.kron(matrices.H @ matrices.Z @ matrices.X, matrices.Z)
+    result_two = np.kron(matrices.H @ matrices.Z @ matrices.X, matrices.SDG @ matrices.Z)
     result_two = matrices.CNOT @ result_two
     result_two = np.kron(matrices.H, matrices.I) @ result_two
     result_two = cnot_10 @ result_two
     result_two = np.kron(matrices.SDG, matrices.I) @ result_two
     result_two = cnot_10 @ result_two
+    result_two = np.kron(matrices.H @ matrices.SDG, matrices.I) @ result_two
 
     result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
