@@ -695,7 +695,9 @@ def random_clifford(
 
     # Generate random phases
     tableau[:, -1] = local_state.integers(2, size=2 * nqubits)
-    cliff = Clifford(tableau)
+
+    engine = backend.platform if backend.name in ("qibojit", "qiboml") else backend.name
+    cliff = Clifford(tableau, engine=engine)
 
     if return_circuit:
         return cliff.to_circuit("AG04", **kwargs)
