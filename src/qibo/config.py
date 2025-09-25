@@ -35,7 +35,7 @@ SHOT_METROPOLIS_THRESHOLD = 100000
 MAX_ITERATIONS = 50
 
 
-def raise_error(exception, message=None):
+def raise_error(exception: type[Exception], message=None):
     """Raise exception with logging error.
 
     Args:
