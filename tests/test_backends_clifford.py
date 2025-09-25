@@ -253,7 +253,7 @@ def test_apply_unitary(backend, sizes_and_counts):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("seed", [2025])
+@pytest.mark.parametrize("seed", [None])
 def test_collapsing_measurements(backend, seed):
     backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
@@ -284,7 +284,8 @@ def test_collapsing_measurements(backend, seed):
         clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
     )
 
-    matrix = random_clifford(1, return_circuit=False, backend=numpy_bkd)
+    matrix = random_clifford(1, return_circuit=True, backend=numpy_bkd)
+    matrix = matrix.unitary(numpy_bkd)
     gate = gates.Unitary(backend.cast(matrix, dtype=matrix.dtype), 0)
     gate.clifford = True
     c1 = Circuit(3)
