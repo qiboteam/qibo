@@ -253,7 +253,7 @@ def test_apply_unitary(backend, sizes_and_counts):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("seed", [None])
+@pytest.mark.parametrize("seed", [17])
 def test_collapsing_measurements(backend, seed):
     backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
