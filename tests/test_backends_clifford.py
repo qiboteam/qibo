@@ -253,9 +253,9 @@ def test_apply_unitary(backend, sizes_and_counts):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("seed", [2024])
+@pytest.mark.parametrize("seed", [2025])
 def test_collapsing_measurements(backend, seed):
-    backend.set_seed(2024)
+    backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
     gate_queue = random_clifford(
         3, density_matrix=True, seed=seed, backend=backend
@@ -335,7 +335,7 @@ def test_bitflip_noise(backend, seed):
     )
 
 
-@pytest.mark.parametrize("seed", [2024])
+@pytest.mark.parametrize("seed", [2025])
 def test_noise_channels(backend, seed):
     backend.set_seed(seed)
 
@@ -357,7 +357,7 @@ def test_noise_channels(backend, seed):
     circuit = noise.apply(circuit)
     circuit_copy = noise.apply(circuit_copy)
 
-    numpy_bkd.set_seed(2024)
+    numpy_bkd.set_seed(seed)
     numpy_result = numpy_bkd.execute_circuit(circuit, nshots=int(1e4))
     clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=int(1e4))
 
@@ -373,7 +373,9 @@ def test_stim(backend):
     clifford_stim = CliffordBackend(engine="stim")
 
     nqubits = 3
-    circuit = random_clifford(nqubits, seed=173, backend=backend)
+    circuit = random_clifford(nqubits, seed=915, backend=backend)
+
+    circuit.draw()
 
     result_qibo = clifford_bkd.execute_circuit(circuit)
     result_stim = clifford_stim.execute_circuit(circuit)
