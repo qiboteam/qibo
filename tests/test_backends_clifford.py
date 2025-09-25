@@ -238,7 +238,8 @@ def test_apply_unitary(backend, sizes_and_counts):
             qubits = [0, 1, 2, 3, 4]
         else:
             qubits = list(np.random.choice(nqubits, size, replace=False))
-        mat = random_clifford(size, return_circuit=False, backend=numpy_bkd)
+        mat = random_clifford(size, return_circuit=True, backend=numpy_bkd)
+        mat = mat.unitary(numpy_bkd)
         gate = gates.Unitary(backend.cast(mat, dtype=mat.dtype), *qubits)
         gate_numpy = gates.Unitary(mat, *qubits)
         circuit.add(gate)
@@ -343,26 +344,26 @@ def test_noise_channels(backend, seed):
 
     nqubits = 3
 
-    c = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
+    circuit = random_clifford(nqubits, density_matrix=True, seed=seed, backend=backend)
 
     noise = NoiseModel()
-    noisy_gates = np.random.choice(c.queue, size=1, replace=False)
+    noisy_gates = np.random.choice(circuit.queue, size=1, replace=False)
     noise.add(PauliError([("X", 0.3)]), gates.H)
     noise.add(DepolarizingError(0.3), noisy_gates[0].__class__)
 
-    c.add(gates.M(*range(nqubits)))
-    c_copy = c.copy()
+    circuit.add(gates.M(*range(nqubits)))
+    circuit_copy = circuit.copy(deep=True)
 
-    c = noise.apply(c)
-    c_copy = noise.apply(c_copy)
+    circuit = noise.apply(circuit)
+    circuit_copy = noise.apply(circuit_copy)
 
     numpy_bkd.set_seed(2024)
-    numpy_result = numpy_bkd.execute_circuit(c)
-    clifford_result = clifford_bkd.execute_circuit(c_copy)
+    numpy_result = numpy_bkd.execute_circuit(circuit, nshots=int(1e4))
+    clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=int(1e4))
 
     backend.assert_allclose(
-        backend.cast(numpy_result.probabilities()),
         clifford_result.probabilities(),
+        backend.cast(numpy_result.probabilities(), dtype="float64"),
         atol=1e-1,
     )
 
