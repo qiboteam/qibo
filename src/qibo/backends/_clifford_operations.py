@@ -164,6 +164,20 @@ def RY(symplectic_matrix, q, nqubits, theta):
         return RY_3pi_2(symplectic_matrix, q, nqubits)
 
 
+def GPI2(symplectic_matrix, q, nqubits, phi):
+    if phi % (2 * np.pi) == 0:
+        return RX(symplectic_matrix, q, nqubits, np.pi / 2)
+
+    if (phi / np.pi - 1) % 2 == 0:
+        return RX(symplectic_matrix, q, nqubits, -np.pi / 2)
+
+    if (phi / (np.pi / 2) - 1) % 4 == 0:
+        return RY(symplectic_matrix, q, nqubits, np.pi / 2)
+
+    # theta == 3*pi/2 + 2*n*pi
+    return RY(symplectic_matrix, q, nqubits, -np.pi / 2)
+
+
 def SWAP(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> CNOT-CNOT-CNOT"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)

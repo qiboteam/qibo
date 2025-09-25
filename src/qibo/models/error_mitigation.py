@@ -1,23 +1,28 @@
 """Error Mitigation Methods."""
 
 import math
+from functools import reduce
 from inspect import signature
-from itertools import product
+from operator import mul
 
-import networkx as nx
 import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
 from qibo.backends import (
+    CliffordBackend,
     NumpyBackend,
     _check_backend,
     _check_backend_and_local_state,
+    _get_engine_name,
     get_backend,
 )
 from qibo.config import raise_error
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.symbols import X, Y, Z
 
 SIMULATION_BACKEND = NumpyBackend()
+CLIFFORD_BACKEND = CliffordBackend(engine="numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -162,7 +167,8 @@ def ZNE(
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
             to simulate noisy computation.
-        nshots (int, optional): Number of shots. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
             equations to obtain the ``gamma`` coefficients. Default is ``False``.
         global_unitary_folding (bool, optional): If ``True``, noise is increased by global unitary folding.
@@ -204,16 +210,22 @@ def ZNE(
             global_unitary_folding,
             insertion_gate=insertion_gate,
         )
-        val = get_expectation_val_with_readout_mitigation(
-            noisy_circuit,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            circuit_result = _execute_circuit(
+                noisy_circuit, qubit_map, noise_model, nshots, backend=backend
+            )
+            val = float(observable.expectation(circuit_result.state()))
+        else:
+            val = get_expectation_val_with_readout_mitigation(
+                noisy_circuit,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
         expected_values.append(val)
 
     expected_values = backend.cast(expected_values, dtype=type(expected_values[0]))
@@ -379,7 +391,8 @@ def CDR(
         observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): observable to be measured.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for simulating
             noisy computation.
-        nshots (int, optional): number of shots. Defaults :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -424,19 +437,26 @@ def CDR(
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
         result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
-        train_val["noise-free"].append(val)
-        val = get_expectation_val_with_readout_mitigation(
-            circ,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
-        train_val["noisy"].append(val)
+        if nshots is None:
+            val_noiseless = observable.expectation(result.state())
+            circuit_result = _execute_circuit(
+                circ, qubit_map, noise_model, nshots, backend=backend
+            )
+            val_noisy = float(observable.expectation(circuit_result.state()))
+        else:
+            val_noiseless = result.expectation_from_samples(observable)
+            val_noisy = get_expectation_val_with_readout_mitigation(
+                circ,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
+        train_val["noise-free"].append(val_noiseless)
+        train_val["noisy"].append(val_noisy)
 
     nparams = (
         len(signature(model).parameters) - 1
@@ -460,16 +480,22 @@ def CDR(
         train_val_noiseless,
     )
 
-    val = get_expectation_val_with_readout_mitigation(
-        circuit,
-        observable,
-        noise_model,
-        nshots,
-        readout,
-        qubit_map,
-        seed=local_state,
-        backend=backend,
-    )
+    if nshots is None:
+        circuit_result = _execute_circuit(
+            circuit, qubit_map, noise_model, nshots, backend=backend
+        )
+        val = float(observable.expectation(circuit_result.state()))
+    else:
+        val = get_expectation_val_with_readout_mitigation(
+            circuit,
+            observable,
+            noise_model,
+            nshots,
+            readout,
+            qubit_map,
+            seed=local_state,
+            backend=backend,
+        )
     mit_val = model(val, *optimal_params)
 
     if full_output:
@@ -502,7 +528,8 @@ def vnCDR(
         noise_levels (numpy.ndarray): sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for
             simulating noisy computation.
-        nshots (int, optional): number of shots. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -553,20 +580,29 @@ def vnCDR(
 
     for circ in training_circuits:
         result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
-        val = result.expectation_from_samples(observable)
+        if nshots is None:
+            val = observable.expectation(result.state())
+        else:
+            val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(float(val.real))
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
-            val = get_expectation_val_with_readout_mitigation(
-                noisy_c,
-                observable,
-                noise_model,
-                nshots,
-                readout,
-                qubit_map,
-                seed=local_state,
-                backend=backend,
-            )
+            if nshots is None:
+                circuit_result = _execute_circuit(
+                    noisy_c, qubit_map, noise_model, nshots, backend=backend
+                )
+                val = float(observable.expectation(circuit_result.state()))
+            else:
+                val = get_expectation_val_with_readout_mitigation(
+                    noisy_c,
+                    observable,
+                    noise_model,
+                    nshots,
+                    readout,
+                    qubit_map,
+                    seed=local_state,
+                    backend=backend,
+                )
             train_val["noisy"].append(float(val.real))
 
     train_val_noisy = train_val["noisy"]
@@ -591,16 +627,22 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
-        expval = get_expectation_val_with_readout_mitigation(
-            noisy_c,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            circuit_result = _execute_circuit(
+                noisy_c, qubit_map, noise_model, nshots, backend=backend
+            )
+            expval = float(observable.expectation(circuit_result.state()))
+        else:
+            expval = get_expectation_val_with_readout_mitigation(
+                noisy_c,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
         val.append(expval)
 
     mit_val = model(
@@ -832,7 +874,7 @@ def get_expectation_val_with_readout_mitigation(
     seed=None,
     backend=None,
 ):
-    """
+    """CDR
     Applies readout error mitigation to the given circuit and observable.
 
     Args:
@@ -927,30 +969,21 @@ def sample_clifford_training_circuit(
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
 
     for i, gate in enumerate(circuit.queue):
-        if isinstance(gate, gates.M):
-            for q in gate.qubits:
-                gate_rand = gates.Unitary(
-                    random_clifford(
-                        1, return_circuit=True, seed=local_state, backend=backend
-                    ).unitary(backend),
-                    q,
-                )
-                gate_rand.clifford = True
-                sampled_circuit.add(gate_rand)
-            sampled_circuit.add(gate)
-        else:
-            if i in non_clifford_gates_indices:
-                gate = gates.Unitary(
-                    random_clifford(
-                        len(gate.qubits),
-                        return_circuit=True,
-                        seed=local_state,
-                        backend=backend,
-                    ).unitary(backend),
-                    *gate.qubits,
-                )
-                gate.clifford = True
-            sampled_circuit.add(gate)
+        if i in non_clifford_gates_indices:
+            clifford_matrix = random_clifford(
+                len(gate.qubits),
+                return_circuit=False,
+                seed=local_state,
+                backend=backend,
+            )
+
+            gate = gates.Unitary(
+                clifford_matrix,
+                *gate.qubits,
+            )
+
+            gate.clifford = True
+        sampled_circuit.add(gate)
 
     return sampled_circuit
 
@@ -966,8 +999,8 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. if ``None``, it uses the current backend.
+        backend (:class:`qibo.backends.CliffordBackend`, optional): Clifford backend to be used
+            in the execution. if ``None``, it uses the `CliffordBackend` with the platform of the current backend as engine.
             Defaults to ``None``.
 
     Returns:
@@ -979,44 +1012,68 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    from qibo import matrices  # pylint: disable=import-outside-toplevel
-    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
-        comp_basis_to_pauli,
-        random_clifford,
-        vectorization,
-    )
+    from qibo import gates
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend_temp, local_state = _check_backend_and_local_state(seed, backend)
+    backend = (
+        CliffordBackend(engine=_get_engine_name(backend_temp))
+        if backend is None
+        else backend_temp
+    )  # pragma: no cover
 
     sampled_circuit = sample_clifford_training_circuit(
         circuit, seed=local_state, backend=backend
     )
-    unitary_matrix = sampled_circuit.unitary(backend=backend)
-    num_qubits = sampled_circuit.nqubits
 
-    comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
-    observable.nqubits = num_qubits
-    observable_liouville = vectorization(
-        backend.np.transpose(backend.np.conj(unitary_matrix), (1, 0))
-        @ observable.matrix
-        @ unitary_matrix,
-        order="row",
-        backend=backend,
+    result = backend.execute_circuit(sampled_circuit.invert(), nshots=1)
+
+    symplectic_matrix = result.symplectic_matrix[:-1, :-1]
+
+    terms = observable.terms[0].factors
+    pauli_symplectic = backend.np.zeros((2 * circuit.nqubits, 1))
+    for term in terms:
+        term = str(term)
+        index = int(term[1])
+        if term[0] in ["X", "Y"]:  # pragma: no cover
+            pauli_symplectic[index] = 1
+        if term[0] in ["Z", "Y"]:  # pragma: no cover
+            pauli_symplectic[index + circuit.nqubits] = 1
+
+    # U --> symplectic_matrix and O --> observable_sym, U*O*Ut --> symplectic_matrix.T @ observable_sym
+    # To get Ut*O*U we need the symplectic_matrix of the inverse circuit Ut
+    pauli_symplectic = (symplectic_matrix.T @ pauli_symplectic) % 2
+
+    x_component = pauli_symplectic[: circuit.nqubits] == 1
+    z_component = pauli_symplectic[circuit.nqubits :] == 1
+    y_obs = reduce(
+        mul,
+        [Y(i, backend=backend) for i in (x_component * z_component).nonzero()[0]],
+        1,
     )
-    observable_pauli_liouville = comp_to_pauli @ observable_liouville
-
-    index = int(
-        backend.np.where(backend.np.abs(observable_pauli_liouville) >= 1e-5)[0][0]
+    x_obs = reduce(
+        mul,
+        [X(i, backend=backend) for i in (x_component * ~z_component).nonzero()[0]],
+        1,
+    )
+    z_obs = reduce(
+        mul,
+        [Z(i, backend=backend) for i in (z_component * ~x_component).nonzero()[0]],
+        1,
+    )
+    observable = y_obs * x_obs * z_obs
+    observable = SymbolicHamiltonian(
+        observable, nqubits=circuit.nqubits, backend=backend
     )
 
-    observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
-
+    terms = observable.terms[0].factors
     adjustment_gates = []
-    for i in range(num_qubits):
-        if observable_pauli[i] in ["X", "Y"]:
-            adjustment_gate = gates.M(i, basis=observable_pauli[i]).basis[0]
+    for term in terms:
+        term = str(term)
+        qubit = int(term[1])
+        if term[0] in ["X", "Y"]:
+            adjustment_gate = gates.M(qubit, basis=term[0]).basis[0]
         else:
-            adjustment_gate = gates.I(i)
+            adjustment_gate = gates.I(qubit)
 
         adjustment_gates.append(adjustment_gate)
 
@@ -1026,7 +1083,6 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         sensitive_circuit.add(gate)
     for gate in sampled_circuit.queue:
         sensitive_circuit.add(gate)
-
     return sensitive_circuit, sampled_circuit, adjustment_gates
 
 
@@ -1057,7 +1113,8 @@ def ICS(
         qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used.
             Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
-        nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`. If `None`, the circuit is simulated without sampling: with statevector simulation if `noise_model` is not `None` and with density matrix simulation otherwise.
+                                Readout mitigation is not available with exact simulation.
         n_training_samples (int, optional): the number of training samples. Defaults to 10.
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
@@ -1076,7 +1133,7 @@ def ICS(
         data (dict): the data dictionary containing the noise-free and noisy expectation values obtained with the training circuits.
 
     Reference:
-        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
+        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability # pragma: no coverof quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
@@ -1088,9 +1145,9 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, seed=local_state, backend=backend)[
-            0
-        ]
+        error_sensitive_circuit(
+            circuit, observable, seed=local_state, backend=CLIFFORD_BACKEND
+        )[0]
         for _ in range(n_training_samples)
     ]
 
@@ -1098,21 +1155,30 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
-        circuit_result = SIMULATION_BACKEND.execute_circuit(
-            training_circuit, nshots=nshots
+        training_circuit_copy = training_circuit.copy(deep=True)
+        circuit_result = CLIFFORD_BACKEND.execute_circuit(
+            training_circuit_copy, nshots=nshots
         )
-        expectation = observable.expectation_from_samples(circuit_result.frequencies())
-
-        noisy_expectation = get_expectation_val_with_readout_mitigation(
-            training_circuit,
-            observable,
-            noise_model,
-            nshots,
-            readout,
-            qubit_map,
-            seed=local_state,
-            backend=backend,
-        )
+        if nshots is None:
+            expectation = observable.expectation(circuit_result.state())
+            circuit_result = _execute_circuit(
+                training_circuit, qubit_map, noise_model, nshots, backend=backend
+            )
+            noisy_expectation = float(observable.expectation(circuit_result.state()))
+        else:
+            expectation = observable.expectation_from_samples(
+                circuit_result.frequencies()
+            )
+            noisy_expectation = get_expectation_val_with_readout_mitigation(
+                training_circuit,
+                observable,
+                noise_model,
+                nshots,
+                readout,
+                qubit_map,
+                seed=local_state,
+                backend=backend,
+            )
 
         data["noise-free"].append(expectation)
         data["noisy"].append(noisy_expectation)
@@ -1122,16 +1188,22 @@ def ICS(
     dep_param = backend.np.mean(lambda_list)
     dep_param_std = backend.np.std(lambda_list)
 
-    noisy_expectation = get_expectation_val_with_readout_mitigation(
-        circuit,
-        observable,
-        noise_model,
-        nshots,
-        readout,
-        qubit_map,
-        seed=local_state,
-        backend=backend,
-    )
+    if nshots is None:
+        circuit_result = _execute_circuit(
+            circuit, qubit_map, noise_model, nshots, backend=backend
+        )
+        noisy_expectation = float(observable.expectation(circuit_result.state()))
+    else:
+        noisy_expectation = get_expectation_val_with_readout_mitigation(
+            circuit,
+            observable,
+            noise_model,
+            nshots,
+            readout,
+            qubit_map,
+            seed=local_state,
+            backend=backend,
+        )
     one_dep_squared = (1 - dep_param) ** 2
     dep_std_squared = dep_param_std**2
 
@@ -1181,6 +1253,8 @@ def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend
         circuit.wire_names = qubit_map
     elif noise_model is not None:
         circuit = noise_model.apply(circuit)
+        if nshots is None:
+            circuit.density_matrix = True
 
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     return circuit_result
