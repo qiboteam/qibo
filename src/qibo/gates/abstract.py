@@ -448,7 +448,7 @@ class Gate:
 
         # Identity conditions for fixed gates
         name = g1.name
-        if name in ("h", "cx", "x", "y", "z", "swap", "ecr", "ccx", "ccz"):
+        if name in ("h", "cx", "x", "y", "z", "swap", "ecr", "ccx", "ccz", "fanout"):
             return True
 
         # Check for parametrized rotation gates
