@@ -445,23 +445,27 @@ def _decomposition_generalized_RBS(gate):
     rotation_controls = ins[:-1] + outs
 
     list_gates = []
-    list_gates.append(gates.X(ins[-1]))
-    list_gates.append(gates.X(outs[0]))
-    list_gates.append(gates.FanOut(ins[-1], *ins[:-1]))
-    list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
-    list_gates.append(gates.X(ins[-1]))
-    list_gates.append(gates.X(outs[0]))
+    if len(ins) > 1:
+        list_gates.append(gates.X(ins[-1]))
+        list_gates.append(gates.FanOut(ins[-1], *ins[:-1]))
+        list_gates.append(gates.X(ins[-1]))
+    if len(outs) > 1:
+        list_gates.append(gates.X(outs[0]))
+        list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
+        list_gates.append(gates.X(outs[0]))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
     list_gates.append(gates.RY(ins[-1], -2 * theta).controlled_by(*rotation_controls))
     if phi != 0.0:
         list_gates.append(gates.RZ(ins[-1], 2 * phi).controlled_by(*rotation_controls))
     list_gates.append(gates.CNOT(ins[-1], outs[0]))
-    list_gates.append(gates.X(outs[0]))
-    list_gates.append(gates.X(ins[-1]))
-    list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
-    list_gates.append(gates.FanOut(ins[-1], *ins[:-1]))
-    list_gates.append(gates.X(outs[0]))
-    list_gates.append(gates.X(ins[-1]))
+    if len(outs) > 1:
+        list_gates.append(gates.X(outs[0]))
+        list_gates.append(gates.FanOut(outs[0], *outs[1:][::-1]))
+        list_gates.append(gates.X(outs[0]))
+    if len(ins) > 1:
+        list_gates.append(gates.X(ins[-1]))
+        list_gates.append(gates.FanOut(ins[-1], *ins[:-1]))
+        list_gates.append(gates.X(ins[-1]))
 
     return list_gates
 
