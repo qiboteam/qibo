@@ -401,7 +401,7 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def _base_decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs) -> List["Gate"]:
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -412,6 +412,7 @@ class Gate:
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            kwargs: Aditional parameters.
 
         Returns:
             list: Synthesis of the original gate in another gate set.
@@ -499,9 +500,14 @@ class Gate:
                     "Cannot decompose multi-controlled ``X`` gate if free "
                     "qubits coincide with target or controls.",
                 )
+
+            ncontrols = len(self.control_qubits)
+
             # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
+            decomposed = base_gate._base_decompose(
+                *free, use_toffolis=use_toffolis, ncontrols=ncontrols
+            )
             mask = self._control_mask_after_stripping(decomposed)
             for bool_value, gate in zip(mask, decomposed):
                 if bool_value:
