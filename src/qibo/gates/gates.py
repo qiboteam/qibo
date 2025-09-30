@@ -2444,11 +2444,8 @@ class RBS(ParametrizedGate):
     def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
         """Decomposition of RBS gate according to `ArXiv:2109.09685
         <https://arxiv.org/abs/2109.09685>`_."""
-        # from qibo.transpiler.decompositions import (  # pylint: disable=C0415
-        #     standard_decompositions,
         # )
 
-        # return standard_decompositions(self)
         q0, q1 = self.target_qubits
 
         ncontrols = kwargs.get("ncontrols", 0)
