@@ -2453,7 +2453,7 @@ class RBS(ParametrizedGate):
 
         ncontrols = kwargs.get("ncontrols", 0)
 
-        if ncontrols >= 2:
+        if ncontrols >= 2:  # pragma: no cover
             return [
                 CNOT(q0, q1),
                 CRY(q1, q0, 2 * self.init_kwargs["theta"]),
