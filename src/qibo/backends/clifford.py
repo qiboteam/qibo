@@ -148,6 +148,15 @@ class CliffordBackend(NumpyBackend):
         if isinstance(gate, gates.Unitary):
             return self.apply_unitary(gate, symplectic_matrix, nqubits)
 
+        # if self.platform == "stim" and isinstance(gate, gates.SDG):
+        #     for gate_name in ("S", "Z"):
+        #         operation = getattr(self.engine, gate_name)
+        #         symplectic_matrix = operation(
+        #             symplectic_matrix, *gate.init_args, nqubits, **kwargs
+        #         )
+
+        #     return symplectic_matrix
+
         operation = getattr(self.engine, gate.__class__.__name__)
 
         kwargs = {}
@@ -362,6 +371,30 @@ class CliffordBackend(NumpyBackend):
             state = gate.apply_clifford(self, state, nqubits)
         return state
 
+    def _execute_circuit_stim(self, circuit, initial_state=None, nshots: int = 1000):
+        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+
+        circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
+        for gate in circuit.queue:
+            name = gate.__class__.__name__
+            name = "S_DAG" if name == "SDG" else name
+            circuit_stim.append(name, list(gate.qubits))
+
+        x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
+            self._stim.Tableau.from_circuit(  # pylint: disable=no-member
+                circuit_stim
+            ).to_numpy()
+        )
+        symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
+        symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
+
+        return Clifford(
+            symplectic_matrix,
+            measurements=circuit.measurements,
+            nshots=nshots,
+            _backend=self,
+        )
+
     def execute_circuit(  # pylint: disable=R1710
         self, circuit, initial_state=None, nshots: int = 1000
     ):
@@ -380,24 +413,7 @@ class CliffordBackend(NumpyBackend):
         from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
 
         if self.platform == "stim":
-            circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
-            for gate in circuit.queue:
-                circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
-
-            x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
-                self._stim.Tableau.from_circuit(  # pylint: disable=no-member
-                    circuit_stim
-                ).to_numpy()
-            )
-            symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
-            symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
-
-            return Clifford(
-                symplectic_matrix,
-                measurements=circuit.measurements,
-                nshots=nshots,
-                _backend=self,
-            )
+            return self._execute_circuit_stim(circuit, initial_state, nshots)
 
         for gate in circuit.queue:
             if (
