@@ -148,15 +148,6 @@ class CliffordBackend(NumpyBackend):
         if isinstance(gate, gates.Unitary):
             return self.apply_unitary(gate, symplectic_matrix, nqubits)
 
-        # if self.platform == "stim" and isinstance(gate, gates.SDG):
-        #     for gate_name in ("S", "Z"):
-        #         operation = getattr(self.engine, gate_name)
-        #         symplectic_matrix = operation(
-        #             symplectic_matrix, *gate.init_args, nqubits, **kwargs
-        #         )
-
-        #     return symplectic_matrix
-
         operation = getattr(self.engine, gate.__class__.__name__)
 
         kwargs = {}
