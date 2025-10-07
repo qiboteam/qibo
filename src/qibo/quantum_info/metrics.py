@@ -307,7 +307,7 @@ def a_fidelity(state, target, backend=None):
     test_state = bool(backend.np.abs(purity_state - 1) <= PRECISION_TOL)
     test_target = bool(backend.np.abs(purity_target - 1) <= PRECISION_TOL)
 
-    if test_state or test_target:
+    if test_state and test_target:
         return fidelity(state, target, backend=backend) ** 2
 
     state_sqrt = backend.calculate_matrix_sqrt(state) if not test_state else state
