@@ -274,7 +274,7 @@ def a_fidelity(state, target, backend=None):
     the :math:`A`-fidelity is defined as:
 
     .. math::
-        F_{\\text{A}}(\\rho, \\, \\sigma) = \\text{tr}^{2}(\\sqrt(\\rho) \\, \\sqrt(\\sigma)) \\, .
+        F_{\\text{A}}(\\rho, \\, \\sigma) = \\text{tr}^{2}(\\sqrt{\\rho} \\, \\sqrt{\\sigma}) \\, .
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -301,19 +301,22 @@ def a_fidelity(state, target, backend=None):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
 
-    dim_state = len(state.shape)
-    dim_target = len(target.shape)
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
 
-    if dim_state == 1 and dim_target == 1:
+    test_state = bool(backend.np.abs(purity_state - 1) <= PRECISION_TOL)
+    test_target = bool(backend.np.abs(purity_target - 1) <= PRECISION_TOL)
+
+    if test_state or test_target:
         return fidelity(state, target, backend=backend) ** 2
 
-    state_sqrt = backend.calculate_matrix_sqrt(state) if dim_state == 2 else state
-    target_sqrt = backend.calculate_matrix_sqrt(target) if dim_target == 2 else target
+    state_sqrt = backend.calculate_matrix_sqrt(state) if not test_state else state
+    target_sqrt = backend.calculate_matrix_sqrt(target) if not test_target else target
 
-    if dim_state == 1 and dim_target == 2:
+    if test_state and not test_target:
         return backend.np.real(backend.np.conj(state) @ target_sqrt @ state) ** 2
 
-    if dim_state == 2 and dim_target == 1:
+    if not test_state and test_target:
         return backend.np.real(backend.np.conj(target) @ state_sqrt @ target) ** 2
 
     return backend.np.real(backend.np.trace(state_sqrt @ target_sqrt)) ** 2
@@ -327,7 +330,7 @@ def n_fidelity(state, target, backend=None):
 
     .. math::
         F_{\\text{N}}(\\rho, \\, \\sigma) = \\text{tr}(\\rho \\, \\sigma) +
-            \\sqrt(1 - \\text{tr}(\\rho^{2})) \\, \\sqrt(1 - \\text{tr}(\\rho^{2})) \\, ,
+            \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, ,
 
     where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
     a quantum state :math:`\\varrho`.
@@ -362,19 +365,19 @@ def n_fidelity(state, target, backend=None):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
 
-    dim_state = len(state.shape)
-    dim_target = len(target.shape)
-
-    if dim_state == 1 or dim_target == 1:
-        return fidelity(state, target, backend=backend)
-
     purity_state = purity(state, backend=backend)
     purity_target = purity(target, backend=backend)
+
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
 
     fid = backend.np.trace(state @ target)
     fid += backend.np.sqrt(1 - purity_state) * backend.np.sqrt(1 - purity_target)
 
-    return fid
+    return backend.np.real(fid)
 
 
 def chen_fidelity(state, target, backend=None):
@@ -434,7 +437,7 @@ def geometric_mean_fidelity(state, target, backend=None):
 
     .. math::
         F_{\\text{GM}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
-            {\\sqrt{\\text{tr}(\\rho^{2})) \\, \\text{tr}(\\sigma^{2})}} \\, ,
+            {\\sqrt{\\text{tr}(\\rho^{2}) \\, \\text{tr}(\\sigma^{2})}} \\, ,
 
     where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
     a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
@@ -465,19 +468,19 @@ def geometric_mean_fidelity(state, target, backend=None):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
 
-    dim_state = len(state.shape)
-    dim_target = len(target.shape)
-
-    if dim_state == 1 or dim_target == 1:
-        return fidelity(state, target, backend=backend)
-
     purity_state = purity(state, backend=backend)
     purity_target = purity(target, backend=backend)
+
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
 
     gm_fid = backend.np.trace(state @ target)
     gm_fid /= backend.np.sqrt(purity_state * purity_target)
 
-    return gm_fid
+    return backend.np.real(gm_fid)
 
 
 def max_fidelity(state, target, backend=None):
@@ -488,7 +491,7 @@ def max_fidelity(state, target, backend=None):
 
     .. math::
         F_{\\text{max}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
-            {\\text{max}(\\text{tr}(\\rho^{2})), \\, \\text{tr}(\\sigma^{2}))} \\, ,
+            {\\text{max}(\\text{tr}(\\rho^{2}), \\, \\text{tr}(\\sigma^{2}))} \\, ,
 
     where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
     a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
@@ -515,17 +518,17 @@ def max_fidelity(state, target, backend=None):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
 
-    dim_state = len(state.shape)
-    dim_target = len(target.shape)
-
-    if dim_state == 1 or dim_target == 1:
-        return fidelity(state, target, backend=backend)
-
     purity_state = purity(state, backend=backend)
     purity_target = purity(target, backend=backend)
 
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
     max_fid = backend.np.trace(state @ target)
-    max_fid /= backend.np.max(purity_state, purity_target)
+    max_fid /= max(purity_state, purity_target)
 
     return max_fid
 
@@ -803,7 +806,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy
+    import cvxpy  # pylint: disable=import-outside-toplevel  #type: ignore
 
     backend = _check_backend(backend)
 
