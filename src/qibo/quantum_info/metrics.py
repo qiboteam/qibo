@@ -314,10 +314,20 @@ def a_fidelity(state, target, backend=None):
     target_sqrt = backend.calculate_matrix_sqrt(target) if not test_target else target
 
     if test_state and not test_target:
-        return backend.np.real(backend.np.conj(state) @ target_sqrt @ state) ** 2
+        trace = (
+            backend.np.conj(state) @ target_sqrt @ state
+            if len(state.shape) == 1
+            else backend.np.trace(state @ target_sqrt)
+        )
+        return backend.np.real(trace) ** 2
 
     if not test_state and test_target:
-        return backend.np.real(backend.np.conj(target) @ state_sqrt @ target) ** 2
+        trace = (
+            backend.np.conj(target) @ state_sqrt @ target
+            if len(target.shape) == 1
+            else backend.np.trace(state_sqrt @ target)
+        )
+        return backend.np.real(trace) ** 2
 
     return backend.np.real(backend.np.trace(state_sqrt @ target_sqrt)) ** 2
 
