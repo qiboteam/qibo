@@ -647,6 +647,8 @@ def random_clifford(
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
         nqubits, local_state=local_state
     )
+    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
+    permutations = backend.cast(permutations, dtype=permutations.dtype)
 
     gamma = backend.np.diag(
         local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
@@ -704,7 +706,7 @@ def random_clifford(
     ]
 
     # Apply layer of Hadamards
-    inds = hadamards * backend.np.arange(1, nqubits + 1)
+    inds = hadamards * backend.cast(backend.np.arange(1, nqubits + 1), dtype=int)
     inds = inds[inds > 0] - 1
     lhs_inds = backend.np.concatenate([inds, inds + nqubits])
     rhs_inds = backend.np.concatenate([inds + nqubits, inds])
