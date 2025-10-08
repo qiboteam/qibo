@@ -329,6 +329,9 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
+    if backend.platform in ("cupy", "cuquantum"):
+        pytest.skip("Clifford circuit decomposition AG04 not implemented for GPUs.")
+
     with pytest.raises(TypeError):
         test = random_clifford(
             nqubits="1", return_circuit=return_circuit, backend=backend
@@ -379,18 +382,13 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
     )
 
     if not return_circuit:
-        if backend.platform in ("cupy", "cuquantum"):
-            with pytest.raises(NotImplementedError):
-                matrix = matrix.to_circuit("AG04")
-        else:
-            matrix = matrix.to_circuit("AG04")
-            matrix = matrix.unitary(backend=backend)
+        matrix = matrix.to_circuit("AG04", density_matrix=density_matrix)
 
-            backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
-    else:
-        matrix = matrix.unitary(backend=backend)
+    assert matrix.density_matrix == density_matrix
 
-        backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
+    matrix = matrix.unitary(backend=backend)
+
+    backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
 
 
 def test_random_pauli_errors(backend):
