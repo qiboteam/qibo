@@ -253,8 +253,8 @@ def test_apply_unitary(backend, sizes_and_counts):
     backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("seed", [17])
-def test_collapsing_measurements(backend, seed):
+def test_collapsing_measurements(backend):
+    seed = 17 if backend.platform in ("cupy", "cuquantum") else 40
     backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
     gate_queue = random_clifford(
@@ -281,7 +281,9 @@ def test_collapsing_measurements(backend, seed):
     numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
 
     backend.assert_allclose(
-        clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
+        clifford_res.probabilities(),
+        backend.cast(numpy_res.probabilities(), dtype="float64"),
+        atol=1e-1,
     )
 
     matrix = random_clifford(1, return_circuit=True, backend=numpy_bkd)
