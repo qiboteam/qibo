@@ -690,7 +690,6 @@ def random_clifford(
         ],
         axis=0,
     )
-    # had_free_operator_2 = backend.np.block([[delta_prime, zero], [prod2, inv2]])
     had_free_operator_2 = backend.np.concatenate(
         [
             backend.np.concatenate([delta_prime, zero], axis=1),
