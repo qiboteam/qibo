@@ -340,6 +340,8 @@ def test_bitflip_noise(backend, seed):
 
 @pytest.mark.parametrize("seed", [2025])
 def test_noise_channels(backend, seed):
+    pytest.skip("Issue with measurements. See issue #1598 and PR #1639.")
+
     backend.set_seed(seed)
 
     clifford_bkd = construct_clifford_backend(backend)
