@@ -3161,7 +3161,11 @@ develop = false
 [package.dependencies]
 numba = "^0.61.0"
 psutil = "^5.9.5"
+<<<<<<< HEAD
 qibo = {git = "https://github.com/qiboteam/qibo", branch = "backends"}
+=======
+qibo = "^0.2.20"
+>>>>>>> master
 scipy = "^1.10.1"
 
 [package.extras]
@@ -3171,8 +3175,13 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
+<<<<<<< HEAD
 reference = "backends"
 resolved_reference = "41f55bb06ee7399a16023dc5459c714576c70a3b"
+=======
+reference = "HEAD"
+resolved_reference = "4045ed5c3bc928f96a27aabe5911a463308c9b83"
+>>>>>>> master
 
 [[package]]
 name = "qulacs"
@@ -4266,4 +4275,8 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
+<<<<<<< HEAD
 content-hash = "9336c73716abfbfb1bde037d13bc7bec384748a847f23c1f90dc21cbb5fd68f0"
+=======
+content-hash = "e39333e4ad4fc8af726007482076119422a55d208949bffd71971ce1aa013163"
+>>>>>>> master

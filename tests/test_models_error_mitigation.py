@@ -57,8 +57,8 @@ backend = construct_backend("numpy")
 resp_matrix_1q = random_stochastic_matrix(
     2, diagonally_dominant=True, seed=2, backend=backend
 )
-resp_matrix_2q = random_stochastic_matrix(
-    4, diagonally_dominant=True, seed=2, backend=backend
+resp_matrix_3q = random_stochastic_matrix(
+    8, diagonally_dominant=True, seed=2, backend=backend
 )
 
 
@@ -70,7 +70,7 @@ resp_matrix_2q = random_stochastic_matrix(
             3,
             get_noise_model(DepolarizingError(0.1), gates.CNOT),
             "CNOT",
-            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
+            {"response_matrix": resp_matrix_3q, "ibu_iters": None},
         ),
         (
             3,
@@ -96,7 +96,8 @@ resp_matrix_2q = random_stochastic_matrix(
 )
 @pytest.mark.parametrize("solve", [False, True])
 @pytest.mark.parametrize("GUF", [False, True])
-def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
+@pytest.mark.parametrize("nshots", [None, 10000])
+def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readout):
     """Test that ZNE reduces the noise."""
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
@@ -107,7 +108,7 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     if nqubits == 1:
         nmeas = 1
     else:
-        nmeas = nqubits - 1
+        nmeas = nqubits
     # Define the circuit
     circuit = get_circuit(nqubits, nmeas)
     # Define the observable
@@ -117,15 +118,18 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     # Noise-free expected value
     exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
-    noisy = state.expectation_from_samples(obs)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
+    if nshots is None:
+        noisy = obs.expectation(state.state())
+    else:
+        noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = ZNE(
         circuit=circuit,
         observable=obs,
         noise_levels=np.array(range(4)),
         noise_model=noise,
-        nshots=10000,
+        nshots=nshots,
         solve_for_gammas=solve,
         global_unitary_folding=GUF,
         insertion_gate=insertion_gate,
@@ -143,20 +147,21 @@ def test_zne(backend, nqubits, noise, solve, GUF, insertion_gate, readout):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), None),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
-            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
+            {"response_matrix": resp_matrix_3q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
-            {"response_matrix": resp_matrix_2q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
+            {"response_matrix": resp_matrix_3q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
             {"ncircuits": 2},
         ),
     ],
 )
-def test_cdr(backend, nqubits, noise, full_output, readout):
+@pytest.mark.parametrize("nshots", [None, 10000])
+def test_cdr(backend, nqubits, noise, nshots, full_output, readout):
     """Test that CDR reduces the noise."""
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
@@ -164,7 +169,7 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     else:
         backend.set_threads(1)
 
-    nmeas = 1 if nqubits == 1 else nqubits - 1
+    nmeas = 1 if nqubits == 1 else nqubits
     # Define the circuit
     circuit = get_circuit(nqubits, nmeas)
     # Define the observable
@@ -174,14 +179,17 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     # Noise-free expected value
     exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
-    noisy = state.expectation_from_samples(obs)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
+    if nshots is None:
+        noisy = obs.expectation(state.state())
+    else:
+        noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = CDR(
         circuit=circuit,
         observable=obs,
         noise_model=noise,
-        nshots=10000,
+        nshots=nshots,
         n_training_samples=20,
         full_output=full_output,
         readout=readout,
@@ -238,7 +246,8 @@ def test_sample_training_circuit(nqubits):
     ],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
+@pytest.mark.parametrize("nshots", [None, 10000])
+def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, nshots):
     """Test that vnCDR reduces the noise."""
     if backend.platform == "tensorflow":
         backend.tf.config.threading.set_inter_op_parallelism_threads = 1
@@ -253,8 +262,11 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     # Noise-free expected value
     exact = obs.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
-    noisy = state.expectation_from_samples(obs)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
+    if nshots is None:
+        noisy = obs.expectation(state.state())
+    else:
+        noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = vnCDR(
         circuit=circuit,
@@ -262,7 +274,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
         backend=backend,
         noise_levels=range(3),
         noise_model=noise,
-        nshots=10000,
+        nshots=nshots,
         n_training_samples=20,
         insertion_gate=insertion_gate,
         full_output=full_output,
@@ -319,20 +331,21 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), None),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
-            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
+            {"response_matrix": resp_matrix_3q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
-            {"response_matrix": resp_matrix_2q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
+            {"response_matrix": resp_matrix_3q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_3q]),
             {"ncircuits": 2},
         ),
     ],
 )
-def test_ics(backend, nqubits, noise, full_output, readout):
+@pytest.mark.parametrize("nshots", [None, 10000])
+def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     np.random.seed(10)
     backend.set_seed(10)
     backend.set_dtype("complex128")
@@ -349,22 +362,25 @@ def test_ics(backend, nqubits, noise, full_output, readout):
 
     """Test that ICS reduces the noise."""
     # Define the circuit
-    circuit = get_circuit(nqubits, nqubits - 1)
+    circuit = get_circuit(nqubits)
     # Define the observable
-    obs = np.prod([Z(i, backend=backend) for i in range(nqubits - 1)])
+    obs = np.prod([Z(i, backend=backend) for i in range(nqubits)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
     exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=10000)
-    noisy = state.expectation_from_samples(obs)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
+    if nshots is None:
+        noisy = obs.expectation(state.state())
+    else:
+        noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = ICS(
         circuit=circuit,
         observable=obs,
         noise_model=noise,
-        nshots=10000,
+        nshots=nshots,
         n_training_samples=20,
         full_output=full_output,
         readout=readout,
