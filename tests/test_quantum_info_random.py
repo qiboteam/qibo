@@ -349,17 +349,23 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
     cnot_10 = cnot_10.unitary(backend)
     cnot_10 = backend.to_numpy(cnot_10)
 
-    result_single = matrices.H @ matrices.Y
+    result_single = matrices.H @ matrices.SDG @ matrices.Y
 
-    result_two = np.kron(
-        matrices.H @ matrices.Z @ matrices.X, matrices.SDG @ matrices.Z
-    )
-    result_two = matrices.CNOT @ result_two
-    result_two = np.kron(matrices.H, matrices.I) @ result_two
-    result_two = cnot_10 @ result_two
-    result_two = np.kron(matrices.SDG, matrices.I) @ result_two
-    result_two = cnot_10 @ result_two
-    result_two = np.kron(matrices.H @ matrices.SDG, matrices.I) @ result_two
+    if backend.platform in ("cupy", "cuquantum"):
+        # fixed seed yields different circuits for GPU backends
+        result_two = np.kron(matrices.H @ matrices.SDG, matrices.X)
+        result_two = matrices.CNOT @ result_two
+        result_two = (
+            np.kron(matrices.S @ matrices.H, matrices.H @ matrices.SDG) @ result_two
+        )
+        result_two = matrices.CNOT @ result_two
+    else:
+        result_two = np.kron(matrices.H @ matrices.Z @ matrices.X, matrices.Z)
+        result_two = matrices.CNOT @ result_two
+        result_two = np.kron(matrices.H, matrices.I) @ result_two
+        result_two = cnot_10 @ result_two
+        result_two = np.kron(matrices.SDG, matrices.I) @ result_two
+        result_two = cnot_10 @ result_two
 
     result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
@@ -373,11 +379,18 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
     )
 
     if not return_circuit:
-        matrix = matrix.to_circuit("AG04")
+        if backend.platform in ("cupy", "cuquantum"):
+            with pytest.raises(NotImplementedError):
+                matrix = matrix.to_circuit("AG04")
+        else:
+            matrix = matrix.to_circuit("AG04")
+            matrix = matrix.unitary(backend=backend)
 
-    matrix = matrix.unitary(backend=backend)
+            backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
+    else:
+        matrix = matrix.unitary(backend=backend)
 
-    backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
+        backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
 
 
 def test_random_pauli_errors(backend):

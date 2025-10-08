@@ -649,16 +649,16 @@ def random_clifford(
     )
 
     gamma = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.int8)
+        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
     )
     gamma = backend.cast(gamma, dtype=gamma.dtype)
 
     gamma_prime = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.int8)
+        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
     )
-    gamma_prime = backend.cast(gamma, dtype=gamma_prime.dtype)
+    gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
 
-    delta = backend.np.eye(nqubits, dtype=backend.np.int8)
+    delta = backend.np.eye(nqubits, dtype=backend.np.uint8)
     delta = backend.cast(delta, dtype=delta.dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
@@ -674,7 +674,7 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.np.zeros((nqubits, nqubits), dtype=np.int8)
+    zero = backend.np.zeros((nqubits, nqubits), dtype=np.uint8)
     zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
@@ -1187,19 +1187,19 @@ def _fill_tril(mat, rng, symmetric, backend):
         return
 
     if dim <= 4:
-        mat[1, 0] = rng.integers(2, dtype=np.int8)
+        mat[1, 0] = rng.integers(2, dtype=np.uint8)
         if symmetric:
             mat[0, 1] = mat[1, 0]
         if dim > 2:
-            mat[2, 0] = rng.integers(2, dtype=np.int8)
-            mat[2, 1] = rng.integers(2, dtype=np.int8)
+            mat[2, 0] = rng.integers(2, dtype=np.uint8)
+            mat[2, 1] = rng.integers(2, dtype=np.uint8)
             if symmetric:
                 mat[0, 2] = mat[2, 0]
                 mat[1, 2] = mat[2, 1]
         if dim > 3:
-            mat[3, 0] = rng.integers(2, dtype=np.int8)
-            mat[3, 1] = rng.integers(2, dtype=np.int8)
-            mat[3, 2] = rng.integers(2, dtype=np.int8)
+            mat[3, 0] = rng.integers(2, dtype=np.uint8)
+            mat[3, 1] = rng.integers(2, dtype=np.uint8)
+            mat[3, 2] = rng.integers(2, dtype=np.uint8)
             if symmetric:
                 mat[0, 3] = mat[3, 0]
                 mat[1, 3] = mat[3, 1]
@@ -1208,7 +1208,7 @@ def _fill_tril(mat, rng, symmetric, backend):
 
     # Use numpy indices for larger dimensions
     rows, cols = backend.np.tril_indices(dim, -1)
-    vals = rng.integers(2, size=rows.size, dtype=backend.np.int8)
+    vals = rng.integers(2, size=rows.size, dtype=backend.np.uint8)
     mat[(rows, cols)] = vals
     if symmetric:
         mat[(cols, rows)] = vals
@@ -1243,7 +1243,7 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
     # however this function tends to fail and result in a non-symplectic
     # final matrix if n is too large.
     if dim <= block_inverse_threshold:
-        return backend.cast(backend.np.linalg.inv(mat), backend.np.int8) % 2
+        return backend.cast(backend.np.linalg.inv(mat), backend.np.uint8) % 2
 
     # For very large matrices  we divide the matrix into 4 blocks of
     # roughly equal size and use the analytic formula for the inverse
