@@ -306,8 +306,8 @@ def a_fidelity(state, target, backend=None):
     purity_state = purity(state, backend=backend)
     purity_target = purity(target, backend=backend)
 
-    test_state = bool(backend.np.abs(purity_state - 1) <= PRECISION_TOL)
-    test_target = bool(backend.np.abs(purity_target - 1) <= PRECISION_TOL)
+    test_state = bool(backend.abs(purity_state - 1) <= PRECISION_TOL)
+    test_target = bool(backend.abs(purity_target - 1) <= PRECISION_TOL)
 
     if test_state and test_target:
         return fidelity(state, target, backend=backend) ** 2
@@ -317,21 +317,21 @@ def a_fidelity(state, target, backend=None):
 
     if test_state and not test_target:
         trace = (
-            backend.np.conj(state) @ target_sqrt @ state
+            backend.conj(state) @ target_sqrt @ state
             if len(state.shape) == 1
-            else backend.np.trace(state @ target_sqrt)
+            else backend.trace(state @ target_sqrt)
         )
-        return backend.np.real(trace) ** 2
+        return backend.real(trace) ** 2
 
     if not test_state and test_target:
         trace = (
-            backend.np.conj(target) @ state_sqrt @ target
+            backend.conj(target) @ state_sqrt @ target
             if len(target.shape) == 1
-            else backend.np.trace(state_sqrt @ target)
+            else backend.trace(state_sqrt @ target)
         )
-        return backend.np.real(trace) ** 2
+        return backend.real(trace) ** 2
 
-    return backend.np.real(backend.np.trace(state_sqrt @ target_sqrt)) ** 2
+    return backend.real(backend.trace(state_sqrt @ target_sqrt)) ** 2
 
 
 def n_fidelity(state, target, backend=None):
@@ -381,15 +381,15 @@ def n_fidelity(state, target, backend=None):
     purity_target = purity(target, backend=backend)
 
     if (
-        backend.np.abs(purity_state - 1) <= PRECISION_TOL
-        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
     ):
         return fidelity(state, target, backend=backend)
 
-    fid = backend.np.trace(state @ target)
-    fid += backend.np.sqrt(1 - purity_state) * backend.np.sqrt(1 - purity_target)
+    fid = backend.trace(state @ target)
+    fid += backend.sqrt(1 - purity_state) * backend.sqrt(1 - purity_target)
 
-    return backend.np.real(fid)
+    return backend.real(fid)
 
 
 def chen_fidelity(state, target, backend=None):
@@ -484,15 +484,15 @@ def geometric_mean_fidelity(state, target, backend=None):
     purity_target = purity(target, backend=backend)
 
     if (
-        backend.np.abs(purity_state - 1) <= PRECISION_TOL
-        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
     ):
         return fidelity(state, target, backend=backend)
 
-    gm_fid = backend.np.trace(state @ target)
-    gm_fid /= backend.np.sqrt(purity_state * purity_target)
+    gm_fid = backend.trace(state @ target)
+    gm_fid /= backend.sqrt(purity_state * purity_target)
 
-    return backend.np.real(gm_fid)
+    return backend.real(gm_fid)
 
 
 def max_fidelity(state, target, backend=None):
@@ -534,12 +534,12 @@ def max_fidelity(state, target, backend=None):
     purity_target = purity(target, backend=backend)
 
     if (
-        backend.np.abs(purity_state - 1) <= PRECISION_TOL
-        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+        backend.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.abs(purity_target - 1) <= PRECISION_TOL
     ):
         return fidelity(state, target, backend=backend)
 
-    max_fid = backend.np.trace(state @ target)
+    max_fid = backend.trace(state @ target)
     max_fid /= max(purity_state, purity_target)
 
     return max_fid

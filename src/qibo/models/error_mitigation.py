@@ -1033,7 +1033,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     symplectic_matrix = result.symplectic_matrix[:-1, :-1]
 
     terms = observable.terms[0].factors
-    pauli_symplectic = backend.np.zeros((2 * circuit.nqubits, 1))
+    pauli_symplectic = backend.zeros((2 * circuit.nqubits, 1))
     for term in terms:
         term = str(term)
         index = int(term[1])

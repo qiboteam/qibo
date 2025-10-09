@@ -261,9 +261,9 @@ def test_alternative_fidelities(backend, nqubits, state_pure, target_pure):
     gm_fid = geometric_mean_fidelity(state, target, backend=backend)
     max_fid = max_fidelity(state, target, backend=backend)
 
-    assert backend.np.round(fid, 10) <= backend.np.round(n_fid, 10)
-    assert backend.np.round(fid, 10) >= backend.np.round(a_fid, 10)
-    assert backend.np.round(gm_fid, 10) >= backend.np.round(max_fid, 10)
+    assert backend.round(fid, 10) <= backend.round(n_fid, 10)
+    assert backend.round(fid, 10) >= backend.round(a_fid, 10)
+    assert backend.round(gm_fid, 10) >= backend.round(max_fid, 10)
 
     if nqubits == 1:
         chen_fid = chen_fidelity(state, target, backend=backend)

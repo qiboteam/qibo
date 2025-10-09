@@ -649,17 +649,15 @@ def random_clifford(
     hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
     permutations = backend.cast(permutations, dtype=permutations.dtype)
 
-    gamma = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
-    )
+    gamma = backend.diag(local_state.integers(2, size=nqubits, dtype=backend.uint8))
     gamma = backend.cast(gamma, dtype=gamma.dtype)
 
-    gamma_prime = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
+    gamma_prime = backend.diag(
+        local_state.integers(2, size=nqubits, dtype=backend.uint8)
     )
     gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
 
-    delta = backend.np.eye(nqubits, dtype=backend.np.uint8)
+    delta = backend.identity(nqubits, dtype=backend.uint8)
     delta = backend.cast(delta, dtype=delta.dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
@@ -675,44 +673,44 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.np.zeros((nqubits, nqubits), dtype=np.uint8)
+    zero = backend.zeros((nqubits, nqubits), dtype=np.uint8)
     zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
     inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
 
-    # backend.np.block cannot be used below because there is no cupy equivalent
-    # hence the necessity for three backend.np.concatenate's
-    had_free_operator_1 = backend.np.concatenate(
+    # backend.block cannot be used below because there is no cupy equivalent
+    # hence the necessity for three backend.concatenate's
+    had_free_operator_1 = backend.concatenate(
         [
-            backend.np.concatenate([delta, zero], axis=1),
-            backend.np.concatenate([prod1, inv1], axis=1),
+            backend.concatenate([delta, zero], axis=1),
+            backend.concatenate([prod1, inv1], axis=1),
         ],
         axis=0,
     )
-    had_free_operator_2 = backend.np.concatenate(
+    had_free_operator_2 = backend.concatenate(
         [
-            backend.np.concatenate([delta_prime, zero], axis=1),
-            backend.np.concatenate([prod2, inv2], axis=1),
+            backend.concatenate([delta_prime, zero], axis=1),
+            backend.concatenate([prod2, inv2], axis=1),
         ],
         axis=0,
     )
 
     # Apply qubit permutation
     table = had_free_operator_2[
-        backend.np.concatenate([permutations, nqubits + permutations])
+        backend.concatenate([permutations, nqubits + permutations])
     ]
 
     # Apply layer of Hadamards
-    inds = hadamards * backend.cast(backend.np.arange(1, nqubits + 1), dtype=int)
+    inds = hadamards * backend.cast(backend.arange(1, nqubits + 1), dtype=int)
     inds = inds[inds > 0] - 1
-    lhs_inds = backend.np.concatenate([inds, inds + nqubits])
-    rhs_inds = backend.np.concatenate([inds + nqubits, inds])
+    lhs_inds = backend.concatenate([inds, inds + nqubits])
+    rhs_inds = backend.concatenate([inds + nqubits, inds])
     table[lhs_inds, :] = table[rhs_inds, :]
 
     # Apply table
-    tableau = backend.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
+    tableau = backend.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
     tableau = backend.cast(tableau, dtype=tableau.dtype)
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
@@ -1204,8 +1202,8 @@ def _fill_tril(mat, rng, symmetric, backend):
         return
 
     # Use numpy indices for larger dimensions
-    rows, cols = backend.np.tril_indices(dim, -1)
-    vals = rng.integers(2, size=rows.size, dtype=backend.np.uint8)
+    rows, cols = backend.tril_indices(dim, -1)
+    vals = rng.integers(2, size=rows.size, dtype=backend.uint8)
     mat[(rows, cols)] = vals
     if symmetric:
         mat[(cols, rows)] = vals
@@ -1240,7 +1238,7 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
     # however this function tends to fail and result in a non-symplectic
     # final matrix if n is too large.
     if dim <= block_inverse_threshold:
-        return backend.cast(backend.np.linalg.inv(mat), backend.np.uint8) % 2
+        return backend.cast(backend.inv(mat), backend.uint8) % 2
 
     # For very large matrices  we divide the matrix into 4 blocks of
     # roughly equal size and use the analytic formula for the inverse
@@ -1252,7 +1250,7 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
     mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold, backend)
     mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold, backend)
     mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
-    inv = backend.np.block(
+    inv = backend.block(
         [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
     )
     return inv % 2
