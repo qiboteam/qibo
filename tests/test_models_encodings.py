@@ -102,29 +102,63 @@ def test_phase_encoder(backend, rotation, kind):
 
 
 @pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("not_power_of_two", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_binary_encoder(backend, nqubits, parametrization, complex_data):
-    if parametrization == "hopf" and complex_data:
-        pytest.skip(
-            "``binary_encoder`` in Hopf coordinates not implemented for complex data."
-        )
+def test_binary_encoder(
+    backend,
+    nqubits,
+    parametrization,
+    complex_data,
+    not_power_of_two,
+    custom_codewords,
+    keep_antictrls,
+):
+    if parametrization == "hopf":
+        if complex_data:
+            pytest.skip(
+                "``binary_encoder`` in Hopf coordinates not implemented for complex data."
+            )
 
-    with pytest.raises(ValueError):
-        dims = 5
-        test = np.random.rand(dims)
-        test = backend.cast(test, dtype=test.dtype)
-        test = binary_encoder(test)
+        with pytest.raises(ValueError):
+            dims = 5
+            test = np.random.rand(dims)
+            test = backend.cast(test, dtype=test.dtype)
+            test = binary_encoder(
+                test, parametrization=parametrization, nqubits=nqubits, backend=backend
+            )
 
-    dims = 2**nqubits
+    if parametrization == "hyperspherical" and not_power_of_two:
+        dims = 14
+    else:
+        dims = 2**nqubits
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
         target = backend.np.real(target)
         target /= backend.np.linalg.norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
+    codewords = backend.np.arange(dims) if custom_codewords else None
+
+    circuit = binary_encoder(
+        target,
+        parametrization=parametrization,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+    )
     state = backend.execute_circuit(circuit).state()
+
+    if parametrization == "hyperspherical" and not_power_of_two:
+        # need to insert zeros at the end of target to get
+        # matching shapes
+        trail_zeros = backend.np.zeros(
+            2 ** int(backend.np.ceil(backend.np.log2(dims))) - dims, dtype=target.dtype
+        )
+        trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
+        target = backend.np.concatenate((target, trail_zeros))
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
