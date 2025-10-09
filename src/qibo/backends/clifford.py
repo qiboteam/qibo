@@ -129,7 +129,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self.engine._clifford_pre_execution_reshape(  # pylint: disable=protected-access
+        return self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
             state
         )
 

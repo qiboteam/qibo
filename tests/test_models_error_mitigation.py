@@ -296,7 +296,9 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     else:
         backend.set_threads(1)
     nshots = 10000
-    p = random_stochastic_matrix(2**nmeas, diagonally_dominant=True, seed=5)
+    p = random_stochastic_matrix(
+        2**nmeas, diagonally_dominant=True, seed=5, backend=backend
+    )
     noise = NoiseModel()
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "response_matrix":

@@ -1250,7 +1250,12 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
     mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold, backend)
     mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold, backend)
     mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
+
     inv = backend.block(
-        [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
+        [
+            [mat_a, backend.zeros((dim1, dim - dim1), dtype=backend.uint8)],
+            [mat_c, mat_d],
+        ]
     )
+
     return inv % 2

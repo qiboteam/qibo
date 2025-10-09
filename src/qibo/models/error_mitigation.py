@@ -1019,7 +1019,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     backend_temp, local_state = _check_backend_and_local_state(seed, backend)
     backend = (
-        CliffordBackend(engine=_get_engine_name(backend_temp))
+        CliffordBackend(platform=_get_engine_name(backend_temp))
         if backend is None
         else backend_temp
     )  # pragma: no cover
@@ -1033,7 +1033,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     symplectic_matrix = result.symplectic_matrix[:-1, :-1]
 
     terms = observable.terms[0].factors
-    pauli_symplectic = backend.zeros((2 * circuit.nqubits, 1))
+    pauli_symplectic = backend.zeros((2 * circuit.nqubits, 1), dtype=backend.uint8)
     for term in terms:
         term = str(term)
         index = int(term[1])

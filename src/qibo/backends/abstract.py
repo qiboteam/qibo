@@ -225,7 +225,7 @@ class Backend:
         return self.engine.argsort(array, axis, **kwargs)
 
     def block(self, arrays) -> "ndarray":
-        self.engine.block(arrays)
+        return self.engine.block(arrays)
 
     def block_diag(self, *arrays) -> "ndarray":
         from scipy.linalg import block_diag  # pylint: disable=import-outside-toplevel

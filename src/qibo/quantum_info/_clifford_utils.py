@@ -193,12 +193,12 @@ def _decomposition_BM20(clifford, **kwargs):
             clifford_copy, inverse_circuit, cnot_cost
         )
 
-    last_row = clifford_copy.engine.cast([False] * 3, dtype=bool)
+    last_row = clifford_copy._backend.cast([False] * 3, dtype=bool)
     circuit = Circuit(nqubits)
     for qubit in range(nqubits):
         position = [qubit, qubit + nqubits]
         single_qubit_circuit = _single_qubit_clifford_decomposition(
-            clifford_copy.engine.np.append(
+            clifford_copy.engine.append(
                 clifford_copy.symplectic_matrix[position][:, position + [-1]], last_row
             ).reshape(3, 3),
             **kwargs,
@@ -453,7 +453,7 @@ def _cnot_cost3(clifford):  # pragma: no cover
                 symplectic_matrix[q1 + nqubits, q2 + nqubits],
             )
             mask = np.zeros(2 * nqubits, dtype=int)
-            mask = clifford.engine.cast(mask, dtype=mask.dtype)
+            mask = clifford._backend.cast(mask, dtype=mask.dtype)
             mask[[q2, q2 + nqubits]] = 1
             loc_y_x = np.array_equal(
                 symplectic_matrix[q1, :] & mask, symplectic_matrix[q1, :]
@@ -535,14 +535,16 @@ def _reduce_cost(clifford, inverse_circuit: Circuit, cost: int):  # pragma: no c
 
                 for qubit, n in [(control, n0), (target, n1)]:
                     if n == 1:
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
                     elif n == 2:
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.SDG(matrix, qubit, nqubits)
-                        matrix = reduced._backend.engine.H(matrix, qubit, nqubits)
-                matrix = reduced._backend.engine.CNOT(matrix, control, target, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.SDG(matrix, qubit, nqubits)
+                        matrix = reduced._backend._platform.H(matrix, qubit, nqubits)
+                matrix = reduced._backend._platform.CNOT(
+                    matrix, control, target, nqubits
+                )
                 reduced.symplectic_matrix = (
                     reduced._backend._clifford_post_execution_reshape(matrix, nqubits)
                 )
