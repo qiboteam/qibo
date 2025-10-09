@@ -63,7 +63,7 @@ class CliffordBackend(NumpyBackend):
                     self._platform, method, getattr(clifford_operations_cpu, method)
                 )
         elif self.platform == "cupy":  # pragma: no cover
-            import cupy  # pylint: disable=import-outside-toplevel
+            import cupy  # pylint: disable=import-outside-toplevel,E0401
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_gpu,
             )
@@ -79,18 +79,6 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
-    # def cast(self, x, dtype=None, copy: bool = False):
-    #     """Cast an object as the array type of the current backend.
-
-    #     Args:
-    #         x: Object to cast to array.
-    #         dtype (optional): data type of the array or tensor. If ``None``, defaults
-    #             to the default data type of the current backend. Defaults to ``None``.
-    #         copy (bool, optional): If ``True`` a copy of the object is created in memory.
-    #             Defaults to ``False``.
-    #     """
-    #     return self.engine.cast(x, dtype=dtype, copy=copy)
-
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -99,7 +87,7 @@ class CliffordBackend(NumpyBackend):
 
         return collections.Counter(dict(zip(res, counts)))
 
-    def zero_state(self, nqubits: int, i_phase=False):
+    def zero_state(self, nqubits: int, i_phase: bool = False):
         """Construct the zero state :math`\\ket{00...00}`.
 
         Args:
@@ -166,7 +154,7 @@ class CliffordBackend(NumpyBackend):
         `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
-        matrix = gate._parameters[0]
+        matrix = gate._parameters[0]  # pylint: disable=protected-access
         symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
         phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
 
@@ -228,8 +216,10 @@ class CliffordBackend(NumpyBackend):
         return pauli_gens_x + pauli_gens_z
 
     def _compute_symplectic_matrix(self, unitary, m):
-        """Compute the symplectic matrix for Clifford unitary on :math`m` qubits and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
-        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0` or :math`1` else :math`1`.
+        """Compute the symplectic matrix for Clifford unitary on :math`m` qubits
+        and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
+        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0`
+        or :math`1` else :math`1`.
         """
         pauli_gens = self._pauli_generators(m)
 
@@ -243,10 +233,10 @@ class CliffordBackend(NumpyBackend):
             found = False
             for candidate_str in product("IXYZ", repeat=m):
                 candidate_str = "".join(candidate_str)
-                candidate_P = self._pauli_string_to_matrix(candidate_str)
+                candidate_p = self._pauli_string_to_matrix(candidate_str)
                 for phase_val, phase_code in zip([1, 1j, -1, -1j], [0, 0, 1, 1]):
                     if self.engine.allclose(
-                        pauli_uconj, phase_val * candidate_P, atol=1e-10
+                        pauli_uconj, phase_val * candidate_p, atol=1e-10
                     ):
                         phase_vector[i] = phase_code
                         symplectic[i, :] = self._pauli_to_binary(candidate_str, m)
@@ -258,7 +248,8 @@ class CliffordBackend(NumpyBackend):
 
     def _get_phase_vector_dk(self, symplectic, m):
         """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
-        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1` else :math`1`.
+        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1`
+        else :math`1`.
         """
         u_matrix = self.zeros((2 * m, 2 * m), dtype=self.uint8)
         u_matrix[0:m, m : 2 * m] = self.identity(m, dtype=self.uint8)
@@ -307,7 +298,8 @@ class CliffordBackend(NumpyBackend):
         - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
 
         Args:
-            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)` in extended Dehaene-De Moor format.
+            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)`
+                in extended Dehaene-De Moor format.
 
         Returns:
             (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
@@ -315,12 +307,12 @@ class CliffordBackend(NumpyBackend):
         n_rows, n_cols = dehaene_tableau.shape
         n = (n_cols - 2) // 2
 
-        X_part = dehaene_tableau[:, :n]
-        Z_part = dehaene_tableau[:, n : 2 * n]
+        x_part = dehaene_tableau[:, :n]
+        z_part = dehaene_tableau[:, n : 2 * n]
         real_phases = dehaene_tableau[:, -2]
         i_phases = dehaene_tableau[:, -1]
 
-        y_count = self.sum(X_part[:-1] & Z_part[:-1], axis=-1)
+        y_count = self.sum(x_part[:-1] & z_part[:-1], axis=-1)
         total_i_power = (i_phases[:-1] + y_count) % 4
 
         final_real_phases = real_phases.copy()
@@ -329,7 +321,7 @@ class CliffordBackend(NumpyBackend):
             final_real_phases[: n_rows - 1][indices] + 1
         ) % 2
 
-        aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
+        aaronson_tableau = np.column_stack([x_part, z_part, final_real_phases])
         return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
 
     def _embed_clifford(self, symplectic_m, n, qubit_indices):
@@ -432,14 +424,17 @@ class CliffordBackend(NumpyBackend):
                 else initial_state
             )
             if i_phase is False:
-                state = self._platform._clifford_pre_execution_reshape(state)
+                state = self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
+                    state
+                )
             for gate in circuit.queue:
                 if i_phase:
                     if isinstance(gate, gates.M):
                         if gate.collapse:
                             raise_error(
                                 NotImplementedError,
-                                "Collapsing measurements with `gates.Unitary` are not implemented in the `CliffordBackend`.",
+                                "Collapsing measurements with `gates.Unitary` are not"
+                                + "implemented in the `CliffordBackend`.",
                             )
                     elif not isinstance(gate, gates.Unitary):
                         gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
@@ -447,7 +442,9 @@ class CliffordBackend(NumpyBackend):
             if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
-                state = self._platform._clifford_post_execution_reshape(state, nqubits)
+                state = self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
+                    state, nqubits
+                )
             clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
@@ -557,9 +554,9 @@ class CliffordBackend(NumpyBackend):
         nqubits = int((symplectic_matrix.shape[1] - 1) / 2)
         phases = (-1) ** symplectic_matrix[:-1, -1].astype(np.int16)
         tmp = 1 * symplectic_matrix[:-1, :-1]
-        X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
+        x_part, z_part = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []
-        for x, z in zip(X, Z):
+        for x, z in zip(x_part, z_part):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
                 from qibo import matrices  # pylint: disable=C0415
