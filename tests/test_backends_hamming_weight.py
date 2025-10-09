@@ -21,7 +21,7 @@ def test_set_backend(backend):
     hamming_bkd = construct_hamming_weight_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("hamming_weight", platform=platform)
-    assert get_backend().name == HammingWeightBackend(engine=platform).name
+    assert get_backend().name == HammingWeightBackend(platform=platform).name
     global_platform = get_backend().platform
     assert global_platform == platform
 
