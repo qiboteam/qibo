@@ -703,7 +703,7 @@ def random_clifford(
     ]
 
     # Apply layer of Hadamards
-    inds = hadamards * backend.cast(backend.arange(1, nqubits + 1), dtype=int)
+    inds = hadamards * backend.engine.arange(1, nqubits + 1)
     inds = inds[inds > 0] - 1
     lhs_inds = backend.concatenate([inds, inds + nqubits])
     rhs_inds = backend.concatenate([inds + nqubits, inds])

@@ -207,6 +207,10 @@ class Backend:
     def int64(self):
         return getattr(self.engine, "int64")
 
+    @property
+    def uint8(self):
+        return getattr(self.engine, "uint8")
+
     ########################################################################################
     ######## Methods related to array manipulation                                  ########
     ########################################################################################
@@ -244,6 +248,9 @@ class Backend:
 
     def diag(self, array, **kwargs) -> "ndarray":
         return self.engine.diag(array, **kwargs)
+
+    def dot(self, array_1, array_2, **kwargs) -> "ndarray":
+        return self.engine.dot(array_1, array_2, **kwargs)
 
     def eig(self, array, **kwargs):
         return self.engine.linalg.eig(array, **kwargs)
@@ -396,6 +403,9 @@ class Backend:
         self, array, axes: Union[Tuple[int, ...], List[int]] = None
     ) -> "ndarray":
         return self.engine.transpose(array, axes)
+
+    def tril(self, array, k: int = 0) -> "ndarray":
+        return self.engine.tril(array, k=k)
 
     def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
         return self.engine.unique(array, **kwargs)
@@ -1119,14 +1129,18 @@ class Backend:
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        if callable(_matrix):
+        if name == "I":
             _matrix = _matrix(2 ** len(gate.target_qubits))
+        elif name == "Align":
+            _matrix = _matrix(0, 2)
+        elif callable(_matrix):
+            return self.matrix_parametrized(gate)
+
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
     def matrix_parametrized(self, gate: "qibo.gates.abstract.Gate"):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-
         _matrix = getattr(self.matrices, name)
         if name == "GeneralizedRBS":
             _matrix = _matrix(
@@ -1135,6 +1149,8 @@ class Backend:
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
+        elif name == "FanOut":
+            _matrix = _matrix(*gate.init_args)
         else:
             _matrix = _matrix(*gate.parameters)
 

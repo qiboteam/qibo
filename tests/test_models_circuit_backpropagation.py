@@ -22,17 +22,17 @@ def construct_tensorflow_backend():
 def test_variable_backpropagation():
     backend = construct_tensorflow_backend()
 
-    theta = backend.tf.Variable(0.1234, dtype=backend.tf.float64)
+    theta = backend.engine.Variable(0.1234, dtype=backend.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
-    with backend.tf.GradientTape() as tape:
+    with backend.engine.GradientTape() as tape:
         circuit = Circuit(1)
         circuit.add(gates.X(0))
         circuit.add(gates.RZ(0, theta))
         result = backend.execute_circuit(circuit)
-        loss = backend.tf.math.real(result.state()[-1])
+        loss = backend.real(result.state()[-1])
     grad = tape.gradient(loss, theta)
-    grad = backend.tf.math.real(grad)
+    grad = backend.real(grad)
 
     target_loss = np.cos(theta / 2.0)
     backend.assert_allclose(loss, target_loss)
@@ -44,15 +44,15 @@ def test_variable_backpropagation():
 def test_two_variables_backpropagation():
     backend = construct_tensorflow_backend()
 
-    theta = backend.tf.Variable([0.1234, 0.4321], dtype=backend.tf.float64)
+    theta = backend.engine.Variable([0.1234, 0.4321], dtype=backend.float64)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
-    with backend.tf.GradientTape() as tape:
+    with backend.engine.GradientTape() as tape:
         circuit = Circuit(2)
         circuit.add(gates.RX(0, theta[0]))
         circuit.add(gates.RY(1, theta[1]))
         result = backend.execute_circuit(circuit)
-        loss = backend.tf.math.real(result.state()[0])
+        loss = backend.real(result.state()[0])
     grad = tape.gradient(loss, theta)
 
     t = np.array([0.1234, 0.4321]) / 2.0

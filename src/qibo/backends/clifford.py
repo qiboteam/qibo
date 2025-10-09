@@ -88,7 +88,7 @@ class CliffordBackend(NumpyBackend):
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
     def calculate_frequencies(self, samples):
-        res, counts = self.engine.np.unique(samples, return_counts=True)
+        res, counts = self.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
         res = [int(r) if not isinstance(r, str) else r for r in res]
         counts = [int(v) for v in counts]
@@ -108,7 +108,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Symplectic matrix for the zero state.
         """
-        identity = self.np.identity(nqubits)
+        identity = self.identity(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
         symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=bool)
@@ -229,8 +229,8 @@ class CliffordBackend(NumpyBackend):
         """
         pauli_gens = self._pauli_generators(m)
 
-        symplectic = self.np.zeros((2 * m, 2 * m), dtype=self.np.uint8)
-        phase_vector = self.np.zeros(2 * m, dtype=self.np.uint8)
+        symplectic = self.zeros((2 * m, 2 * m), dtype=self.uint8)
+        phase_vector = self.zeros(2 * m, dtype=self.uint8)
 
         for i, p_str in enumerate(pauli_gens):
             pauli = self._pauli_string_to_matrix(p_str)
@@ -241,7 +241,7 @@ class CliffordBackend(NumpyBackend):
                 candidate_str = "".join(candidate_str)
                 candidate_P = self._pauli_string_to_matrix(candidate_str)
                 for phase_val, phase_code in zip([1, 1j, -1, -1j], [0, 0, 1, 1]):
-                    if self.np.allclose(
+                    if self.engine.allclose(
                         pauli_uconj, phase_val * candidate_P, atol=1e-10
                     ):
                         phase_vector[i] = phase_code
@@ -256,9 +256,10 @@ class CliffordBackend(NumpyBackend):
         """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
         :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1` else :math`1`.
         """
-        u_matrix = self.np.zeros((2 * m, 2 * m), dtype=self.np.uint8)
-        u_matrix[0:m, m : 2 * m] = self.np.eye(m, dtype=self.np.uint8)
-        d = self.np.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
+        u_matrix = self.zeros((2 * m, 2 * m), dtype=self.uint8)
+        u_matrix[0:m, m : 2 * m] = self.identity(m, dtype=self.uint8)
+        print(self.diag((u_matrix @ symplectic.T) % 2))
+        d = self.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
         return d
 
     def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits):
@@ -268,21 +269,21 @@ class CliffordBackend(NumpyBackend):
 
         new_symplectic_vector = (symplectic_matrix.T @ symplectic_vector) % 2
 
-        pd_dot_sv = self.np.dot(phase_d, symplectic_vector) % 2
+        pd_dot_sv = self.dot(phase_d, symplectic_vector) % 2
         new_delta = delta ^ pd_dot_sv
 
-        u_matrix = self.np.zeros((2 * nqubits, 2 * nqubits), dtype=self.np.uint8)
-        u_matrix[0:nqubits, nqubits : 2 * nqubits] = self.np.eye(
-            nqubits, dtype=self.np.uint8
+        u_matrix = self.zeros((2 * nqubits, 2 * nqubits), dtype=self.uint8)
+        u_matrix[0:nqubits, nqubits : 2 * nqubits] = self.identity(
+            nqubits, dtype=self.uint8
         )
 
         lows = self.np.tril(
             symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
-            ^ self.np.outer(phase_d, phase_d)
+            ^ self.outer(phase_d, phase_d)
         )
 
-        ph_dot_sv = self.np.dot(phase_h, symplectic_vector) % 2
-        sv_lows_sv = self.np.dot(symplectic_vector, lows @ symplectic_vector) % 2
+        ph_dot_sv = self.dot(phase_h, symplectic_vector) % 2
+        sv_lows_sv = self.dot(symplectic_vector, lows @ symplectic_vector) % 2
         delta_pd_dot_sv = (delta * pd_dot_sv) % 2
         new_epsilon = epsilon ^ ph_dot_sv ^ sv_lows_sv ^ delta_pd_dot_sv
         return new_symplectic_vector, new_epsilon, new_delta
