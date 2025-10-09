@@ -22,7 +22,7 @@ from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
 
 SIMULATION_BACKEND = NumpyBackend()
-CLIFFORD_BACKEND = CliffordBackend(engine="numpy")
+CLIFFORD_BACKEND = CliffordBackend("numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):

@@ -21,71 +21,75 @@ class CliffordBackend(NumpyBackend):
         :class:`qibo.backends.abstract.Backend`: Backend used for the calculation.
     """
 
-    def __init__(self, engine=None):
+    def __init__(self, platform=None):
         super().__init__()
 
-        if engine == "stim":
+        self.name = "clifford"
+        self.platform = platform
+
+        if self.platform == "stim":
             import stim  # pylint: disable=C0415
 
-            engine = "numpy"
             self.platform = "stim"
             self._stim = stim
         else:
-            if engine is None:
+            if self.platform is None:
                 from qibo.backends import (  # pylint: disable=C0415
                     _check_backend,
                     _get_engine_name,
                 )
 
-                engine = _get_engine_name(_check_backend(engine))
+                self.platform = _get_engine_name(_check_backend(self.platform))
 
-            self.platform = engine
+            self._platform = self.platform
 
         spec = find_spec("qibo.backends._clifford_operations")
-        self.engine = module_from_spec(spec)
-        spec.loader.exec_module(self.engine)
+        self._platform = module_from_spec(spec)
+        spec.loader.exec_module(self._platform)
 
-        if engine == "numpy":
-            pass
-        elif engine == "numba":
-            from numba import set_num_threads
-
-            set_num_threads(1)
-
+        if self.platform in ("numpy", "stim"):
+            self.engine = np
+        elif self.platform == "numba":
+            import numba  # pylint: disable=import-outside-toplevel
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_cpu,
             )
 
+            self.engine = numba
+            self.platform = "numba"
+            self.engine.set_num_threads(1)
             for method in dir(clifford_operations_cpu):
-                setattr(self.engine, method, getattr(clifford_operations_cpu, method))
-        elif engine == "cupy":  # pragma: no cover
+                setattr(
+                    self._platform, method, getattr(clifford_operations_cpu, method)
+                )
+        elif self.platform == "cupy":  # pragma: no cover
+            import cupy  # pylint: disable=import-outside-toplevel
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_gpu,
             )
 
+            self.engine = cupy
             for method in dir(clifford_operations_gpu):
-                setattr(self.engine, method, getattr(clifford_operations_gpu, method))
+                setattr(
+                    self._platform, method, getattr(clifford_operations_gpu, method)
+                )
         else:
             raise_error(
                 NotImplementedError,
-                f"Backend `{engine}` is not supported for Clifford Simulation.",
+                f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
-        self.np = self.engine
+    # def cast(self, x, dtype=None, copy: bool = False):
+    #     """Cast an object as the array type of the current backend.
 
-        self.name = "clifford"
-
-    def cast(self, x, dtype=None, copy: bool = False):
-        """Cast an object as the array type of the current backend.
-
-        Args:
-            x: Object to cast to array.
-            dtype (optional): data type of the array or tensor. If ``None``, defaults
-                to the default data type of the current backend. Defaults to ``None``.
-            copy (bool, optional): If ``True`` a copy of the object is created in memory.
-                Defaults to ``False``.
-        """
-        return self.engine.cast(x, dtype=dtype, copy=copy)
+    #     Args:
+    #         x: Object to cast to array.
+    #         dtype (optional): data type of the array or tensor. If ``None``, defaults
+    #             to the default data type of the current backend. Defaults to ``None``.
+    #         copy (bool, optional): If ``True`` a copy of the object is created in memory.
+    #             Defaults to ``False``.
+    #     """
+    #     return self.engine.cast(x, dtype=dtype, copy=copy)
 
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
@@ -112,8 +116,8 @@ class CliffordBackend(NumpyBackend):
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
         symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=bool)
-        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
+        symplectic_matrix[:nqubits, :nqubits] = self.copy(identity)
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.copy(identity)
         return symplectic_matrix
 
     def _clifford_pre_execution_reshape(self, state):
@@ -139,7 +143,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Reshaped state.
         """
-        return self.engine._clifford_post_execution_reshape(  # pylint: disable=protected-access
+        return self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
             state, nqubits
         )
 
@@ -148,7 +152,7 @@ class CliffordBackend(NumpyBackend):
         if isinstance(gate, gates.Unitary):
             return self.apply_unitary(gate, symplectic_matrix, nqubits)
 
-        operation = getattr(self.engine, gate.__class__.__name__)
+        operation = getattr(self._platform, gate.__class__.__name__)
 
         kwargs = {}
         for param_name in ["theta", "phi"]:
@@ -192,17 +196,17 @@ class CliffordBackend(NumpyBackend):
         from qibo import matrices  # pylint: disable=C0415
 
         paulis = {
-            pauli: self.engine.cast(getattr(matrices, pauli), dtype=self.dtype)
+            pauli: self.cast(getattr(matrices, pauli), dtype=self.dtype)
             for pauli in ("I", "X", "Y", "Z")
         }
         paulis["Y"] = 1j * paulis["Y"]
         pauli_matrices = [paulis.get(p) for p in pauli_str]
-        matrix = reduce(self.engine.np.kron, pauli_matrices)
+        matrix = reduce(self.kron, pauli_matrices)
         return matrix
 
     def _pauli_to_binary(self, pauli_str, nqubits):
         """Convert Pauli string to binary vector of length :math`2*nqubits`."""
-        pauli_symplectic = self.np.zeros(2 * nqubits, dtype=self.np.uint8)
+        pauli_symplectic = self.zeros(2 * nqubits, dtype=self.uint8)
         for q, term in enumerate(pauli_str):
             if term in ["X", "Y"]:
                 pauli_symplectic[q] = 1
@@ -276,7 +280,7 @@ class CliffordBackend(NumpyBackend):
             nqubits, dtype=self.uint8
         )
 
-        lows = self.np.tril(
+        lows = self.tril(
             symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
             ^ self.outer(phase_d, phase_d)
         )
@@ -316,7 +320,7 @@ class CliffordBackend(NumpyBackend):
         real_phases = dehaene_tableau[:, -2]
         i_phases = dehaene_tableau[:, -1]
 
-        y_count = self.np.sum(X_part[:-1] & Z_part[:-1], axis=-1)
+        y_count = self.sum(X_part[:-1] & Z_part[:-1], axis=-1)
         total_i_power = (i_phases[:-1] + y_count) % 4
 
         final_real_phases = real_phases.copy()
@@ -330,7 +334,7 @@ class CliffordBackend(NumpyBackend):
 
     def _embed_clifford(self, symplectic_m, n, qubit_indices):
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
-        symplectic_n = self.np.eye(2 * n, dtype=self.np.uint8)
+        symplectic_n = self.identity(2 * n, dtype=self.uint8)
 
         x_indices = qubit_indices
         z_indices = [q + n for q in qubit_indices]
@@ -342,7 +346,7 @@ class CliffordBackend(NumpyBackend):
 
     def _embed_phase_vector(self, phase_m, n, qubit_indices):
         """Embed m-qubit phase vector into n-qubit system."""
-        phase_n = self.np.zeros(2 * n, dtype=self.np.uint8)
+        phase_n = self.zeros(2 * n, dtype=self.uint8)
         m = len(qubit_indices)
 
         qubit_indices = np.array(qubit_indices)
@@ -353,9 +357,9 @@ class CliffordBackend(NumpyBackend):
 
     def apply_channel(self, channel, state, nqubits):
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
-        index = self.np.random.choice(
-            range(len(probabilities)), size=1, p=probabilities
-        )[0]
+        index = self.random_choice(range(len(probabilities)), size=1, p=probabilities)[
+            0
+        ]
         index = int(index)
         if index != len(channel.gates):
             gate = channel.gates[index]
@@ -428,7 +432,7 @@ class CliffordBackend(NumpyBackend):
                 else initial_state
             )
             if i_phase is False:
-                state = self._clifford_pre_execution_reshape(state)
+                state = self._platform._clifford_pre_execution_reshape(state)
             for gate in circuit.queue:
                 if i_phase:
                     if isinstance(gate, gates.M):
@@ -443,7 +447,7 @@ class CliffordBackend(NumpyBackend):
             if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
-                state = self._clifford_post_execution_reshape(state, nqubits)
+                state = self._platform._clifford_post_execution_reshape(state, nqubits)
             clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
@@ -486,7 +490,7 @@ class CliffordBackend(NumpyBackend):
             for measurement in circuit_copy.measurements:
                 measurement.result.reset()
             samples.append(res.samples())
-        samples = self.np.vstack(samples)
+        samples = self.vstack(samples)
 
         for meas in circuit.measurements:
             meas.result.register_samples(samples[:, meas.target_qubits])
@@ -526,12 +530,14 @@ class CliffordBackend(NumpyBackend):
             qubits = tuple(qubits)
 
         if collapse:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)]
-            samples.append(self.engine.M(state, qubits, nqubits, collapse))
+            samples = [
+                self._platform.M(state, qubits, nqubits) for _ in range(nshots - 1)
+            ]
+            samples.append(self._platform.M(state, qubits, nqubits, collapse))
         else:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
+            samples = [self._platform.M(state, qubits, nqubits) for _ in range(nshots)]
 
-        return self.engine.cast(samples, dtype=int)
+        return self.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
@@ -559,7 +565,7 @@ class CliffordBackend(NumpyBackend):
                 from qibo import matrices  # pylint: disable=C0415
 
                 paulis = [self.cast(getattr(matrices, p)) for p in paulis]
-                matrix = reduce(self.np.kron, paulis)
+                matrix = reduce(self.kron, paulis)
                 generators.append(matrix)
             else:
                 generators.append("".join(paulis))

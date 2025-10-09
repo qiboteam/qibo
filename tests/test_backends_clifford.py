@@ -27,10 +27,11 @@ def construct_clifford_backend(backend):
 
 
 def test_set_backend(backend):
-    clifford_bkd = construct_clifford_backend(backend)
     platform = _get_engine_name(backend)
+
     set_backend("clifford", platform=platform)
     assert isinstance(get_backend(), CliffordBackend)
+
     global_platform = get_backend().platform
     assert global_platform == platform
 
@@ -375,7 +376,7 @@ def test_noise_channels(backend, seed):
 
 def test_stim(backend):
     clifford_bkd = construct_clifford_backend(backend)
-    clifford_stim = CliffordBackend(engine="stim")
+    clifford_stim = CliffordBackend(platform="stim")
 
     nqubits = 3
     circuit = random_clifford(nqubits, backend=backend)

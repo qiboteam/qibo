@@ -45,8 +45,8 @@ class MetaBackend:
                 CliffordBackend if backend == "clifford" else HammingWeightBackend
             )
 
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
+            platform = kwargs.pop("platform", None)
+            kwargs["platform"] = platform
 
             return backend_class(**kwargs)
 
