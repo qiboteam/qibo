@@ -258,7 +258,6 @@ class CliffordBackend(NumpyBackend):
         """
         u_matrix = self.zeros((2 * m, 2 * m), dtype=self.uint8)
         u_matrix[0:m, m : 2 * m] = self.identity(m, dtype=self.uint8)
-        print(self.diag((u_matrix @ symplectic.T) % 2))
         d = self.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
         return d
 

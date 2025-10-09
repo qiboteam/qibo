@@ -224,6 +224,9 @@ class Backend:
     def argsort(self, array, axis=None, **kwargs) -> "ndarray":
         return self.engine.argsort(array, axis, **kwargs)
 
+    def block(self, arrays) -> "ndarray":
+        self.engine.block(arrays)
+
     def block_diag(self, *arrays) -> "ndarray":
         from scipy.linalg import block_diag  # pylint: disable=import-outside-toplevel
 
@@ -378,8 +381,8 @@ class Backend:
     ) -> "ndarray":
         return self.engine.reshape(array, shape, **kwargs)
 
-    def round(self, array, **kwargs):
-        return self.engine.round(array, **kwargs)
+    def round(self, array, decimals: int = 0, **kwargs):
+        return self.engine.round(array, decimals, **kwargs)
 
     def shuffle(self, array, **kwargs) -> "ndarray":
         self.engine.random.shuffle(array, **kwargs)
@@ -406,6 +409,9 @@ class Backend:
 
     def tril(self, array, k: int = 0) -> "ndarray":
         return self.engine.tril(array, k=k)
+
+    def tril_indices(self, n: int, k: int = 0, m: int = None):
+        return self.engine.tril_indices(n, k, m)
 
     def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
         return self.engine.unique(array, **kwargs)
@@ -1258,7 +1264,7 @@ class Backend:
         qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
         qrange = (2**qrange)[:, None]
         samples = self.cast(samples, dtype=self.int32)  # pylint: disable=E1111
-        return self.matmul(samples, qrange)[:, 0]
+        return (samples @ qrange)[:, 0]
 
     def update_frequencies(self, frequencies, probabilities, nsamples: int):
         samples = self.sample_shots(probabilities, nsamples)

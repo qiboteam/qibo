@@ -178,20 +178,25 @@ class Random(Placer):
     """
 
     def __init__(
-        self, connectivity: Optional[nx.Graph] = None, samples: int = 100, seed=None
+        self,
+        connectivity: Optional[nx.Graph] = None,
+        samples: int = 100,
+        seed=None,
     ):
+
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
 
-    def __call__(self, circuit):
+    def __call__(self, circuit, backend=None):
         """Find an initial layout of the given circuit using random greedy algorithm.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
         assert_placement(circuit, self.connectivity)
-        _, local_state = _check_backend_and_local_state(self.seed, backend=None)
+        _, local_state = _check_backend_and_local_state(self.seed, backend=backend)
+        print(local_state)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
@@ -270,7 +275,7 @@ class ReverseTraversal(Placer):
         self.routing_algorithm = routing_algorithm
         self.depth = depth
 
-    def __call__(self, circuit: Circuit):
+    def __call__(self, circuit: Circuit, backend=None):
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
         Args:

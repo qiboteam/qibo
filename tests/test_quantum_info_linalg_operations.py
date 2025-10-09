@@ -276,7 +276,9 @@ def test_matrix_log(backend, base):
     sqrt = matrix_logarithm(state, base=base, backend=backend)
     backend.assert_allclose(sqrt, target)
 
-    sqrt = matrix_logarithm(state, base=base, eigenvectors=eigvecs, eigenvalues=eigvals)
+    sqrt = matrix_logarithm(
+        state, base=base, eigenvectors=eigvecs, eigenvalues=eigvals, backend=backend
+    )
     backend.assert_allclose(sqrt, target)
 
 

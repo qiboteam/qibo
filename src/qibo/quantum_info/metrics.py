@@ -312,8 +312,8 @@ def a_fidelity(state, target, backend=None):
     if test_state and test_target:
         return fidelity(state, target, backend=backend) ** 2
 
-    state_sqrt = backend.calculate_matrix_sqrt(state) if not test_state else state
-    target_sqrt = backend.calculate_matrix_sqrt(target) if not test_target else target
+    state_sqrt = backend.matrix_sqrt(state) if not test_state else state
+    target_sqrt = backend.matrix_sqrt(target) if not test_target else target
 
     if test_state and not test_target:
         trace = (

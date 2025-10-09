@@ -1,23 +1,19 @@
-import collections
+from collections import Counter
 
-import numpy as np
 import sympy
 
-from qibo import gates
 from qibo.config import raise_error
 
 
 def _check_backend(backend):
     """This is only needed due to the circular import with qibo.backends."""
-    from qibo.backends import _check_backend
+    from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
 
     return _check_backend(backend)
 
 
 def frequencies_to_binary(frequencies, nqubits):
-    return collections.Counter(
-        {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
-    )
+    return Counter({f"{k:b}".zfill(nqubits): v for k, v in frequencies.items()})
 
 
 def apply_bitflips(result, p0, p1=None):

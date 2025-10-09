@@ -435,6 +435,7 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
             hw_1,
             theta,
             phi,
+            backend=backend,
         )
         circuit.add(gate)
 

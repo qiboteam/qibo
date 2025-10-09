@@ -434,7 +434,7 @@ def test_reset_channel_errors(p_0, p_1):
         ("reset", 10, 3),
     ],
 )
-def test_on_qubits(channel, qubits, new_qubits):
+def test_on_qubits(backend, channel, qubits, new_qubits):
     if channel == "kraus":
         a_1 = np.sqrt(0.4) * matrices.X
         a_2 = np.sqrt(0.6) * np.kron(matrices.Z, matrices.Z)
@@ -500,7 +500,9 @@ def test_on_qubits(channel, qubits, new_qubits):
         )
 
     if channel == "readout":
-        probabilities = random_stochastic_matrix(2 ** len(qubits), seed=10)
+        probabilities = random_stochastic_matrix(
+            2 ** len(qubits), seed=10, backend=backend
+        )
         gate = gates.ReadoutErrorChannel(qubits, probabilities)
         new_gate = gate.on_qubits(dict(zip(qubits, new_qubits)))
 

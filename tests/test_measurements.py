@@ -35,6 +35,7 @@ def assert_dicts_equal(backend, d1, d2):
         if isinstance(v, dict):
             assert v == d2[k]
         else:
+            print(type(v), type(d2[k]))
             backend.assert_allclose(v, d2[k])
 
 
@@ -308,12 +309,17 @@ def test_register_measurements(backend):
     circuit.add(gates.M(1))
     result = backend.execute_circuit(circuit, nshots=100)
 
-    decimal_samples = {"register0": 2 * np.ones((100,)), "register1": np.ones((100,))}
-    binary_samples = {"register0": np.zeros((100, 2)), "register1": np.ones((100, 1))}
+    decimal_samples = {
+        "register0": 2 * backend.ones((100,)),
+        "register1": backend.ones((100,)),
+    }
+    binary_samples = {
+        "register0": backend.zeros((100, 2)),
+        "register1": backend.ones((100, 1)),
+    }
     binary_samples["register0"][:, 0] = 1
     decimal_frequencies = {"register0": {2: 100}, "register1": {1: 100}}
     binary_frequencies = {"register0": {"10": 100}, "register1": {"1": 100}}
-    print(type(result))
     assert_register_result(
         backend,
         result,

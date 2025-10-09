@@ -226,8 +226,8 @@ def test_variable_theta():
     except MissingBackend:  # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
 
-    theta1 = backend.tf.Variable(0.1234, dtype=backend.tf.float64)
-    theta2 = backend.tf.Variable(0.4321, dtype=backend.tf.float64)
+    theta1 = backend.engine.Variable(0.1234, dtype=backend.float64)
+    theta2 = backend.engine.Variable(0.4321, dtype=backend.float64)
     cvar = Circuit(2)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
