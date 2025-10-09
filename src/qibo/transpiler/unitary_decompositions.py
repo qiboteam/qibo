@@ -54,14 +54,12 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
     # write unitary in magic basis
-    u_magic = (
-        backend.transpose(backend.conj(magic_basis), (1, 0)) @ unitary @ magic_basis
-    )
+    u_magic = backend.conj(magic_basis).T @ unitary @ magic_basis
     # construct and diagonalize UT_U
-    ut_u = backend.transpose(u_magic, (1, 0)) @ u_magic
+    ut_u = u_magic.T @ u_magic
     ut_u_real = backend.real(ut_u) + backend.imag(ut_u)
     if backend.__class__.__name__ not in ("PyTorchBackend", "TensorflowBackend"):
-        ut_u_real = np.round(ut_u_real, decimals=15)
+        ut_u_real = backend.round(ut_u_real, decimals=15)
 
     eigvals_real, psi_magic = backend.eigenvectors(ut_u_real, hermitian=True)
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
@@ -69,7 +67,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = backend.engine.linalg.qr(psi_magic)
     # write psi in computational basis
-    psi = backend.matmul(magic_basis, psi_magic)
+    psi = magic_basis @ psi_magic
     return psi, eigvals
 
 
@@ -250,7 +248,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
 def magic_decomposition(unitary, backend=None):
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
 
-    unitary = backend.cast(unitary)
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi, backend=backend)

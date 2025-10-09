@@ -85,18 +85,13 @@ class Hamiltonian(AbstractHamiltonian):
         return self._eigenvectors
 
     def exp(self, a):
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
-            matrix_exponentiation,
-        )
-
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = matrix_exponentiation(
+            self._exp["result"] = self.backend.matrix_exp(
                 self.matrix,
                 -1j * a,
                 self._eigenvectors,
                 self._eigenvalues,
-                self.backend,
             )
         return self._exp.get("result")
 

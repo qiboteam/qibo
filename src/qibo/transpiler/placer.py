@@ -196,7 +196,6 @@ class Random(Placer):
         """
         assert_placement(circuit, self.connectivity)
         _, local_state = _check_backend_and_local_state(self.seed, backend=backend)
-        print(local_state)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())

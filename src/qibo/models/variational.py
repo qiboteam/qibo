@@ -89,19 +89,19 @@ class VQE:
         if loss_func is None:
             loss_func = vqe_loss
         if compile:
-            loss = self.hamiltonian.backend.compile(loss_func)
+            loss = self.backend.compile(loss_func)
         else:
             loss = loss_func
 
         if method == "cma":
-            dtype = self.hamiltonian.backend.float64
+            dtype = self.backend.float64
             loss = (
                 (lambda p, c, h: loss_func(p, c, h).item())
                 if str(dtype) == "torch.float64"
                 else (lambda p, c, h: dtype(loss_func(p, c, h)))
             )
         elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
+            loss = lambda p, c, h: self.backend.to_numpy(loss_func(p, c, h))
         result, parameters, extra = self.optimizers.optimize(
             loss,
             initial_state,
@@ -117,7 +117,7 @@ class VQE:
             options=options,
             compile=compile,
             processes=processes,
-            backend=self.hamiltonian.backend,
+            backend=self.backend,
         )
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
@@ -371,6 +371,9 @@ class QAOA:
         if not isinstance(hamiltonian, AbstractHamiltonian):
             raise_error(TypeError, f"Invalid Hamiltonian type {type(hamiltonian)}.")
         self.hamiltonian = hamiltonian
+        self.backend = (
+            hamiltonian.backend
+        )  # to avoid error with _create_calculate_callbacks
         self.nqubits = hamiltonian.nqubits
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer is None:
@@ -378,7 +381,7 @@ class QAOA:
                 self.hamiltonian, self.hamiltonians.SymbolicHamiltonian
             )
             self.mixer = self.hamiltonians.X(
-                self.nqubits, dense=not trotter, backend=self.hamiltonian.backend
+                self.nqubits, dense=not trotter, backend=self.backend
             )
         else:
             if type(mixer) != type(hamiltonian):
@@ -417,9 +420,6 @@ class QAOA:
         self.mix_solver = get_solver(solver, 1e-2, self.mixer)
 
         self.callbacks = callbacks
-        self.backend = (
-            hamiltonian.backend
-        )  # to avoid error with _create_calculate_callbacks
         self.accelerators = accelerators
         self.normalize_state = StateEvolution._create_normalize_state(self, solver)
         self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
@@ -454,9 +454,9 @@ class QAOA:
             State vector after applying the QAOA exponential gates.
         """
         if initial_state is None:
-            state = self.hamiltonian.backend.plus_state(self.nqubits)
+            state = self.backend.plus_state(self.nqubits)
         else:
-            state = self.hamiltonian.backend.cast(initial_state)
+            state = self.backend.cast(initial_state, dtype=initial_state.dtype)
 
         self.calculate_callbacks(state)
         n = int(self.params.shape[0])
@@ -545,27 +545,31 @@ class QAOA:
 
         def _loss(params, qaoa, hamiltonian, state):
             if state is not None:
-                state = hamiltonian.backend.cast(state, copy=True)
+                state = self.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
+
             if loss_func is None:
                 return hamiltonian.expectation(state)
-            else:
-                func_hyperparams = {
-                    key: loss_func_param[key]
-                    for key in loss_func_param
-                    if key in loss_func.__code__.co_varnames
-                }
-                param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
-                return loss_func(**param)
+            func_hyperparams = {
+                key: loss_func_param[key]
+                for key in loss_func_param
+                if key in loss_func.__code__.co_varnames
+            }
+            param = {
+                **func_hyperparams,
+                "hamiltonian": hamiltonian,
+                "state": state,
+                "backend": self.backend,
+            }
+
+            return loss_func(**param)
 
         if method == "sgd":
-            loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
+            loss = lambda p, c, h, s: _loss(self.backend.cast(p), c, h, s)
         else:
-            loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
-                _loss(p, c, h, s)
-            )
+            loss = lambda p, c, h, s: self.backend.to_numpy(_loss(p, c, h, s))
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
@@ -584,7 +588,9 @@ class QAOA:
             processes=processes,
             backend=self.backend,
         )
+
         self.set_parameters(parameters)
+
         return result, parameters, extra
 
 
@@ -658,15 +664,11 @@ class FALQON(QAOA):
         energy = [np.inf]
         callback_result = []
         for _ in range(1, max_layers + 1):
-            beta = self.hamiltonian.backend.to_numpy(
-                _loss(parameters, self, self.evol_hamiltonian)
-            )
+            beta = self.backend.to_numpy(_loss(parameters, self, self.evol_hamiltonian))
 
             if tol is not None:
                 energy.append(
-                    self.hamiltonian.backend.to_numpy(
-                        _loss(parameters, self, self.hamiltonian)
-                    )
+                    self.backend.to_numpy(_loss(parameters, self, self.hamiltonian))
                 )
                 if abs(energy[-1] - energy[-2]) < tol:
                     break

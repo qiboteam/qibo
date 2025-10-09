@@ -78,7 +78,7 @@ def optimize(
             # set parameters to circuit
             circuit.set_parameters(params)
     """
-    from qibo.backends import _check_backend
+    from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
 
     backend = _check_backend(backend)
     if method == "cma":
@@ -87,28 +87,30 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
+
         return cmaes(
             loss, backend.to_numpy(initial_parameters), args, callback, options
         )
-    elif method == "sgd":
+
+    if method == "sgd":
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
-    else:
-        return newtonian(
-            loss,
-            initial_parameters,
-            args,
-            method,
-            jac,
-            hess,
-            hessp,
-            bounds,
-            constraints,
-            tol,
-            callback,
-            options,
-            processes,
-            backend,
-        )
+
+    return newtonian(
+        loss,
+        initial_parameters,
+        args,
+        method,
+        jac,
+        hess,
+        hessp,
+        bounds,
+        constraints,
+        tol,
+        callback,
+        options,
+        processes,
+        backend,
+    )
 
 
 def cmaes(loss, initial_parameters, args=(), callback=None, options=None):

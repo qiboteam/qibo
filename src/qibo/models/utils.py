@@ -1,21 +1,26 @@
 import numpy as np
 
 from qibo import gates
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
 
-def convert_bit_to_energy(hamiltonian, bitstring):
+def convert_bit_to_energy(hamiltonian, bitstring, backend=None):
     """
     Given a binary string and a hamiltonian, we compute the corresponding energy.
     make sure the bitstring is of the right length
     """
+    backend = _check_backend(backend)
+
     n = len(bitstring)
     circuit = Circuit(n)
     active_bit = [i for i in range(n) if bitstring[i] == "1"]
     for i in active_bit:
         circuit.add(gates.X(i))
-    result = circuit()  # this is an execution result, a quantum state
+    result = backend.execute_circuit(
+        circuit
+    )  # this is an execution result, a quantum state
     return hamiltonian.expectation(result.state())
 
 
@@ -51,33 +56,37 @@ def compute_cvar(probabilities, values, alpha, threshold=0.001):
     return cvar
 
 
-def cvar(hamiltonian, state, alpha=0.1):
+def cvar(hamiltonian, state, alpha=0.1, backend=None):
     """
     Given the hamiltonian and state, this function estimate the
     corresponding cvar function
     """
+    backend = _check_backend(backend)
+
     counts = convert_state_to_count(state)
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
     m = int(np.log2(state.size))
     for i, p in enumerate(counts):
-        values[i] = convert_bit_to_energy(hamiltonian, bin(i)[2:].zfill(m))
+        values[i] = convert_bit_to_energy(hamiltonian, bin(i)[2:].zfill(m), backend)
         probabilities[i] = p
     cvar_ans = compute_cvar(probabilities, values, alpha)
     return cvar_ans
 
 
-def gibbs(hamiltonian, state, eta=0.1):
+def gibbs(hamiltonian, state, eta=0.1, backend=None):
     """
     Given the hamiltonian and the state, and optional eta value
     it estimate the gibbs function value.
     """
+    backend = _check_backend(backend)
+
     counts = convert_state_to_count(state)
     avg = 0
     sum_count = 0
     m = int(np.log2(state.size))
     for bitstring, count in enumerate(counts):
-        obj = convert_bit_to_energy(hamiltonian, bin(bitstring)[2:].zfill(m))
+        obj = convert_bit_to_energy(hamiltonian, bin(bitstring)[2:].zfill(m), backend)
         avg += np.exp(-eta * obj)
         sum_count += count
     return -np.log(avg / sum_count)
