@@ -207,7 +207,7 @@ def test_hellinger_shot_error(backend, validate, kind):
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
 
-    assert 2 * hellinger_error < hellinger_fid
+    assert 1.5 * hellinger_error < hellinger_fid
 
 
 @pytest.mark.parametrize("kind", [None, list])

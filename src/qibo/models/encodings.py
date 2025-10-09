@@ -176,6 +176,7 @@ def sparse_encoder(
         1. L. Li, and J. Luo,
         *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
         `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
         2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
         *Quantum encoder for fixed-Hamming-weight subspaces*,
         `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.

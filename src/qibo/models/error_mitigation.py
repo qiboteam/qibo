@@ -974,10 +974,11 @@ def sample_clifford_training_circuit(
         if i in non_clifford_gates_indices:
             clifford_matrix = random_clifford(
                 len(gate.qubits),
-                return_circuit=False,
+                return_circuit=True,
                 seed=local_state,
                 backend=backend,
             )
+            clifford_matrix = clifford_matrix.unitary(backend)
 
             gate = gates.Unitary(
                 clifford_matrix,

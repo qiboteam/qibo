@@ -269,6 +269,282 @@ def infidelity(state, target, backend=None):
     return 1 - fidelity(state, target, backend=backend)
 
 
+def a_fidelity(state, target, backend=None):
+    """Return the :math:`A`-fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the :math:`A`-fidelity is defined as:
+
+    .. math::
+        F_{\\text{A}}(\\rho, \\, \\sigma) = \\text{tr}^{2}(\\sqrt{\\rho} \\, \\sqrt{\\sigma}) \\, .
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: :math:`A`-fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. Z. Ma, F.-L. Zhang, and J.-L. Chen. *Geometric interpretation for the A ﬁdelity and its
+        relation with the Bures ﬁdelity*, `Phys. Rev. A, 78(6):064305, (2008)
+        <https://doi.org/10.1103/PhysRevA.78.064305>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    test_state = bool(backend.np.abs(purity_state - 1) <= PRECISION_TOL)
+    test_target = bool(backend.np.abs(purity_target - 1) <= PRECISION_TOL)
+
+    if test_state and test_target:
+        return fidelity(state, target, backend=backend) ** 2
+
+    state_sqrt = backend.calculate_matrix_sqrt(state) if not test_state else state
+    target_sqrt = backend.calculate_matrix_sqrt(target) if not test_target else target
+
+    if test_state and not test_target:
+        trace = (
+            backend.np.conj(state) @ target_sqrt @ state
+            if len(state.shape) == 1
+            else backend.np.trace(state @ target_sqrt)
+        )
+        return backend.np.real(trace) ** 2
+
+    if not test_state and test_target:
+        trace = (
+            backend.np.conj(target) @ state_sqrt @ target
+            if len(target.shape) == 1
+            else backend.np.trace(state_sqrt @ target)
+        )
+        return backend.np.real(trace) ** 2
+
+    return backend.np.real(backend.np.trace(state_sqrt @ target_sqrt)) ** 2
+
+
+def n_fidelity(state, target, backend=None):
+    """Return the :math:`N`-fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the :math:`N`-fidelity is defined as:
+
+    .. math::
+        F_{\\text{N}}(\\rho, \\, \\sigma) = \\text{tr}(\\rho \\, \\sigma) +
+            \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, \\sqrt{1 - \\text{tr}(\\rho^{2})} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: :math:`N`-fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. P. E. M. F. Mendonça, R. d. J. Napolitano, M. A. Marchiolli, C. J. Foster, and
+        Y.-C. Liang. *Alternative ﬁdelity measure between quantum states*,
+        `Phys. Rev. A, 78 052330 (2008) <https://doi.org/10.1103/PhysRevA.78.052330>`_.
+
+        3. A. Miszczak, Z. Puchala, P. Horodecki, A. Uhlmann, and K. Zyczkowski.
+        *Sub- and super-ﬁdelity as bounds for quantum ﬁdelity*.
+        `Quantum Inf. Comput., 9(1):103–130, (2009)
+        <https://dl.acm.org/doi/10.5555/2021256.2021263>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    fid = backend.np.trace(state @ target)
+    fid += backend.np.sqrt(1 - purity_state) * backend.np.sqrt(1 - purity_target)
+
+    return backend.np.real(fid)
+
+
+def chen_fidelity(state, target, backend=None):
+    """Return the Chen fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the Chen fidelity is defined as:
+
+    .. math::
+        F_{\\text{C}}(\\rho, \\, \\sigma) = \\frac{1 - r}{2} + \\frac{1 + r}{2} \\,
+            F_{\\text{N}}(\\rho, \\, \\sigma)  \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Chen fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. J.-L. Chen, L. Fu, A. A. Ungar, and X.-G. Zhao, *Alternative fidelity measure between
+        two states of an N-state quantum system*, `Phys. Rev. A 65, 054304 (2002)
+        <https://doi.org/10.1103/PhysRevA.65.054304>`_.
+
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    dims = len(state)
+
+    coeff = 1 / (dims - 1)
+
+    fid = (1 - coeff) / 2
+    fid += ((1 + coeff) / 2) * n_fidelity(state, target, backend=backend)
+
+    return fid
+
+
+def geometric_mean_fidelity(state, target, backend=None):
+    """Return the geometric-mean fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the geometric-mean fidelity is defined as:
+
+    .. math::
+        F_{\\text{GM}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
+            {\\sqrt{\\text{tr}(\\rho^{2}) \\, \\text{tr}(\\sigma^{2})}} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
+    then the geometric-mean fidelity reduces to the usual :class:`qibo.quantum_info.fidelity`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Geometric-mean fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+
+        2. X. Wang, C.-S. Yu, and X.X. Yi. *An alternative quantum ﬁdelity for mixed states
+        of qudits*. `Phys. Lett. A, 373(1):58–60, (2008)
+        <https://doi.org/10.1016/j.physleta.2008.10.083>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    gm_fid = backend.np.trace(state @ target)
+    gm_fid /= backend.np.sqrt(purity_state * purity_target)
+
+    return backend.np.real(gm_fid)
+
+
+def max_fidelity(state, target, backend=None):
+    """Return max fidelity between two quantum states.
+
+    For a quantum ``state`` :math:`\\rho` and a ``target`` quantum state :math:`\\sigma`,
+    the max fidelity is defined as:
+
+    .. math::
+        F_{\\text{max}}(\\rho, \\, \\sigma) = \\frac{\\text{tr}(\\rho \\, \\sigma)}
+            {\\text{max}(\\text{tr}(\\rho^{2}), \\, \\text{tr}(\\sigma^{2}))} \\, ,
+
+    where :math:`\\text{tr}(\\varrho^{2})` is the :class:`qibo.quantum_info.purity` of
+    a quantum state :math:`\\varrho`. If at least one of the quantum states is pure,
+    then the max fidelity reduces to the usual :class:`qibo.quantum_info.fidelity`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        float: Max fidelity between :math:`\\rho` and :math:`\\sigma`.
+
+    References:
+        1. Y.-C. Liang, Y.-H. Yeh, P. E. M. F. Mendonça, R. Y. Teh, M. D. Reid, and P. D. Drummond,
+        *Quantum fidelity measures for mixed states*, `Rep. Prog. Phys. 82 076001 (2019)
+        <https://iopscience.iop.org/article/10.1088/1361-6633/ab1ca4>`_.
+    """
+
+    backend = _check_backend(backend)
+
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
+
+    purity_state = purity(state, backend=backend)
+    purity_target = purity(target, backend=backend)
+
+    if (
+        backend.np.abs(purity_state - 1) <= PRECISION_TOL
+        or backend.np.abs(purity_target - 1) <= PRECISION_TOL
+    ):
+        return fidelity(state, target, backend=backend)
+
+    max_fid = backend.np.trace(state @ target)
+    max_fid /= max(purity_state, purity_target)
+
+    return max_fid
+
+
 def bures_angle(state, target, backend=None):
     """Calculates the Bures angle :math:`D_{A}` between a ``state``
     :math:`\\rho` and a ``target`` state :math:`\\sigma`. This is given by
@@ -536,7 +812,7 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):  # pragma: no co
     .. note::
         This function requires the optional CVXPY package to be installed.
     """
-    import cvxpy
+    import cvxpy  # pylint: disable=import-outside-toplevel  #type: ignore
 
     backend = _check_backend(backend)
 

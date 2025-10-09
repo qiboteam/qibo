@@ -323,6 +323,9 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
+    if backend.platform in ("cupy", "cuquantum"):
+        pytest.skip("Clifford circuit decomposition AG04 not implemented for GPUs.")
+
     with pytest.raises(TypeError):
         test = random_clifford(
             nqubits="1", return_circuit=return_circuit, backend=backend
@@ -338,11 +341,28 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
             nqubits, return_circuit=return_circuit, seed=0.1, backend=backend
         )
 
-    result_single = matrices.Z @ matrices.H
+    cnot_10 = Circuit(2)
+    cnot_10.add(gates.CNOT(1, 0))
+    cnot_10 = cnot_10.unitary(backend)
+    cnot_10 = backend.to_numpy(cnot_10)
 
-    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Y)
-    result_two = np.kron(matrices.S @ matrices.X, matrices.I) @ result_two
-    result_two = matrices.CNOT @ matrices.CZ @ result_two
+    result_single = matrices.H @ matrices.SDG @ matrices.Y
+
+    if backend.platform in ("cupy", "cuquantum"):
+        # fixed seed yields different circuits for GPU backends
+        result_two = np.kron(matrices.H @ matrices.SDG, matrices.X)
+        result_two = matrices.CNOT @ result_two
+        result_two = (
+            np.kron(matrices.S @ matrices.H, matrices.H @ matrices.SDG) @ result_two
+        )
+        result_two = matrices.CNOT @ result_two
+    else:
+        result_two = np.kron(matrices.H @ matrices.Z @ matrices.X, matrices.Z)
+        result_two = matrices.CNOT @ result_two
+        result_two = np.kron(matrices.H, matrices.I) @ result_two
+        result_two = cnot_10 @ result_two
+        result_two = np.kron(matrices.SDG, matrices.I) @ result_two
+        result_two = cnot_10 @ result_two
 
     result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
@@ -355,8 +375,12 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
         backend=backend,
     )
 
-    if return_circuit:
-        matrix = matrix.unitary(backend)
+    if not return_circuit:
+        matrix = matrix.to_circuit("AG04", density_matrix=density_matrix)
+
+    assert matrix.density_matrix == density_matrix
+
+    matrix = matrix.unitary(backend=backend)
 
     backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
 

@@ -252,7 +252,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     .. math::
         (1 - H^{2}(p, q))^{2} \\, ,
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`.
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
@@ -286,9 +286,9 @@ def hellinger_shot_error(
         \\frac{1 - H^{2}(p, q)}{\\sqrt{nshots}} \\, \\sum_{k} \\,
             \\left(\\sqrt{p_{k} \\, (1 - q_{k})} + \\sqrt{q_{k} \\, (1 - p_{k})}\\right)
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`,
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`,
     and :math:`1 - H^{2}(p, q)` is the square root of the
-    :func:`qibo.quantum_info.utils.hellinger_fidelity`.
+    :func:`qibo.quantum_info.hellinger_fidelity`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
