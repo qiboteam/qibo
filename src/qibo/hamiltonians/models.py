@@ -91,9 +91,6 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
             ham -= h * _build_spin_model(
                 nqubits, backend.matrices.X, condition, backend
             )
-        print(ham)
-        print(type(ham))
-        print(backend)
         return Hamiltonian(nqubits, ham, backend=backend)
 
     term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(

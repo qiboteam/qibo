@@ -55,9 +55,9 @@ class CliffordBackend(NumpyBackend):
                 clifford_operations_cpu,
             )
 
-            self.engine = numba
+            self.engine = np
             self.platform = "numba"
-            self.engine.set_num_threads(1)
+            numba.set_num_threads(1)
             for method in dir(clifford_operations_cpu):
                 setattr(
                     self._platform, method, getattr(clifford_operations_cpu, method)
@@ -78,6 +78,18 @@ class CliffordBackend(NumpyBackend):
                 NotImplementedError,
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
+
+    # def cast(self, x, dtype=None, copy: bool = False):
+    #     if dtype is None:
+    #         dtype = self.dtype
+
+    #     if isinstance(x, self.tensor_types):
+    #         return x.astype(dtype, copy=copy)
+
+    #     if self.is_sparse(x):
+    #         return x.astype(dtype, copy=copy)
+
+    #     return self.engine.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
