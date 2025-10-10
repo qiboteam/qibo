@@ -80,7 +80,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
+
     backend = _check_backend(backend)
+
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, backend.matrices.Z, condition, backend)
@@ -406,14 +408,14 @@ def _multikron(matrix_list, backend):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
-    return reduce(backend.np.kron, matrix_list)
+    return reduce(backend.engine.kron, matrix_list)
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
     h = sum(
         reduce(
-            backend.np.kron,
+            backend.engine.kron,
             (
                 matrix if condition(i, j) else backend.matrices.I()
                 for j in range(nqubits)

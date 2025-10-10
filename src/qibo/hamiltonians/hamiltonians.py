@@ -31,7 +31,9 @@ class Hamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix, backend=None):
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
         self.backend = _check_backend(backend)
 
@@ -43,7 +45,7 @@ class Hamiltonian(AbstractHamiltonian):
                 TypeError,
                 f"Matrix of invalid type {type(matrix)} given during Hamiltonian initialization",
             )
-        matrix = self.backend.cast(matrix)
+        matrix = self.backend.cast(matrix, dtype=matrix.dtype)
 
         super().__init__()
         self.nqubits = nqubits
@@ -74,74 +76,67 @@ class Hamiltonian(AbstractHamiltonian):
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
-            self._eigenvalues = self.backend.calculate_eigenvalues(self.matrix, k)
+            self._eigenvalues = self.backend.eigenvalues(self.matrix, k=k)
         return self._eigenvalues
 
     def eigenvectors(self, k=6):
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.backend.calculate_eigenvectors(
-                self.matrix, k
+            self._eigenvalues, self._eigenvectors = self.backend.eigenvectors(
+                self.matrix, k=k
             )
         return self._eigenvectors
 
     def exp(self, a):
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
-            matrix_exponentiation,
-        )
-
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = matrix_exponentiation(
+            self._exp["result"] = self.backend.matrix_exp(
                 self.matrix,
                 -1j * a,
                 self._eigenvectors,
                 self._eigenvalues,
-                self.backend,
             )
         return self._exp.get("result")
 
     def expectation(self, state, normalize=False):
-        if isinstance(state, self.backend.tensor_types):
-            state = self.backend.cast(state)
-            shape = tuple(state.shape)
-            if len(shape) == 1:  # state vector
-                return self.backend.calculate_expectation_state(self, state, normalize)
+        if not isinstance(state, self.backend.tensor_types):
+            raise_error(
+                TypeError,
+                "Cannot calculate Hamiltonian expectation "
+                + f"value for state of type {type(state)}",
+            )
 
-            if len(shape) == 2:  # density matrix
-                return self.backend.calculate_expectation_density_matrix(
-                    self, state, normalize
-                )
+        state = self.backend.cast(state, dtype=state.dtype)
+        shape = tuple(state.shape)
 
+        if len(shape) not in (1, 2):
             raise_error(
                 ValueError,
                 "Cannot calculate Hamiltonian expectation value "
                 + f"for state of shape {shape}",
             )
 
-        raise_error(
-            TypeError,
-            "Cannot calculate Hamiltonian expectation "
-            + f"value for state of type {type(state)}",
-        )
+        return self.backend.expectation_value(self, state, normalize=normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
-        diag = self.backend.np.diagonal(obs)
-        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
+        diag = self.backend.diag(obs)
+        if self.backend.engine.count_nonzero(obs - self.backend.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
-                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+                "Observable is not diagonal. Expectation of non diagonal observables starting "
+                + "from samples is currently supported for "
+                + "`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
             )
-        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
+        diag = self.backend.reshape(diag, self.nqubits * (2,))
         if qubit_map is None:
             qubit_map = range(self.nqubits)
-        diag = self.backend.np.transpose(diag, qubit_map).ravel()
+        diag = self.backend.transpose(diag, qubit_map).ravel()
         # select only the elements with non-zero counts
         diag = diag[[int(state, 2) for state in freq.keys()]]
         counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
             freq.values()
         )
-        return self.backend.np.real(self.backend.np.sum(diag * counts))
+        return self.backend.real(self.backend.sum(diag * counts))
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
@@ -169,8 +164,8 @@ class Hamiltonian(AbstractHamiltonian):
         energy = self.expectation(state)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
+        average_h2 = self.backend.expectation_value(h2, state, normalize=True)
+        return self.backend.sqrt(self.backend.abs(average_h2 - energy**2))
 
     def __add__(self, other):
         if isinstance(other, self.__class__):
@@ -244,13 +239,15 @@ class Hamiltonian(AbstractHamiltonian):
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
         other = self.backend.cast(other)
         if self._eigenvalues is not None:
-            if self.backend.np.real(other) >= 0:  # TODO: check for side effects K.qnp
+            if self.backend.real(other) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 axis = (0,) if (self.backend.platform == "pytorch") else 0
-                r._eigenvalues = other * self.backend.np.flip(self._eigenvalues, axis)
+                r._eigenvalues = other * self.backend.engine.flip(
+                    self._eigenvalues, axis
+                )
         if self._eigenvectors is not None:
-            if self.backend.np.real(other) > 0:  # TODO: see above
+            if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -460,7 +457,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
             result = reduce(
-                self.backend.np.matmul,
+                self.backend.engine.matmul,
                 (self._get_symbol_matrix(subterm) for subterm in factors),
             )
 
@@ -471,7 +468,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             matrix_power = (
                 np.linalg.matrix_power
                 if self.backend.name == "tensorflow"
-                else self.backend.np.linalg.matrix_power
+                else self.backend.engine.linalg.matrix_power
             )
             result = matrix_power(matrix, int(exponent))
 
@@ -615,7 +612,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         keys = list(freq.keys())
         counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=self.backend.np.float64) / sum(counts)
+        counts = self.backend.cast(counts, dtype=self.backend.float64) / sum(counts)
         expvals = []
         for term in self.terms:
             qubits = {
@@ -631,7 +628,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
             len(self.terms), len(freq)
         )
-        return self.backend.np.sum(expvals @ counts) + self.constant.real
+        return self.backend.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form

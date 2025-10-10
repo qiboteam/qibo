@@ -206,7 +206,7 @@ def _gate_tomography(
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
                 if transpiler is not None:
-                    new_circ, _ = transpiler(new_circ)
+                    new_circ, _ = transpiler(new_circ, backend=backend)
                 exp_val = observable.expectation_from_samples(
                     backend.execute_circuit(new_circ, nshots=nshots).frequencies()
                 )
@@ -331,15 +331,12 @@ def GST(
             )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
-        gauge_matrix_2q = backend.np.kron(gauge_matrix, gauge_matrix)
+        gauge_matrix_2q = backend.kron(gauge_matrix, gauge_matrix)
         for matrix in matrices:
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
-                gauge_matrix
-                @ backend.np.linalg.inv(empty)
-                @ matrix
-                @ backend.np.linalg.inv(gauge_matrix)
+                gauge_matrix @ backend.inv(empty) @ matrix @ backend.inv(gauge_matrix)
             )
         matrices = PL_matrices
 

@@ -164,7 +164,7 @@ def test_vqe(backend, method, options, compile, filename):
     backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
-    state = backend.np.ones(2**nqubits) / np.sqrt(2**nqubits)
+    state = backend.ones(2**nqubits) / np.sqrt(2**nqubits)
     energy_fluctuation = v.energy_fluctuation(state)
     assert energy_fluctuation >= 0
     backend.set_threads(n_threads)
@@ -375,10 +375,10 @@ def test_aavqe(backend, method, options, compile, filename):
     "test_input, test_param, expected",
     [(cvar, {"alpha": 0.1}, -0.5), (gibbs, {"eta": 0.1}, -2.08)],
 )
-def test_custom_loss(test_input, test_param, expected):
+def test_custom_loss(backend, test_input, test_param, expected):
     from qibo import hamiltonians
 
-    h = XXZ(3)
+    h = XXZ(3, backend=backend)
     qaoa = QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
     best, params, _ = qaoa.minimize(
