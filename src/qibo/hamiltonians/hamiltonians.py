@@ -31,7 +31,9 @@ class Hamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix, backend=None):
-        from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
         self.backend = _check_backend(backend)
 
