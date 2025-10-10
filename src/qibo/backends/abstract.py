@@ -73,6 +73,44 @@ class Backend:
         """
         return None
 
+    def cast(
+        self, array, dtype=None, copy: bool = False
+    ) -> "ndarray":  # pragma: no cover
+        """Cast an object as the array type of the current backend.
+
+        Args:
+            x: Object to cast to array.
+            dtype (str or type, optional): data type of ``x`` after casting.
+                Options are ``"complex128"``, ``"complex64"``, ``"float64"``,
+                or ``"float32"``. If ``None``, defaults to ``Backend.dtype``.
+                Defaults to ``None``.
+            copy (bool, optional): If ``True`` a copy of the object is created in memory.
+                Defaults to ``False``.
+        """
+        raise_error(NotImplementedError)
+
+    def compile(self, func):  # pragma: no cover
+        """Compile the given method.
+
+        Available only for the ``TensorflowBackend`` in ``qiboml``.
+        """
+        return func
+
+    def is_sparse(self, array) -> bool:
+        """Determine if a given array is a sparse tensor."""
+        from scipy.sparse import issparse  # pylint: disable=import-outside-toplevel
+
+        return issparse(array)
+
+    def set_device(self, device: str) -> None:  # pragma: no cover
+        """Set simulation device. Works in-place.
+
+        Args:
+            device (str): Device index, *e.g.* ``/CPU:0`` for CPU, or ``/GPU:1`` for
+                the second GPU in a multi-GPU environment.
+        """
+        raise_error(NotImplementedError)
+
     def set_dtype(self, dtype: str) -> None:  # pragma: no cover
         """Set data type of arrays created using the backend. Works in-place.
 
@@ -121,15 +159,6 @@ class Backend:
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
 
-    def set_device(self, device: str) -> None:  # pragma: no cover
-        """Set simulation device. Works in-place.
-
-        Args:
-            device (str): Device index, *e.g.* ``/CPU:0`` for CPU, or ``/GPU:1`` for
-                the second GPU in a multi-GPU environment.
-        """
-        raise_error(NotImplementedError)
-
     def set_seed(self, seed: Union[int, None]) -> None:
         """Set the seed of the random number generator. Works in-place."""
         self.engine.random.seed(seed)
@@ -142,38 +171,9 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def cast(
-        self, array, dtype=None, copy: bool = False
-    ) -> "ndarray":  # pragma: no cover
-        """Cast an object as the array type of the current backend.
-
-        Args:
-            x: Object to cast to array.
-            dtype (str or type, optional): data type of ``x`` after casting.
-                Options are ``"complex128"``, ``"complex64"``, ``"float64"``,
-                or ``"float32"``. If ``None``, defaults to ``Backend.dtype``.
-                Defaults to ``None``.
-            copy (bool, optional): If ``True`` a copy of the object is created in memory.
-                Defaults to ``False``.
-        """
-        raise_error(NotImplementedError)
-
-    def is_sparse(self, array) -> bool:
-        """Determine if a given array is a sparse tensor."""
-        from scipy.sparse import issparse  # pylint: disable=import-outside-toplevel
-
-        return issparse(array)
-
     def to_numpy(self, array) -> "ndarray":  # pragma: no cover
         """Cast a given array to numpy."""
         raise_error(NotImplementedError)
-
-    def compile(self, func):  # pragma: no cover
-        """Compile the given method.
-
-        Available only for the ``TensorflowBackend`` in ``qiboml``.
-        """
-        return func
 
     ########################################################################################
     ######## Methods related to data types                                          ########
