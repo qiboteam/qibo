@@ -2,7 +2,6 @@
 
 from typing import List, Union
 
-import numpy as np
 from scipy.special import binom
 
 from qibo import gates

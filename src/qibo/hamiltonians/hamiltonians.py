@@ -31,7 +31,7 @@ class Hamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix, backend=None):
-        from qibo.backends import _check_backend
+        from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
 
         self.backend = _check_backend(backend)
 
@@ -43,7 +43,7 @@ class Hamiltonian(AbstractHamiltonian):
                 TypeError,
                 f"Matrix of invalid type {type(matrix)} given during Hamiltonian initialization",
             )
-        matrix = self.backend.cast(matrix)
+        matrix = self.backend.cast(matrix, dtype=matrix.dtype)
 
         super().__init__()
         self.nqubits = nqubits

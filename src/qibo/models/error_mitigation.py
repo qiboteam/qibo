@@ -21,9 +21,6 @@ from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
 
-SIMULATION_BACKEND = NumpyBackend()
-CLIFFORD_BACKEND = CliffordBackend("numpy")
-
 
 def get_gammas(noise_levels, analytical: bool = True):
     """Standalone function to compute the ZNE coefficients given the noise levels.
@@ -426,6 +423,8 @@ def CDR(
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
+    SIMULATION_BACKEND = NumpyBackend()
+
     if readout is None:
         readout = {}
 
@@ -565,6 +564,8 @@ def vnCDR(
            `arXiv:2011.01157 [quant-ph] <https://arxiv.org/abs/2011.01157>`_.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
+
+    SIMULATION_BACKEND = NumpyBackend()
 
     if model is None:
         model = lambda x, *params: backend.sum(
@@ -1140,6 +1141,8 @@ def ICS(
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
+
+    CLIFFORD_BACKEND = CliffordBackend("numpy")
 
     if readout is None:
         readout = {}

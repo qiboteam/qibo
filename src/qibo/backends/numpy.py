@@ -6,7 +6,6 @@ from qibo import __version__
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import raise_error
-from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class NumpyBackend(Backend):
@@ -47,7 +46,7 @@ class NumpyBackend(Backend):
         if self.is_sparse(x):
             return x.astype(dtype, copy=copy)
 
-        return np.asarray(x, dtype=dtype, copy=copy if copy else None)
+        return self.engine.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def to_numpy(self, array):
         if self.is_sparse(array):

@@ -80,7 +80,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
+
     backend = _check_backend(backend)
+
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, backend.matrices.Z, condition, backend)
@@ -89,6 +91,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
             ham -= h * _build_spin_model(
                 nqubits, backend.matrices.X, condition, backend
             )
+        print(ham)
+        print(type(ham))
+        print(backend)
         return Hamiltonian(nqubits, ham, backend=backend)
 
     term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
