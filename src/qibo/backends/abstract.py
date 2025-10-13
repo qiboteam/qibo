@@ -1065,7 +1065,9 @@ class Backend:
         )
 
         for _ in range(nshots):
-            state = self.cast(state_copy, dtype=state_copy.dtype, copy=True)
+            state = self.cast(  # pylint: disable=E1111
+                state_copy, dtype=state_copy.dtype, copy=True
+            )
 
             if not density_matrix and circuit.accelerators:  # pragma: no cover
                 state = self.execute_distributed_circuit(  # pylint: disable=E1111
