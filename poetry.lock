@@ -3227,7 +3227,7 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "clifford_measurement_fix"
-resolved_reference = "e4f0de213e42f659a0fe8234a9d5b9ddf7085cc4"
+resolved_reference = "5cc1c0458582c65d122a5b964b21aa1b2dfc4621"
 
 [[package]]
 name = "qulacs"
