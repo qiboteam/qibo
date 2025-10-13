@@ -74,7 +74,7 @@ class Backend:
         return None
 
     def cast(
-        self, array, dtype=None, copy: bool = False
+        self, array, dtype=None, copy: bool = False  # pylint: disable=unused-argument
     ) -> "ndarray":  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
@@ -546,14 +546,14 @@ class Backend:
         """
         if eigenvectors is None:
             # to_numpy and cast needed for GPUs
-            log = self.logm(matrix) / float(self.log(base))
+            log_matrix = self.logm(matrix) / float(self.log(base))
 
-            return log
+            return log_matrix
 
-        log = self.log(eigenvalues) / float(self.log(base))
+        log_matrix = self.log(eigenvalues) / float(self.log(base))
         ud = self.transpose(self.conj(eigenvectors))
 
-        return (eigenvectors * log) @ ud
+        return (eigenvectors * log_matrix) @ ud
 
     def matrix_power(
         self,
@@ -1065,7 +1065,7 @@ class Backend:
         )
 
         for _ in range(nshots):
-            state = state_copy
+            state = self.cast(state_copy, dtype=state_copy.dtype, copy=True)
 
             if not density_matrix and circuit.accelerators:  # pragma: no cover
                 state = self.execute_distributed_circuit(  # pylint: disable=E1111
@@ -1105,7 +1105,7 @@ class Backend:
             else:
                 final_result = QuantumState(final_state, backend=self)
 
-            circuit._final_state = final_result
+            circuit._final_state = final_result  # pylint: disable=protected-access
 
             return final_result
 
@@ -1119,7 +1119,7 @@ class Backend:
             samples
         )
 
-        circuit._final_state = final_result
+        circuit._final_state = final_result  # pylint: disable=protected-access
 
         return final_result
 
@@ -1279,9 +1279,9 @@ class Backend:
     def assert_allclose(
         self, value, target, rtol: float = 1e-7, atol: float = 0.0
     ):  # pragma: no cover
-        if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
+        if isinstance(value, (CircuitResult, QuantumState)):
             value = value.state()
-        if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
+        if isinstance(target, (CircuitResult, QuantumState)):
             target = target.state()
 
         self.engine.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
@@ -1473,12 +1473,14 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        U, S, Vh = self.singular_value_decomposition(matrix)
+        u_matrix, s_matrix, vh_matrix = self.singular_value_decomposition(matrix)
         # cast needed because of different dtypes in `torch`
-        S = self.cast(S, dtype=dtype)  # pylint: disable=E1111
-        S_inv = self.engine.where(self.abs(S) < precision_singularity, 0.0, S**power)
+        s_matrix = self.cast(s_matrix, dtype=dtype)  # pylint: disable=E1111
+        s_matrix_inv = self.engine.where(
+            self.abs(s_matrix) < precision_singularity, 0.0, s_matrix**power
+        )
 
-        return self.inv(Vh) @ self.diag(S_inv) @ self.inv(U)
+        return self.inv(vh_matrix) @ self.diag(s_matrix_inv) @ self.inv(u_matrix)
 
     def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
