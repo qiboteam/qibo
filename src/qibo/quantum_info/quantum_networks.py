@@ -292,13 +292,10 @@ class QuantumNetwork:
             self.matrix(),
             dtype=self._tensor.dtype,
         )
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            adjoint = self._backend.transpose(reshaped, (1, 0))
-        else:
-            adjoint = self._backend.transpose(reshaped)
+        adjoint = self._backend.transpose(reshaped, axes=(1, 0))
 
         mat_diff = self._backend.conj(adjoint) - reshaped
-        norm = self._backend.matrix_norm(mat_diff, order=order)
+        norm = self._backend.matrix_norm(mat_diff, order)
 
         return float(norm) <= precision_tol
 
@@ -677,10 +674,7 @@ class QuantumNetwork:
         if self.is_pure():
             # Reshapes input matrix based on purity.
             tensor.reshape(self.dims)
-            if self._backend.__class__.__name__ == "PyTorchBackend":
-                tensor = self._tensordot(tensor, conj(tensor), dims=0)
-            else:
-                tensor = self._tensordot(tensor, conj(tensor), axes=0)
+            tensor = self._tensordot(tensor, conj(tensor), axes=0)
             tensor = self._operator_to_tensor(tensor, self.partition)
 
             if update:
@@ -778,14 +772,9 @@ class QuantumComb(QuantumNetwork):
         trace_out = TraceOperation(dim_out, backend=backend).full()
         trace_in = TraceOperation(dim_in, backend=backend).full()
 
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_out, dims=([-1], [0]))
-            sub_comb = self._tensordot(reduced, trace_in, dims=([-1], [0]))
-            expected = self._tensordot(sub_comb, trace_in / dim_in, dims=0)
-        else:
-            reduced = self._tensordot(self.full(), trace_out, axes=(-1, 0))
-            sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
-            expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
+        reduced = self._tensordot(self.full(), trace_out, axes=(-1, 0))
+        sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
+        expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
 
         norm = self._backend.vector_norm(reduced - expected, order=order)
 
@@ -913,18 +902,9 @@ class QuantumChannel(QuantumComb):
         trace_out = TraceOperation(dim_out, backend=backend).full()
         trace_in = TraceOperation(dim_in, backend=backend).full()
 
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_in, dims=([0], [0]))
-            sub_comb = self._tensordot(
-                reduced,
-                trace_out,
-                dims=([0], [0]),
-            )
-            expected = self._tensordot(trace_out / dim_out, sub_comb, dims=0)
-        else:
-            reduced = self._tensordot(self.full(), trace_in, axes=(0, 0))
-            sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
-            expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
+        reduced = self._tensordot(self.full(), trace_in, axes=(0, 0))
+        sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
+        expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
 
         norm = self._backend.vector_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:

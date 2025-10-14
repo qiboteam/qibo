@@ -73,7 +73,7 @@ class CliffordBackend(NumpyBackend):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
                 )
-        else:
+        else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",

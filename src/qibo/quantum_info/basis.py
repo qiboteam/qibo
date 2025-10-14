@@ -105,12 +105,10 @@ def pauli_basis(
         basis_full = basis_single
 
     if vectorize and sparse:
-        if backend.platform == "pytorch":
-            nonzero = lambda x: backend.nonzero(x, as_tuple=True)
-        else:
-            nonzero = backend.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
-        indices = nonzero(backend.abs(basis))  # abs needed because of ``tensorflow``
+        indices = backend.nonzero(
+            backend.abs(basis)
+        )  # abs needed because of ``tensorflow``
         basis = basis[indices].reshape(-1, dim)
         indices = indices[1].reshape(-1, dim)
 

@@ -317,6 +317,11 @@ class Backend:
     def flatnonzero(self, array) -> "ndarray":
         return self.engine.flatnonzero(array)
 
+    def flip(
+        self, array, axis: Optional[Union[int, Tuple[int, ...]]] = None
+    ) -> "ndarray":
+        return self.engine.flip(array, axis=axis)
+
     def floor(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.floor(array, **kwargs)
 

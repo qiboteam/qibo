@@ -9,6 +9,7 @@ from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     lanczos,
+    matrix_exponentiation,
     matrix_logarithm,
     matrix_power,
     matrix_sqrt,
@@ -211,6 +212,18 @@ def test_partial_transpose(backend, p, statevector, batch):
                 backend.assert_allclose(transposed[j], target)
         else:
             backend.assert_allclose(transposed, target)
+
+
+def test_matrix_exponentiation(backend):
+    phase = 0.1
+    target = (
+        backend.cos(0.1) * backend.matrices.I()
+        + 1j * backend.sin(phase) * backend.matrices.X
+    )
+
+    matrix = matrix_exponentiation(backend.matrices.X, 1j * phase, backend=backend)
+
+    backend.assert_allclose(matrix, target)
 
 
 @pytest.mark.parametrize("singular", [False, True])
