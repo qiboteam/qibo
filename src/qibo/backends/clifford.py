@@ -151,7 +151,7 @@ class CliffordBackend(NumpyBackend):
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
     def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - self.np.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
         index = self.np.random.choice(
             range(len(probabilities)), size=1, p=probabilities
         )[0]
