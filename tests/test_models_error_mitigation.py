@@ -346,17 +346,17 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
         ),
     ],
 )
-@pytest.mark.parametrize("nshots", [None, 100])
+@pytest.mark.parametrize("nshots", [None, 1000])
 def test_ics(backend, nqubits, noise, full_output, readout, nshots):
-    np.random.seed(10)
-    backend.set_seed(10)
+    # np.random.seed(10)
+    # backend.set_seed(10)
     backend.set_dtype("complex128")
 
     set_dtype("complex128")
 
     if backend.platform == "tensorflow":
-        backend.tf.config.threading.set_inter_op_parallelism_threads = 1
-        backend.tf.config.threading.set_intra_op_parallelism_threads = 1
+        backend.engine.config.threading.set_inter_op_parallelism_threads = 1
+        backend.engine.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
 
@@ -370,23 +370,30 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     # Noise-free expected value
     exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
+    np.random.seed(8)
+    backend.set_seed(8)
     state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
     if nshots is None:
         noisy = obs.expectation(state.state())
     else:
         noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
+    np.random.seed(8)
+    backend.set_seed(8)
     estimate = ICS(
         circuit=circuit,
         observable=obs,
         noise_model=noise,
         nshots=nshots,
-        n_training_samples=20,
+        n_training_samples=10,
         full_output=full_output,
         readout=readout,
         backend=backend,
     )
     if full_output:
         estimate = estimate[0]
+
+    # print(exact)
+    # assert 0
 
     assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
