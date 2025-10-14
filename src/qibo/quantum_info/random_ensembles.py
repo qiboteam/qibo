@@ -399,7 +399,6 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     return backend.cast(state, dtype=dtype)
 
 
-
 def random_density_matrix(
     dims: int,
     rank: Optional[int] = None,
@@ -1108,4 +1107,3 @@ def _inverse_tril(mat, block_inverse_threshold, backend):
         [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
     )
     return inv % 2
-

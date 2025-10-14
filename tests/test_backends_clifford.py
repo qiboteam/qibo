@@ -198,7 +198,6 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
         backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
 
 
-
 @pytest.mark.parametrize("sizes_and_counts", [(1, 1), (2, 2), (3, 3)])
 def test_apply_unitary(backend, sizes_and_counts):
     nqubits = 5
