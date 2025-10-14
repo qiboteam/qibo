@@ -8,7 +8,6 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibo import matrices
 from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
@@ -174,7 +173,9 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
-        hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+        hadamards = backend.np.real(
+            reduce(backend.np.kron, [backend.matrices.H] * nqubits)
+        )
         hadamards /= 2 ** (nqubits / 2)
         hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 

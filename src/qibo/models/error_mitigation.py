@@ -1,7 +1,7 @@
 """Error Mitigation Methods."""
 
 import math
-from functools import reduce
+from functools import cache, reduce
 from inspect import signature
 from operator import mul
 
@@ -10,8 +10,6 @@ from scipy.optimize import curve_fit
 
 from qibo import gates
 from qibo.backends import (
-    CliffordBackend,
-    NumpyBackend,
     _check_backend,
     _check_backend_and_local_state,
     _get_engine_name,
@@ -21,8 +19,20 @@ from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
 
-SIMULATION_BACKEND = NumpyBackend()
-CLIFFORD_BACKEND = CliffordBackend(engine="numpy")
+
+# all this roundabout due to circular imports
+@cache
+def SIMULATION_BACKEND():
+    from qibo.backends import NumpyBackend
+
+    return NumpyBackend()
+
+
+@cache
+def CLIFFORD_BACKEND():
+    from qibo.backends import CliffordBackend
+
+    return CliffordBackend(engine="numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -440,7 +450,7 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
+        result = SIMULATION_BACKEND().execute_circuit(circ, nshots=nshots)
         if nshots is None:
             val_noiseless = observable.expectation(result.state())
             circuit_result = _execute_circuit(
@@ -584,7 +594,7 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        result = SIMULATION_BACKEND.execute_circuit(circ, nshots=nshots)
+        result = SIMULATION_BACKEND().execute_circuit(circ, nshots=nshots)
         if nshots is None:
             val = observable.expectation(result.state())
         else:
@@ -1155,7 +1165,7 @@ def ICS(
 
     training_circuits = [
         error_sensitive_circuit(
-            circuit, observable, seed=seed, backend=CLIFFORD_BACKEND
+            circuit, observable, seed=seed, backend=CLIFFORD_BACKEND()
         )[0]
         for _ in range(n_training_samples)
     ]
@@ -1165,7 +1175,7 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        circuit_result = CLIFFORD_BACKEND.execute_circuit(
+        circuit_result = CLIFFORD_BACKEND().execute_circuit(
             training_circuit_copy, nshots=nshots
         )
         if nshots is None:
