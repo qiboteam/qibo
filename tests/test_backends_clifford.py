@@ -6,8 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, get_backend, set_backend
-from qibo.backends import CliffordBackend, NumpyBackend, clifford
-from qibo.backends.clifford import _get_engine_name
+from qibo.backends import CliffordBackend, NumpyBackend, _get_engine_name
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
@@ -134,7 +133,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
     backend.set_seed(seed)
-    nqubits, nshots = 3, 1000
+    nqubits, nshots = 3, 5000
     clifford_bkd = construct_clifford_backend(backend)
     clifford_bkd.set_seed(seed)
 

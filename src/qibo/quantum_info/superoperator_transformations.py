@@ -124,7 +124,7 @@ def unvectorization(state, order: str = "row", backend=None):
             f"order must be either 'row' or 'column' or 'system', but it is {order}.",
         )
     backend = _check_backend(backend)
-    state = backend.cast(state)
+    state = backend.cast(state, dtype=state.dtype)
 
     dim = int(np.sqrt(state.shape[-1]))
     if len(state.shape) == 1:

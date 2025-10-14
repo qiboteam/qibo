@@ -46,23 +46,23 @@ def assert_matrices_allclose(gate, natives, backend):
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
-@pytest.mark.parametrize("gatename", ["H", "X", "Y", "I"])
-def test_pauli_to_native(backend, gatename, natives):
-    gate = getattr(gates, gatename)(0)
+@pytest.mark.parametrize("gate_name", ["H", "X", "Y", "I"])
+def test_pauli_to_native(backend, gate_name, natives):
+    gate = getattr(gates, gate_name)(0)
     assert_matrices_allclose(gate, natives=natives | default_natives, backend=backend)
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
-@pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
-def test_rotations_to_native(backend, gatename, natives):
-    gate = getattr(gates, gatename)(0, theta=0.1)
+@pytest.mark.parametrize("gate_name", ["RX", "RY", "RZ"])
+def test_rotations_to_native(backend, gate_name, natives):
+    gate = getattr(gates, gate_name)(0, theta=0.1)
     assert_matrices_allclose(gate, natives=natives | default_natives, backend=backend)
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
-@pytest.mark.parametrize("gatename", ["S", "SDG", "T", "TDG", "SX"])
-def test_special_single_qubit_to_native(backend, gatename, natives):
-    gate = getattr(gates, gatename)(0)
+@pytest.mark.parametrize("gate_name", ["S", "SDG", "T", "TDG", "SX"])
+def test_special_single_qubit_to_native(backend, gate_name, natives):
+    gate = getattr(gates, gate_name)(0)
     assert_matrices_allclose(gate, natives=natives | default_natives, backend=backend)
 
 
@@ -90,7 +90,7 @@ def test_gpi2_to_native(backend, natives):
     assert_matrices_allclose(gate, natives=natives | default_natives, backend=backend)
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
+@pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
 @pytest.mark.parametrize(
     "natives_2q",
     [NativeGates.CZ, NativeGates.iSWAP, NativeGates.CZ | NativeGates.iSWAP],
@@ -99,8 +99,8 @@ def test_gpi2_to_native(backend, natives):
     "natives_1q",
     [NativeGates.U3, NativeGates.GPI2, NativeGates.U3 | NativeGates.GPI2],
 )
-def test_two_qubit_to_native(backend, gatename, natives_1q, natives_2q):
-    gate = getattr(gates, gatename)(0, 1)
+def test_two_qubit_to_native(backend, gate_name, natives_1q, natives_2q):
+    gate = getattr(gates, gate_name)(0, 1)
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
@@ -112,9 +112,9 @@ def test_two_qubit_to_native(backend, gatename, natives_1q, natives_2q):
     "natives_1q",
     [NativeGates.U3, NativeGates.GPI2, NativeGates.U3 | NativeGates.GPI2],
 )
-@pytest.mark.parametrize("gatename", ["CRX", "CRY", "CRZ"])
-def test_controlled_rotations_to_native(backend, gatename, natives_1q, natives_2q):
-    gate = getattr(gates, gatename)(0, 1, 0.3)
+@pytest.mark.parametrize("gate_name", ["CRX", "CRY", "CRZ"])
+def test_controlled_rotations_to_native(backend, gate_name, natives_1q, natives_2q):
+    gate = getattr(gates, gate_name)(0, 1, 0.3)
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
@@ -193,9 +193,9 @@ def test_GeneralizedfSim_to_native(backend, natives_1q, natives_2q, seed):
     "natives_1q",
     [NativeGates.U3, NativeGates.GPI2, NativeGates.U3 | NativeGates.GPI2],
 )
-@pytest.mark.parametrize("gatename", ["RXX", "RZZ", "RYY"])
-def test_rnn_to_native(backend, gatename, natives_1q, natives_2q):
-    gate = getattr(gates, gatename)(0, 1, theta=0.1)
+@pytest.mark.parametrize("gate_name", ["RXX", "RZZ", "RYY"])
+def test_rnn_to_native(backend, gate_name, natives_1q, natives_2q):
+    gate = getattr(gates, gate_name)(0, 1, theta=0.1)
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
