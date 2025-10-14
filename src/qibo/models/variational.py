@@ -88,7 +88,8 @@ class VQE:
         """
         if loss_func is None:
             loss_func = vqe_loss
-        if compile:
+
+        if compile:  # pragma: no cover
             loss = self.backend.compile(loss_func)
         else:
             loss = loss_func
@@ -97,11 +98,12 @@ class VQE:
             dtype = self.backend.float64
             loss = (
                 (lambda p, c, h: loss_func(p, c, h).item())
-                if str(dtype) == "torch.float64"
+                if self.backend.platform == "pytorch"
                 else (lambda p, c, h: dtype(loss_func(p, c, h)))
             )
         elif method != "sgd":
             loss = lambda p, c, h: self.backend.to_numpy(loss_func(p, c, h))
+
         result, parameters, extra = self.optimizers.optimize(
             loss,
             initial_state,
@@ -119,7 +121,9 @@ class VQE:
             processes=processes,
             backend=self.backend,
         )
+
         self.circuit.set_parameters(parameters)
+
         return result, parameters, extra
 
     def energy_fluctuation(self, state):
@@ -566,7 +570,7 @@ class QAOA:
 
             return loss_func(**param)
 
-        if method == "sgd":
+        if method == "sgd":  # pragma: no cover
             loss = lambda p, c, h, s: _loss(self.backend.cast(p), c, h, s)
         else:
             loss = lambda p, c, h, s: self.backend.to_numpy(_loss(p, c, h, s))

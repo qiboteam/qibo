@@ -409,7 +409,7 @@ class Backend:
         return self.engine.random.choice(array, **kwargs)
 
     def random_integers(self, low, high=None, size=None, dtype=None):
-        if dtype is None:
+        if dtype is None:  # pragma: no cover
             dtype = self.dtype
 
         return self.engine.random.randint(low, high, size=size, dtype=dtype)
@@ -528,7 +528,7 @@ class Backend:
             if k < matrix.shape[0]:
                 return self.eigsh(matrix, k=k, which="SA")
 
-            matrix = self.to_numpy(matrix)  # pylint: disable=E1111
+            matrix = self.to_numpy(matrix)  # pylint: disable=E1111  # pragma: no cover
 
         if hermitian:
             return self.eigh(matrix)
