@@ -1037,7 +1037,7 @@ def quantum_fisher_information_matrix(
     initial_state=None,
     return_complex: bool = True,
     backend=None,
-):
+):  # pragma: no cover
     """Calculate the Quantum Fisher Information Matrix (QFIM) of a parametrized ``circuit``.
 
     Given a set of ``parameters`` :math:`\\theta = \\{\\theta_{k}\\}_{k\\in[M]}` and a

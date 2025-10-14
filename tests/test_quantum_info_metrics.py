@@ -278,7 +278,7 @@ def test_process_fidelity_and_infidelity(backend, seed):
     rng = np.random.default_rng(seed)
     with pytest.raises(TypeError):
         channel = rng.random(d**2, d**2)
-        target = rng.random(d**2, d**2, d**2)
+        target = rng.random(d**2, d)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, backend=backend)
@@ -292,8 +292,7 @@ def test_process_fidelity_and_infidelity(backend, seed):
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, check_unitary=True, backend=backend)
 
-    channel = np.eye(d**2)
-    channel = backend.cast(channel, dtype=channel.dtype)
+    channel = backend.identity(d**2)
 
     backend.assert_allclose(
         process_fidelity(channel, backend=backend), 1.0, atol=PRECISION_TOL

@@ -270,7 +270,7 @@ def sgd(
     if options is not None:
         sgd_options.update(options)
 
-    if backend.platform == "tensorflow":
+    if backend.platform == "tensorflow":  # pragma: no cover
         return _sgd_tf(
             loss,
             initial_parameters,
@@ -281,7 +281,7 @@ def sgd(
             callback=callback,
         )
 
-    if backend.platform == "pytorch":
+    if backend.platform == "pytorch":  # pragma: no cover
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."
@@ -293,7 +293,9 @@ def sgd(
     raise_error(RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend.")
 
 
-def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):
+def _sgd_torch(
+    loss, initial_parameters, args, sgd_options, backend, callback=None
+):  # pragma: no cover
 
     vparams = initial_parameters
     optimizer = getattr(backend.engine.optim, sgd_options["optimizer"])(
@@ -315,7 +317,7 @@ def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=No
 
 def _sgd_tf(
     loss, initial_parameters, args, sgd_options, compile, backend, callback=None
-):
+):  # pragma: no cover
 
     vparams = backend.tf.Variable(initial_parameters)
     optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(

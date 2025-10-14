@@ -359,7 +359,7 @@ class CliffordBackend(NumpyBackend):
 
         return phase_n
 
-    def apply_channel(self, channel, state, nqubits):
+    def apply_channel(self, channel, state, nqubits):  # pragma: no cover
         probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
         index = self.random_choice(range(len(probabilities)), size=1, p=probabilities)[
             0

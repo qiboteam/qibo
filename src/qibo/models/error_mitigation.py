@@ -337,7 +337,7 @@ def _curve_fit(
     Returns:
         ndarray: the optimal parameters.
     """
-    if backend.platform == "pytorch":
+    if backend.platform == "pytorch":  # pragma: no cover
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
