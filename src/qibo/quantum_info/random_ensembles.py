@@ -1041,39 +1041,37 @@ def random_stochastic_matrix(
         max_iterations = MAX_ITERATIONS
 
     matrix = local_state.random(size=(dims, dims))
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
     if diagonally_dominant:
         matrix /= dims**2
         for k, row in enumerate(matrix):
-            row = np.delete(row, obj=k)
-            matrix[k, k] = 1 - np.sum(row)
-    row_sum = np.sum(matrix, axis=1)
+            row = backend.delete(row, obj=k)
+            matrix[k, k] = 1 - backend.sum(row)
 
-    row_sum = matrix.sum(axis=1)
+    row_sum = backend.sum(matrix, axis=1)
 
     if bistochastic:
-        column_sum = matrix.sum(axis=0)
+        column_sum = backend.sum(matrix, axis=0)
         count = 0
         while count <= max_iterations - 1 and (
             (
-                np.any(row_sum >= 1 + precision_tol)
-                or np.any(row_sum <= 1 - precision_tol)
+                backend.any(row_sum >= 1 + precision_tol)
+                or backend.any(row_sum <= 1 - precision_tol)
             )
             or (
-                np.any(column_sum >= 1 + precision_tol)
-                or np.any(column_sum <= 1 - precision_tol)
+                backend.any(column_sum >= 1 + precision_tol)
+                or backend.any(column_sum <= 1 - precision_tol)
             )
         ):
-            matrix = matrix / matrix.sum(axis=0)
-            matrix = matrix / matrix.sum(axis=1)[:, np.newaxis]
-            row_sum = matrix.sum(axis=1)
-            column_sum = matrix.sum(axis=0)
+            matrix = matrix / backend.sum(matrix, axis=0)
+            matrix = matrix / backend.sum(matrix, axis=1)[:, np.newaxis]
+            row_sum = backend.sum(matrix, axis=1)
+            column_sum = backend.sum(matrix, axis=0)
             count += 1
         if count == max_iterations:
             warnings.warn("Reached max iterations.", RuntimeWarning)
     else:
-        matrix = matrix / np.outer(row_sum, [1] * dims)
-
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
+        matrix = matrix / backend.outer(row_sum, [1] * dims)
 
     return matrix
 

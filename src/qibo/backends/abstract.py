@@ -111,7 +111,7 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def set_dtype(self, dtype: str) -> None:  # pragma: no cover
+    def set_dtype(self, dtype: str) -> None:
         """Set data type of arrays created using the backend. Works in-place.
 
         .. note::
@@ -264,6 +264,9 @@ class Backend:
 
         return csr_matrix(array)
 
+    def delete(self, array, **kwargs) -> "ndarray":
+        return self.engine.delete(array, **kwargs)
+
     def det(self, array) -> "ndarray":
         return self.engine.linalg.det(array)
 
@@ -314,7 +317,7 @@ class Backend:
     def flatnonzero(self, array) -> "ndarray":
         return self.engine.flatnonzero(array)
 
-    def floor(self, array, **kwargs) -> "ndarray":
+    def floor(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.floor(array, **kwargs)
 
     def identity(self, dims: int, dtype=None, sparse: bool = False) -> "ndarray":
@@ -346,15 +349,13 @@ class Backend:
     def log2(self, array, **kwargs) -> "ndarray":
         return self.engine.log2(array, **kwargs)
 
-    def log10(self, array, **kwargs) -> "ndarray":
+    def log10(self, array, **kwargs) -> "ndarray":  # pragma: no cover
         return self.engine.log10(array, **kwargs)
 
     def matmul(self, array_1, array_2, **kwargs) -> "ndarray":
         return self.engine.matmul(array_1, array_2, **kwargs)
 
-    def matrix_norm(
-        self, state, order: Union[int, float, str] = "nuc", **kwargs
-    ):  # pragma: no cover
+    def matrix_norm(self, state, order: Union[int, float, str] = "nuc", **kwargs):
         """Calculate norm of a :math:`2`-dimensional array.
 
         Default is the ``nuclear`` norm.
@@ -382,12 +383,12 @@ class Backend:
     def nonzero(self, array) -> "ndarray":
         return self.engine.nonzero(array)
 
-    def ones(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
+    def ones(self, shape, dtype=None) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
         return self.engine.ones(shape, dtype=dtype)
 
-    def outer(self, array_1, array_2) -> "ndarray":  # pragma: no cover
+    def outer(self, array_1, array_2) -> "ndarray":
         return self.engine.outer(array_1, array_2)
 
     def prod(self, array, **kwargs) -> "ndarray":
@@ -399,7 +400,7 @@ class Backend:
     def real(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.real(array)
 
-    def random_choice(self, array, **kwargs) -> "ndarray":  # pragma: no cover
+    def random_choice(self, array, **kwargs) -> "ndarray":
         return self.engine.random.choice(array, **kwargs)
 
     def random_integers(self, low, high=None, size=None, dtype=None):
@@ -470,7 +471,7 @@ class Backend:
 
     def vector_norm(
         self, state, order: Union[int, float, str] = 2, dtype=None
-    ) -> float:  # pragma: no cover
+    ) -> float:
         """Calculate norm of an :math:`1`-dimensional array.
 
         For specifications on possible values of the parameter ``order``
@@ -490,7 +491,7 @@ class Backend:
     def vstack(self, arrays, **kwargs) -> "ndarray":
         return self.engine.vstack(arrays, **kwargs)
 
-    def zeros(self, shape, dtype=None) -> "ndarray":  # pragma: no cover
+    def zeros(self, shape, dtype=None) -> "ndarray":
         if dtype is None:
             dtype = self.dtype
         return self.engine.zeros(shape, dtype=dtype)
@@ -516,9 +517,7 @@ class Backend:
 
         return self.eigvals(matrix)
 
-    def eigenvectors(
-        self, matrix, k: int = 6, hermitian: bool = True
-    ):  # pragma: no cover
+    def eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
         """Calculate eigenvectors of a matrix."""
         if self.is_sparse(matrix):
             if k < matrix.shape[0]:
@@ -533,7 +532,7 @@ class Backend:
 
     def expectation_value(
         self, hamiltonian, state, normalize: bool = False, dtype=None
-    ):  # pragma: no cover
+    ):
         """Calculate expectation value of a state vector given the observable matrix."""
         if dtype is None:
             dtype = self.dtype
@@ -613,7 +612,7 @@ class Backend:
         power: Union[float, int],
         precision_singularity: float = 1e-14,
         dtype=None,
-    ):  # pragma: no cover
+    ):
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
 
@@ -646,7 +645,7 @@ class Backend:
 
         return fractional_matrix_power(matrix, power)
 
-    def matrix_sqrt(self, array):  # pragma: no cover
+    def matrix_sqrt(self, array):
         """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
 
         .. note::
@@ -739,9 +738,7 @@ class Backend:
 
         return state
 
-    def maximally_mixed_state(
-        self, nqubits: int, dtype=None
-    ) -> "ndarray":  # pragma: no cover
+    def maximally_mixed_state(self, nqubits: int, dtype=None) -> "ndarray":
         """Generate the :math:`n`-qubit density matrix for the maximally mixed state.
 
         .. math::
@@ -772,9 +769,7 @@ class Backend:
 
         return self.sum(self.conj(state_1) * state_2)
 
-    def plus_state(
-        self, nqubits: int, density_matrix: bool = False, dtype=None
-    ):  # pragma: no cover
+    def plus_state(self, nqubits: int, density_matrix: bool = False, dtype=None):
         """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         if dtype is None:
             dtype = self.dtype
@@ -788,7 +783,7 @@ class Backend:
 
         return state
 
-    def reset_error_density_matrix(self, gate, state, nqubits: int):  # pragma: no cover
+    def reset_error_density_matrix(self, gate, state, nqubits: int):
         """Apply reset error to density matrix."""
         from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
 
@@ -808,9 +803,7 @@ class Backend:
 
         return state + p_1 * self.apply_gate(X(qubit), zero, nqubits)
 
-    def thermal_error_density_matrix(
-        self, gate, state, nqubits: int
-    ):  # pragma: no cover
+    def thermal_error_density_matrix(self, gate, state, nqubits: int):
         """Apply thermal relaxation error to density matrix."""
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
@@ -819,7 +812,7 @@ class Backend:
 
     def zero_state(
         self, nqubits: int, density_matrix: bool = False, dtype=None
-    ) -> "ndarray":  # pragma: no cover
+    ) -> "ndarray":
         """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
         Args:
@@ -902,9 +895,7 @@ class Backend:
 
         return self.reshape(state, shape)
 
-    def apply_gate_half_density_matrix(
-        self, gate, state, nqubits: int
-    ):  # pragma: no cover
+    def apply_gate_half_density_matrix(self, gate, state, nqubits: int):
         """Apply a gate to one side of the density matrix."""
         if gate.is_controlled_by:
             raise_error(
@@ -998,9 +989,7 @@ class Backend:
 
         return self._collapse_statevector(state, qubits, shot, nqubits, normalize)
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots: int = 1000
-    ):  # pragma: no cover
+    def execute_circuit(self, circuit, initial_state=None, nshots: int = 1000):
         """Execute a :class:`qibo.models.circuit.Circuit`."""
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
@@ -1428,7 +1417,7 @@ class Backend:
         shot,
         nqubits: int,
         normalize: bool = True,
-    ):  # pragma: no cover
+    ):
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
