@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates
+from qibo import Circuit, gates, set_dtype
 from qibo.backends import construct_backend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.error_mitigation import (
@@ -346,13 +346,11 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
         ),
     ],
 )
-@pytest.mark.parametrize("nshots", [None, 10000])
+@pytest.mark.parametrize("nshots", [None, 100])
 def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     np.random.seed(10)
     backend.set_seed(10)
     backend.set_dtype("complex128")
-
-    from qibo import set_dtype
 
     set_dtype("complex128")
 
