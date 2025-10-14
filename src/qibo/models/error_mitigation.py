@@ -282,7 +282,7 @@ def sample_training_circuit_cdr(
         rep_gate_matrix = [rep_gate.matrix(backend) for rep_gate in rep_gates]
         rep_gate_matrix = backend.cast(rep_gate_matrix, dtype=rep_gate_matrix[0].dtype)
         matrix_norm = backend.matrix_norm(
-            gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
+            gate_matrix - rep_gate_matrix, "fro", axis=(1, 2)
         )
 
         distance.append(backend.real(matrix_norm))

@@ -353,7 +353,7 @@ class Backend:
         return self.engine.matmul(array_1, array_2, **kwargs)
 
     def matrix_norm(
-        self, state, order: Union[int, float, str] = "nuc", dtype=None
+        self, state, order: Union[int, float, str] = "nuc", **kwargs
     ):  # pragma: no cover
         """Calculate norm of a :math:`2`-dimensional array.
 
@@ -367,12 +367,14 @@ class Backend:
         `numpy.linalg.norm
         <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
         """
+        dtype = kwargs.get("dtype", None)
+
         if dtype is None:
             dtype = self.dtype
 
         state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
 
-        return self.engine.linalg.norm(state, ord=order)
+        return self.engine.linalg.norm(state, order, **kwargs)
 
     def mean(self, array, **kwargs) -> Union[float, complex, "ndarray"]:
         return self.engine.mean(array, **kwargs)
