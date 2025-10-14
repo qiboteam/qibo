@@ -218,13 +218,13 @@ class Backend:
     def abs(self, array, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.abs(array, **kwargs)
 
-    def all(self, array, **kwargs) -> "ndarray" | bool:
+    def all(self, array, **kwargs) -> Union["ndarray", bool]:
         return self.engine.all(array, **kwargs)
 
     def angle(self, array, **kwargs) -> "ndarray":
         return self.engine.angle(array, **kwargs)
 
-    def any(self, array, **kwargs) -> "ndarray" | bool:
+    def any(self, array, **kwargs) -> Union["ndarray" | bool]:
         return self.engine.any(array, **kwargs)
 
     def arccos(self, array, **kwargs) -> "ndarray":
