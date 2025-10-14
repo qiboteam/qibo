@@ -215,6 +215,9 @@ def _reshuffling(super_op: ndarray, ax1: int, ax2: int) -> ndarray:
     super_op = ENGINE.transpose(super_op, axes)
     return ENGINE.reshape(super_op, [dim**2, dim**2])
 
+def _random_statevector_real(dims: int):
+    state = ENGINE.random.standard_normal(dims)
+    return state / ENGINE.linalg.norm(state)
 
 def _random_statevector(dims: int):
     state = ENGINE.random.standard_normal(dims)

@@ -22,6 +22,7 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    permutation_synthesis,
     phase_encoder,
     sparse_encoder,
     unary_encoder,
@@ -272,7 +273,8 @@ def test_hamming_weight_encoder(
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
-def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
+@pytest.mark.parametrize("method", ["li", "farias"])
+def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
@@ -293,13 +295,29 @@ def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
 
     if integers and not zip_input:
         with pytest.raises(ValueError):
-            circuit = sparse_encoder(data, nqubits=None)
+            circuit = sparse_encoder(data, method, nqubits=None, backend=backend)
+
+        with pytest.raises(ValueError):
+            circuit = sparse_encoder(
+                data, method=True, nqubits=nqubits, backend=backend
+            )
 
     _nqubits = nqubits if integers else None
-    circuit = sparse_encoder(data, _nqubits, backend=backend)
+    circuit = sparse_encoder(data, method, _nqubits, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
+
+
+@pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
+def test_permutation_synthesis_errors(sigma, backend):
+
+    with pytest.raises(TypeError):
+        permutation_synthesis(backend.np.array(sigma), m=2, backend=backend)
+    with pytest.raises(ValueError):
+        permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
+    with pytest.raises(ValueError):
+        permutation_synthesis(sigma, m=3, backend=backend)
 
 
 def test_entangling_layer_errors():

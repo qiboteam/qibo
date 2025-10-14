@@ -1,3 +1,5 @@
+"""Module defining the matrix representation of gates used by the backends."""
+
 import cmath
 import math
 from functools import cached_property
@@ -489,6 +491,31 @@ class NumpyMatrices:
             ],
             dtype=self.dtype,
         )
+
+    def FanOut(self, *q):
+        # TODO: remove this loop after refactoring Gate.matrix method.
+
+        # based on Backend.matrix_fused method
+        rank = len(q)
+        matrix = self.I(2**rank)
+
+        gmatrix = self.CNOT
+        eye = self.I(2 ** (rank - 2))
+        gmatrix = self.np.kron(gmatrix, eye)
+        original_shape = gmatrix.shape
+        gmatrix = self.np.reshape(gmatrix, 2 * rank * (2,))
+
+        for qubit in range(1, rank):
+            qubits = [0, qubit]
+            indices = qubits + [qub for qub in range(rank) if qub not in qubits]
+            indices = self.np.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(indices + rank)
+            _gmatrix = self.np.transpose(gmatrix, transpose_indices)
+            _gmatrix = self.np.reshape(_gmatrix, original_shape)
+            matrix = _gmatrix @ matrix
+
+        return self._cast(matrix, dtype=self.dtype)
 
     def GeneralizedRBS(self, qubits_in, qubits_out, theta, phi):
         num_qubits_in, num_qubits_out = len(qubits_in), len(qubits_out)

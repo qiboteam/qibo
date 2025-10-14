@@ -2,7 +2,6 @@
 
 import math
 import warnings
-from functools import cache
 from typing import Optional, Union
 
 import numpy as np
@@ -16,6 +15,7 @@ from qibo.backends import (
 )
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
+from qibo.quantum_info.clifford import Clifford
 from qibo.quantum_info.superoperator_transformations import (
     choi_to_chi,
     choi_to_kraus,
@@ -68,7 +68,8 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
         raise_error(
             TypeError, f"ngates must be type int, but it is type {type(ngates)}."
         )
-    elif ngates <= 0:
+
+    if ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
@@ -353,7 +354,7 @@ def random_quantum_channel(
     return super_op
 
 
-def random_statevector(dims: int, seed=None, backend=None):
+def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -363,8 +364,18 @@ def random_statevector(dims: int, seed=None, backend=None):
     where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
 
+    .. note::
+        If ``dtype`` if ``"float64"``, ``"float32"``, or an equivalent type,
+        then :math:`\\ket{\\psi} \\in \\mathbb{R}^{\\text{dims}}`. Otherwise,
+        :math:`\\ket{\\psi} \\in \\mathbb{C}^{\\text{dims}}`.
+
     Args:
         dims (int): dimension of the matrix.
+        dtype (str or type, optional): data type for the random statevector.
+            Options are ``"complex128``, ``"complex64"``, ``"float64"``, or ``"float32"``.
+            It also accepts the equivalent data types of ``backend``'s engines, *e.g.*
+            ``numpy.complex128`` or ``cupy.float64``. If ``None``, defaults to
+            ``backend.dtype``. Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -377,7 +388,16 @@ def random_statevector(dims: int, seed=None, backend=None):
     """
     backend = _check_backend(backend)
     backend.set_seed(seed)
-    return backend.qinfo._random_statevector(dims)
+
+    if dtype is None:
+        dtype = backend.dtype
+
+    if "complex" in str(dtype):
+        state = backend.qinfo._random_statevector(dims)
+    else:
+        state = backend.qinfo._random_statevector_real(dims)
+    return backend.cast(state, dtype=dtype)
+
 
 
 def random_density_matrix(
@@ -483,11 +503,7 @@ def random_density_matrix(
 
 
 def random_clifford(
-    nqubits: int,
-    return_circuit: bool = True,
-    density_matrix: bool = False,
-    seed=None,
-    backend=None,
+    nqubits: int, return_circuit: bool = True, seed=None, backend=None, **kwargs
 ):
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
     For the mathematical details, see Reference [1].
@@ -496,17 +512,18 @@ def random_clifford(
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` object. Defaults to ``True``.
-        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
-            the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
-        (ndarray or :class:`qibo.models.Circuit`): Random Clifford operator.
+        :class:`qibo.quantum_info.clifford.Clifford` or :class:`qibo.models.Circuit`:
+        Random Clifford operator.
 
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
@@ -520,45 +537,93 @@ def random_clifford(
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
         nqubits
     )
+    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
+    permutations = backend.cast(permutations, dtype=permutations.dtype)
 
-    gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime = (
-        backend.qinfo._gamma_delta_matrices(nqubits, hadamards, permutations)
+    gamma = backend.np.diag(
+        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
+    )
+    gamma = backend.cast(gamma, dtype=gamma.dtype)
+
+    gamma_prime = backend.np.diag(
+        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
+    )
+    gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
+
+    delta = backend.np.eye(nqubits, dtype=backend.np.uint8)
+    delta = backend.cast(delta, dtype=delta.dtype)
+    delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
+
+    _fill_tril(gamma, local_state, symmetric=True, backend=backend)
+    _fill_tril(gamma_prime, local_state, symmetric=True, backend=backend)
+    _fill_tril(delta, local_state, symmetric=False, backend=backend)
+    _fill_tril(delta_prime, local_state, symmetric=False, backend=backend)
+
+    # For large nqubits numpy.inv function called below can
+    # return invalid output leading to a non-symplectic Clifford
+    # being generated. This can be prevented by manually forcing
+    # block inversion of the matrix.
+    block_inverse_threshold = 50
+
+    # Compute stabilizer table
+    zero = backend.np.zeros((nqubits, nqubits), dtype=np.uint8)
+    zero = backend.cast(zero, dtype=zero.dtype)
+    prod1 = (gamma @ delta) % 2
+    prod2 = (gamma_prime @ delta_prime) % 2
+    inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
+    inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
+
+    # backend.np.block cannot be used below because there is no cupy equivalent
+    # hence the necessity for three backend.np.concatenate's
+    had_free_operator_1 = backend.np.concatenate(
+        [
+            backend.np.concatenate([delta, zero], axis=1),
+            backend.np.concatenate([prod1, inv1], axis=1),
+        ],
+        axis=0,
+    )
+    had_free_operator_2 = backend.np.concatenate(
+        [
+            backend.np.concatenate([delta_prime, zero], axis=1),
+            backend.np.concatenate([prod2, inv2], axis=1),
+        ],
+        axis=0,
     )
 
-    gamma_matrix = backend.to_numpy(gamma_matrix)
-    delta_matrix = backend.to_numpy(delta_matrix)
-    gamma_matrix_prime = backend.to_numpy(gamma_matrix_prime)
-    delta_matrix_prime = backend.to_numpy(delta_matrix_prime)
+    # Apply qubit permutation
+    table = had_free_operator_2[
+        backend.np.concatenate([permutations, nqubits + permutations])
+    ]
 
-    # get first element of the Borel group
-    clifford_circuit = _operator_from_hadamard_free_group(
-        gamma_matrix, delta_matrix, density_matrix
+    # Apply layer of Hadamards
+    inds = hadamards * backend.cast(backend.np.arange(1, nqubits + 1), dtype=int)
+    inds = inds[inds > 0] - 1
+    lhs_inds = backend.np.concatenate([inds, inds + nqubits])
+    rhs_inds = backend.np.concatenate([inds + nqubits, inds])
+    table[lhs_inds, :] = table[rhs_inds, :]
+
+    # Apply table
+    tableau = backend.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
+    tableau = backend.cast(tableau, dtype=tableau.dtype)
+    tableau[:, :-1] = (had_free_operator_1 @ table) % 2
+
+    # Generate random phases
+    integers = local_state.integers(2, size=2 * nqubits)
+    integers = backend.cast(integers, dtype=integers.dtype)
+    tableau[:, -1] = integers
+
+    engine = (
+        backend.platform
+        if backend.name in ("clifford", "qibojit", "qiboml")
+        else backend.name
     )
+    cliff = Clifford(tableau, engine=engine)
 
-    # Apply permutated Hadamard layer
-    for qubit, had in enumerate(hadamards):
-        if had == 1:
-            clifford_circuit.add(gates.H(int(permutations[qubit])))
+    if return_circuit:
+        method = "BM20" if engine == "cupy" else "AG04"
+        return cliff.to_circuit(method, **kwargs)
 
-    # get second element of the Borel group
-    clifford_circuit += _operator_from_hadamard_free_group(
-        gamma_matrix_prime,
-        delta_matrix_prime,
-        density_matrix,
-        random_pauli(
-            nqubits,
-            depth=1,
-            return_circuit=True,
-            density_matrix=density_matrix,
-            seed=seed,
-            backend=backend,
-        ),
-    )
-
-    if return_circuit is False:
-        clifford_circuit = clifford_circuit.unitary(backend=backend)
-
-    return clifford_circuit
+    return cliff
 
 
 def random_pauli(
@@ -930,75 +995,6 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     return hadamards, permutations
 
 
-@cache
-def _create_S(q):
-    return gates.S(int(q))
-
-
-@cache
-def _create_CZ(cq, tq):
-    return gates.CZ(int(cq), int(tq))
-
-
-@cache
-def _create_CNOT(cq, tq):
-    return gates.CNOT(int(cq), int(tq))
-
-
-def _operator_from_hadamard_free_group(
-    gamma_matrix, delta_matrix, density_matrix: bool = False, pauli_operator=None
-):
-    """Calculates an element :math:`F` of the Hadamard-free group :math:`\\mathcal{F}_{n}`,
-    where :math:`n` is the number of qubits ``nqubits``. For more details,
-    see Reference [1].
-
-    Args:
-        gamma_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
-        delta_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
-        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
-            the circuit would evolve density matrices. Defaults to ``False``.
-        pauli_operator (:class:`qibo.models.Circuit`, optional): a :math:`n`-qubit
-            Pauli operator. If ``None``, it is assumed to be the Identity.
-            Defaults to ``None``.
-
-    Returns:
-        :class:`qibo.models.Circuit`: element of the Hadamard-free group.
-
-    Reference:
-        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
-           structure of the Clifford group*.
-           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
-    """
-    if gamma_matrix.shape != delta_matrix.shape:  # pragma: no cover
-        raise_error(
-            ValueError,
-            "gamma_matrix and delta_matrix must have shape (nqubits, nqubits), "
-            + f"but {gamma_matrix.shape} != {delta_matrix.shape}",
-        )
-
-    nqubits = len(gamma_matrix)
-    circuit = Circuit(nqubits, density_matrix=density_matrix)
-
-    if pauli_operator is not None:
-        circuit += pauli_operator
-
-    idx = np.tril_indices(nqubits, k=-1)
-    gamma_ones = gamma_matrix[idx].nonzero()[0]
-    delta_ones = delta_matrix[idx].nonzero()[0]
-
-    S_gates = [_create_S(q) for q in np.diag(gamma_matrix).nonzero()[0]]
-    CZ_gates = [
-        _create_CZ(cq, tq) for cq, tq in zip(idx[1][gamma_ones], idx[0][gamma_ones])
-    ]
-    CNOT_gates = [
-        _create_CNOT(cq, tq) for cq, tq in zip(idx[1][delta_ones], idx[0][delta_ones])
-    ]
-
-    circuit.add(S_gates + CZ_gates + CNOT_gates)
-
-    return circuit
-
-
 def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend):
     """Helper function for :func:qibo.quantum_info.random_ensembles.random_quantum_channel.
     Generates a channel from the BCSZ measure.
@@ -1030,3 +1026,86 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
         return backend.qinfo._super_op_from_bcsz_measure_column(dims, rank)
 
     return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)
+
+
+def _fill_tril(mat, rng, symmetric, backend):
+    """Add symmetric random ints to off-diagonals"""
+    dim = mat.shape[0]
+    # Optimized for low dimensions
+    if dim == 1:
+        return
+
+    if dim <= 4:
+        mat[1, 0] = rng.integers(2, dtype=np.uint8)
+        if symmetric:
+            mat[0, 1] = mat[1, 0]
+        if dim > 2:
+            mat[2, 0] = rng.integers(2, dtype=np.uint8)
+            mat[2, 1] = rng.integers(2, dtype=np.uint8)
+            if symmetric:
+                mat[0, 2] = mat[2, 0]
+                mat[1, 2] = mat[2, 1]
+        if dim > 3:
+            mat[3, 0] = rng.integers(2, dtype=np.uint8)
+            mat[3, 1] = rng.integers(2, dtype=np.uint8)
+            mat[3, 2] = rng.integers(2, dtype=np.uint8)
+            if symmetric:
+                mat[0, 3] = mat[3, 0]
+                mat[1, 3] = mat[3, 1]
+                mat[2, 3] = mat[3, 2]
+        return
+
+    # Use numpy indices for larger dimensions
+    rows, cols = backend.np.tril_indices(dim, -1)
+    vals = rng.integers(2, size=rows.size, dtype=backend.np.uint8)
+    mat[(rows, cols)] = vals
+    if symmetric:
+        mat[(cols, rows)] = vals
+
+
+def _inverse_tril(mat, block_inverse_threshold, backend):
+    """Invert a lower-triangular matrix with unit diagonal."""
+    # Optimized inversion function for low dimensions
+    dim = mat.shape[0]
+
+    if dim <= 2:
+        return mat
+
+    if dim <= 5:
+        inv = backend.cast(mat, dtype=mat.dtype, copy=True)
+        inv[2, 0] = mat[2, 0] ^ (mat[1, 0] & mat[2, 1])
+        if dim > 3:
+            inv[3, 1] = mat[3, 1] ^ (mat[2, 1] & mat[3, 2])
+            inv[3, 0] = mat[3, 0] ^ (mat[3, 2] & mat[2, 0]) ^ (mat[1, 0] & inv[3, 1])
+        if dim > 4:
+            inv[4, 2] = (mat[4, 2] ^ (mat[3, 2] & mat[4, 3])) & 1
+            inv[4, 1] = mat[4, 1] ^ (mat[4, 3] & mat[3, 1]) ^ (mat[2, 1] & inv[4, 2])
+            inv[4, 0] = (
+                mat[4, 0]
+                ^ (mat[1, 0] & inv[4, 1])
+                ^ (mat[2, 0] & inv[4, 2])
+                ^ (mat[3, 0] & mat[4, 3])
+            )
+        return inv % 2
+
+    # For higher dimensions we use Numpy's inverse function
+    # however this function tends to fail and result in a non-symplectic
+    # final matrix if n is too large.
+    if dim <= block_inverse_threshold:
+        return backend.cast(backend.np.linalg.inv(mat), backend.np.uint8) % 2
+
+    # For very large matrices  we divide the matrix into 4 blocks of
+    # roughly equal size and use the analytic formula for the inverse
+    # of a block lower-triangular matrix:
+    # inv([[A, 0],[C, D]]) = [[inv(A), 0], [inv(D).C.inv(A), inv(D)]]
+    # call the inverse function recursively to compute inv(A) and invD
+
+    dim1 = dim // 2
+    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold, backend)
+    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold, backend)
+    mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
+    inv = backend.np.block(
+        [[mat_a, np.zeros((dim1, dim - dim1), dtype=int)], [mat_c, mat_d]]
+    )
+    return inv % 2
+

@@ -1,7 +1,7 @@
 """Module with common linear algebra operations for quantum information."""
 
 import math
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibo.backends import _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
@@ -239,8 +239,8 @@ def partial_transpose(
 
 
 def matrix_exponentiation(
-    phase: Union[float, complex],
     matrix,
+    phase: Optional[Union[float, int, complex]] = None,
     eigenvectors=None,
     eigenvalues=None,
     backend=None,
@@ -251,14 +251,15 @@ def matrix_exponentiation(
     it returns the exponential of the form
 
     .. math::
-        \\exp\\left(-i \\, \\theta \\, H \\right) \\, .
+        \\exp\\left(\\theta \\, H \\right) \\, .
 
     If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
     is used for the exponentiation.
 
     Args:
-        phase (float or complex): phase that multiplies the matrix.
         matrix (ndarray): matrix to be exponentiated.
+        phase (float or int or complex): phase that multiplies the matrix.
+            If ``None``, defaults to :math:`1`. Defaults to ``None``.
         eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
             to calculate ``matrix`` exponentiation as part of diagonalization.
             Must be used together with ``eigenvalues``. Defaults to ``None``.
@@ -274,7 +275,44 @@ def matrix_exponentiation(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+    return backend.calculate_matrix_exp(matrix, phase, eigenvectors, eigenvalues)
+
+
+def matrix_logarithm(
+    matrix,
+    base: Union[float, int] = 2,
+    eigenvectors=None,
+    eigenvalues=None,
+    backend=None,
+):
+    """Calculates the logarithm of a matrix.
+
+    Given a ``matrix`` :math:`A` and a log base :math:`b`, it returns the logarithm of the form
+
+    .. math::
+        \\log_{b}\\left(\\theta \\, H \\right) \\, .
+
+    If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
+    is used for the calculation.
+
+    Args:
+        matrix (ndarray): matrix to be logarithmed.
+        eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvalues``. Defaults to ``None``.
+        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvectors``. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix logarithm :math:`\\log_{b}(H)`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.calculate_matrix_log(matrix, base, eigenvectors, eigenvalues)
 
 
 def matrix_power(
@@ -298,6 +336,21 @@ def matrix_power(
     backend = _check_backend(backend)
 
     return backend.calculate_matrix_power(matrix, power, precision_singularity)
+
+
+def matrix_sqrt(matrix, backend=None):
+    """Given a ``matrix`` :math:`A`, calculate :math:`A^{1/2}`.
+
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix power :math:`A^{1/2}`.
+    """
+    return matrix_power(matrix, power=0.5, backend=backend)
 
 
 def singular_value_decomposition(matrix, backend=None):

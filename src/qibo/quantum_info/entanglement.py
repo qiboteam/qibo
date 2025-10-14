@@ -153,9 +153,7 @@ def negativity(state, bipartition, backend=None):
     return backend.np.real((norm - 1) / 2)
 
 
-def entanglement_fidelity(
-    channel, nqubits: int, state=None, check_hermitian: bool = False, backend=None
-):
+def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     """Entanglement fidelity :math:`F_{\\mathcal{E}}` of a ``channel`` :math:`\\mathcal{E}`
     on ``state`` :math:`\\rho` is given by
 
@@ -175,9 +173,6 @@ def entanglement_fidelity(
             by ``channel``. If ``None``, defaults to the maximally entangled state
             :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
             :math:`n` is ``nqubits``. Defaults to ``None``.
-        check_hermitian (bool, optional): if ``True``, checks if the final state
-            :math:`\\rho_{f}` is Hermitian. If ``False``, it assumes it is Hermitian.
-            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
@@ -205,12 +200,6 @@ def entanglement_fidelity(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if not isinstance(check_hermitian, bool):
-        raise_error(
-            TypeError,
-            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
-        )
-
     backend = _check_backend(backend)
 
     if state is None:
@@ -223,9 +212,7 @@ def entanglement_fidelity(
 
     state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
 
-    entang_fidelity = fidelity(
-        state_final, state, check_hermitian=check_hermitian, backend=backend
-    )
+    entang_fidelity = fidelity(state_final, state, backend=backend)
 
     return entang_fidelity
 

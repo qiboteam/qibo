@@ -5,17 +5,22 @@ from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
 from qibo.models.encodings import _generate_rbs_angles, unary_encoder
 from qibo.quantum_info.metrics import (
+    a_fidelity,
     average_gate_fidelity,
     bures_angle,
     bures_distance,
+    chen_fidelity,
     diamond_norm,
     expressibility,
     fidelity,
     frame_potential,
     gate_error,
+    geometric_mean_fidelity,
     hilbert_schmidt_distance,
     impurity,
     infidelity,
+    max_fidelity,
+    n_fidelity,
     process_fidelity,
     process_infidelity,
     purity,
@@ -57,41 +62,30 @@ def test_purity_and_impurity(backend):
     )
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
-def test_trace_distance(backend, check_hermitian):
+def test_trace_distance(backend):
     with pytest.raises(TypeError):
         state = random_density_matrix(2, pure=True, backend=backend)
         target = random_density_matrix(4, pure=True, backend=backend)
-        test = trace_distance(
-            state, target, check_hermitian=check_hermitian, backend=backend
-        )
+        test = trace_distance(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = trace_distance(
-            state, target, check_hermitian=check_hermitian, backend=backend
-        )
+        test = trace_distance(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.array([])
         target = np.array([])
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=state.dtype)
-        test = trace_distance(
-            state, target, check_hermitian=check_hermitian, backend=backend
-        )
-    with pytest.raises(TypeError):
-        state = random_density_matrix(2, pure=True, backend=backend)
-        target = random_density_matrix(2, pure=True, backend=backend)
-        test = trace_distance(state, target, check_hermitian="True", backend=backend)
+        test = trace_distance(state, target, backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        trace_distance(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
@@ -99,7 +93,7 @@ def test_trace_distance(backend, check_hermitian):
     state = backend.np.outer(backend.np.conj(state), state)
     target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        trace_distance(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
@@ -109,7 +103,7 @@ def test_trace_distance(backend, check_hermitian):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        trace_distance(state, target, backend=backend),
         1.0,
         atol=PRECISION_TOL,
     )
@@ -159,27 +153,22 @@ def test_hilbert_schmidt_distance(backend):
     )
 
 
-@pytest.mark.parametrize("check_hermitian", [True, False])
-def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
+def test_fidelity_and_infidelity_and_bures(backend):
     with pytest.raises(TypeError):
         state = random_density_matrix(2, pure=True, backend=backend)
         target = random_density_matrix(4, pure=True, backend=backend)
-        test = fidelity(state, target, check_hermitian=check_hermitian, backend=backend)
+        test = fidelity(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        test = fidelity(state, target, check_hermitian, backend=backend)
-    with pytest.raises(TypeError):
-        state = random_density_matrix(2, pure=True, backend=backend)
-        target = random_density_matrix(2, pure=True, backend=backend)
-        test = fidelity(state, target, check_hermitian="True", backend=backend)
+        test = fidelity(state, target, backend=backend)
 
     state = backend.identity_density_matrix(4)
     target = backend.identity_density_matrix(4)
     backend.assert_allclose(
-        fidelity(state, target, check_hermitian, backend=backend),
+        fidelity(state, target, backend=backend),
         1.0,
         atol=PRECISION_TOL,
     )
@@ -189,22 +178,22 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        fidelity(state, target, check_hermitian, backend=backend),
+        fidelity(state, target, backend=backend),
         1.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, check_hermitian, backend=backend),
+        infidelity(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, check_hermitian, backend=backend),
+        bures_angle(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, check_hermitian, backend=backend),
+        bures_distance(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
@@ -212,22 +201,22 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
     state = backend.np.outer(backend.np.conj(state), state)
     target = backend.np.outer(backend.np.conj(target), target)
     backend.assert_allclose(
-        fidelity(state, target, check_hermitian, backend=backend),
+        fidelity(state, target, backend=backend),
         1.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, check_hermitian, backend=backend),
+        infidelity(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, check_hermitian, backend=backend),
+        bures_angle(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, check_hermitian, backend=backend),
+        bures_distance(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
@@ -237,25 +226,50 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        fidelity(state, target, check_hermitian, backend=backend),
+        fidelity(state, target, backend=backend),
         0.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, check_hermitian, backend=backend),
+        infidelity(state, target, backend=backend),
         1.0,
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, check_hermitian, backend=backend),
+        bures_angle(state, target, backend=backend),
         np.arccos(0.0),
         atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, check_hermitian, backend=backend),
+        bures_distance(state, target, backend=backend),
         np.sqrt(2),
         atol=PRECISION_TOL,
     )
+
+
+@pytest.mark.parametrize("target_pure", [False, True])
+@pytest.mark.parametrize("state_pure", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 5])
+def test_alternative_fidelities(backend, nqubits, state_pure, target_pure):
+    dims = 2**nqubits
+    state = random_density_matrix(dims, pure=state_pure, seed=10, backend=backend)
+    target = random_density_matrix(dims, pure=target_pure, seed=8, backend=backend)
+
+    fid = fidelity(state, target, backend=backend)
+    a_fid = a_fidelity(state, target, backend=backend)
+    n_fid = n_fidelity(state, target, backend=backend)
+    gm_fid = geometric_mean_fidelity(state, target, backend=backend)
+    max_fid = max_fidelity(state, target, backend=backend)
+
+    assert backend.np.round(fid, 10) <= backend.np.round(n_fid, 10)
+    assert backend.np.round(fid, 10) >= backend.np.round(a_fid, 10)
+    assert backend.np.round(gm_fid, 10) >= backend.np.round(max_fid, 10)
+
+    if nqubits == 1:
+        chen_fid = chen_fidelity(state, target, backend=backend)
+
+        backend.assert_allclose(chen_fid, fid, atol=1e-6)
+        backend.assert_allclose(chen_fid, n_fid, atol=1e-6)
 
 
 @pytest.mark.parametrize("seed", [10])

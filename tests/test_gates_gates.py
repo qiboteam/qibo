@@ -1436,6 +1436,33 @@ def test_deutsch(backend, theta):
         assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
 
+@pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
+def test_fanout(backend, qubits):
+    with pytest.raises(ValueError):
+        gate = gates.FanOut(0)
+
+    nqubits = len(qubits)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.CNOT(qubits[0], qubit) for qubit in qubits[1:])
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    gate = gates.FanOut(*qubits)
+    circuit.add(gate)
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate.decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
+
+    assert gate.clifford
+
+
 @pytest.mark.parametrize(
     "qubits_in,qubits_out",
     [
@@ -1457,13 +1484,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
         nqubits=nqubits,
         initial_state=initial_state,
     )
-    # test decomposition
-    final_state_decompose = apply_gates(
-        backend,
-        gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).decompose(),
-        nqubits=nqubits,
-        initial_state=initial_state,
-    )
 
     matrix = np.eye(2**nqubits, dtype=complex)
     exp, sin, cos = np.exp(1j * phi), np.sin(theta), np.cos(theta)
@@ -1475,7 +1495,6 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi).qasm_label
@@ -1488,6 +1507,17 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
         assert not gates.GeneralizedRBS(
             qubits_in, qubits_out, theta, phi
         ).hamming_weight
+
+    # test decomposition
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1))
+    target = circuit.unitary(backend)
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.GeneralizedRBS(qubits_in, qubits_out, 0.1).decompose())
+    matrix = circuit.unitary(backend)
+
+    backend.assert_allclose(matrix, target)
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -1527,7 +1557,6 @@ def test_unitary(backend, nqubits):
 
 
 def test_unitary_initialization(backend):
-
     matrix = np.random.random((4, 4))
     gate = gates.Unitary(matrix, 0, 1)
     backend.assert_allclose(gate.parameters[0], matrix, atol=1e-6)
@@ -1972,3 +2001,39 @@ def test_clifford_condition_update(backend, gate):
 
 
 ###############################################################################
+
+
+@pytest.mark.parametrize(
+    "gate, qubits, params",
+    [
+        ["X", (1,), ()],
+        ["I", (2,), ()],
+        ["I", (2, 3), ()],
+        ["Align", (0,), (1,)],
+        ["FanOut", (0, 2, 3), ()],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1,)],
+        ["GeneralizedRBS", ([0, 1], [2, 4]), (0.1, 0.5)],
+    ],
+)
+def test_matrix(backend, gate, qubits, params):
+    gate = getattr(gates, gate)
+    gate = gate(*qubits, *params)
+
+    backend.assert_allclose(gate.matrix(backend), backend.matrix(gate))
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        gates.RX(0, 0.123),
+        gates.RY(0, 0.123),
+        gates.RZ(0, 0.123),
+    ],
+)
+def test_gradient_rn(backend, gate):
+    """Test gradient for Rn gates"""
+    generator = gate.generator(backend)
+    target_gradient = (
+        -1j * gate.generator_eigenvalue() * (generator @ gate.matrix(backend))
+    )
+    backend.assert_allclose(gate.gradient(backend).matrix(backend), target_gradient)

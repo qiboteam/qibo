@@ -101,13 +101,11 @@ class EntanglementEntropy(Callback):
         partition: Optional[List[int]] = None,
         compute_spectrum: bool = False,
         base: float = 2,
-        check_hermitian: bool = False,
     ):
         super().__init__()
         self.partition = partition
         self.compute_spectrum = compute_spectrum
         self.base = base
-        self.check_hermitian = check_hermitian
         self.spectrum = list()
 
     @Callback.nqubits.setter
@@ -132,7 +130,6 @@ class EntanglementEntropy(Callback):
             state,
             bipartition=self.partition,
             base=self.base,
-            check_hermitian=self.check_hermitian,
             return_spectrum=True,
             backend=backend,
         )

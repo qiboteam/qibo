@@ -4,7 +4,7 @@ from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -268,7 +268,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     .. math::
         (1 - H^{2}(p, q))^{2} \\, ,
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`.
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
@@ -302,9 +302,9 @@ def hellinger_shot_error(
         \\frac{1 - H^{2}(p, q)}{\\sqrt{nshots}} \\, \\sum_{k} \\,
             \\left(\\sqrt{p_{k} \\, (1 - q_{k})} + \\sqrt{q_{k} \\, (1 - p_{k})}\\right)
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`,
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`,
     and :math:`1 - H^{2}(p, q)` is the square root of the
-    :func:`qibo.quantum_info.utils.hellinger_fidelity`.
+    :func:`qibo.quantum_info.hellinger_fidelity`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
@@ -564,3 +564,145 @@ def _hadamard_transform_1d(array, backend=None):
         array_copied /= 2.0
 
     return array_copied
+
+
+def _cycles_from_perm(sigma: List[int]):
+    """Extract the cycles from a permutation as follows:
+    - Treat the permutation as a directed graph of arrows i->sigma(i).
+    - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
+    - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
+
+    Args:
+        sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of disjoint cycles.
+    """
+    n, seen, cycles = len(sigma), [False] * len(sigma), []
+    for i in range(n):
+        # Depth‑first walk from every unvisited vertex
+        if seen[i]:
+            continue
+        cur, cyc = i, []
+        # Disjoint cycles
+        while not seen[cur]:
+            seen[cur] = True
+            cyc.append(cur)
+            cur = sigma[cur]
+        if len(cyc) > 1:
+            cycles.append(cyc)
+    return cycles
+
+
+def _star_matchings(cyc: list[int]):
+    """
+    Given a cycle :math:`(a_{1}, \\, a_{2}, \\, \\cdots, \\, a_{k})` with :math:`k \\geq 2`,
+    the star factorization expresses the cycle as the ordered product of :math:`(k-1)`
+    disjoint transpositions that all share the first vertex:
+
+    .. math::
+        (a_{1}, \\, a_{2}), \\, (a_{1}, \\, a_{3}), \\, \\cdots, \\, (a_{1}, \\, a_{k}) \\, .
+
+    Applied right‑to‑left, this product reproduces the original cycle.
+
+    Args:
+        cyc (list[list[tuple[int, int]]]): :math:`t` list of disjoint cycles.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of pairwise transpositions.
+    """
+    hub = cyc[0]
+    return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
+
+
+def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
+    """
+    Add a matching to the current layer if
+        - it shares no vertex with swaps already in the layer, and
+        - new layer size #swaps stays a power of two <= m.
+    Otherwise flush the layer and start a new one.
+    It works since disjointness keeps swaps commutative, and the power‑of‑two size rule
+    aligns exactly with layer constraints.
+
+    Args:
+        matchings (list[list[tuple[int, int]]]): :math:`t` list of pairwise transpositions.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
+    """
+    layers: list[list[tuple[int, int]]] = []
+    cur: list[tuple[int, int]] = []
+    used = set()
+
+    def _flush():
+        nonlocal cur, used
+        if cur:
+            layers.append(cur)
+        cur, used = [], set()
+
+    def _verts(layer: list[tuple[int, int]]):
+        for a, b in layer:
+            yield a
+            yield b
+
+    for M in matchings:
+        x = len(cur) + len(M)
+        # is power of 2 and x<=m
+        legal = (x > 0 and (x & (x - 1)) == 0) and x <= m
+        # shares no vertex with swaps already in the layer
+        if cur and (any(v in used for v in _verts(M)) or not legal):  # pragma: no cover
+            _flush()
+        cur.extend(M)
+        used.update(_verts(M))
+        if len(cur) == m:
+            _flush()
+    _flush()
+    return layers
+
+
+def decompose_permutation(
+    sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None
+):
+    """
+     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}` such that:
+        - each layer has at most :math:`m` disjoint transpositions
+        - each layer moves a power‑of‑two number of indices.
+
+    We do this as follows:
+        1) Cycle extraction – split sigma into disjoint cycles.
+        2) Star factorisation – a k‑cycle becomes (k-1) hub–spoke swaps.
+        3) Greedy packing – merge swaps into layers while keeping rules.
+
+    Args:
+        sigma (list[int] or tuple[int]): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
+
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
+
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(
+            TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
+        )
+
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(len(sigma)))]) != 0:
+        raise_error(
+            ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
+        )
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
+
+    matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
+
+    return _greedy_pack(matchings, m)
