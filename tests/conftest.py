@@ -24,8 +24,8 @@ def pytest_addoption(parser):
 BACKENDS = [
     "numpy",
     "qibojit-numba",
-    # "qibojit-cupy",
-    # "qibojit-cuquantum",
+    "qibojit-cupy",
+    "qibojit-cuquantum",
     # "qiboml-tensorflow",
     # "qiboml-pytorch",
 ]

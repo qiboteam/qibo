@@ -343,7 +343,7 @@ def _exponent(
     Returns:
         (np.array): The calculated exponents.
     """
-    # BUG: this cannot be performed in the packed representation for measurements (thus packed rows)
+    # this cannot be performed in the packed representation for measurements (thus packed rows)
     # because bitwise arithmetic difference and sum are needed, which cannot be done directly
     # in the packed representation.
     return 2 * (x1 * x2 * (z2 - z1) + z1 * z2 * (x1 - x2)) - x1 * z2 + x2 * z1
@@ -361,6 +361,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
+    # calculate the exponent in the unpacked representation
     xi, zi = symplectic_matrix[i, :nqubits], symplectic_matrix[i, nqubits:-1]
     xh, zh = symplectic_matrix[h, :nqubits], symplectic_matrix[h, nqubits:-1]
     exponents = _exponent(xi, zi, xh, zh)
@@ -372,6 +373,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     r = np.ones(h.shape[0], dtype=np.uint8)
     r[ind] = 0
 
+    # the rest can be done in the packed representation
     symplectic_matrix = _pack_for_measurements(symplectic_matrix, nqubits)
     packed_n = _packed_size(nqubits)
     xi, zi = symplectic_matrix[i, :packed_n], symplectic_matrix[i, packed_n:-1]
@@ -394,20 +396,17 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
 
 def _determined_outcome(state, q, nqubits):
     """Extracts the outcome for a measurement in case it is determined."""
-    # breakpoint()
     state[-1, :] = 0
     idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
     if len(idx) == 0:
         return state, state[-1, -1]
-    # state = _pack_for_measurements(state, nqubits)
     state = _rowsum(
         state,
         _dim_xz(nqubits) * np.ones(idx.shape, dtype=np.uint),
         idx,
-        nqubits,  # _packed_size(nqubits),
+        nqubits,
         True,
     )
-    # state = _unpack_for_measurements(state, nqubits)
     return state, state[-1, -1]
 
 
@@ -418,15 +417,13 @@ def _random_outcome(state, p, q, nqubits):
     h = state[:-1, q].nonzero()[0]
     state[p, q] = 1
     if h.shape[0] > 0:
-        # state = _pack_for_measurements(state, nqubits)
         state = _rowsum(
             state,
             h.astype(np.uint),
             np.uint(p) * np.ones(h.shape[0], dtype=np.uint),
-            nqubits,  # _packed_size(nqubits),
+            nqubits,
             False,
         )
-        # state = _unpack_for_measurements(state, nqubits)
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
     state[p, :] = 0

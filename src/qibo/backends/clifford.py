@@ -301,7 +301,6 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): Samples shots.
         """
-        # breakpoint()
         if isinstance(qubits, list):
             qubits = tuple(qubits)
 
