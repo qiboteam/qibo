@@ -1018,9 +1018,9 @@ def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
     test_superop = backend.cast(test_superop, dtype=backend.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = backend.swapaxes(
-        backend.reshape(test_superop, [2] * 4), *axes
-    ).reshape([4, 4])
+    test_choi = backend.swapaxes(backend.reshape(test_superop, [2] * 4), *axes).reshape(
+        [4, 4]
+    )
 
     choi_super_op = chi_to_choi(
         test_chi / aux, normalize, order, pauli_order, backend=backend
