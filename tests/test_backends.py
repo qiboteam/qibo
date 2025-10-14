@@ -1,4 +1,3 @@
-import platform
 import sys
 
 import numpy as np
