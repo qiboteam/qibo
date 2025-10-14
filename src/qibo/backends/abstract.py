@@ -224,7 +224,7 @@ class Backend:
     def angle(self, array, **kwargs) -> "ndarray":
         return self.engine.angle(array, **kwargs)
 
-    def any(self, array, **kwargs) -> Union["ndarray" | bool]:
+    def any(self, array, **kwargs) -> Union["ndarray", bool]:
         return self.engine.any(array, **kwargs)
 
     def arccos(self, array, **kwargs) -> "ndarray":
