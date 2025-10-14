@@ -125,13 +125,11 @@ def test_two_qubits_gates(backend, gate):
 @pytest.mark.parametrize(
     "seed",
     [
-        2024,
+        15,
+        25,
     ],
 )
 def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
-    # with nqubits=3 fails for seed 15, 19, 25, 45
-    # with nqubits=4 fails for seed 17, 21, 23, 29, 36, 39, 44
-    # see issue qibo#1598
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
     backend.set_seed(seed)
@@ -158,9 +156,8 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
 
     numpy_freq = numpy_result.frequencies(binary)
     clifford_freq = clifford_result.frequencies(binary)
+    assert set(numpy_freq.keys()) == set(clifford_freq.keys())
     clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-
-    assert len(numpy_freq) == len(clifford_freq)
 
     for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
         backend.assert_allclose(np_count / nshots, clif_count / nshots, atol=1e-1)
@@ -168,10 +165,6 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
 
 @pytest.mark.parametrize("seed", [2024])
 def test_collapsing_measurements(backend, seed):
-    if backend.platform == "numba":
-        pytest.skip(
-            "Can't fix the seed of numba backend, thus triggering bug qibo#1598."
-        )
     clifford_bkd = construct_clifford_backend(backend)
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
