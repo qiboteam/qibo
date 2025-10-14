@@ -629,8 +629,8 @@ class QuantumNetwork:
 
         self.system_input = self._check_system_input(self.system_input, self.partition)
 
-        self._einsum = self._backend.engine.einsum
-        self._tensordot = self._backend.engine.tensordot
+        self._einsum = self._backend.einsum
+        self._tensordot = self._backend.tensordot
         self._tensor = self._backend.cast(self._tensor, dtype=self._tensor.dtype)
 
         if self._pure:

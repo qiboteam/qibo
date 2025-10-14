@@ -27,7 +27,7 @@ def u3_decomposition(unitary, backend):
     unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / backend.sqrt(backend.det(unitary))
-    theta = 2 * backend.engine.arctan2(backend.abs(su2[1, 0]), backend.abs(su2[0, 0]))
+    theta = 2 * backend.arctan2(backend.abs(su2[1, 0]), backend.abs(su2[0, 0]))
     plus = backend.angle(su2[1, 1])
     minus = backend.angle(su2[1, 0])
     phi = plus + minus
@@ -65,7 +65,7 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     # compute full eigvals as <psi|ut_u|psi>, as eigvals_real is only real
     eigvals = backend.sum(backend.conj(psi_magic) * (ut_u @ psi_magic), 0)
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
-    psi_magic, _ = backend.engine.linalg.qr(psi_magic)
+    psi_magic, _ = backend.qr(psi_magic)
     # write psi in computational basis
     psi = magic_basis @ psi_magic
     return psi, eigvals
@@ -98,11 +98,7 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     e_, f_ = e_[:, 0], f_[0]
     # find exp(1j * delta) using (A5a)
     ef_ = backend.kron(e, f_)
-    phase = (
-        1j
-        * np.sqrt(2)
-        * backend.sum(backend.engine.multiply(backend.conj(ef_), psi_bar[2]))
-    )
+    phase = 1j * np.sqrt(2) * backend.sum(backend.conj(ef_) * psi_bar[2])
     v0 = backend.cast(np.asarray([1, 0]))
     v1 = backend.cast(np.asarray([0, 1]))
     # construct unitaries UA, UB using (A6a), (A6b)

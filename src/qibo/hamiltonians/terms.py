@@ -262,7 +262,7 @@ class SymbolicTerm(HamiltonianTerm):
             of this term.
         """
         matrices = list(self.qubit_to_matrix_map.values())
-        return complex(self.coefficient) * reduce(self.backend.engine.kron, matrices)
+        return complex(self.coefficient) * reduce(self.backend.kron, matrices)
 
     @cached_property
     def qubit_to_matrix_map(self) -> dict:
@@ -271,7 +271,7 @@ class SymbolicTerm(HamiltonianTerm):
         acting on it.
         """
         return {
-            q: reduce(self.backend.engine.matmul, self.matrix_map.get(q))
+            q: reduce(self.backend.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
         }
 
@@ -302,7 +302,7 @@ class SymbolicTerm(HamiltonianTerm):
         for q in set(self.target_qubits).intersection(set(term.target_qubits)):
             m1 = self.qubit_to_matrix_map.get(q)
             m2 = term.qubit_to_matrix_map.get(q)
-            if not self.backend.engine.all(m1 @ m2 == m2 @ m1):
+            if not self.backend.all(m1 @ m2 == m2 @ m1):
                 return False
         return True
 

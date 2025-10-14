@@ -457,7 +457,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
             result = reduce(
-                self.backend.engine.matmul,
+                self.backend.matmul,
                 (self._get_symbol_matrix(subterm) for subterm in factors),
             )
 
@@ -468,7 +468,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             matrix_power = (
                 np.linalg.matrix_power
                 if self.backend.name == "tensorflow"
-                else self.backend.engine.linalg.matrix_power
+                else self.backend.matrix_power
             )
             result = matrix_power(matrix, int(exponent))
 

@@ -270,13 +270,13 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
     bitstrings_sorted = backend.cast(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
-        dtype=backend.engine.int8,
+        dtype=backend.int8,
     )
 
     dim = len(data_sorted)
     sigma = np.arange(2**nqubits)
 
-    flag = backend.zeros(dim, dtype=backend.engine.int8)
+    flag = backend.zeros(dim, dtype=backend.int8)
     indexes = list(
         backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
     )
@@ -419,8 +419,8 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
         difference = b_1 - b_0
 
         ones, new_ones = (
-            list(backend.engine.argsort(b_0)[-hw_0:]),
-            list(backend.engine.argsort(b_1)[-hw_1:]),
+            list(backend.argsort(b_0)[-hw_0:]),
+            list(backend.argsort(b_1)[-hw_1:]),
         )
         ones, new_ones = {int(elem) for elem in ones}, {int(elem) for elem in new_ones}
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
@@ -1175,10 +1175,10 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=N
 
     if architecture == "diagonal":
         phases = [
-            backend.engine.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
+            backend.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(backend.engine.arctan2(data[-1], data[-2]))
+        phases.append(backend.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
         if nqubits is None:  # pragma: no cover
@@ -1749,7 +1749,7 @@ def _sort_data_sparse(data, nqubits, backend):
         np.array(list(string)).astype(int) for string in bitstrings_sorted
     ]
 
-    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.engine.int8)
+    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.int8)
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     return data_sorted, bitstrings_sorted
@@ -1987,7 +1987,7 @@ def _perm_column_ops(
         for k in range(n):
             bits.append((x >> k) & 1)
         A.append(bits)
-    A = backend.cast(A, dtype=backend.engine.int8)
+    A = backend.cast(A, dtype=backend.int8)
     ncols = A.shape[1]
     # initialize the list of gates
     qgates = []
@@ -2030,7 +2030,7 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
     backend = _check_backend(backend)
 
     log2m = int(backend.log2(2 * m))
-    atilde = backend.engine.array(
+    atilde = backend.cast(
         [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
     )
 
@@ -2096,7 +2096,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
     backend = _check_backend(backend)
     # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
-    prefix = int(backend.engine.ceil(backend.log2(2 * m)))
+    prefix = int(backend.ceil(backend.log2(2 * m)))
     x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
     qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
@@ -2142,7 +2142,7 @@ def permutation_synthesis(
             f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
-    nqubits = int(backend.engine.ceil(backend.log2(len(sigma))))
+    nqubits = int(backend.ceil(backend.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"

@@ -94,8 +94,8 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
     if sparse_type is not None:
         hH1, target_1 = hH1.toarray(), target_1.toarray()
         hH2, target_2 = hH2.toarray(), target_2.toarray()
-        hH3 = backend.engine.asarray(hH3)
-        hH4 = backend.engine.asarray(hH4)
+        hH3 = backend.cast(hH3, dtype=hH3.dtype)
+        hH4 = backend.cast(hH4, dtype=hH4.dtype)
 
     backend.assert_allclose(hH1, target_1)
     backend.assert_allclose(hH2, target_2)

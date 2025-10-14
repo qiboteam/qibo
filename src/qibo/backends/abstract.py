@@ -42,7 +42,7 @@ class Backend:
         return f"{self.name} ({self.platform})"
 
     @property
-    def qubits(self) -> Optional[list[Union[int, str]]]:  # pragma: no cover
+    def qubits(self) -> Optional[List[Union[int, str]]]:  # pragma: no cover
         """Return the qubit names of the backend.
 
         Returns:
@@ -218,8 +218,20 @@ class Backend:
     def abs(self, array, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.abs(array, **kwargs)
 
+    def all(self, array, **kwargs) -> "ndarray" | bool:
+        return self.engine.all(array, **kwargs)
+
     def angle(self, array, **kwargs) -> "ndarray":
         return self.engine.angle(array, **kwargs)
+
+    def any(self, array, **kwargs) -> "ndarray" | bool:
+        return self.engine.any(array, **kwargs)
+
+    def arccos(self, array, **kwargs) -> "ndarray":
+        return self.engine.arccos(array, **kwargs)
+
+    def arctan2(self, array_1, array_2, **kwargs) -> "ndarray":
+        return self.engine.arctan2(array_1, array_2, **kwargs)
 
     def argsort(self, array, axis=None, **kwargs) -> "ndarray":
         return self.engine.argsort(array, axis, **kwargs)
@@ -232,6 +244,9 @@ class Backend:
 
         return block_diag(*arrays)
 
+    def ceil(self, array, **kwargs) -> "ndarray":
+        return self.engine.ceil(array, **kwargs)
+
     def concatenate(self, tup, **kwargs) -> "ndarray":
         return self.engine.concatenate(tup, **kwargs)
 
@@ -240,6 +255,9 @@ class Backend:
 
     def copy(self, array, **kwargs) -> "ndarray":
         return self.engine.copy(array, **kwargs)
+
+    def cos(self, array, **kwargs) -> "ndarray":
+        return self.engine.cos(array, **kwargs)
 
     def csr_matrix(self, array):
         from scipy.sparse import csr_matrix  # pylint: disable=import-outside-toplevel
@@ -274,6 +292,9 @@ class Backend:
     def eigvals(self, array, **kwargs):
         return self.engine.linalg.eigvals(array, **kwargs)
 
+    def einsum(self, subscripts: str, *operands, **kwargs) -> "ndarray":
+        return self.engine.einsum(subscripts, *operands, **kwargs)
+
     def empty(self, shape, **kwargs) -> "ndarray":
         return self.engine.empty(shape, **kwargs)
 
@@ -289,6 +310,12 @@ class Backend:
             from scipy.linalg import expm  # pylint: disable=import-outside-toplevel
 
         return expm(array)
+
+    def flatnonzero(self, array) -> "ndarray":
+        return self.engine.flatnonzero(array)
+
+    def floor(self, array, **kwargs) -> "ndarray":
+        return self.engine.floor(array, **kwargs)
 
     def identity(self, dims: int, dtype=None, sparse: bool = False) -> "ndarray":
         if dtype is None:
@@ -361,6 +388,12 @@ class Backend:
     def outer(self, array_1, array_2) -> "ndarray":  # pragma: no cover
         return self.engine.outer(array_1, array_2)
 
+    def prod(self, array, **kwargs) -> "ndarray":
+        return self.engine.prod(array, **kwargs)
+
+    def qr(self, array, **kwargs) -> Tuple["ndarray", ...]:
+        return self.engine.linalg.qr(array, **kwargs)
+
     def real(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.real(array)
 
@@ -376,6 +409,9 @@ class Backend:
     def random_sample(self, size: int):
         return self.engine.random.random(size)
 
+    def ravel(self, array, **kwargs) -> "ndarray":
+        return self.engine.ravel(array, **kwargs)
+
     def reshape(
         self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
     ) -> "ndarray":
@@ -387,14 +423,28 @@ class Backend:
     def shuffle(self, array, **kwargs) -> "ndarray":
         self.engine.random.shuffle(array, **kwargs)
 
+    def sin(self, array, **kwargs) -> "ndarray":
+        return self.engine.sin(array, **kwargs)
+
+    def sort(self, array, **kwargs) -> "ndarray":
+        return self.engine.sort(array, **kwargs)
+
     def sqrt(self, array):
         return self.engine.sqrt(array)
+
+    def squeeze(
+        self, array, axis: Optional[Union[int, Tuple[int, ...]]] = None
+    ) -> "ndarray":
+        return self.engine.squeeze(array, axis)
 
     def std(self, array, **kwargs) -> Union[float, "ndarray"]:
         return self.engine.std(array, **kwargs)
 
     def sum(self, array, axis=None, **kwargs) -> Union[int, float, complex, "ndarray"]:
         return self.engine.sum(array, axis=axis, **kwargs)
+
+    def swapaxes(self, array, axis_1: int, axis_2: int) -> "ndarray":
+        return self.engine.swapaxes(array, axis_1, axis_2)
 
     def tensordot(self, array_1, array_2, axes: Union[int, Tuple[int, ...]] = 2):
         return self.engine.tensordot(array_1, array_2, axes=axes)

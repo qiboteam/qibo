@@ -304,7 +304,7 @@ def test_pqc_integral(backend):
 def test_decompose_permutation_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        decompose_permutation(backend.engine.array(sigma), m=2, backend=backend)
+        decompose_permutation(backend.cast(sigma, dtype=int), m=2, backend=backend)
     with pytest.raises(ValueError):
         decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):

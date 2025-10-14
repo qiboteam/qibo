@@ -136,7 +136,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
                 circuit, initial_state=backend.copy(initial_state), nshots=1
             )
             final_states.append(final_state.state())
-        final_states = backend.engine.mean(backend.cast(final_states), 0)
+        final_states = backend.mean(backend.cast(final_states), 0)
     else:
         final_states = backend.execute_circuit(
             circuit, initial_state=backend.copy(initial_state), nshots=20

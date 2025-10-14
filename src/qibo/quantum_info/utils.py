@@ -441,7 +441,7 @@ def haar_integral(
             rho = haar_state @ backend.conj(haar_state).T
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.engine.kron, [rho] * power_t
+                backend.kron, [rho] * power_t
             )
 
         integral = rand_unit_density / samples

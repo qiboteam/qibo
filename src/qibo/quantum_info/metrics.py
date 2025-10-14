@@ -567,9 +567,7 @@ def bures_angle(state, target, backend=None):
     """
     backend = _check_backend(backend)
 
-    angle = backend.engine.arccos(
-        backend.sqrt(fidelity(state, target, backend=backend))
-    )
+    angle = backend.arccos(backend.sqrt(fidelity(state, target, backend=backend)))
 
     return angle
 

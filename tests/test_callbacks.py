@@ -106,9 +106,7 @@ def test_entropy_in_circuit(backend, density_matrix, base):
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [0.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
-    entropy_spectrum = backend.engine.ravel(
-        backend.engine.concatenate(entropy.spectrum)
-    ).tolist()
+    entropy_spectrum = backend.ravel(backend.concatenate(entropy.spectrum)).tolist()
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
 

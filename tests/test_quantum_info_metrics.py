@@ -418,7 +418,7 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
 
         target = [1]
         for param in params[:-1]:
-            elem = float(target[-1] * backend.engine.sin(param) ** 2)
+            elem = float(target[-1] * backend.sin(param) ** 2)
             target.append(elem)
         target = 4 * backend.diag(backend.cast(target, dtype=np.float64))
 

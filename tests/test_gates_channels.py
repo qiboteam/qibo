@@ -318,7 +318,7 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
         matrix = backend.reshape(matrix, 4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950
         target_state = backend.reshape(backend.copy(initial_state), 6 * (2,))
-        target_state = backend.engine.einsum(
+        target_state = backend.einsum(
             "abcd,aJKcjk->bJKdjk", matrix, backend.to_numpy(target_state)
         )
         target_state = backend.reshape(target_state, initial_state.shape)

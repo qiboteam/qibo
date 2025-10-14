@@ -106,7 +106,7 @@ def test_ud_eigenvalues(backend, seed):
     ud_diag = backend.diag(ud_bell)
 
     backend.assert_allclose(backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6)
-    backend.assert_allclose(backend.engine.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
+    backend.assert_allclose(backend.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])

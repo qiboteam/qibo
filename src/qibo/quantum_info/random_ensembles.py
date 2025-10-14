@@ -232,17 +232,14 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
     if measure == "haar":
         unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
         # Tensorflow experi
-        Q, R = backend.engine.linalg.qr(unitary)
+        Q, R = backend.qr(unitary)
         D = backend.diag(R)
         D = D / backend.abs(D)
         R = backend.diag(D)
         unitary = Q @ R
     elif measure is None:
-        from scipy.linalg import expm
-
-        H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
-        unitary = expm(-1.0j * H / 2)
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+        H = random_hermitian(dims, seed=seed, backend=backend)
+        unitary = backend.matrix_exp(H, -0.5j)
 
     return unitary
 

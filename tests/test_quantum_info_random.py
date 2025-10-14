@@ -56,7 +56,7 @@ def test_uniform_sampling_U3(backend, seed):
         )
     expectation_values = backend.cast(expectation_values)
 
-    expectation_values = backend.engine.mean(expectation_values, axis=0)
+    expectation_values = backend.mean(expectation_values, axis=0)
 
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
@@ -172,11 +172,7 @@ def test_random_unitary(backend, measure):
     dims = 4
     matrix = random_unitary(dims, measure=measure, backend=backend)
     matrix_dagger = backend.conj(matrix).T
-    matrix_inv = (
-        backend.engine.inverse(matrix)
-        if backend.platform == "pytorch"
-        else np.linalg.inv(matrix)
-    )
+    matrix_inv = backend.inv(matrix)
     norm = float(backend.matrix_norm(matrix_inv - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
@@ -490,8 +486,8 @@ def test_random_pauli(
             )
     else:
         matrix = backend.transpose(matrix, (1, 0, 2, 3))
-        matrix = [reduce(backend.engine.kron, row) for row in matrix]
-        matrix = reduce(backend.engine.matmul, matrix)
+        matrix = [reduce(backend.kron, row) for row in matrix]
+        matrix = reduce(backend.matmul, matrix)
 
         if subset is None:
             backend.assert_allclose(

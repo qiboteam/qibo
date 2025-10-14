@@ -185,7 +185,7 @@ def partial_transpose(
     if len(shape) == 1:
         operator = backend.outer(operator, backend.conj(operator.T))
     elif len(shape) == 3 and shape[1] == 1:
-        operator = backend.engine.einsum(
+        operator = backend.einsum(
             "aij,akl->aijkl", operator, backend.conj(operator)
         ).reshape(nstates, dims, dims)
 
@@ -537,9 +537,9 @@ def _vector_projection(vector, directions, backend):
         result *= directions
         return result / (backend.conj(directions) @ directions)
 
-    dot_products = backend.engine.einsum("j,kj", backend.conj(vector), directions)
+    dot_products = backend.einsum("j,kj", backend.conj(vector), directions)
     inner_prods = backend.diag(
-        backend.engine.einsum("jk,lk", backend.conj(directions), directions)
+        backend.einsum("jk,lk", backend.conj(directions), directions)
     )
 
     return backend.reshape(dot_products / inner_prods, (-1, 1)) * directions

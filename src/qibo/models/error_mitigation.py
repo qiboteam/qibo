@@ -281,7 +281,7 @@ def sample_training_circuit_cdr(
         gate_matrix = gate.matrix(backend)
         rep_gate_matrix = [rep_gate.matrix(backend) for rep_gate in rep_gates]
         rep_gate_matrix = backend.cast(rep_gate_matrix, dtype=rep_gate_matrix[0].dtype)
-        matrix_norm = backend.engine.linalg.norm(
+        matrix_norm = backend.matrix_norm(
             gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
         )
 
@@ -341,7 +341,7 @@ def _curve_fit(
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
-        loss = lambda pred, target: backend.engine.mean((pred - target) ** 2)
+        loss = lambda pred, target: backend.mean((pred - target) ** 2)
         optimizer = backend.engine.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
         )
@@ -568,9 +568,7 @@ def vnCDR(
     SIMULATION_BACKEND = NumpyBackend()
 
     if model is None:
-        model = lambda x, *params: backend.sum(
-            x * backend.engine.vstack(params), axis=0
-        )
+        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -1191,8 +1189,8 @@ def ICS(
         lambda_list.append(1 - noisy_expectation / expectation)
 
     lambda_list = backend.cast(lambda_list, dtype=lambda_list[0].dtype)
-    dep_param = backend.engine.mean(lambda_list)
-    dep_param_std = backend.engine.std(lambda_list)
+    dep_param = backend.mean(lambda_list)
+    dep_param_std = backend.std(lambda_list)
 
     if nshots is None:
         circuit_result = _execute_circuit(

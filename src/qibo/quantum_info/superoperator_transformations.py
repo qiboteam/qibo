@@ -71,9 +71,9 @@ def vectorization(state, order: str = "row", backend=None):
     if len(state.shape) == 1:
         state = backend.outer(state, backend.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
-        state = backend.engine.einsum(
-            "aij,akl->aijkl", state, backend.conj(state)
-        ).reshape(state.shape[0], dims, dims)
+        state = backend.einsum("aij,akl->aijkl", state, backend.conj(state)).reshape(
+            state.shape[0], dims, dims
+        )
 
     if order == "row":
         state = backend.reshape(state, (-1, dims**2))
@@ -93,7 +93,7 @@ def vectorization(state, order: str = "row", backend=None):
         state = backend.transpose(state, new_axis)
         state = backend.reshape(state, (-1, 2 ** (2 * nqubits)))
 
-    state = backend.engine.squeeze(
+    state = backend.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
     )
 
@@ -1980,7 +1980,7 @@ def stinespring_to_kraus(
         )
 
     stinespring = backend.reshape(stinespring, (dim, dim_env, dim, dim_env))
-    stinespring = backend.engine.swapaxes(stinespring, 1, 2)
+    stinespring = backend.swapaxes(stinespring, 1, 2)
 
     kraus_ops = []
     for alpha in range(dim_env):
@@ -2227,7 +2227,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     super_op = backend.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    super_op = backend.engine.swapaxes(super_op, *axes)
+    super_op = backend.swapaxes(super_op, *axes)
 
     super_op = backend.reshape(super_op, [dim**2, dim**2])
 

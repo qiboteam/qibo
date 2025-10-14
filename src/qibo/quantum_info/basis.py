@@ -93,7 +93,7 @@ def pauli_basis(
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     dim = 2**nqubits
     basis_single = backend.cast([pauli_labels[label] for label in pauli_order])
-    einsum = np.einsum if backend.platform == "tensorflow" else backend.engine.einsum
+    einsum = np.einsum if backend.platform == "tensorflow" else backend.einsum
 
     if nqubits > 1:
         input_indices = [range(3 * i, 3 * (i + 1)) for i in range(nqubits)]
@@ -108,7 +108,7 @@ def pauli_basis(
         if backend.platform == "pytorch":
             nonzero = lambda x: backend.nonzero(x, as_tuple=True)
         else:
-            nonzero = backend.engine.nonzero
+            nonzero = backend.nonzero
         basis = vectorization(basis_full, order=order, backend=backend)
         indices = nonzero(backend.abs(basis))  # abs needed because of ``tensorflow``
         basis = basis[indices].reshape(-1, dim)
@@ -273,7 +273,7 @@ def pauli_to_comp_basis(
     if sparse:
         elements, indexes = [], []
         for row in unitary:
-            index_list = backend.engine.flatnonzero(row)
+            index_list = backend.flatnonzero(row)
             indexes.append(index_list)
             elements.append(row[index_list])
 

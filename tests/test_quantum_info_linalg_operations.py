@@ -305,8 +305,8 @@ def test_singular_value_decomposition(backend):
 
     _, S, _ = singular_value_decomposition(state, backend=backend)
 
-    S_sorted = backend.engine.sort(S)
-    coeffs_sorted = backend.engine.sort(coeffs)
+    S_sorted = backend.sort(S)
+    coeffs_sorted = backend.sort(coeffs)
     if backend.platform == "pytorch":
         S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
 
@@ -393,7 +393,7 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
     # testing several projections
     target = backend.cast(
         [
-            backend.engine.dot(backend.conj(state), direction) * direction
+            backend.dot(backend.conj(state), direction) * direction
             for direction in directions
         ]
     )

@@ -83,11 +83,11 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = backend.engine.random.rand(nqubits)
+    phases = backend.random_sample(nqubits)
 
     gate = getattr(gates, rotation)
     target = reduce(
-        backend.engine.kron,
+        backend.kron,
         [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
     )[:, 0]
 
@@ -121,7 +121,7 @@ def test_binary_encoder(backend, nqubits, parametrization, complex_data):
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
         target = backend.real(target)
-        target /= backend.engine.linalg.norm(target)
+        target /= backend.vector_norm(target)
 
     circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
     state = backend.execute_circuit(circuit).state()
@@ -313,7 +313,9 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
 def test_permutation_synthesis_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        permutation_synthesis(backend.engine.array(sigma), m=2, backend=backend)
+        permutation_synthesis(
+            backend.cast(sigma, dtype=backend.int64), m=2, backend=backend
+        )
     with pytest.raises(ValueError):
         permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
