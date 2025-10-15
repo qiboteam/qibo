@@ -105,10 +105,7 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
     else:
         backend.set_threads(1)
 
-    if nqubits == 1:
-        nmeas = 1
-    else:
-        nmeas = nqubits - 1
+    nmeas = nqubits
 
     nshots = 30000
     # Define the circuit
@@ -120,7 +117,7 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
     # Noise-free expected value
     exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
     if nshots is None:
         noisy = obs.expectation(state.state())
     else:

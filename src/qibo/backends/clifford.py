@@ -115,7 +115,7 @@ class CliffordBackend(NumpyBackend):
         identity = self.np.eye(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=bool)
+        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
