@@ -549,7 +549,7 @@ class QAOA:
             qaoa.set_parameters(params)
             state = qaoa(state)
             if loss_func is None:
-                return hamiltonian.expectation(state)
+                return hamiltonian.expectation_from_state(state)
             else:
                 func_hyperparams = {
                     key: loss_func_param[key]
@@ -653,7 +653,7 @@ class FALQON(QAOA):
         def _loss(params, falqon, hamiltonian):
             falqon.set_parameters(params)
             state = falqon(initial_state)
-            return hamiltonian.expectation(state)
+            return hamiltonian.expectation_from_state(state)
 
         energy = [np.inf]
         callback_result = []
