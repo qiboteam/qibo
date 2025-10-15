@@ -466,7 +466,7 @@ def CDR(
                 nshots,
                 readout,
                 qubit_map,
-                seed=local_state,
+                # seed=local_state,
                 backend=backend,
             )
         train_val["noise-free"].append(val_noiseless)
@@ -475,7 +475,7 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = local_state.random(nparams)
+    params = backend.np.random.rand(nparams)
     params = backend.cast(params, dtype=params.dtype)
 
     train_val_noisy = train_val["noisy"]
@@ -615,7 +615,7 @@ def vnCDR(
                     nshots,
                     readout,
                     qubit_map,
-                    seed=local_state,
+                    # seed=local_state,
                     backend=backend,
                 )
             train_val["noisy"].append(float(val.real))
@@ -623,7 +623,7 @@ def vnCDR(
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
     noisy_array = backend.np.reshape(noisy_array, (-1, len(noise_levels)))
-    params = local_state.random(len(noise_levels))
+    params = backend.np.random.rand(len(noise_levels))
     params = backend.cast(params, dtype=params.dtype)
     train_val_noiseless = train_val["noise-free"]
     train_val_noiseless = backend.cast(
@@ -989,7 +989,7 @@ def sample_clifford_training_circuit(
             clifford_matrix = random_clifford(
                 len(gate.qubits),
                 return_circuit=True,
-                seed=local_state,
+                # seed=local_state,
                 backend=backend,
             )
             clifford_matrix = clifford_matrix.unitary(backend)
@@ -1033,7 +1033,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     backend_temp = _check_backend(backend)
     backend = (
-        CliffordBackend(engine=_get_engine_name(backend_temp))
+        CLIFFORD_BACKEND()  # CliffordBackend(engine=_get_engine_name(backend_temp))
         if backend is None
         else backend_temp
     )  # pragma: no cover
@@ -1195,7 +1195,7 @@ def ICS(
                 nshots,
                 readout,
                 qubit_map,
-                seed=local_state,
+                # seed=local_state,
                 backend=backend,
             )
 

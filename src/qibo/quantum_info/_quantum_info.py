@@ -281,6 +281,91 @@ def _random_density_matrix_bures(dims: int, rank: int, mean: float, stddev: floa
     return state / ENGINE.trace(state)
 
 
+def _fill_tril(mat, symmetric):
+    """Add symmetric random ints to off-diagonals"""
+    dim = mat.shape[0]
+    # Optimized for low dimensions
+    if dim == 1:
+        return
+
+    if dim <= 4:
+        mat[1, 0] = ENGINE.random.randint(2, dtype=ENGINE.uint8)
+        if symmetric:
+            mat[0, 1] = mat[1, 0]
+        if dim > 2:
+            mat[2, 0] = ENGINE.random.randint(2, dtype=np.uint8)
+            mat[2, 1] = ENGINE.random.randint(2, dtype=np.uint8)
+            if symmetric:
+                mat[0, 2] = mat[2, 0]
+                mat[1, 2] = mat[2, 1]
+        if dim > 3:
+            mat[3, 0] = ENGINE.random.randint(2, dtype=np.uint8)
+            mat[3, 1] = ENGINE.random.randint(2, dtype=np.uint8)
+            mat[3, 2] = ENGINE.random.randint(2, dtype=np.uint8)
+            if symmetric:
+                mat[0, 3] = mat[3, 0]
+                mat[1, 3] = mat[3, 1]
+                mat[2, 3] = mat[3, 2]
+        return
+
+    # Use numpy indices for larger dimensions
+    rows, cols = ENGINE.tril_indices(dim, -1)
+    vals = ENGINE.random.randint(2, size=rows.size, dtype=ENGINE.uint8)
+    mat[(rows, cols)] = vals
+    if symmetric:
+        mat[(cols, rows)] = vals
+
+
+def _inverse_tril(mat, block_inverse_threshold):
+    """Invert a lower-triangular matrix with unit diagonal."""
+    # Optimized inversion function for low dimensions
+    dim = mat.shape[0]
+
+    if dim <= 2:
+        return mat
+
+    if dim <= 5:
+        inv = ENGINE.copy(mat)
+        inv[2, 0] = mat[2, 0] ^ (mat[1, 0] & mat[2, 1])
+        if dim > 3:
+            inv[3, 1] = mat[3, 1] ^ (mat[2, 1] & mat[3, 2])
+            inv[3, 0] = mat[3, 0] ^ (mat[3, 2] & mat[2, 0]) ^ (mat[1, 0] & inv[3, 1])
+        if dim > 4:
+            inv[4, 2] = (mat[4, 2] ^ (mat[3, 2] & mat[4, 3])) & 1
+            inv[4, 1] = mat[4, 1] ^ (mat[4, 3] & mat[3, 1]) ^ (mat[2, 1] & inv[4, 2])
+            inv[4, 0] = (
+                mat[4, 0]
+                ^ (mat[1, 0] & inv[4, 1])
+                ^ (mat[2, 0] & inv[4, 2])
+                ^ (mat[3, 0] & mat[4, 3])
+            )
+        return inv % 2
+
+    # For higher dimensions we use Numpy's inverse function
+    # however this function tends to fail and result in a non-symplectic
+    # final matrix if n is too large.
+    if dim <= block_inverse_threshold:
+        return ENGINE.linalg.inv(mat) % 2
+
+    # For very large matrices  we divide the matrix into 4 blocks of
+    # roughly equal size and use the analytic formula for the inverse
+    # of a block lower-triangular matrix:
+    # inv([[A, 0],[C, D]]) = [[inv(A), 0], [inv(D).C.inv(A), inv(D)]]
+    # call the inverse function recursively to compute inv(A) and invD
+
+    dim1 = dim // 2
+    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold)
+    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold)
+    mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
+    inv = ENGINE.vstack(
+        [
+            ENGINE.hstack([mat_a, ENGINE.zeros((dim1, dim - dim1), dtype=int)]),
+            ENGINE.hstack([mat_c, mat_d]),
+        ]
+    )
+    return inv % 2
+
+
 def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, ndarray]:
     exponents = ENGINE.arange(nqubits, 0, -1, dtype=ENGINE.int64)
     powers = 4**exponents

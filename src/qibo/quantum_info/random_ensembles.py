@@ -540,12 +540,12 @@ def random_clifford(
     permutations = backend.cast(permutations, dtype=permutations.dtype)
 
     gamma = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
+        backend.np.random.randint(2, size=nqubits, dtype=backend.np.uint8)
     )
     gamma = backend.cast(gamma, dtype=gamma.dtype)
 
     gamma_prime = backend.np.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.np.uint8)
+        backend.np.random.randint(2, size=nqubits, dtype=backend.np.uint8)
     )
     gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
 
@@ -553,10 +553,10 @@ def random_clifford(
     delta = backend.cast(delta, dtype=delta.dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
-    _fill_tril(gamma, local_state, symmetric=True, backend=backend)
-    _fill_tril(gamma_prime, local_state, symmetric=True, backend=backend)
-    _fill_tril(delta, local_state, symmetric=False, backend=backend)
-    _fill_tril(delta_prime, local_state, symmetric=False, backend=backend)
+    backend.qinfo._fill_tril(gamma, symmetric=True)
+    backend.qinfo._fill_tril(gamma_prime, symmetric=True)
+    backend.qinfo._fill_tril(delta, symmetric=False)
+    backend.qinfo._fill_tril(delta_prime, symmetric=False)
 
     # For large nqubits numpy.inv function called below can
     # return invalid output leading to a non-symplectic Clifford
@@ -569,8 +569,8 @@ def random_clifford(
     zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
-    inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
-    inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
+    inv1 = backend.qinfo._inverse_tril(delta, block_inverse_threshold).T
+    inv2 = backend.qinfo._inverse_tril(delta_prime, block_inverse_threshold).T
 
     # backend.np.block cannot be used below because there is no cupy equivalent
     # hence the necessity for three backend.np.concatenate's
@@ -607,7 +607,7 @@ def random_clifford(
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
-    integers = local_state.integers(2, size=2 * nqubits)
+    integers = backend.np.random.randint(2, size=2 * nqubits)
     integers = backend.cast(integers, dtype=integers.dtype)
     tableau[:, -1] = integers
 
