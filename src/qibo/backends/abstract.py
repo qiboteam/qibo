@@ -863,6 +863,29 @@ class Backend:
 
         return noisy_samples
 
+    def apply_channel(self, channel, state, nqubits: int):
+        """Apply a ``channel`` to quantum ``state``."""
+
+        density_matrix = bool(len(state.shape) == 2)
+
+        if density_matrix:
+            state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
+
+            new_state = (1 - channel.coefficient_sum) * state
+            for coeff, gate in zip(channel.coefficients, channel.gates):
+                new_state += coeff * self.apply_gate(gate, state, nqubits)
+
+            return new_state
+
+        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
+
+        index = int(self.sample_shots(probabilities, 1)[0])
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = self.apply_gate(gate, state, nqubits)
+
+        return state
+
     def apply_gate(self, gate, state, nqubits: int) -> "ndarray":
         """Apply a gate to quantum state."""
 
@@ -919,29 +942,6 @@ class Backend:
         state = self.engine.einsum(left, state, matrix)
 
         return self.reshape(state, 2 * (2**nqubits,))
-
-    def apply_channel(self, channel, state, nqubits: int):
-        """Apply a ``channel`` to quantum ``state``."""
-
-        density_matrix = bool(len(state.shape) == 2)
-
-        if density_matrix:
-            state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
-
-            new_state = (1 - channel.coefficient_sum) * state
-            for coeff, gate in zip(channel.coefficients, channel.gates):
-                new_state += coeff * self.apply_gate(gate, state, nqubits)
-
-            return new_state
-
-        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
-
-        index = int(self.sample_shots(probabilities, 1)[0])
-        if index != len(channel.gates):
-            gate = channel.gates[index]
-            state = self.apply_gate(gate, state, nqubits)
-
-        return state
 
     def calculate_symbolic(
         self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
@@ -1282,12 +1282,6 @@ class Backend:
 
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
-    def sample_shots(self, probabilities, nshots: int):
-        """Sample measurement shots according to a probability distribution."""
-        return self.random_choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
-
     def sample_frequencies(self, probabilities, nshots: int):
         """Sample measurement frequencies according to a probability distribution."""
         nprobs = probabilities / self.sum(probabilities)
@@ -1301,6 +1295,12 @@ class Backend:
         )
 
         return Counter({i: int(f) for i, f in enumerate(frequencies) if f > 0})
+
+    def sample_shots(self, probabilities, nshots: int):
+        """Sample measurement shots according to a probability distribution."""
+        return self.random_choice(
+            range(len(probabilities)), size=nshots, p=probabilities
+        )
 
     def samples_to_binary(self, samples, nqubits: int):
         """Convert samples from decimal representation to binary."""
