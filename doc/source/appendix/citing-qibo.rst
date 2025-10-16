@@ -4,7 +4,7 @@ Publications
 If Qibo has been significant in your research, and you would like to acknowledge
 the project in your academic publication, we suggest citing the following documents:
 
-Collaboration papers
+Collaboration Papers
 --------------------
 
 * S. Efthymiou, S. Ramos-Calderer, C. Bravo-Prieto, A. Pérez-Salinas, D.
@@ -239,7 +239,7 @@ Conference Proceedings
 .. _`QTML2024`: https://qtml2024.org
 .. _`arXiv:2411.13468`: https://arxiv.org/abs/2411.13468
 
-Based on qibo
+Based on Qibo
 -------------
 
 * A. Pérez-Salinas, J. M. Cruz-Martinez, Abdulla A. Alhajri, S. Carrazza.
