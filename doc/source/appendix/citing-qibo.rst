@@ -133,6 +133,16 @@ Peer-Reviewed Articles
 
 .. _`arXiv:2510.11773`: https://arxiv.org/abs/2510.11773
 
+
+PhD theses based on Qibo
+------------------------
+
+
+* A. Pasquale, *Open-source middleware for quantum computing*
+  (2024). `https://tesidottorato.depositolegale.it/handle/20.500.14242/184252`_
+
+.. _`https://tesidottorato.depositolegale.it/handle/20.500.14242/184252`: https://tesidottorato.depositolegale.it/handle/20.500.14242/184252
+
 Software References in Zenodo
 -----------------------------
 
@@ -176,9 +186,9 @@ Software References in Zenodo
 * A. Papaluca, M. Robbiati, E. Pedicillo, R. M. S. Farias, N. Laurora, A.
      Sopena, G. Al Ramahi, A. Pasquale, S. Carrazza, A. Candido. (2025).
      qiboteam/qiboml: QiboML. Zenodo.
-     `https://doi.org/10.5281/zenodo.17310379`_.
+     `https://doi.org/10.5281/zenodo.17310378`_.
 
-.. _`https://zenodo.org/records/17310379`: https://zenodo.org/records/17310379
+.. _`https://doi.org/10.5281/zenodo.17310378`: https://doi.org/10.5281/zenodo.17310378
 
 Conference Proceedings
 ----------------------
