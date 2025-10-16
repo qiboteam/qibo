@@ -1035,11 +1035,7 @@ def liouville_to_pauli(
     dim = int(np.sqrt(len(super_op)))
     nqubits = int(np.log2(dim))
 
-    if (
-        super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    if super_op.shape[0] != super_op.shape[1] or dim // 1 != 0 or nqubits // 1 != 0:
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     comp_to_pauli = comp_basis_to_pauli(
@@ -1236,11 +1232,7 @@ def pauli_to_liouville(
     dim = int(np.sqrt(len(pauli_op)))
     nqubits = int(np.log2(dim))
 
-    if (
-        pauli_op.shape[0] != pauli_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    if pauli_op.shape[0] != pauli_op.shape[1] or dim // 1 != 0 or nqubits // 1 != 0:
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
     pauli_to_comp = pauli_to_comp_basis(
@@ -2218,8 +2210,8 @@ def _reshuffling(super_op, order: str = "row", backend=None):
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(np.log2(int(dim)), 1) != 0
+        or dim // 1 != 0
+        or np.log2(int(dim)) // 1 != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
