@@ -234,7 +234,6 @@ def ZNE(
                 nshots,
                 readout,
                 qubit_map,
-                seed=seed,
                 backend=backend,
             )
         expected_values.append(val)
@@ -444,7 +443,7 @@ def CDR(
         readout = {}
 
     training_circuits = [
-        sample_training_circuit_cdr(circuit, seed=seed, backend=backend)
+        sample_training_circuit_cdr(circuit, backend=backend)
         for _ in range(n_training_samples)
     ]
 
@@ -466,7 +465,6 @@ def CDR(
                 nshots,
                 readout,
                 qubit_map,
-                # seed=local_state,
                 backend=backend,
             )
         train_val["noise-free"].append(val_noiseless)
@@ -507,7 +505,6 @@ def CDR(
             nshots,
             readout,
             qubit_map,
-            seed=seed,
             backend=backend,
         )
     mit_val = model(val, *optimal_params)
@@ -615,7 +612,6 @@ def vnCDR(
                     nshots,
                     readout,
                     qubit_map,
-                    # seed=local_state,
                     backend=backend,
                 )
             train_val["noisy"].append(float(val.real))
@@ -655,7 +651,6 @@ def vnCDR(
                 nshots,
                 readout,
                 qubit_map,
-                seed=seed,
                 backend=backend,
             )
         val.append(expval)
@@ -846,7 +841,9 @@ def apply_randomized_readout_mitigation(
         circuit_c.queue.pop()
         cal_circuit = Circuit(circuit.nqubits, density_matrix=True)
 
-        x_gate = random_pauli(circuit.nqubits, 1, subset=["I", "X"], seed=seed).queue
+        x_gate = random_pauli(
+            circuit.nqubits, 1, subset=["I", "X"], backend=backend
+        ).queue
 
         error_map = {}
         for j, gate in enumerate(x_gate):
@@ -925,7 +922,6 @@ def get_expectation_val_with_readout_mitigation(
             noise_model,
             nshots,
             readout["ncircuits"],
-            seed=seed,
             backend=backend,
         )
     else:
@@ -989,7 +985,6 @@ def sample_clifford_training_circuit(
             clifford_matrix = random_clifford(
                 len(gate.qubits),
                 return_circuit=True,
-                # seed=local_state,
                 backend=backend,
             )
             clifford_matrix = clifford_matrix.unitary(backend)
@@ -1039,9 +1034,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     )  # pragma: no cover
     backend.set_seed(seed)
 
-    sampled_circuit = sample_clifford_training_circuit(
-        circuit, seed=seed, backend=backend
-    )
+    sampled_circuit = sample_clifford_training_circuit(circuit, backend=backend)
 
     result = backend.execute_circuit(sampled_circuit.invert(), nshots=1)
 
@@ -1164,9 +1157,7 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(
-            circuit, observable, seed=seed, backend=CLIFFORD_BACKEND()
-        )[0]
+        error_sensitive_circuit(circuit, observable, backend=CLIFFORD_BACKEND())[0]
         for _ in range(n_training_samples)
     ]
 
@@ -1195,7 +1186,6 @@ def ICS(
                 nshots,
                 readout,
                 qubit_map,
-                # seed=local_state,
                 backend=backend,
             )
 
@@ -1220,7 +1210,6 @@ def ICS(
             nshots,
             readout,
             qubit_map,
-            seed=seed,
             backend=backend,
         )
     one_dep_squared = (1 - dep_param) ** 2

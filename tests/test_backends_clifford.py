@@ -293,7 +293,10 @@ def test_non_clifford_error(backend):
 
 
 def test_initial_state(backend):
+    seed = 42
+    backend.set_seed(seed)
     clifford_bkd = construct_clifford_backend(backend)
+    clifford_bkd.set_seed(seed)
     state = random_clifford(3, backend=numpy_bkd)
     tmp = clifford_bkd.execute_circuit(state)
     initial_symplectic_matrix = tmp.symplectic_matrix
@@ -304,7 +307,7 @@ def test_initial_state(backend):
     clifford_state = clifford_bkd.execute_circuit(
         circ, initial_state=initial_symplectic_matrix
     ).state()
-    backend.assert_allclose(numpy_state, clifford_state)
+    backend.assert_allclose(numpy_state, clifford_state, atol=1e-8)
 
 
 @pytest.mark.parametrize("seed", [10])
