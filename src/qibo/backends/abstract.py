@@ -304,6 +304,9 @@ class Backend:
     def exp(self, array, **kwargs):
         return self.engine.exp(array, **kwargs)
 
+    def expand_dims(self, array, axis: Union[int, Tuple[int, ...]]):
+        return self.engine.expand_dims(array, axis)
+
     def expm(self, array) -> "ndarray":
         if self.is_sparse(array):
             from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
@@ -405,8 +408,14 @@ class Backend:
     def real(self, array) -> Union[int, float, "ndarray"]:
         return self.engine.real(array)
 
-    def random_choice(self, array, **kwargs) -> "ndarray":
-        return self.engine.random.choice(array, **kwargs)
+    def random_choice(
+        self,
+        array,
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        replace: bool = True,
+        p=None,
+    ) -> "ndarray":
+        return self.engine.random.choice(array, size=size, replace=replace, p=p)
 
     def random_integers(self, low, high=None, size=None, dtype=None):
         if dtype is None:  # pragma: no cover
@@ -1275,7 +1284,7 @@ class Backend:
             shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
             state = self.reshape(state, 2 * nqubits * (2,))
             state = self.reshape(self.transpose(state, order), shape)
-            probs = self.abs(self.engine.einsum("abab->a", state))
+            probs = self.abs(self.einsum("abab->a", state))
             probs = self.reshape(probs, len(qubits) * (2,))
         else:
             rtype = self.real(state).dtype
@@ -1411,11 +1420,11 @@ class Backend:
     def _append_zeros(self, state, qubits, results):
         """Helper function for the ``collapse_state`` method."""
         for q, r in zip(qubits, results):
-            state = self.engine.expand_dims(state, q)
+            state = self.expand_dims(state, q)
             state = (
-                self.engine.concatenate([self.zeros_like(state), state], q)
+                self.concatenate([self.zeros_like(state), state], axis=q)
                 if r == 1
-                else self.engine.concatenate([state, self.zeros_like(state)], q)
+                else self.concatenate([state, self.zeros_like(state)], axis=q)
             )
         return state
 
