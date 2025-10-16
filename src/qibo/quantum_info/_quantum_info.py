@@ -367,6 +367,22 @@ def _inverse_tril(mat, block_inverse_threshold):
 
 
 def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, ndarray]:
+    """Using the quantum Mallows distribution, samples a binary array
+    representing a layer of Hadamard gates as well as an array with permutated
+    qubit indexes. For more details, see Reference [1].
+
+    Args:
+        nqubits (int): number of qubits.
+
+    Returns:
+        (``ndarray``, ``ndarray`): tuple of binary ``ndarray`` and ``ndarray`` of indexes.
+
+    Reference:
+        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
+            structure of the Clifford group*.
+            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
+
+    """
     exponents = ENGINE.arange(nqubits, 0, -1, dtype=ENGINE.int64)
     powers = 4**exponents
     powers[powers == 0] = ENGINE.iinfo(ENGINE.int64).max
@@ -383,47 +399,6 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
         permutations[l] = available[index]
         mask[permutations[l]] = False
     return hadamards, permutations
-
-
-def _gamma_delta_matrices(
-    nqubits: int, hadamards: ndarray, permutations: ndarray
-) -> tuple[ndarray, ndarray, ndarray, ndarray]:
-    delta_matrix = ENGINE.eye(nqubits, dtype=int)
-    delta_matrix_prime = ENGINE.copy(delta_matrix)
-
-    gamma_matrix_prime = ENGINE.random.randint(0, 2, size=nqubits)
-    gamma_matrix_prime = ENGINE.diag(gamma_matrix_prime)
-
-    gamma_matrix = ENGINE.random.randint(0, 2, size=nqubits)
-    gamma_matrix = hadamards * gamma_matrix
-    gamma_matrix = ENGINE.diag(gamma_matrix)
-
-    tril_indices = ENGINE.tril_indices(nqubits, k=-1)
-    delta_matrix_prime[tril_indices] = ENGINE.random.randint(
-        0, 2, size=len(tril_indices[0])
-    )
-    gamma_matrix_prime[tril_indices] = ENGINE.random.randint(
-        0, 2, size=len(tril_indices[0])
-    )
-    triu_indices = ENGINE.triu_indices(nqubits, k=1)
-    gamma_matrix_prime[triu_indices] = gamma_matrix_prime[tril_indices]
-
-    p_col_gt_row = permutations[triu_indices[1]] > permutations[triu_indices[0]]
-    p_col_neq_row = permutations[triu_indices[1]] != permutations[triu_indices[0]]
-    p_col_le_row = p_col_gt_row ^ True
-    h_row_eq_0 = hadamards[triu_indices[0]] == 0
-    h_col_eq_0 = hadamards[triu_indices[1]] == 0
-
-    idx = (h_row_eq_0 * h_col_eq_0 ^ True) * p_col_neq_row
-    elements = ENGINE.random.randint(0, 2, size=len(idx.nonzero()[0]))
-    gamma_matrix[triu_indices[0][idx], triu_indices[1][idx]] = elements
-    gamma_matrix[triu_indices[1][idx], triu_indices[0][idx]] = elements
-
-    idx = p_col_gt_row | (p_col_le_row * h_row_eq_0 * h_col_eq_0)
-    elements = ENGINE.random.randint(0, 2, size=len(idx.nonzero()[0]))
-    delta_matrix[triu_indices[1][idx], triu_indices[0][idx]] = elements
-
-    return gamma_matrix, gamma_matrix_prime, delta_matrix, delta_matrix_prime
 
 
 def _super_op_from_bcsz_measure_preamble(
