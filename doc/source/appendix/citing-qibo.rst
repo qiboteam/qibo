@@ -4,8 +4,8 @@ Publications
 If Qibo has been significant in your research, and you would like to acknowledge
 the project in your academic publication, we suggest citing the following documents:
 
-Peer-Reviewed Articles
-----------------------
+Collaboration papers
+--------------------
 
 * S. Efthymiou, S. Ramos-Calderer, C. Bravo-Prieto, A. Pérez-Salinas, D.
   Garcı́a-Martı́n, A. Garcia-Saez, J. I. Latorre, S. Carrazza, *Qibo: a
@@ -313,6 +313,11 @@ Based on qibo
      (`arXiv:2502.19872`_).
 
 .. _`arXiv:2502.19872`: https://arxiv.org/abs/2502.19872
+
+* I. Masina, G. Lo Presti, M. Robbiati and M. Grossi. Simulating Bell inequalities with Qibo. (2025), `Eur. J. Phys. 46 035401`_, (`arXiv:2501.01434`_).
+
+.. _`Eur. J. Phys. 46 035401`: https://iopscience.iop.org/article/10.1088/1361-6404/adcd13
+.. _`arXiv:2501.01434`: https://arxiv.org/abs/2501.01434
 
 Authorship Guideline
 --------------------
