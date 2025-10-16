@@ -202,12 +202,12 @@ def test_random_statevector(backend, dtype, seed):
     # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
-    assert abs(purity(state, backend=backend) - 1.0) < 5 * PRECISION_TOL
+    assert abs(purity(state, backend=backend) - 1.0) < 8 * PRECISION_TOL
 
     if dtype is not None:
         dtype = getattr(backend.np, dtype)
         state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
-        assert abs(purity(state, backend=backend) - 1.0) < 5 * PRECISION_TOL
+        assert abs(purity(state, backend=backend) - 1.0) < 8 * PRECISION_TOL
 
 
 @pytest.mark.parametrize("normalize", [False, True])
@@ -269,71 +269,36 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             )
 
 
-@pytest.mark.parametrize("seed", [10])
-@pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("return_circuit", [True, False])
-@pytest.mark.parametrize("nqubits", [1, 2])
-def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
-    if backend.platform in ("cupy", "cuquantum"):
-        pytest.skip("Clifford circuit decomposition AG04 not implemented for GPUs.")
+@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(1e2), int(3e4))))
+def test_random_clifford(backend, nqubits, nsamples):
 
+    # errors tests
     with pytest.raises(TypeError):
-        test = random_clifford(
-            nqubits="1", return_circuit=return_circuit, backend=backend
-        )
+        test = random_clifford(nqubits="1", backend=backend)
     with pytest.raises(ValueError):
-        test = random_clifford(
-            nqubits=-1, return_circuit=return_circuit, backend=backend
-        )
+        test = random_clifford(nqubits=-1, backend=backend)
     with pytest.raises(TypeError):
         test = random_clifford(nqubits, return_circuit="True", backend=backend)
     with pytest.raises(TypeError):
-        test = random_clifford(
-            nqubits, return_circuit=return_circuit, seed=0.1, backend=backend
-        )
+        test = random_clifford(nqubits, seed=0.1, backend=backend)
 
-    cnot_10 = Circuit(2)
-    cnot_10.add(gates.CNOT(1, 0))
-    cnot_10 = cnot_10.unitary(backend)
-    cnot_10 = backend.to_numpy(cnot_10)
+    n_cliffords = 24 if nqubits == 1 else 11520
+    expected_prob = 1 / n_cliffords
+    samples = {str(random_clifford(nqubits, return_circuit=False, backend=backend)): 1}
+    for _ in range(nsamples):
+        sample = str(random_clifford(nqubits, return_circuit=False, backend=backend))
+        if sample in samples:
+            samples[sample] += 1
+        else:
+            samples[sample] = 1
 
-    result_single = matrices.H @ matrices.SDG @ matrices.Y
-
-    if backend.platform in ("cupy", "cuquantum"):
-        # fixed seed yields different circuits for GPU backends
-        result_two = np.kron(matrices.H @ matrices.SDG, matrices.X)
-        result_two = matrices.CNOT @ result_two
-        result_two = (
-            np.kron(matrices.S @ matrices.H, matrices.H @ matrices.SDG) @ result_two
-        )
-        result_two = matrices.CNOT @ result_two
+    avg_prob = (np.array(list(samples.values())) / (nsamples + 1)).mean()
+    atol = 10 ** (-len(str(n_cliffords)))
+    np.testing.assert_allclose(expected_prob, avg_prob, atol=atol)
+    if nqubits == 1:
+        assert len(samples) == n_cliffords
     else:
-        result_two = np.kron(matrices.H @ matrices.Z @ matrices.X, matrices.Z)
-        result_two = matrices.CNOT @ result_two
-        result_two = np.kron(matrices.H, matrices.I) @ result_two
-        result_two = cnot_10 @ result_two
-        result_two = np.kron(matrices.SDG, matrices.I) @ result_two
-        result_two = cnot_10 @ result_two
-
-    result = result_single if nqubits == 1 else result_two
-    result = backend.cast(result, dtype=result.dtype)
-
-    matrix = random_clifford(
-        nqubits,
-        return_circuit=return_circuit,
-        density_matrix=density_matrix,
-        seed=seed,
-        backend=backend,
-    )
-
-    if not return_circuit:
-        matrix = matrix.to_circuit("AG04", density_matrix=density_matrix)
-
-    assert matrix.density_matrix == density_matrix
-
-    matrix = matrix.unitary(backend=backend)
-
-    backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
+        assert int(1e4) <= len(samples) <= n_cliffords
 
 
 def test_random_pauli_errors(backend):

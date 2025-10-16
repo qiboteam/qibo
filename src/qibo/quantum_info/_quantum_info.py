@@ -376,11 +376,12 @@ def _sample_from_quantum_mallows_distribution(nqubits: int) -> tuple[ndarray, nd
     hadamards = idx_le_exp.astype(ENGINE.int64)
     idx_gt_exp = idx_le_exp ^ True
     indexes[idx_gt_exp] = 2 * exponents[idx_gt_exp] - indexes[idx_gt_exp] - 1
-    mute_index = list(range(nqubits))
-    permutations = ENGINE.zeros(nqubits, dtype=int)
-    for l, index in enumerate(indexes.tolist()):
-        permutations[l] = mute_index[index]
-        del mute_index[index]
+    permutations = np.empty(nqubits, dtype=int)
+    mask = np.ones(nqubits, dtype=bool)
+    for l, index in enumerate(indexes):
+        available = np.flatnonzero(mask)
+        permutations[l] = available[index]
+        mask[permutations[l]] = False
     return hadamards, permutations
 
 

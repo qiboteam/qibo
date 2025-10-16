@@ -688,6 +688,7 @@ class NumpyBackend(Backend):
 
     def set_seed(self, seed):
         self.np.random.seed(seed)
+        self.qinfo.ENGINE.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
         return self.random_choice(

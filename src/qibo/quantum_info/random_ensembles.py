@@ -529,6 +529,11 @@ def random_clifford(
            structure of the Clifford group*.
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
+    if not isinstance(return_circuit, bool):
+        raise_error(
+            TypeError,
+            f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
+        )
 
     backend = _check_backend(backend)
     backend.set_seed(seed)
