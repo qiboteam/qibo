@@ -584,7 +584,11 @@ class Backend:
         used for exponentiation.
         """
         if eigenvectors is None or self.is_sparse(matrix):
-            return self.expm(phase * matrix)
+            _matrix = self.expm(phase * matrix)
+
+            return self.cast(
+                _matrix, dtype=_matrix.dtype
+            )  # for GPU backends on qibojit
 
         expd = self.exp(phase * eigenvalues)
         ud = self.transpose(self.conj(eigenvectors))
