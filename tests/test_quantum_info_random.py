@@ -269,8 +269,10 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             )
 
 
-@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(1e2), int(3e4))))
+@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(3e2), int(3e4))))
 def test_random_clifford(backend, nqubits, nsamples):
+
+    backend.set_seed(42)
 
     # errors tests
     with pytest.raises(TypeError):
