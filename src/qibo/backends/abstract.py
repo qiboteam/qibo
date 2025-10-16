@@ -1285,7 +1285,7 @@ class Backend:
     def sample_frequencies(self, probabilities, nshots: int):
         """Sample measurement frequencies according to a probability distribution."""
         nprobs = probabilities / self.sum(probabilities)
-        frequencies = self.zeros(len(nprobs), dtype=self.engine.int64)
+        frequencies = self.zeros(len(nprobs), dtype=self.int64)
 
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
@@ -1304,8 +1304,8 @@ class Backend:
 
     def samples_to_binary(self, samples, nqubits: int):
         """Convert samples from decimal representation to binary."""
-        qrange = (self.engine.arange(nqubits - 1, -1, -1, dtype=self.engine.int32),)
-        return self.engine.mod(self.engine.right_shift(samples[:, None], qrange), 2)
+        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
+        return self.engine.right_shift(samples[:, None], qrange) // 2
 
     def samples_to_decimal(self, samples, nqubits: int):
         """Convert samples from binary representation to decimal."""

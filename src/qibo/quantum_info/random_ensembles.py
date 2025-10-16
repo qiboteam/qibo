@@ -138,8 +138,9 @@ def random_gaussian_matrix(
 
     dims = (dims, rank)
 
-    matrix = 1.0j * local_state.normal(loc=mean, scale=stddev, size=dims)
-    matrix += local_state.normal(loc=mean, scale=stddev, size=dims)
+    matrix = 1.0j * (mean + stddev * local_state.standard_normal(size=dims))
+    matrix += mean + stddev * local_state.standard_normal(size=dims)
+
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     return matrix
@@ -1071,7 +1072,7 @@ def random_stochastic_matrix(
         if count == max_iterations:
             warnings.warn("Reached max iterations.", RuntimeWarning)
     else:
-        matrix = matrix / backend.outer(row_sum, [1] * dims)
+        matrix = matrix / backend.outer(row_sum, backend.ones(dims, dtype=int))
 
     return matrix
 
