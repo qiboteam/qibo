@@ -116,6 +116,7 @@ Collaboration Papers
         year      = {2025}
     }
 
+.. _`doi:10.1088/2058-9565/adcd97`: https://doi.org/10.1088/2058-9565/adcd97
 .. _`arXiv:2310.05851`: https://arxiv.org/abs/2310.05851
 
 * A. Pasquale, E. Pedicillo, J. Cereijo, S. Ramos-Calderer, A. Candido, G. Palazzo,
@@ -127,9 +128,9 @@ Collaboration Papers
 .. _`arXiv:2410.00101`: https://arxiv.org/abs/2410.00101
 
 * M. Robbiati, A. Papaluca, A. Pasquale, E. Pedicillo, R. M. S. Farias, A.
-     Sopena, M. Robbiano, G. Alramahi, S. Bordoni, A. Candido, N. Laurora, J.
-     Suda Neto, Y. P. Tan, M. Grossi, S.  Carrazza, *Qiboml: towards the
-     orchestration of quantum-classical machine learning* (2025), (`arXiv:2510.11773`_).
+  Sopena, M. Robbiano, G. Alramahi, S. Bordoni, A. Candido, N. Laurora, J.
+  Suda Neto, Y. P. Tan, M. Grossi, S.  Carrazza, *Qiboml: towards the
+  orchestration of quantum-classical machine learning* (2025), (`arXiv:2510.11773`_).
 
 .. _`arXiv:2510.11773`: https://arxiv.org/abs/2510.11773
 
@@ -213,8 +214,8 @@ Conference Proceedings
 .. _`arXiv:2303.10397`: https://arxiv.org/pdf/2303.10397
 
 * E. Pedicillo, A. Candido, S. Efthymiou, H. Sargsyan, Y. P. Tan, J. Cereijo, J.
-     Y. Khoo, A. Pasquale, M. Robbiati, S. Carrazza. An open-source framework
-     for quantum hardware control. (2024) `ACAT24`_, (`arXiv:2407.21737`_).
+  Y. Khoo, A. Pasquale, M. Robbiati, S. Carrazza. An open-source framework
+  for quantum hardware control. (2024) `ACAT24`_, (`arXiv:2407.21737`_).
 
 .. _`ACAT24`: https://indico.cern.ch/event/1330797/
 .. _`arXiv:2407.21737`: https://arxiv.org/abs/2407.21737
@@ -226,8 +227,8 @@ Conference Proceedings
 .. _`arXiv:2408.00384`: https://arxiv.org/abs/2408.00384
 
 * L. Xiaoyue, M. Robbiati, A. Pasquale, E. Pedicillo, A. Wright, S. Carrazza, M.
-     Gluza.  Strategies for optimizing double-bracket quantum algorithms. (2024)
-     `ACAT24`_, (`arXiv:2408.07431`_)
+  Gluza.  Strategies for optimizing double-bracket quantum algorithms. (2024)
+  `ACAT24`_, (`arXiv:2408.07431`_)
 
 .. _`arXiv:2408.07431`: https://arxiv.org/abs/2408.07431
 
