@@ -95,7 +95,7 @@ Collaboration Papers
 
 * R. Carobene, A. Candido, J. Serrano, A.O-Fuertes, A. Giachero, S. Carrazza,
   *Qibosoq: an open-source framework for quantum circuit RFSoC programming*
-  (2023), `doi:10.1088/2058-9565/adcd97` (`arXiv:2310.05851`_)
+  (2023), `doi:10.1088/2058-9565/adcd97`_ (`arXiv:2310.05851`_)
 
   In *BibTeX* format:
 
