@@ -437,15 +437,15 @@ markers = {main = "(sys_platform == \"win32\" or platform_system == \"Windows\")
 
 [[package]]
 name = "colorlog"
-version = "6.9.0"
+version = "6.10.1"
 description = "Add colours to the output of Python's logging module."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 markers = "python_version >= \"3.12\" or python_version <= \"3.11\""
 files = [
-    {file = "colorlog-6.9.0-py3-none-any.whl", hash = "sha256:5906e71acd67cb07a71e779c47c4bcb45fb8c2993eebe9e5adcd6a6f1b283eff"},
-    {file = "colorlog-6.9.0.tar.gz", hash = "sha256:bfba54a1b93b94f54e1f4fe48395725a3d92fd2a4af702f6bd70946bdc0c6ac2"},
+    {file = "colorlog-6.10.1-py3-none-any.whl", hash = "sha256:2d7e8348291948af66122cff006c9f8da6255d224e7cf8e37d8de2df3bad8c9c"},
+    {file = "colorlog-6.10.1.tar.gz", hash = "sha256:eb4ae5cb65fe7fec7773c2306061a8e63e02efc2c72eba9d27b0fa23c94f1321"},
 ]
 
 [package.dependencies]
@@ -1601,15 +1601,15 @@ test = ["coverage", "ipykernel (>=6.14)", "mypy", "paramiko", "pre-commit", "pyt
 
 [[package]]
 name = "jupyter-core"
-version = "5.9.0"
+version = "5.9.1"
 description = "Jupyter core package. A base package on which Jupyter projects rely."
 optional = false
 python-versions = ">=3.10"
 groups = ["docs"]
 markers = "python_version >= \"3.12\" or python_version <= \"3.11\""
 files = [
-    {file = "jupyter_core-5.9.0-py3-none-any.whl", hash = "sha256:bf13431d292ce34a25568586729a3b9deb07d112289b77350dc4c2340c2f34c1"},
-    {file = "jupyter_core-5.9.0.tar.gz", hash = "sha256:5f8fba10cfc946fe1b4037e986458fc89430397207b21d741dc399d3d42951d4"},
+    {file = "jupyter_core-5.9.1-py3-none-any.whl", hash = "sha256:ebf87fdc6073d142e114c72c9e29a9d7ca03fad818c5d300ce2adc1fb0743407"},
+    {file = "jupyter_core-5.9.1.tar.gz", hash = "sha256:4d09aaff303b9566c3ce657f580bd089ff5c91f5f89cf7d8846c3cdf465b5508"},
 ]
 
 [package.dependencies]
@@ -3201,7 +3201,7 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "qinfo_jit"
-resolved_reference = "de4f440ec95565346b54e6fe3672d025f58e83bc"
+resolved_reference = "31776925f718f988db81aeb6c4e78defaf82de8b"
 
 [[package]]
 name = "qulacs"
