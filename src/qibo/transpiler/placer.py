@@ -205,7 +205,12 @@ class Random(Placer):
         final_cost = self._cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
             mapping = dict(
-                zip(keys, local_state.choice(range(nodes), nodes, replace=False))
+                zip(
+                    keys,
+                    backend.random_choice(
+                        range(nodes), nodes, replace=False, seed=local_state
+                    ),
+                )
             )
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)

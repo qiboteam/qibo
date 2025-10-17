@@ -647,13 +647,13 @@ def random_clifford(
     hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
     permutations = backend.cast(permutations, dtype=permutations.dtype)
 
-    gamma = backend.diag(local_state.integers(2, size=nqubits, dtype=backend.uint8))
-    gamma = backend.cast(gamma, dtype=gamma.dtype)
+    gamma = backend.diag(backend.random_integers(2, size=nqubits, seed=local_state))
+    gamma = backend.cast(gamma, dtype=backend.uint8)
 
     gamma_prime = backend.diag(
-        local_state.integers(2, size=nqubits, dtype=backend.uint8)
+        backend.random_integers(2, size=nqubits, seed=local_state)
     )
-    gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
+    gamma_prime = backend.cast(gamma_prime, dtype=backend.uint8)
 
     delta = backend.identity(nqubits, dtype=backend.uint8)
     delta = backend.cast(delta, dtype=delta.dtype)
@@ -713,7 +713,7 @@ def random_clifford(
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
-    integers = local_state.integers(2, size=2 * nqubits)
+    integers = backend.random_integers(2, size=2 * nqubits, seed=local_state)
     integers = backend.cast(integers, dtype=integers.dtype)
     tableau[:, -1] = integers
 
@@ -847,7 +847,9 @@ def random_pauli(
         if isinstance(qubits, int):
             qubits = [qubits]
 
-    indexes = local_state.integers(0, len(subset), size=(len(qubits), depth))
+    indexes = backend.random_integers(
+        0, len(subset), size=(len(qubits), depth), seed=local_state
+    )
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:

@@ -417,16 +417,35 @@ class Backend:
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         replace: bool = True,
         p=None,
+        seed=None,
     ) -> "ndarray":
+        if seed is not None:
+            local_state = (
+                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
+            )
+
+            return local_state.choice(array, size=size, replace=replace, p=p)
+
         return self.engine.random.choice(array, size=size, replace=replace, p=p)
 
-    def random_integers(self, low, high=None, size=None, dtype=None):
-        if dtype is None:  # pragma: no cover
-            dtype = self.dtype
+    def random_integers(self, low, high=None, size=None, seed=None):
+        if seed is not None:
+            local_state = (
+                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
+            )
 
-        return self.engine.random.randint(low, high, size=size, dtype=dtype)
+            return local_state.integers(low, high, size)
 
-    def random_sample(self, size: int):
+        return self.engine.random.randint(low, high, size)
+
+    def random_sample(self, size: int, seed=None):
+        if seed is not None:
+            local_state = (
+                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
+            )
+
+            return local_state.random(size)
+
         return self.engine.random.random(size)
 
     def ravel(self, array, **kwargs) -> "ndarray":

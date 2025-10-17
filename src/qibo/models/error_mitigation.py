@@ -290,11 +290,12 @@ def sample_training_circuit_cdr(
     distance = backend.vstack(distance)
     prob = backend.exp(-(distance**2) / sigma**2)
 
-    index = local_state.choice(
+    index = backend.random_choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
         p=backend.to_numpy(backend.sum(prob, -1) / backend.sum(prob)),
+        seed=local_state,
     )
 
     gates_to_replace = np.array([gates_to_replace[i] for i in index])
@@ -304,7 +305,11 @@ def sample_training_circuit_cdr(
 
     replacement = np.array([replacement[i] for i in index])
     replacement = [
-        replacement[i][local_state.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
+        replacement[i][
+            backend.random_choice(
+                range(len(p)), size=1, p=p / np.sum(p), seed=local_state
+            )[0]
+        ]
         for i, p in enumerate(prob)
     ]
     replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
