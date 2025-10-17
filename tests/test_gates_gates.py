@@ -1522,13 +1522,13 @@ def test_generalized_rbs(backend, qubits_in, qubits_out):
 
 @pytest.mark.parametrize("seed", [10])
 def test_generalized_rbs_apply(backend, seed):
-    rng = np.random.default_rng(seed)
-
+    np.random.seed(seed)
+    backend.set_seed(seed)
     nqubits = 4
     dims = 2**nqubits
-    theta, phi = 2 * np.pi * rng.random(2)
+    theta, phi = 2 * np.pi * np.random.random(2)
 
-    qubit_ids = rng.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
+    qubit_ids = np.random.choice(np.arange(0, nqubits), size=nqubits - 1, replace=False)
     qubits_in, qubits_out = qubit_ids[:1], qubit_ids[1:]
 
     gate = gates.GeneralizedRBS(qubits_in, qubits_out, theta, phi)
@@ -1536,7 +1536,7 @@ def test_generalized_rbs_apply(backend, seed):
     matrix.add(gate)
     matrix = matrix.unitary(backend=backend)
 
-    state = random_statevector(dims, seed=rng, backend=backend)
+    state = random_statevector(dims, seed=seed, backend=backend)
     target = matrix @ state
 
     state = gate.apply(backend, state, nqubits)
