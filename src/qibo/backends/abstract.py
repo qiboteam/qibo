@@ -264,6 +264,9 @@ class Backend:
 
         return csr_matrix(array)
 
+    def default_rng(self, seed: Optional[int] = None) -> "ndarray":
+        return self.engine.random.default_rng(seed)
+
     def delete(self, array, **kwargs) -> "ndarray":
         return self.engine.delete(array, **kwargs)
 

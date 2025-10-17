@@ -360,7 +360,7 @@ def _check_backend_and_local_state(seed, backend):
     backend = _check_backend(backend)
 
     if seed is None or isinstance(seed, int):
-        local_state = backend.engine.random.default_rng(seed)
+        local_state = backend.default_rng(seed)
     else:
         local_state = seed
 

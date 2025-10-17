@@ -655,7 +655,7 @@ def unary_encoder_random_gaussian(
     )
 
     local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     sampler = _ProbabilityDistributionGaussianLoader(

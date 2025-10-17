@@ -326,7 +326,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
     backend = _check_backend(backend)
 
     local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     capability = []
