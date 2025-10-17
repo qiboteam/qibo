@@ -1101,7 +1101,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend
     exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
     exponents = backend.cast(exponents, dtype=exponents.dtype)
     powers = 4**exponents
-    powers[powers == 0] = np.iinfo(np.int64).max
+    powers = backend.engine.where(powers == 0, np.iinfo(np.int64).max, powers)
 
     r = backend.random_uniform(0, 1, size=nqubits, seed=local_state)
 

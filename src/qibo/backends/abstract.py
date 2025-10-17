@@ -420,9 +420,7 @@ class Backend:
         seed=None,
     ) -> "ndarray":
         if seed is not None:
-            local_state = (
-                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
-            )
+            local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return local_state.choice(array, size=size, replace=replace, p=p)
 
@@ -430,9 +428,7 @@ class Backend:
 
     def random_integers(self, low, high=None, size=None, seed=None):
         if seed is not None:
-            local_state = (
-                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
-            )
+            local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return local_state.integers(low, high, size)
 
@@ -440,9 +436,7 @@ class Backend:
 
     def random_sample(self, size: int, seed=None):
         if seed is not None:
-            local_state = (
-                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
-            )
+            local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return local_state.random(size)
 
@@ -456,9 +450,7 @@ class Backend:
         seed=None,
     ) -> "ndarray":
         if seed is not None:
-            local_state = (
-                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
-            )
+            local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return local_state.uniform(low, high, size)
 
