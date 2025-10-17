@@ -642,10 +642,8 @@ def random_clifford(
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
-        nqubits, local_state=local_state
+        nqubits, local_state=local_state, backend=backend
     )
-    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
-    permutations = backend.cast(permutations, dtype=permutations.dtype)
 
     gamma = backend.diag(backend.random_integers(2, size=nqubits, seed=local_state))
     gamma = backend.cast(gamma, dtype=backend.uint8)
@@ -1079,7 +1077,7 @@ def random_stochastic_matrix(
     return matrix
 
 
-def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
+def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend):
     """Using the quantum Mallows distribution, samples a binary array
     representing a layer of Hadamard gates as well as an array with permutated
     qubit indexes. For more details, see Reference [1].
@@ -1101,16 +1099,17 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     mute_index = list(range(nqubits))
 
     exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
+    exponents = backend.cast(exponents, dtype=exponents.dtype)
     powers = 4**exponents
     powers[powers == 0] = np.iinfo(np.int64).max
 
-    r = local_state.uniform(0, 1, size=nqubits)
+    r = backend.random_uniform(0, 1, size=nqubits, seed=local_state)
 
-    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / powers)))
+    indexes = -1 * (backend.ceil(backend.log2(r + (1 - r) / powers)))
 
     hadamards = 1 * (indexes < exponents)
 
-    permutations = np.zeros(nqubits, dtype=int)
+    permutations = backend.zeros(nqubits, dtype=int)
     for l, (index, m) in enumerate(zip(indexes, exponents)):
         k = index if index < m else 2 * m - index - 1
         k = int(k)

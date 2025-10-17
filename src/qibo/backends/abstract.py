@@ -448,6 +448,22 @@ class Backend:
 
         return self.engine.random.random(size)
 
+    def random_uniform(
+        self,
+        low: Union[float, int] = 0.0,
+        high: Union[float, int] = 1.0,
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        seed=None,
+    ) -> "ndarray":
+        if seed is not None:
+            local_state = (
+                self.engine.random.default_rng(seed) if isinstance(seed, int) else seed
+            )
+
+            return local_state.uniform(low, high, size)
+
+        return self.engine.random.uniform(low, high, size)
+
     def ravel(self, array, **kwargs) -> "ndarray":
         return self.engine.ravel(array, **kwargs)
 

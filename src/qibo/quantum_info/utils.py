@@ -507,10 +507,12 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
 
     rand_unit_density = backend.zeros((dim**power_t, dim**power_t), dtype=complex)
     for _ in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params = backend.random_uniform(
+            -float(np.pi), float(np.pi), circuit.trainable_gates.nparams
+        )
         circuit.set_parameters(params)
         rho = backend.execute_circuit(circuit).state()
-        rand_unit_density = rand_unit_density + reduce(np.kron, [rho] * power_t)
+        rand_unit_density = rand_unit_density + reduce(backend.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 

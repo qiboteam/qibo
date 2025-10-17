@@ -1012,15 +1012,19 @@ def frame_potential(
     potential = 0
     for _ in range(samples):
         unitary_1 = circuit.copy()
-        params_1 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params_1 = backend.random_uniform(
+            -float(np.pi), float(np.pi), size=circuit.trainable_gates.nparams
+        )
         unitary_1.set_parameters(params_1)
-        unitary_1 = unitary_1.unitary(backend) / np.sqrt(dim)
+        unitary_1 = unitary_1.unitary(backend) / float(np.sqrt(dim))
 
         for _ in range(samples):
             unitary_2 = circuit.copy()
-            params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+            params_2 = backend.random_uniform(
+                -float(np.pi), float(np.pi), size=circuit.trainable_gates.nparams
+            )
             unitary_2.set_parameters(params_2)
-            unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
+            unitary_2 = unitary_2.unitary(backend) / float(np.sqrt(dim))
 
             potential += backend.abs(
                 backend.trace(
