@@ -178,15 +178,14 @@ Software References in Zenodo
 .. _`https://doi.org/10.5281/zenodo.8083285`: https://doi.org/10.5281/zenodo.8083285
 
 * A. Tan, A. Candido, L. Yang, M. Robbiati, S. Carrazza, V. Balachandran, A.
-     Papaluca, M. Robbiano, N. Srivathsan, R. M. S. Farias. (2025).
-     qiboteam/qibotn: QiboTN. Zenodo. `https://doi.org/10.5281/zenodo.15705071`_.
+  Papaluca, M. Robbiano, N. Srivathsan, R. M. S. Farias. (2025). qiboteam/qibotn: QiboTN. Zenodo.
+  `https://doi.org/10.5281/zenodo.15705071`_.
 
 .. _`https://doi.org/10.5281/zenodo.15705071`: https://doi.org/10.5281/zenodo.15705071
 
 * A. Papaluca, M. Robbiati, E. Pedicillo, R. M. S. Farias, N. Laurora, A.
-     Sopena, G. Al Ramahi, A. Pasquale, S. Carrazza, A. Candido. (2025).
-     qiboteam/qiboml: QiboML. Zenodo.
-     `https://doi.org/10.5281/zenodo.17310378`_.
+  Sopena, G. Al Ramahi, A. Pasquale, S. Carrazza, A. Candido. (2025).
+  qiboteam/qiboml: QiboML. Zenodo. `https://doi.org/10.5281/zenodo.17310378`_.
 
 .. _`https://doi.org/10.5281/zenodo.17310378`: https://doi.org/10.5281/zenodo.17310378
 
@@ -233,8 +232,8 @@ Conference Proceedings
 .. _`arXiv:2408.07431`: https://arxiv.org/abs/2408.07431
 
 * J. Y. Khoo, C. K. Gan, W. Ding, S. Carrazza, J. Ye, J. Feng Kong. Benchmarking
-        Quantum Convolutional Neural Networks for Classification and Data
-        Compression Tasks. (2024) `QTML2024`_, (`arXiv:2411.13468`_).
+  Quantum Convolutional Neural Networks for Classification and Data
+  Compression Tasks. (2024) `QTML2024`_, (`arXiv:2411.13468`_).
 
 .. _`QTML2024`: https://qtml2024.org
 .. _`arXiv:2411.13468`: https://arxiv.org/abs/2411.13468
@@ -276,18 +275,18 @@ Based on Qibo
 .. _`arXiv:2311.05680`: https://arxiv.org/abs/2311.05680
 
 * A. D'Elia, B. Alfakes, A. Alkhazaleh, L. Banchi, M. Beretta, S. Carrazza, F.
-     Chiarello, D. Di Gioacchino, A. Giachero, F. Henrich, A. Stephane Piedjou
-     Komnang, C. Ligi, G. Maccarrone, M. Macucci, E. Palumbo, A. Pasquale, L.
-     Piersanti, F. Ravaux, A. Rettaroli, M. Robbiati, S. Tocci, C. Gatti,
-     Characterization of a Transmon Qubit in a 3D Cavity for Quantum Machine
-     Learning and Photon Counting. `Appl. Sci. 2024, 14(4), 1478`_, (`arXiv:2402.04322`_).
+  Chiarello, D. Di Gioacchino, A. Giachero, F. Henrich, A. Stephane Piedjou
+  Komnang, C. Ligi, G. Maccarrone, M. Macucci, E. Palumbo, A. Pasquale, L.
+  Piersanti, F. Ravaux, A. Rettaroli, M. Robbiati, S. Tocci, C. Gatti,
+  Characterization of a Transmon Qubit in a 3D Cavity for Quantum Machine
+  Learning and Photon Counting. `Appl. Sci. 2024, 14(4), 1478`_, (`arXiv:2402.04322`_).
 
 .. _`Appl. Sci. 2024, 14(4), 1478`: https://doi.org/10.3390/app14041478
 .. _`arXiv:2402.04322`: https://arxiv.org/abs/2402.04322
 
 * S. Bordoni, A. Papaluca, P. Buttarini, A. Sopena, S. Giagu, S. Carrazza.
-     Quantum noise modeling through Reinforcement Learning. (2024),
-     (`arXiv:2408.01506`_).
+  Quantum noise modeling through Reinforcement Learning. (2024),
+  (`arXiv:2408.01506`_).
 
 .. _`arXiv:2408.01506`: https://arxiv.org/abs/2408.01506
 
@@ -299,18 +298,18 @@ Based on Qibo
 
 .. _`arXiv:2408.03987`: https://arxiv.org/abs/2408.03987
 
-*  R. Moretti, D. Labranca, P. Campana, R. Carobene, M. Gobbo, M. A.
-      Castellanos-Beltran, D. Olaya, P. F. Hopkins, L. Banchi, M. Borghesi, A.
-      Candido, S. Carrazza, H. A. Corti, A. D'Elia, M. Faverzani, E. Ferri, A.
-      Nucciotti, L. Origo, A. Pasquale, A. S. Piedjou Komnang, A. Rettaroli, S.
-      Tocci, C. Gatti, A. Giachero. Transmon qubit modeling and characterization
-      for Dark Matter search. (2024), (`arXiv:2409.05988`_).
+* R. Moretti, D. Labranca, P. Campana, R. Carobene, M. Gobbo, M. A.
+  Castellanos-Beltran, D. Olaya, P. F. Hopkins, L. Banchi, M. Borghesi, A.
+  Candido, S. Carrazza, H. A. Corti, A. D'Elia, M. Faverzani, E. Ferri, A.
+  Nucciotti, L. Origo, A. Pasquale, A. S. Piedjou Komnang, A. Rettaroli, S.
+  Tocci, C. Gatti, A. Giachero. Transmon qubit modeling and characterization
+  for Dark Matter search. (2024), (`arXiv:2409.05988`_).
 
 .. _`arXiv:2409.05988`: https://arxiv.org/abs/2409.05988
 
 * M. Ho, J. Y. Khoo, A. M. Mak, S. Carrazza. AI-Powered Noisy Quantum Emulation:
-     Generalized Gate-Based Protocols for Hardware-Agnostic Simulation. (2025),
-     (`arXiv:2502.19872`_).
+  Generalized Gate-Based Protocols for Hardware-Agnostic Simulation. (2025),
+  (`arXiv:2502.19872`_).
 
 .. _`arXiv:2502.19872`: https://arxiv.org/abs/2502.19872
 
