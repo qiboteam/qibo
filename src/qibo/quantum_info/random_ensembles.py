@@ -1098,8 +1098,8 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend
     """
     mute_index = list(range(nqubits))
 
-    exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
-    exponents = backend.cast(exponents, dtype=exponents.dtype)
+    exponents = np.arange(nqubits, 0, -1)
+    exponents = backend.cast(exponents, dtype=backend.int64)
     powers = 4**exponents
     powers = backend.engine.where(powers == 0, np.iinfo(np.int64).max, powers)
 
