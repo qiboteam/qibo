@@ -520,7 +520,9 @@ class Backend:
     def tril(self, array, k: int = 0) -> "ndarray":
         return self.engine.tril(array, k=k)
 
-    def tril_indices(self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs):
+    def tril_indices(
+        self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs
+    ):
         if col is None:
             col = row
         return self.engine.tril_indices(row, offset, col, **kwargs)
