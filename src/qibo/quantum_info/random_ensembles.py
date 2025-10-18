@@ -193,7 +193,7 @@ def random_hermitian(
         matrix = (matrix + backend.conj(matrix).T) / 2
 
     if normalize:
-        matrix = matrix / np.linalg.norm(backend.to_numpy(matrix))
+        matrix = matrix / backend.matrix_norm(matrix)
 
     return matrix
 
@@ -436,15 +436,6 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     if dims <= 0:
         raise_error(ValueError, "dim must be of type int and >= 1")
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
     if dtype is None:
@@ -671,7 +662,7 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.zeros((nqubits, nqubits), dtype=np.uint8)
+    zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
     zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
@@ -773,16 +764,6 @@ def random_pauli(
         (ndarray or :class:`qibo.models.Circuit`): all sampled Pauli operators.
 
     """
-
-    if (
-        not isinstance(qubits, int)
-        and not isinstance(qubits, list)
-        and not isinstance(qubits, np.ndarray)
-    ):
-        raise_error(
-            TypeError,
-            f"qubits must be either type int, list or ndarray, but it is type {type(qubits)}.",
-        )
 
     if isinstance(qubits, int) and qubits < 0:
         raise_error(ValueError, "qubits must be a non-negative integer.")
@@ -949,7 +930,7 @@ def random_pauli_hamiltonian(
         )
         eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
 
-        hamiltonian = np.zeros((d, d), dtype=complex)
+        hamiltonian = backend.zeros((d, d), dtype=backend.complex128)
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
@@ -1103,7 +1084,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend
     exponents = np.arange(nqubits, 0, -1)
     exponents = backend.cast(exponents, dtype=backend.int64)
     powers = 4**exponents
-    powers = backend.engine.where(powers == 0, np.iinfo(np.int64).max, powers)
+    powers = backend.engine.where(powers == 0, int(np.iinfo(np.int64).max), powers)
 
     r = backend.random_uniform(0, 1, size=nqubits, seed=local_state)
 
@@ -1138,23 +1119,21 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    nqubits = int(np.log2(dims))
-
     super_op = random_gaussian_matrix(
         dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
     )
     super_op = super_op @ backend.conj(super_op).T
 
     # partial trace implemented with einsum
-    super_op_reduced = np.einsum(
-        "ijik->jk", np.reshape(backend.to_numpy(super_op), (dims,) * 4)
+    super_op_reduced = backend.einsum(
+        "ijik->jk", backend.reshape(super_op, (dims,) * 4)
     )
 
-    eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
+    eigenvalues, eigenvectors = backend.eigh(super_op_reduced)
 
-    eigenvalues = np.sqrt(1.0 / eigenvalues)
+    eigenvalues = backend.sqrt(1.0 / eigenvalues)
 
-    operator = backend.zeros((dims, dims), dtype=complex)
+    operator = backend.zeros((dims, dims), dtype=backend.complex128)
     for eigenvalue, eigenvector in zip(
         backend.cast(eigenvalues), backend.cast(eigenvectors).T
     ):
