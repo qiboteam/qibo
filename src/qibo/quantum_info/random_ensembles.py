@@ -1179,19 +1179,33 @@ def _fill_tril(mat, rng, symmetric, backend):
         return
 
     if dim <= 4:
-        mat[1, 0] = rng.integers(2, dtype=np.uint8)
+        mat[1, 0] = backend.cast(
+            backend.random_integers(2, seed=rng), dtype=backend.uint8
+        )
         if symmetric:
             mat[0, 1] = mat[1, 0]
         if dim > 2:
-            mat[2, 0] = rng.integers(2, dtype=np.uint8)
-            mat[2, 1] = rng.integers(2, dtype=np.uint8)
+            mat[2, 0] = backend.cast(
+                backend.random_integers(2, seed=rng), dtype=backend.uint8
+            )
+            mat[2, 1] = backend.cast(
+                backend.random_integers(2, seed=rng), dtype=backend.uint8
+            )
+
             if symmetric:
                 mat[0, 2] = mat[2, 0]
                 mat[1, 2] = mat[2, 1]
         if dim > 3:
-            mat[3, 0] = rng.integers(2, dtype=np.uint8)
-            mat[3, 1] = rng.integers(2, dtype=np.uint8)
-            mat[3, 2] = rng.integers(2, dtype=np.uint8)
+            mat[3, 0] = backend.cast(
+                backend.random_integers(2, seed=rng), dtype=backend.uint8
+            )
+            mat[3, 1] = backend.cast(
+                backend.random_integers(2, seed=rng), dtype=backend.uint8
+            )
+            mat[3, 2] = backend.cast(
+                backend.random_integers(2, seed=rng), dtype=backend.uint8
+            )
+
             if symmetric:
                 mat[0, 3] = mat[3, 0]
                 mat[1, 3] = mat[3, 1]
