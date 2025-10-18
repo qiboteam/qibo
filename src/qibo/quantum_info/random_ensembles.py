@@ -1,14 +1,16 @@
 """Module with functions that create random quantum and classical objects."""
 
 import math
+import operator
 import warnings
+from functools import reduce
 from typing import Optional, Union
 
 import numpy as np
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import NumpyBackend, _check_backend_and_local_state
+from qibo.backends import _check_backend_and_local_state
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.clifford import Clifford
@@ -1214,8 +1216,9 @@ def _fill_tril(mat, rng, symmetric, backend):
 
     # Use numpy indices for larger dimensions
     rows, cols = backend.tril_indices(dim, -1)
+    size = reduce(operator.mul, rows.shape)
     vals = backend.cast(
-        backend.random_integers(2, size=rows.size, seed=rng), dtype=backend.uint8
+        backend.random_integers(2, size=size, seed=rng), dtype=backend.uint8
     )
     mat[(rows, cols)] = vals
     if symmetric:
