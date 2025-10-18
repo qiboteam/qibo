@@ -49,15 +49,20 @@ class CliffordBackend(NumpyBackend):
 
         if self.platform in ("numpy", "stim"):
             self.engine = np
+        elif self.platform == "pytorch":
+            import torch  # pylint: disable=import-outside-toplevel
+
+            self.engine = torch
         elif self.platform == "numba":
             import numba  # pylint: disable=import-outside-toplevel
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_cpu,
             )
 
-            self.engine = np
-            self.platform = "numba"
             numba.set_num_threads(1)
+
+            self.engine = np
+
             for method in dir(clifford_operations_cpu):
                 setattr(
                     self._platform, method, getattr(clifford_operations_cpu, method)
@@ -69,6 +74,7 @@ class CliffordBackend(NumpyBackend):
             )
 
             self.engine = cupy
+
             for method in dir(clifford_operations_gpu):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
