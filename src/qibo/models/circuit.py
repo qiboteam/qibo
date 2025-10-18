@@ -1054,7 +1054,7 @@ class Circuit:
         self.compiled.executor = backend.compile(executor)
         if self.measurements:
             self.compiled.result = lambda state, nshots: CircuitResult(
-                state, self.measurements, backend, nshots=nshots
+                state, self.measurements, backend=backend, nshots=nshots
             )
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
@@ -1120,16 +1120,16 @@ class Circuit:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        circ = cls(
+        circuit = cls(
             raw["nqubits"],
             density_matrix=raw["density_matrix"],
             wire_names=raw.get("wire_names"),
         )
 
         for gate in raw["queue"]:
-            circ.add(Gate.from_dict(gate))
+            circuit.add(Gate.from_dict(gate))
 
-        return circ
+        return circuit
 
     def to_qasm(self):
         """Convert circuit to a QASM string.

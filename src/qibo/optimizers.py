@@ -78,7 +78,7 @@ def optimize(
             # set parameters to circuit
             circuit.set_parameters(params)
     """
-    from qibo.backends import _check_backend
+    from qibo.backends import _check_backend  # pylint: disable=import-outside-toplevel
 
     backend = _check_backend(backend)
     if method == "cma":
@@ -87,28 +87,30 @@ def optimize(
                 RuntimeError,
                 "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
             )
+
         return cmaes(
             loss, backend.to_numpy(initial_parameters), args, callback, options
         )
-    elif method == "sgd":
+
+    if method == "sgd":
         return sgd(loss, initial_parameters, args, callback, options, compile, backend)
-    else:
-        return newtonian(
-            loss,
-            initial_parameters,
-            args,
-            method,
-            jac,
-            hess,
-            hessp,
-            bounds,
-            constraints,
-            tol,
-            callback,
-            options,
-            processes,
-            backend,
-        )
+
+    return newtonian(
+        loss,
+        initial_parameters,
+        args,
+        method,
+        jac,
+        hess,
+        hessp,
+        bounds,
+        constraints,
+        tol,
+        callback,
+        options,
+        processes,
+        backend,
+    )
 
 
 def cmaes(loss, initial_parameters, args=(), callback=None, options=None):
@@ -268,7 +270,7 @@ def sgd(
     if options is not None:
         sgd_options.update(options)
 
-    if backend.platform == "tensorflow":
+    if backend.platform == "tensorflow":  # pragma: no cover
         return _sgd_tf(
             loss,
             initial_parameters,
@@ -279,7 +281,7 @@ def sgd(
             callback=callback,
         )
 
-    if backend.platform == "pytorch":
+    if backend.platform == "pytorch":  # pragma: no cover
         if compile:
             log.warning(
                 "PyTorch does not support compilation of the optimization graph."
@@ -291,10 +293,12 @@ def sgd(
     raise_error(RuntimeError, "SGD optimizer requires Tensorflow or PyTorch backend.")
 
 
-def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=None):
+def _sgd_torch(
+    loss, initial_parameters, args, sgd_options, backend, callback=None
+):  # pragma: no cover
 
     vparams = initial_parameters
-    optimizer = getattr(backend.np.optim, sgd_options["optimizer"])(
+    optimizer = getattr(backend.engine.optim, sgd_options["optimizer"])(
         params=[vparams], lr=sgd_options["learning_rate"]
     )
 
@@ -313,7 +317,7 @@ def _sgd_torch(loss, initial_parameters, args, sgd_options, backend, callback=No
 
 def _sgd_tf(
     loss, initial_parameters, args, sgd_options, compile, backend, callback=None
-):
+):  # pragma: no cover
 
     vparams = backend.tf.Variable(initial_parameters)
     optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(

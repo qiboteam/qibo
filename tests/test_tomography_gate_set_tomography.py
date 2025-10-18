@@ -239,11 +239,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        T_2q = backend.np.kron(T, T)
+        T_2q = backend.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = backend.np.linalg.inv(G)
+                G_inv = backend.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
@@ -262,9 +262,9 @@ def test_GST(backend, target_gates, pauli_liouville):
             )
 
 
-def test_GST_invertible_matrix():
+def test_GST_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
     assert True
 
 

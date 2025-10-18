@@ -66,7 +66,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return self.backend.calculate_matrix_exp(self.matrix, phase=-1j * x)
+        return self.backend.matrix_exp(self.matrix, phase=-1j * x)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -85,10 +85,10 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = self.backend.np.kron(
+        matrix = self.backend.kron(
             term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
-        matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -98,8 +98,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = self.backend.np.transpose(matrix, order)
-        matrix = self.backend.np.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = self.backend.transpose(matrix, order)
+        matrix = self.backend.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(
             self.matrix + matrix, *self.target_qubits, backend=self.backend
         )
@@ -120,8 +120,10 @@ class HamiltonianTerm:
         # TODO: improve this and understand why it works
         if isinstance(gate, bool) or gate is None:
             gate = self.gate
+
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
+
         return backend.apply_gate(gate, state, nqubits)  # pylint: disable=E1102
 
 
@@ -260,7 +262,7 @@ class SymbolicTerm(HamiltonianTerm):
             of this term.
         """
         matrices = list(self.qubit_to_matrix_map.values())
-        return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
+        return complex(self.coefficient) * reduce(self.backend.kron, matrices)
 
     @cached_property
     def qubit_to_matrix_map(self) -> dict:
@@ -269,7 +271,7 @@ class SymbolicTerm(HamiltonianTerm):
         acting on it.
         """
         return {
-            q: reduce(self.backend.np.matmul, self.matrix_map.get(q))
+            q: reduce(self.backend.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
         }
 
@@ -300,7 +302,7 @@ class SymbolicTerm(HamiltonianTerm):
         for q in set(self.target_qubits).intersection(set(term.target_qubits)):
             m1 = self.qubit_to_matrix_map.get(q)
             m2 = term.qubit_to_matrix_map.get(q)
-            if not self.backend.np.all(m1 @ m2 == m2 @ m1):
+            if not self.backend.all(m1 @ m2 == m2 @ m1):
                 return False
         return True
 

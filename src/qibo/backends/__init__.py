@@ -45,8 +45,8 @@ class MetaBackend:
                 CliffordBackend if backend == "clifford" else HammingWeightBackend
             )
 
-            engine = kwargs.pop("platform", None)
-            kwargs["engine"] = engine
+            platform = kwargs.pop("platform", None)
+            kwargs["platform"] = platform
 
             return backend_class(**kwargs)
 
@@ -351,7 +351,7 @@ def _check_backend_and_local_state(seed, backend):
     if (
         seed is not None
         and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
+        and not isinstance(seed, backend.engine.random.Generator)
     ):
         raise_error(
             TypeError, "seed must be either type int or numpy.random.Generator."
@@ -360,13 +360,7 @@ def _check_backend_and_local_state(seed, backend):
     backend = _check_backend(backend)
 
     if seed is None or isinstance(seed, int):
-        if backend.__class__.__name__ in [
-            "CupyBackend",
-            "CuQuantumBackend",
-        ]:  # pragma: no cover
-            local_state = backend.np.random.default_rng(seed)
-        else:
-            local_state = np.random.default_rng(seed)
+        local_state = backend.default_rng(seed)
     else:
         local_state = seed
 

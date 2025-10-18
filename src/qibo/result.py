@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import __version__, backends, gates
+from qibo import __version__, gates
 from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
@@ -26,12 +26,15 @@ class QuantumState:
     """Data structure to represent the final state after circuit execution.
 
     Args:
-        state (np.ndarray): Input quantum state as np.ndarray.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, the current backend is going to be used.
+        state (ndarray): Input quantum state as ``ndarray``.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
+            If not provided, the global backend is going to be used.
     """
 
     def __init__(self, state, backend=None):
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
         self.backend = _check_backend(backend)
         self.density_matrix = len(state.shape) == 2
@@ -50,16 +53,11 @@ class QuantumState:
                 contains more terms they will be ignored. Defaults to :math:`20`.
 
         Returns:
-            (str): A string representing the state in the computational basis.
+            str: String representing the state in the computational basis.
         """
-        if self.density_matrix:
-            terms = self.backend.calculate_symbolic_density_matrix(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
-        else:
-            terms = self.backend.calculate_symbolic(
-                self._state, self.nqubits, decimals, cutoff, max_terms
-            )
+        terms = self.backend.calculate_symbolic(
+            self._state, self.nqubits, decimals, cutoff, max_terms
+        )
         return " + ".join(terms)
 
     def state(self, numpy: bool = False):
@@ -101,12 +99,9 @@ class QuantumState:
         if qubits is None:
             qubits = tuple(range(self.nqubits))
 
-        if self.density_matrix:
-            return self.backend.calculate_probabilities_density_matrix(
-                self._state, qubits, self.nqubits
-            )
-
-        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
+        return self.backend.calculate_probabilities(
+            self._state, qubits, self.nqubits, density_matrix=self.density_matrix
+        )
 
     def __str__(self):
         return self.symbolic()
@@ -139,7 +134,11 @@ class QuantumState:
         Returns:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
-        backend = backends.construct_backend("numpy")
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            construct_backend,
+        )
+
+        backend = construct_backend("numpy")
         return cls(payload.get("state"), backend=backend)
 
     @classmethod
@@ -161,7 +160,7 @@ class MeasurementOutcomes:
 
     Args:
         measurements (:class:`qibo.gates.M`): Measurement gates.
-        backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
             If ``None``, then the current backend is used. Defaults to ``None``.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
@@ -237,7 +236,6 @@ class MeasurementOutcomes:
                 )
                 # register frequencies to individual gate ``MeasurementResult``
                 qubit_map = {q: i for i, q in enumerate(qubits)}
-                reg_frequencies = {}
                 binary_frequencies = frequencies_to_binary(
                     self._frequencies, len(qubits)
                 )
@@ -258,7 +256,9 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.frequencies(binary)
+                gate.register_name: gate.result.frequencies(
+                    binary, backend=self.backend
+                )
                 for gate in self.measurements
             }
 
@@ -295,7 +295,7 @@ class MeasurementOutcomes:
         probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(
-            self.backend.np.sqrt(probs), qubits, nqubits
+            self.backend.sqrt(probs), qubits, nqubits
         )
 
     def has_samples(self):
@@ -330,19 +330,22 @@ class MeasurementOutcomes:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = self.backend.np.concatenate(
-                    [gate.result.samples() for gate in self.measurements],
+                self._samples = self.backend.concatenate(
+                    [
+                        gate.result.samples(backend=self.backend)
+                        for gate in self.measurements
+                    ],
                     axis=1,
                 )
             else:
                 if self._frequencies is not None:
                     # generate samples that respect the existing frequencies
                     frequencies = self.frequencies(binary=False)
-                    samples = np.concatenate(
+                    samples = self.backend.concatenate(
                         [np.repeat(x, f) for x, f in frequencies.items()]
                     )
-                    np.random.shuffle(samples)
-                    samples = self.backend.cast(samples, dtype=self.backend.np.int64)
+                    self.backend.shuffle(samples)
+                    samples = self.backend.cast(samples, dtype=self.backend.int64)
                 else:
                     # generate new samples
                     samples = self.backend.sample_shots(self._probs, self.nshots)
@@ -354,15 +357,14 @@ class MeasurementOutcomes:
                             [p0.get(q) for q in qubits],
                             [p1.get(q) for q in qubits],
                         ],
-                        dtype=self.backend.np.float64,
+                        dtype=self.backend.float64,
                     )
                     samples = self.backend.apply_bitflips(
                         samples, bitflip_probabilities
                     )
                 # register samples to individual gate ``MeasurementResult``
-                qubit_map = {
-                    q: i for i, q in enumerate(self.measurement_gate.target_qubits)
-                }
+                qubit_map = self.measurement_gate.target_qubits
+                qubit_map = dict(zip(qubit_map, range(len(qubit_map))))
                 self._samples = samples
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
@@ -370,7 +372,7 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.samples(binary)
+                gate.register_name: gate.result.samples(binary, backend=self.backend)
                 for gate in self.measurements
             }
 
@@ -475,7 +477,7 @@ class MeasurementOutcomes:
             filename (str): Path to the file containing the :class:`qibo.result.MeasurementOutcomes`.
 
         Returns:
-            A :class:`qibo.result.MeasurementOutcomes` object.
+            :class:`qibo.result.MeasurementOutcomes`: instance of the ``MeasurementOutcomes`` class.
         """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
@@ -485,11 +487,12 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state after circuit execution.
 
     Args:
-        final_state (np.ndarray): Input quantum state as np.ndarray.
-        measurements (qibo.gates.M): The measurement gates containing the measurements.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided, then the current backend is going to be used.
-        probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
-        samples (np.darray): Use these samples to generate probabilities and frequencies.
+        final_state (ndarray): Input quantum state as np.ndarray.
+        measurements (:class:`qibo.gates.M`): The measurement gates containing the measurements.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
+            If not provided, then the current backend is going to be used.
+        probabilities (ndarray): Use these probabilities to generate samples and frequencies.
+        samples (ndarray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
     """
 
