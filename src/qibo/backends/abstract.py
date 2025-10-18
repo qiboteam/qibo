@@ -427,6 +427,10 @@ class Backend:
         return self.engine.random.choice(array, size=size, replace=replace, p=p)
 
     def random_integers(self, low, high=None, size=None, seed=None):
+        if high is None:
+            high = low
+            low = 0
+
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
