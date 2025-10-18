@@ -1214,7 +1214,9 @@ def _fill_tril(mat, rng, symmetric, backend):
 
     # Use numpy indices for larger dimensions
     rows, cols = backend.tril_indices(dim, -1)
-    vals = rng.integers(2, size=rows.size, dtype=backend.uint8)
+    vals = backend.cast(
+        backend.random_integers(2, size=rows.size, seed=rng), dtype=backend.uint8
+    )
     mat[(rows, cols)] = vals
     if symmetric:
         mat[(cols, rows)] = vals
