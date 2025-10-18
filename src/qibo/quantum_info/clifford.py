@@ -389,8 +389,8 @@ class Clifford:
                 TypeError, f"``deep`` must be type bool, but it is type {type(deep)}."
             )
 
-        symplectic_matrix = (
-            self.copy(self.symplectic_matrix) if deep else self.symplectic_matrix
+        symplectic_matrix = self._backend.cast(
+            self.symplectic_matrix, dtype=self.symplectic_matrix.dtype, copy=deep
         )
 
         return self.__class__(
