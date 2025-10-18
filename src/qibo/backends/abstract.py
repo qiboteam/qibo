@@ -520,8 +520,10 @@ class Backend:
     def tril(self, array, k: int = 0) -> "ndarray":
         return self.engine.tril(array, k=k)
 
-    def tril_indices(self, row: int, col: int = 0, offset: int = 0, **kwargs):
-        return self.engine.tril_indices(row, col, offset, **kwargs)
+    def tril_indices(self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs):
+        if col is None:
+            col = row
+        return self.engine.tril_indices(row, offset, col, **kwargs)
 
     def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
         return self.engine.unique(array, **kwargs)
