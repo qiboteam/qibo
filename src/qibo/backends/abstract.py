@@ -426,10 +426,19 @@ class Backend:
 
         return self.engine.random.choice(array, size=size, replace=replace, p=p)
 
-    def random_integers(self, low, high=None, size=None, seed=None):
+    def random_integers(
+        self,
+        low: int,
+        high: Optional[int] = None,
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        seed=None,
+    ):
         if high is None:
             high = low
             low = 0
+
+        if size is None:
+            size = 1
 
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
@@ -511,8 +520,8 @@ class Backend:
     def tril(self, array, k: int = 0) -> "ndarray":
         return self.engine.tril(array, k=k)
 
-    def tril_indices(self, n: int, k: int = 0, m: int = None):
-        return self.engine.tril_indices(n, k, m)
+    def tril_indices(self, row: int, col: int = 0, offset: int = 0, **kwargs):
+        return self.engine.tril_indices(row, col, offset, **kwargs)
 
     def unique(self, array, **kwargs) -> Union["ndarray", Tuple["ndarray", "ndarray"]]:
         return self.engine.unique(array, **kwargs)
