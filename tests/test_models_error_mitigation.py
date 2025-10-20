@@ -308,7 +308,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     c.add(gates.M(*range(nmeas)))
     qubits = [term.target_qubits for term in obs.terms]
     coefficients = [term.coefficient.real for term in obs.terms]
-    noisy_val = obs.backend.expectation_diagonal_observable_symbolic(
+    noisy_val = obs.backend.expectation_diagonal_observable_symbolic_from_samples(
         noise.apply(c), obs.nqubits, qubits, coefficients, nshots=nshots
     )
 
