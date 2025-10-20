@@ -525,7 +525,11 @@ class NumpyMatrices:
             [1 + 0j if l == k else 0j for l in range(2**bitstring_length)]
             for k in range(2**bitstring_length)
         ]
-        exp, sin, cos = self.engine.exp(1j * phi), self.engine.sin(theta), self.engine.cos(theta)
+        exp, sin, cos = (
+            self.engine.exp(1j * phi),
+            self.engine.sin(theta),
+            self.engine.cos(theta),
+        )
 
         integer_in = int("1" * num_qubits_in + "0" * num_qubits_out, base=2)
         integer_out = int("0" * num_qubits_in + "1" * num_qubits_out, base=2)
