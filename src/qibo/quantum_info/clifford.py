@@ -60,10 +60,12 @@ class Clifford:
             # adding the scratch row if not provided
             self.symplectic_matrix = self.data
             if self.symplectic_matrix.shape[0] % 2 == 0:
-                self.symplectic_matrix = np.vstack(
+                self.symplectic_matrix = self._backend.vstack(
                     (
                         self.symplectic_matrix,
-                        np.zeros(self.symplectic_matrix.shape[1], dtype=np.uint8),
+                        self._backend.zeros(
+                            self.symplectic_matrix.shape[1], dtype=self._backend.uint8
+                        ),
                     )
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
@@ -266,13 +268,13 @@ class Clifford:
                     ],
                     dtype=self._backend.float64,
                 )
-                samples = self._backend.cast(samples, dtype="int32")
+                samples = self._backend.cast(samples, dtype=self._backend.int32)
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
             # register samples to individual gate ``MeasurementResult``
             qubit_map = {
                 q: i for i, q in enumerate(self.measurement_gate.target_qubits)
             }
-            self._samples = self._backend.cast(samples, dtype="int32")
+            self._samples = self._backend.cast(samples, dtype=self._backend.int32)
             for gate in self.measurements:
                 rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                 gate.result.register_samples(self._samples[:, rqubits])

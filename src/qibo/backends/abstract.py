@@ -181,35 +181,35 @@ class Backend:
 
     @property
     def complex64(self):
-        return getattr(self.engine, "complex64")
+        return self.engine.complex64
 
     @property
     def complex128(self):
-        return getattr(self.engine, "complex128")
+        return self.engine.complex128
 
     @property
     def float32(self):
-        return getattr(self.engine, "float32")
+        return self.engine.float32
 
     @property
     def float64(self):
-        return getattr(self.engine, "float64")
+        return self.engine.float64
 
     @property
     def int8(self):
-        return getattr(self.engine, "int8")
+        return self.engine.int8
 
     @property
     def int32(self):
-        return getattr(self.engine, "int32")
+        return self.engine.int32
 
     @property
     def int64(self):
-        return getattr(self.engine, "int64")
+        return self.engine.int64
 
     @property
     def uint8(self):
-        return getattr(self.engine, "uint8")
+        return self.engine.uint8
 
     ########################################################################################
     ######## Methods related to array manipulation                                  ########
