@@ -136,7 +136,7 @@ class Hamiltonian(AbstractHamiltonian):
 
         circuit = circuit.copy(True)
         circuit.add(gates.M(*range(self.nqubits)))
-        return self.backend.expectation_diagonal_observable_dense(
+        return self.backend.expectation_diagonal_observable_dense_from_samples(
             circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
 
@@ -164,7 +164,7 @@ class Hamiltonian(AbstractHamiltonian):
                 return frequencies
 
         circuit._final_state = TMP()
-        return self.backend.expectation_diagonal_observable_dense(
+        return self.backend.expectation_diagonal_observable_dense_from_samples(
             circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
@@ -620,15 +620,12 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             ):
                 return self.dense.expectation(circuit)
             terms_coefficients, terms, term_qubits = self.simple_terms
-            return (
-                self.constant
-                + self.backend.expectation_observable_symbolic_from_state(
-                    circuit, terms, term_qubits, terms_coefficients, self.nqubits
-                )
+            return self.constant + self.backend.expectation_observable_symbolic(
+                circuit, terms, term_qubits, terms_coefficients, self.nqubits
             )
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
-        return self.backend.expectation_observable_symbolic(
+        return self.backend.expectation_observable_symbolic_from_samples(
             circuit,
             terms_coefficients,
             terms_observables,
@@ -673,7 +670,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 ]
             )
             coefficients.append(term.coefficient.real)
-        return self.backend.expectation_diagonal_observable_symbolic(
+        return self.backend.expectation_diagonal_observable_symbolic_from_samples(
             circuit, self.nqubits, qubits, coefficients, nshots=1, qubit_map=qubit_map
         )
 

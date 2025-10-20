@@ -296,7 +296,7 @@ class Backend(abc.ABC):
             return self.calculate_expectation_density_matrix(observable, state, False)
         return self.calculate_expectation_state(observable, state, False)
 
-    def expectation_diagonal_observable_dense(
+    def expectation_diagonal_observable_dense_from_samples(
         self,
         circuit: "Circuit",
         observable: "ndarray",
@@ -305,7 +305,7 @@ class Backend(abc.ABC):
         qubit_map: Optional[Tuple[int, ...]] = None,
     ) -> float:
         """Compute the expectation value of a dense hamiltonian diagonal in a defined basis
-        starting from the samples.
+        starting from the samples (measured in the same basis).
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
@@ -338,7 +338,7 @@ class Backend(abc.ABC):
         counts = self.cast(list(freq.values()), dtype=diag.dtype) / sum(freq.values())
         return self.np.real(self.np.sum(diag * counts))
 
-    def expectation_diagonal_observable_symbolic(
+    def expectation_diagonal_observable_symbolic_from_samples(
         self,
         circuit: "Circuit",
         nqubits: int,
@@ -388,7 +388,7 @@ class Backend(abc.ABC):
         )
         return self.np.sum(expvals @ counts)
 
-    def expectation_observable_symbolic(
+    def expectation_observable_symbolic_from_samples(
         self,
         circuit,
         diagonal_terms_coefficients: List[List[float]],
@@ -462,7 +462,7 @@ class Backend(abc.ABC):
             diagonal_terms_coefficients,
             qubit_maps,
         ):
-            expval += self.expectation_diagonal_observable_symbolic(
+            expval += self.expectation_diagonal_observable_symbolic_from_samples(
                 circ,
                 nqubits,
                 terms_qubits,
@@ -472,7 +472,7 @@ class Backend(abc.ABC):
             )
         return constant + expval
 
-    def expectation_observable_symbolic_from_state(
+    def expectation_observable_symbolic(
         self,
         circuit: "Circuit",
         terms: List[str],
@@ -481,8 +481,8 @@ class Backend(abc.ABC):
         nqubits: int,
     ):
         """
-        Compute the expectation value of a general symbolic observable that is a sum of terms
-        starting from the state. In particular, each term of the observable is contracted with
+        Compute the expectation value of a general symbolic observable that is a sum of terms.
+        In particular, each term of the observable is contracted with
         the corresponding subspace defined by the qubits it acts on.
 
         Args:

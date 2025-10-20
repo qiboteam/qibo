@@ -1,9 +1,12 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 
+from collections.abc import Iterable
+
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.backends import construct_backend
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.models import XXZ
 from qibo.quantum_info.random_ensembles import (
@@ -459,3 +462,17 @@ def test_hamiltonian_energy_fluctuation(backend):
 
     assert np.isclose(backend.to_numpy(gs_energy_fluctuation), 0, atol=1e-5)
     assert gs_energy_fluctuation < zs_energy_fluctuation
+
+
+def test_dense_hamiltonian_backend_setter(backend):
+    nqubits = 2
+    matrix = np.random.randn(2**nqubits, 2**nqubits)
+    h = Hamiltonian(nqubits, matrix, backend=construct_backend("numpy"))
+    h.backend = backend
+    if isinstance(backend.tensor_types, Iterable):
+        assert any(
+            isinstance(h.matrix, tensor_type) for tensor_type in backend.tensor_types
+        )
+    else:
+        assert isinstance(h.matrix, backend.tensor_types)
+    assert isinstance(h.backend, type(backend))
