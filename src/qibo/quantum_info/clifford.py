@@ -206,7 +206,7 @@ class Clifford:
         """
         stabilizers = self.stabilizers(return_array=True)
 
-        return self.sum(stabilizers, axis=0) / len(stabilizers)
+        return self._backend.sum(stabilizers, axis=0) / len(stabilizers)
 
     @property
     def measurement_gate(self):
