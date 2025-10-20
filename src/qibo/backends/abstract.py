@@ -1359,7 +1359,7 @@ class Backend:
     def sample_shots(self, probabilities, nshots: int):
         """Sample measurement shots according to a probability distribution."""
         return self.random_choice(
-            range(len(probabilities)), size=nshots, p=probabilities
+            self.engine.arange(len(probabilities)), size=nshots, p=probabilities
         )
 
     def samples_to_binary(self, samples, nqubits: int):
