@@ -314,7 +314,7 @@ def _set_row_x_to_zero(clifford, circuit: Circuit, qubit: int):
             )
             circuit.add(gates.CNOT(qubit, k))
 
-    if np.any(z[qubit:]):
+    if clifford._backend.any(z[qubit:]):
         if not z[qubit]:
             # to treat Zs: make sure row.Z[k] to True
             clifford._backend._platform.S(clifford.symplectic_matrix, qubit, nqubits)
@@ -347,7 +347,7 @@ def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
     x = clifford.stabilizers(symplectic=True)
     x, z = x[:, :nqubits][qubit], x[:, nqubits:-1][qubit]
 
-    if np.any(z[qubit + 1 :]):
+    if clifford._backend.any(z[qubit + 1 :]):
         for k in range(qubit + 1, nqubits):
             if z[k]:
                 clifford._backend._platform.CNOT(
@@ -355,7 +355,7 @@ def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
                 )
                 circuit.add(gates.CNOT(k, qubit))
 
-    if np.any(x[qubit:]):
+    if clifford._backend.any(x[qubit:]):
         clifford._backend._platform.H(clifford.symplectic_matrix, qubit, nqubits)
         circuit.add(gates.H(qubit))
         for k in range(qubit + 1, nqubits):
@@ -393,8 +393,10 @@ def _rank_2(a: bool, b: bool, c: bool, d: bool):
     """Returns rank of 2x2 boolean matrix."""
     if (a & d) ^ (b & c):
         return 2
+
     if a or b or c or d:
         return 1
+
     return 0
 
 
