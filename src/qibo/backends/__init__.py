@@ -348,20 +348,10 @@ def construct_backend(backend, **kwargs) -> Backend:  # pylint: disable=R1710
 
 
 def _check_backend_and_local_state(seed, backend):
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, backend.engine.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
     backend = _check_backend(backend)
 
-    if seed is None or isinstance(seed, int):
-        local_state = backend.default_rng(seed)
-    else:
-        local_state = seed
+    local_state = (
+        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
 
     return backend, local_state

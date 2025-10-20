@@ -9,7 +9,6 @@ from typing import List, Sequence, Tuple
 import sympy
 
 from qibo import config
-from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -549,6 +548,8 @@ class Gate:
         Returns:
             ndarray: Matrix representation of gate.
         """
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
         backend = _check_backend(backend)
 
         return backend.matrix(self)
@@ -673,6 +674,8 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
     def matrix(self, backend=None):
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
         backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)
