@@ -49,6 +49,10 @@ class Clifford:
     _samples: Optional[int] = None
 
     def __post_init__(self):
+        if self._backend is None:
+            self._backend = CliffordBackend(self.engine)
+        self.engine = self._backend.engine
+
         if isinstance(self.data, Circuit):
             clifford = self.from_circuit(self.data, engine=self.engine)
             self.symplectic_matrix = clifford.symplectic_matrix
@@ -69,9 +73,6 @@ class Clifford:
                     )
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
-        if self._backend is None:
-            self._backend = CliffordBackend(self.engine)
-        self.engine = self._backend.engine
 
     @classmethod
     def from_circuit(
