@@ -611,7 +611,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 "Calculation of expectation values starting from the state is deprecated, use the ``expectation_from_state`` method if you really need it, or simply pass the circuit you want to calculate the expectation value from."
             )
             return self.expectation_from_state(circuit)
-
         if nshots is None:
             if not all(
                 isinstance(factor, PauliSymbol)
@@ -620,7 +619,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             ):
                 return self.dense.expectation(circuit)
             terms_coefficients, terms, term_qubits = self.simple_terms
-            return self.constant + self.backend.expectation_observable_symbolic(
+            return self.constant.real + self.backend.expectation_observable_symbolic(
                 circuit, terms, term_qubits, terms_coefficients, self.nqubits
             )
 
