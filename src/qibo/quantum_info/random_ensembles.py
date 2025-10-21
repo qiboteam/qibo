@@ -616,7 +616,6 @@ def random_clifford(
            structure of the Clifford group*.
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
-
     if isinstance(nqubits, int) is False:
         raise_error(
             TypeError,
@@ -634,6 +633,12 @@ def random_clifford(
 
     backend, local_state = _check_backend_and_local_state(seed, backend)
 
+    if backend.platform == "tensorflow":
+        raise_error(
+            NotImplementedError,
+            "``random_clifford`` function does not support the ``TensorflowBackend``.",
+        )
+
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
         nqubits, local_state=local_state, backend=backend
     )
@@ -647,7 +652,6 @@ def random_clifford(
     gamma_prime = backend.cast(gamma_prime, dtype=backend.uint8)
 
     delta = backend.identity(nqubits, dtype=backend.uint8)
-    delta = backend.cast(delta, dtype=delta.dtype)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     _fill_tril(gamma, local_state, symmetric=True, backend=backend)
@@ -663,7 +667,6 @@ def random_clifford(
 
     # Compute stabilizer table
     zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
-    zero = backend.cast(zero, dtype=zero.dtype)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
@@ -688,19 +691,18 @@ def random_clifford(
 
     # Apply qubit permutation
     table = had_free_operator_2[
-        backend.concatenate([permutations, nqubits + permutations])
+        backend.concatenate([permutations, nqubits + permutations], axis=0)
     ]
 
     # Apply layer of Hadamards
-    inds = hadamards * backend.engine.arange(1, nqubits + 1)
+    inds = hadamards * backend.arange(1, nqubits + 1)
     inds = inds[inds > 0] - 1
-    lhs_inds = backend.concatenate([inds, inds + nqubits])
-    rhs_inds = backend.concatenate([inds + nqubits, inds])
+    lhs_inds = backend.concatenate([inds, inds + nqubits], axis=0)
+    rhs_inds = backend.concatenate([inds + nqubits, inds], axis=0)
     table[lhs_inds, :] = table[rhs_inds, :]
 
     # Apply table
     tableau = backend.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
-    tableau = backend.cast(tableau, dtype=tableau.dtype)
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
@@ -1092,7 +1094,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend
 
     hadamards = 1 * (indexes < exponents)
 
-    permutations = backend.zeros(nqubits, dtype=int)
+    permutations = backend.zeros(nqubits, dtype=backend.int64)
     for l, (index, m) in enumerate(zip(indexes, exponents)):
         k = index if index < m else 2 * m - index - 1
         k = int(k)

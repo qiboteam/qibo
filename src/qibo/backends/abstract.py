@@ -230,6 +230,9 @@ class Backend:
     def any(self, array, **kwargs) -> Union[ArrayLike, bool]:
         return self.engine.any(array, **kwargs)
 
+    def arange(self, *args, **kwargs):
+        return self.engine.arange(*args, **kwargs)
+
     def arccos(self, array, **kwargs) -> ArrayLike:
         return self.engine.arccos(array, **kwargs)
 

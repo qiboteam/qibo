@@ -49,10 +49,6 @@ class CliffordBackend(NumpyBackend):
 
         if self.platform in ("numpy", "stim"):
             self.engine = np
-        elif self.platform == "pytorch":
-            import torch  # pylint: disable=import-outside-toplevel
-
-            self.engine = torch
         elif self.platform == "numba":
             import numba  # pylint: disable=import-outside-toplevel
             from qibojit.backends import (  # pylint: disable=C0415
@@ -79,6 +75,10 @@ class CliffordBackend(NumpyBackend):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
                 )
+        elif self.platform == "pytorch":
+            import torch  # pylint: disable=import-outside-toplevel
+
+            self.engine = torch
         else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
