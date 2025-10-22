@@ -101,10 +101,20 @@ Indices and tables
 * :ref:`search`
 
 
-Supporters and collaborators
-============================
+Supporters
+==========
 
-* Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
+Financial Sponsors and Development Partners
+-------------------------------------------
+
+* `Quantum Research Center <https://www.tii.ae/quantum>`_, Technology Innovation Institute (TII), United Arab Emirates.
+* `National Quantum Science and Technology Institute <https://nqsti.it>`_, Italy.
+* `National Quantum Computing Hub <https://nqch.sg>`_, National Quantum Office, Singapore.
+* `QUARKO <https://quarko.tech>`_.
+
+Collaborators
+-------------
+
 * Università degli Studi di Milano (UNIMI), Italy.
 * Istituto Nazionale di Fisica Nucleare (INFN), Italy.
 * Università degli Studi di Milano-Bicocca (UNIMIB), Italy.
