@@ -2,7 +2,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-mpl.use("agg")
+mpl.use("tkagg")
 
 from qibo import Circuit, gates
 from qibo.ui.bloch import Bloch
@@ -214,6 +214,19 @@ def test_many_spheres():
     bs.render()
     plt.show()
     bs.clear()
+
+    bs.render()
+    plt.show()
+
+
+def test_mixed_state():
+    bs = Bloch()
+
+    states = [0.25, 0.25, 0.0]
+    bs.add_vector(states, mode=["vector"], color="blue")
+
+    states = [1.0, 0.0, 0.0]
+    bs.add_vector(states, mode=["vector"], color="red")
 
     bs.render()
     plt.show()

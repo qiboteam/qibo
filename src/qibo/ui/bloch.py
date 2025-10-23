@@ -157,6 +157,13 @@ class Bloch:
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
     # -----States and Vectors-----
+    def _check(self, x, y, z):
+        """This function checks that vectors have only three elements and that they have a radius < 1."""
+        if np.sqrt(np.power(x, 2) + np.power(y, 2) + np.power(z, 2)) <= 1.0:
+            pass
+        else:
+            raise_error(ValueError, "The coordinates are outside the Bloch sphere.")
+
     def _coordinates(self, state):
         """This function determines the coordinates of a qubit in the sphere."""
         x, y, z = 0, 0, 0
@@ -174,32 +181,19 @@ class Bloch:
             z = sigma_Z.expectation(state)
         return x, y, z
 
-    def _homogeneous(self, vector):
-        """Helper method to `_broadcasting_semantics()`."""
-        # breakpoint()
-        if len(vector.shape) == 1:
-            #  breakpoint()
-            return [vector]
-        elif len(vector.shape) == 2:
-            return vector
-        else:
-            raise_error(ValueError, "Only `2D` or `1D` np.ndarray / list is accepted.")
-
     def _broadcasting_semantics(self, vector, mode, color):
         """This function makes sure that `vector`, `mode`, `color` have the same sizes."""
         if isinstance(vector, list):
             vector = np.array(vector)
+        if isinstance(mode, (list, str)):
+            mode = np.array(mode)
+        if isinstance(color, (list, str)):
+            color = np.array(color)
 
-        vector = self._homogeneous(vector)
+        vector = np.atleast_2d(vector)
+        vector, mode, color = np.broadcast_arrays(vector, mode, color)
 
-        num_vector = len(vector)
-        if isinstance(mode, str):
-            mode = [mode] * num_vector
-
-        if isinstance(color, str):
-            color = [color] * num_vector
-
-        return vector, mode, color
+        return vector, mode.flatten(), color.flatten()
 
     def add_vector(
         self,
@@ -240,6 +234,7 @@ class Bloch:
             else:
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
+    # -----Clear and produce the sphere-----
     def clear(self):
         """This function clears the sphere."""
         plt.close()
