@@ -355,7 +355,7 @@ def _exponent(
         z2 (np.array): Bits of the second z paulis.
 
     Returns:
-        (np.array): The calculated exponents.
+        ndarray: The calculated exponents.
     """
     # this cannot be performed in the packed representation for measurements (thus packed rows)
     # because bitwise arithmetic difference and sum are needed, which cannot be done directly
@@ -373,7 +373,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
         nqubits (int): Total number of qubits.
 
     Returns:
-        (np.array): The updated symplectic matrix.
+        ndarray: The updated symplectic matrix.
     """
     # calculate the exponent in the unpacked representation
     xi, zi = symplectic_matrix[i, :nqubits], symplectic_matrix[i, nqubits:-1]
