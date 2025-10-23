@@ -333,7 +333,6 @@ p(0.1) q[0];"""
     assert c.queue[3].parameters == (0.1,)
 
 
-
 def test_from_qasm_crotations():
     target = """OPENQASM 2.0;
 qreg q[2];

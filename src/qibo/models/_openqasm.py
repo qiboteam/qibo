@@ -108,7 +108,7 @@ def _qibo_gate_name(gate):
 
     if gate == "ccx":
         return "TOFFOLI"
-    
+
     if gate == "p":
         return "U1"
 
