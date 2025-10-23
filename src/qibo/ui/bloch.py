@@ -176,7 +176,9 @@ class Bloch:
 
     def _homogeneous(self, vector):
         """Helper method to `_broadcasting_semantics()`."""
+        # breakpoint()
         if len(vector.shape) == 1:
+            #  breakpoint()
             return [vector]
         elif len(vector.shape) == 2:
             return vector
@@ -255,6 +257,7 @@ class Bloch:
         """This function creates the empty sphere and plots the
         vectors and points on it."""
         if self._shown == True:
+            plt.close()
             self._new_window()
         self._shown = True
 
