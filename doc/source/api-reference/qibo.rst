@@ -1367,6 +1367,17 @@ Heisenberg XXZ
     This is useful for systems that contain many qubits for which constructing
     the full matrix is intractable.
 
+
+Expectation values
+^^^^^^^^^^^^^^^^^^
+
+Functions to compute expectation values of Hamiltonians expressed in different input formats.
+
+Expectation values of Hamiltonians
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.hamiltonians.expectation_values.get_expval_hamiltonian
+    
 _______________________
 
 
