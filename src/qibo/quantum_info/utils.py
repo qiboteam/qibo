@@ -639,12 +639,11 @@ def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
 def decompose_permutation(
     sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None
 ):
-    """
-     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    """Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
     into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}` such that:
-        - each layer has at most :math:`m` disjoint transpositions
-        - each layer moves a power‑of‑two number of indices.
+    each layer has at most :math:`m` disjoint transpositions and each layer moves a power‑of‑two number
+    of indices.
 
     We do this as follows:
         1) Cycle extraction – split sigma into disjoint cycles.
