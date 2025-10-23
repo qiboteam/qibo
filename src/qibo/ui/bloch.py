@@ -121,7 +121,7 @@ class Bloch:
         y = np.cos(theta)
         return x, y, z
 
-    def _latitude(self, z):
+    def _parallel(self, z):
         """Helper method to `_create_sphere` to construct the sphere's latitudes
         Args:
             z (float): latitude at which the circle will be drawn
