@@ -26,13 +26,6 @@ class Arrow3D(FancyArrowPatch):
         This method is automatically called by Matplotlib's 3D axis
         to transform the arrow's 3D coordinates into 2D screen coordinates,
         handling perspective and position for correct display.
-
-        Args:
-            None.
-
-        Returns:
-            float: The minimum z-depth of the projected arrow's points.
-            This is used by Matplotlib to determine the drawing order of the objects.
         """
         xs3d, ys3d, zs3d = self._verts3d
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
@@ -90,15 +83,7 @@ class Bloch:
 
     # -----Sphere-----
     def _sphere_surface(self):
-        """Helper method to `_create_sphere` to construct the sphere's surface
-
-        Args:
-            None
-
-        Returns:
-            Three arrays containing the cartesian coordinates
-            of 100 points used to draw the surface of the sphere.
-        """
+        """Helper method to `_create_sphere` to construct the sphere's surface"""
         phi, theta = np.mgrid[0.0 : np.pi : 100j, 0.0 : 2.0 * np.pi : 100j]
         x = np.sin(phi) * np.cos(theta)
         y = np.sin(phi) * np.sin(theta)
@@ -106,15 +91,7 @@ class Bloch:
         return x, y, z
 
     def _axis(self):
-        """Helper method to `_create_sphere` to construct the sphere's axis
-
-        Args:
-            None
-
-        Returns:
-            Three arrays containing the cartesian coordinates
-            of 100 points used to draw the axis of the sphere.
-        """
+        """Helper method to `_create_sphere` to construct the sphere's axis."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.zeros(100)
         x = np.sin(theta)
@@ -122,14 +99,7 @@ class Bloch:
         return x, y, z
 
     def _parallel(self, z):
-        """Helper method to `_create_sphere` to construct the sphere's latitudes
-        Args:
-            z (float): latitude at which the circle will be drawn
-
-        Returns:
-            Three arrays containing the cartesian coordinates
-            of 100 points used to draw the latitudes of the sphere.
-        """
+        """Helper method to `_create_sphere` to construct the sphere's parallels."""
         theta = np.linspace(0, 2 * np.pi, 100)
         z = np.full(100, z)
         r = np.sqrt(1 - z[0] ** 2)
@@ -138,14 +108,7 @@ class Bloch:
         return x, y, z
 
     def _meridian(self, phi):
-        """Helper method to `_create_sphere` to construct the sphere's meridians
-        Args:
-            phi (float): angle at which the meridian will be drawn.
-
-        Returns:
-            Three arrays containing the cartesian coordinates
-            of 100 points used to draw the meridians of the sphere.
-        """
+        """Helper method to `_create_sphere` to construct the sphere's meridians."""
         theta = np.linspace(0, 2 * np.pi, 100)
         x = np.sin(theta) * np.cos(phi)
         y = np.sin(theta) * np.sin(phi)
@@ -170,13 +133,13 @@ class Bloch:
             (zeros, zeros, line),
         ]
 
-        # Meridian and Latitude
+        # Meridian and Parallel
         phi = [(n + 1) * np.pi / 3 for n in range(6)]
         lat = (0.4, -0.4, 0.9, -0.9)
         meridian = lambda x: self.ax.plot(*self._meridian(x), color="darkgrey")
-        latitude = lambda x: self.ax.plot(*self._latitude(x), color="darkgrey")
+        parallel = lambda x: self.ax.plot(*self._parallel(x), color="darkgrey")
 
-        # Axis, Axis lines, Meridians, Latitudes
+        # Axis, Axis lines, Meridians, Parallels
         with mpl.rc_context(self.STYLE):
             [self.ax.plot(*combinations_axis[i], color="darkgrey") for i in range(3)]
             [
@@ -184,7 +147,7 @@ class Bloch:
                 for i in range(3)
             ]
             [meridian(p) for p in phi]
-            [latitude(l) for l in lat]
+            [parallel(l) for l in lat]
 
         # Text
         with mpl.rc_context(self.STYLE_TEXT):
@@ -195,14 +158,7 @@ class Bloch:
 
     # -----States and Vectors-----
     def _coordinates(self, state):
-        """This function determines the coordinates of a qubit in the sphere.
-
-        Args:
-            state (np.ndarray): quantum state.
-
-        Returns:
-            The coordinates of the state on the sphere.
-        """
+        """This function determines the coordinates of a qubit in the sphere."""
         x, y, z = 0, 0, 0
         if state[0] == 1 and state[0] == 0:
             z = 1
@@ -219,14 +175,7 @@ class Bloch:
         return x, y, z
 
     def _homogeneous(self, vector):
-        """Helper method to `_broadcasting_semantics()`."
-
-        Args:
-            vector (np.ndarray / list): quantum state.
-
-        Returns:
-            None
-        """
+        """Helper method to `_broadcasting_semantics()`."""
         if len(vector.shape) == 1:
             return [vector]
         elif len(vector.shape) == 2:
@@ -235,18 +184,7 @@ class Bloch:
             raise_error(ValueError, "Only `2D` or `1D` np.ndarray / list is accepted.")
 
     def _broadcasting_semantics(self, vector, mode, color):
-        """This function makes sure that `vector`, `mode`, `color` have the same sizes."
-
-        Args:
-            vector (np.ndarray): quantum state.
-            mode (str): the two possible representations on the
-                sphere: "point" or "vector".
-            color (str): the color that the "point"/"vector"
-                will have on the sphere.
-
-        Returns:
-            Three array of the same dimensions.
-        """
+        """This function makes sure that `vector`, `mode`, `color` have the same sizes."""
         if isinstance(vector, list):
             vector = np.array(vector)
 
@@ -267,18 +205,7 @@ class Bloch:
         mode: Union[str, list[str]] = "vector",
         color: Union[str, list[str]] = "black",
     ):
-        """This function adds a vector to the sphere.
-
-        Args:
-            vector (ArrayLike): quantum state with three cordinates.
-            mode (str): the two possible representations on the
-                sphere: "point" or "vector".
-            color (str): the color that the "point"/"vector"
-                will have on the sphere.
-
-        Returns:
-            None
-        """
+        """This function adds a vector to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(vector, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
@@ -297,18 +224,7 @@ class Bloch:
         mode: Union[str, list[str]] = "vector",
         color: Union[str, list[str]] = "black",
     ):
-        """This function adds a state to the sphere.
-
-        Args:
-            state (ArrayLike): 2D vector.
-            mode (str): the two possible representations on the
-                sphere: "point" or "vector".
-            color (str): the color that the "point"/"vector"
-                will have on the sphere.
-
-        Returns:
-            None
-        """
+        """This function adds a state to the sphere."""
 
         vectors, modes, colors = self._broadcasting_semantics(state, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
@@ -323,14 +239,7 @@ class Bloch:
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
     def clear(self):
-        """This function clears the sphere.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
+        """This function clears the sphere."""
         plt.close()
         self._new_window()
 
@@ -344,14 +253,7 @@ class Bloch:
 
     def render(self):
         """This function creates the empty sphere and plots the
-        vectors and points on it.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
+        vectors and points on it."""
         if self._shown == True:
             self._new_window()
         self._shown = True
