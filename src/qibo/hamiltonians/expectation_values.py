@@ -6,9 +6,9 @@ from scipy.sparse import csr_matrix, identity, kron
 
 from qibo import Circuit, gates
 from qibo.backends import _check_backend, matrices
-from qibo.hamiltonians import Hamiltonian
-from qibo.config import raise_error
 from qibo.backends.abstract import Backend
+from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian
 
 _PAULI_MATRICES_SPARSE = {
     "I": identity(2, format="csr"),
@@ -316,7 +316,9 @@ def _group_commuting_paulis(
 
     if force_complete_z:
         terms_with_only_z = [
-            term for term in hamilt_terms_list if set(term[-1]) in [{"I", "Z"}, {"I"}, {"Z"}]
+            term
+            for term in hamilt_terms_list
+            if set(term[-1]) in [{"I", "Z"}, {"I"}, {"Z"}]
         ]
         terms_groups_z = [terms_with_only_z]
         # update terms to be grouped, removing the ones with only z

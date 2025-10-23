@@ -1377,7 +1377,7 @@ Expectation values of Hamiltonians
 """"""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.hamiltonians.expectation_values.get_expval_hamiltonian
-    
+
 _______________________
 
 

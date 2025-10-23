@@ -1,8 +1,9 @@
 import pytest
 
-from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.hamiltonians import XXZ
 from qibo.hamiltonians.expectation_values import get_expval_hamiltonian
+from qibo.quantum_info.random_ensembles import random_clifford
+
 
 def get_XXZ_hamilt_explicit(nqubits, delta=0.5):
     """
@@ -31,10 +32,16 @@ def get_XXZ_hamilt_explicit(nqubits, delta=0.5):
 
     return hamiltonian_xxz
 
+
 @pytest.mark.parametrize("nqubits", [4, 6, 8])
 @pytest.mark.parametrize("nshots", [None, int(1e6)])
 @pytest.mark.parametrize("hamiltonian_type", ["matrix", "like_list", "like_dict"])
-def test_get_expval_hamiltonian(backend, nqubits, nshots, hamiltonian_type,):
+def test_get_expval_hamiltonian(
+    backend,
+    nqubits,
+    nshots,
+    hamiltonian_type,
+):
 
     circuit = random_clifford(nqubits, backend=backend)
 
