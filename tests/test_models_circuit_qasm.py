@@ -319,15 +319,19 @@ def test_from_qasm_ugates():
 qreg q[2];
 u1(0.1) q[0];
 u2(0.2,0.6) q[1];
-cu3(0.3,0.4,0.5) q[0],q[1];"""
+cu3(0.3,0.4,0.5) q[0],q[1];
+p(0.1) q[0];"""
     c = Circuit.from_qasm(target)
     assert c.depth == 2
     assert isinstance(c.queue[0], gates.U1)
     assert isinstance(c.queue[1], gates.U2)
     assert isinstance(c.queue[2], gates.CU3)
+    assert isinstance(c.queue[3], gates.U1)
     assert c.queue[0].parameters == (0.1,)
     assert c.queue[1].parameters == (0.2, 0.6)
     assert c.queue[2].parameters == (0.3, 0.4, 0.5)
+    assert c.queue[3].parameters == (0.1,)
+
 
 
 def test_from_qasm_crotations():
