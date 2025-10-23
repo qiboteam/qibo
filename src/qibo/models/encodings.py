@@ -2115,9 +2115,8 @@ def permutation_synthesis(
     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
     and a power‑of‑two budget ``m``, this function factors ``sigma``
     into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
-    such that:
-        - each layer has at most :math:`m` disjoint transpositions;
-        - each layer moves a power‑of‑two number of indices.
+    such that each layer has at most :math:`m` disjoint transpositions and each layer moves 
+    a power‑of‑two number of indices.
 
     The function returns a circuit synthesis of ``sigma``.
 
