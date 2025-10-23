@@ -968,6 +968,14 @@ Deutsch
     :member-order: bysource
 
 
+Fan-out
+"""""""
+
+.. autoclass:: qibo.gates.FanOut
+    :members:
+    :member-order: bysource
+
+
 Generalized Reconfigurable Beam Splitter (RBS)
 """"""""""""""""""""""""""""""""""""""""""""""
 
@@ -1925,6 +1933,36 @@ Infidelity
 """"""""""
 
 .. autofunction:: qibo.quantum_info.infidelity
+
+
+A fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.a_fidelity
+
+
+N fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.n_fidelity
+
+
+Chen fidelity
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.chen_fidelity
+
+
+Geometric-mean fidelity
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.geometric_mean_fidelity
+
+
+Max fidelity
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.max_fidelity
 
 
 Bures angle

@@ -46,6 +46,7 @@ GATES_CONTROLLED_BY_DEFAULT = [
     "cu3",
     "ccx",
     "ccz",
+    "fanout",
 ]
 
 
@@ -87,6 +88,8 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
+
+        self._clifford = False
 
     @property
     def clifford(self):
@@ -352,6 +355,9 @@ class Gate:
         new_gate = self._dagger()
         new_gate.is_controlled_by = self.is_controlled_by
         new_gate.control_qubits = self.control_qubits
+        if hasattr(self, "_clifford"):
+            new_gate._clifford = self._clifford
+
         return new_gate
 
     def check_controls(func):  # pylint: disable=E0213
@@ -395,7 +401,7 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def _base_decompose(self, *free, use_toffolis=True) -> List["Gate"]:
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs) -> List["Gate"]:
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -406,6 +412,7 @@ class Gate:
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            kwargs: Aditional parameters.
 
         Returns:
             list: Synthesis of the original gate in another gate set.
@@ -442,7 +449,7 @@ class Gate:
 
         # Identity conditions for fixed gates
         name = g1.name
-        if name in ("h", "cx", "x", "y", "z", "swap", "ecr", "ccx", "ccz"):
+        if name in ("h", "cx", "x", "y", "z", "swap", "ecr", "ccx", "ccz", "fanout"):
             return True
 
         # Check for parametrized rotation gates
@@ -493,9 +500,14 @@ class Gate:
                     "Cannot decompose multi-controlled ``X`` gate if free "
                     "qubits coincide with target or controls.",
                 )
+
+            ncontrols = len(self.control_qubits)
+
             # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            decomposed = base_gate._base_decompose(*free, use_toffolis=use_toffolis)
+            decomposed = base_gate._base_decompose(
+                *free, use_toffolis=use_toffolis, ncontrols=ncontrols
+            )
             mask = self._control_mask_after_stripping(decomposed)
             for bool_value, gate in zip(mask, decomposed):
                 if bool_value:

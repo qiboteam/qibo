@@ -4,8 +4,8 @@ Publications
 If Qibo has been significant in your research, and you would like to acknowledge
 the project in your academic publication, we suggest citing the following documents:
 
-Peer-Reviewed Articles
-----------------------
+Collaboration Papers
+--------------------
 
 * S. Efthymiou, S. Ramos-Calderer, C. Bravo-Prieto, A. Pérez-Salinas, D.
   Garcı́a-Martı́n, A. Garcia-Saez, J. I. Latorre, S. Carrazza, *Qibo: a
@@ -95,18 +95,54 @@ Peer-Reviewed Articles
 
 * R. Carobene, A. Candido, J. Serrano, A.O-Fuertes, A. Giachero, S. Carrazza,
   *Qibosoq: an open-source framework for quantum circuit RFSoC programming*
-  (2023), (`arXiv:2310.05851`_)
+  (2023), `doi:10.1088/2058-9565/adcd97`_ (`arXiv:2310.05851`_)
 
+  In *BibTeX* format:
+
+  .. code-block:: text
+
+    @article{qibosoq_paper,
+        doi       = {10.22331/q-2024-02-12-1247},
+        url       = {https://doi.org/10.1088/2058-9565/adcd97},
+        title     = {Qibosoq: an open-source framework for quantum circuit RFSoC programming},
+        author    = {Carobene, Rodolfo and Candido, Alessandro and Serrano, Javier and Orgaz-Fuertes, Alvaro and Giachero, Andrea and Carrazza, Stefano},
+        journal   = {{Quantum Science and Technology}},
+        issn      = {2058-9565},
+        publisher = {{IOP Publishing}},
+        volume    = {10},
+        pages     = {035010},
+        number    = {3},
+        month     = apr,
+        year      = {2025}
+    }
+
+.. _`doi:10.1088/2058-9565/adcd97`: https://doi.org/10.1088/2058-9565/adcd97
 .. _`arXiv:2310.05851`: https://arxiv.org/abs/2310.05851
 
 * A. Pasquale, E. Pedicillo, J. Cereijo, S. Ramos-Calderer, A. Candido, G. Palazzo,
   R. Carobene, M. Gobbo, S. Efthymiou, Y. Paul Tan, I. Roth, M. Robbiati, J. Wilkens,
   A. Orgaz-Fuertes, D. Fuentes-Ruiz, A. Giachero, F. Brito, J. I. Latorre,
   *Qibocal: an open-source framework for calibration of self-hosted quantum devices*
-  (2024), (`arXiv:2410.00101`_)
+  (2024), (`arXiv:2410.00101`_).
 
 .. _`arXiv:2410.00101`: https://arxiv.org/abs/2410.00101
 
+* M. Robbiati, A. Papaluca, A. Pasquale, E. Pedicillo, R. M. S. Farias, A.
+  Sopena, M. Robbiano, G. Alramahi, S. Bordoni, A. Candido, N. Laurora, J.
+  Suda Neto, Y. P. Tan, M. Grossi, S.  Carrazza, *Qiboml: towards the
+  orchestration of quantum-classical machine learning* (2025), (`arXiv:2510.11773`_).
+
+.. _`arXiv:2510.11773`: https://arxiv.org/abs/2510.11773
+
+
+PhD theses based on Qibo
+------------------------
+
+
+* A. Pasquale, *Open-source middleware for quantum computing*
+  (2024). `https://tesidottorato.depositolegale.it/handle/20.500.14242/184252`_
+
+.. _`https://tesidottorato.depositolegale.it/handle/20.500.14242/184252`: https://tesidottorato.depositolegale.it/handle/20.500.14242/184252
 
 Software References in Zenodo
 -----------------------------
@@ -142,6 +178,17 @@ Software References in Zenodo
 
 .. _`https://doi.org/10.5281/zenodo.8083285`: https://doi.org/10.5281/zenodo.8083285
 
+* A. Tan, A. Candido, L. Yang, M. Robbiati, S. Carrazza, V. Balachandran, A.
+  Papaluca, M. Robbiano, N. Srivathsan, R. M. S. Farias. (2025). qiboteam/qibotn: QiboTN. Zenodo.
+  `https://doi.org/10.5281/zenodo.15705071`_.
+
+.. _`https://doi.org/10.5281/zenodo.15705071`: https://doi.org/10.5281/zenodo.15705071
+
+* A. Papaluca, M. Robbiati, E. Pedicillo, R. M. S. Farias, N. Laurora, A.
+  Sopena, G. Al Ramahi, A. Pasquale, S. Carrazza, A. Candido. (2025).
+  qiboteam/qiboml: QiboML. Zenodo. `https://doi.org/10.5281/zenodo.17310378`_.
+
+.. _`https://doi.org/10.5281/zenodo.17310378`: https://doi.org/10.5281/zenodo.17310378
 
 Conference Proceedings
 ----------------------
@@ -153,20 +200,46 @@ Conference Proceedings
 .. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
 
 * M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza.
-  A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_, (`arXiv:2210.10787`_).
+  A quantum analytical Adam descent through parameter shift rule using Qibo.
+  (2022) `ICHEP2022`_, (`arXiv:2210.10787`_).
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
 
 * A. Pasquale, S. Efthymiou, S. Ramos-Calderer, J. Wilkens, I, Roth, S. Carrazza.
-  Towards an open-source framework to perform quantum calibration and characterization. (2023) `ACAT22`_, (`arXiv:2303.10397`_).
+  Towards an open-source framework to perform quantum calibration and
+  characterization. (2023) `ACAT22`_, (`arXiv:2303.10397`_).
 
 .. _`ACAT22`: https://indico.cern.ch/event/1106990/
 .. _`arXiv:2303.10397`: https://arxiv.org/pdf/2303.10397
 
+* E. Pedicillo, A. Candido, S. Efthymiou, H. Sargsyan, Y. P. Tan, J. Cereijo, J.
+  Y. Khoo, A. Pasquale, M. Robbiati, S. Carrazza. An open-source framework
+  for quantum hardware control. (2024) `ACAT24`_, (`arXiv:2407.21737`_).
 
+.. _`ACAT24`: https://indico.cern.ch/event/1330797/
+.. _`arXiv:2407.21737`: https://arxiv.org/abs/2407.21737
 
-Based on qibo
+* A. Pasquale, A. Papaluca, R. M. S. Farias, M. Robbiati, E. Pedicillo, S.
+  Carrazza. Beyond full statevector simulation with Qibo. (2024) `ACAT24`_,
+  (`arXiv:2408.00384`_).
+
+.. _`arXiv:2408.00384`: https://arxiv.org/abs/2408.00384
+
+* L. Xiaoyue, M. Robbiati, A. Pasquale, E. Pedicillo, A. Wright, S. Carrazza, M.
+  Gluza.  Strategies for optimizing double-bracket quantum algorithms. (2024)
+  `ACAT24`_, (`arXiv:2408.07431`_)
+
+.. _`arXiv:2408.07431`: https://arxiv.org/abs/2408.07431
+
+* J. Y. Khoo, C. K. Gan, W. Ding, S. Carrazza, J. Ye, J. Feng Kong. Benchmarking
+  Quantum Convolutional Neural Networks for Classification and Data
+  Compression Tasks. (2024) `QTML2024`_, (`arXiv:2411.13468`_).
+
+.. _`QTML2024`: https://qtml2024.org
+.. _`arXiv:2411.13468`: https://arxiv.org/abs/2411.13468
+
+Based on Qibo
 -------------
 
 * A. Pérez-Salinas, J. M. Cruz-Martinez, Abdulla A. Alhajri, S. Carrazza.
@@ -183,18 +256,68 @@ Based on qibo
 .. _`Quantum 6 (2022) 777`: https://quantum-journal.org/papers/q-2022-08-17-777/
 .. _`arXiv:2110.06933`: https://arxiv.org/abs/2110.06933
 
-
 * M. Robbiati, J. M. Cruz-Martinez, S. Carrazza. Determining probability density
-  functions with adiabatic quantum computing. (2023), (`arXiv:2303.11346`_).
+  functions with adiabatic quantum computing. `Quantum Mach. Intell. 7, 5
+  (2025)`_, (`arXiv:2303.11346`_).
 
+.. _`Quantum Mach. Intell. 7, 5 (2025)`: https://doi.org/10.1007/s42484-024-00228-2
 .. _`arXiv:2303.11346`: https://arxiv.org/abs/2303.11346
 
 * J. M. Cruz-Martinez, M. Robbiati, S. Carrazza, Multi-variable integration with
-  a variational quantum circuit. (2023), (`arXiv:2308.05657`_).
+  a variational quantum circuit. `Quantum Sci. Technol. 9 035053 (2024)`_,
+  (`arXiv:2308.05657`_).
 
+.. _`Quantum Sci. Technol. 9 035053 (2024)`: https://doi.org/10.1088/2058-9565/ad5866
 .. _`arXiv:2308.05657`: https://arxiv.org/abs/2308.05657
 
+* M. Robbiati, A. Sopena, A., S. Carrazza, Real-time error mitigation for
+  variational optimization on quantum hardware. (2023), (`arXiv:2311.05680`_).
 
+.. _`arXiv:2311.05680`: https://arxiv.org/abs/2311.05680
+
+* A. D'Elia, B. Alfakes, A. Alkhazaleh, L. Banchi, M. Beretta, S. Carrazza, F.
+  Chiarello, D. Di Gioacchino, A. Giachero, F. Henrich, A. Stephane Piedjou
+  Komnang, C. Ligi, G. Maccarrone, M. Macucci, E. Palumbo, A. Pasquale, L.
+  Piersanti, F. Ravaux, A. Rettaroli, M. Robbiati, S. Tocci, C. Gatti,
+  Characterization of a Transmon Qubit in a 3D Cavity for Quantum Machine
+  Learning and Photon Counting. `Appl. Sci. 2024, 14(4), 1478`_, (`arXiv:2402.04322`_).
+
+.. _`Appl. Sci. 2024, 14(4), 1478`: https://doi.org/10.3390/app14041478
+.. _`arXiv:2402.04322`: https://arxiv.org/abs/2402.04322
+
+* S. Bordoni, A. Papaluca, P. Buttarini, A. Sopena, S. Giagu, S. Carrazza.
+  Quantum noise modeling through Reinforcement Learning. (2024),
+  (`arXiv:2408.01506`_).
+
+.. _`arXiv:2408.01506`: https://arxiv.org/abs/2408.01506
+
+* M. Robbiati, E. Pedicillo, A. Pasquale, X. Li, A.
+  Wright, R. M. S. Farias, K. U. Giang, J. Son, J. Knörzer, S. T. Goh, J. Y.
+  Khoo, N. H. Y. Ng, Z. Holmes, S. Carrazza, Marek Gluza. Double-bracket quantum
+  algorithms for high-fidelity ground state preparation. (2024),
+  (`arXiv:2408.03987`_).
+
+.. _`arXiv:2408.03987`: https://arxiv.org/abs/2408.03987
+
+* R. Moretti, D. Labranca, P. Campana, R. Carobene, M. Gobbo, M. A.
+  Castellanos-Beltran, D. Olaya, P. F. Hopkins, L. Banchi, M. Borghesi, A.
+  Candido, S. Carrazza, H. A. Corti, A. D'Elia, M. Faverzani, E. Ferri, A.
+  Nucciotti, L. Origo, A. Pasquale, A. S. Piedjou Komnang, A. Rettaroli, S.
+  Tocci, C. Gatti, A. Giachero. Transmon qubit modeling and characterization
+  for Dark Matter search. (2024), (`arXiv:2409.05988`_).
+
+.. _`arXiv:2409.05988`: https://arxiv.org/abs/2409.05988
+
+* M. Ho, J. Y. Khoo, A. M. Mak, S. Carrazza. AI-Powered Noisy Quantum Emulation:
+  Generalized Gate-Based Protocols for Hardware-Agnostic Simulation. (2025),
+  (`arXiv:2502.19872`_).
+
+.. _`arXiv:2502.19872`: https://arxiv.org/abs/2502.19872
+
+* I. Masina, G. Lo Presti, M. Robbiati and M. Grossi. Simulating Bell inequalities with Qibo. (2025), `Eur. J. Phys. 46 035401`_, (`arXiv:2501.01434`_).
+
+.. _`Eur. J. Phys. 46 035401`: https://iopscience.iop.org/article/10.1088/1361-6404/adcd13
+.. _`arXiv:2501.01434`: https://arxiv.org/abs/2501.01434
 
 Authorship Guideline
 --------------------
