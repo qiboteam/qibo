@@ -241,6 +241,8 @@ class Bloch:
         self._color_points = []
         self._color_vectors = []
 
+        self.render()
+
     def render(self):
         """This function creates the empty sphere and plots the
         vectors and points on it."""
