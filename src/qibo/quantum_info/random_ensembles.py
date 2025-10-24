@@ -484,7 +484,6 @@ def random_density_matrix(
         else:
             state = backend.qinfo._random_density_matrix_bures(dims, dims, 0.0, 1.0)
 
-
     if basis is not None:
         pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
