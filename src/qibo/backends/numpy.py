@@ -49,6 +49,4 @@ class NumpyBackend(Backend):
         return self.engine.asarray(x, dtype=dtype, copy=copy if copy else None)
 
     def to_numpy(self, array):
-        if self.is_sparse(array):
-            return array.toarray()
-        return array
+        return array.toarray() if self.is_sparse(array) else array
