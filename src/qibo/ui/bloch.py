@@ -157,13 +157,6 @@ class Bloch:
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
     # -----States and Vectors-----
-    def _check(self, x, y, z):
-        """This function checks that vectors have only three elements and that they have a radius < 1."""
-        if np.sqrt(np.power(x, 2) + np.power(y, 2) + np.power(z, 2)) <= 1.0:
-            pass
-        else:
-            raise_error(ValueError, "The coordinates are outside the Bloch sphere.")
-
     def _coordinates(self, state):
         """This function determines the coordinates of a qubit in the sphere."""
         x, y, z = 0, 0, 0
