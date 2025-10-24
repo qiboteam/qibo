@@ -159,12 +159,8 @@ class Bloch:
     # -----States and Vectors-----
     def _coordinates(self, state):
         """This function determines the coordinates of a qubit in the sphere."""
-        x, y, z = 0, 0, 0
-        if state[0] == 1 and state[0] == 0:
-            z = 1
-        elif state[0] == 0 and state[0] == 1:
-            z = -1
-        else:
+
+        def _paulis_expectation(state):
             sigma_X = hamiltonians.SymbolicHamiltonian(X(0))
             sigma_Y = hamiltonians.SymbolicHamiltonian(Y(0))
             sigma_Z = hamiltonians.SymbolicHamiltonian(Z(0))
@@ -172,7 +168,24 @@ class Bloch:
             x = sigma_X.expectation(state)
             y = sigma_Y.expectation(state)
             z = sigma_Z.expectation(state)
-        return x, y, z
+            return x, y, z
+
+        x, y, z = 0, 0, 0
+        if state.ndim == 1:
+            if state[0] == 1 and state[0] == 0:
+                z = 1
+                return x, y, z
+            elif state[0] == 0 and state[0] == 1:
+                z = -1
+                return x, y, z
+            else:
+                return _paulis_expectation(state)
+        elif state.ndim == 2:
+            return _paulis_expectation(state)
+
+    def _is_density_matrix(self, rho: np.ndarray) -> bool:
+        """This function is used only to check whether an input of shape (2,2) is two state vectors or one density matrix."""
+        return np.allclose(rho, rho.conj().T) and np.isclose(np.trace(rho), 1)
 
     def _broadcasting_semantics(self, vector, mode, color):
         """This function makes sure that `vector`, `mode`, `color` have the same sizes."""
@@ -183,9 +196,13 @@ class Bloch:
         if isinstance(color, (list, str)):
             color = np.array(color)
 
+        # Check to distinguish if (2,2) is one density matrix or two state vectors.
+        if vector.ndim == 2 and vector.shape == (2, 2):
+            if self._is_density_matrix(vector):
+                vector = np.expand_dims(vector, axis=0)
+
         vector = np.atleast_2d(vector)
         vector, mode, color = np.broadcast_arrays(vector, mode, color)
-
         return vector, mode.flatten(), color.flatten()
 
     def add_vector(
