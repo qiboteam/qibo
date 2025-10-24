@@ -47,7 +47,7 @@ def test_translate_gate_error_2q():
     "natives_1q",
     [NativeGates.U3, NativeGates.GPI2, NativeGates.U3 | NativeGates.GPI2],
 )
-def test_unroller(natives_1q, natives_2q):
+def test_unroller(backend, natives_1q, natives_2q):
     circuit = Circuit(3)
     circuit.add(gates.H(0))
     circuit.add(gates.X(0))
@@ -81,7 +81,7 @@ def test_unroller(natives_1q, natives_2q):
     circuit.add(gates.RZZ(0, 1, 0.3))
     circuit.add(gates.fSim(0, 1, 0.4, 0.5))
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    unroller = Unroller(native_gates=natives_1q | natives_2q)
+    unroller = Unroller(native_gates=natives_1q | natives_2q, backend=backend)
     translated_circuit = unroller(circuit)
     assert_decomposition(
         translated_circuit,

@@ -8,7 +8,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import Circuit
-from qibo.backends import CliffordBackend
+from qibo.backends.clifford import CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
@@ -49,6 +49,10 @@ class Clifford:
     _samples: Optional[int] = None
 
     def __post_init__(self):
+        if self._backend is None:
+            self._backend = CliffordBackend(self.engine)
+        self.engine = self._backend.engine
+
         if isinstance(self.data, Circuit):
             clifford = self.from_circuit(self.data, engine=self.engine)
             self.symplectic_matrix = clifford.symplectic_matrix
@@ -60,16 +64,15 @@ class Clifford:
             # adding the scratch row if not provided
             self.symplectic_matrix = self.data
             if self.symplectic_matrix.shape[0] % 2 == 0:
-                self.symplectic_matrix = np.vstack(
+                self.symplectic_matrix = self._backend.vstack(
                     (
                         self.symplectic_matrix,
-                        np.zeros(self.symplectic_matrix.shape[1], dtype=np.uint8),
+                        self._backend.zeros(
+                            self.symplectic_matrix.shape[1], dtype=self._backend.uint8
+                        ),
                     )
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
-        if self._backend is None:
-            self._backend = CliffordBackend(self.engine)
-        self.engine = self._backend.engine
 
     @classmethod
     def from_circuit(
@@ -203,7 +206,7 @@ class Clifford:
         """
         stabilizers = self.stabilizers(return_array=True)
 
-        return self.engine.np.sum(stabilizers, axis=0) / len(stabilizers)
+        return self._backend.sum(stabilizers, axis=0) / len(stabilizers)
 
     @property
     def measurement_gate(self):
@@ -264,22 +267,22 @@ class Clifford:
                         [p0.get(q) for q in measured_qubits],
                         [p1.get(q) for q in measured_qubits],
                     ],
-                    dtype=self._backend.np.float64,
+                    dtype=self._backend.float64,
                 )
-                samples = self._backend.cast(samples, dtype="int32")
+                samples = self._backend.cast(samples, dtype=self._backend.int32)
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
             # register samples to individual gate ``MeasurementResult``
             qubit_map = {
                 q: i for i, q in enumerate(self.measurement_gate.target_qubits)
             }
-            self._samples = self._backend.cast(samples, dtype="int32")
+            self._samples = self._backend.cast(samples, dtype=self._backend.int32)
             for gate in self.measurements:
                 rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                 gate.result.register_samples(self._samples[:, rqubits])
 
         if registers:
             return {
-                gate.register_name: gate.result.samples(binary)
+                gate.register_name: gate.result.samples(binary, backend=self._backend)
                 for gate in self.measurements
             }
 
@@ -320,7 +323,9 @@ class Clifford:
             if binary:
                 return {
                     gate.register_name: frequencies_to_binary(
-                        self._backend.calculate_frequencies(gate.result.samples(False)),
+                        self._backend.calculate_frequencies(
+                            gate.result.samples(False, backend=self._backend)
+                        ),
                         len(gate.target_qubits),
                     )
                     for gate in self.measurements
@@ -328,7 +333,7 @@ class Clifford:
 
             return {
                 gate.register_name: self._backend.calculate_frequencies(
-                    gate.result.samples(False)
+                    gate.result.samples(False, backend=self._backend)
                 )
                 for gate in self.measurements
             }
@@ -366,10 +371,10 @@ class Clifford:
         for s in samples:
             probs[int(s)] += 1
 
-        probs = self.engine.cast(probs, float) / len(samples)
+        probs = self._backend.cast(probs, float) / len(samples)
 
         return self._backend.calculate_probabilities(
-            self.engine.np.sqrt(probs), qubits, len(measured_qubits)
+            self._backend.sqrt(probs), qubits, len(measured_qubits)
         )
 
     def copy(self, deep: bool = False):
@@ -387,10 +392,8 @@ class Clifford:
                 TypeError, f"``deep`` must be type bool, but it is type {type(deep)}."
             )
 
-        symplectic_matrix = (
-            self.engine.np.copy(self.symplectic_matrix)
-            if deep
-            else self.symplectic_matrix
+        symplectic_matrix = self._backend.cast(
+            self.symplectic_matrix, dtype=self.symplectic_matrix.dtype, copy=deep
         )
 
         return self.__class__(
@@ -409,7 +412,7 @@ class Clifford:
             phases (list or ndarray): phases of the generators.
 
         Returns:
-            (list): All operators generated by the generators of the stabilizer group.
+            list: All operators generated by the generators of the stabilizer group.
         """
 
         if not isinstance(generators[0], str):
@@ -417,13 +420,11 @@ class Clifford:
             phases = self._backend.cast(phases)
 
             operators = generators * phases.reshape(-1, 1, 1)
-            identity = self.engine.identity_density_matrix(
-                self.nqubits, normalize=False
-            )
+            identity = self._backend.identity(2**self.nqubits)
             operators = self._backend.cast([(g, identity) for g in operators])
 
             return self._backend.cast(
-                [reduce(self.engine.np.matmul, ops) for ops in product(*operators)]
+                [reduce(self.engine.matmul, ops) for ops in product(*operators)]
             )
 
         operators = list(np.copy(generators))

@@ -35,7 +35,7 @@ def test_measurementoutcomes_probabilities(backend, qubits):
         result = MeasurementOutcomes(
             circuit.measurements, backend=backend, probabilities=global_probs
         )
-        backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-1)
+        backend.assert_allclose(repeated_probabilities, probabilities, atol=1e-1)
         backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-1)
 
 
@@ -50,10 +50,10 @@ def test_measurementoutcomes_samples_from_measurements(backend):
 
 
 def test_circuit_result_error(backend):
-    c = Circuit(1)
+    circuit = Circuit(1)
     state = np.array([1, 0])
     with pytest.raises(Exception) as exc_info:
-        CircuitResult(state, c.measurements, backend)
+        CircuitResult(state, circuit.measurements, backend)
     assert (
         str(exc_info.value)
         == "Circuit does not contain measurements. Use a `QuantumState` instead."
@@ -61,9 +61,9 @@ def test_circuit_result_error(backend):
 
 
 def test_measurement_gate_dump_load(backend):
-    c = Circuit(2)
-    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
-    m = c.measurements
+    circuit = Circuit(2)
+    circuit.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    m = circuit.measurements
     load = m[0].to_json()
     new_m = gates.M.load(load)
     assert new_m.to_json() == load
@@ -71,11 +71,11 @@ def test_measurement_gate_dump_load(backend):
 
 @pytest.mark.parametrize("agnostic_load", [False, True])
 def test_measurementoutcomes_dump_load(backend, agnostic_load):
-    c = Circuit(2)
-    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    circuit = Circuit(2)
+    circuit.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
     # just to trigger repeated execution and test MeasurementOutcomes
-    c.has_collapse = True
-    measurement = backend.execute_circuit(c, nshots=100)
+    circuit.has_collapse = True
+    measurement = backend.execute_circuit(circuit, nshots=100)
     freq = measurement.frequencies()
     measurement.dump("tmp.npy")
     if agnostic_load:
@@ -90,12 +90,12 @@ def test_measurementoutcomes_dump_load(backend, agnostic_load):
 
 @pytest.mark.parametrize("agnostic_load", [False, True])
 def test_circuitresult_dump_load(backend, agnostic_load):
-    c = Circuit(2, density_matrix=True)
-    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
     # trigger repeated execution to build the CircuitResult object
     # from samples and recover the same exact frequencies
-    c.has_collapse = True
-    result = backend.execute_circuit(c)
+    circuit.has_collapse = True
+    result = backend.execute_circuit(circuit)
     freq = result.frequencies()
     # set probabilities to trigger the warning
     result._probs = result.probabilities()
@@ -106,5 +106,5 @@ def test_circuitresult_dump_load(backend, agnostic_load):
     loaded_freq = loaded_res.frequencies()
     for state, f in freq.items():
         assert loaded_freq[state] == f
-    assert backend.np.sum(result.state() - backend.cast(loaded_res.state())) == 0
+    assert backend.sum(result.state() - backend.cast(loaded_res.state())) == 0
     remove("tmp.npy")
