@@ -5,7 +5,6 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
-from numpy.random import permutation
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
@@ -461,7 +460,7 @@ def random_density_matrix(
     if metric not in ["hilbert-schmidt", "ginibre", "bures"]:
         raise_error(ValueError, f"metric {metric} not implemented.")
 
-    if basis is not None and basis not in ["pauli"]:
+    if basis is not None and basis != "pauli":
         if (
             "pauli-" not in basis
             or len(basis.split("-")) != 2
@@ -469,7 +468,7 @@ def random_density_matrix(
         ):
             raise_error(ValueError, f"basis {basis} nor recognized.")
 
-    if normalize is True and basis is None:
+    if normalize and basis is None:
         raise_error(ValueError, "normalize cannot be True when basis=None.")
 
     backend = _check_backend(backend)
@@ -485,7 +484,6 @@ def random_density_matrix(
         else:
             state = backend.qinfo._random_density_matrix_bures(dims, dims, 0.0, 1.0)
 
-    # state = backend.cast(state, dtype=state.dtype)
 
     if basis is not None:
         pauli_order = basis.split("-")[1]

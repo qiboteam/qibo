@@ -194,14 +194,7 @@ def _unvectorization_system(state: ndarray, dim: int) -> ndarray:
     nqubits = int(np.log2(dim))
     axes_old = list(range(1, 2 * nqubits + 1))
     state = ENGINE.reshape(state, (state.shape[0],) + (2,) * 2 * nqubits)
-    state = ENGINE.transpose(
-        state,
-        [
-            0,
-        ]
-        + axes_old[1::2]
-        + axes_old[0::2],
-    )
+    state = ENGINE.transpose(state, [0] + axes_old[1::2] + axes_old[0::2])
     return ENGINE.reshape(state, (state.shape[0],) + (2**nqubits,) * 2)
 
 

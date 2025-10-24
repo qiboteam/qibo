@@ -456,7 +456,7 @@ def choi_to_kraus(
         precision_tol = PRECISION_TOL
 
     backend = _check_backend(backend)
-    choi_super_op = backend.cast(choi_super_op)
+    choi_super_op = backend.cast(choi_super_op, dtype=choi_super_op.dtype)
 
     if validate_cp:
         norm = float(
