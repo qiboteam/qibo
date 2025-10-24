@@ -63,9 +63,17 @@ To get in touch with the community and the developers, consider joining the Qibo
 
 If you have a question about the project, please contact us with [📫](mailto:qiboteam@qibo.science).
 
-## Supporters and collaborators
+## Supporters
 
-- Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
+### Financial Sponsors and Development Partners
+
+- [Quantum Research Center](https://www.tii.ae/quantum), Technology Innovation Institute (TII), United Arab Emirates.
+- [National Quantum Science and Technology Institute](https://nqsti.it), Italy.
+- [National Quantum Computing Hub](https://www.nqch.sg), National Quantum Office, Singapore.
+- [QUARKO](https://quarko.tech).
+
+### Collaborators
+
 - Università degli Studi di Milano (UNIMI), Italy.
 - Istituto Nazionale di Fisica Nucleare (INFN), Italy.
 - Università degli Studi di Milano-Bicocca (UNIMIB), Italy.
@@ -77,4 +85,4 @@ If you have a question about the project, please contact us with [📫](mailto:q
 - Institute of High Performance Computing (IHPC), Singapore.
 - National Supercomputing Centre (NSCC), Singapore.
 - RIKEN Center for Computational Science (R-CCS), Japan.
-- NVIDIA (cuQuantum), USA.
+- NVIDIA (cuQuantum & cuda-quantum), USA.
