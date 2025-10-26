@@ -9,7 +9,10 @@ from typing import Union
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.transforms import Bbox
+import matplotlib.patches
+import matplotlib.lines
 
 from qibo import gates
 
@@ -19,13 +22,16 @@ UI = Path(__file__).parent
 STYLE = json.loads((UI / "styles.json").read_text())
 SYMBOLS = json.loads((UI / "symbols.json").read_text())
 
+
 PLOT_PARAMS = {
     "scale": 1.0,
-    "fontsize": 14.0,
+    "fontsize": 12.0,
     "linewidth": 1.0,
     "control_radius": 0.05,
     "not_radius": 0.15,
     "swap_delta": 0.08,
+    "swap_delta_x": 0.07,
+    "swap_delta_y": 1.1,
     "label_buffer": 0.0,
     "dpi": 100,
     "facecolor": "w",
@@ -35,11 +41,27 @@ PLOT_PARAMS = {
     "textcolor": "k",
     "gatecolor": "w",
     "controlcolor": "#000000",
+    "xscale": 1.2,
+    "yscale": 3,
+    "fold_direction": "down",  # or "up"
+    "fold_gap": 7,
+    "wire_pitch": 80,  # data spacing between adjacent wires
+    "wire_inches": 1,  # physical inches per wire (controls visual spacing)
+    "gate_box_scale": 0.2,  # 1.0 = normal size, <1 shrinks boxes
+    "gate_font_scale": 0.9,  # scale text size inside boxes
+    "control_radius_with_folds": 0.18,  # dot radius (data units)
+    "not_radius_with_folds": 0.32,  # ⊕ outer radius
+    "swap_delta_with_folds": 0.25,  # SWAP arm
+    "gate_box_w": 0.80,  # gate box width
+    "gate_box_h": 0.70,  # gate box height
+    "gate_pad": 0.10,  # padding inside box
+    "margin_left_cols": 1.10,   # space for |q⟩ labels
+    "margin_right_cols": 0.15,  # trim the extra space on the right
 }
 
 
 def _plot_quantum_schedule(
-    schedule, inits, plot_params, labels=[], plot_labels=True, **kwargs
+    schedule, inits, plot_params, labels=[], plot_labels=True, fold=20, **kwargs
 ):
     """Use Matplotlib to plot a queue of quantum circuit.
 
@@ -66,12 +88,20 @@ def _plot_quantum_schedule(
         labels=labels,
         plot_labels=plot_labels,
         schedule=True,
-        **kwargs
+        fold=fold,
+        **kwargs,
     )
 
 
 def _plot_quantum_circuit(
-    gates, inits, plot_params, labels=[], plot_labels=True, schedule=False, **kwargs
+    gates,
+    inits,
+    plot_params,
+    labels=[],
+    plot_labels=True,
+    schedule=False,
+    fold=20,
+    **kwargs,
 ):
     """Use Matplotlib to plot a quantum circuit.
 
@@ -105,6 +135,19 @@ def _plot_quantum_circuit(
 
     nq = len(labels)
     ng = len(gates)
+
+    num_fold = int(np.ceil(ng / fold)) if fold > 0 else 1
+    if num_fold > 1:
+        return _plot_quantum_circuit_with_folds(
+            gates,
+            inits,
+            plot_params,
+            labels=labels,
+            fold=fold,
+            plot_labels=plot_labels,
+            schedule=schedule,
+            **kwargs,
+        )
 
     wire_grid = np.arange(0.0, nq * scale, scale, dtype=float)
 
@@ -438,6 +481,47 @@ def _swapx(ax, x, y, plot_params):
     _line(ax, x - d, x + d, y + d, y - d, plot_params)
 
 
+def _swapx_with_folds(ax, x, y, p):
+    # match the CNOT symbol footprint
+    R  = p["not_radius_with_folds"]        # ⊕'s horizontal diameter = R
+    sx = R * 0.5                # half-width of the box (so total width = R)
+    sy = 0.85 * R * 0.5         # half-height (so total height = 0.85*R)
+
+    _line(ax, x - sx, x + sx, y - sy, y + sy, p)
+    _line(ax, x - sx, x + sx, y + sy, y - sy, p)
+
+
+
+def _setup_figure_with_folds(nq, ng, gate_grid, wire_grid, plot_params, cols, rows):
+    # New plot_params knobs
+    plot_params.setdefault("inch_per_col", 0.60)  # width per column in inches
+    plot_params.setdefault("inch_per_row", 0.85)  # height per wire in inches
+    plot_params.setdefault("margin_cols", 0.75)  # left/right margins in columns
+    plot_params.setdefault("margin_rows", 0.75)  # top/bottom margins in rows
+
+    left_cols  = plot_params.get("margin_left_cols",  plot_params["margin_cols"])
+    right_cols = plot_params.get("margin_right_cols", plot_params["margin_cols"])
+    rows_margin = plot_params["margin_rows"]
+
+    fig_w = (cols + left_cols + right_cols) * plot_params["inch_per_col"]
+    fig_h = (rows + 2 * rows_margin) * plot_params["inch_per_row"]
+
+    fig = plt.figure(
+        figsize=(fig_w, fig_h),
+        dpi=plot_params["dpi"],
+        facecolor=plot_params["facecolor"],
+        edgecolor=plot_params["edgecolor"],
+    )
+
+    ax = fig.add_subplot(1, 1, 1, frameon=True)
+    ax.set_axis_off()
+    ax.set_xlim(-left_cols, cols + right_cols)
+    ax.set_ylim(-rows_margin, rows + rows_margin)
+    ax.set_aspect("auto")
+    
+    return ax, fig
+
+
 def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     scale = plot_params["scale"]
     fig = plt.figure(
@@ -453,6 +537,23 @@ def _setup_figure(nq, ng, gate_grid, wire_grid, plot_params):
     ax.set_ylim(wire_grid[0] - offset, wire_grid[-1] + offset)
     ax.set_aspect("equal")
     return ax, fig
+
+
+def _draw_wires_with_folds(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
+    xscale = plot_params["xscale"]
+    yscale = plot_params["yscale"]
+    linewidth = plot_params["linewidth"]
+    xmin, xmax = ax.get_xlim()
+    
+    for i in range(nq):
+        _line(
+            ax,
+            xmin,
+            xmax,
+            wire_grid[i],
+            wire_grid[i],
+            plot_params,
+        )
 
 
 def _draw_wires(ax, nq, gate_grid, wire_grid, plot_params, measured={}):
@@ -571,12 +672,12 @@ def _composed_rectangle(ax, x1, x2, y1, y2, label, plot_style):
         lw=plot_style["linewidth"],
         label="",
         fill=True,
-        zorder=2,
+        zorder=6,
     )
 
     ax.add_patch(rect)
     text_gate = _text(ax, x + w * 0.05, y + h / 2, label, plot_style, box=False)
-    _auto_fit_fontsize(text_gate, w * 0.8, None, fig=ax.figure, ax=ax)
+    # _auto_fit_fontsize(text_gate, w * 0.8, None, fig=ax.figure, ax=ax)
 
 
 def _auto_fit_fontsize(text, width, height, fig=None, ax=None):
@@ -991,3 +1092,505 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
 
     ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
     return ax, ax.figure
+
+
+def _measured_wires_with_folds(
+    gates_plot,
+    labels,
+    num_qubits=0,
+    num_folds=-1,
+    schedule=False,
+    fold_direction="down",
+):
+    measured = {}
+    for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
+        name, target = gate[:2]
+        j = _get_flipped_index(target, labels)
+        if name.startswith("M"):
+            for num in range(num_folds):
+                fold_idx = num if fold_direction == "up" else (num_folds - 1 - num)
+                measured[j + fold_idx * num_qubits] = i
+    return measured
+
+
+def _plot_quantum_circuit_with_folds(
+    gates,
+    inits,
+    plot_params,
+    labels=[],
+    plot_labels=True,
+    schedule=False,
+    fold=-1,
+    **kwargs,
+):
+    """Use Matplotlib to plot a quantum circuit.
+
+    Args:
+        gates (list): List of tuples for each gate in the quantum circuit. (name,target,control1,control2...).
+        Targets and controls initially defined in terms of labels.
+
+        inits (list): Initialization list of gates.
+
+        plot_params (list): Style plot configuration.
+
+        labels (list): List of qubit labels. (optional).
+
+        kwargs (list): Variadic list that can override plot parameters.
+
+    Returns:
+        matplotlib.axes.Axes: An Axes object encapsulates all the plt elements of a plot in a figure.
+    """
+
+    plot_params.update(kwargs)
+    scale = plot_params["scale"]
+
+    # Create labels from gates. This will become slow if there are a lot
+    #  of gates, in which case move to an ordered dictionary
+    if not labels:
+        labels = []
+        for i, gate in _enumerate_gates(gates, schedule=schedule):
+            for label in gate[1:]:
+                if label not in labels:
+                    labels.append(label)
+
+    nq = len(labels)
+    ng = len(gates)
+
+    num_folds = max(1, int(np.ceil(ng / fold)))  # Handle edge cases
+    xscale = plot_params.get("xscale", plot_params["scale"])
+    fold_gap = plot_params.get("fold_gap", 0.0)
+    wire_pitch = plot_params.get("wire_pitch", 1)
+
+    cols = fold if fold > 0 else ng
+    num_folds = max(1, int(np.ceil(ng / fold))) if fold > 0 else 1
+    rows = nq * num_folds + (num_folds - 1) * plot_params.get("fold_gap_cells", 0)
+
+    gate_grid = np.arange(0.0, cols, 1.0, dtype=float)  # 1 unit per column
+    wire_grid = np.arange(0.0, rows, 1.0, dtype=float)  # 1 unit per wire
+
+    ax, _ = _setup_figure_with_folds(
+        nq * num_folds,
+        (nq if fold == -1 else fold),
+        gate_grid,
+        wire_grid,
+        plot_params,
+        cols,
+        rows,
+    )
+
+    measured = (
+        None
+        if ng == 0
+        else _measured_wires_with_folds(
+            gates,
+            labels,
+            num_qubits=nq,
+            num_folds=num_folds,
+            schedule=schedule,
+            fold_direction=plot_params.get("fold_direction", "down"),
+        )
+    )
+
+    _draw_wires_with_folds(
+        ax, nq * num_folds, gate_grid, wire_grid, plot_params, measured
+    )
+
+    if plot_labels:
+        _draw_labels_with_folds(
+            ax, labels, inits, gate_grid, wire_grid, plot_params, num_folds=num_folds
+        )
+
+    if ng > 0:
+        _draw_gates_with_folds(
+            ax,
+            gates,
+            labels,
+            gate_grid,
+            wire_grid,
+            plot_params,
+            measured,
+            schedule=schedule,
+            fold=fold,
+            num_folds=num_folds,
+        )
+
+    if fold != -1 and num_folds > 1:
+        _draw_fold_boundaries(ax, gate_grid, wire_grid, nq, num_folds, plot_params)
+
+    return ax
+
+
+def _draw_gates_with_folds(
+    ax,
+    gates_plot,
+    labels,
+    gate_grid,
+    wire_grid,
+    plot_params,
+    measured={},
+    schedule=False,
+    fold=-1,
+    num_folds=0,
+):
+    for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
+        _draw_target_with_folds(
+            ax,
+            i,
+            gate,
+            labels,
+            gate_grid,
+            wire_grid,
+            plot_params,
+            fold=fold,
+            num_folds=num_folds,
+        )
+        if len(gate) > 2:  # Controlled
+            _draw_controls_with_folds(
+                ax,
+                i,
+                gate,
+                labels,
+                gate_grid,
+                wire_grid,
+                plot_params,
+                measured,
+                fold=fold,
+                num_folds=num_folds,
+            )
+
+
+def _fold_coords(i: int, fold: int, num_qubits: int, num_folds: int, direction: str):
+    """Return (col_index, y_offset) for gate index i under folding, honoring direction."""
+    if fold == -1:
+        return i, 0
+    col = i % fold
+    fold_idx = i // fold
+
+    if direction == "down":  # top → bottom stacking
+        fold_idx = num_folds - 1 - fold_idx
+
+    yoff = fold_idx * num_qubits
+
+    return col, yoff
+
+
+def _draw_controls_with_folds(
+    ax,
+    i,
+    gate,
+    labels,
+    gate_grid,
+    wire_grid,
+    plot_params,
+    measured={},
+    fold=-1,
+    num_folds=0,
+):
+    name, target = gate[:2]
+
+    if "FUSEDENDGATEBARRIER" in name:
+        return
+
+    linewidth = plot_params["linewidth"]
+    scale = plot_params["scale"]
+    control_radius = plot_params["control_radius_with_folds"]
+
+    num_qubits = len(labels)
+    num_qubits = len(labels)
+    col, yoff = _fold_coords(
+        i,
+        fold,
+        num_qubits,
+        num_folds,
+        direction=plot_params.get("fold_direction", "down"),
+    )
+
+    target_index = _get_flipped_index(target, labels)
+    controls = gate[2:]
+    control_indices = _get_flipped_indices(controls, labels)
+    gate_indices = control_indices + [target_index]
+    min_wire = min(gate_indices)
+    max_wire = max(gate_indices)
+
+    if "FUSEDSTARTGATEBARRIER" in name:
+        # Optional: this still uses i-based x extents which may span folds.
+        # If you later want fold-safe boxes, you’ll need to split boxes across folds.
+        equal_qbits = False
+        if "@EQUAL" in name:
+            name = name.replace("@EQUAL", "")
+            equal_qbits = True
+        nfused = int(name.replace("FUSEDSTARTGATEBARRIER", ""))
+        dx_right = 0.30
+        dx_left = 0.30
+        dy = 0.25
+        _rectangle(
+            ax,
+            gate_grid[col + 1] - dx_left,  # use folded column
+            gate_grid[min(col + nfused, len(gate_grid) - 1)] + dx_right,
+            wire_grid[min_wire + yoff] - dy - (0 if not equal_qbits else -0.9 * scale),
+            wire_grid[max_wire + yoff] + dy,
+            plot_params,
+        )
+    elif not "UNITARY@" in name:
+        # Vertical line between min and max wires at folded x
+        _line(
+            ax,
+            gate_grid[col],  # folded column
+            gate_grid[col],
+            wire_grid[min_wire + yoff],  # folded rows
+            wire_grid[max_wire + yoff],
+            plot_params,
+            linestyle=(
+                "dashed" if name == "UNITARY" and target.count("_") > 1 else "solid"
+            ),
+        )
+
+        cci = 0
+        for ci in control_indices:
+            x = gate_grid[col]  # folded x
+            y = wire_grid[ci + yoff]  # folded y
+
+            is_dagger = False
+            if name[-2:] == "DG":
+                name = name.replace("DG", "")
+                is_dagger = True
+
+            if name == "SWAP":
+                _swapx_with_folds(ax, x, y, plot_params)
+            elif name in [
+                "ISWAP",
+                "SISWAP",
+                "FSWAP",
+                "FSIM",
+                "SYC",
+                "GENERALIZEDFSIM",
+                "RXX",
+                "RYY",
+                "RZZ",
+                "RZX",
+                "RXXYY",
+                "G",
+                "RBS",
+                "ECR",
+                "MS",
+                "UNITARY",
+            ]:
+                symbol = SYMBOLS.get(name, name)
+                if is_dagger:
+                    symbol += r"$\rm{^{\dagger}}$"
+
+                if name == "UNITARY" and target.count("_") > 1:
+                    hash_split = controls[cci].split("_")
+                    u_gate_single_hash = hash_split[2]
+                    global_hash = hash_split[3]
+                    index_r = int(hash_split[4])
+                    subindex = plot_params["hash_unitary_gates"][index_r][
+                        u_gate_single_hash + "-" + global_hash
+                    ]
+                    symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+                    symbol += r"$\rm_{{{}}}$".format(
+                        plot_params["hash_global_unitary_gates"][global_hash]
+                    )
+                    cci += 1
+
+                _text_with_folds(ax, x, y, symbol, plot_params, box=True)
+            else:
+                _cdot_with_folds(ax, x, y, plot_params)
+    else:
+        # UNITARY@ multi-qubit box: also needs folded coordinates
+        minw = min(control_indices + [target_index])
+        maxw = max(control_indices + [target_index])
+        x = gate_grid[col]
+        strip_symbol = name.replace("UNITARY@", "")
+        if strip_symbol == "":
+            strip_symbol = "U_G"
+        symbol = r"$\rm{{{}}}$".format(strip_symbol)
+
+        dx_right = 0.45
+        dy = 0.25
+        _composed_rectangle(
+            ax,
+            gate_grid[col],  # left x (folded)
+            gate_grid[min(col + 1, len(gate_grid) - 1)] + dx_right,  # right x
+            wire_grid[minw + yoff] - dy,  # bottom y (folded)
+            wire_grid[maxw + yoff] + dy,  # top y (folded)
+            symbol,
+            plot_params,
+        )
+
+
+def _draw_target_with_folds(
+    ax, i, gate, labels, gate_grid, wire_grid, plot_params, fold=-1, num_folds=0
+):
+    name, target = gate[:2]
+    xscale = plot_params["xscale"]
+    yscale = plot_params["yscale"]
+    pitch = plot_params["wire_pitch"]
+
+    if (
+        "FUSEDSTARTGATEBARRIER" in name
+        or "FUSEDENDGATEBARRIER" in name
+        or "UNITARY@" in name
+    ):
+        return
+
+    is_dagger = False
+    if name[-2:] == "DG":
+        name = name.replace("DG", "")
+        is_dagger = True
+
+    symbol = SYMBOLS.get(name, name)  # override name with symbols
+
+    if is_dagger:
+        symbol += r"$\rm{^{\dagger}}$"
+
+    actual_x_index = i % fold
+    x = gate_grid[actual_x_index]
+    num_qubits = len(labels)
+
+    target_index = _get_flipped_index(target, labels)
+    fold_index = int(i / fold)
+
+    if plot_params.get("fold_direction", "up") == "down":
+        fold_index = num_folds - 1 - fold_index
+
+    yoff = fold_index * num_qubits
+
+    y = wire_grid[target_index + yoff]
+
+    if name in ["CNOT", "TOFFOLI"]:
+        _oplus_with_folds(ax, x, y, plot_params, num_folds)
+    elif name == "SWAP":
+        _swapx_with_folds(ax, x, y, plot_params)
+    else:
+        if name == "ALIGN":
+            symbol = "A({})".format(target[2:])
+
+        if name == "UNITARY" and target.count("_") > 1:
+            hash_split = target.split("_")
+            hash = hash_split[2]
+            global_hash = hash_split[3]
+            index_r = int(hash_split[4])
+            subindex = plot_params["hash_unitary_gates"][index_r][
+                hash + "-" + global_hash
+            ]
+            symbol = r"$\rm_{{{}}}$".format(subindex) + symbol
+            symbol += r"$\rm_{{{}}}$".format(
+                plot_params["hash_global_unitary_gates"][global_hash]
+            )
+
+        t = _text_with_folds(ax, x, y, symbol, plot_params, box=True)
+
+
+def _draw_labels_with_folds(
+    ax, labels, inits, gate_grid, wire_grid, plot_params, num_folds=0
+):
+    xmin, _ = ax.get_xlim()
+    left = xmin - plot_params.get("label_pad", 0.60)
+    xscale = plot_params["xscale"]
+    nq = len(labels)
+
+    if "wire_names" in plot_params:
+        labels = (
+            plot_params["wire_names"] if len(plot_params["wire_names"]) > 0 else labels
+        )
+
+    direction = plot_params.get("fold_direction", "down")
+
+    for i in range(nq):
+        j = _get_flipped_index(labels[i], labels)
+        for num in range(num_folds):
+            fold_idx = num if direction == "up" else (num_folds - 1 - num)
+            _text_with_folds(
+                ax,
+                left,
+                wire_grid[j + fold_idx * nq],
+                _render_label(labels[i], inits),
+                plot_params,
+            )
+
+
+def _draw_fold_boundaries(ax, gate_grid, wire_grid, nq, num_folds, plot_params):
+    """Qiskit-like fold brackets:
+    - right bracket at end of each fold except last
+    - left  bracket at start of each fold except first
+    """
+    if num_folds <= 1:
+        return
+
+    # xscale = plot_params.get("xscale", 1.0)
+    xmin, xmax = ax.get_xlim()
+    pad = 0.005
+
+    # place the brackets just inside the figure margins so they appear
+    # visually after/before all gates in the fold
+    x_left_edge = xmin + pad
+    x_right_edge = xmax - pad
+
+    for f in range(num_folds):
+        y_top = wire_grid[f * nq]
+        y_bot = wire_grid[(f + 1) * nq - 1]
+
+        # LEFT bracket (start of fold), skip for first fold
+        if (
+            f != num_folds - 1
+        ):  # checking for 0 because folds are actually stacked bottom to top, so first fold is at f = num_folds-1
+            _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
+
+        # RIGHT bracket (end of fold), skip for last fold
+        if (
+            f != 0
+        ):  # checking for 0 because folds are actually stacked bottom to top, so last fold is at f = 0
+            _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
+
+
+# Controls (solid dot)
+def _cdot_with_folds(ax, x, y, p):
+    r = p["control_radius_with_folds"]
+    e = matplotlib.patches.Ellipse(
+        (x, y), r, 0.85*r, ec=p["edgecolor"], fc=p["controlcolor"], lw=p["linewidth"]
+    )
+    ax.add_patch(e)
+
+
+# Target ⊕
+def _oplus_with_folds(ax, x, y, p, _num_folds_unused=None):
+    R = p["not_radius_with_folds"]
+    c = matplotlib.patches.Ellipse(
+        (x, y),
+        R,
+        0.85 * R,
+        ec=p["edgecolor"],
+        fc=p["gatecolor"],
+        lw=p["linewidth"],
+        fill=True,
+    )
+    ax.add_patch(c)
+    _line(ax, x, x, y, y-(0.85 * R)/2, p)
+
+
+# Gate box + text
+def _text_with_folds(ax, x, y, label, p, box=False):
+    fs = p["fontsize"] * p.get("gate_font_scale", 1.0)
+    if box:
+        w = p["gate_box_w"]
+        h = p["gate_box_h"]
+        rect = matplotlib.patches.Rectangle(
+            (x - w / 2, y - h / 2),
+            w,
+            h,
+            ec=p["edgecolor"],
+            fc=p["facecolor"],
+            lw=p["linewidth"],
+            fill=True,
+            zorder=20
+        )
+        ax.add_patch(rect)
+        pad = p["gate_pad"]
+        return ax.text(
+            x, y, label, ha="center", va="center", color=p["textcolor"], size=fs, zorder=30,
+        )
+    else:
+        return ax.text(
+            x, y, label, ha="center", va="center", color=p["textcolor"], size=fs, zorder=30
+        )
