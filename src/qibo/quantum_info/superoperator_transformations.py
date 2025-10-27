@@ -2295,6 +2295,7 @@ def _individual_kraus_to_liouville(
 
     return super_ops
 
+
 def _to_pauli_liouville_fht(super_op, normalize: bool = False, backend=None):
     """Fast conversion from Liouville to Pauli-Liouville representation using the Fast Walsh–Hadamard Transform.
 
@@ -2336,6 +2337,7 @@ def _to_pauli_liouville_fht(super_op, normalize: bool = False, backend=None):
     # Normalize if required (divide by sqrt of dimension)
     if normalize:
         import math
+
         mat = mat / math.sqrt(mat.shape[0])
 
     # Cast back to backend array
