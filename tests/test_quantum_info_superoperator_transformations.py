@@ -444,6 +444,7 @@ def test_choi_to_kraus(
     test_choi = backend.cast(
         np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
     )
+    test_non_CP = backend.cast(test_non_CP)
 
     kraus_ops, _ = choi_to_kraus(
         test_choi, order=order, validate_cp=validate_cp, backend=backend
@@ -533,7 +534,7 @@ def test_choi_to_stinespring(
     if validate_cp is True:
         with pytest.raises(NotImplementedError):
             test = choi_to_stinespring(
-                test_non_CP,
+                backend.cast(test_non_CP),
                 order=order,
                 validate_cp=validate_cp,
                 nqubits=nqubits,

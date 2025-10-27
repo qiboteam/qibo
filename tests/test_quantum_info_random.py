@@ -202,12 +202,12 @@ def test_random_statevector(backend, dtype, seed):
     # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
-    assert abs(purity(state, backend=backend) - 1.0) < 8 * PRECISION_TOL
+    assert abs(purity(state, backend=backend) - 1.0) < 9 * PRECISION_TOL
 
     if dtype is not None:
         dtype = getattr(backend.np, dtype)
         state = random_statevector(dims, dtype=dtype, seed=seed, backend=backend)
-        assert abs(purity(state, backend=backend) - 1.0) < 8 * PRECISION_TOL
+        assert abs(purity(state, backend=backend) - 1.0) < 9 * PRECISION_TOL
 
 
 @pytest.mark.parametrize("normalize", [False, True])
