@@ -12,7 +12,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 from qibo.quantum_info.linalg_operations import singular_value_decomposition
-from qibo.quantum_info.utils import _get_paulis, _normalization
+from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -219,10 +219,12 @@ def to_pauli_liouville(
     """
     backend = _check_backend(backend)
 
-    normalization = _normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
+    normalization = (
+        _pauli_basis_normalization(int(np.log2(channel.shape[0]))) if normalize else 1.0
+    )
     func_order = getattr(backend.qinfo, f"_to_pauli_liouville_{order}")
     return func_order(
-        channel, *_get_paulis(pauli_order, backend), normalization=normalization
+        channel, *_get_single_paulis(pauli_order, backend), normalization=normalization
     )
 
 

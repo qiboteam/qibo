@@ -2,7 +2,7 @@ from typing import Optional
 
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.quantum_info.utils import _get_paulis, _normalization
+from qibo.quantum_info.utils import _get_single_paulis, _pauli_basis_normalization
 
 
 def pauli_basis(
@@ -59,7 +59,7 @@ def pauli_basis(
 
     backend = _check_backend(backend)
     fname = f"_pauli_basis_{order}"
-    normalization = _normalization(nqubits) if normalize else 1.0
+    normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
 
     if vectorize and sparse:
         func = getattr(backend.qinfo, f"_vectorize_sparse{fname}")
@@ -69,7 +69,7 @@ def pauli_basis(
         func = backend.qinfo._pauli_basis
 
     return func(
-        nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
+        nqubits, *_get_single_paulis(pauli_order, backend), normalization=normalization
     )
 
 
@@ -205,10 +205,12 @@ def pauli_to_comp_basis(
     backend = _check_backend(backend)
 
     if sparse:
-        normalization = _normalization(nqubits) if normalize else 1.0
+        normalization = _pauli_basis_normalization(nqubits) if normalize else 1.0
         func = getattr(backend.qinfo, f"_pauli_to_comp_basis_sparse_{order}")
         return func(
-            nqubits, *_get_paulis(pauli_order, backend), normalization=normalization
+            nqubits,
+            *_get_single_paulis(pauli_order, backend),
+            normalization=normalization,
         )
 
     return pauli_basis(

@@ -13,7 +13,7 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 @cache
-def _get_paulis(order: str, backend: Backend):
+def _get_single_paulis(order: str, backend: Backend):
     pauli_labels = {"I": backend.matrices.I()}
     pauli_labels.update(
         {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
@@ -22,7 +22,7 @@ def _get_paulis(order: str, backend: Backend):
 
 
 @cache
-def _normalization(nqubits: int):
+def _pauli_basis_normalization(nqubits: int):
     return float(np.sqrt(2**nqubits))
 
 
