@@ -2294,3 +2294,49 @@ def _individual_kraus_to_liouville(
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops
+
+def _to_pauli_liouville_fht(super_op, normalize: bool = False, backend=None):
+    """Fast conversion from Liouville to Pauli-Liouville representation using the Fast Walsh–Hadamard Transform.
+
+    Args:
+        super_op (ndarray): superoperator in the Liouville representation.
+        normalize (bool, optional): If ``True``, return the normalized Pauli basis representation. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the execution. If ``None``, uses the current backend.
+
+    Returns:
+        ndarray: superoperator in the Pauli-Liouville representation.
+    """
+    # Obtain backend
+    backend = _check_backend(backend)
+    # Convert to numpy array (complex)
+    mat = backend.to_numpy(super_op).astype(complex)
+
+    def _fht(vec):
+        """In-place 1D Fast Walsh–Hadamard Transform."""
+        n = len(vec)
+        h = 1
+        while h < n:
+            for i in range(0, n, h * 2):
+                for j in range(i, i + h):
+                    a = vec[j]
+                    b = vec[j + h]
+                    vec[j] = a + b
+                    vec[j + h] = a - b
+            h *= 2
+        return vec
+
+    # Apply FHT to rows
+    for i in range(mat.shape[0]):
+        mat[i] = _fht(mat[i])
+
+    # Apply FHT to columns
+    for j in range(mat.shape[1]):
+        mat[:, j] = _fht(mat[:, j])
+
+    # Normalize if required (divide by sqrt of dimension)
+    if normalize:
+        import math
+        mat = mat / math.sqrt(mat.shape[0])
+
+    # Cast back to backend array
+    return backend.cast(mat)
