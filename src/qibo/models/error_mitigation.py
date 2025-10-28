@@ -1028,9 +1028,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
 
     backend_temp = _check_backend(backend)
     backend = (
-        CLIFFORD_BACKEND()
-        if backend is None
-        else backend_temp
+        CLIFFORD_BACKEND() if backend is None else backend_temp
     )  # pragma: no cover
     backend.set_seed(seed)
 
