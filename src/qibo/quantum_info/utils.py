@@ -1,6 +1,6 @@
 """Utility functions for the Quantum Information module."""
 
-from functools import reduce
+from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
@@ -8,9 +8,22 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+
+
+@cache
+def _get_single_paulis(order: str, backend: Backend):
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
+    return [pauli_labels[label] for label in order]
+
+
+@cache
+def _pauli_basis_normalization(nqubits: int):
+    return float(np.sqrt(2**nqubits))
 
 
 def hamming_weight(
@@ -160,7 +173,9 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
-        hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+        hadamards = backend.np.real(
+            reduce(backend.np.kron, [backend.matrices.H] * nqubits)
+        )
         hadamards /= 2 ** (nqubits / 2)
         hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
@@ -425,23 +440,28 @@ def haar_integral(
     dim = 2**nqubits
 
     if samples is not None:
-        from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
-            random_statevector,
-        )
-
         rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
         rand_unit_density = backend.cast(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
-        for _ in range(samples):
-            haar_state = backend.reshape(
-                random_statevector(dim, backend=backend), (-1, 1)
-            )
 
-            rho = haar_state @ backend.conj(haar_state).T
+        random_states = backend.qinfo.ENGINE.random.standard_normal((samples, dim))
+        random_states = backend.cast(random_states, dtype=rand_unit_density.dtype)
+        random_states += 1.0j * backend.qinfo.ENGINE.random.standard_normal(
+            (samples, dim)
+        )
+        random_states /= backend.qinfo.ENGINE.linalg.norm(
+            random_states, axis=1
+        ).reshape(-1, 1)
+        random_states = random_states.reshape(samples, 1, dim)
+        rho = backend.np.einsum(
+            "ijk,ijl->ikl", random_states, backend.np.conj(random_states)
+        )
+
+        for state in rho:
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.kron, [rho] * power_t
+                backend.np.kron, [state] * power_t
             )
 
         integral = rand_unit_density / samples

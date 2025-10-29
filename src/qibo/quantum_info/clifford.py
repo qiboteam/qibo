@@ -422,7 +422,6 @@ class Clifford:
             operators = generators * phases.reshape(-1, 1, 1)
             identity = self._backend.identity(2**self.nqubits)
             operators = self._backend.cast([(g, identity) for g in operators])
-
             return self._backend.cast(
                 [reduce(self.engine.matmul, ops) for ops in product(*operators)]
             )

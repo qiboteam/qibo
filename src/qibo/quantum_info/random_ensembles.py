@@ -1,16 +1,17 @@
 """Module with functions that create random quantum and classical objects."""
 
 import math
-import operator
 import warnings
-from functools import reduce
 from typing import Optional, Union
 
 import numpy as np
 from scipy.stats import rv_continuous
 
-from qibo import Circuit, gates, matrices
-from qibo.backends import _check_backend_and_local_state
+from qibo import Circuit, gates
+from qibo.backends import (
+    _check_backend,
+    _check_backend_and_local_state,
+)
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.clifford import Clifford
@@ -86,8 +87,8 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
 def random_gaussian_matrix(
     dims: int,
     rank: Optional[int] = None,
-    mean: float = 0,
-    stddev: float = 1,
+    mean: float = 0.0,
+    stddev: float = 1.0,
     seed=None,
     backend=None,
 ):
@@ -119,10 +120,6 @@ def random_gaussian_matrix(
     Returns:
         ndarray: Random Gaussian matrix with dimensions ``(dims, rank)``.
     """
-
-    if dims <= 0:
-        raise_error(ValueError, "dims must be type int and positive.")
-
     if rank is None:
         rank = dims
     else:
@@ -130,22 +127,10 @@ def random_gaussian_matrix(
             raise_error(
                 ValueError, f"rank ({rank}) cannot be greater than dims ({dims})."
             )
-        elif rank <= 0:
-            raise_error(ValueError, f"rank ({rank}) must be an int between 1 and dims.")
 
-    if stddev is not None and stddev <= 0.0:
-        raise_error(ValueError, "stddev must be a positive float.")
-
-    backend, local_state = _check_backend_and_local_state(seed, backend)
-
-    dims = (dims, rank)
-
-    matrix = 1.0j * (mean + stddev * local_state.standard_normal(size=dims))
-    matrix += mean + stddev * local_state.standard_normal(size=dims)
-
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-
-    return matrix
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
+    return backend.qinfo._random_gaussian_matrix(dims, rank, mean, stddev)
 
 
 def random_hermitian(
@@ -177,23 +162,15 @@ def random_hermitian(
         ndarray: Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
     """
 
-    if dims <= 0:
-        raise_error(ValueError, f"dims ({dims}) must be type int and positive.")
-
-    if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
-        raise_error(TypeError, "semidefinite and normalize must be type bool.")
-
-    backend, local_state = _check_backend_and_local_state(seed, backend)
-
-    matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
-
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
     if semidefinite:
-        matrix = backend.conj(matrix).T @ matrix
+        matrix = backend.qinfo._random_hermitian_semidefinite(dims)
     else:
-        matrix = (matrix + backend.conj(matrix).T) / 2
+        matrix = backend.qinfo._random_hermitian(dims)
 
     if normalize:
-        matrix = matrix / backend.matrix_norm(matrix)
+        matrix = matrix / backend.np.linalg.norm(matrix)
 
     return matrix
 
@@ -219,32 +196,16 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         ndarray: Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
     """
 
-    if dims <= 0:
-        raise_error(ValueError, "dims must be type int and positive.")
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
-    if measure is not None:
-        if not isinstance(measure, str):
-            raise_error(
-                TypeError, f"measure must be type str but it is type {type(measure)}."
-            )
-        if measure != "haar":
-            raise_error(ValueError, f"measure {measure} not implemented.")
-
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    if measure is not None and measure != "haar":
+        raise_error(ValueError, f"measure {measure} not implemented.")
 
     if measure == "haar":
-        unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
-        # Tensorflow experi
-        Q, R = backend.qr(unitary)
-        D = backend.diag(R)
-        D = D / backend.abs(D)
-        R = backend.diag(D)
-        unitary = Q @ R
-    elif measure is None:
-        H = random_hermitian(dims, seed=seed, backend=backend)
-        unitary = backend.matrix_exp(H, -0.5j)
+        return backend.qinfo._random_unitary_haar(dims)
 
-    return unitary
+    return backend.qinfo._random_unitary(dims)
 
 
 def random_quantum_channel(
@@ -317,20 +278,14 @@ def random_quantum_channel(
     Returns:
         ndarray: Superoperator representation of a random unitary gate.
     """
-    if not isinstance(representation, str):
-        raise_error(
-            TypeError,
-            f"representation must be type str, but it is type {type(representation)}",
-        )
-
-    if representation not in [
+    if representation not in (
         "chi",
         "choi",
         "kraus",
         "liouville",
         "pauli",
         "stinespring",
-    ]:
+    ):
         if (
             ("chi-" not in representation and "pauli-" not in representation)
             or len(representation.split("-")) != 2
@@ -338,21 +293,19 @@ def random_quantum_channel(
         ):
             raise_error(ValueError, f"representation {representation} not implemented.")
 
-    if measure == "bcsz" and order not in ["row", "column"]:
-        raise_error(
-            NotImplementedError, f"order {order} not implemented for measure {measure}."
-        )
-
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if measure == "bcsz":
         super_op = _super_op_from_bcsz_measure(
-            dims=dims, rank=rank, order=order, seed=local_state, backend=backend
+            dims=dims, rank=rank, order=order, seed=seed, backend=backend
         )
-    else:
-        super_op = random_unitary(dims, measure, local_state, backend)
-        super_op = vectorization(super_op, order=order, backend=backend)
-        super_op = backend.outer(super_op, backend.conj(super_op))
+    elif measure == "haar":
+        func_order = getattr(backend.qinfo, f"_super_op_from_haar_measure_{order}")
+        super_op = func_order(dims)
+    elif measure is None:
+        func_order = getattr(backend.qinfo, f"_super_op_from_hermitian_measure_{order}")
+        super_op = func_order(dims)
 
     if "chi" in representation:
         pauli_order = "IXYZ"
@@ -432,25 +385,18 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
     Returns:
         ndarray: Random statevector :math:`\\ket{\\psi}`.
     """
-
-    if dims <= 0:
-        raise_error(ValueError, "dim must be of type int and >= 1")
-
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if dtype is None:
         dtype = backend.dtype
 
-    state = local_state.standard_normal(dims)
-    state = backend.cast(state, dtype=dtype)
     if "complex" in str(dtype):
-        state += 0j
-        state = state + 1.0j * backend.cast(
-            local_state.standard_normal(dims), dtype=dtype
-        )
-    state = state / backend.vector_norm(state)
+        state = backend.qinfo._random_statevector(dims)
+    else:
+        state = backend.qinfo._random_statevector_real(dims)
 
-    return state
+    return backend.cast(state, dtype=dtype)
 
 
 def random_density_matrix(
@@ -509,31 +455,13 @@ def random_density_matrix(
         ndarray: Random density matrix :math:`\\rho`.
     """
 
-    if dims <= 0:
-        raise_error(ValueError, "dims must be type int and positive.")
-
     if rank is not None and rank > dims:
         raise_error(ValueError, f"rank ({rank}) cannot be greater than dims ({dims}).")
 
-    if rank is not None and rank <= 0:
-        raise_error(ValueError, f"rank ({rank}) must be an int between 1 and dims.")
-
-    if rank is not None and not isinstance(rank, int):
-        raise_error(TypeError, f"rank must be type int, but it is type {type(rank)}.")
-
-    if not isinstance(pure, bool):
-        raise_error(TypeError, f"pure must be type bool, but it is type {type(pure)}.")
-
-    if not isinstance(metric, str):
-        raise_error(
-            TypeError, f"metric must be type str, but it is type {type(metric)}."
-        )
     if metric not in ["hilbert-schmidt", "ginibre", "bures"]:
         raise_error(ValueError, f"metric {metric} not implemented.")
 
-    if basis is not None and not isinstance(basis, str):
-        raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
-    elif basis is not None and basis not in ["pauli"]:
+    if basis is not None and basis != "pauli":
         if (
             "pauli-" not in basis
             or len(basis.split("-")) != 2
@@ -541,38 +469,21 @@ def random_density_matrix(
         ):
             raise_error(ValueError, f"basis {basis} nor recognized.")
 
-    if not isinstance(normalize, bool):
-        raise_error(
-            TypeError, f"normalize must be type bool, but it is type {type(normalize)}."
-        )
-    elif normalize is True and basis is None:
+    if normalize and basis is None:
         raise_error(ValueError, "normalize cannot be True when basis=None.")
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
-
-    if metric == "hilbert-schmidt":
-        rank = None
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     if pure:
-        state = random_statevector(dims, seed=local_state, backend=backend)
-        state = backend.outer(state, backend.conj(state))
+        state = backend.qinfo._random_density_matrix_pure(dims)
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
-            state = random_gaussian_matrix(
-                dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
+            state = backend.qinfo._random_density_matrix_hs_ginibre(
+                dims, dims, 0.0, 1.0
             )
-            state = state @ backend.conj(state).T
-            state = state / backend.trace(state)
         else:
-            state = backend.identity(dims)
-            state += random_unitary(dims, seed=local_state, backend=backend)
-            state = state @ random_gaussian_matrix(
-                dims, rank, seed=local_state, backend=backend
-            )
-            state = state @ backend.conj(state).T
-            state /= backend.trace(state)
-
-    state = backend.cast(state, dtype=state.dtype)
+            state = backend.qinfo._random_density_matrix_bures(dims, dims, 0.0, 1.0)
 
     if basis is not None:
         pauli_order = basis.split("-")[1]
@@ -616,48 +527,34 @@ def random_clifford(
            structure of the Clifford group*.
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
-    if isinstance(nqubits, int) is False:
-        raise_error(
-            TypeError,
-            f"nqubits must be type int, but it is type {type(nqubits)}.",
-        )
-
-    if nqubits <= 0:
-        raise_error(ValueError, "nqubits must be a positive integer.")
-
     if not isinstance(return_circuit, bool):
         raise_error(
             TypeError,
             f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
-    if backend.platform == "tensorflow":
-        raise_error(
-            NotImplementedError,
-            "``random_clifford`` function does not support the ``TensorflowBackend``.",
-        )
-
-    hadamards, permutations = _sample_from_quantum_mallows_distribution(
-        nqubits, local_state=local_state, backend=backend
+    hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
+        nqubits
     )
 
-    gamma = backend.diag(backend.random_integers(2, size=nqubits, seed=local_state))
-    gamma = backend.cast(gamma, dtype=backend.uint8)
+    gamma = backend.diag(
+        backend.random_integers(2, size=nqubits, dtype=backend.np.uint8)
+    )
 
     gamma_prime = backend.diag(
-        backend.random_integers(2, size=nqubits, seed=local_state)
+        backend.random_integers(2, size=nqubits, dtype=backend.np.uint8)
     )
-    gamma_prime = backend.cast(gamma_prime, dtype=backend.uint8)
 
-    delta = backend.identity(nqubits, dtype=backend.uint8)
+    delta = backend.identity(nqubits, dtype=backend.np.uint8)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
-    _fill_tril(gamma, local_state, symmetric=True, backend=backend)
-    _fill_tril(gamma_prime, local_state, symmetric=True, backend=backend)
-    _fill_tril(delta, local_state, symmetric=False, backend=backend)
-    _fill_tril(delta_prime, local_state, symmetric=False, backend=backend)
+    backend.qinfo._fill_tril(gamma, symmetric=True)
+    backend.qinfo._fill_tril(gamma_prime, symmetric=True)
+    backend.qinfo._fill_tril(delta, symmetric=False)
+    backend.qinfo._fill_tril(delta_prime, symmetric=False)
 
     # For large nqubits numpy.inv function called below can
     # return invalid output leading to a non-symplectic Clifford
@@ -669,8 +566,8 @@ def random_clifford(
     zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
-    inv1 = _inverse_tril(delta, block_inverse_threshold, backend=backend).T
-    inv2 = _inverse_tril(delta_prime, block_inverse_threshold, backend=backend).T
+    inv1 = backend.qinfo._inverse_tril(delta, block_inverse_threshold).T
+    inv2 = backend.qinfo._inverse_tril(delta_prime, block_inverse_threshold).T
 
     # backend.block cannot be used below because there is no cupy equivalent
     # hence the necessity for three backend.concatenate's
@@ -706,7 +603,7 @@ def random_clifford(
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
-    integers = backend.random_integers(2, size=2 * nqubits, seed=local_state)
+    integers = backend.random_integers(2, size=2 * nqubits)
     integers = backend.cast(integers, dtype=integers.dtype)
     tableau[:, -1] = integers
 
@@ -767,18 +664,6 @@ def random_pauli(
 
     """
 
-    if isinstance(qubits, int) and qubits < 0:
-        raise_error(ValueError, "qubits must be a non-negative integer.")
-
-    if isinstance(qubits, int) is False and any(q < 0 for q in qubits):
-        raise_error(ValueError, "qubit indexes must be non-negative integers.")
-
-    if isinstance(depth, int) and depth <= 0:
-        raise_error(ValueError, "depth must be a positive integer.")
-
-    if isinstance(max_qubits, int) and max_qubits <= 0:
-        raise_error(ValueError, "max_qubits must be a positive integer.")
-
     if max_qubits is not None:
         if isinstance(qubits, int) and qubits >= max_qubits:
             raise_error(
@@ -787,17 +672,8 @@ def random_pauli(
             )
         elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
             raise_error(ValueError, "all qubit indexes must be < max_qubits.")
-
-    if not isinstance(return_circuit, bool):
-        raise_error(
-            TypeError,
-            f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
-        )
-
-    if subset is not None and not isinstance(subset, list):
-        raise_error(
-            TypeError, f"subset must be type list, but it is type {type(subset)}."
-        )
+    if depth < 1:
+        raise_error(ValueError, "``depth`` must be >= 1.")
 
     if subset is not None and any(isinstance(item, str) is False for item in subset):
         raise_error(
@@ -805,12 +681,18 @@ def random_pauli(
             "subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     complete_set = (
         {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
         if return_circuit
-        else {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+        else {
+            "I": backend.matrices.I(),
+            "X": backend.matrices.X,
+            "Y": backend.matrices.Y,
+            "Z": backend.matrices.Z,
+        }
     )
 
     if subset is None:
@@ -830,9 +712,8 @@ def random_pauli(
         if isinstance(qubits, int):
             qubits = [qubits]
 
-    indexes = backend.random_integers(
-        0, len(subset), size=(len(qubits), depth), seed=local_state
-    )
+    # this may be optimized as well (the sampling mostly) but maybe it's not worth it
+    indexes = backend.np.random.randint(0, len(subset), size=(len(qubits), depth))
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:
@@ -843,7 +724,10 @@ def random_pauli(
                     gate_grid.add(subset[column_item](qubit))
     else:
         gate_grid = backend.cast(
-            [[subset[column_item] for column_item in row] for row in indexes]
+            [
+                backend.cast([subset[column_item] for column_item in row])
+                for row in indexes
+            ]
         )
 
     return gate_grid
@@ -910,11 +794,12 @@ def random_pauli_hamiltonian(
             "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     d = 2**nqubits
 
-    hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
+    hamiltonian = random_hermitian(d, normalize=True, seed=seed, backend=backend)
 
     eigenvalues, eigenvectors = backend.eigenvectors(hamiltonian)
     if backend.platform == "tensorflow":
@@ -1062,48 +947,6 @@ def random_stochastic_matrix(
     return matrix
 
 
-def _sample_from_quantum_mallows_distribution(nqubits: int, local_state, backend):
-    """Using the quantum Mallows distribution, samples a binary array
-    representing a layer of Hadamard gates as well as an array with permutated
-    qubit indexes. For more details, see Reference [1].
-
-    Args:
-        nqubits (int): number of qubits.
-        local_state (:class:`numpy.random.Generator`): a generator of
-            random numbers
-
-    Returns:
-        (``ndarray``, ``ndarray`): tuple of binary ``ndarray`` and ``ndarray`` of indexes.
-
-    Reference:
-        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
-            structure of the Clifford group*.
-            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
-
-    """
-    mute_index = list(range(nqubits))
-
-    exponents = np.arange(nqubits, 0, -1)
-    exponents = backend.cast(exponents, dtype=backend.int64)
-    powers = 4**exponents
-    powers = backend.engine.where(powers == 0, int(np.iinfo(np.int64).max), powers)
-
-    r = backend.random_uniform(0, 1, size=nqubits, seed=local_state)
-
-    indexes = -1 * (backend.ceil(backend.log2(r + (1 - r) / powers)))
-
-    hadamards = 1 * (indexes < exponents)
-
-    permutations = backend.zeros(nqubits, dtype=backend.int64)
-    for l, (index, m) in enumerate(zip(indexes, exponents)):
-        k = index if index < m else 2 * m - index - 1
-        k = int(k)
-        permutations[l] = mute_index[k]
-        del mute_index[k]
-
-    return hadamards, permutations
-
-
 def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend):
     """Helper function for :func:qibo.quantum_info.random_ensembles.random_quantum_channel.
     Generates a channel from the BCSZ measure.
@@ -1121,138 +964,17 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
             in the execution. If ``None``, it uses the current backend.
             Defaults to ``None``.
     """
-    super_op = random_gaussian_matrix(
-        dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
-    )
-    super_op = super_op @ backend.conj(super_op).T
+    backend.set_seed(seed)
 
-    # partial trace implemented with einsum
-    super_op_reduced = backend.einsum(
-        "ijik->jk", backend.reshape(super_op, (dims,) * 4)
-    )
+    if rank is None:
+        rank = dims
 
-    eigenvalues, eigenvectors = backend.eigh(super_op_reduced)
-
-    eigenvalues = backend.sqrt(1.0 / eigenvalues)
-
-    operator = backend.zeros((dims, dims), dtype=backend.complex128)
-    for eigenvalue, eigenvector in zip(
-        backend.cast(eigenvalues), backend.cast(eigenvectors).T
-    ):
-        operator = operator + eigenvalue * backend.outer(
-            eigenvector, backend.conj(eigenvector)
+    if order not in ("row", "column"):
+        raise_error(
+            ValueError, f"Unrecognized {order} order, pick one in ('row', 'column')."
         )
 
-    ops = [backend.identity(dims), operator]
     if order == "column":
-        ops = ops[::-1]
+        return backend.qinfo._super_op_from_bcsz_measure_column(dims, rank)
 
-    operator = backend.kron(*ops)
-
-    super_op = operator @ super_op @ operator
-
-    return super_op
-
-
-def _fill_tril(mat, rng, symmetric, backend):
-    """Add symmetric random ints to off-diagonals"""
-    dim = mat.shape[0]
-    # Optimized for low dimensions
-    if dim == 1:
-        return
-
-    if dim <= 4:
-        mat[1, 0] = backend.cast(
-            backend.random_integers(2, seed=rng), dtype=backend.uint8
-        )
-        if symmetric:
-            mat[0, 1] = mat[1, 0]
-        if dim > 2:
-            mat[2, 0] = backend.cast(
-                backend.random_integers(2, seed=rng), dtype=backend.uint8
-            )
-            mat[2, 1] = backend.cast(
-                backend.random_integers(2, seed=rng), dtype=backend.uint8
-            )
-
-            if symmetric:
-                mat[0, 2] = mat[2, 0]
-                mat[1, 2] = mat[2, 1]
-        if dim > 3:
-            mat[3, 0] = backend.cast(
-                backend.random_integers(2, seed=rng), dtype=backend.uint8
-            )
-            mat[3, 1] = backend.cast(
-                backend.random_integers(2, seed=rng), dtype=backend.uint8
-            )
-            mat[3, 2] = backend.cast(
-                backend.random_integers(2, seed=rng), dtype=backend.uint8
-            )
-
-            if symmetric:
-                mat[0, 3] = mat[3, 0]
-                mat[1, 3] = mat[3, 1]
-                mat[2, 3] = mat[3, 2]
-        return
-
-    # Use numpy indices for larger dimensions
-    rows, cols = backend.tril_indices(dim, -1)
-    size = reduce(operator.mul, rows.shape)
-    vals = backend.cast(
-        backend.random_integers(2, size=size, seed=rng), dtype=backend.uint8
-    )
-    mat[(rows, cols)] = vals
-    if symmetric:
-        mat[(cols, rows)] = vals
-
-
-def _inverse_tril(mat, block_inverse_threshold, backend):
-    """Invert a lower-triangular matrix with unit diagonal."""
-    # Optimized inversion function for low dimensions
-    dim = mat.shape[0]
-
-    if dim <= 2:
-        return mat
-
-    if dim <= 5:
-        inv = backend.cast(mat, dtype=mat.dtype, copy=True)
-        inv[2, 0] = mat[2, 0] ^ (mat[1, 0] & mat[2, 1])
-        if dim > 3:
-            inv[3, 1] = mat[3, 1] ^ (mat[2, 1] & mat[3, 2])
-            inv[3, 0] = mat[3, 0] ^ (mat[3, 2] & mat[2, 0]) ^ (mat[1, 0] & inv[3, 1])
-        if dim > 4:
-            inv[4, 2] = (mat[4, 2] ^ (mat[3, 2] & mat[4, 3])) & 1
-            inv[4, 1] = mat[4, 1] ^ (mat[4, 3] & mat[3, 1]) ^ (mat[2, 1] & inv[4, 2])
-            inv[4, 0] = (
-                mat[4, 0]
-                ^ (mat[1, 0] & inv[4, 1])
-                ^ (mat[2, 0] & inv[4, 2])
-                ^ (mat[3, 0] & mat[4, 3])
-            )
-        return inv % 2
-
-    # For higher dimensions we use Numpy's inverse function
-    # however this function tends to fail and result in a non-symplectic
-    # final matrix if n is too large.
-    if dim <= block_inverse_threshold:
-        return backend.cast(backend.inv(mat), backend.uint8) % 2
-
-    # For very large matrices  we divide the matrix into 4 blocks of
-    # roughly equal size and use the analytic formula for the inverse
-    # of a block lower-triangular matrix:
-    # inv([[A, 0],[C, D]]) = [[inv(A), 0], [inv(D).C.inv(A), inv(D)]]
-    # call the inverse function recursively to compute inv(A) and invD
-
-    dim1 = dim // 2
-    mat_a = _inverse_tril(mat[0:dim1, 0:dim1], block_inverse_threshold, backend)
-    mat_d = _inverse_tril(mat[dim1:dim, dim1:dim], block_inverse_threshold, backend)
-    mat_c = (mat_d @ mat[dim1:dim, 0:dim1]) @ mat_a
-
-    inv = backend.block(
-        [
-            [mat_a, backend.zeros((dim1, dim - dim1), dtype=backend.uint8)],
-            [mat_c, mat_d],
-        ]
-    )
-
-    return inv % 2
+    return backend.qinfo._super_op_from_bcsz_measure_row(dims, rank)

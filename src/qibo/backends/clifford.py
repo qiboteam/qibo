@@ -97,6 +97,10 @@ class CliffordBackend(NumpyBackend):
 
     #     return self.engine.asarray(x, dtype=dtype, copy=copy if copy else None)
 
+    def set_seed(self, seed):
+        super().set_seed(seed)
+        self.engine.set_seed(seed)
+
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -121,9 +125,9 @@ class CliffordBackend(NumpyBackend):
         identity = self.identity(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=bool)
-        symplectic_matrix[:nqubits, :nqubits] = self.copy(identity)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.copy(identity)
+        symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
+        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
 
     def _clifford_pre_execution_reshape(self, state):
@@ -365,11 +369,11 @@ class CliffordBackend(NumpyBackend):
 
         return phase_n
 
-    def apply_channel(self, channel, state, nqubits):  # pragma: no cover
-        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
-        index = self.random_choice(range(len(probabilities)), size=1, p=probabilities)[
-            0
-        ]
+    def apply_channel(self, channel, state, nqubits):
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
+        index = self.random_choice(
+            self.arange(len(probabilities)), size=1, p=probabilities
+        )[0]
         index = int(index)
         if index != len(channel.gates):
             gate = channel.gates[index]

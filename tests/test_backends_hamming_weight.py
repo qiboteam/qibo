@@ -298,7 +298,7 @@ def test_n_qubit_gates(backend, weight):
 
 @pytest.mark.parametrize("weight", [1, 2, 3])
 @pytest.mark.parametrize("collapse", [False, True])
-@pytest.mark.parametrize("nshots", [None, 100])
+@pytest.mark.parametrize("nshots", [None, 500])
 def test_measurement(backend, weight, collapse, nshots):
     backend.set_seed(2024)
     hamming_bkd = construct_hamming_weight_backend(backend)
