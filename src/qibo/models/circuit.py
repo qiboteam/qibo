@@ -1210,6 +1210,10 @@ class Circuit:
         parser = QASMParser()
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
+    def to_cudaq(self):
+        """Convert circuit to cudaq string."""
+        raise NotImplementedError
+
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
