@@ -1,13 +1,16 @@
+import inspect
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from qibo import gates, Circuit
+from qibo import Circuit, gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 from qibo.error_mitigation.abstract import DataRegressionErrorMitigation
 from qibo.gates.abstract import Gate
+from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.noise import NoiseModel
 
 NPBACKEND = NumpyBackend()
 
@@ -19,6 +22,21 @@ class CDR(DataRegressionErrorMitigation):
     _targeted_gate: Gate = None
 
     def __post_init__(self):
+        super().__post_init__()
+        # setup the regression model
+        param_dtype = self.simulation_backend.np.float64
+        if self.regression_model is None:
+            self.regression_model = lambda x, a, b: a * x + b
+            if self.model_parameters is None:
+                self.model_parameters = self.simulation_backend.cast(
+                    [1, 0], dtype=param_dtype
+                )
+        elif self.model_parameters is None:
+            nparams = len(inspect.signature(self.regression_model).parameters) - 1
+            self.model_parameters = self.simulation_backend.cast(
+                np.random.randn(nparams), dtype=param_dtype
+            )
+        # setup the replacement gates
         if self.replacement_gates is None:
             self.replacement_gates = (
                 gates.RZ,
@@ -34,7 +52,9 @@ class CDR(DataRegressionErrorMitigation):
                 f"The provided set of gates for replacement: {self.replacement_gates} include one or more non clifford gates.",
             )
 
-    def sample_circuit(self, circuit: Optional[Circuit] = None, sigma: float = 0.5) -> Circuit:
+    def sample_circuit(
+        self, circuit: Optional[Circuit] = None, sigma: float = 0.5
+    ) -> Circuit:
         circuit = self._circuit(circuit)
 
         gates_to_replace = []
@@ -68,29 +88,27 @@ class CDR(DataRegressionErrorMitigation):
 
         distance = np.vstack(distance)
         prob = np.exp(-(distance**2) / sigma**2)
-        
+
         index = np.random.choice(
             range(len(gates_to_replace)),
             size=min(int(len(gates_to_replace) / 2), 50),
             replace=False,
             p=np.sum(prob, -1) / np.sum(prob),
         )
-        
+
         gates_to_replace = np.array([gates_to_replace[i] for i in index])
         prob = [prob[i] for i in index]
         prob = NPBACKEND.cast(prob, dtype=prob[0].dtype)
-        
+
         replacement = np.array([replacement[i] for i in index])
         replacement = [
-            replacement[i][
-                np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]
-            ]
+            replacement[i][np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
             for i, p in enumerate(prob)
         ]
         replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
-        
+
         sampled_circuit = circuit.__class__(**circuit.init_kwargs)
         for i, gate in enumerate(circuit.queue):
             sampled_circuit.add(replacement.get(i, gate))
-            
+
         return sampled_circuit
