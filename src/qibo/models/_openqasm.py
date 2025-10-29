@@ -109,6 +109,9 @@ def _qibo_gate_name(gate):
     if gate == "ccx":
         return "TOFFOLI"
 
+    if gate == "p":
+        return "U1"
+
     if gate in ["u", "U"]:
         # `u` for QASM 2.0
         # `U` for QASM 3.0
