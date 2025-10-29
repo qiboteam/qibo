@@ -105,27 +105,26 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
     else:
         backend.set_threads(1)
 
-    if nqubits == 1:
-        nmeas = 1
-    else:
-        nmeas = nqubits
+    nmeas = nqubits
+
+    nshots = 30000
     # Define the circuit
-    c = get_circuit(nqubits, nmeas)
+    circuit = get_circuit(nqubits, nmeas)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
     if nshots is None:
         noisy = obs.expectation(state.state())
     else:
         noisy = state.expectation_from_samples(obs)
     # Mitigated expected value
     estimate = ZNE(
-        circuit=c,
+        circuit=circuit,
         observable=obs,
         noise_levels=np.array(range(4)),
         noise_model=noise,

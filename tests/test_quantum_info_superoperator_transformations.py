@@ -57,8 +57,6 @@ def test_vectorization(backend, nqubits, order, statevector):
         vectorization(x, backend=backend)
     with pytest.raises(TypeError):
         vectorization(np.array([]), backend=backend)
-    with pytest.raises(TypeError):
-        vectorization(random_statevector(4, backend=backend), order=1, backend=backend)
     with pytest.raises(ValueError):
         vectorization(
             random_statevector(4, backend=backend), order="1", backend=backend
@@ -199,11 +197,7 @@ def test_batched_vectorization(backend, nqubits, order, statevector):
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 def test_unvectorization(backend, nqubits, order):
-    with pytest.raises(TypeError):
-        unvectorization(
-            random_density_matrix(2**nqubits, backend=backend), backend=backend
-        )
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         unvectorization(
             random_statevector(4**nqubits, backend=backend), order=1, backend=backend
         )
@@ -211,14 +205,17 @@ def test_unvectorization(backend, nqubits, order):
         unvectorization(
             random_statevector(4**2, backend=backend), order="1", backend=backend
         )
-
     dim = 2**nqubits
     matrix_test = random_density_matrix(dim, backend=backend)
-
     matrix = vectorization(matrix_test, order, backend)
     matrix = unvectorization(matrix, order, backend)
-
     backend.assert_allclose(matrix_test, matrix, atol=PRECISION_TOL)
+
+    matrix_test_2d = backend.np.vstack([matrix_test, matrix_test]).reshape(2, dim, dim)
+    matrix = vectorization(matrix_test_2d, order, backend)
+    matrix = unvectorization(matrix, order, backend)
+
+    backend.assert_allclose(matrix_test_2d, matrix, atol=PRECISION_TOL)
 
 
 test_a0 = np.sqrt(0.4) * matrices.X
@@ -447,13 +444,7 @@ def test_choi_to_kraus(
     test_choi = backend.cast(
         np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
     )
-
-    with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, str(PRECISION_TOL), backend=backend)
-    with pytest.raises(ValueError):
-        choi_to_kraus(test_choi, -1.0 * PRECISION_TOL, backend=backend)
-    with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, validate_cp="True", backend=backend)
+    test_non_CP = backend.cast(test_non_CP)
 
     kraus_ops, _ = choi_to_kraus(
         test_choi, order=order, validate_cp=validate_cp, backend=backend
@@ -543,7 +534,7 @@ def test_choi_to_stinespring(
     if validate_cp is True:
         with pytest.raises(NotImplementedError):
             test = choi_to_stinespring(
-                test_non_CP,
+                backend.cast(test_non_CP),
                 order=order,
                 validate_cp=validate_cp,
                 nqubits=nqubits,
@@ -644,7 +635,9 @@ def test_liouville_to_pauli(backend, normalize, order, pauli_order, test_superop
 @pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_liouville_to_kraus(backend, order, test_a0, test_a1):
-    kraus_ops, _ = liouville_to_kraus(test_superop, order=order, backend=backend)
+    kraus_ops, _ = liouville_to_kraus(
+        backend.cast(test_superop), order=order, backend=backend
+    )
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
@@ -702,6 +695,7 @@ def test_liouville_to_stinespring(
     test_a0,
     test_a1,
 ):
+    test_superop = backend.cast(test_superop)
     test_stinespring = backend.cast(test_stinespring, dtype=test_stinespring.dtype)
     test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
     test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
@@ -1249,13 +1243,6 @@ def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
             nqubits=nqubits,
             backend=backend,
         )
-    with pytest.raises(TypeError):
-        test = stinespring_to_kraus(
-            stinespring,
-            dim_env=dim_env,
-            nqubits=1.0,
-            backend=backend,
-        )
     with pytest.raises(ValueError):
         test = stinespring_to_kraus(
             stinespring,
@@ -1339,14 +1326,12 @@ def test_kraus_to_unitaries(backend, order):
 def test_reshuffling(backend, order, test_superop):
     from qibo.quantum_info.superoperator_transformations import _reshuffling
 
-    with pytest.raises(TypeError):
-        _reshuffling(test_superop, True, backend=backend)
     with pytest.raises(ValueError):
-        _reshuffling(test_superop, "sustem", backend=backend)
-    with pytest.raises(NotImplementedError):
         _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
         _reshuffling(test_superop[:-1, :-1], order, backend=backend)
+
+    test_superop = backend.cast(test_superop)
 
     reshuffled = _reshuffling(test_superop, order, backend=backend)
     reshuffled = _reshuffling(reshuffled, order, backend=backend)

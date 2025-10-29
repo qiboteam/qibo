@@ -87,6 +87,10 @@ class CliffordBackend(NumpyBackend):
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
+    def set_seed(self, seed):
+        super().set_seed(seed)
+        self.engine.set_seed(seed)
+
     def calculate_frequencies(self, samples):
         res, counts = self.engine.np.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -111,7 +115,7 @@ class CliffordBackend(NumpyBackend):
         identity = self.np.eye(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=bool)
+        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
@@ -352,7 +356,7 @@ class CliffordBackend(NumpyBackend):
         return phase_n
 
     def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
         index = self.np.random.choice(
             range(len(probabilities)), size=1, p=probabilities
         )[0]
@@ -530,7 +534,6 @@ class CliffordBackend(NumpyBackend):
             samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
             samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
-
         return self.engine.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(
