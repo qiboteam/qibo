@@ -4,7 +4,7 @@ import math
 from collections import Counter
 from typing import List, Optional, Tuple, Union
 
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, DTypeLike
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -67,7 +67,7 @@ class Backend:
         return None
 
     @property
-    def natives(self) -> Optional[list[str]]:  # pragma: no cover
+    def natives(self) -> Optional[List[str]]:  # pragma: no cover
         """Return the native gates of the backend.
 
         Returns:
@@ -77,7 +77,10 @@ class Backend:
         return None
 
     def cast(
-        self, array, dtype=None, copy: bool = False  # pylint: disable=unused-argument
+        self,
+        array: ArrayLike,
+        dtype: DTypeLike = None,
+        copy: bool = False,  # pylint: disable=unused-argument
     ) -> ArrayLike:  # pragma: no cover
         """Cast an object as the array type of the current backend.
 
@@ -99,7 +102,7 @@ class Backend:
         """
         return func
 
-    def is_sparse(self, array) -> bool:
+    def is_sparse(self, array: ArrayLike) -> bool:
         """Determine if a given array is a sparse tensor."""
         from scipy.sparse import issparse  # pylint: disable=import-outside-toplevel
 
@@ -174,7 +177,7 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
-    def to_numpy(self, array) -> ArrayLike:  # pragma: no cover
+    def to_numpy(self, array: ArrayLike) -> ArrayLike:  # pragma: no cover
         """Cast a given array to numpy."""
         raise_error(NotImplementedError)
 
@@ -183,89 +186,91 @@ class Backend:
     ########################################################################################
 
     @property
-    def complex64(self):
+    def complex64(self) -> DTypeLike:
         return self.engine.complex64
 
     @property
-    def complex128(self):
+    def complex128(self) -> DTypeLike:
         return self.engine.complex128
 
     @property
-    def float32(self):
+    def float32(self) -> DTypeLike:
         return self.engine.float32
 
     @property
-    def float64(self):
+    def float64(self) -> DTypeLike:
         return self.engine.float64
 
     @property
-    def int8(self):
+    def int8(self) -> DTypeLike:
         return self.engine.int8
 
     @property
-    def int32(self):
+    def int32(self) -> DTypeLike:
         return self.engine.int32
 
     @property
-    def int64(self):
+    def int64(self) -> DTypeLike:
         return self.engine.int64
 
     @property
-    def uint8(self):
+    def uint8(self) -> DTypeLike:
         return self.engine.uint8
 
     ########################################################################################
     ######## Methods related to array manipulation                                  ########
     ########################################################################################
 
-    def abs(self, array, **kwargs) -> Union[int, float, complex, ArrayLike]:
+    def abs(self, array: ArrayLike, **kwargs) -> Union[int, float, complex, ArrayLike]:
         return self.engine.abs(array, **kwargs)
 
-    def all(self, array, **kwargs) -> Union[ArrayLike, bool]:
+    def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
         return self.engine.all(array, **kwargs)
 
-    def angle(self, array, **kwargs) -> ArrayLike:
+    def angle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.angle(array, **kwargs)
 
-    def any(self, array, **kwargs) -> Union[ArrayLike, bool]:
+    def any(self, array: ArrayLike, **kwargs) -> Union[ArrayLike, bool]:
         return self.engine.any(array, **kwargs)
 
-    def arange(self, *args, **kwargs):
+    def arange(self, *args, **kwargs) -> ArrayLike:
         return self.engine.arange(*args, **kwargs)
 
-    def arccos(self, array, **kwargs) -> ArrayLike:
+    def arccos(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arccos(array, **kwargs)
 
-    def arctan2(self, array_1, array_2, **kwargs) -> ArrayLike:
+    def arctan2(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.arctan2(array_1, array_2, **kwargs)
 
-    def argsort(self, array, axis=None, **kwargs) -> ArrayLike:
+    def argsort(
+        self, array: ArrayLike, axis: Optional[int] = None, **kwargs
+    ) -> ArrayLike:
         return self.engine.argsort(array, axis, **kwargs)
 
-    def block(self, arrays) -> ArrayLike:
+    def block(self, arrays: ArrayLike) -> ArrayLike:
         return self.engine.block(arrays)
 
-    def block_diag(self, *arrays) -> ArrayLike:
+    def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
         from scipy.linalg import block_diag  # pylint: disable=import-outside-toplevel
 
         return block_diag(*arrays)
 
-    def ceil(self, array, **kwargs) -> ArrayLike:
+    def ceil(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.ceil(array, **kwargs)
 
-    def concatenate(self, tup, **kwargs) -> ArrayLike:
+    def concatenate(self, tup: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         return self.engine.concatenate(tup, **kwargs)
 
-    def conj(self, array) -> ArrayLike:
+    def conj(self, array: ArrayLike) -> ArrayLike:
         return self.engine.conj(array)
 
-    def copy(self, array, **kwargs) -> ArrayLike:
+    def copy(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.copy(array, **kwargs)
 
-    def cos(self, array, **kwargs) -> ArrayLike:  # pragma: no cover
+    def cos(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.cos(array, **kwargs)
 
-    def csr_matrix(self, array):
+    def csr_matrix(self, array: ArrayLike) -> ArrayLike:
         from scipy.sparse import csr_matrix  # pylint: disable=import-outside-toplevel
 
         return csr_matrix(array)
@@ -273,50 +278,56 @@ class Backend:
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
         return self.engine.random.default_rng(seed)
 
-    def delete(self, array, **kwargs) -> ArrayLike:
+    def delete(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.delete(array, **kwargs)
 
-    def det(self, array) -> ArrayLike:
+    def det(self, array: ArrayLike) -> ArrayLike:
         return self.engine.linalg.det(array)
 
-    def diag(self, array, **kwargs) -> ArrayLike:
+    def diag(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.diag(array, **kwargs)
 
-    def dot(self, array_1, array_2, **kwargs) -> ArrayLike:
+    def dot(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.dot(array_1, array_2, **kwargs)
 
-    def eig(self, array, **kwargs):  # pragma: no cover
+    def eig(
+        self, array: ArrayLike, **kwargs
+    ) -> Tuple[ArrayLike, ArrayLike]:  # pragma: no cover
         return self.engine.linalg.eig(array, **kwargs)
 
-    def eigh(self, array, **kwargs):
+    def eigh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
         return self.engine.linalg.eigh(array, **kwargs)
 
-    def eigsh(self, array, **kwargs):
+    def eigsh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
         from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
             eigsh,
         )
 
         return eigsh(array, **kwargs)
 
-    def eigvalsh(self, array, **kwargs):
+    def eigvalsh(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.linalg.eigvalsh(array, **kwargs)
 
-    def eigvals(self, array, **kwargs):  # pragma: no cover
+    def eigvals(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.linalg.eigvals(array, **kwargs)
 
-    def einsum(self, subscripts: str, *operands, **kwargs) -> ArrayLike:
+    def einsum(
+        self, subscripts: str, *operands: List[ArrayLike], **kwargs
+    ) -> ArrayLike:
         return self.engine.einsum(subscripts, *operands, **kwargs)
 
-    def empty(self, shape, **kwargs) -> ArrayLike:
+    def empty(self, shape: Union[int, Tuple[int, ...]], **kwargs) -> ArrayLike:
         return self.engine.empty(shape, **kwargs)
 
-    def exp(self, array, **kwargs):
+    def exp(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
         return self.engine.exp(array, **kwargs)
 
-    def expand_dims(self, array, axis: Union[int, Tuple[int, ...]]):
+    def expand_dims(
+        self, array: ArrayLike, axis: Union[int, Tuple[int, ...]]
+    ) -> ArrayLike:
         return self.engine.expand_dims(array, axis)
 
-    def expm(self, array) -> ArrayLike:
+    def expm(self, array: ArrayLike) -> ArrayLike:
         if self.is_sparse(array):
             from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
                 expm,
@@ -326,53 +337,58 @@ class Backend:
 
         return expm(array)
 
-    def flatnonzero(self, array) -> ArrayLike:
+    def flatnonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.flatnonzero(array)
 
     def flip(
-        self, array, axis: Optional[Union[int, Tuple[int, ...]]] = None
+        self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> ArrayLike:
         return self.engine.flip(array, axis=axis)
 
-    def floor(self, array, **kwargs) -> ArrayLike:  # pragma: no cover
+    def floor(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.floor(array, **kwargs)
 
-    def identity(self, dims: int, dtype=None, sparse: bool = False) -> ArrayLike:
+    def identity(
+        self, dims: int, dtype: DTypeLike = None, sparse: bool = False
+    ) -> ArrayLike:
         if dtype is None:
             dtype = self.dtype
 
-        if sparse:
-            return self._identity_sparse(dims, dtype)
+        return (
+            self._identity_sparse(dims, dtype)
+            if sparse
+            else self.engine.eye(dims, dtype=dtype)
+        )
 
-        return self.engine.eye(dims, dtype=dtype)
-
-    def imag(self, array) -> Union[int, float, ArrayLike]:
+    def imag(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
         return self.engine.imag(array)
 
-    def inv(self, array) -> ArrayLike:
+    def inv(self, array: ArrayLike) -> ArrayLike:
         return self.engine.linalg.inv(array)
 
-    def kron(self, array_1, array_2) -> ArrayLike:
+    def kron(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
         return self.engine.kron(array_1, array_2)
 
-    def log(self, array, **kwargs) -> ArrayLike:
+    def log(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.log(array, **kwargs)
 
-    def logm(self, array, **kwargs) -> ArrayLike:
+    def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
         from scipy.linalg import logm  # pylint: disable=import-outside-toplevel
 
         return logm(array, **kwargs)
 
-    def log2(self, array, **kwargs) -> ArrayLike:
+    def log2(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.log2(array, **kwargs)
 
-    def log10(self, array, **kwargs) -> ArrayLike:  # pragma: no cover
+    def log10(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.log10(array, **kwargs)
 
-    def matmul(self, array_1, array_2, **kwargs) -> ArrayLike:
+    def matmul(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.matmul(array_1, array_2, **kwargs)
 
-    def matrix_norm(self, state, order: Union[int, float, str] = "nuc", **kwargs):
+    def matrix_norm(
+        self, state: ArrayLike, order: Union[int, float, str] = "nuc", **kwargs
+    ) -> Union[float, ArrayLike]:
         """Calculate norm of a :math:`2`-dimensional array.
 
         Default is the ``nuclear`` norm.
@@ -394,43 +410,52 @@ class Backend:
 
         return self.engine.linalg.norm(state, order, **kwargs)
 
-    def mean(self, array, **kwargs) -> Union[float, complex, ArrayLike]:
+    def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
         return self.engine.mean(array, **kwargs)
 
-    def nonzero(self, array) -> ArrayLike:
+    def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
 
-    def ones(self, shape, dtype=None) -> ArrayLike:
+    def ones(self, shape: Union[int, Tuple[int, ...]], dtype=None) -> ArrayLike:
         if dtype is None:
             dtype = self.dtype
         return self.engine.ones(shape, dtype=dtype)
 
-    def outer(self, array_1, array_2) -> ArrayLike:
+    def outer(self, array_1: ArrayLike, array_2: ArrayLike) -> ArrayLike:
         return self.engine.outer(array_1, array_2)
 
-    def prod(self, array, **kwargs) -> ArrayLike:
+    def prod(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.prod(array, **kwargs)
 
-    def qr(self, array, **kwargs) -> Tuple[ArrayLike, ...]:
+    def qr(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ...]:
         return self.engine.linalg.qr(array, **kwargs)
 
-    def real(self, array) -> Union[int, float, ArrayLike]:
+    def real(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
         return self.engine.real(array)
 
     def random_choice(
         self,
-        array,
+        array: ArrayLike,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         replace: bool = True,
         p=None,
         seed=None,
+        **kwargs,
     ) -> ArrayLike:
+        dtype = kwargs.get("dtype", self.float64)
+
+        if size is None:
+            size = 1
+
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
+            result = local_state.choice(array, size=size, replace=replace, p=p)
 
-            return local_state.choice(array, size=size, replace=replace, p=p)
+            return self.cast(result, dtype=dtype)
 
-        return self.engine.random.choice(array, size=size, replace=replace, p=p)
+        result = self.engine.random.choice(array, size=size, replace=replace, p=p)
+
+        return self.cast(result, dtype=dtype)
 
     def random_integers(
         self,
@@ -438,7 +463,10 @@ class Backend:
         high: Optional[int] = None,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         seed=None,
-    ):
+        **kwargs,
+    ) -> ArrayLike:
+        dtype = kwargs.get("dtype", self.int64)
+
         if high is None:
             high = low
             low = 0
@@ -449,17 +477,19 @@ class Backend:
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
-            return local_state.integers(low, high, size)
+            return self.cast(local_state.integers(low, high, size), dtype=dtype)
 
-        return self.engine.random.randint(low, high, size)
+        return self.cast(self.engine.random.randint(low, high, size), dtype=dtype)
 
-    def random_sample(self, size: int, seed=None):
+    def random_sample(self, size: int, seed=None, **kwargs) -> ArrayLike:
+        dtype = kwargs.get("dtype", self.float64)
+
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
-            return local_state.random(size)
+            return self.cast(local_state.random(size), dtype=dtype)
 
-        return self.engine.random.random(size)
+        return self.cast(self.engine.random.random(size), dtype=dtype)
 
     def random_uniform(
         self,
@@ -467,52 +497,65 @@ class Backend:
         high: Union[float, int] = 1.0,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         seed=None,
+        **kwargs,
     ) -> ArrayLike:
+        dtype = kwargs.get("dtype", self.float64)
+
+        if size is None:
+            size = 1
+
         if seed is not None:
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
-            return local_state.uniform(low, high, size)
+            return self.cast(local_state.uniform(low, high, size), dtype=dtype)
 
-        return self.engine.random.uniform(low, high, size)
+        return self.cast(self.engine.random.uniform(low, high, size), dtype=dtype)
 
-    def ravel(self, array, **kwargs) -> ArrayLike:
+    def ravel(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.ravel(array, **kwargs)
 
     def reshape(
-        self, array, shape: Union[Tuple[int, ...], List[int]], **kwargs
+        self, array: ArrayLike, shape: Union[Tuple[int, ...], List[int]], **kwargs
     ) -> ArrayLike:
         return self.engine.reshape(array, shape, **kwargs)
 
-    def round(self, array, decimals: int = 0, **kwargs):
+    def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
 
-    def shuffle(self, array, **kwargs) -> ArrayLike:
+    def shuffle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         self.engine.random.shuffle(array, **kwargs)
 
-    def sin(self, array, **kwargs) -> ArrayLike:  # pragma: no cover
+    def sin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.sin(array, **kwargs)
 
-    def sort(self, array, **kwargs) -> ArrayLike:
+    def sort(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.sort(array, **kwargs)
 
-    def sqrt(self, array):
+    def sqrt(self, array: ArrayLike) -> ArrayLike:
         return self.engine.sqrt(array)
 
     def squeeze(
-        self, array, axis: Optional[Union[int, Tuple[int, ...]]] = None
+        self, array: ArrayLike, axis: Optional[Union[int, Tuple[int, ...]]] = None
     ) -> ArrayLike:
         return self.engine.squeeze(array, axis)
 
-    def std(self, array, **kwargs) -> Union[float, ArrayLike]:
+    def std(self, array: ArrayLike, **kwargs) -> Union[float, ArrayLike]:
         return self.engine.std(array, **kwargs)
 
-    def sum(self, array, axis=None, **kwargs) -> Union[int, float, complex, ArrayLike]:
+    def sum(
+        self, array: ArrayLike, axis: Optional[int] = None, **kwargs
+    ) -> Union[int, float, complex, ArrayLike]:
         return self.engine.sum(array, axis=axis, **kwargs)
 
     def swapaxes(self, array, axis_1: int, axis_2: int) -> ArrayLike:
         return self.engine.swapaxes(array, axis_1, axis_2)
 
-    def tensordot(self, array_1, array_2, axes: Union[int, Tuple[int, ...]] = 2):
+    def tensordot(
+        self,
+        array_1: ArrayLike,
+        array_2: ArrayLike,
+        axes: Union[int, Tuple[int, ...]] = 2,
+    ) -> ArrayLike:
         return self.engine.tensordot(array_1, array_2, axes=axes)
 
     def trace(self, array) -> Union[int, float]:
