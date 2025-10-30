@@ -1212,7 +1212,14 @@ class Circuit:
 
     def to_cudaq(self):
         """Convert circuit to cudaq string."""
-        raise NotImplementedError
+        try:
+            from qbraid.transpiler.conversions.openqasm3 import openqasm3_to_cudaq
+            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, please install it with `poetry install --with cudaq`"
+            ) from e
+        return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
