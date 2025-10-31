@@ -2,8 +2,8 @@
 
 import inspect
 from functools import cache
-from importlib.util import find_spec, module_from_spec
 
+import qibo.backends._hamming_weight_operations as module
 from qibo.config import raise_error
 
 
@@ -33,8 +33,6 @@ def HammingWeightBackend(platform=None):
             f"Backend `{platform}` is not supported for "
             + "Hamming-weight-preserving circuit simulation.",
         )
-
-    import qibo.backends._hamming_weight_operations as module
 
     methods = {
         name: func for name, func in inspect.getmembers(module, inspect.isfunction)

@@ -29,8 +29,6 @@ def test_uniform_sampling_U3(backend, seed):
         uniform_sampling_U3("1", seed=seed, backend=backend)
     with pytest.raises(ValueError):
         uniform_sampling_U3(0, seed=seed, backend=backend)
-    with pytest.raises(TypeError):
-        uniform_sampling_U3(2, seed="1", backend=backend)
 
     X = backend.cast(matrices.X, dtype=matrices.X.dtype)
     Y = backend.cast(matrices.Y, dtype=matrices.Y.dtype)

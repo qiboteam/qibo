@@ -345,7 +345,7 @@ def test_schmidt_decomposition(backend):
 
     # entropy test
     coeffs = backend.abs(S) ** 2
-    entropy = backend.engine.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
+    entropy = backend.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
     entropy = -backend.sum(coeffs * entropy)
 
     assert entropy < 1e-14

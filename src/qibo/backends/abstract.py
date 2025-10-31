@@ -241,6 +241,11 @@ class Backend:
     def any(self, array: ArrayLike, **kwargs) -> Union[ArrayLike, bool]:
         return self.engine.any(array, **kwargs)
 
+    def append(
+        self, array: ArrayLike, values: ArrayLike, axis: Optional[int] = None
+    ) -> ArrayLike:
+        return self.engine.append(array, values, axis)
+
     def arange(self, *args, **kwargs) -> ArrayLike:
         return self.engine.arange(*args, **kwargs)
 
@@ -254,6 +259,9 @@ class Backend:
         self, array: ArrayLike, axis: Optional[int] = None, **kwargs
     ) -> ArrayLike:
         return self.engine.argsort(array, axis, **kwargs)
+
+    def array_equal(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
+        return self.engine.array_equal(array_1, array_2, **kwargs)
 
     def block(self, arrays: ArrayLike) -> ArrayLike:
         return self.engine.block(arrays)
@@ -424,7 +432,9 @@ class Backend:
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
 
-    def ones(self, shape: Union[int, Tuple[int, ...]], dtype=None) -> ArrayLike:
+    def ones(
+        self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
+    ) -> ArrayLike:
         if dtype is None:
             dtype = self.dtype
         return self.engine.ones(shape, dtype=dtype)
@@ -555,7 +565,7 @@ class Backend:
     ) -> Union[int, float, complex, ArrayLike]:
         return self.engine.sum(array, axis=axis, **kwargs)
 
-    def swapaxes(self, array, axis_1: int, axis_2: int) -> ArrayLike:
+    def swapaxes(self, array: ArrayLike, axis_1: int, axis_2: int) -> ArrayLike:
         return self.engine.swapaxes(array, axis_1, axis_2)
 
     def tensordot(
@@ -566,11 +576,11 @@ class Backend:
     ) -> ArrayLike:
         return self.engine.tensordot(array_1, array_2, axes=axes)
 
-    def trace(self, array) -> Union[int, float]:
+    def trace(self, array: ArrayLike) -> Union[int, float]:
         return self.engine.trace(array)
 
     def transpose(
-        self, array, axes: Union[Tuple[int, ...], List[int]] = None
+        self, array: ArrayLike, axes: Union[Tuple[int, ...], List[int]] = None
     ) -> ArrayLike:
         return self.engine.transpose(array, axes)
 
@@ -616,6 +626,9 @@ class Backend:
 
     def vstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         return self.engine.vstack(arrays, **kwargs)
+
+    def where(self, *args, **kwargs) -> ArrayLike:
+        return self.engine.where(*args, **kwargs)
 
     def zeros(
         self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
@@ -972,7 +985,10 @@ class Backend:
         return self.reshape(state, shape)
 
     def zero_state(
-        self, nqubits: int, density_matrix: bool = False, dtype=None
+        self,
+        nqubits: int,
+        density_matrix: bool = False,
+        dtype: Optional[DTypeLike] = None,
     ) -> ArrayLike:
         """Generate the :math:`n`-fold tensor product of the single-qubit :math:`\\ket{0}` state.
 
@@ -1735,7 +1751,7 @@ class Backend:
         u_matrix, s_matrix, vh_matrix = self.singular_value_decomposition(matrix)
         # cast needed because of different dtypes in `torch`
         s_matrix = self.cast(s_matrix, dtype=dtype)  # pylint: disable=E1111
-        s_matrix_inv = self.engine.where(
+        s_matrix_inv = self.where(
             self.abs(s_matrix) < precision_singularity, 0.0, s_matrix**power
         )
 

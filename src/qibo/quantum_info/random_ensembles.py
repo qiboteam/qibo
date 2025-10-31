@@ -610,7 +610,7 @@ def random_clifford(
         if backend.name in ("clifford", "qibojit", "qiboml")
         else backend.name
     )
-    cliff = Clifford(tableau, engine=engine)
+    cliff = Clifford(tableau, platform=engine)
 
     if return_circuit:
         method = "BM20" if engine == "cupy" else "AG04"

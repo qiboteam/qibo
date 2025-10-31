@@ -94,7 +94,7 @@ def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int 
             nqubits,
             measurements=circuit.measurements,
             nshots=nshots,
-            engine=self.platform,
+            platform=self.platform,
         )
 
         return result
@@ -124,7 +124,7 @@ def _gray_code(self, initial_string):
 
     strings = _ehrlich_algorithm(initial_string, return_indices=False)
     strings = [list(string) for string in strings]
-    strings = self.engine.asarray(strings, dtype=int)
+    strings = self.cast(strings, dtype=int)
 
     return strings
 
@@ -155,21 +155,24 @@ def _get_cached_strings(
         of bitstrings for single-qubit gates.
     """
     if two_qubit_gate:
-        initial_string = self.engine.array(
+        initial_string = self.cast(
             [1] * (weight - 1 - ncontrols)
-            + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+            + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols)),
+            dtype=self.int64,
         )
         strings = self._gray_code(initial_string)
     else:
-        initial_string = self.engine.array(
+        initial_string = self.cast(
             [1] * (weight - ncontrols)
-            + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols))
+            + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols)),
+            dtype=self.int64,
         )
         strings_0 = self._gray_code(initial_string)
 
-        initial_string = self.engine.array(
+        initial_string = self.cast(
             [1] * (weight - 1 - ncontrols)
-            + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols)))
+            + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols))),
+            dtype=self.int64,
         )
         strings_1 = self._gray_code(initial_string)
 
@@ -274,8 +277,9 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
         indexes_zero[:, qubits] = ["0"]
         if len(controls) > 0:
             indexes_zero[:, controls] = "1"
-        indexes_zero = self.engine.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_zero]
+        indexes_zero = self.cast(
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_zero],
+            dtype=self.int64,
         )
 
         state[indexes_zero] *= matrix_00
@@ -286,8 +290,9 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
             indexes_one[:, controls] = "1"
 
         indexes_one[:, qubits] = ["1"]
-        indexes_one = self.engine.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_one]
+        indexes_one = self.cast(
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_one],
+            dtype=self.int64,
         )
 
         state[indexes_one] *= matrix_11
@@ -338,8 +343,8 @@ def _update_amplitudes(
     if ncontrols > 0:
         indexes_in[:, controls] = "1"
     indexes_in[:, qubits] = bitlist
-    indexes_in = self.engine.array(
-        [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+    indexes_in = self.cast(
+        [self._dict_indexes["".join(elem)][0] for elem in indexes_in], dtype=self.int64
     )
     state[indexes_in] *= matrix_element
 
@@ -389,11 +394,13 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
         indexes_in[:, qubits] = ["1", "0"]
         indexes_out = self.engine.copy(indexes_in)
         indexes_out[:, qubits] = ["0", "1"]
-        indexes_in = self.engine.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+        indexes_in = self.cast(
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_in],
+            dtype=self.int64,
         )
-        indexes_out = self.engine.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
+        indexes_out = self.cast(
+            [self._dict_indexes["".join(elem)][0] for elem in indexes_out],
+            dtype=self.int64,
         )
 
         old_in, old_out = state[indexes_in], state[indexes_out]
@@ -534,8 +541,7 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
 
     reordered_strings = self.engine.array(["".join(s) for s in reordered_strings_array])
     reordered_indexes = [
-        self.engine.where(strings == new_string_i)[0][0]
-        for new_string_i in reordered_strings
+        self.where(strings == new_string_i)[0][0] for new_string_i in reordered_strings
     ]
     new_matrix = matrix[reordered_indexes][:, reordered_indexes]
 

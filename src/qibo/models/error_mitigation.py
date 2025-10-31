@@ -32,7 +32,7 @@ def SIMULATION_BACKEND():
 def CLIFFORD_BACKEND():
     from qibo.backends import CliffordBackend  # pylint: disable=import-outside-toplevel
 
-    return CliffordBackend(engine="numpy")
+    return CliffordBackend("numpy")
 
 
 def get_gammas(noise_levels, analytical: bool = True):

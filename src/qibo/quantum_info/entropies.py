@@ -59,7 +59,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     if np.abs(float(total_sum) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
-    log_prob = backend.engine.where(
+    log_prob = backend.where(
         prob_dist != 0, backend.log2(prob_dist) / np.log2(base), 0.0
     )
 
@@ -130,11 +130,11 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
 
-    log_prob_q = backend.engine.where(
+    log_prob_q = backend.where(
         prob_dist_q != 0.0, backend.log2(prob_dist_q) / np.log2(base), -np.inf
     )
 
-    log_prob = backend.engine.where(prob_dist_p != 0.0, log_prob_q, 0.0)
+    log_prob = backend.where(prob_dist_p != 0.0, log_prob_q, 0.0)
 
     relative = backend.sum(prob_dist_p * log_prob)
 
@@ -535,7 +535,7 @@ def von_neumann_entropy(
     if return_spectrum:
         eigenvalues = backend.eigenvalues(state)
 
-        log_prob = backend.engine.where(
+        log_prob = backend.where(
             backend.real(eigenvalues) > 0.0,
             backend.log2(eigenvalues) / backend.log2(base),
             0.0,

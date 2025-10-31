@@ -198,7 +198,7 @@ def _decomposition_BM20(clifford, **kwargs):
     for qubit in range(nqubits):
         position = [qubit, qubit + nqubits]
         single_qubit_circuit = _single_qubit_clifford_decomposition(
-            clifford_copy.engine.append(
+            clifford_copy._backend.append(
                 clifford_copy.symplectic_matrix[position][:, position + [-1]], last_row
             ).reshape(3, 3),
             **kwargs,

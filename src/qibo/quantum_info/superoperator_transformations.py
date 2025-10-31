@@ -931,18 +931,19 @@ def liouville_to_pauli(
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(super_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(super_op))
+    nqubits = np.log2(dim)
 
-    if super_op.shape[0] != super_op.shape[1] or dim // 1 != 0 or nqubits // 1 != 0:
+    # backend-agnostic way to check if nqubits and dim are integers
+    if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     comp_to_pauli = comp_basis_to_pauli(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
@@ -1132,14 +1133,14 @@ def pauli_to_liouville(
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(pauli_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(pauli_op))
+    nqubits = np.log2(dim)
 
-    if pauli_op.shape[0] != pauli_op.shape[1] or dim // 1 != 0 or nqubits // 1 != 0:
+    if pauli_op.shape[0] != pauli_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
     pauli_to_comp = pauli_to_comp_basis(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,

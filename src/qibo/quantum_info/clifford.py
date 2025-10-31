@@ -42,7 +42,7 @@ class Clifford:
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
-    engine: Optional[str] = None
+    platform: Optional[str] = None
 
     _backend: Optional[CliffordBackend] = None
     _measurement_gate = None
@@ -50,11 +50,11 @@ class Clifford:
 
     def __post_init__(self):
         if self._backend is None:
-            self._backend = CliffordBackend(self.engine)
-        self.engine = self._backend.engine
+            self._backend = CliffordBackend(self.platform)
+        self.platform = self._backend.platform
 
         if isinstance(self.data, Circuit):
-            clifford = self.from_circuit(self.data, engine=self.engine)
+            clifford = self.from_circuit(self.data, platform=self.platform)
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
             self.measurements = clifford.measurements
@@ -80,7 +80,7 @@ class Clifford:
         circuit: Circuit,
         initial_state: Optional[np.ndarray] = None,
         nshots: int = 1000,
-        engine: Optional[str] = None,
+        platform: Optional[str] = None,
     ):
         """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by executing the input circuit.
 
@@ -91,16 +91,16 @@ class Clifford:
                 Defaults to ``None``.
             nshots (int, optional): number of measurement shots to perform
                 if ``circuit`` has measurement gates. Defaults to :math:`10^{3}`.
-            engine (str, optional): engine to use in the execution of the
+            platform (str, optional): engine to use in the execution of the
                 :class:`qibo.backends.CliffordBackend`. It accepts ``"numpy"``, ``"numba"``,
                 ``"cupy"``, and ``"stim"`` (see `stim <https://github.com/quantumlib/Stim>`_).
-                If ``None``, defaults to the corresponding engine
+                If ``None``, defaults to the corresponding platform
                 from the current backend. Defaults to ``None``.
 
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
         """
-        cls._backend = CliffordBackend(engine)
+        cls._backend = CliffordBackend(platform)
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
@@ -423,7 +423,7 @@ class Clifford:
             identity = self._backend.identity(2**self.nqubits)
             operators = self._backend.cast([(g, identity) for g in operators])
             return self._backend.cast(
-                [reduce(self.engine.matmul, ops) for ops in product(*operators)]
+                [reduce(self._backend.matmul, ops) for ops in product(*operators)]
             )
 
         operators = list(np.copy(generators))

@@ -991,7 +991,7 @@ def graph_state(matrix, backend=None, **kwargs):
     circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     # since the matrix is symmetric, we only need the upper triangular part
-    rows, columns = backend.nonzero(backend.engine.triu(matrix))
+    rows, columns = backend.nonzero(backend.triu(matrix))
     circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
@@ -1769,7 +1769,7 @@ def _get_gate_sparse(
 ):
     backend = _check_backend(backend)
     if distance == 1:
-        qubit = int(backend.engine.where(difference == 1)[0][0])
+        qubit = int(backend.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
             touched_qubits.append(qubit)
         gate = (
@@ -2002,14 +2002,14 @@ def _perm_column_ops(
 
             # look for columns that are equal to A[:,idxj]
             for idxk in range(idxj + 1, ncols):
-                if backend.engine.array_equal(A[:, idxj], A[:, idxk]):
+                if backend.array_equal(A[:, idxj], A[:, idxk]):
                     qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
                     # this should transform the k-th column into an all-zero column
                     A[:, idxk] = 0
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
     for idxk in range(ell, ncols):
-        if not backend.engine.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
+        if not backend.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
             for k in range(len(flag)):
                 if flag[k] == 0:
                     flag[k] = 1

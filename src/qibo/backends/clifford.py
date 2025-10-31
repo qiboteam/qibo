@@ -4,7 +4,7 @@ import collections
 from functools import cache, reduce
 from importlib.util import find_spec, module_from_spec
 from itertools import product
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -85,21 +85,9 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
-    # def cast(self, x, dtype=None, copy: bool = False):
-    #     if dtype is None:
-    #         dtype = self.dtype
-
-    #     if isinstance(x, self.tensor_types):
-    #         return x.astype(dtype, copy=copy)
-
-    #     if self.is_sparse(x):
-    #         return x.astype(dtype, copy=copy)
-
-    #     return self.engine.asarray(x, dtype=dtype, copy=copy if copy else None)
-
-    def set_seed(self, seed):
-        super().set_seed(seed)
-        self.engine.set_seed(seed)
+    # def set_seed(self, seed):
+    #     super().set_seed(seed)
+    #     self.engine.seed(seed)
 
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
@@ -531,7 +519,7 @@ class CliffordBackend(NumpyBackend):
     def sample_shots(
         self,
         state,
-        qubits: Union[tuple, list],
+        qubits: Union[Tuple[int, ...], List[int]],
         nqubits: int,
         nshots: int,
         collapse: bool = False,
