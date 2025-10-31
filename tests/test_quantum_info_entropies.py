@@ -498,7 +498,7 @@ def test_relative_von_neumann_entropy(backend, base):
         """
         target_entropy = 21.201794779725777
         state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-        target = backend.cast([0.0, 1.0], dtype=backend.np.float64)
+        target = backend.cast([0.0, 1.0], dtype=backend.float64)
         backend.assert_allclose(
             relative_von_neumann_entropy(state, target, base=base, backend=backend),
             target_entropy / float(np.log(base)),

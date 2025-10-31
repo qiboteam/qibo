@@ -211,7 +211,7 @@ def test_unvectorization(backend, nqubits, order):
     matrix = unvectorization(matrix, order, backend)
     backend.assert_allclose(matrix_test, matrix, atol=PRECISION_TOL)
 
-    matrix_test_2d = backend.np.vstack([matrix_test, matrix_test]).reshape(2, dim, dim)
+    matrix_test_2d = backend.vstack([matrix_test, matrix_test]).reshape(2, dim, dim)
     matrix = vectorization(matrix_test_2d, order, backend)
     matrix = unvectorization(matrix, order, backend)
 

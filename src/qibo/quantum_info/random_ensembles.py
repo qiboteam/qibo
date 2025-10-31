@@ -170,7 +170,7 @@ def random_hermitian(
         matrix = backend.qinfo._random_hermitian(dims)
 
     if normalize:
-        matrix = matrix / backend.np.linalg.norm(matrix)
+        matrix = matrix / backend.matrix_norm(matrix)
 
     return matrix
 
@@ -540,15 +540,13 @@ def random_clifford(
         nqubits
     )
 
-    gamma = backend.diag(
-        backend.random_integers(2, size=nqubits, dtype=backend.np.uint8)
-    )
+    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=backend.uint8))
 
     gamma_prime = backend.diag(
-        backend.random_integers(2, size=nqubits, dtype=backend.np.uint8)
+        backend.random_integers(2, size=nqubits, dtype=backend.uint8)
     )
 
-    delta = backend.identity(nqubits, dtype=backend.np.uint8)
+    delta = backend.identity(nqubits, dtype=backend.uint8)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     backend.qinfo._fill_tril(gamma, symmetric=True)
@@ -713,7 +711,7 @@ def random_pauli(
             qubits = [qubits]
 
     # this may be optimized as well (the sampling mostly) but maybe it's not worth it
-    indexes = backend.np.random.randint(0, len(subset), size=(len(qubits), depth))
+    indexes = backend.random_integers(0, len(subset), size=(len(qubits), depth))
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:

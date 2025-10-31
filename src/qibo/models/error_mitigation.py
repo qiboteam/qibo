@@ -478,8 +478,7 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.np.random.rand(nparams)
-    params = backend.cast(params, dtype=params.dtype)
+    params = backend.random_sample(nparams)
 
     train_val_noisy = train_val["noisy"]
     train_val_noisy = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))

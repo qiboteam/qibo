@@ -652,7 +652,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
-    kraus_ops = backend.np.vstack(kraus_ops)
+    kraus_ops = backend.vstack(kraus_ops)
     func_order = getattr(backend.qinfo, f"_kraus_to_choi_{order}")
     return func_order(kraus_ops)
 
@@ -850,11 +850,8 @@ def kraus_to_stinespring(
     dim_env = len(kraus_ops)
 
     if initial_state_env is None:
-        initial_state_env = backend.np.zeros(dim_env, dtype=backend.np.complex128)
+        initial_state_env = backend.zeros(dim_env, dtype=backend.complex128)
         initial_state_env[0] = 1.0
-        initial_state_env = backend.cast(
-            initial_state_env, dtype=initial_state_env.dtype
-        )
 
     # only utility is for outer product,
     # so np.conj here to only do it once
@@ -2072,12 +2069,13 @@ def _reshuffling(super_op, order: str = "row", backend=None):
             f"Unsupported {order} order, please pick one in ('row', 'column').",
         )
     backend = _check_backend(backend)
+
     dim = np.sqrt(super_op.shape[0])
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or dim // 1 != 0
-        or np.log2(int(dim)) // 1 != 0
+        or dim % 1 != 0
+        or np.log2(int(dim)) % 1 != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 

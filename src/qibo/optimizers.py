@@ -1,3 +1,5 @@
+import numpy as np
+
 from qibo.config import log, raise_error
 
 
@@ -374,7 +376,7 @@ class ParallelBFGS:  # pragma: no cover
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo("float64").eps
+        self.precision = np.finfo("float64").eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
@@ -399,7 +401,7 @@ class ParallelBFGS:  # pragma: no cover
             callback=self.callback,
             options=self.options,
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+        out.hess_inv = out.hess_inv * np.identity(len(x0))
         return out
 
     @staticmethod

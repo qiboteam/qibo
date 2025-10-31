@@ -101,13 +101,7 @@ def test_kraus_channel(backend, pauli_order):
     channel = gates.KrausChannel(0, [a_1, a_2])
 
     backend.assert_allclose(
-        float(
-            backend.matrix_norm(
-                channel.to_liouville(backend=backend) - test_superop, order=2
-            )
-        )
-        < PRECISION_TOL,
-        True,
+        channel.to_liouville(backend=backend), test_superop, atol=PRECISION_TOL
     )
     backend.assert_allclose(
         float(

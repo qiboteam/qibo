@@ -125,9 +125,13 @@ class CliffordBackend(NumpyBackend):
         identity = self.identity(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
-        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
+        symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=self.uint8)
+        symplectic_matrix[:nqubits, :nqubits] = self.cast(
+            identity, dtype=identity.dtype, copy=True
+        )
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.cast(
+            identity, dtype=identity.dtype, copy=True
+        )
         return symplectic_matrix
 
     def _clifford_pre_execution_reshape(self, state):

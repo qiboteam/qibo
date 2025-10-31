@@ -2,9 +2,12 @@
 
 import math
 from collections import Counter
+from importlib.util import find_spec, module_from_spec
 from typing import List, Optional, Tuple, Union
 
 from numpy.typing import ArrayLike, DTypeLike
+from scipy.linalg import fractional_matrix_power
+from scipy.sparse import eye
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -33,6 +36,11 @@ class Backend:
         self.supports_multigpu = False
         self.tensor_types = ()
         self.versions = {"qibo": __version__}
+
+        # load the quantum info basic operations
+        spec = find_spec("qibo.quantum_info._quantum_info")
+        self.qinfo = module_from_spec(spec)
+        spec.loader.exec_module(self.qinfo)
 
     def __reduce__(self) -> Tuple["Backend", tuple]:
         """Allow pickling backend objects that have references to modules."""
@@ -438,7 +446,7 @@ class Backend:
         array: ArrayLike,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         replace: bool = True,
-        p=None,
+        p: Optional[ArrayLike] = None,
         seed=None,
         **kwargs,
     ) -> ArrayLike:
@@ -566,8 +574,8 @@ class Backend:
     ) -> ArrayLike:
         return self.engine.transpose(array, axes)
 
-    def tril(self, array, k: int = 0) -> ArrayLike:
-        return self.engine.tril(array, k=k)
+    def tril(self, array: ArrayLike, offset: int = 0) -> ArrayLike:
+        return self.engine.tril(array, offset)
 
     def tril_indices(
         self, row: int, offset: int = 0, col: Optional[int] = None, **kwargs
@@ -576,11 +584,19 @@ class Backend:
             col = row
         return self.engine.tril_indices(row, offset, col, **kwargs)
 
-    def unique(self, array, **kwargs) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
+    def triu(self, array: ArrayLike, offset: int = 0) -> ArrayLike:
+        return self.engine.triu(array, offset)
+
+    def unique(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
         return self.engine.unique(array, **kwargs)
 
     def vector_norm(
-        self, state, order: Union[int, float, str] = 2, dtype=None
+        self,
+        state: ArrayLike,
+        order: Union[int, float, str] = 2,
+        dtype: Optional[DTypeLike] = None,
     ) -> float:
         """Calculate norm of an :math:`1`-dimensional array.
 
@@ -598,22 +614,28 @@ class Backend:
 
         return self.engine.linalg.norm(state, order)
 
-    def vstack(self, arrays, **kwargs) -> ArrayLike:
+    def vstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         return self.engine.vstack(arrays, **kwargs)
 
-    def zeros(self, shape, dtype=None) -> ArrayLike:
+    def zeros(
+        self, shape: Union[int, Tuple[int, ...]], dtype: Optional[DTypeLike] = None
+    ) -> ArrayLike:
         if dtype is None:
             dtype = self.dtype
         return self.engine.zeros(shape, dtype=dtype)
 
-    def zeros_like(self, array, dtype=None, **kwargs) -> ArrayLike:
+    def zeros_like(
+        self, array: ArrayLike, dtype: Optional[DTypeLike] = None, **kwargs
+    ) -> ArrayLike:
         return self.engine.zeros_like(array, dtype=dtype, **kwargs)
 
     ########################################################################################
     ######## Methods related to linear algebra operations                           ########
     ########################################################################################
 
-    def eigenvalues(self, matrix, k: int = 6, hermitian: bool = True):
+    def eigenvalues(
+        self, matrix: ArrayLike, k: int = 6, hermitian: bool = True
+    ) -> ArrayLike:
         """Calculate eigenvalues of a matrix."""
         if self.is_sparse(matrix):
             log.warning(
@@ -627,7 +649,9 @@ class Backend:
 
         return self.eigvals(matrix)  # pragma: no cover
 
-    def eigenvectors(self, matrix, k: int = 6, hermitian: bool = True):
+    def eigenvectors(
+        self, matrix: ArrayLike, k: int = 6, hermitian: bool = True
+    ) -> ArrayLike:
         """Calculate eigenvectors of a matrix."""
         if self.is_sparse(matrix):
             if k < matrix.shape[0]:
@@ -641,8 +665,12 @@ class Backend:
         return self.eig(matrix)  # pragma: no cover
 
     def expectation_value(
-        self, hamiltonian, state, normalize: bool = False, dtype=None
-    ):
+        self,
+        hamiltonian,
+        state,
+        normalize: bool = False,
+        dtype: Optional[DTypeLike] = None,
+    ) -> Union[float, int]:
         """Calculate expectation value of a state vector given the observable matrix."""
         if dtype is None:
             dtype = self.dtype
@@ -666,8 +694,12 @@ class Backend:
         return exp_val
 
     def jacobian(
-        self, circuit, parameters, initial_state=None, return_complex: bool = True
-    ):  # pragma: no cover
+        self,
+        circuit: "Circuit",  # type: ignore
+        parameters: ArrayLike,
+        initial_state: Optional[ArrayLike] = None,
+        return_complex: bool = True,
+    ) -> ArrayLike:  # pragma: no cover
         """Calculate the Jacobian matrix of ``circuit`` with respect to varables ``params``."""
         raise_error(
             NotImplementedError,
@@ -677,11 +709,11 @@ class Backend:
 
     def matrix_exp(
         self,
-        matrix,
+        matrix: ArrayLike,
         phase: Union[float, int, complex] = 1,
-        eigenvectors=None,
-        eigenvalues=None,
-    ):
+        eigenvectors: Optional[ArrayLike] = None,
+        eigenvalues: Optional[ArrayLike] = None,
+    ) -> ArrayLike:
         """Calculate the exponential :math:`e^{\\theta \\, A}` of a matrix :math:`A`
         and ``phase`` :math:`\\theta`.
 
@@ -701,8 +733,12 @@ class Backend:
         return (eigenvectors * expd) @ ud
 
     def matrix_log(
-        self, matrix, base: Union[float, int] = 2, eigenvectors=None, eigenvalues=None
-    ):
+        self,
+        matrix: ArrayLike,
+        base: Union[float, int] = 2,
+        eigenvectors: Optional[ArrayLike] = None,
+        eigenvalues: Optional[ArrayLike] = None,
+    ) -> ArrayLike:
         """Calculate the logarithm :math:`\\log_{b}(A)` with a ``base`` :math:`b`
         of a matrix :math:`A`.
 
@@ -722,11 +758,11 @@ class Backend:
 
     def matrix_power(
         self,
-        matrix,
+        matrix: ArrayLike,
         power: Union[float, int],
         precision_singularity: float = 1e-14,
-        dtype=None,
-    ):
+        dtype: Optional[DTypeLike] = None,
+    ) -> ArrayLike:
         """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
         i.e. :math:`A^{\\alpha}`.
 
@@ -753,13 +789,9 @@ class Backend:
                     matrix, power, precision_singularity, dtype=dtype
                 )
 
-        from scipy.linalg import (  # pylint: disable=import-outside-toplevel
-            fractional_matrix_power,
-        )
-
         return fractional_matrix_power(matrix, power)
 
-    def matrix_sqrt(self, array):
+    def matrix_sqrt(self, array: ArrayLike) -> ArrayLike:
         """Calculate the square root of ``matrix`` :math:`A`, i.e. :math:`A^{1/2}`.
 
         .. note::
@@ -770,7 +802,7 @@ class Backend:
         return self.matrix_power(array, power=0.5)
 
     def partial_trace(
-        self, state, traced_qubits: Union[Tuple[int, ...], List[int]]
+        self, state: ArrayLike, traced_qubits: Union[Tuple[int, ...], List[int]]
     ) -> ArrayLike:
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
 
@@ -807,7 +839,7 @@ class Backend:
 
         return self.engine.einsum("abac->bc", state)
 
-    def singular_value_decomposition(self, array) -> Tuple[ArrayLike, ...]:
+    def singular_value_decomposition(self, array: ArrayLike) -> Tuple[ArrayLike, ...]:
         """Calculate the Singular Value Decomposition of ``matrix``."""
         return self.engine.linalg.svd(array)
 
@@ -815,7 +847,9 @@ class Backend:
     ######## Methods related to the creation and manipulation of quantum objects    ########
     ########################################################################################
 
-    def depolarizing_error_density_matrix(self, gate, state, nqubits):
+    def depolarizing_error_density_matrix(
+        self, gate: Gate, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         target_qubits = gate.target_qubits
@@ -852,7 +886,9 @@ class Backend:
 
         return state
 
-    def maximally_mixed_state(self, nqubits: int, dtype=None) -> ArrayLike:
+    def maximally_mixed_state(
+        self, nqubits: int, dtype: Optional[DTypeLike] = None
+    ) -> ArrayLike:
         """Generate the :math:`n`-qubit density matrix for the maximally mixed state.
 
         .. math::
@@ -873,7 +909,9 @@ class Backend:
 
         return state
 
-    def overlap_statevector(self, state_1, state_2, dtype=None):
+    def overlap_statevector(
+        self, state_1: ArrayLike, state_2: ArrayLike, dtype: Optional[DTypeLike] = None
+    ) -> Union[float, complex]:
         """Calculate overlap of two pure quantum states."""
         if dtype is None:
             dtype = self.dtype
@@ -883,7 +921,12 @@ class Backend:
 
         return self.sum(self.conj(state_1) * state_2)
 
-    def plus_state(self, nqubits: int, density_matrix: bool = False, dtype=None):
+    def plus_state(
+        self,
+        nqubits: int,
+        density_matrix: bool = False,
+        dtype: Optional[DTypeLike] = None,
+    ) -> ArrayLike:
         """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         if dtype is None:
             dtype = self.dtype
@@ -897,7 +940,9 @@ class Backend:
 
         return state
 
-    def reset_error_density_matrix(self, gate, state, nqubits: int):
+    def reset_error_density_matrix(
+        self, gate: Gate, state: ArrayLike, nqubits: int  # type: ignore
+    ) -> ArrayLike:
         """Apply reset error to density matrix."""
         from qibo.gates.gates import X  # pylint: disable=import-outside-toplevel
 
@@ -917,7 +962,9 @@ class Backend:
 
         return state + p_1 * self.apply_gate(X(qubit), zero, nqubits)
 
-    def thermal_error_density_matrix(self, gate, state, nqubits: int):
+    def thermal_error_density_matrix(
+        self, gate: Gate, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         """Apply thermal relaxation error to density matrix."""
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
@@ -956,7 +1003,9 @@ class Backend:
     ######## Methods related to circuit execution                                   ########
     ########################################################################################
 
-    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+    def apply_bitflips(
+        self, noiseless_samples: ArrayLike, bitflip_probabilities: ArrayLike
+    ) -> ArrayLike:
         sprobs = self.random_sample(noiseless_samples.shape)
         sprobs = self.cast(sprobs, dtype="float64")  # pylint: disable=E1111
 
@@ -972,7 +1021,9 @@ class Backend:
 
         return noisy_samples
 
-    def apply_channel(self, channel, state, nqubits: int):
+    def apply_channel(
+        self, channel: "Channel", state: ArrayLike, nqubits: int  # type: ignore
+    ) -> ArrayLike:
         """Apply a ``channel`` to quantum ``state``."""
 
         density_matrix = bool(len(state.shape) == 2)
@@ -995,7 +1046,7 @@ class Backend:
 
         return state
 
-    def apply_gate(self, gate, state, nqubits: int) -> ArrayLike:
+    def apply_gate(self, gate: Gate, state: ArrayLike, nqubits: int) -> ArrayLike:
         """Apply a gate to quantum state."""
 
         density_matrix = bool(len(state.shape) == 2)
@@ -1032,7 +1083,9 @@ class Backend:
 
         return self.reshape(state, shape)
 
-    def apply_gate_half_density_matrix(self, gate, state, nqubits: int):
+    def apply_gate_half_density_matrix(
+        self, gate: Gate, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         """Apply a gate to one side of the density matrix."""
         if gate.is_controlled_by:  # pragma: no cover
             raise_error(
@@ -1053,8 +1106,13 @@ class Backend:
         return self.reshape(state, 2 * (2**nqubits,))
 
     def calculate_symbolic(
-        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
-    ):
+        self,
+        state: ArrayLike,
+        nqubits: int,
+        decimals: int = 5,
+        cutoff: float = 1e-10,
+        max_terms: int = 20,
+    ) -> List[str]:
         # state = self.to_numpy(state)
         density_matrix = bool(len(state.shape) == 2)
         ind_j = self.nonzero(state)
@@ -1087,7 +1145,7 @@ class Backend:
 
     def collapse_state(
         self,
-        state,
+        state: ArrayLike,
         qubits: Union[Tuple[int, ...], List[int]],
         shot: int,
         nqubits: int,
@@ -1103,7 +1161,12 @@ class Backend:
 
         return self._collapse_statevector(state, qubits, shot, nqubits, normalize)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots: int = 1000):
+    def execute_circuit(
+        self,
+        circuit: "Circuit",  # type: ignore
+        initial_state: Optional[ArrayLike] = None,
+        nshots: int = 1000,
+    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:
         """Execute a :class:`qibo.models.circuit.Circuit`."""
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
@@ -1169,8 +1232,14 @@ class Backend:
         return result
 
     def execute_circuits(
-        self, circuits, initial_states=None, nshots: int = None, processes=None
-    ):  # pragma: no cover
+        self,
+        circuits: List["Circuit"],  # type: ignore
+        initial_states: Optional[ArrayLike] = None,
+        nshots: Optional[int] = None,
+        processes: Optional[int] = None,
+    ) -> List[
+        Union[CircuitResult, MeasurementOutcomes, QuantumState]
+    ]:  # pragma: no cover
         """Execute multiple :class:`qibo.models.circuit.Circuit` in parallel."""
         from qibo.parallel import (  # pylint: disable=import-outside-toplevel
             parallel_circuits_execution,
@@ -1181,8 +1250,8 @@ class Backend:
         )
 
     def execute_circuit_repeated(
-        self, circuit: "qibo.models.circuit.Circuit", nshots: int, initial_state=None
-    ):  # pragma: no cover
+        self, circuit: "Circuit", nshots: int, initial_state: Optional[ArrayLike] = None  # type: ignore
+    ) -> ArrayLike:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
         Useful for noise simulation using state vectors or for simulating gates
@@ -1281,8 +1350,11 @@ class Backend:
         return final_result
 
     def execute_distributed_circuit(
-        self, circuit, initial_state=None, nshots: int = None
-    ):  # pragma: no cover
+        self,
+        circuit: "Circuit",  # type: ignore
+        initial_state: Optional[ArrayLike] = None,
+        nshots: Optional[int] = None,
+    ) -> Union[CircuitResult, MeasurementOutcomes, QuantumState]:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
@@ -1301,7 +1373,7 @@ class Backend:
 
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
-    def matrix_parametrized(self, gate: Gate):
+    def matrix_parametrized(self, gate: Gate) -> ArrayLike:
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
@@ -1319,7 +1391,7 @@ class Backend:
 
         return self.cast(_matrix, dtype=_matrix.dtype)  # pylint: disable=E1111
 
-    def matrix_fused(self, fgate):
+    def matrix_fused(self, fgate: Gate) -> ArrayLike:
         """Fuse matrices of multiple gates."""
         rank = len(fgate.target_qubits)
         matrix = self.identity(2**rank, sparse=True)
@@ -1359,11 +1431,11 @@ class Backend:
     ######## Methods related to the execution and post-processing of measurements   ########
     ########################################################################################
 
-    def aggregate_shots(self, shots) -> ArrayLike:
+    def aggregate_shots(self, shots: ArrayLike) -> ArrayLike:
         """Collect shots to a single array."""
         return self.cast(shots, dtype=shots[0].dtype)  # pylint: disable=E1111
 
-    def calculate_frequencies(self, samples):
+    def calculate_frequencies(self, samples: ArrayLike) -> Counter:
         """Calculate measurement frequencies from shots."""
         res, counts = self.unique(samples, return_counts=True)
         res = self.to_numpy(res).tolist()
@@ -1371,8 +1443,12 @@ class Backend:
         return Counter(dict(zip(res, counts)))
 
     def calculate_probabilities(
-        self, state, qubits, nqubits, density_matrix: bool = False
-    ):
+        self,
+        state: ArrayLike,
+        qubits: Union[List[int], Tuple[int, ...]],
+        nqubits: int,
+        density_matrix: bool = False,
+    ) -> ArrayLike:
         if density_matrix:
             order = tuple(sorted(qubits))
             order += tuple(i for i in range(nqubits) if i not in qubits)
@@ -1391,7 +1467,7 @@ class Backend:
 
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
-    def sample_frequencies(self, probabilities, nshots: int):
+    def sample_frequencies(self, probabilities: ArrayLike, nshots: int) -> Counter:
         """Sample measurement frequencies according to a probability distribution."""
         nprobs = probabilities / self.sum(probabilities)
         frequencies = self.zeros(len(nprobs), dtype=self.int64)
@@ -1405,25 +1481,30 @@ class Backend:
 
         return Counter({i: int(f) for i, f in enumerate(frequencies) if f > 0})
 
-    def sample_shots(self, probabilities, nshots: int):
+    def sample_shots(self, probabilities: ArrayLike, nshots: int) -> ArrayLike:
         """Sample measurement shots according to a probability distribution."""
         return self.random_choice(
-            self.engine.arange(len(probabilities)), size=nshots, p=probabilities
+            self.engine.arange(len(probabilities)),
+            size=nshots,
+            p=probabilities,
+            dtype=self.int64,
         )
 
-    def samples_to_binary(self, samples, nqubits: int):
+    def samples_to_binary(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from decimal representation to binary."""
         qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
         return self.engine.right_shift(samples[:, None], qrange) // 2
 
-    def samples_to_decimal(self, samples, nqubits: int):
+    def samples_to_decimal(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from binary representation to decimal."""
         qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
         qrange = (2**qrange)[:, None]
         samples = self.cast(samples, dtype=self.int32)  # pylint: disable=E1111
         return (samples @ qrange)[:, 0]
 
-    def update_frequencies(self, frequencies, probabilities, nsamples: int):
+    def update_frequencies(
+        self, frequencies: ArrayLike, probabilities: ArrayLike, nsamples: int
+    ) -> ArrayLike:
         samples = self.sample_shots(probabilities, nsamples)
         res, counts = self.unique(samples, return_counts=True)
         frequencies[res] += counts
@@ -1434,8 +1515,12 @@ class Backend:
     ########################################################################################
 
     def assert_allclose(
-        self, value, target, rtol: float = 1e-7, atol: float = 0.0
-    ):  # pragma: no cover
+        self,
+        value: Union[ArrayLike, CircuitResult, QuantumState],
+        target: Union[ArrayLike, CircuitResult, QuantumState],
+        rtol: float = 1e-7,
+        atol: float = 0.0,
+    ) -> None:  # pragma: no cover
         if isinstance(value, (CircuitResult, QuantumState)):
             value = value.state()
         if isinstance(target, (CircuitResult, QuantumState)):
@@ -1444,8 +1529,12 @@ class Backend:
         self.engine.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     def assert_circuitclose(
-        self, circuit, target_circuit, rtol: float = 1e-7, atol: float = 0.0
-    ):
+        self,
+        circuit: "Circuit",  # type: ignore
+        target_circuit: "Circuit",  # type: ignore
+        rtol: float = 1e-7,
+        atol: float = 0.0,
+    ) -> None:
         value = self.execute_circuit(circuit).state()
         target = self.execute_circuit(target_circuit).state()
 
@@ -1455,7 +1544,9 @@ class Backend:
     ######## Helper methods                                                         ########
     ########################################################################################
 
-    def _apply_gate_controlled_by(self, gate, state, nqubits: int) -> ArrayLike:
+    def _apply_gate_controlled_by(
+        self, gate: Gate, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         matrix = gate.matrix(self)
         matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
         ncontrol = len(gate.control_qubits)
@@ -1477,7 +1568,7 @@ class Backend:
         return self.reshape(state, shape=(2**nqubits,))
 
     def _apply_gate_controlled_by_density_matrix(
-        self, gate, state, nqubits: int
+        self, gate: Gate, state: ArrayLike, nqubits: int
     ) -> ArrayLike:
         matrix = gate.matrix(self)
         matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
@@ -1513,7 +1604,9 @@ class Backend:
 
         return self.reshape(state, 2 * (2**nqubits,))
 
-    def _append_zeros(self, state, qubits, results):
+    def _append_zeros(
+        self, state: ArrayLike, qubits: Union[List[int], Tuple[int, ...]], results
+    ) -> ArrayLike:
         """Helper function for the ``collapse_state`` method."""
         for q, r in zip(qubits, results):
             state = self.expand_dims(state, q)
@@ -1526,12 +1619,12 @@ class Backend:
 
     def _collapse_density_matrix(
         self,
-        state,
+        state: ArrayLike,
         qubits: Union[Tuple[int, ...], List[int]],
-        shot,
+        shot: ArrayLike,
         nqubits: int,
         normalize: bool = True,
-    ):
+    ) -> ArrayLike:
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
@@ -1555,12 +1648,12 @@ class Backend:
 
     def _collapse_statevector(
         self,
-        state,
+        state: ArrayLike,
         qubits: Union[Tuple[int, ...], List[int]],
-        shot,
+        shot: ArrayLike,
         nqubits: int,
         normalize: bool = True,
-    ):
+    ) -> ArrayLike:
         state = self.cast(state, dtype=state.dtype)  # pylint: disable=E1111
         shape = state.shape
         binshot = list(self.samples_to_binary(shot, len(qubits))[0])
@@ -1580,7 +1673,12 @@ class Backend:
 
         return self.engine.reshape(state, shape)
 
-    def _execute_circuit(self, circuit, initial_state=None, nshots=1000):
+    def _execute_circuit(
+        self,
+        circuit: "Circuit",  # type: ignore
+        initial_state: Optional[ArrayLike] = None,
+        nshots: int = 1000,
+    ) -> Union[CircuitResult, QuantumState]:
         nqubits = circuit.nqubits
         density_matrix = circuit.density_matrix
 
@@ -1615,17 +1713,21 @@ class Backend:
 
         return circuit._final_state
 
-    def _identity_sparse(self, dims: int, dtype=None):
-        from scipy.sparse import eye  # pylint: disable=import-outside-toplevel
-
+    def _identity_sparse(
+        self, dims: int, dtype: Optional[DTypeLike] = None
+    ) -> ArrayLike:
         if dtype is None:  # pragma: no cover
             dtype = self.dtype
 
         return eye(dims, dtype=dtype)
 
     def _negative_power_singular_matrix(
-        self, matrix, power: Union[float, int], precision_singularity: float, dtype=None
-    ):
+        self,
+        matrix: ArrayLike,
+        power: Union[float, int],
+        precision_singularity: float,
+        dtype: Optional[DTypeLike] = None,
+    ) -> ArrayLike:
         """Calculate negative power of singular matrix."""
         if dtype is None:  # pragma: no cover
             dtype = self.dtype
@@ -1639,12 +1741,14 @@ class Backend:
 
         return self.inv(vh_matrix) @ self.diag(s_matrix_inv) @ self.inv(u_matrix)
 
-    def _order_probabilities(self, probs, qubits, nqubits):
+    def _order_probabilities(
+        self, probs: ArrayLike, qubits: Union[List[int], Tuple[int, ...]], nqubits: int
+    ) -> ArrayLike:
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
-        for i in range(nqubits):
-            if i in qubits:
-                reduced[i] = i - len(unmeasured)
+        for k in range(nqubits):
+            if k in qubits:
+                reduced[k] = k - len(unmeasured)
             else:
-                unmeasured.append(i)
-        return self.transpose(probs, [reduced.get(i) for i in qubits])
+                unmeasured.append(k)
+        return self.transpose(probs, [reduced.get(k) for k in qubits])

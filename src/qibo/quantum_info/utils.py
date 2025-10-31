@@ -173,11 +173,8 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
-        hadamards = backend.np.real(
-            reduce(backend.np.kron, [backend.matrices.H] * nqubits)
-        )
+        hadamards = reduce(backend.kron, [backend.real(backend.matrices.H)] * nqubits)
         hadamards /= 2 ** (nqubits / 2)
-        hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
         array = hadamards @ array
 
@@ -454,14 +451,12 @@ def haar_integral(
             random_states, axis=1
         ).reshape(-1, 1)
         random_states = random_states.reshape(samples, 1, dim)
-        rho = backend.np.einsum(
-            "ijk,ijl->ikl", random_states, backend.np.conj(random_states)
-        )
+        rho = backend.einsum("ijk,ijl->ikl", random_states, backend.conj(random_states))
 
         for state in rho:
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.np.kron, [state] * power_t
+                backend.kron, [state] * power_t
             )
 
         integral = rand_unit_density / samples
