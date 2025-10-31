@@ -338,7 +338,7 @@ def _update_amplitudes(
     nqubits = len(qubits) + ncontrols + len(other_qubits)
 
     strings = self._get_cached_strings(nqubits, weight + shift, ncontrols)
-    indexes_in = self.engine.zeros((len(strings), nqubits), dtype=str)
+    indexes_in = self.zeros((len(strings), nqubits), dtype=str)
     indexes_in[:, other_qubits] = strings
     if ncontrols > 0:
         indexes_in[:, controls] = "1"
@@ -387,12 +387,12 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
     matrix_1001, matrix_1010 = matrix[2, 1], matrix[2, 2]
 
     if weight - ncontrols > 0 and weight not in [0, nqubits]:
-        indexes_in = self.engine.zeros((len(strings), nqubits), dtype=str)
+        indexes_in = self.zeros((len(strings), nqubits), dtype=str)
         indexes_in[:, other_qubits] = strings
         if len(controls) > 0:
             indexes_in[:, controls] = "1"
         indexes_in[:, qubits] = ["1", "0"]
-        indexes_out = self.engine.copy(indexes_in)
+        indexes_out = self.cast(indexes_in, dtype=indexes_in.dtype, copy=True)
         indexes_out[:, qubits] = ["0", "1"]
         indexes_in = self.cast(
             [self._dict_indexes["".join(elem)][0] for elem in indexes_in],

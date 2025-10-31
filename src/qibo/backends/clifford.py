@@ -85,10 +85,6 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
-    # def set_seed(self, seed):
-    #     super().set_seed(seed)
-    #     self.engine.seed(seed)
-
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -249,9 +245,7 @@ class CliffordBackend(NumpyBackend):
                 candidate_str = "".join(candidate_str)
                 candidate_p = self._pauli_string_to_matrix(candidate_str)
                 for phase_val, phase_code in zip([1, 1j, -1, -1j], [0, 0, 1, 1]):
-                    if self.engine.allclose(
-                        pauli_uconj, phase_val * candidate_p, atol=1e-10
-                    ):
+                    if self.allclose(pauli_uconj, phase_val * candidate_p, atol=1e-10):
                         phase_vector[i] = phase_code
                         symplectic[i, :] = self._pauli_to_binary(candidate_str, m)
                         found = True

@@ -235,6 +235,9 @@ class Backend:
     def all(self, array: ArrayLike, **kwargs) -> Union[bool, ArrayLike]:
         return self.engine.all(array, **kwargs)
 
+    def allclose(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
+        return self.engine.allclose(array_1, array_2, **kwargs)
+
     def angle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.angle(array, **kwargs)
 
@@ -285,6 +288,9 @@ class Backend:
 
     def cos(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.cos(array, **kwargs)
+
+    def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return self.engine.count_nonzero(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike) -> ArrayLike:
         from scipy.sparse import csr_matrix  # pylint: disable=import-outside-toplevel

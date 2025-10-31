@@ -258,11 +258,11 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
 
     ud_bell = backend.transpose(backend.conj(bell_basis), (1, 0)) @ ud @ bell_basis
     ud_diag = backend.diag(ud_bell)
-    if not backend.engine.allclose(
+    if not backend.allclose(
         backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6
     ):  # pragma: no cover
         return None
-    uprod = backend.to_numpy(backend.engine.prod(ud_diag))
+    uprod = backend.to_numpy(backend.prod(ud_diag))
     if not np.allclose(uprod, 1.0, atol=1e-6, rtol=1e-6):  # pragma: no cover
         return None
     return ud_diag
@@ -392,7 +392,7 @@ def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
         list: gates implementing the decomposition
     """
     # Handle identity case efficiently
-    if backend.engine.allclose(unitary, backend.identity(4)):
+    if backend.allclose(unitary, backend.identity(4)):
         return []
 
     z_component = _get_z_component(unitary, backend)

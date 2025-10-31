@@ -979,7 +979,7 @@ def graph_state(matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=int)
 
-    if not backend.engine.allclose(matrix, matrix.T):
+    if not backend.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
             f"``matrix`` is not symmetric, not representing an undirected graph",

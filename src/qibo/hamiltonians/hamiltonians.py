@@ -120,7 +120,7 @@ class Hamiltonian(AbstractHamiltonian):
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
         diag = self.backend.diag(obs)
-        if self.backend.engine.count_nonzero(obs - self.backend.diag(diag)) != 0:
+        if self.backend.count_nonzero(obs - self.backend.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non diagonal observables starting "
