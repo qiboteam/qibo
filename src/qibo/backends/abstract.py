@@ -162,7 +162,7 @@ class Backend:
         if dtype != self.dtype:
             self.dtype = dtype
 
-            if self.matrices:
+            if self.matrices is not None:
                 self.matrices = self.matrices.__class__(self.dtype)
 
     def set_seed(self, seed: Union[int, None]) -> None:
