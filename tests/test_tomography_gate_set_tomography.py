@@ -170,8 +170,8 @@ def test__extract_nqubits():
     gates_to_test = [gates.Z, (gates.RX, [np.pi / 2]), gates.CNOT, gates.TOFFOLI]
     for idx in range(0, len(gates_to_test)):
         gate = gates_to_test[idx]
-        # if isinstance(gate, tuple):
-        #     gate, _ = gate
+        if isinstance(gate, tuple):
+            gate, _ = gate
         if idx < 3:
             assert _extract_nqubits(gate) == correct_nqubits[idx]
         else:

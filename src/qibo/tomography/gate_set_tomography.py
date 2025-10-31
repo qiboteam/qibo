@@ -145,26 +145,17 @@ def _measurement_basis(j: int, nqubits: int):
     return [gates.M(q, basis=measurements[q]) for q in range(len(measurements))]
 
 
-def _extract_nqubits(
-    gate: Union[gates.abstract.Gate, Tuple[gates.abstract.Gate, List[float]]],
-):
+def _extract_nqubits(gate, params=None):
     """A function to extract the number of qubits the gate acts on.
     Args:
-        gate (:class:`qibo.gates.abstract.Gate` or tuple): Either a gate or a tuple consisting of a gate and a list of its parameters.
-            Examples of a valid input:
-            - ``gate = gates.Z`` for a non-parametrized gate.
-            - ``gate = (gates.RX, [np.pi/3])`` or ``gate = (gates.PRX, [np.pi/2, np.pi/3])`` for a parametrized gate.
-            - ``gate = (gates.Unitary, [np.array([[1, 0], [0, 1]])])`` for an arbitrary unitary operator.
+        gate (:class:`qibo.gates.abstract.Gate`): gate
+        params (list, optional): A list containing the angles for the gate.
     Returns:
         nqubits (int): Number of qubits that the gate acts on.
     """
 
-    nqubits = None
-    params = None
-    if isinstance(gate, tuple):
-        gate, params = gate
     init_args = signature(gate).parameters
-    if "unitary" in init_args:
+    if "unitary" in init_args and params is not None:
         nqubits = int(np.log2(np.shape(params[0])[0]))
     else:
         if "q" in init_args:
@@ -212,7 +203,7 @@ def _get_nqubits_and_angles(
         angles = None
         params = None
     init_args = signature(gate).parameters
-    nqubits = _extract_nqubits(original_gate)
+    nqubits = _extract_nqubits(gate, params)
 
     if angles:
         angle_names = [arg for arg in init_args if arg in angles]
@@ -246,20 +237,7 @@ def _extract_gate(
         nqubits (int): The number of qubits that the gate acts on.
     """
 
-    original_gate_input = gate
-
-    gate, nqubits, angle_names, angle_values, params = _get_nqubits_and_angles(
-        original_gate_input
-    )
-
-    # Perform some checks
-    if isinstance(original_gate_input, tuple):
-        if "unitary" in angle_names:
-            # Check that unitary gate does not receive a non-unitary matrix.
-            g = gate(angle_values["unitary"], *range(nqubits), check_unitary=True)
-            if not g.unitary:
-                raise_error(ValueError, "Unitary gate received non-unitary matrix.")
-
+    gate, nqubits, angle_names, angle_values, params = _get_nqubits_and_angles(gate)
     # Construct gate instance
     idx = (
         range(nqubits)
@@ -267,13 +245,16 @@ def _extract_gate(
         else ((idx,) if isinstance(idx, int) else tuple(idx))
     )
     if "unitary" in angle_values:
-        gate = gate(angle_values["unitary"], *idx)
+        gate = gate(angle_values["unitary"], *idx, check_unitary=True)
+        if not gate.unitary:
+            raise_error(ValueError, "Unitary gate received non-unitary matrix.")
     else:
         gate = gate(*idx, **angle_values)
 
     return gate, nqubits
 
 
+@cache
 def _get_swap_pairs(nqubits, ancilla):
     """Function that returns a tuple representing which qubits to swap. There are three
         scenarios:
@@ -518,12 +499,17 @@ def GST(
         if len(gate_set) == 2:
             gate_set_nqubits = []
             for gate in gate_set:
+                params = None
+                if isinstance(gate, tuple):
+                    gate, params = gate
                 nqubits = _extract_nqubits(gate)
                 gate_set_nqubits.append(nqubits)
             if 2 in gate_set_nqubits:
                 raise_error(RuntimeError, f"Requires two single-qubit gates")
         else:
             raise_error(RuntimeError, f"Requires two single-qubit gates")
+        # if two_qubit_basis_op_diff_registers and len(gate_set) != 2:
+        #     raise_error(RuntimeError, f"Requires two single-qubit gates")
 
         gate = []
         for idx, _gate in enumerate(gate_set):
