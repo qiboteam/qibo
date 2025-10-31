@@ -163,6 +163,7 @@ def _extract_nqubits(gate, params=None):
         elif "q0" in init_args and "q1" in init_args and "q2" not in init_args:
             nqubits = 2
         else:
+            nqubits = None
             raise_error(
                 RuntimeError,
                 f"Gate {gate} is not supported for `GST`, only 1- and 2-qubit gates are supported.",
