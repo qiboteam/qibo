@@ -9,8 +9,6 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 from qibo.error_mitigation.abstract import DataRegressionErrorMitigation
 from qibo.gates.abstract import Gate
-from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.noise import NoiseModel
 
 NPBACKEND = NumpyBackend()
 
@@ -24,18 +22,8 @@ class CDR(DataRegressionErrorMitigation):
     def __post_init__(self):
         super().__post_init__()
         # setup the regression model
-        param_dtype = self.simulation_backend.np.float64
-        if self.regression_model is None:
-            self.regression_model = lambda x, a, b: a * x + b
-            if self.model_parameters is None:
-                self.model_parameters = self.simulation_backend.cast(
-                    [1, 0], dtype=param_dtype
-                )
-        elif self.model_parameters is None:
-            nparams = len(inspect.signature(self.regression_model).parameters) - 1
-            self.model_parameters = self.simulation_backend.cast(
-                np.random.randn(nparams), dtype=param_dtype
-            )
+        self._regression_model_setup()
+
         # setup the replacement gates
         if self.replacement_gates is None:
             self.replacement_gates = (
@@ -44,13 +32,22 @@ class CDR(DataRegressionErrorMitigation):
             )
         self._targeted_gate = self.replacement_gates[0]
         if not all(
-            self._targeted_gate(0, **kwargs).clifford()
+            self._targeted_gate(0, **kwargs).clifford
             for kwargs in self.replacement_gates[1]
         ):
             raise_error(
                 ValueError,
                 f"The provided set of gates for replacement: {self.replacement_gates} include one or more non clifford gates.",
             )
+
+    def _regression_model_setup(self):
+        if self.regression_model is None:
+            self.regression_model = lambda x, a, b: a * x + b
+            if self.model_parameters is None:
+                self.model_parameters = np.array([1, 0], dtype=np.float64)
+        elif self.model_parameters is None:
+            nparams = len(inspect.signature(self.regression_model).parameters) - 1
+            self.model_parameters = np.random.randn(nparams).astype(np.float64)
 
     def sample_circuit(
         self, circuit: Optional[Circuit] = None, sigma: float = 0.5

@@ -6,12 +6,14 @@ from functools import cached_property
 from types import NoneType
 from typing import Callable, Iterable, List, Optional, Union
 
+import numpy as np
+from scipy.optimize import curve_fit
+
 from qibo import Circuit
-from qibo.backends import _check_backend, construct_backend, get_transpiler
+from qibo.backends import construct_backend, get_transpiler
 from qibo.backends.abstract import Backend
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.models.error_mitigation import SIMULATION_BACKEND
 from qibo.noise import NoiseModel
 from qibo.transpiler import Passes
 
@@ -23,21 +25,25 @@ class ErrorMitigationRoutine(ABC):
     observable: Optional[AbstractHamiltonian] = None
     noise_model: Optional[NoiseModel] = None
     transpiler: Optional[Passes] = None
-    backend: Optional[Backend] = None
 
     def __post_init__(
         self,
     ):
-        self.backend = _check_backend(self.backend)
         if self.transpiler is None:
             self.transpiler = get_transpiler()
+
+    @property
+    def backend(self):
+        if self.observable is not None:
+            return self.observable.backend
+        raise_error(RuntimeError, "No observable defined yet, no backend available.")
 
     def _circuit(self, circuit: Circuit) -> Circuit:
         if circuit is None:
             if self.circuit is None:
                 raise_error(
                     RuntimeError,
-                    "No circuit provided, please either initialize the the mitigation routine with a circuit, or provide it upon `__call__.`",
+                    "No circuit provided, please either initialize the the mitigation routine with a circuit, or provide it upon call.",
                 )
             return self.circuit
         return circuit
@@ -56,9 +62,11 @@ class ErrorMitigationRoutine(ABC):
             if self.observable is None:
                 raise_error(
                     RuntimeError,
-                    "No observable provided, please either initialize the the mitigation routine with an observable, or provide it upon `__call__.`",
+                    "No observable provided, please either initialize the the mitigation routine with an observable, or provide it upon call.",
                 )
             return self.observable
+        # this is mostly useful to have a consistent backend available
+        self.observable = observable
         return observable
 
     @abstractmethod
@@ -87,9 +95,11 @@ class ErrorMitigationRoutine(ABC):
 @dataclass
 class DataRegressionErrorMitigation(ErrorMitigationRoutine):
 
+    n_training_samples: Optional[int] = 50
     regression_model: Optional[Callable] = None
     model_parameters: Optional[Iterable[float]] = None
     simulation_backend: Optional[Backend] = None
+    _is_trained: bool = False
 
     def __post_init__(self):
         super().__post_init__()
@@ -111,41 +121,85 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
             self.sample_circuit(self.circuit) for _ in range(self.n_training_samples)
         ]
 
+    @property
+    def is_trained(self) -> bool:
+        return self._is_trained
+
+    @is_trained.setter
+    def is_trained(self, trained: bool):
+        self._is_trained = trained
+
+    @property
+    def xdata_shape(self):
+        return (self.n_training_samples,)
+
     def regression(
         self,
-        training_circuits: List[Circuit],
+        training_circuits: Optional[List[Circuit]] = None,
         observable: Optional[AbstractHamiltonian] = None,
         nshots: Optional[int] = None,
         noise_model: Optional[NoiseModel] = None,
     ):
+        if training_circuits is None:
+            training_circuits = self.training_circuits
+
         observable = self._observable(observable)
+
         # first get the noisy expectations running with the current backend
         noisy_circuits = self._circuit_preprocessing(training_circuits, noise_model)
-        noisy_expectations = [
-            observable.expectation(circuit, nshots=nshots) for circuit in noisy_circuits
-        ]
+        noisy_expectations = observable.backend.cast(
+            [
+                observable.expectation(circuit, nshots=nshots)
+                for circuit in noisy_circuits
+            ],
+            dtype=observable.backend.np.float64,
+        )
+        # cast to numpy
+        noisy_expectations = self.simulation_backend.to_numpy(noisy_expectations)
+        noisy_expectations = np.reshape(noisy_expectations, self.xdata_shape)
+
         # then switch to the simulation backend to get the exact values
         original_backend = observable.backend
         observable.backend = self.simulation_backend
-        exact_expectations = [
-            observable.expectation(circuit, nshots=nshots)
-            for circuit in training_circuits
+        # select the subset of circuits relevant for exact expectations
+        N = self.xdata_shape[-1] if len(self.xdata_shape) > 1 else 1
+        training_circuits = [
+            training_circuits[i] for i in N * np.arange(noisy_expectations.shape[0])
         ]
+        exact_expectations = self.simulation_backend.cast(
+            [
+                observable.expectation(circuit, nshots=nshots)
+                for circuit in training_circuits
+            ],
+            dtype=self.simulation_backend.np.float64,
+        )
+        # cast to numpy
+        exact_expectations = self.simulation_backend.to_numpy(exact_expectations)
         # restore the original backend
         observable.backend = original_backend
-        # cast to the simulation backend native array
-        noisy_expectations = self.simulation_backend.cast(
-            noisy_expectations, dtype=exact_expectations[0].dtype
-        )
+
         # do the regression
-        optimal_params = self.simulation_backend.curve_fit(
+        optimal_params, params_cov = curve_fit(
             self.regression_model,
             noisy_expectations,
             exact_expectations,
             self.model_parameters,
         )
-        self.model_parameters = optimal_params
         return optimal_params
+
+    def _apply_model(
+        self,
+        circuit: Optional[Circuit] = None,
+        observable: Optional[AbstractHamiltonian] = None,
+        nshots: Optional[int] = None,
+        noise_model: Optional[NoiseModel] = None,
+    ):
+        circuit = self._circuit(circuit)
+        circuit = self._circuit_preprocessing([circuit], noise_model)[0]
+        observable = self._observable(observable)
+        noisy_exp_val = observable.expectation(circuit, nshots=nshots)
+        params = self.backend.cast(self.model_parameters, dtype=noisy_exp_val.dtype)
+        return self.regression_model(noisy_exp_val, *params)
 
     def __call__(
         self,
@@ -156,9 +210,13 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
     ):
         training_circuits = self._training_circuits(circuit)
         # if something is different retrain the regression model
-        if circuit is not None or observable is not None or noise_model is not None:
-            self.regression(training_circuits, observable, nshots, noise_model)
-        observable = self._observable(observable)
-        circuit = self._circuit(circuit)
-        noisy_exp_val = observable.expectation(circuit, nshots=nshots)
-        return self.regression_model(noisy_exp_val, *self.model_parameters)
+        if (
+            circuit is not None
+            or observable is not None
+            or noise_model is not None
+            or not self.is_trained
+        ):
+            self.model_parameters = self.regression(
+                training_circuits, observable, nshots, noise_model
+            )
+        return self._apply_model(circuit, observable, nshots, noise_model)

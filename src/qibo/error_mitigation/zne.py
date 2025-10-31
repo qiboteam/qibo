@@ -8,7 +8,6 @@ import numpy as np
 from qibo import Circuit, gates
 from qibo.config import raise_error
 from qibo.error_mitigation.abstract import ErrorMitigationRoutine
-from qibo.gates.abstract import Gate
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.noise import NoiseModel
 
@@ -111,6 +110,14 @@ class ZNE(ErrorMitigationRoutine):
                     )
         return noisy_circuit
 
+    def _noisy_circuits(self, circuit: Optional[Circuit] = None):
+        if circuit is None:
+            return self.noisy_circuits
+        return [
+            self.build_noisy_circuit(circuit, num_insertions)
+            for num_insertions in self.noise_levels
+        ]
+
     @cached_property
     def noisy_circuits(self) -> List[Circuit]:
         return [
@@ -125,13 +132,7 @@ class ZNE(ErrorMitigationRoutine):
         nshots: Optional[int] = None,
         noise_model: Optional[NoiseModel] = None,
     ):
-        if circuit is None:
-            noisy_circuits = self.noisy_circuits
-        else:
-            noisy_circuits = [
-                self.build_noisy_circuit(circuit, num_insertions)
-                for num_insertions in self.noise_levels
-            ]
+        noisy_circuits = self._noisy_circuits(circuit)
         noisy_circuits = self._circuit_preprocessing(noisy_circuits, noise_model)
         observable = self._observable(observable)
         exp_vals = [
