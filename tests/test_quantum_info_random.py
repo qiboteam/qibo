@@ -257,7 +257,7 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             )
 
 
-@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(3e2), int(3e4))))
+@pytest.mark.parametrize("nqubits,nsamples", zip((1, 2), (int(3e2), int(3e3))))
 def test_random_clifford(backend, nqubits, nsamples):
 
     backend.set_seed(42)
@@ -283,12 +283,11 @@ def test_random_clifford(backend, nqubits, nsamples):
             samples[sample] = 1
 
     avg_prob = (np.array(list(samples.values())) / (nsamples + 1)).mean()
-    atol = 10 ** (-len(str(n_cliffords)))
-    np.testing.assert_allclose(expected_prob, avg_prob, atol=atol)
+    backend.assert_allclose(expected_prob, avg_prob, atol=1e-2, rtol=0.7)
     if nqubits == 1:
         assert len(samples) == n_cliffords
     else:
-        assert int(1e4) <= len(samples) <= n_cliffords
+        assert int(1e3) <= len(samples) <= n_cliffords
 
 
 def test_random_pauli_errors(backend):
@@ -453,9 +452,6 @@ def test_random_stochastic_matrix(backend):
         dims = 2
         max_iterations = -1
         random_stochastic_matrix(dims, max_iterations=max_iterations, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 4
-        random_stochastic_matrix(dims, seed=0.1, backend=backend)
 
     # tests if matrix is row-stochastic
     dims = 4

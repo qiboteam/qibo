@@ -1411,7 +1411,8 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
     markers = markers | (set(range(max_index + 1, nqubits)) - last_run)
 
     new_ones = np.argsort(new_bitstring)[-hamming_weight:]
-    controls = list(set(ones) & set(new_ones))
+
+    controls = list({int(elem) for elem in ones} & {int(elem) for elem in new_ones})
     difference = new_bitstring - bitstring
     qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
 
@@ -1455,11 +1456,11 @@ def _ehrlich_algorithm(initial_string, return_indices: bool = True):
 
     markers = _get_markers(initial_string, last_run=False)
     string = initial_string
-    strings = ["".join(string[::-1].astype(str))]
+    strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
         string, markers, c_and_t = _get_next_bistring(string, markers, k)
-        strings.append("".join(string[::-1].astype(str)))
+        strings.append("".join(str(elem) for elem in string[::-1]))
         controls_and_targets.append(c_and_t)
 
     if return_indices:

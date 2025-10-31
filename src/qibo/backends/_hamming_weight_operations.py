@@ -201,7 +201,7 @@ def _get_lexicographical_order(self, nqubits, weight):
 
     lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
     lexicographical_order = [
-        "".join(item.astype(str)) for item in lexicographical_order
+        "".join(str(elem) for elem in item) for item in lexicographical_order
     ]
     lexicographical_order.sort()
     lexicographical_order_int = [int(item, base=2) for item in lexicographical_order]

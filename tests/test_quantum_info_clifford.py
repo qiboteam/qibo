@@ -348,7 +348,7 @@ def test_clifford_copy(backend, nqubits, deep):
     assert copy.nqubits == clifford.nqubits
     assert copy.measurements == clifford.measurements
     assert copy.nshots == clifford.nshots
-    assert copy.engine == clifford.engine
+    assert copy.platform == clifford.platform
 
 
 @pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
