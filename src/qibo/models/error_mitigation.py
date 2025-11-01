@@ -425,7 +425,6 @@ def CDR(
            `arXiv:2005.10189 [quant-ph] <https://arxiv.org/abs/2005.10189>`_.
     """
     backend, local_state = _check_backend_and_local_state(seed, backend)
-
     if readout is None:
         readout = {}
 
