@@ -138,7 +138,8 @@ class ZNE(ErrorMitigationRoutine):
         exp_vals = [
             observable.expectation(circ, nshots=nshots) for circ in noisy_circuits
         ]
-        gammas = self.observable.backend.cast(
+        exp_vals = self.backend.np.stack(exp_vals)
+        gammas = self.backend.cast(
             self.gammas(self.noise_levels), dtype=exp_vals[0].dtype
         )
         return sum(gammas * exp_vals)

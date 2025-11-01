@@ -1,3 +1,4 @@
+import copy
 import inspect
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -8,7 +9,7 @@ from qibo import Circuit, gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 from qibo.error_mitigation.abstract import DataRegressionErrorMitigation
-from qibo.gates.abstract import Gate
+from qibo.gates.abstract import Gate, ParametrizedGate
 
 NPBACKEND = NumpyBackend()
 
@@ -73,6 +74,12 @@ class CDR(DataRegressionErrorMitigation):
 
             replacement.append(rep_gates)
 
+            if isinstance(gate, ParametrizedGate):
+                gate = copy.deepcopy(gate)
+                gate.parameters = NPBACKEND.cast(
+                    [self.backend.to_numpy(p) for p in gate.parameters],
+                    dtype=np.float64,
+                )
             gate_matrix = gate.matrix(NPBACKEND)
             rep_gate_matrix = [rep_gate.matrix(NPBACKEND) for rep_gate in rep_gates]
             rep_gate_matrix = NPBACKEND.cast(

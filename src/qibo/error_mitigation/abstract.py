@@ -133,6 +133,19 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
     def xdata_shape(self):
         return (self.n_training_samples,)
 
+    @staticmethod
+    def _cast_parameters(
+        circuits: List[Circuit], src_backend: Backend, target_backend: Backend
+    ):
+        for circ in circuits:
+            for gate in circ.parametrized_gates:
+                params = src_backend.to_numpy(
+                    src_backend.cast(gate.parameters, dtype=src_backend.np.float64)
+                )
+                gate.parameters = target_backend.cast(
+                    params, dtype=target_backend.np.float64
+                )
+
     def regression(
         self,
         training_circuits: Optional[List[Circuit]] = None,
@@ -155,7 +168,7 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
             dtype=observable.backend.np.float64,
         )
         # cast to numpy
-        noisy_expectations = self.simulation_backend.to_numpy(noisy_expectations)
+        noisy_expectations = self.backend.to_numpy(noisy_expectations)
         noisy_expectations = np.reshape(noisy_expectations, self.xdata_shape)
 
         # then switch to the simulation backend to get the exact values
@@ -166,6 +179,10 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
         training_circuits = [
             training_circuits[i] for i in N * np.arange(noisy_expectations.shape[0])
         ]
+        # cast circuits parameters to the simulation backend arrays
+        self._cast_parameters(
+            training_circuits, original_backend, self.simulation_backend
+        )
         exact_expectations = self.simulation_backend.cast(
             [
                 observable.expectation(circuit, nshots=nshots)
@@ -219,4 +236,5 @@ class DataRegressionErrorMitigation(ErrorMitigationRoutine):
             self.model_parameters = self.regression(
                 training_circuits, observable, nshots, noise_model
             )
+            self.is_trained = True
         return self._apply_model(circuit, observable, nshots, noise_model)
