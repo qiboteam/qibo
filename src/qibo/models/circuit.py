@@ -1219,6 +1219,12 @@ class Circuit:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, please install it with `poetry install --with cudaq`"
             ) from e
+        try:
+            import cudaq
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
         return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
