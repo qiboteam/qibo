@@ -1210,6 +1210,17 @@ class Circuit:
         parser = QASMParser()
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
+    def to_qir(self):
+        """Convert circuit to QIR string."""
+        try:
+            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+            from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, please install it with `poetry install --with qir`"
+            ) from e
+        return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
+
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
