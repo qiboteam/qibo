@@ -2,7 +2,11 @@
 
 import re
 
+import pytest
+
 from qibo import Circuit
+
+pytest.importorskip("cudaq")
 
 
 def _clean_cudaq_code(circuit_code: str) -> str:
