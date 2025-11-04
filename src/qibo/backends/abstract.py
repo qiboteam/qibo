@@ -7,8 +7,8 @@ from importlib.util import find_spec, module_from_spec
 from typing import List, Optional, Tuple, Union
 
 from numpy.typing import ArrayLike, DTypeLike
-from scipy.linalg import fractional_matrix_power
-from scipy.sparse import eye
+from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.sparse import eye as eye_sparse
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -271,8 +271,6 @@ class Backend:
         return self.engine.block(arrays)
 
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
-        from scipy.linalg import block_diag  # pylint: disable=import-outside-toplevel
-
         return block_diag(*arrays)
 
     def ceil(self, array: ArrayLike, **kwargs) -> ArrayLike:
@@ -1761,7 +1759,7 @@ class Backend:
         if dtype is None:  # pragma: no cover
             dtype = self.dtype
 
-        return eye(dims, dtype=dtype)
+        return eye_sparse(dims, dtype=dtype)
 
     def _negative_power_singular_matrix(
         self,

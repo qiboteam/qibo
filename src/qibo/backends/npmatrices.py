@@ -65,7 +65,7 @@ class NumpyMatrices:
             [[1 + 0j, 0], [0, cmath.exp(-1j * math.pi / 4.0)]], dtype=self.dtype
         )
 
-    def I(self, n=2):
+    def I(self, n: int = 2):
         return self.engine.eye(n, dtype=self.dtype)
 
     def Align(self, delay, n=2):
