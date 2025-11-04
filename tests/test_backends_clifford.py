@@ -157,13 +157,7 @@ def test_two_qubits_gates(backend, gate):
 
 @pytest.mark.parametrize("prob_qubits", [1, 2])
 @pytest.mark.parametrize("binary", [False, True])
-@pytest.mark.parametrize(
-    "seed",
-    [
-        15,
-        25,
-    ],
-)
+@pytest.mark.parametrize("seed", [15, 25])
 def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     np.random.seed(seed)
     numpy_bkd.set_seed(seed)
@@ -178,21 +172,24 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     prob_qubits = np.random.choice(MEASURED_QUBITS, size=prob_qubits, replace=False)
     circuit.add(gates.M(*MEASURED_QUBITS))
     circuit_copy.add(gates.M(*MEASURED_QUBITS))
+    circuit.draw()
+    print()
+    circuit.draw()
     numpy_result = numpy_bkd.execute_circuit(circuit, nshots=nshots)
     clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=nshots)
 
-    backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
+    backend.assert_allclose(clifford_result.state(), backend.cast(numpy_result.state()))
+
     clifford_prob = clifford_result.probabilities(prob_qubits)
     numpy_prob = backend.cast(numpy_result.probabilities(prob_qubits))
-    backend.assert_allclose(
-        numpy_prob,
-        clifford_prob,
-        atol=1e-1,
-    )
+
+    backend.assert_allclose(numpy_prob, clifford_prob, atol=1e-1)
 
     numpy_freq = numpy_result.frequencies(binary)
     clifford_freq = clifford_result.frequencies(binary)
+
     assert set(numpy_freq.keys()) == set(clifford_freq.keys())
+
     clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
 
     for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):

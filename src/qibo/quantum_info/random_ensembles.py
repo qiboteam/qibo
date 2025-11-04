@@ -539,6 +539,8 @@ def random_clifford(
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
         nqubits
     )
+    hadamards = backend.cast(hadamards, dtype=backend.uint8)
+    permutations = backend.cast(permutations, dtype=backend.uint8)
 
     gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=backend.uint8))
 

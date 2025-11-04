@@ -9,11 +9,12 @@ from typing import List, Tuple, Union
 import numpy as np
 
 from qibo import gates
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.abstract import Backend
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import raise_error
 
 
-class CliffordBackend(NumpyBackend):
+class CliffordBackend(Backend):
     """Backend for the simulation of Clifford circuits following
     `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
 
@@ -85,6 +86,9 @@ class CliffordBackend(NumpyBackend):
                 f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
+        self.cast = self._platform.cast
+        self.matrices = NumpyMatrices(self.dtype)
+
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -106,7 +110,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Symplectic matrix for the zero state.
         """
-        identity = self.identity(nqubits)
+        identity = self.identity(nqubits, dtype=self.uint8)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
         symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=self.uint8)

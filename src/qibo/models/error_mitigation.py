@@ -309,29 +309,34 @@ def sample_training_circuit_cdr(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
-        p=backend.to_numpy(backend.sum(prob, -1) / backend.sum(prob)),
-        seed=local_state,
+        p=backend.sum(prob, -1) / backend.sum(prob),
+        # seed=local_state,
+        dtype=backend.int64,
     )
+    index = [int(ind) for ind in index]
 
-    gates_to_replace = np.array([gates_to_replace[i] for i in index])
-    prob = [prob[i] for i in index]
-    prob = backend.cast(prob, dtype=prob[0].dtype)
-    prob = backend.to_numpy(prob)
+    gates_to_replace = np.array([gates_to_replace[ind] for ind in index])
+    prob = prob[index]
 
-    replacement = np.array([replacement[i] for i in index])
+    replacement = np.array([replacement[ind] for ind in index])
     replacement = [
-        replacement[i][
-            backend.random_choice(
-                range(len(p)), size=1, p=p / np.sum(p), seed=local_state
-            )[0]
+        replacement[ind][
+            int(
+                backend.random_choice(
+                    range(len(p)),
+                    size=1,
+                    p=p / backend.sum(p),
+                    # seed=local_state
+                )[0]
+            )
         ]
-        for i, p in enumerate(prob)
+        for ind, p in enumerate(prob)
     ]
-    replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
+    replacement = {ind[0]: g for ind, g in zip(gates_to_replace, replacement)}
 
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
-    for i, gate in enumerate(circuit.queue):
-        sampled_circuit.add(replacement.get(i, gate))
+    for ind, gate in enumerate(circuit.queue):
+        sampled_circuit.add(replacement.get(ind, gate))
 
     return sampled_circuit
 
@@ -623,8 +628,8 @@ def vnCDR(
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
     noisy_array = backend.reshape(noisy_array, (-1, len(noise_levels)))
-    params = local_state.random(len(noise_levels))
-    params = backend.cast(params, dtype=params.dtype)
+    # params = local_state.random(len(noise_levels))
+    params = backend.random_sample(len(noise_levels))
     train_val_noiseless = train_val["noise-free"]
     train_val_noiseless = backend.cast(
         train_val_noiseless, dtype=type(train_val_noiseless[0])

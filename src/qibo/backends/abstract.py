@@ -2,6 +2,7 @@
 
 import math
 from collections import Counter
+from functools import reduce
 from importlib.util import find_spec, module_from_spec
 from typing import List, Optional, Tuple, Union
 
@@ -928,6 +929,25 @@ class Backend:
 
         return state
 
+    def minus_state(
+        self,
+        nqubits: int,
+        density_matrix: bool = False,
+        dtype: Optional[DTypeLike] = None,
+    ):
+        if dtype is None:
+            dtype = self.dtype
+
+        state = self.cast([1, -1], dtype=dtype)
+        state = reduce(self.kron, [state] * nqubits)
+
+        state /= 2 ** (nqubits / 2)
+
+        if density_matrix:
+            state = self.outer(state, self.conj(state))
+
+        return state
+
     def overlap_statevector(
         self, state_1: ArrayLike, state_2: ArrayLike, dtype: Optional[DTypeLike] = None
     ) -> Union[float, complex]:
@@ -1515,7 +1535,7 @@ class Backend:
     def samples_to_binary(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from decimal representation to binary."""
         qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
-        return self.engine.right_shift(samples[:, None], qrange) // 2
+        return self.engine.right_shift(samples[:, None], qrange) % 2
 
     def samples_to_decimal(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from binary representation to decimal."""

@@ -159,9 +159,10 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
         else:
             circuit = circuit.fuse()
     inv_circuit = circuit.invert()
-    target_state = np.ones(2**4) / 4.0
+    target_state = backend.plus_state(4)
     final_state = backend.execute_circuit(
-        circuit, initial_state=np.copy(target_state)
+        circuit,
+        initial_state=backend.cast(target_state, dtype=target_state.dtype, copy=True),
     )._state
     final_state = backend.execute_circuit(inv_circuit, initial_state=final_state)._state
     backend.assert_allclose(final_state, target_state, atol=1e-6)

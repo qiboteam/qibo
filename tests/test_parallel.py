@@ -7,30 +7,33 @@ import sys
 import numpy as np
 import pytest
 
-import qibo
-from qibo import gates
-from qibo.models import QFT, Circuit
+from qibo import Circuit, gates
+from qibo.models import QFT
 from qibo.parallel import (
     parallel_circuits_execution,
     parallel_execution,
     parallel_parametrized_execution,
 )
+from qibo.quantum_info.random_ensembles import random_statevector
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_states_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     nqubits = 10
-    np.random.seed(0)
-    c = QFT(nqubits)
+    backend.set_seed(0)
+    circuit = QFT(nqubits)
 
-    states = [np.random.random(2**nqubits) for i in range(5)]
+    states = [
+        random_statevector(2**nqubits, dtype=backend.complex128, backend=backend)
+        for _ in range(5)
+    ]
 
     r1 = []
     for state in states:
-        r1.append(backend.execute_circuit(c, state))
+        r1.append(backend.execute_circuit(circuit, state))
 
-    r2 = parallel_execution(c, states=states, processes=2, backend=backend)
+    r2 = parallel_execution(circuit, states=states, processes=2, backend=backend)
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
     backend.assert_allclose(r1, r2)
@@ -60,8 +63,10 @@ def test_parallel_circuit_evaluation(backend, use_execute_circuits):
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_circuit_states_evaluation(backend):
     """Evaluate multiple circuits in parallel with different initial states."""
-    circuits = [QFT(n) for n in range(1, 11)]
-    states = [np.random.random(2**n) for n in range(1, 11)]
+    circuits = [QFT(nqubits) for nqubits in range(1, 11)]
+    states = [
+        random_statevector(2**nqubits, backend=backend) for nqubits in range(1, 11)
+    ]
 
     with pytest.raises(TypeError):
         r2 = parallel_circuits_execution(
