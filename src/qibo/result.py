@@ -1,3 +1,5 @@
+"""Module defining classes that store results of circuit execution."""
+
 import collections
 import warnings
 from typing import Optional, Union
@@ -16,7 +18,10 @@ def load_result(filename: str):
         filename (str): Path to the file containing the results.
 
     Returns:
-        :class:`qibo.result.QuantumState` or :class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`: result of circuit execution saved to disk, depending on saved filed.
+        :class:`qibo.result.QuantumState` or 
+        :class:`qibo.result.MeasurementOutcomes` or 
+        :class:`qibo.result.CircuitResult`: result of circuit execution saved to disk,
+        depending on saved filed.
     """
     payload = np.load(filename, allow_pickle=True).item()
     return globals()[payload.pop("dtype")].from_dict(payload)
@@ -64,8 +69,9 @@ class QuantumState:
         """State's tensor representation as a backend tensor.
 
         .. note::
-            If the state has Hamming weight :math:`k` and is computed using the ``HammingWeightBackend``, its dimension
-            is :math:`d = \\binom{n}{k}`, where :math:`n` is the number of qubits.
+            If the state has Hamming weight :math:`k` and is computed using the
+            ``HammingWeightBackend``, its dimension is :math:`d = \\binom{n}{k}`,
+            where :math:`n` is the number of qubits.
 
         Args:
             numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
@@ -107,7 +113,8 @@ class QuantumState:
         return self.symbolic()
 
     def to_dict(self):
-        """Returns a dictonary containinig all the information needed to rebuild the ``QuantumState``"""
+        """Returns a dictonary containinig all the information needed to
+        rebuild the ``QuantumState``"""
         return {
             "state": self.state(numpy=True),
             "dtype": self.__class__.__name__,
@@ -281,7 +288,8 @@ class MeasurementOutcomes:
         else:
             raise_error(
                 RuntimeError,
-                f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
+                f"Asking probabilities for qubits {qubits}, "
+                + f"but only qubits {self.measurement_gate.qubits} were measured.",
             )
 
         if self._probs is not None and not self.measurement_gate.has_bitflip_noise():
@@ -422,7 +430,8 @@ class MeasurementOutcomes:
         return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
-        """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""
+        """Returns a dictonary containinig all the information needed to rebuild the
+        :class:`qibo.result.MeasurementOutcomes`."""
         args = {
             "measurements": [m.to_json() for m in self.measurements],
             "probabilities": self._probs,
@@ -447,16 +456,18 @@ class MeasurementOutcomes:
         """Builds a :class:`qibo.result.MeasurementOutcomes` object starting from a dictionary.
 
         Args:
-            payload (dict): Dictionary containing all the information to load the :class:`qibo.result.MeasurementOutcomes` object.
+            payload (dict): Dictionary containing all the information to load the
+                :class:`qibo.result.MeasurementOutcomes` object.
 
         Returns:
-            A :class:`qibo.result.MeasurementOutcomes` object.
+            :class:`qibo.result.MeasurementOutcomes`: Object storing the measurement outcomes.
         """
-        from qibo.backends import construct_backend
+        from qibo.backends import construct_backend  # pylint: disable=C0415
 
         if payload["probabilities"] is not None and payload["samples"] is not None:
             warnings.warn(
-                "Both `probabilities` and `samples` found, discarding the `probabilities` and building out of the `samples`."
+                "Both `probabilities` and `samples` found, discarding the `probabilities`"
+                + "and building out of the `samples`."
             )
             payload.pop("probabilities")
         backend = construct_backend("numpy")
@@ -474,17 +485,20 @@ class MeasurementOutcomes:
         """Builds the :class:`qibo.result.MeasurementOutcomes` object stored in a file.
 
         Args:
-            filename (str): Path to the file containing the :class:`qibo.result.MeasurementOutcomes`.
+            filename (str): Path to the file containing the
+                :class:`qibo.result.MeasurementOutcomes`.
 
         Returns:
-            :class:`qibo.result.MeasurementOutcomes`: instance of the ``MeasurementOutcomes`` class.
+            :class:`qibo.result.MeasurementOutcomes`: instance of the 
+            ``MeasurementOutcomes`` class.
         """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
-    """Object to store both the outcomes of measurements and the final state after circuit execution.
+    """Object to store both the outcomes of measurements and the final state
+    after circuit execution.
 
     Args:
         final_state (ndarray): Input quantum state as np.ndarray.
@@ -521,7 +535,8 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         return QuantumState.probabilities(self, qubits)
 
     def to_dict(self):
-        """Returns a dictonary containinig all the information needed to rebuild the ``CircuitResult``."""
+        """Returns a dictonary containinig all the information needed to rebuild the
+        ``CircuitResult``."""
         args = MeasurementOutcomes.to_dict(self)
         args.update(QuantumState.to_dict(self))
         args.update({"dtype": self.__class__.__name__})
@@ -532,7 +547,8 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         """Builds a ``CircuitResult`` object starting from a dictionary.
 
         Args:
-            payload (dict): Dictionary containing all the information to load the ``CircuitResult`` object.
+            payload (dict): Dictionary containing all the information to load the
+                ``CircuitResult`` object.
 
         Returns:
             :class:`qibo.result.CircuitResult`: circuit result object.

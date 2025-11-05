@@ -1,6 +1,6 @@
 import pytest
 
-pytest.skip("Soon to be moved to `qiboml`.")
+pytest.skip("Soon to be moved to `qiboml`.", allow_module_level=True)
 
 import math
 
