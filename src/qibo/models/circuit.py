@@ -1233,9 +1233,33 @@ class Circuit:
         return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
 
     @classmethod
-    def from_cudaq(cls):
-        """Construct a circuit from CUDA-Q (quake) code."""
-        raise NotImplementedError
+    def from_cudaq(cls, cudaq_circuit_code):  # pragma: no cover
+        """Construct a circuit from CUDA-Q (quake) code.
+
+        Args:
+            cudaq_circuit_code (PyKernel): kernel containing the
+                cudaq circuit code.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit` representing the
+            given circuit.
+        """
+        try:
+            from qbraid.transpiler.conversions.cudaq import (  # pylint: disable=C0415
+                cudaq_to_qasm2,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --with cudaq`"
+            ) from e
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
+        return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
