@@ -172,9 +172,6 @@ def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     prob_qubits = np.random.choice(MEASURED_QUBITS, size=prob_qubits, replace=False)
     circuit.add(gates.M(*MEASURED_QUBITS))
     circuit_copy.add(gates.M(*MEASURED_QUBITS))
-    circuit.draw()
-    print()
-    circuit.draw()
     numpy_result = numpy_bkd.execute_circuit(circuit, nshots=nshots)
     clifford_result = clifford_bkd.execute_circuit(circuit_copy, nshots=nshots)
 

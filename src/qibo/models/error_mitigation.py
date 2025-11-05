@@ -387,7 +387,6 @@ def _curve_fit(
         ydata = backend.to_numpy(ydata)
         params = backend.to_numpy(params)
 
-    print(type(model), type(xdata), type(ydata), type(params))
     optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
 
     return backend.cast(optimal_params, dtype=optimal_params.dtype)
@@ -1085,8 +1084,6 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         observable, nqubits=circuit.nqubits, backend=backend
     )
 
-    print(observable.matrix)
-
     terms = observable.terms[0].factors
     adjustment_gates = []
     for term in terms:
@@ -1163,8 +1160,6 @@ def ICS(
 
     platform = backend.name if backend.platform is None else backend.platform
     clifford_backend = CLIFFORD_BACKEND(platform)
-
-    print(backend, clifford_backend)
 
     if readout is None:
         readout = {}

@@ -35,7 +35,6 @@ def assert_dicts_equal(backend, d1, d2):
         if isinstance(v, dict):
             assert v == d2[k]
         else:
-            print(type(v), type(d2[k]))
             backend.assert_allclose(v, d2[k])
 
 

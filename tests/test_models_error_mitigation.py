@@ -392,7 +392,4 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     if full_output:
         estimate = estimate[0]
 
-    # print(exact)
-    # assert 0
-
     assert backend.abs(exact - estimate) <= backend.abs(exact - noisy)
