@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pytest
 
-from qibo import construct_backend, gates, list_available_backends, set_backend
+from qibo import Circuit, construct_backend, gates, list_available_backends, set_backend
 from qibo.backends import MetaBackend
 
 from .conftest import AVAILABLE_BACKENDS
@@ -95,6 +95,19 @@ def test_plus_density_matrix(backend):
     matrix = backend.plus_state(4, density_matrix=True)
     target_matrix = backend.ones((16, 16)) / 16
     backend.assert_allclose(matrix, target_matrix)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nqubits", [2, 5])
+def test_minus_state(backend, nqubits, density_matrix):
+    state = backend.minus_state(nqubits, density_matrix=density_matrix)
+
+    target = Circuit(nqubits, density_matrix=density_matrix)
+    target.add(gates.X(qubit) for qubit in range(nqubits))
+    target.add(gates.H(qubit) for qubit in range(nqubits))
+    target = backend.execute_circuit(target).state()
+
+    backend.assert_allclose(state, target)
 
 
 def test_set_backend_error():

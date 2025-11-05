@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, Union
 
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.sparse import csr_matrix
 from scipy.sparse import eye as eye_sparse
 
 from qibo import __version__
@@ -291,16 +292,14 @@ class Backend:
     def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.count_nonzero(array, **kwargs)
 
-    def csr_matrix(self, array: ArrayLike) -> ArrayLike:
-        from scipy.sparse import csr_matrix  # pylint: disable=import-outside-toplevel
-
-        return csr_matrix(array)
+    def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return csr_matrix(array, **kwargs)
 
     def default_rng(self, seed: Optional[int] = None) -> ArrayLike:
         return self.engine.random.default_rng(seed)
 
-    def delete(self, array: ArrayLike, **kwargs) -> ArrayLike:
-        return self.engine.delete(array, **kwargs)
+    def delete(self, *args, **kwargs) -> ArrayLike:
+        return self.engine.delete(*args, **kwargs)
 
     def det(self, array: ArrayLike) -> ArrayLike:
         return self.engine.linalg.det(array)
@@ -1163,6 +1162,7 @@ class Backend:
         terms = []
         if density_matrix:
             for j, k in zip(ind_j, ind_k):
+                j, k = int(j), int(k)
                 b_j = bin(j)[2:].zfill(nqubits)
                 b_k = bin(k)[2:].zfill(nqubits)
                 if self.abs(state[j, k]) >= cutoff:
@@ -1173,7 +1173,8 @@ class Backend:
                     return terms
         else:
             for j in ind_j:
-                b = bin(j)[2:].zfill(nqubits)
+                j = int(j)
+                b = bin(int(j))[2:].zfill(nqubits)
                 if self.abs(state[j]) >= cutoff:
                     x = self.round(state[j], decimals=decimals)
                     terms.append(f"{x}|{b}>")
@@ -1456,9 +1457,12 @@ class Backend:
 
             qubits = list(gate.qubits)
             indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
-            indices = self.argsort(indices)
-            transpose_indices = list(indices)
-            transpose_indices.extend(indices + rank)
+            indices = self.argsort(
+                self.cast(indices, dtype=self.int64)  # pylint: disable=E1111
+            )  # required by cupy
+            indices = [int(elem) for elem in indices]
+            transpose_indices = indices
+            transpose_indices.extend([ind + rank for ind in indices])
             gmatrix = self.transpose(gmatrix, transpose_indices)
             gmatrix = self.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix

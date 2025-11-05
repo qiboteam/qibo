@@ -124,7 +124,7 @@ def _gray_code(self, initial_string):
 
     strings = _ehrlich_algorithm(initial_string, return_indices=False)
     strings = [list(string) for string in strings]
-    strings = self.cast(strings, dtype=int)
+    strings = self.cast(strings, dtype=self.int64)
 
     return strings
 
@@ -269,16 +269,19 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
 
     matrix_00, matrix_11 = self._get_single_qubit_matrix(gate)
 
-    indexes_one = self.zeros((len(strings_1), nqubits), dtype=str)
+    indexes_one = self.zeros((len(strings_1), nqubits), dtype=self.int64)
 
     if matrix_00 != 1.0 and nqubits - weight > 0:
-        indexes_zero = self.zeros((len(strings_0), nqubits), dtype=str)
+        indexes_zero = self.zeros((len(strings_0), nqubits), dtype=self.int64)
         indexes_zero[:, other_qubits] = strings_0
-        indexes_zero[:, qubits] = ["0"]
+        indexes_zero[:, qubits] = [0]
         if len(controls) > 0:
-            indexes_zero[:, controls] = "1"
+            indexes_zero[:, controls] = 1
         indexes_zero = self.cast(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_zero],
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_zero
+            ],
             dtype=self.int64,
         )
 
@@ -287,11 +290,14 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
     if matrix_11 != 1.0 and weight - ncontrols > 0:
         indexes_one[:, other_qubits] = strings_1
         if len(controls) > 0:
-            indexes_one[:, controls] = "1"
+            indexes_one[:, controls] = 1
 
-        indexes_one[:, qubits] = ["1"]
+        indexes_one[:, qubits] = [1]
         indexes_one = self.cast(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_one],
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_one
+            ],
             dtype=self.int64,
         )
 
@@ -338,13 +344,14 @@ def _update_amplitudes(
     nqubits = len(qubits) + ncontrols + len(other_qubits)
 
     strings = self._get_cached_strings(nqubits, weight + shift, ncontrols)
-    indexes_in = self.zeros((len(strings), nqubits), dtype=str)
+    indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
     indexes_in[:, other_qubits] = strings
     if ncontrols > 0:
-        indexes_in[:, controls] = "1"
+        indexes_in[:, controls] = 1
     indexes_in[:, qubits] = bitlist
     indexes_in = self.cast(
-        [self._dict_indexes["".join(elem)][0] for elem in indexes_in], dtype=self.int64
+        [self._dict_indexes["".join(str(e) for e in elem)][0] for elem in indexes_in],
+        dtype=self.int64,
     )
     state[indexes_in] *= matrix_element
 
@@ -387,19 +394,25 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
     matrix_1001, matrix_1010 = matrix[2, 1], matrix[2, 2]
 
     if weight - ncontrols > 0 and weight not in [0, nqubits]:
-        indexes_in = self.zeros((len(strings), nqubits), dtype=str)
+        indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
         indexes_in[:, other_qubits] = strings
         if len(controls) > 0:
-            indexes_in[:, controls] = "1"
-        indexes_in[:, qubits] = ["1", "0"]
+            indexes_in[:, controls] = 1
+        indexes_in[:, qubits] = [1, 0]
         indexes_out = self.cast(indexes_in, dtype=indexes_in.dtype, copy=True)
-        indexes_out[:, qubits] = ["0", "1"]
+        indexes_out[:, qubits] = [0, 1]
         indexes_in = self.cast(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_in],
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_in
+            ],
             dtype=self.int64,
         )
         indexes_out = self.cast(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_out],
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_out
+            ],
             dtype=self.int64,
         )
 
@@ -570,7 +583,6 @@ def calculate_symbolic(
     Returns:
         str: String representing the state in the computational basis.
     """
-    state = self.to_numpy(state)
     terms = []
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)

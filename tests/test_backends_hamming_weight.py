@@ -163,6 +163,8 @@ def test_two_qubit_gates(backend, gate, weight):
         initial_state_full = get_full_initial_state(
             initial_state, weight, nqubits, hamming_bkd
         )
+        initial_state_full = hamming_bkd.to_numpy(initial_state_full)
+
         result = numpy_bkd.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
         state = backend.cast(state)

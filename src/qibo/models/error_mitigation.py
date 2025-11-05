@@ -29,10 +29,10 @@ def SIMULATION_BACKEND():
 
 
 @cache
-def CLIFFORD_BACKEND():
+def CLIFFORD_BACKEND(platform: str = "numpy"):
     from qibo.backends import CliffordBackend  # pylint: disable=import-outside-toplevel
 
-    return CliffordBackend("numpy")
+    return CliffordBackend(platform)
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -387,6 +387,7 @@ def _curve_fit(
         ydata = backend.to_numpy(ydata)
         params = backend.to_numpy(params)
 
+    print(type(model), type(xdata), type(ydata), type(params))
     optimal_params = curve_fit(model, xdata, ydata, p0=params)[0]
 
     return backend.cast(optimal_params, dtype=optimal_params.dtype)
@@ -588,7 +589,10 @@ def vnCDR(
     backend.set_seed(seed)
 
     if model is None:
-        model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
+        if backend.platform in ("cupy", "cuquantum"):
+            model = lambda x, *params: np.sum(x * np.vstack(params), axis=0)
+        else:
+            model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -1033,8 +1037,6 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    from qibo import gates
-
     backend_temp = _check_backend(backend)
     backend = (
         CLIFFORD_BACKEND() if backend is None else backend_temp
@@ -1083,6 +1085,8 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         observable, nqubits=circuit.nqubits, backend=backend
     )
 
+    print(observable.matrix)
+
     terms = observable.terms[0].factors
     adjustment_gates = []
     for term in terms:
@@ -1096,11 +1100,11 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
+    sensitive_circuit.add(adjustment_gates)
 
-    for gate in adjustment_gates:
-        sensitive_circuit.add(gate)
     for gate in sampled_circuit.queue:
         sensitive_circuit.add(gate)
+
     return sensitive_circuit, sampled_circuit, adjustment_gates
 
 
@@ -1157,6 +1161,11 @@ def ICS(
     backend = _check_backend(backend)
     backend.set_seed(seed)
 
+    platform = backend.name if backend.platform is None else backend.platform
+    clifford_backend = CLIFFORD_BACKEND(platform)
+
+    print(backend, clifford_backend)
+
     if readout is None:
         readout = {}
 
@@ -1164,7 +1173,7 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, backend=CLIFFORD_BACKEND())[0]
+        error_sensitive_circuit(circuit, observable, backend=clifford_backend)[0]
         for _ in range(n_training_samples)
     ]
 
@@ -1173,7 +1182,7 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        circuit_result = CLIFFORD_BACKEND().execute_circuit(
+        circuit_result = clifford_backend.execute_circuit(
             training_circuit_copy, nshots=nshots
         )
         if nshots is None:

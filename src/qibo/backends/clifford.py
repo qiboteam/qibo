@@ -88,6 +88,7 @@ class CliffordBackend(Backend):
 
         self.cast = self._platform.cast
         self.matrices = NumpyMatrices(self.dtype)
+        self.tensor_types = (self.engine.ndarray,)
 
     def calculate_frequencies(self, samples):
         res, counts = self.unique(samples, return_counts=True)

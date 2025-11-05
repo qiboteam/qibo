@@ -714,7 +714,7 @@ def random_pauli(
 
     # this may be optimized as well (the sampling mostly) but maybe it's not worth it
     indexes = backend.random_integers(0, len(subset), size=(len(qubits), depth))
-    indexes = [[keys[item] for item in row] for row in indexes]
+    indexes = [[keys[int(item)] for item in row] for row in indexes]
 
     if return_circuit:
         gate_grid = Circuit(max_qubits, density_matrix=density_matrix)
@@ -916,7 +916,7 @@ def random_stochastic_matrix(
     if diagonally_dominant:
         matrix /= dims**2
         for k, row in enumerate(matrix):
-            row = backend.delete(row, obj=k)
+            row = backend.delete(row, k)
             matrix[k, k] = 1 - backend.sum(row)
 
     row_sum = backend.sum(matrix, axis=1)
