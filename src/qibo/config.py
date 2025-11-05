@@ -5,7 +5,8 @@ Define the default circuit, constants and types.
 import logging
 import os
 
-# Logging level from 0 (all) to 4 (errors) (see https://docs.python.org/3/library/logging.html#logging-levels)
+# Logging level from 0 (all) to 4 (errors) 
+# (see https://docs.python.org/3/library/logging.html#logging-levels)
 QIBO_LOG_LEVEL = 1
 if "QIBO_LOG_LEVEL" in os.environ:  # pragma: no cover
     QIBO_LOG_LEVEL = 10 * int(os.environ.get("QIBO_LOG_LEVEL"))
@@ -84,7 +85,7 @@ class CustomHandler(logging.StreamHandler):
 
     def format(self, record):
         """Format the record with specific format."""
-        from qibo import __version__
+        from qibo import __version__  # pylint: disable=C0415
 
         fmt = f"[Qibo {__version__}|%(levelname)s|%(asctime)s]: %(message)s"
         return logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S").format(record)
