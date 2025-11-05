@@ -936,7 +936,7 @@ class Backend:
         if dtype is None:
             dtype = self.dtype
 
-        state = self.cast([1, -1], dtype=dtype)
+        state = self.cast([1, -1], dtype=dtype)  # pylint: disable=E1111
         state = reduce(self.kron, [state] * nqubits)
 
         state /= 2 ** (nqubits / 2)
