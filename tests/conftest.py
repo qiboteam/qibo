@@ -23,8 +23,8 @@ def pytest_addoption(parser):
 # backends to be tested
 BACKENDS = [
     "numpy",
-    # "qibojit-numba",
-    # "qibojit-cupy",
+    "qibojit-numba",
+    "qibojit-cupy",
     # "qibojit-cuquantum",
     # "qiboml-tensorflow",
     # "qiboml-pytorch",
