@@ -449,7 +449,7 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        observable.backend = SIMULATION_BACKEND
+        observable.backend = SIMULATION_BACKEND()
         val_noiseless = observable.expectation(circ, nshots)
         observable.backend = backend
         if nshots is None:
@@ -591,7 +591,7 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        observable.backend = SIMULATION_BACKEND
+        observable.backend = SIMULATION_BACKEND()
         val = observable.expectation(circ, nshots)
         observable.backend = backend
         train_val["noise-free"].append(float(val.real))
@@ -1173,7 +1173,7 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        observable.backend = CLIFFORD_BACKEND
+        observable.backend = CLIFFORD_BACKEND()
         expectation = observable.expectation(training_circuit_copy, nshots)
         observable.backend = backend
 
