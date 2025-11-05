@@ -1,3 +1,7 @@
+import pytest
+
+pytest.skip("Soon to be moved to `qiboml`.")
+
 import math
 
 import numpy as np

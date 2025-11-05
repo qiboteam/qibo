@@ -299,8 +299,9 @@ class QuantumCNN:
             theta: list or numpy.array with the biases to be used in the circuit.
             init_state: numpy.array with the quantum state to be classified.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
+
         Returns:
-            numpy.array() with predictions for each qubit, for the initial state.
+            ndarray: with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
         if self.copy_init_state:
@@ -349,7 +350,7 @@ class QuantumCNN:
         predictions = np.zeros(shape=(len(data), self.measured_qubits))
 
         for i, text in enumerate(data):
-            predictions[i] = self.Predictions(circ, Bias, text, nshots)
+            predictions[i] = self.Predictions(circ, Bias, text.astype(complex), nshots)
 
         s = self.square_loss(labels, predictions)
 
