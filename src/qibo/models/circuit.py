@@ -1210,7 +1210,7 @@ class Circuit:
         parser = QASMParser()
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
-    def to_cudaq(self):
+    def to_cudaq(self):  # pragma: no cover
         """Convert circuit to cudaq string."""
         try:
             from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
