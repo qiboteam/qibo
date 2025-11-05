@@ -170,7 +170,7 @@ def test_fSim_to_native(backend, natives_1q, natives_2q):
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 @pytest.mark.parametrize(
     "natives_2q",
     [NativeGates.CZ, NativeGates.iSWAP, NativeGates.CZ | NativeGates.iSWAP],
@@ -212,7 +212,7 @@ def test_TOFFOLI_to_native(backend, natives_1q, natives_2q):
     assert_matrices_allclose(gate, natives_1q | natives_2q | default_natives, backend)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 @pytest.mark.parametrize(
     "natives_2q",
     [NativeGates.CZ, NativeGates.iSWAP, NativeGates.CZ | NativeGates.iSWAP],

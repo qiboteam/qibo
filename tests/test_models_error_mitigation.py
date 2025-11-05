@@ -102,10 +102,9 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
     else:
         backend.set_threads(1)
 
-    if nqubits == 1:
-        nmeas = 1
-    else:
-        nmeas = nqubits
+    nmeas = nqubits
+
+    nshots = 30000
     # Define the circuit
     c = get_circuit(nqubits)
     c_copy = c.copy(True)

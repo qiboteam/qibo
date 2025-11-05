@@ -56,7 +56,9 @@ Documentation
 The Qibo documentation is automatically generated with `sphinx
 <https://www.sphinx-doc.org/>`_, thus all functions should be documented using
 docstrings. The ``doc`` folder contains the project setup for the documentation
-web page.
+web page. We render documentation for the `latest stable
+<https://qibo.science/qibo/stable>`_ and `latest development
+<https://qibo.science/qibo/latest>`_ (main branch) of the code.
 
 The documentation requirements can be installed with:
 

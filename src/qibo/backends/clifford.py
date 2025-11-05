@@ -87,6 +87,10 @@ class CliffordBackend(NumpyBackend):
         """
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
+    def set_seed(self, seed):
+        super().set_seed(seed)
+        self.engine.set_seed(seed)
+
     def calculate_frequencies(self, samples):
         res, counts = self.engine.np.unique(samples, return_counts=True)
         # The next two lines are necessary for the GPU backends
@@ -111,7 +115,7 @@ class CliffordBackend(NumpyBackend):
         identity = self.np.eye(nqubits)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=bool)
+        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
         return symplectic_matrix
@@ -352,7 +356,7 @@ class CliffordBackend(NumpyBackend):
         return phase_n
 
     def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
         index = self.np.random.choice(
             range(len(probabilities)), size=1, p=probabilities
         )[0]
@@ -361,6 +365,30 @@ class CliffordBackend(NumpyBackend):
             gate = channel.gates[index]
             state = gate.apply_clifford(self, state, nqubits)
         return state
+
+    def _execute_circuit_stim(self, circuit, initial_state=None, nshots: int = 1000):
+        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+
+        circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
+        for gate in circuit.queue:
+            name = gate.__class__.__name__
+            name = "S_DAG" if name == "SDG" else name
+            circuit_stim.append(name, list(gate.qubits))
+
+        x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
+            self._stim.Tableau.from_circuit(  # pylint: disable=no-member
+                circuit_stim
+            ).to_numpy()
+        )
+        symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
+        symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
+
+        return Clifford(
+            symplectic_matrix,
+            measurements=circuit.measurements,
+            nshots=nshots,
+            _backend=self,
+        )
 
     def execute_circuit(  # pylint: disable=R1710
         self, circuit, initial_state=None, nshots: int = 1000
@@ -380,24 +408,7 @@ class CliffordBackend(NumpyBackend):
         from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
 
         if self.platform == "stim":
-            circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
-            for gate in circuit.queue:
-                circuit_stim.append(gate.__class__.__name__, list(gate.qubits))
-
-            x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
-                self._stim.Tableau.from_circuit(  # pylint: disable=no-member
-                    circuit_stim
-                ).to_numpy()
-            )
-            symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
-            symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
-
-            return Clifford(
-                symplectic_matrix,
-                measurements=circuit.measurements,
-                nshots=nshots,
-                _backend=self,
-            )
+            return self._execute_circuit_stim(circuit, initial_state, nshots)
 
         for gate in circuit.queue:
             if (
@@ -443,6 +454,7 @@ class CliffordBackend(NumpyBackend):
                 nshots=nshots,
                 _backend=self,
             )
+            circuit._final_state = clifford
             return clifford
 
         except self.oom_error:  # pragma: no cover
@@ -523,7 +535,6 @@ class CliffordBackend(NumpyBackend):
             samples.append(self.engine.M(state, qubits, nqubits, collapse))
         else:
             samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
-
         return self.engine.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(

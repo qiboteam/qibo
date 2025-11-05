@@ -2,6 +2,7 @@
 
 import collections
 import math
+from importlib.util import find_spec, module_from_spec
 from typing import Union
 
 import numpy as np
@@ -35,6 +36,10 @@ class NumpyBackend(Backend):
             np.complex64,
             np.complex128,
         )
+        # load the quantum info basic operations
+        spec = find_spec("qibo.quantum_info._quantum_info")
+        self.qinfo = module_from_spec(spec)
+        spec.loader.exec_module(self.qinfo)
 
     @property
     def qubits(self):
@@ -683,6 +688,7 @@ class NumpyBackend(Backend):
 
     def set_seed(self, seed):
         self.np.random.seed(seed)
+        self.qinfo.ENGINE.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
         return self.random_choice(

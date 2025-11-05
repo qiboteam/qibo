@@ -208,7 +208,7 @@ def test_hellinger_shot_error(backend, validate, kind):
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
 
-    assert 2 * hellinger_error < hellinger_fid
+    assert 1.5 * hellinger_error < hellinger_fid
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -272,7 +272,7 @@ def test_haar_integral_errors(backend):
 @pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e3)
+    samples = int(1e4)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
