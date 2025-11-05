@@ -1213,14 +1213,19 @@ class Circuit:
     def to_cudaq(self):
         """Convert circuit to cudaq string."""
         try:
-            from qbraid.transpiler.conversions.openqasm3 import openqasm3_to_cudaq
-            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+            from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
+                openqasm3_to_cudaq,
+            )
+            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+                qasm2_to_qasm3,
+            )
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "The optional dependency qbraid is missing, please install it with `poetry install --with cudaq`"
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --with cudaq`"
             ) from e
         try:
-            import cudaq
+            import cudaq  # pylint: disable=C0415, W0611
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "'cudaq' is not installed, please install it with `pip install cudaq`."
