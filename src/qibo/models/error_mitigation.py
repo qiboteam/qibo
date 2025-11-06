@@ -1160,6 +1160,7 @@ def ICS(
 
     platform = backend.name if backend.platform is None else backend.platform
     clifford_backend = CLIFFORD_BACKEND(platform)
+    print(clifford_backend)
 
     if readout is None:
         readout = {}

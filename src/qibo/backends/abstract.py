@@ -43,6 +43,7 @@ class Backend:
         spec = find_spec("qibo.quantum_info._quantum_info")
         self.qinfo = module_from_spec(spec)
         spec.loader.exec_module(self.qinfo)
+        self.qinfo.ENGINE = self
 
     def __reduce__(self) -> Tuple["Backend", tuple]:
         """Allow pickling backend objects that have references to modules."""
@@ -368,16 +369,19 @@ class Backend:
     def floor(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.floor(array, **kwargs)
 
+    def hstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
+        return self.engine.hstack(arrays, **kwargs)
+
     def identity(
-        self, dims: int, dtype: DTypeLike = None, sparse: bool = False
+        self, dims: int, dtype: DTypeLike = None, sparse: bool = False, **kwargs
     ) -> ArrayLike:
         if dtype is None:
             dtype = self.dtype
 
         return (
-            self._identity_sparse(dims, dtype)
+            self._identity_sparse(dims, dtype, **kwargs)
             if sparse
-            else self.engine.eye(dims, dtype=dtype)
+            else self.engine.eye(dims, dtype=dtype, **kwargs)
         )
 
     def imag(self, array: ArrayLike) -> Union[int, float, ArrayLike]:
@@ -634,6 +638,7 @@ class Backend:
         state: ArrayLike,
         order: Union[int, float, str] = 2,
         dtype: Optional[DTypeLike] = None,
+        **kwargs,
     ) -> float:
         """Calculate norm of an :math:`1`-dimensional array.
 
@@ -649,7 +654,7 @@ class Backend:
 
         state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
 
-        return self.engine.linalg.norm(state, order)
+        return self.engine.linalg.norm(state, order, **kwargs)
 
     def vstack(self, arrays: Tuple[ArrayLike, ...], **kwargs) -> ArrayLike:
         return self.engine.vstack(arrays, **kwargs)

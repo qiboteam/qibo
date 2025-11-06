@@ -442,14 +442,10 @@ def haar_integral(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
 
-        random_states = backend.qinfo.ENGINE.random.standard_normal((samples, dim))
+        random_states = backend.random_normal(0, 1, size=(samples, dim))
         random_states = backend.cast(random_states, dtype=rand_unit_density.dtype)
-        random_states += 1.0j * backend.qinfo.ENGINE.random.standard_normal(
-            (samples, dim)
-        )
-        random_states /= backend.qinfo.ENGINE.linalg.norm(
-            random_states, axis=1
-        ).reshape(-1, 1)
+        random_states += 1.0j * backend.random_normal(0, 1, size=(samples, dim))
+        random_states /= backend.vector_norm(random_states, axis=1).reshape(-1, 1)
         random_states = random_states.reshape(samples, 1, dim)
         rho = backend.einsum("ijk,ijl->ikl", random_states, backend.conj(random_states))
 

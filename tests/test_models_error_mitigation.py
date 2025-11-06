@@ -1,3 +1,6 @@
+from functools import reduce
+from operator import mul
+
 import numpy as np
 import pytest
 
@@ -363,7 +366,7 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     # Define the circuit
     circuit = get_circuit(nqubits)
     # Define the observable
-    obs = backend.prod([Z(i, backend=backend) for i in range(nqubits)])
+    obs = reduce(mul, [Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value

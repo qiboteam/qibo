@@ -26,7 +26,6 @@ class NumpyBackend(Backend):
             self.complex64,
             self.complex128,
         )
-        self.qinfo.ENGINE = self
         self.tensor_types = (self.engine.ndarray,)
         self.versions[self.name] = self.engine.__version__
 
