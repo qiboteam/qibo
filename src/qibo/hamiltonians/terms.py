@@ -167,8 +167,8 @@ class SymbolicTerm(HamiltonianTerm):
                     # backend of a symbol, i.e. Z(q, backend=backend)
                     factor.backend = self.backend
                     if isinstance(factor.matrix, self.backend.tensor_types):
-                        q = factor.target_qubit
-                        if q in self.matrix_map:
+                        q = int(factor.target_qubit)
+                        if q in self.matrix_map.keys():
                             # Check for possible simplifications only if current factor is X/Y/Z
                             if isinstance(factor, (X, Y, Z)):
                                 self._simplify_q_factors(factor, q)

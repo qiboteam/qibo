@@ -198,13 +198,17 @@ class CliffordBackend(Backend):
 
     def _pauli_string_to_matrix(self, pauli_str):
         """Convert Pauli string to matrix (tensor product)."""
-        from qibo import matrices  # pylint: disable=C0415
+        # from qibo import matrices  # pylint: disable=C0415
 
-        paulis = {
-            pauli: self.cast(getattr(matrices, pauli), dtype=self.dtype)
-            for pauli in ("I", "X", "Y", "Z")
-        }
-        paulis["Y"] = 1j * paulis["Y"]
+        paulis = {}
+        for pauli_string in ("I", "X", "Y", "Z"):
+            pauli = getattr(self.matrices, pauli_string)
+            if pauli_string == "I":
+                pauli = pauli()
+            elif pauli_string == "Y":
+                pauli *= 1j
+            paulis[pauli_string] = pauli
+
         pauli_matrices = [paulis.get(p) for p in pauli_str]
         matrix = reduce(self.kron, pauli_matrices)
         return matrix
@@ -245,7 +249,7 @@ class CliffordBackend(Backend):
 
         for i, p_str in enumerate(pauli_gens):
             pauli = self._pauli_string_to_matrix(p_str)
-            pauli_uconj = unitary @ pauli @ unitary.conj().T
+            pauli_uconj = unitary @ pauli @ self.conj(unitary).T
 
             found = False
             for candidate_str in product("IXYZ", repeat=m):

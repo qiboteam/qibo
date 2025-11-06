@@ -7,7 +7,7 @@ from importlib.util import find_spec, module_from_spec
 from typing import List, Optional, Tuple, Union
 
 from numpy.typing import ArrayLike, DTypeLike
-from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.linalg import block_diag, fractional_matrix_power, logm
 from scipy.sparse import csr_matrix
 from scipy.sparse import eye as eye_sparse
 
@@ -397,8 +397,6 @@ class Backend:
         return self.engine.log(array, **kwargs)
 
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
-        from scipy.linalg import logm  # pylint: disable=import-outside-toplevel
-
         return logm(array, **kwargs)
 
     def log2(self, array: ArrayLike, **kwargs) -> ArrayLike:
