@@ -1211,7 +1211,11 @@ class Circuit:
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
     def to_cudaq(self):  # pragma: no cover
-        """Convert circuit to cudaq string."""
+        """Convert circuit to cudaq code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `cudaq` circuits.
+        """
         try:
             from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
                 openqasm3_to_cudaq,
@@ -1235,6 +1239,9 @@ class Circuit:
     @classmethod
     def from_cudaq(cls, cudaq_circuit_code):  # pragma: no cover
         """Construct a circuit from CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the `cudaq` circuit into a `qibo.models.circuit.Circuit`.
 
         Args:
             cudaq_circuit_code (PyKernel): kernel containing the
