@@ -487,17 +487,18 @@ def test_u3(backend, seed_state, seed_observable):
     matrix = np.array([[ep.conj() * cost, -em.conj() * sint], [em * sint, ep * cost]])
     matrix = backend.cast(matrix)
 
-    target_state = backend.matmul(matrix, initial_state)
+    target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
+
+    print(type(observable))
+
     backend.assert_allclose(
-        backend.cast(backend.conj(final_state_decompose).T)
-        @ observable
-        @ final_state_decompose,
-        backend.cast(backend.conj(target_state).T)
+        backend.conj(final_state_decompose).T @ observable @ final_state_decompose,
+        backend.conj(backend.cast(target_state).T)
         @ observable
         @ backend.cast(target_state),
         atol=1e-6,

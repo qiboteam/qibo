@@ -2,6 +2,7 @@
 
 from typing import List, Union
 
+import numpy as np
 from scipy.special import binom
 
 from qibo import gates
@@ -521,8 +522,10 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
-    strings = self.engine.array(list(self._dict_indexes.keys()))
-    indexes = self.engine.array([index[1] for index in self._dict_indexes.values()])
+    strings = np.array(list(self._dict_indexes.keys()))
+    indexes = self.cast(
+        [index[1] for index in self._dict_indexes.values()], dtype=self.int64
+    )
     dim = len(indexes)
 
     matrix = self.zeros((dim, dim))
@@ -546,19 +549,18 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
     diagonal_indices = self.identity(dim, dtype=bool)
     matrix[mod_condition & ~control_condition & diagonal_indices] = 1
 
-    new_matrix = self.zeros((dim, dim))
-    new_matrix = self.cast(new_matrix, dtype=self.dtype)
+    new_matrix = self.zeros((dim, dim), dtype=self.dtype)
 
-    strings_array = self.engine.array([list(s) for s in strings])
+    strings_array = np.array([list(s) for s in strings])
     reordered_strings_array = strings_array[:, map_]
 
-    reordered_strings = self.engine.array(["".join(s) for s in reordered_strings_array])
+    reordered_strings = ["".join(s) for s in reordered_strings_array]
     reordered_indexes = [
-        self.where(strings == new_string_i)[0][0] for new_string_i in reordered_strings
+        np.where(strings == new_string_i)[0][0] for new_string_i in reordered_strings
     ]
     new_matrix = matrix[reordered_indexes][:, reordered_indexes]
 
-    new_matrix = self.cast(new_matrix)
+    new_matrix = self.cast(new_matrix, dtype=new_matrix.dtype)
     state = new_matrix @ state
 
     return state

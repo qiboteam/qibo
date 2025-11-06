@@ -15,9 +15,8 @@ class NumpyBackend(Backend):
     def __init__(self):
         super().__init__()
         self.engine = np
-        self.name = "numpy"
         self.matrices = NumpyMatrices(self.dtype)
-        self.tensor_types = (self.engine.ndarray,)
+        self.name = "numpy"
         self.numeric_types += (
             self.int8,
             self.int32,
@@ -27,6 +26,8 @@ class NumpyBackend(Backend):
             self.complex64,
             self.complex128,
         )
+        self.qinfo.ENGINE = self
+        self.tensor_types = (self.engine.ndarray,)
         self.versions[self.name] = self.engine.__version__
 
     def set_device(self, device: str) -> None:

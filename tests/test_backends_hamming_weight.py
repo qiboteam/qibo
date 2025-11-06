@@ -289,10 +289,12 @@ def test_n_qubit_gates(backend, weight):
             initial_state, weight, 4, hamming_bkd
         )
 
-        initial_state_full = numpy_bkd.cast(initial_state_full)
+        initial_state_full = backend.cast(
+            initial_state_full, dtype=initial_state_full.dtype
+        )
         result = backend.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
-        state = backend.cast(state)
+        state = backend.cast(state, dtype=state.dtype)
 
         backend.assert_allclose(hamming_full_state, state, atol=1e-8)
         assert result.symbolic() == hamming_result.symbolic()

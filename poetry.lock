@@ -3222,7 +3222,7 @@ cuquantum = ["cuquantum-python-cu12 (>=24.1.0,<25.0.0)"]
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "backends"
-resolved_reference = "e1616be1fc9c173ffd06c6282a6631670d59d1b7"
+resolved_reference = "1879ed92dc2e7716aaee29e517704b599ac1f3a0"
 
 [[package]]
 name = "qulacs"
