@@ -1786,12 +1786,14 @@ class Backend:
         return circuit._final_state
 
     def _identity_sparse(
-        self, dims: int, dtype: Optional[DTypeLike] = None
+        self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
     ) -> ArrayLike:
         if dtype is None:  # pragma: no cover
             dtype = self.dtype
 
-        return eye_sparse(dims, dtype=dtype)
+        sparsity_format = kwargs.get("format", "csr")
+
+        return eye_sparse(dims, dtype=dtype, format=sparsity_format, **kwargs)
 
     def _negative_power_singular_matrix(
         self,

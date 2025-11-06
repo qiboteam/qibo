@@ -76,6 +76,8 @@ class CliffordBackend(Backend):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
                 )
+            self.csr_matrix = self._platform.csr_matrix
+            self._identity_sparse = self._platform._identity_sparse
         elif self.platform == "pytorch":
             import torch  # pylint: disable=import-outside-toplevel
 

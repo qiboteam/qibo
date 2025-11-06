@@ -4,7 +4,7 @@ from typing import Tuple, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-ENGINE = None
+ENGINE = np
 
 
 def _pauli_basis(
