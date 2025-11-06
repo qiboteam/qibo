@@ -1211,7 +1211,7 @@ class Circuit:
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
     def to_cudaq(self):  # pragma: no cover
-        """Convert circuit to cudaq code.
+        """Convert circuit to CUDA-Q (quake) code.
 
         Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
         the circuit into `cudaq` circuits.
