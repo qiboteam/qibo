@@ -135,8 +135,13 @@ class ZNE(ErrorMitigationRoutine):
         noisy_circuits = self._noisy_circuits(circuit)
         noisy_circuits = self._circuit_preprocessing(noisy_circuits, noise_model)
         observable = self._observable(observable)
+        if self.readout_mitigation is not None:
+            breakpoint()
         exp_vals = [
-            observable.expectation(circ, nshots=nshots) for circ in noisy_circuits
+            observable.expectation(
+                circ, nshots=nshots, readout_mitigation=self.readout_mitigation
+            )
+            for circ in noisy_circuits
         ]
         exp_vals = self.backend.np.stack(exp_vals)
         gammas = self.backend.cast(

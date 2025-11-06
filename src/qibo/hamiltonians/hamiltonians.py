@@ -593,7 +593,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
+    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None, **measurements_kwargs) -> float:  # type: ignore
         """Computes the expectation value for a given circuit.
 
         Args:
@@ -620,7 +620,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 return self.dense.expectation(circuit)
             terms_coefficients, terms, term_qubits = self.simple_terms
             return self.constant.real + self.backend.expectation_observable_symbolic(
-                circuit, terms, term_qubits, terms_coefficients, self.nqubits
+                circuit,
+                terms,
+                term_qubits,
+                terms_coefficients,
+                self.nqubits,
             )
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
@@ -632,6 +636,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.nqubits,
             self.constant.real,
             nshots,
+            **measurements_kwargs,
         )
 
     def expectation_from_samples(

@@ -50,6 +50,7 @@ class M(Gate):
         basis: Union[Gate, str] = Z,
         p0: Optional["ProbsType"] = None,  # type: ignore
         p1: Optional["ProbsType"] = None,  # type: ignore
+        readout_mitigation: Optional["ReadoutMitigationRoutine"] = None,
     ):
         super().__init__()
         self.name = "measure"
@@ -58,6 +59,8 @@ class M(Gate):
         self.register_name = register_name
         self.collapse = collapse
         self.result = MeasurementResult(self.target_qubits)
+        if readout_mitigation is not None:
+            self.result = readout_mitigation(self.result)
         # list of measurement pulses implementing the gate
         # relevant for experiments only
         self.pulses = None

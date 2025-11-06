@@ -397,6 +397,7 @@ class Backend(abc.ABC):
         nqubits: int,
         constant: float,
         nshots: int,
+        **measurements_kwargs,
     ) -> float:
         """Compute the expectation value of a general symbolic observable defined by groups of terms
         that can be diagonalized simultaneously, starting from the samples.
@@ -433,15 +434,18 @@ class Backend(abc.ABC):
                 # prepare the measurement basis and append it to the circuit
                 for qubit, factor in zip(qubits, observable):
                     if factor != "I" and qubit not in measurements:
-                        measurements[qubit] = gates.M(
-                            qubit, basis=getattr(gates, factor)
-                        )
+                        measurements[qubit] = getattr(gates, factor)
 
             # Get the qubits we want to measure for each term
-            qubit_maps.append(measurements.keys())
+            qubits = measurements.keys()
+            qubit_maps.append(qubits)
+            measurement_gate = gates.M(
+                *qubits, basis=list(measurements.values()), **measurements_kwargs
+            )
 
             circ_copy = circuit.copy(True)
-            circ_copy.add(list(measurements.values()))
+            # circ_copy.add(list(measurements.values()))
+            circ_copy.add(measurement_gate)
             rotated_circuits.append(circ_copy)
 
         # execute the circuits

@@ -14,8 +14,47 @@ from qibo.backends import construct_backend, get_transpiler
 from qibo.backends.abstract import Backend
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.measurements import MeasurementResult
 from qibo.noise import NoiseModel
 from qibo.transpiler import Passes
+
+
+@dataclass
+class ReadoutMitigationRoutine(ABC):
+
+    _backend: Union[Backend, NoneType] = None
+    _noise_model: NoiseModel = None
+    _nqubits: int = None
+
+    @property
+    def backend(self):
+        if self._backend is None:
+            raise_error(RuntimeError, "Backend not initialized yet.")
+        return self._backend
+
+    @backend.setter
+    def backend(self, new_backend: Backend):
+        self._backend = new_backend
+
+    @property
+    def noise_model(self):
+        if self._noise_model is None:
+            raise_error(RuntimeError, "NoiseModel not initialized yet.")
+        return self._noise_model
+
+    @property
+    def nqubits(self):
+        if self._nqubits is None:
+            raise_error(RuntimeError, "nqubits not initialized yet.")
+        return self._nqubits
+
+    @abstractmethod
+    def __call__(self, measurement_result: MeasurementResult) -> MeasurementResult:
+        pass
+
+
+class MitigatedMeasurementResult(MeasurementResult):
+    pass
 
 
 @dataclass
@@ -25,12 +64,16 @@ class ErrorMitigationRoutine(ABC):
     observable: Optional[AbstractHamiltonian] = None
     noise_model: Optional[NoiseModel] = None
     transpiler: Optional[Passes] = None
+    readout_mitigation: Optional[ReadoutMitigationRoutine] = None
 
     def __post_init__(
         self,
     ):
         if self.transpiler is None:
             self.transpiler = get_transpiler()
+        if self.readout_mitigation is not None:
+            self.readout_mitigation._noise_model = self.noise_model
+            self.readout_mitigation._backend = self.backend
 
     @property
     def backend(self):
