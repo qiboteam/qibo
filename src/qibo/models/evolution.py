@@ -37,13 +37,16 @@ class StateEvolution:
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import TFIM
+            from qibo.models import StateEvolution
+
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
-            hamiltonian = hamiltonians.TFIM(3, h=1.0)
+            hamiltonian = TFIM(3, h=1.0)
             # initialize evolution model with step dt=1e-2
-            evolve = models.StateEvolution(hamiltonian, dt=1e-2)
+            evolve = StateEvolution(hamiltonian, dt=1e-2)
             # initialize state to |+++>
-            initial_state = np.ones(8) / np.sqrt(8)
+            initial_state = np.ones(8, dtype=complex) / np.sqrt(8)
             # execute evolution for total time T=2
             final_state2 = evolve(final_time=2, initial_state=initial_state)
     """

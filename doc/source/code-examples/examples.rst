@@ -11,6 +11,7 @@ Here is an example of a circuit with 2 qubits:
 .. testcode::
 
     import numpy as np
+
     from qibo import Circuit, gates
 
     # Construct the circuit
@@ -19,7 +20,7 @@ Here is an example of a circuit with 2 qubits:
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
     # Define an initial state (optional - default initial state is |00>)
-    initial_state = np.ones(4) / 2.0
+    initial_state = np.ones(4, dtype=complex) / 2.0
     # Execute the circuit and obtain the final state
     result = circuit(initial_state) # circuit.execute(initial_state) also works
     print(result.state())
