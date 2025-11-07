@@ -1521,8 +1521,8 @@ class Backend:
     ) -> ArrayLike:
         if density_matrix:
             order = tuple(sorted(qubits))
-            order += tuple(i for i in range(nqubits) if i not in qubits)
-            order = order + tuple(i + nqubits for i in order)
+            order += tuple(qubit for qubit in range(nqubits) if qubit not in qubits)
+            order = order + tuple(qubit + nqubits for qubit in order)
             shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
             state = self.reshape(state, 2 * nqubits * (2,))
             state = self.reshape(self.transpose(state, order), shape)
@@ -1818,9 +1818,9 @@ class Backend:
     ) -> ArrayLike:
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
-        for k in range(nqubits):
-            if k in qubits:
-                reduced[k] = k - len(unmeasured)
+        for qubit in range(nqubits):
+            if qubit in qubits:
+                reduced[qubit] = qubit - len(unmeasured)
             else:
-                unmeasured.append(k)
-        return self.transpose(probs, [reduced.get(k) for k in qubits])
+                unmeasured.append(qubit)
+        return self.transpose(probs, [reduced.get(qubit) for qubit in qubits])

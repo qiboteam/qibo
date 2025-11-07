@@ -3,9 +3,10 @@
 from dataclasses import dataclass, field
 from functools import reduce
 from itertools import product
-from typing import Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo import Circuit
 from qibo.backends.clifford import CliffordBackend
@@ -37,15 +38,15 @@ class Clifford:
             from the current backend. Defaults to ``None``.
     """
 
-    symplectic_matrix: np.ndarray = field(init=False)
-    data: Union[np.ndarray, Circuit] = field(repr=False)
+    symplectic_matrix: ArrayLike = field(init=False)
+    data: Union[ArrayLike, Circuit] = field(repr=False)
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
     platform: Optional[str] = None
 
     _backend: Optional[CliffordBackend] = None
-    _measurement_gate = None
+    _measurement_gate: M = None
     _samples: Optional[int] = None
 
     def __post_init__(self):
@@ -78,7 +79,7 @@ class Clifford:
     def from_circuit(
         cls,
         circuit: Circuit,
-        initial_state: Optional[np.ndarray] = None,
+        initial_state: Optional[ArrayLike] = None,
         nshots: int = 1000,
         platform: Optional[str] = None,
     ):
@@ -104,7 +105,7 @@ class Clifford:
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    def to_circuit(self, algorithm: Optional[str] = "AG04", **kwargs):
+    def to_circuit(self, algorithm: Optional[str] = "AG04", **kwargs) -> Circuit:
         """Converts symplectic matrix into a Clifford circuit.
 
         Args:
@@ -133,7 +134,9 @@ class Clifford:
 
         return _decomposition_AG04(self, **kwargs)
 
-    def generators(self, return_array: bool = False):
+    def generators(
+        self, return_array: bool = False
+    ) -> Union[Tuple[List[str], List[int]], Tuple[List[ArrayLike], List[int]]]:
         """Extracts the generators of stabilizers and destabilizers.
 
         Args:
@@ -147,7 +150,9 @@ class Clifford:
             self.symplectic_matrix, return_array
         )
 
-    def stabilizers(self, symplectic: bool = False, return_array: bool = False):
+    def stabilizers(
+        self, symplectic: bool = False, return_array: bool = False
+    ) -> Union[ArrayLike, List[str]]:
         """Extracts the stabilizers of the state.
 
         Args:
@@ -171,7 +176,9 @@ class Clifford:
 
         return self.symplectic_matrix[self.nqubits : -1, :]
 
-    def destabilizers(self, symplectic: bool = False, return_array: bool = False):
+    def destabilizers(
+        self, symplectic: bool = False, return_array: bool = False
+    ) -> Union[ArrayLike, List[str]]:
         """Extracts the destabilizers of the state.
 
         Args:
@@ -195,7 +202,7 @@ class Clifford:
 
         return self.symplectic_matrix[: self.nqubits, :]
 
-    def state(self):
+    def state(self) -> ArrayLike:
         """Builds the density matrix representation of the state.
 
         .. note::
@@ -209,7 +216,7 @@ class Clifford:
         return self._backend.sum(stabilizers, axis=0) / len(stabilizers)
 
     @property
-    def measurement_gate(self):
+    def measurement_gate(self) -> M:
         """Single measurement gate containing all measured qubits.
 
         Useful for sampling all measured qubits at once when simulating.
@@ -223,7 +230,9 @@ class Clifford:
 
         return self._measurement_gate
 
-    def samples(self, binary: bool = True, registers: bool = False):
+    def samples(
+        self, binary: bool = True, registers: bool = False
+    ) -> Union[ArrayLike, Dict]:
         """Returns raw measurement samples.
 
         Args:
@@ -291,7 +300,9 @@ class Clifford:
 
         return self._backend.samples_to_decimal(self._samples, len(measured_qubits))
 
-    def frequencies(self, binary: bool = True, registers: bool = False):
+    def frequencies(
+        self, binary: bool = True, registers: bool = False
+    ) -> Union[ArrayLike, Dict]:
         """Returns the frequencies of measured samples.
 
         Args:
@@ -343,14 +354,16 @@ class Clifford:
 
         return freq
 
-    def probabilities(self, qubits: Optional[Union[tuple, list]] = None):
+    def probabilities(
+        self, qubits: Optional[Union[List[int], Tuple[int, ...]]] = None
+    ) -> ArrayLike:
         """Computes the probabilities of the selected qubits from the measured samples.
 
         Args:
             qubits (tuple or list, optional): Qubits for which to compute the probabilities.
 
         Returns:
-            (ndarray): Measured probabilities.
+            ndarray: Measured probabilities.
         """
         if isinstance(qubits, list):
             qubits = tuple(qubits)
@@ -404,7 +417,7 @@ class Clifford:
             _backend=self._backend,
         )
 
-    def _construct_operators(self, generators: list, phases: list):
+    def _construct_operators(self, generators: list, phases: list) -> List[str]:
         """Helper function to construct all the operators from their generators.
 
         Args:

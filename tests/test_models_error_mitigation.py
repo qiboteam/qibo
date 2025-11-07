@@ -348,7 +348,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
         ),
     ],
 )
-@pytest.mark.parametrize("nshots", [None, 1000])
+@pytest.mark.parametrize("nshots", [None, 2000])
 def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     # np.random.seed(10)
     # backend.set_seed(10)
