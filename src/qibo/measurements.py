@@ -1,9 +1,7 @@
 import collections
 
-import numpy as np
 import sympy
 
-from qibo import gates
 from qibo.config import raise_error
 
 
