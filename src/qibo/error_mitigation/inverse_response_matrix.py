@@ -1,9 +1,8 @@
-from copy import deepcopy
 from functools import cached_property
+from typing import Dict, List
 
 from qibo import Circuit, gates
 from qibo.error_mitigation.abstract import ReadoutMitigationRoutine
-from qibo.measurements import MeasurementResult
 
 
 class InverseResponseMatrix(ReadoutMitigationRoutine):
@@ -11,7 +10,7 @@ class InverseResponseMatrix(ReadoutMitigationRoutine):
     _circuit: Circuit = None
 
     @cached_property
-    def response_circuits(self):
+    def response_circuits(self) -> List[Circuit]:
         circuits = []
         for i in range(2**self.nqubits):
             binary_state = format(i, f"0{self.nqubits}b")
@@ -41,22 +40,21 @@ class InverseResponseMatrix(ReadoutMitigationRoutine):
     def inverse_response_matrix(self):
         return self.backend.np.linalg.inv(self.response_matrix)
 
-    def __call__(self, measurement_result: MeasurementResult) -> MeasurementResult:
-        original_frequencies = deepcopy(measurement_result.frequencies)
-        self._nqubits = len(measurement_result.target_qubits)
-        measurement_result.frequencies = self.frequencies_decorator(
-            original_frequencies
-        )
-        return measurement_result
-
-    def frequencies_decorator(self, freq_method):
-
-        def monkey_frequencies():
-            frequencies = self.backend.np.zeros(2**self.nqubits)
-            for key, value in freq_method().items():
-                frequencies[int(key, 2)] = value
-            frequencies = frequencies.reshape(-1, 1)
-            frequencies = self.inverse_response_matrix @ frequencies
-            return {i: float(value[0].real) for i, value in enumerate(frequencies)}
-
-        return monkey_frequencies
+    def __call__(self, frequencies: Dict[int | str, int]) -> Dict[int | str, float]:
+        if self.nshots is None:
+            self.nshots = sum(tuple(frequencies.values()))
+        is_key_integer = isinstance(tuple(frequencies)[0], int)
+        # convert keys to integer representation
+        if not is_key_integer:
+            frequencies = {int(key, 2): value for key, value in frequencies.items()}
+        mitigated_frequencies = self.backend.np.zeros(2**self.nqubits)
+        for key, value in frequencies.items():
+            mitigated_frequencies[key] = value
+        mitigated_frequencies = mitigated_frequencies.reshape(-1, 1)
+        mitigated_frequencies = self.inverse_response_matrix @ mitigated_frequencies
+        if not is_key_integer:
+            {
+                f"{i:0{self.nqubits}b}": float(value[0])
+                for i, value in enumerate(mitigated_frequencies)
+            }
+        return {i: float(value[0]) for i, value in enumerate(mitigated_frequencies)}

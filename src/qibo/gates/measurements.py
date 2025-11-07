@@ -59,8 +59,9 @@ class M(Gate):
         self.register_name = register_name
         self.collapse = collapse
         self.result = MeasurementResult(self.target_qubits)
-        if readout_mitigation is not None:
-            self.result = readout_mitigation(self.result)
+        self.readout_mitigation = readout_mitigation
+        if self.readout_mitigation is not None:
+            self.readout_mitigation._nqubits = len(self.target_qubits)
         # list of measurement pulses implementing the gate
         # relevant for experiments only
         self.pulses = None
@@ -85,6 +86,7 @@ class M(Gate):
             "basis": [g.__name__ for g in self.basis_gates],
             "p0": p0,
             "p1": p1,
+            "readout_mitigation": readout_mitigation,
         }
         if collapse:
             if p0 is not None or p1 is not None:

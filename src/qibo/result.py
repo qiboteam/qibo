@@ -222,23 +222,25 @@ class MeasurementOutcomes:
 
         if self._repeated_execution_frequencies is not None:
             if binary:
-                return self._repeated_execution_frequencies
-
-            return collections.Counter(
+                frequencies = self._repeated_execution_frequencies
+            frequencies = collections.Counter(
                 {int(k, 2): v for k, v in self._repeated_execution_frequencies.items()}
             )
+            if self.measurement_gate.readout_mitigation is not None:
+                frequencies = self.measurement_gate.readout_mitigation(frequencies)
+            return frequencies
 
         if self._frequencies is None:
             if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
                 self._samples = self.samples()
             if not self.has_samples():
                 # generate new frequencies
-                self._frequencies = self.backend.sample_frequencies(
-                    self._probs, self.nshots
-                )
+                frequencies = self.backend.sample_frequencies(self._probs, self.nshots)
+                if self.measurement_gate.readout_mitigation is not None:
+                    frequencies = self.measurement_gate.readout_mitigation(frequencies)
+                self._frequencies = frequencies
                 # register frequencies to individual gate ``MeasurementResult``
                 qubit_map = {q: i for i, q in enumerate(qubits)}
-                reg_frequencies = {}
                 binary_frequencies = frequencies_to_binary(
                     self._frequencies, len(qubits)
                 )
@@ -256,7 +258,10 @@ class MeasurementOutcomes:
                 self._frequencies = self.backend.calculate_frequencies(
                     self.samples(binary=False)
                 )
-
+                if self.measurement_gate.readout_mitigation is not None:
+                    self._frequencies = self.measurement_gate.readout_mitigation(
+                        self._frequencies
+                    )
         if registers:
             return {
                 gate.register_name: gate.result.frequencies(binary)

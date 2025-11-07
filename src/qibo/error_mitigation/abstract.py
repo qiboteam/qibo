@@ -22,6 +22,7 @@ from qibo.transpiler import Passes
 @dataclass
 class ReadoutMitigationRoutine(ABC):
 
+    nshots: Optional[int] = None
     _backend: Union[Backend, NoneType] = None
     _noise_model: NoiseModel = None
     _nqubits: int = None
