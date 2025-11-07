@@ -9,12 +9,11 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-from qibo.gates.channels import Channel
 
 
 class CliffordBackend(Backend):
@@ -350,7 +349,12 @@ class CliffordBackend(Backend):
         aaronson_tableau = np.column_stack([x_part, z_part, final_real_phases])
         return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
 
-    def _embed_clifford(self, symplectic_m: ArrayLike, n: int, qubit_indices: Union[List[int], Tuple[int, ...]]) -> ArrayLike:
+    def _embed_clifford(
+        self,
+        symplectic_m: ArrayLike,
+        n: int,
+        qubit_indices: Union[List[int], Tuple[int, ...]],
+    ) -> ArrayLike:
         """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
         symplectic_n = self.identity(2 * n, dtype=self.uint8)
 
@@ -362,7 +366,12 @@ class CliffordBackend(Backend):
 
         return symplectic_n % 2
 
-    def _embed_phase_vector(self, phase_m: ArrayLike, n: int, qubit_indices: Union[List[int], Tuple[int, ...]]):
+    def _embed_phase_vector(
+        self,
+        phase_m: ArrayLike,
+        n: int,
+        qubit_indices: Union[List[int], Tuple[int, ...]],
+    ):
         """Embed m-qubit phase vector into n-qubit system."""
         phase_n = self.zeros(2 * n, dtype=self.uint8)
         m = len(qubit_indices)
@@ -373,7 +382,7 @@ class CliffordBackend(Backend):
 
         return phase_n
 
-    def apply_channel(self, channel: Channel, state: ArrayLike, nqubits: int) -> ArrayLike:
+    def apply_channel(self, channel, state: ArrayLike, nqubits: int) -> ArrayLike:
         probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
         index = self.random_choice(
             self.arange(len(probabilities)), size=1, p=probabilities
@@ -384,7 +393,9 @@ class CliffordBackend(Backend):
             state = gate.apply_clifford(self, state, nqubits)
         return state
 
-    def _execute_circuit_stim(self, circuit: Circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000):
+    def _execute_circuit_stim(
+        self, circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000
+    ):
         from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
 
         circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
@@ -409,7 +420,10 @@ class CliffordBackend(Backend):
         )
 
     def execute_circuit(  # pylint: disable=R1710
-        self, circuit: Circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000
+        self,
+        circuit,
+        initial_state: Optional[ArrayLike] = None,
+        nshots: int = 1000,
     ):
         """Execute a Clifford circuits.
 
@@ -487,7 +501,9 @@ class CliffordBackend(Backend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit: Circuit, nshots: int = 1000, initial_state: Optional[ArrayLike] = None):
+    def execute_circuit_repeated(
+        self, circuit, nshots: int = 1000, initial_state: Optional[ArrayLike] = None
+    ):
         """Execute a Clifford circuits ``nshots`` times.
 
         This is used for all the simulations that involve repeated execution.
