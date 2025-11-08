@@ -654,8 +654,9 @@ def unary_encoder_random_gaussian(
         _ProbabilityDistributionGaussianLoader,
     )
 
+    # needs to rely on numpy's rng because of scipy
     local_state = (
-        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     sampler = _ProbabilityDistributionGaussianLoader(
@@ -1562,10 +1563,10 @@ def _binary_encoder_hopf(
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = backend.reshape(base_strings, (-1, 2))
+    base_strings = np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        base_strings = backend.reshape(base_strings[:, 0], (-1, 2))
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 

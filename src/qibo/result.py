@@ -18,8 +18,8 @@ def load_result(filename: str):
         filename (str): Path to the file containing the results.
 
     Returns:
-        :class:`qibo.result.QuantumState` or 
-        :class:`qibo.result.MeasurementOutcomes` or 
+        :class:`qibo.result.QuantumState` or
+        :class:`qibo.result.MeasurementOutcomes` or
         :class:`qibo.result.CircuitResult`: result of circuit execution saved to disk,
         depending on saved filed.
     """
@@ -349,9 +349,10 @@ class MeasurementOutcomes:
                 if self._frequencies is not None:
                     # generate samples that respect the existing frequencies
                     frequencies = self.frequencies(binary=False)
-                    samples = self.backend.concatenate(
-                        [np.repeat(x, f) for x, f in frequencies.items()]
-                    )
+                    samples = [
+                        self.backend.repeat(x, f) for x, f in frequencies.items()
+                    ]
+                    samples = self.backend.concatenate(samples)
                     self.backend.shuffle(samples)
                     samples = self.backend.cast(samples, dtype=self.backend.int64)
                 else:
@@ -489,7 +490,7 @@ class MeasurementOutcomes:
                 :class:`qibo.result.MeasurementOutcomes`.
 
         Returns:
-            :class:`qibo.result.MeasurementOutcomes`: instance of the 
+            :class:`qibo.result.MeasurementOutcomes`: instance of the
             ``MeasurementOutcomes`` class.
         """
         payload = np.load(filename, allow_pickle=True).item()

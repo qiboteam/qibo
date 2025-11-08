@@ -558,6 +558,14 @@ class Backend:
     def ravel(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.ravel(array, **kwargs)
 
+    def repeat(
+        self,
+        array: ArrayLike,
+        repeats: Union[int, List[int], Tuple[int, ...]],
+        axis: Optional[int] = None,
+    ) -> ArrayLike:
+        return self.engine.repeat(array, repeats, axis)
+
     def reshape(
         self, array: ArrayLike, shape: Union[Tuple[int, ...], List[int]], **kwargs
     ) -> ArrayLike:
@@ -1099,7 +1107,7 @@ class Backend:
 
             return new_state
 
-        probabilities = channel.coefficients + (1 - self.sum(channel.coefficients),)
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
 
         index = int(self.sample_shots(probabilities, 1)[0])
         if index != len(channel.gates):
@@ -1381,10 +1389,9 @@ class Backend:
                 for gate in circuit.measurements:
                     gate.result.reset()
 
-        final_states = self.cast(final_states, dtype=final_states[0].dtype)
-
         if density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
+            final_states = self.cast(final_states, dtype=final_states[0].dtype)
             final_state = self.mean(final_states, axis=0)
             if circuit.measurements:
                 final_result = CircuitResult(

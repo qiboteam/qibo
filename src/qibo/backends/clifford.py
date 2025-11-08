@@ -180,10 +180,12 @@ class CliffordBackend(Backend):
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
         matrix = gate._parameters[0]  # pylint: disable=protected-access
-        symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
-        phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
+        matrix = self.cast(matrix, dtype=matrix.dtype)
 
+        symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
         symplectic_n = self._embed_clifford(symplectic_m, nqubits, qubit_indices)
+
+        phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
         phase_h_n = self._embed_phase_vector(phase_h_m, nqubits, qubit_indices)
         phase_d_n = self._embed_phase_vector(phase_d_m, nqubits, qubit_indices)
 
