@@ -10,6 +10,7 @@ from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, fractional_matrix_power, logm
 from scipy.sparse import csr_matrix
 from scipy.sparse import eye as eye_sparse
+from scipy.sparse.linalg import eigsh
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -320,10 +321,6 @@ class Backend:
         return self.engine.linalg.eigh(array, **kwargs)
 
     def eigsh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
-        from scipy.sparse.linalg import (  # pylint: disable=import-outside-toplevel
-            eigsh,
-        )
-
         return eigsh(array, **kwargs)
 
     def eigvalsh(self, array: ArrayLike, **kwargs) -> ArrayLike:
@@ -1383,6 +1380,8 @@ class Backend:
                     samples.append("".join([str(int(s)) for s in sample]))
                 for gate in circuit.measurements:
                     gate.result.reset()
+
+        final_states = self.cast(final_states, dtype=final_states[0].dtype)
 
         if density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse

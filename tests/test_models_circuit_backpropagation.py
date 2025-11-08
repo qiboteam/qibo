@@ -7,6 +7,9 @@ from qibo import Circuit, gates
 from qibo.backends import MissingBackend
 
 
+pytest.skip("To be moved to `qiboml`.", allow_module_level=True)
+
+
 def construct_tensorflow_backend():
     try:
         from qibo.backends import construct_backend
