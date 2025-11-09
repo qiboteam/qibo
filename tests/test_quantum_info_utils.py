@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
+from qibo.backends import NumpyBackend
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -187,10 +188,14 @@ def test_hellinger(backend, validate, kind):
 def test_hellinger_shot_error(backend, validate, kind):
     nqubits, nshots = 5, 1000
 
-    circuit = random_clifford(nqubits, seed=1, backend=backend)
-    circuit.add(gates.M(qubit) for qubit in range(nqubits))
+    if backend.platform in ("cupy", "cuquantum"):
+        circuit = random_clifford(nqubits, seed=1, backend=NumpyBackend())
+        circuit_2 = random_clifford(nqubits, seed=2, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(nqubits, seed=1, backend=backend)
+        circuit_2 = random_clifford(nqubits, seed=2, backend=backend)
 
-    circuit_2 = random_clifford(nqubits, seed=2, backend=backend)
+    circuit.add(gates.M(qubit) for qubit in range(nqubits))
     circuit_2.add(gates.M(qubit) for qubit in range(nqubits))
 
     prob_dist_p = backend.execute_circuit(circuit, nshots=nshots).probabilities()

@@ -304,16 +304,17 @@ def test_random_pauli_errors(backend):
 
 
 def test_pauli_single(backend):
-    result = np.array([[0.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 0.0 + 0.0j]])
-    result = backend.cast(result, dtype=result.dtype)
+    target = (
+        backend.matrices.Z
+        if backend.platform in ("cupy", "cuquantum")
+        else backend.matrices.X
+    )
 
-    matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary(backend=backend)
+    matrix = random_pauli(0, 1, 1, seed=10, backend=backend)
+    matrix = matrix.unitary(backend=backend)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
-    backend.assert_allclose(
-        backend.abs(backend.matrix_norm(matrix - result, order=2)) < PRECISION_TOL,
-        True,
-    )
+    backend.assert_allclose(matrix, target)
 
 
 @pytest.mark.parametrize("qubits", [2, [0, 1]])
@@ -326,26 +327,16 @@ def test_pauli_single(backend):
 def test_random_pauli(
     backend, qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed
 ):
-    result_complete_set = np.array(
-        [
-            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, -1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, -1.0 + 0.0j],
-        ]
+    result_complete_set = (
+        backend.kron(backend.matrices.I(), backend.matrices.I())
+        if backend.platform in ("cupy", "cuquantum")
+        else backend.kron(backend.matrices.I(), backend.matrices.Z)
     )
-    result_complete_set = backend.cast(
-        result_complete_set, dtype=result_complete_set.dtype
-    )
-    result_subset = backend.cast(
-        np.array(
-            [
-                [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
-                [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
-            ]
-        )
+
+    result_subset = (
+        backend.kron(backend.matrices.I(), backend.matrices.I())
+        if backend.platform in ("cupy", "cuquantum")
+        else backend.kron(backend.matrices.I(), backend.matrices.X)
     )
 
     matrix = random_pauli(
@@ -354,18 +345,10 @@ def test_random_pauli(
 
     if return_circuit:
         matrix = matrix.unitary(backend=backend)
-        matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
-            assert (
-                float(backend.matrix_norm(matrix - result_complete_set, order=2))
-                < PRECISION_TOL
-            )
+            backend.assert_allclose(matrix, result_complete_set)
         else:
-            backend.assert_allclose(
-                float(backend.matrix_norm(matrix - result_subset, order=2))
-                < PRECISION_TOL,
-                True,
-            )
+            backend.assert_allclose(matrix, result_subset)
     else:
         matrix = backend.transpose(matrix, (1, 0, 2, 3))
         matrix = [reduce(backend.kron, row) for row in matrix]

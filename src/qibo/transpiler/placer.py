@@ -1,9 +1,9 @@
 from typing import Optional
 
 import networkx as nx
+import numpy as np
 
 from qibo import gates
-from qibo.backends import _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
@@ -195,7 +195,6 @@ class Random(Placer):
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
         assert_placement(circuit, self.connectivity)
-        _, local_state = _check_backend_and_local_state(self.seed, backend=backend)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
@@ -207,8 +206,8 @@ class Random(Placer):
             mapping = dict(
                 zip(
                     keys,
-                    backend.random_choice(
-                        range(nodes), nodes, replace=False, seed=local_state
+                    np.random.choice(
+                        range(nodes), size=nodes, replace=False
                     ),
                 )
             )

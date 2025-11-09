@@ -149,40 +149,36 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
         [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]), reverse=True
     )
 
+    I = backend.matrices.I()
+    H = backend.matrices.H
+    S = backend.matrices.S
+
     correction = {
-        "left_A": matrices.I.copy(),
-        "left_B": matrices.I.copy(),
-        "right_A": matrices.I.copy(),
-        "right_B": matrices.I.copy(),
+        "left_A": I,
+        "left_B": I,
+        "right_A": I,
+        "right_B": I,
     }
 
     permutation = [x[1] for x in alphas_ordered]
 
     if permutation[0] == 1:
-        correction["left_A"] @= matrices.S
-        correction["left_B"] @= matrices.S
-        correction["right_A"] = dag(matrices.S) @ correction["right_A"]
-        correction["right_B"] = dag(matrices.S) @ correction["right_B"]
+        correction["left_A"] @= S
+        correction["left_B"] @= S
+        correction["right_A"] = dag(S) @ correction["right_A"]
+        correction["right_B"] = dag(S) @ correction["right_B"]
 
     elif permutation[0] == 2:
-        correction["left_A"] = correction["left_A"] @ matrices.H
-        correction["left_B"] = correction["left_B"] @ matrices.H
-        correction["right_A"] = dag(matrices.H) @ correction["right_A"]
-        correction["right_B"] = dag(matrices.H) @ correction["right_B"]
+        correction["left_A"] = correction["left_A"] @ H
+        correction["left_B"] = correction["left_B"] @ H
+        correction["right_A"] = dag(H) @ correction["right_A"]
+        correction["right_B"] = dag(H) @ correction["right_B"]
 
     if not (permutation[1] == 1 or permutation[2] == 2):
-        correction["left_A"] = correction["left_A"] @ (
-            matrices.S @ matrices.H @ matrices.S
-        )
-        correction["left_B"] = correction["left_B"] @ (
-            matrices.S @ matrices.H @ matrices.S
-        )
-        correction["right_A"] = (
-            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_A"]
-        )
-        correction["right_B"] = (
-            dag(matrices.S @ matrices.H @ matrices.S) @ correction["right_B"]
-        )
+        correction["left_A"] = correction["left_A"] @ (S @ H @ S)
+        correction["left_B"] = correction["left_B"] @ (S @ H @ S)
+        correction["right_A"] = dag(S @ H @ S) @ correction["right_A"]
+        correction["right_B"] = dag(S @ H @ S) @ correction["right_B"]
 
     # 3. find local corrections to enforce, as possible, conditions on h
     paulis = ["X", "Y", "Z"]
@@ -190,12 +186,9 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
         if i < 2:
             if alpha < 0:
                 alpha += np.pi / 2
-                correction["left_A"] = correction["left_A"] @ (
-                    1j * getattr(matrices, paulis[i])
-                )
-                correction["left_B"] = correction["left_B"] @ getattr(
-                    matrices, paulis[i]
-                )
+                p_corr = getattr(backend.matrices, paulis[i])
+                correction["left_A"] = correction["left_A"] @ (1j * p_corr)
+                correction["left_B"] = correction["left_B"] @ p_corr
             if (
                 alpha > np.pi / 4
             ):  # can't conjugate so sign of z alternates to compensate
@@ -220,14 +213,10 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
             correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
 
     # 4. apply corrections
-    correction["left_A"] = backend.cast(correction["left_A"])
-    correction["left_B"] = backend.cast(correction["left_B"])
-    correction["right_A"] = backend.cast(correction["right_A"])
-    correction["right_B"] = backend.cast(correction["right_B"])
-    ua = backend.matmul(ua, correction["left_A"])
-    ub = backend.matmul(ub, correction["left_B"])
-    va = backend.matmul(correction["right_A"], va)
-    vb = backend.matmul(correction["right_B"], vb)
+    ua = ua @ correction["left_A"]
+    ub = ub @ correction["left_B"]
+    va = correction["right_A"] @ va
+    vb = correction["right_B"] @ vb
     ud = backend.matmul(
         backend.kron(dag(correction["left_A"]), dag(correction["left_B"])),
         backend.matmul(
@@ -282,8 +271,8 @@ def calculate_h_vector(ud_diag, backend):
 
 def cnot_decomposition(q0, q1, hx, hy, hz, backend):
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
-    h = backend.cast(H)
-    u3 = backend.cast(-1j * matrices.H)
+    h = backend.matrices.H
+    u3 = -1j * h
     # use corrected version from PRA paper (not arXiv)
     u2 = -u3 @ gates.RX(0, 2 * hx - np.pi / 2).matrix(backend)
     # add an extra exp(-i pi / 4) global phase to get exact match

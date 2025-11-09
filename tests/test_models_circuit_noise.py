@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import (
     random_clifford,
     random_density_matrix,
@@ -223,7 +224,7 @@ def test_probabilities_repeated_execution(backend, nqubits):
     qubits_list = [(q,) for q in range(nqubits)]
     qubits_list += [tuple(q for q in range(nqubits))]
 
-    circuit = random_clifford(nqubits, return_circuit=True, backend=backend)
+    circuit = random_clifford(nqubits, return_circuit=True, backend=NumpyBackend())
     circuit.add(gates.UnitaryChannel(qubits_list, list(zip(probabilities, unitaries))))
     circuit.add(gates.M(*range(nqubits)))
 

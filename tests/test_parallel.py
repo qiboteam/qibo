@@ -36,7 +36,9 @@ def test_parallel_states_evaluation(backend):
     r2 = parallel_execution(circuit, states=states, processes=2, backend=backend)
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
-    backend.assert_allclose(r1, r2)
+
+    for x, y in zip(r1, r2):
+        backend.assert_allclose(x, y)
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
@@ -121,4 +123,6 @@ def test_parallel_parametrized_circuit(backend):
     )
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
-    backend.assert_allclose(r1, r2)
+
+    for x, y in zip(r1, r2):
+        backend.assert_allclose(x, y)

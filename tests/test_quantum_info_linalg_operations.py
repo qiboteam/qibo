@@ -336,7 +336,7 @@ def test_schmidt_decomposition(backend):
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
     # recovering original state
-    recovered = backend.zeros_like(state.shape, dtype=complex)
+    recovered = backend.zeros_like(state, dtype=backend.complex128)
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
             recovered = recovered + coeff * backend.kron(u, vh)

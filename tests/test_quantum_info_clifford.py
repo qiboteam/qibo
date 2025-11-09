@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import CliffordBackend, _get_engine_name
+from qibo.backends import CliffordBackend, _get_engine_name, NumpyBackend
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
     _one_qubit_paulis_string_product,
@@ -66,7 +66,10 @@ def test_clifford_from_circuit(backend, measurement):
 def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
     clifford_backend = construct_clifford_backend(backend)
 
-    clifford = random_clifford(nqubits, seed=seed, backend=backend)
+    if backend.platform in ("cupy", "cuquantum"):
+        clifford = random_clifford(nqubits, seed=seed, backend=NumpyBackend())
+    else:
+        clifford = random_clifford(nqubits, seed=seed, backend=backend)
 
     platform = _get_engine_name(backend)
     symplectic_matrix_original = Clifford.from_circuit(
@@ -124,7 +127,10 @@ def test_clifford_initialization(backend, nqubits):
 
     clifford_backend = construct_clifford_backend(backend)
 
-    circuit = random_clifford(nqubits, backend=backend)
+    if backend.platform in ("cupy", "cuquantum"):
+        circuit = random_clifford(nqubits, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(nqubits, backend=backend)
     symplectic_matrix = clifford_backend.execute_circuit(circuit).symplectic_matrix
 
     platform = _get_engine_name(backend)
@@ -288,7 +294,11 @@ def test_clifford_samples_frequencies(backend, binary):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
-    circuit = random_clifford(5, backend=backend)
+
+    if backend.platform in ("cupy", "cuquantum"):
+        circuit = random_clifford(5, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(5, backend=backend)
     circuit.add(gates.M(3, register_name="3"))
     circuit.add(gates.M(0, 1, register_name="01"))
     obj = Clifford.from_circuit(circuit, nshots=50, platform=_get_engine_name(backend))
@@ -298,7 +308,7 @@ def test_clifford_samples_frequencies(backend, binary):
         backend.assert_allclose(samples_2, np.hstack((samples_1["3"], samples_1["01"])))
     else:
         backend.assert_allclose(
-            samples_2, [s1 + 4 * s2 for s1, s2 in zip(samples_1["01"], samples_1["3"])]
+            samples_2, backend.cast([s1 + 4 * s2 for s1, s2 in zip(samples_1["01"], samples_1["3"])], dtype=backend.int64)
         )
 
     freq_1 = obj.frequencies(binary=binary, registers=True)
@@ -336,7 +346,10 @@ def test_clifford_samples_error(backend):
 def test_clifford_copy(backend, nqubits, deep):
     clifford_backend = construct_clifford_backend(backend)
 
-    circuit = random_clifford(nqubits, backend=backend)
+    if backend.platform in ("cupy", "cuquantum") and nqubits > 2:
+        circuit = random_clifford(nqubits, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(nqubits, backend=backend)
     clifford = Clifford.from_circuit(circuit, platform=_get_engine_name(backend))
 
     with pytest.raises(TypeError):

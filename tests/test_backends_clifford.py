@@ -98,7 +98,7 @@ def test_single_qubit_gates(backend, gate):
     circuit.add(gates.H(q) for q in H_qubits)
     if gate == "Unitary":
         circuit_numpy.add(gates.H(q) for q in H_qubits)
-        matrix = random_clifford(1, return_circuit=True, backend=numpy_bkd)
+        matrix = random_clifford(1, return_circuit=True, seed=10, backend=numpy_bkd)
         matrix = matrix.unitary(numpy_bkd)
         gate1_numpy = gates.Unitary(matrix, qubits[0])
         gate2_numpy = gates.Unitary(matrix, qubits[1])
@@ -216,7 +216,7 @@ def test_apply_unitary(backend, sizes_and_counts):
             qubits = [0, 1, 2, 3, 4]
         else:
             qubits = list(np.random.choice(nqubits, size, replace=False))
-        mat = random_clifford(size, return_circuit=True, backend=numpy_bkd)
+        mat = random_clifford(size, return_circuit=True, seed=10, backend=numpy_bkd)
         mat = mat.unitary(numpy_bkd)
         gate = gates.Unitary(backend.cast(mat, dtype=mat.dtype), *qubits)
         gate_numpy = gates.Unitary(mat, *qubits)

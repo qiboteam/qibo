@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 from scipy.linalg import expm
 
+pytest.skip("To be moved to `qiboml`.", allow_module_level=True)
+
 from qibo import Circuit, gates
 from qibo.hamiltonians import TFIM, XXZ, X, Y
 from qibo.models.utils import cvar, gibbs

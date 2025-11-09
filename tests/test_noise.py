@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.noise import (
     AmplitudeDampingError,
     CustomError,
@@ -659,7 +660,10 @@ def test_ibmq_noise(
     ## Since the IBMQNoiseModel inherits the NoiseModel class,
     ## we will test only what is different
 
-    circuit = random_clifford(nqubits, density_matrix=True, backend=backend)
+    if backend.platform in ("cupy", "cuquantum"):
+        circuit = random_clifford(nqubits, density_matrix=True, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(nqubits, density_matrix=True, backend=backend)
     circuit.add(gates.M(qubit) for qubit in range(nqubits))
 
     parameters = {

@@ -1322,7 +1322,10 @@ class Backend:
         )
 
     def execute_circuit_repeated(
-        self, circuit: "Circuit", nshots: int, initial_state: Optional[ArrayLike] = None  # type: ignore
+        self, 
+        circuit: "Circuit",  # type: ignore
+        nshots: int, 
+        initial_state: Optional[ArrayLike] = None,
     ) -> ArrayLike:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
@@ -1391,7 +1394,7 @@ class Backend:
 
         if density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_states = self.cast(final_states, dtype=final_states[0].dtype)
+            final_states = self.cast(final_states, dtype=final_states[0].dtype)  # pylint: disable=E1111
             final_state = self.mean(final_states, axis=0)
             if circuit.measurements:
                 final_result = CircuitResult(

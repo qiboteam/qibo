@@ -71,7 +71,12 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
     if ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+
+    # necessary to use numpy rng explicitly because of scipy
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
 
     sampler = _probability_distribution_sin(a=0, b=np.pi, seed=local_state)
     phases = local_state.random((ngates, 3))

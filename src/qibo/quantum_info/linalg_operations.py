@@ -534,9 +534,11 @@ def _vector_projection(vector, directions, backend):
         directions = backend.cast(directions, dtype=directions[0].dtype)
 
     if len(directions.shape) == 1:
-        result = backend.conj(vector) @ directions
-        result *= directions
-        return result / (backend.conj(directions) @ directions)
+        return (
+            backend.dot(backend.conj(vector), directions)
+            * directions
+            / backend.dot(backend.conj(directions), directions)
+        )
 
     dot_products = backend.einsum("j,kj", backend.conj(vector), directions)
     inner_prods = backend.diag(

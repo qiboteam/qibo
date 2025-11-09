@@ -322,13 +322,11 @@ def GST(
         )
 
     if pauli_liouville:
-        if gauge_matrix is not None:
-            if np.linalg.det(gauge_matrix) == 0:
-                raise_error(ValueError, "Matrix is not invertible")
-        else:
-            gauge_matrix = backend.cast(
-                [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
-            )
+        if gauge_matrix is not None and np.linalg.det(gauge_matrix) == 0:
+            raise_error(ValueError, "Matrix is not invertible")
+        gauge_matrix = backend.cast(
+            [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
+        )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
         gauge_matrix_2q = backend.kron(gauge_matrix, gauge_matrix)
