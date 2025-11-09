@@ -124,6 +124,6 @@ addopts = [
 omit=[
   "src/qibo/models/qcnn.py",
   "src/qibo/models/variational.py",
-  "src/qibo/models/optimizers.py",
+  "src/qibo/optimizers.py",
   "src/qibo/solvers.py",
 ]
