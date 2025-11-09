@@ -6,7 +6,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.asserts import assert_decomposition
-from qibo.transpiler.unroller import NativeGates, translate_gate
+from qibo.transpiler.unroller import NativeGates, translate_gate, cz_dec
 
 default_natives = NativeGates.Z | NativeGates.RZ | NativeGates.M | NativeGates.I
 
@@ -231,14 +231,10 @@ def test_unitary_to_native(backend, nqubits, natives_1q, natives_2q, seed):
 
 
 def test_count_1q(backend):
-    from qibo.transpiler.unroller import cz_dec
-
     np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT(0, 1), backend), 2)
     np.testing.assert_allclose(cz_dec.count_1q(gates.CRX(0, 1, 0.1), backend), 2)
 
 
 def test_count_2q(backend):
-    from qibo.transpiler.unroller import cz_dec
-
     np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1), backend), 1)
     np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1), backend), 2)

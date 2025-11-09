@@ -102,12 +102,12 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     v0 = backend.cast(np.asarray([1, 0]))
     v1 = backend.cast(np.asarray([0, 1]))
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = backend.tensordot(v0, backend.conj(e), 0) + phase * backend.tensordot(
-        v1, backend.conj(e_), 0
+    ua = backend.outer(v0, backend.conj(e)) + phase * backend.outer(
+        v1, backend.conj(e_)
     )
-    ub = backend.tensordot(v0, backend.conj(f), 0) + backend.conj(
-        phase
-    ) * backend.tensordot(v1, backend.conj(f_), 0)
+    ub = backend.outer(v0, backend.conj(f)) + backend.conj(phase) * backend.outer(
+        v1, backend.conj(f_)
+    )
     return ua, ub
 
 
@@ -126,7 +126,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     ub *= det
     va *= det
     vb *= det
-    dag = lambda u: backend.transpose(backend.conj(u), (1, 0))
+    dag = lambda u: backend.conj(u).T
     u_dagger = dag(
         backend.kron(
             ua,
@@ -149,15 +149,14 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
         [[hx, 0], [hy, 1], [hz, 2]], key=lambda x: fit(x[0]), reverse=True
     )
 
-    I = backend.matrices.I()
     H = backend.matrices.H
     S = backend.matrices.S
 
     correction = {
-        "left_A": I,
-        "left_B": I,
-        "right_A": I,
-        "right_B": I,
+        "left_A": backend.matrices.I(),
+        "left_B": backend.matrices.I(),
+        "right_A": backend.matrices.I(),
+        "right_B": backend.matrices.I(),
     }
 
     permutation = [x[1] for x in alphas_ordered]
@@ -194,23 +193,26 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
             ):  # can't conjugate so sign of z alternates to compensate
                 # Swap alpha_i and alpha_z sign
                 correction["left_B"] = correction["left_B"] @ getattr(
-                    matrices, paulis[(i + 1) % 2]
+                    backend.matrices, paulis[(i + 1) % 2]
                 )
                 correction["right_B"] = (
-                    getattr(matrices, paulis[(i + 1) % 2]) @ correction["right_B"]
+                    getattr(backend.matrices, paulis[(i + 1) % 2])
+                    @ correction["right_B"]
                 )
                 # Add pi/2 to alpha_i
                 correction["left_A"] = correction["left_A"] @ (
-                    1j * getattr(matrices, paulis[i])
+                    1j * getattr(backend.matrices, paulis[i])
                 )
                 correction["left_B"] = correction["left_B"] @ getattr(
-                    matrices, paulis[i]
+                    backend.matrices, paulis[i]
                 )
         elif abs(alpha) > np.pi / 4:
             correction["left_A"] = correction["left_A"] @ (
-                (1j if alpha < 0 else -1j) * getattr(matrices, paulis[i])
+                (1j if alpha < 0 else -1j) * getattr(backend.matrices, paulis[i])
             )
-            correction["left_B"] = correction["left_B"] @ getattr(matrices, paulis[i])
+            correction["left_B"] = correction["left_B"] @ getattr(
+                backend.matrices, paulis[i]
+            )
 
     # 4. apply corrections
     ua = ua @ correction["left_A"]
@@ -245,15 +247,19 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis)
 
-    ud_bell = backend.transpose(backend.conj(bell_basis), (1, 0)) @ ud @ bell_basis
+    ud_bell = backend.conj(bell_basis).T @ ud @ bell_basis
     ud_diag = backend.diag(ud_bell)
+
     if not backend.allclose(
         backend.diag(ud_diag), ud_bell, atol=1e-6, rtol=1e-6
     ):  # pragma: no cover
         return None
-    uprod = backend.to_numpy(backend.prod(ud_diag))
-    if not np.allclose(uprod, 1.0, atol=1e-6, rtol=1e-6):  # pragma: no cover
+
+    uprod = backend.prod(ud_diag)
+
+    if not backend.allclose(uprod, 1.0, atol=1e-6, rtol=1e-6):  # pragma: no cover
         return None
+
     return ud_diag
 
 

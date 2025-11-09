@@ -271,14 +271,11 @@ def test_state_callback(backend, density_matrix, copy):
     circuit.add(gates.CallbackGate(statec))
     final_state = backend.execute_circuit(circuit)
 
-    target_state0 = np.array([1, 0, 1, 0]) / np.sqrt(2)
-    target_state1 = np.ones(4) / 2.0
-    if not copy and backend.name == "qibojit":
-        # when copy is disabled in the callback and in-place updates are used
-        target_state0 = target_state1
+    target_state0 = backend.cast([1, 0, 1, 0]) / float(np.sqrt(2))
+    target_state1 = backend.ones(4) / 2.0
     if density_matrix:
-        target_state0 = np.tensordot(target_state0, target_state0, axes=0)
-        target_state1 = np.tensordot(target_state1, target_state1, axes=0)
+        target_state0 = backend.outer(target_state0, target_state0)
+        target_state1 = backend.outer(target_state1, target_state1)
     backend.assert_allclose(statec[0], target_state0)
     backend.assert_allclose(statec[1], target_state1)
 
