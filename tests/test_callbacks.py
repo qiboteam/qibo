@@ -273,6 +273,10 @@ def test_state_callback(backend, density_matrix, copy):
 
     target_state0 = backend.cast([1, 0, 1, 0]) / float(np.sqrt(2))
     target_state1 = backend.ones(4) / 2.0
+    if not copy and backend.platform == "numba":
+        # when copy is disabled in the callback and in-place updates are used
+        target_state0 = target_state1
+
     if density_matrix:
         target_state0 = backend.outer(target_state0, target_state0)
         target_state1 = backend.outer(target_state1, target_state1)
