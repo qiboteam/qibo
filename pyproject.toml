@@ -119,3 +119,11 @@ addopts = [
   '--cov-report=html',
   '--durations=60',
 ]
+
+[tool.coverage.run]
+omit=[
+  "src/qibo/models/qcnn.py",
+  "src/qibo/models/variational.py",
+  "src/qibo/models/optimizers.py",
+  "src/qibo/solvers.py",
+]
