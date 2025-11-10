@@ -156,6 +156,8 @@ def test_hamiltonian_operation_errors(backend):
     with pytest.raises(NotImplementedError):
         R = H1 + "a"
     with pytest.raises(NotImplementedError):
+        R = H1 * "a"
+    with pytest.raises(NotImplementedError):
         R = H2 - (2,)
     with pytest.raises(NotImplementedError):
         R = [3] - H1

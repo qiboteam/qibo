@@ -1,9 +1,15 @@
 """Module defining the Numpy backend."""
 
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
+from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
+from scipy.sparse import csr_matrix
+from scipy.sparse import eye as eye_sparse
+from scipy.sparse import issparse
+from scipy.sparse.linalg import eigsh
+from scipy.sparse.linalg import expm as expm_sparse
 
 from qibo import __version__
 from qibo.backends.abstract import Backend
@@ -53,5 +59,70 @@ class NumpyBackend(Backend):
 
         return self.engine.asarray(array, dtype=dtype, copy=copy if copy else None)
 
+    def is_sparse(self, array: ArrayLike) -> bool:
+        """Determine if a given array is a sparse tensor."""
+        return issparse(array)
+
     def to_numpy(self, array: ArrayLike) -> ArrayLike:
         return array.toarray() if self.is_sparse(array) else array
+
+    def block_diag(self, *arrays):
+        return block_diag(*arrays)
+
+    def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return csr_matrix(array, **kwargs)
+
+    def eigsh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
+        return eigsh(array, **kwargs)
+
+    def expm(self, array: ArrayLike) -> ArrayLike:
+        func = expm_sparse if self.is_sparse(array) else expm
+        return func(array)
+
+    def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return logm(array, **kwargs)
+
+    def matrix_power(
+        self,
+        matrix: ArrayLike,
+        power: Union[float, int],
+        precision_singularity: float = 1e-14,
+        dtype: Optional[DTypeLike] = None,
+    ) -> ArrayLike:
+        """Calculate the (fractional) ``power`` :math:`\\alpha` of ``matrix`` :math:`A`,
+        i.e. :math:`A^{\\alpha}`.
+
+        .. note::
+            For the ``pytorch`` backend, this method relies on a copy of the original tensor.
+            This may break the gradient flow. For the GPU backends (i.e. ``cupy`` and
+            ``cuquantum``), this method falls back to CPU whenever ``power`` is not
+            an integer.
+        """
+        if not isinstance(power, (float, int)):
+            raise_error(
+                TypeError,
+                f"``power`` must be either float or int, but it is type {type(power)}.",
+            )
+
+        if dtype is None:
+            dtype = self.dtype
+
+        if power < 0.0:
+            # negative powers of singular matrices via SVD
+            determinant = self.det(matrix)
+            if abs(determinant) < precision_singularity:
+                return self._negative_power_singular_matrix(
+                    matrix, power, precision_singularity, dtype=dtype
+                )
+
+        return fractional_matrix_power(matrix, power)
+
+    def _identity_sparse(
+        self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
+    ) -> ArrayLike:
+        if dtype is None:  # pragma: no cover
+            dtype = self.dtype
+
+        sparsity_format = kwargs.get("format", "csr")
+
+        return eye_sparse(dims, dtype=dtype, format=sparsity_format, **kwargs)
