@@ -206,9 +206,7 @@ class Random(Placer):
             mapping = dict(
                 zip(
                     keys,
-                    np.random.choice(
-                        range(nodes), size=nodes, replace=False
-                    ),
+                    np.random.choice(range(nodes), size=nodes, replace=False),
                 )
             )
             graph = nx.relabel_nodes(self.connectivity, mapping)

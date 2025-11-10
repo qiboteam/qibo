@@ -6,7 +6,8 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.hamiltonians import terms
 from qibo.quantum_info import random_density_matrix, random_statevector
-from qibo.symbols import I, X, Y, Z, Symbol
+from qibo.symbols import I, Symbol, X, Y, Z
+
 
 def test_hamiltonian_term_initialization(backend):
     """Test initialization and matrix assignment of ``HamiltonianTerm``."""
