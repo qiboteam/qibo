@@ -42,6 +42,8 @@ def test_compiled_execute(backend):
 
 def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
+    if backend.platform != "tensorflow":
+        pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
     circuit = Circuit(2)
     circuit.add([gates.H(0), gates.H(1)])
     circuit.compile()

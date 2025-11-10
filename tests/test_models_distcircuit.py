@@ -37,18 +37,19 @@ def test_distributed_circuit_add_gate():
         circuit.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.1)]))
 
 
-def test_distributed_circuit_various_errors():
+def test_distributed_circuit_various_errors(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     circuit = Circuit(5, devices)
     # Attempt to use ``.with_pauli_noise``
     with pytest.raises(NotImplementedError):
         circuit.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
-    # Attempt to compile
-    with pytest.raises(RuntimeError):
-        circuit.compile()
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
         final_state = circuit.final_state
+    # Attempt to compile
+    if backend.platform == "tensorflow":
+        with pytest.raises(RuntimeError):
+            circuit.compile()
 
 
 def test_distributed_circuit_fusion(accelerators):
