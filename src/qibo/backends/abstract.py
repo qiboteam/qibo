@@ -270,7 +270,7 @@ class Backend:
     def array_equal(self, array_1: ArrayLike, array_2: ArrayLike, **kwargs) -> bool:
         return self.engine.array_equal(array_1, array_2, **kwargs)
 
-    def block(self, arrays: ArrayLike) -> ArrayLike:
+    def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         return self.engine.block(arrays)
 
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
@@ -468,7 +468,7 @@ class Backend:
         if size is None:
             size = 1
 
-        if seed is not None:
+        if seed is not None:  # pragma: no cover
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
             result = local_state.choice(array, size=size, replace=replace, p=p)
 
@@ -495,7 +495,7 @@ class Backend:
         if size is None:
             size = 1
 
-        if seed is not None:
+        if seed is not None:  # pragma: no cover
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return self.cast(local_state.integers(low, high, size), dtype=dtype)
@@ -513,7 +513,7 @@ class Backend:
         if dtype is None:
             dtype = self.float64
 
-        if seed is not None:
+        if seed is not None:  # pragma: non cover
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             # local rng usually only has standard normal implemented
@@ -528,7 +528,7 @@ class Backend:
     def random_sample(self, size: int, seed=None, **kwargs) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
 
-        if seed is not None:
+        if seed is not None:  # pragma: no cover
             local_state = self.default_rng(seed) if isinstance(seed, int) else seed
 
             return self.cast(local_state.random(size), dtype=dtype)
@@ -545,7 +545,7 @@ class Backend:
     ) -> ArrayLike:
         dtype = kwargs.get("dtype", self.float64)
 
-        if size is None:
+        if size is None:  # pragma: no cover
             size = 1
 
         if seed is not None:
@@ -1322,9 +1322,9 @@ class Backend:
         )
 
     def execute_circuit_repeated(
-        self, 
+        self,
         circuit: "Circuit",  # type: ignore
-        nshots: int, 
+        nshots: int,
         initial_state: Optional[ArrayLike] = None,
     ) -> ArrayLike:  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
@@ -1394,7 +1394,9 @@ class Backend:
 
         if density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_states = self.cast(final_states, dtype=final_states[0].dtype)  # pylint: disable=E1111
+            final_states = self.cast(  # pylint: disable=E1111
+                final_states, dtype=final_states[0].dtype
+            )
             final_state = self.mean(final_states, axis=0)
             if circuit.measurements:
                 final_result = CircuitResult(

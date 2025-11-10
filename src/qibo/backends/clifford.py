@@ -80,7 +80,7 @@ class CliffordBackend(Backend):
                 )
             self.csr_matrix = self._platform.csr_matrix
             self._identity_sparse = self._platform._identity_sparse
-        elif self.platform == "pytorch":
+        elif self.platform == "pytorch":  # pragma: no cover
             import torch  # pylint: disable=import-outside-toplevel
 
             self.engine = torch

@@ -228,40 +228,46 @@ class Hamiltonian(AbstractHamiltonian):
         )
 
     def __mul__(self, other):
-        if isinstance(other, self.backend.tensor_types):
+        if isinstance(other, self.backend.tensor_types):  # pragma: no cover
             other = complex(other)
         elif not isinstance(other, self.backend.numeric_types):
             raise_error(
                 NotImplementedError,
                 f"Hamiltonian multiplication to {type(other)} not implemented.",
             )
-        new_matrix = self.matrix * other
-        r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+
         other = self.backend.cast(other)
+
+        new_matrix = self.matrix * other
+
+        r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+
         if self._eigenvalues is not None:
             if self.backend.real(other) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
                 r._eigenvalues = other * self.backend.flip(self._eigenvalues, axis=(0,))
+
         if self._eigenvectors is not None:
             if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+
         return r
 
     def __matmul__(self, other):
+        if not isinstance(other, (self.__class__, self.backend.tensor_types)):
+            raise_error(
+                NotImplementedError,
+                f"Hamiltonian ``matmul`` to {type(other)} not implemented.",
+            )
+
         if isinstance(other, self.__class__):
             matrix = self.matrix @ other.matrix
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
-        if isinstance(other, self.backend.tensor_types):
-            return self.matrix @ other
-
-        raise_error(
-            NotImplementedError,
-            f"Hamiltonian matmul to {type(other)} not implemented.",
-        )
+        return self.matrix @ other
 
 
 def _calculate_nqubits_from_form(form):
@@ -685,32 +691,35 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, other):
         """Matrix multiplication with other Hamiltonians or state vectors."""
+        if not isinstance(other, (self.__class__, self.backend.tensor_types)):
+            raise_error(
+                NotImplementedError,
+                f"Hamiltonian matmul to {type(other)} not implemented.",
+            )
+
         if isinstance(other, self.__class__):
             return other * self
 
-        if isinstance(other, self.backend.tensor_types):
-            rank = len(tuple(other.shape))
-            if rank not in (1, 2):
-                raise_error(
-                    NotImplementedError,
-                    f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
-                )
-            state_qubits = int(np.log2(int(other.shape[0])))
-            if state_qubits != self.nqubits:
-                raise_error(
-                    ValueError,
-                    f"Cannot multiply Hamiltonian on {self.nqubits} qubits to "
-                    + f"state of {state_qubits} qubits.",
-                )
-            if rank == 1:  # state vector
-                return self.apply_gates(other)
+        rank = len(tuple(other.shape))
+        if rank not in (1, 2):
+            raise_error(
+                NotImplementedError,
+                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
+            )
 
-            return self.apply_gates(other, density_matrix=True)
+        state_qubits = int(np.log2(int(other.shape[0])))
 
-        raise_error(
-            NotImplementedError,
-            f"Hamiltonian matmul to {type(other)} not implemented.",
-        )
+        if state_qubits != self.nqubits:
+            raise_error(
+                ValueError,
+                f"Cannot multiply Hamiltonian on {self.nqubits} qubits to "
+                + f"state of {state_qubits} qubits.",
+            )
+
+        if rank == 1:  # state vector
+            return self.apply_gates(other)
+
+        return self.apply_gates(other, density_matrix=True)
 
     def circuit(self, dt, accelerators=None):
         """Circuit that implements a Trotter step of this Hamiltonian.

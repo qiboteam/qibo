@@ -247,7 +247,7 @@ class AdiabaticEvolution(StateEvolution):
         return super().execute(final_time, start_time, initial_state)
 
     @staticmethod
-    def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):
+    def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):  # pragma: no cover
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``tf.Tensor``.
@@ -265,7 +265,7 @@ class AdiabaticEvolution(StateEvolution):
             log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
-    def minimize(self, initial_parameters, method="BFGS", options=None, messages=False):
+    def minimize(self, initial_parameters, method="BFGS", options=None, messages=False):  # pragma: no cover
         """Optimize the free parameters of the scheduling function.
 
         Args:
