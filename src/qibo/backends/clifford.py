@@ -79,8 +79,6 @@ class CliffordBackend(Backend):
                 setattr(
                     self._platform, method, getattr(clifford_operations_gpu, method)
                 )
-            # self.csr_matrix = self._platform.csr_matrix
-            # self._identity_sparse = self._platform._identity_sparse
         elif self.platform == "pytorch":  # pragma: no cover
             import torch  # pylint: disable=import-outside-toplevel
 
@@ -599,16 +597,6 @@ class CliffordBackend(Backend):
         u_matrix[0:m, m : 2 * m] = self.identity(m, dtype=self.uint8)
         d = self.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
         return d
-
-    # def _identity_sparse(
-    #     self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
-    # ) -> ArrayLike:
-    #     if dtype is None:  # pragma: no cover
-    #         dtype = self.dtype
-
-    #     sparsity_format = kwargs.get("format", "csr")
-
-    #     return eye_sparse(dims, dtype=dtype, format=sparsity_format, **kwargs)
 
     @staticmethod
     @cache
