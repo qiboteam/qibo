@@ -547,3 +547,16 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     """
     state = _unpackbits(state, axis=0, count=_dim(nqubits))[: _dim(nqubits)]
     return state
+
+
+def csr_matrix(array, **kwargs):
+    return sparse.csr_matrix(array, **kwargs)
+
+
+def _identity_sparse(dims: int, dtype=None, **kwargs):
+    if dtype is None:  # pragma: no cover
+        dtype = "complex128"
+
+    sparsity_format = kwargs.get("format", "csr")
+
+    return sparse.eye(dims, dtype=dtype, format=sparsity_format, **kwargs)

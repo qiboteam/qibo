@@ -14,6 +14,9 @@ def test_eager_execute(backend, accelerators):
 
 
 def test_compiled_execute(backend):
+    if backend.platform != "tensorflow":
+        pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
+
     def create_circuit(theta=0.1234):
         circuit = Circuit(2)
         circuit.add(gates.X(0))

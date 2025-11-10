@@ -251,6 +251,8 @@ def test_circuit_copy_with_measurements(backend, accelerators):
 
 
 def test_measurement_compiled_circuit(backend):
+    if backend.platform != "tensorflow":
+        pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
     circuit = Circuit(2)
     circuit.add(gates.X(0))
     circuit.add(gates.M(0))

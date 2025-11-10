@@ -80,8 +80,8 @@ def test_circuit_unitary_non_trivial(backend):
     backend.assert_allclose(unitary, target)
 
 
-@pytest.mark.parametrize("compile", [False, True])
-def test_circuit_vs_gate_execution(backend, compile):
+@pytest.mark.parametrize("compile_flag", [False, True])
+def test_circuit_vs_gate_execution(backend, compile_flag):
     """Check consistency between executing circuit and stand alone gates."""
     nqubits = 2
     theta = 0.1234
@@ -99,7 +99,9 @@ def test_circuit_vs_gate_execution(backend, compile):
         return state
 
     initial_state = backend.zero_state(nqubits)
-    if compile:
+    if compile_flag:
+        if backend.platform != "tensorflow":
+            pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
         circuit = backend.compile(custom_circuit)
     else:
         circuit = custom_circuit
