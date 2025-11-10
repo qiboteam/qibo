@@ -6,7 +6,6 @@ import pytest
 from qibo import Circuit, gates
 from qibo.backends import MissingBackend
 
-
 pytest.skip("To be moved to `qiboml`.", allow_module_level=True)
 
 

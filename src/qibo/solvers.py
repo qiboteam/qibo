@@ -153,4 +153,3 @@ def get_solver(solver_name, dt, hamiltonian):
         return TrotterizedExponential(dt, hamiltonian)
 
     return Exponential(dt, hamiltonian)
-

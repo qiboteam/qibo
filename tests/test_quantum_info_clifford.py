@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.backends import CliffordBackend, _get_engine_name, NumpyBackend
+from qibo.backends import CliffordBackend, NumpyBackend, _get_engine_name
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
     _one_qubit_paulis_string_product,
@@ -308,7 +308,11 @@ def test_clifford_samples_frequencies(backend, binary):
         backend.assert_allclose(samples_2, np.hstack((samples_1["3"], samples_1["01"])))
     else:
         backend.assert_allclose(
-            samples_2, backend.cast([s1 + 4 * s2 for s1, s2 in zip(samples_1["01"], samples_1["3"])], dtype=backend.int64)
+            samples_2,
+            backend.cast(
+                [s1 + 4 * s2 for s1, s2 in zip(samples_1["01"], samples_1["3"])],
+                dtype=backend.int64,
+            ),
         )
 
     freq_1 = obj.frequencies(binary=binary, registers=True)
