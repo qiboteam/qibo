@@ -751,7 +751,7 @@ class Backend:
         used for exponentiation.
         """
         if eigenvectors is None or self.is_sparse(matrix):
-            _matrix = self.expm(phase * matrix)
+            _matrix = self.expm(phase * matrix)  # pylint: disable=E1111
 
             return self.cast(
                 _matrix, dtype=_matrix.dtype
@@ -1436,7 +1436,7 @@ class Backend:
             # the ``Gate.controlled_by`` method
             num_controls = len(gate.control_qubits)
             if num_controls > 0:
-                gmatrix = self.block_diag(
+                gmatrix = self.block_diag(  # pylint: disable=E1111
                     self.identity(2 ** len(gate.qubits) - len(gmatrix)), gmatrix
                 )
             # Kronecker product with identity is needed to make the

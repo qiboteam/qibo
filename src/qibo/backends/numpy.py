@@ -66,7 +66,11 @@ class NumpyBackend(Backend):
     def to_numpy(self, array: ArrayLike) -> ArrayLike:
         return array.toarray() if self.is_sparse(array) else array
 
-    def block_diag(self, *arrays):
+    ########################################################################################
+    ######## Methods related to array manipulation                                  ########
+    ########################################################################################
+
+    def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
         return block_diag(*arrays)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
@@ -81,6 +85,10 @@ class NumpyBackend(Backend):
 
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return logm(array, **kwargs)
+
+    ########################################################################################
+    ######## Methods related to linear algebra operations                           ########
+    ########################################################################################
 
     def matrix_power(
         self,
@@ -116,6 +124,10 @@ class NumpyBackend(Backend):
                 )
 
         return fractional_matrix_power(matrix, power)
+
+    ########################################################################################
+    ######## Helper methods                                                         ########
+    ########################################################################################
 
     def _identity_sparse(
         self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
