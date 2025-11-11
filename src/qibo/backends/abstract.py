@@ -1560,7 +1560,7 @@ class Backend:
         target: Union[ArrayLike, CircuitResult, QuantumState],
         rtol: float = 1e-7,
         atol: float = 0.0,
-    ) -> None:  # pragma: no cover
+    ) -> None:
         if isinstance(value, (CircuitResult, QuantumState)):
             value = value.state()
         if isinstance(target, (CircuitResult, QuantumState)):
