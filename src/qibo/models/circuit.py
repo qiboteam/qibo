@@ -650,11 +650,22 @@ class Circuit:
                 # be added to the new circuit, otherwise once the measure gate
                 # is added in the circuit there will be two of the same.
 
+                measurement_circuit = self.__init__(self.nqubits, **self.init_kwargs)
+
                 for base in gate.basis:
                     if base not in self.queue:
-                        self.add(base)
+                        measurement_circuit.add(base)
 
-                self.queue.append(gate)
+                measurement_circuit.queue.append(gate)
+                if (
+                    gate.readout_mitigation is not None
+                    and gate.readout_mitigation.noise_model is not None
+                ):
+                    measurement_circuit = gate.readout_mitigation.noise_model.apply(
+                        measurement_circuit
+                    )
+                self.queue += measurement_circuit.queue
+
                 if gate.register_name is None:
                     # add default register name
                     nreg = self.queue.nmeasurements - 1
