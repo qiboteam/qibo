@@ -553,6 +553,9 @@ class Backend:
     ) -> ArrayLike:
         return self.engine.reshape(array, shape, **kwargs)
 
+    def right_shift(self, *args, **kwargs) -> ArrayLike:
+        return self.engine.right_shift(*args, **kwargs)
+
     def round(self, array: ArrayLike, decimals: int = 0, **kwargs) -> ArrayLike:
         return self.engine.round(array, decimals, **kwargs)
 
@@ -1521,7 +1524,7 @@ class Backend:
     def sample_shots(self, probabilities: ArrayLike, nshots: int) -> ArrayLike:
         """Sample measurement shots according to a probability distribution."""
         return self.random_choice(
-            self.engine.arange(len(probabilities)),
+            self.arange(len(probabilities)),
             size=nshots,
             p=probabilities,
             dtype=self.int64,
@@ -1529,12 +1532,12 @@ class Backend:
 
     def samples_to_binary(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from decimal representation to binary."""
-        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
-        return self.engine.right_shift(samples[:, None], qrange) % 2
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=self.int32)
+        return self.right_shift(samples[:, None], qrange) % 2
 
     def samples_to_decimal(self, samples: ArrayLike, nqubits: int) -> ArrayLike:
         """Convert samples from binary representation to decimal."""
-        qrange = self.engine.arange(nqubits - 1, -1, -1, dtype=self.int32)
+        qrange = self.arange(nqubits - 1, -1, -1, dtype=self.int32)
         qrange = (2**qrange)[:, None]
         samples = self.cast(samples, dtype=self.int32)  # pylint: disable=E1111
         return (samples @ qrange)[:, 0]
@@ -1594,10 +1597,10 @@ class Backend:
         # are active. This should be `state[-1]`
         state = self.reshape(state, (2**ncontrol,) + nactive * (2,))
         opstring = einsum_utils.apply_gate_string(targets, nactive)
-        updates = self.engine.einsum(opstring, state[-1], matrix)
+        updates = self.einsum(opstring, state[-1], matrix)
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.
-        state = self.engine.concatenate([state[:-1], updates[None]], axis=0)
+        state = self.concatenate([state[:-1], updates[None]], axis=0)
         state = self.reshape(state, nqubits * (2,))
         # Put qubit indices back to their proper places
         state = self.transpose(state, einsum_utils.reverse_order(order))
@@ -1609,7 +1612,7 @@ class Backend:
     ) -> ArrayLike:
         matrix = gate.matrix(self)
         matrix = self.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
-        matrixc = self.engine.conj(matrix)
+        matrixc = self.conj(matrix)
         ncontrol = len(gate.control_qubits)
         nactive = nqubits - ncontrol
         dims_ctrl = 2**ncontrol
@@ -1622,20 +1625,20 @@ class Backend:
             targets, nactive
         )
         state01 = state[: dims_ctrl - 1, dims_ctrl - 1]
-        state01 = self.engine.einsum(rightc, state01, matrixc)
+        state01 = self.einsum(rightc, state01, matrixc)
         state10 = state[dims_ctrl - 1, : dims_ctrl - 1]
-        state10 = self.engine.einsum(leftc, state10, matrix)
+        state10 = self.einsum(leftc, state10, matrix)
 
         left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
         state11 = state[dims_ctrl - 1, dims_ctrl - 1]
-        state11 = self.engine.einsum(right, state11, matrixc)
-        state11 = self.engine.einsum(left, state11, matrix)
+        state11 = self.einsum(right, state11, matrixc)
+        state11 = self.einsum(left, state11, matrix)
 
         state00 = state[range(dims_ctrl - 1)]
         state00 = state00[:, range(dims_ctrl - 1)]
-        state01 = self.engine.concatenate([state00, state01[:, None]], axis=1)
-        state10 = self.engine.concatenate([state10, state11[None]], axis=0)
-        state = self.engine.concatenate([state01, state10[None]], axis=0)
+        state01 = self.concatenate([state00, state01[:, None]], axis=1)
+        state10 = self.concatenate([state10, state11[None]], axis=0)
+        state = self.concatenate([state01, state10[None]], axis=0)
         state = self.reshape(state, 2 * nqubits * (2,))
         state = self.transpose(state, einsum_utils.reverse_order(order))
 
@@ -1703,12 +1706,12 @@ class Backend:
         state = self.reshape(state, subshape)[int(shot)]
 
         if normalize:
-            norm = self.sqrt(self.sum(self.engine.abs(state) ** 2))
+            norm = self.sqrt(self.sum(self.abs(state) ** 2))
             state = state / norm
 
         state = self._append_zeros(state, qubits, binshot)
 
-        return self.engine.reshape(state, shape)
+        return self.reshape(state, shape)
 
     def _execute_circuit(
         self,

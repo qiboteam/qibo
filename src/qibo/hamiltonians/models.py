@@ -269,8 +269,8 @@ def Heisenberg(
 
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
-        matrix = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
-        matrix = backend.cast(matrix, dtype=matrix.dtype)
+        matrix = np.zeros((2**nqubits, 2**nqubits))
+        matrix = backend.cast(matrix, dtype=backend.complex128)
         for ind, pauli in enumerate(paulis):
             double_term = _build_spin_model(
                 nqubits, pauli(0, backend=backend).matrix, condition, backend
