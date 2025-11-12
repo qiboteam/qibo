@@ -185,16 +185,22 @@ class QASMParser:
         """Converts a :class:`openqasm3.ast.QuantumMeasurementStatement` statement
         into :class:`qibo.gates.measurements.M`."""
         qubit = self._get_qubit(measurement.measure.qubit)
-        register = measurement.target.name.name
-        if register not in self.c_registers:
-            raise_error(ValueError, f"Undefined measurement register `{register}`.")
-        ind = measurement.target.indices[0][0].value
-        if ind >= len(self.c_registers[register]):
-            raise_error(
-                IndexError, f"Index `{ind}` is out of bounds of register `{register}`."
-            )
-        self.c_registers[register][ind] = qubit
-        return getattr(qibo.gates, "M")(qubit, register_name=register)
+        if hasattr(measurement.target, "indices"):
+            register = measurement.target.name.name
+            if register not in self.c_registers:
+                raise_error(ValueError, f"Undefined measurement register `{register}`.")
+            ind = measurement.target.indices[0][0].value
+            if ind >= len(self.c_registers[register]):
+                raise_error(
+                    IndexError,
+                    f"Index `{ind}` is out of bounds of register `{register}`.",
+                )
+            self.c_registers[register][ind] = qubit
+            qubits = (qubit,)
+        else:
+            register = measurement.target.name
+            qubits = self.c_registers[register]
+        return getattr(qibo.gates, "M")(*qubits, register_name=register)
 
     def _get_qubit(self, qubit):
         """Extracts the qubit from a :class:`openqasm3.ast.QubitDeclaration` statement."""
