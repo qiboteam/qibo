@@ -1,6 +1,8 @@
 from functools import cached_property
 from typing import Dict, List
 
+from numpy.typing import ArrayLike
+
 from qibo import Circuit, gates
 from qibo.error_mitigation.abstract import ReadoutMitigationRoutine
 
@@ -40,21 +42,27 @@ class InverseResponseMatrix(ReadoutMitigationRoutine):
     def inverse_response_matrix(self):
         return self.backend.np.linalg.inv(self.response_matrix)
 
+    def _frequencies_to_array(self, frequencies: Dict[int, int | float]) -> ArrayLike:
+        array = self.backend.np.zeros(2**self.nqubits)
+        for key, value in frequencies.items():
+            array[key] = value
+        return self.backend.np.reshape(array, (-1, 1))
+
+    def mitigate_frequencies(self, frequencies: ArrayLike) -> ArrayLike:
+        return self.inverse_response_matrix @ frequencies
+
     def __call__(self, frequencies: Dict[int | str, int]) -> Dict[int | str, float]:
         if self.nshots is None:
             self.nshots = sum(tuple(frequencies.values()))
         is_key_integer = isinstance(tuple(frequencies)[0], int)
         # convert keys to integer representation
         if not is_key_integer:
-            frequencies = {int(key, 2): value for key, value in frequencies.items()}
-        mitigated_frequencies = self.backend.np.zeros(2**self.nqubits)
-        for key, value in frequencies.items():
-            mitigated_frequencies[key] = value
-        mitigated_frequencies = mitigated_frequencies.reshape(-1, 1)
-        mitigated_frequencies = self.inverse_response_matrix @ mitigated_frequencies
+            frequencies = self.binary_to_integer_keys(frequencies)
+        frequencies = self._frequencies_to_array(frequencies)
+        mitigated_frequencies = self.mitigate_frequencies(frequencies)
+        mitigated_frequencies = (
+            self.backend.to_numpy(mitigated_frequencies).ravel().tolist()
+        )
         if not is_key_integer:
-            return {
-                f"{i:0{self.nqubits}b}": float(value[0])
-                for i, value in enumerate(mitigated_frequencies)
-            }
-        return {i: float(value[0]) for i, value in enumerate(mitigated_frequencies)}
+            return self.integer_to_binary_keys(mitigated_frequencies, self.nqubits)
+        return {i: value for i, value in enumerate(mitigated_frequencies)}

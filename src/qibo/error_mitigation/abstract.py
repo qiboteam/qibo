@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import cached_property
 from types import NoneType
-from typing import Callable, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -52,6 +52,18 @@ class ReadoutMitigationRoutine(ABC):
     @abstractmethod
     def __call__(self, measurement_result: MeasurementResult) -> MeasurementResult:
         pass
+
+    @staticmethod
+    def binary_to_integer_keys(
+        frequencies: Dict[str, int | float],
+    ) -> Dict[int, int | float]:
+        return {int(key, 2): value for key, value in frequencies.items()}
+
+    @staticmethod
+    def integer_to_binary_keys(
+        frequencies: Dict[int, int | float], nqubits: int
+    ) -> Dict[str, int | float]:
+        return {f"{i:0{nqubits}b}": value for i, value in enumerate(frequencies)}
 
 
 class MitigatedMeasurementResult(MeasurementResult):
