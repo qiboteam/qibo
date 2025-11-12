@@ -426,6 +426,22 @@ measure q[3] -> b[1];"""
     assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
 
 
+def test_from_qasm_vectorized_measurements():
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[3];
+creg a[3];
+x q[1];
+measure q -> a;
+"""
+    c = Circuit.from_qasm(target)
+    assert c.depth == 2
+    assert isinstance(c.queue[0], gates.X)
+    assert c.measurement_tuples == {
+        "a": (0, 1, 2),
+    }
+
+
 def test_from_qasm_measurements_order():
     target = """OPENQASM 2.0;
 include "qelib1.inc";
