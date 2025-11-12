@@ -419,6 +419,8 @@ class Backend(abc.ABC):
 
         rotated_circuits = []
         qubit_maps = []
+        # if "readout_mitigation" in measurements_kwargs:
+        #    breakpoint()
         # loop over the terms that can be diagonalized simultaneously
         for terms_qubits, terms_observables in zip(
             diagonal_terms_qubits, diagonal_terms_observables

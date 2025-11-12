@@ -53,7 +53,7 @@ class InverseResponseMatrix(ReadoutMitigationRoutine):
         mitigated_frequencies = mitigated_frequencies.reshape(-1, 1)
         mitigated_frequencies = self.inverse_response_matrix @ mitigated_frequencies
         if not is_key_integer:
-            {
+            return {
                 f"{i:0{self.nqubits}b}": float(value[0])
                 for i, value in enumerate(mitigated_frequencies)
             }

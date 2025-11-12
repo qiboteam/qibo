@@ -649,13 +649,13 @@ class Circuit:
                 # all the gates in the basis of the measure gates should not
                 # be added to the new circuit, otherwise once the measure gate
                 # is added in the circuit there will be two of the same.
-
-                measurement_circuit = self.__init__(self.nqubits, **self.init_kwargs)
+                measurement_circuit = Circuit(**self.init_kwargs)
 
                 for base in gate.basis:
                     if base not in self.queue:
                         measurement_circuit.add(base)
-
+                gate.basis = []
+                gate.basis_gates = [gates.Z]
                 measurement_circuit.queue.append(gate)
                 if (
                     gate.readout_mitigation is not None

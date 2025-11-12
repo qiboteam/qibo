@@ -313,6 +313,10 @@ class NoiseModel:
 
         noisy_circuit = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
+            readout_mitigation = None
+            if isinstance(gate, gates.M) and gate.readout_mitigation is not None:
+                readout_mitigation = gate.readout_mitigation
+                gate.readout_mitigation = None
             errors_list = (
                 self.errors[gate.__class__]
                 if isinstance(gate, (gates.Channel, gates.M))
@@ -369,6 +373,9 @@ class NoiseModel:
                     not in noisy_circuit.measurement_tuples.keys()
                 ):
                     noisy_circuit.add(gate)
+
+            if isinstance(gate, gates.M):
+                gate.readout_mitigation = readout_mitigation
 
         return noisy_circuit
 
