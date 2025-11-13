@@ -52,7 +52,7 @@ class Symbol(sympy.Symbol):
         commutative=False,
         backend: Optional[Backend] = None,
     ):
-        self.target_qubit = q
+        self.target_qubit = int(q)
         self.backend = _check_backend(backend)
         self._gate = None
         if not (

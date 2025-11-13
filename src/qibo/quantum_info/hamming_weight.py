@@ -38,10 +38,10 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         nqubits: int,
         measurements=None,
         nshots: int = 1000,
-        engine=None,
+        platform=None,
     ):  # pylint: disable=too-many-arguments
 
-        backend = HammingWeightBackend(engine)
+        backend = HammingWeightBackend(platform)
         QuantumState.__init__(self, state, backend)
         MeasurementOutcomes.__init__(self, measurements, backend, nshots=nshots)
 
@@ -80,7 +80,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self.nqubits, self.weight
         )
 
-        state = self.backend.np.zeros(2**self.nqubits, dtype=self.backend.np.complex128)
+        state = self.backend.zeros(2**self.nqubits, dtype=self.backend.complex128)
         state = self.backend.cast(state, dtype=state.dtype)
         indices = list(self.backend._dict_indexes.values())
         indices.sort()
@@ -154,7 +154,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
         probs = [0 for _ in range(2**nqubits)]
         for state, freq in self.frequencies(binary=False).items():
             probs[state] = freq / self.nshots
-        rtype = self.backend.np.real(probs).dtype
+        rtype = self.backend.real(probs).dtype
         probs = self.backend.cast(probs, dtype=rtype)
         self._probs = probs
 
@@ -162,7 +162,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             self.backend._dict_indexes = None
 
         return self.backend.calculate_full_probabilities(
-            self.backend.np.sqrt(probs), qubits, nqubits
+            self.backend.sqrt(probs), qubits, nqubits
         )
 
     def samples(self, binary: bool = True, registers: bool = False):

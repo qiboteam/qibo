@@ -216,7 +216,7 @@ def test_operational_logic(backend):
     # Complex conjugate of a network has to match the complex conjugate of the operator
     backend.assert_allclose(
         network.conj().operator(backend=backend),
-        backend.np.conj(network.operator(backend=backend)),
+        backend.conj(network.operator(backend=backend)),
     )
 
 
@@ -270,7 +270,7 @@ def test_with_states(backend):
         channel.to_choi(backend=backend), (dims, dims), backend=backend, inverse=True
     )
 
-    state_output = channel.apply_density_matrix(backend, state, nqubits)
+    state_output = channel.apply(backend, state, nqubits)
     state_output_network = network_channel.apply(state)
     state_output_link = network_state.link_product("ij,jk -> ik", network_channel)
 
@@ -416,7 +416,7 @@ def test_apply(backend):
     )
 
     applied = network.apply(state)
-    target = unitary @ state @ backend.np.conj(unitary).T
+    target = unitary @ state @ backend.conj(unitary).T
 
     backend.assert_allclose(applied, target, atol=1e-8)
 

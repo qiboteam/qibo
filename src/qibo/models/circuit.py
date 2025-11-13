@@ -1054,7 +1054,7 @@ class Circuit:
         self.compiled.executor = backend.compile(executor)
         if self.measurements:
             self.compiled.result = lambda state, nshots: CircuitResult(
-                state, self.measurements, backend, nshots=nshots
+                state, self.measurements, backend=backend, nshots=nshots
             )
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
@@ -1120,16 +1120,16 @@ class Circuit:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        circ = cls(
+        circuit = cls(
             raw["nqubits"],
             density_matrix=raw["density_matrix"],
             wire_names=raw.get("wire_names"),
         )
 
         for gate in raw["queue"]:
-            circ.add(Gate.from_dict(gate))
+            circuit.add(Gate.from_dict(gate))
 
-        return circ
+        return circuit
 
     def to_qasm(self):
         """Convert circuit to a QASM string.
@@ -1228,12 +1228,14 @@ class Circuit:
                 "The optional dependency qbraid is missing, "
                 "please install it with `poetry install --with cudaq`"
             ) from e
+
         try:
             import cudaq  # pylint: disable=C0415, W0611
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "'cudaq' is not installed, please install it with `pip install cudaq`."
+                "``cudaq`` is not installed, please install it with `pip install cudaq`."
             ) from e
+
         return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
 
     @classmethod
@@ -1260,12 +1262,14 @@ class Circuit:
                 "The optional dependency qbraid is missing, "
                 "please install it with `poetry install --with cudaq`"
             ) from e
+
         try:
             import cudaq  # pylint: disable=C0415, W0611
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
-                "'cudaq' is not installed, please install it with `pip install cudaq`."
+                "``cudaq`` is not installed, please install it with `pip install cudaq`."
             ) from e
+
         return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):

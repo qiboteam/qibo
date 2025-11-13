@@ -6,6 +6,7 @@ import pytest
 from qibo import Circuit, gates, matrices
 from qibo.hamiltonians import terms
 from qibo.quantum_info import random_density_matrix, random_statevector
+from qibo.symbols import I, Symbol, X, Y, Z
 
 
 def test_hamiltonian_term_initialization(backend):
@@ -48,12 +49,10 @@ def test_hamiltonian_term_gates(backend):
     backend.assert_allclose(gate.matrix(backend), matrix)
 
     initial_state = random_statevector(2**nqubits, backend=backend)
-    final_state = term(backend, backend.np.copy(initial_state), nqubits)
+    final_state = term(backend, backend.copy(initial_state), nqubits)
     circuit = Circuit(nqubits)
     circuit.add(gates.Unitary(matrix, 1, 2))
-    target_state = backend.execute_circuit(
-        circuit, backend.np.copy(initial_state)
-    ).state()
+    target_state = backend.execute_circuit(circuit, backend.copy(initial_state)).state()
     backend.assert_allclose(final_state, target_state)
 
 
@@ -67,9 +66,9 @@ def test_hamiltonian_term_exponentiation(backend):
     backend.assert_allclose(term.exp(0.5), exp_matrix)
 
     initial_state = random_statevector(4, backend=backend)
-    final_state = term(backend, backend.np.copy(initial_state), 2, term.expgate(0.5))
+    final_state = term(backend, backend.copy(initial_state), 2, term.expgate(0.5))
     exp_gate = gates.Unitary(exp_matrix, 1)
-    target_state = backend.apply_gate(exp_gate, backend.np.copy(initial_state), 2)
+    target_state = backend.apply_gate(exp_gate, backend.copy(initial_state), 2)
     backend.assert_allclose(final_state, target_state)
 
 
@@ -101,8 +100,6 @@ def test_hamiltonian_term_merge(backend):
 
 def test_symbolic_term_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression."""
-    from qibo.symbols import X, Y
-
     expression = X(0) * Y(1) * X(1)
     term = terms.SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (0, 1)
@@ -113,20 +110,18 @@ def test_symbolic_term_creation(backend):
 
 def test_symbolic_term_with_power_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression that contains powers."""
-    from qibo.symbols import X, Z
-
     expression = X(0) ** 4 * Z(1) ** 2 * X(2)
     term = terms.SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (2,)
     assert len(term.matrix_map) == 1
     assert term.coefficient == 2
-    backend.assert_allclose(term.matrix_map.get(2), [backend.matrices.X])
+    print(term.matrix_map.get(2))
+    print(type(term.matrix_map.get(2)), type(backend.matrices.X))
+    backend.assert_allclose(term.matrix_map.get(2)[0], backend.matrices.X)
 
 
 def test_symbolic_term_with_imag_creation():
     """Test creating ``SymbolicTerm`` from sympy expression that contains imaginary coefficients."""
-    from qibo.symbols import Y
-
     expression = 3j * Y(0)
     term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0,)
@@ -135,8 +130,6 @@ def test_symbolic_term_with_imag_creation():
 
 def test_symbolic_term_matrix(backend):
     """Test matrix calculation of ``SymbolicTerm``."""
-    from qibo.symbols import X, Y, Z
-
     expression = X(0) * Y(1) * Z(2) * X(1)
     term = terms.SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (0, 1, 2)
@@ -147,8 +140,6 @@ def test_symbolic_term_matrix(backend):
 
 def test_symbolic_term_mul(backend):
     """Test multiplying scalar to ``SymbolicTerm``."""
-    from qibo.symbols import X, Y, Z
-
     expression = Y(2) * Z(3) * X(2) * X(3)
     term = terms.SymbolicTerm(1, expression, backend=backend)
     assert term.target_qubits == (2, 3)
@@ -162,8 +153,6 @@ def test_symbolic_term_mul(backend):
 
 def test_symbolic_term_reduction(backend):
     """Test simplification of ``SymbolicTerm`` expressions"""
-    from qibo.symbols import I, X, Y, Z
-
     expression = (
         0.1**2 * X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)
     )  #  -0.01i * Z(1) * X(2)
@@ -176,8 +165,6 @@ def test_symbolic_term_reduction(backend):
 
 def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
     """Test simplification of ``SymbolicTerm`` expressions that include Symbol"""
-    from qibo.symbols import Symbol, X, Y, Z
-
     matrix = np.random.random((2, 2))
     expression = (
         Z(0) * (Symbol(0, matrix) ** 2) * (X(0) ** 2) * Y(0)
@@ -191,8 +178,6 @@ def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
 @pytest.mark.parametrize("density_matrix", [False])
 def test_symbolic_term_call(backend, density_matrix):
     """Test applying ``SymbolicTerm`` to state."""
-    from qibo.symbols import X, Y, Z
-
     expression = Z(0) * X(1) * Y(2)
     term = terms.SymbolicTerm(2, expression)
     matrixlist = [
@@ -207,9 +192,9 @@ def test_symbolic_term_call(backend, density_matrix):
         else random_statevector(2**3, backend=backend)
     )
     final_state = term(
-        backend, backend.np.copy(initial_state), 3, density_matrix=density_matrix
+        backend, backend.copy(initial_state), 3, density_matrix=density_matrix
     )
-    target_state = 2 * backend.np.copy(initial_state)
+    target_state = 2 * backend.copy(initial_state)
     for matrix in matrixlist:
         target_state = matrix @ target_state
     backend.assert_allclose(final_state, target_state)
@@ -217,8 +202,6 @@ def test_symbolic_term_call(backend, density_matrix):
 
 def test_symbolic_term_merge(backend):
     """Test merging ``SymbolicTerm`` to ``HamiltonianTerm``."""
-    from qibo.symbols import X, Z
-
     matrix = np.random.random((4, 4))
     term1 = terms.HamiltonianTerm(matrix, 0, 1, backend=backend)
     term2 = terms.SymbolicTerm(1, X(0) * Z(1), backend=backend)

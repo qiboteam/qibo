@@ -140,7 +140,7 @@ def comp_basis_to_pauli(
             pauli_order=pauli_order,
             backend=backend,
         )
-        elements = backend.np.conj(elements)
+        elements = backend.conj(elements)
 
         return elements, indexes
 
@@ -154,7 +154,7 @@ def comp_basis_to_pauli(
         backend=backend,
     )
 
-    unitary = backend.np.conj(unitary)
+    unitary = backend.conj(unitary)
 
     return unitary
 

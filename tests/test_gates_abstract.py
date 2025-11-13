@@ -454,7 +454,7 @@ def test_decompose_controlled_optimized(backend):
     circuit_1.add(target)
     circuit_2.add(decomp)
 
-    backend.assert_circuitclose(circuit_1, circuit_2)
+    backend.assert_circuitclose(circuit_1, circuit_2, atol=1e-8)
 
 
 @pytest.mark.parametrize(

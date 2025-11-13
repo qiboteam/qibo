@@ -199,7 +199,7 @@ def plot_density_hist(
     # Create a density matrix from state vector
     if not circuit.density_matrix:
         state = backend.cast(state)
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     nqubits = circuit.nqubits
     row_names = _get_labels(nqubits)
@@ -219,8 +219,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = backend.np.reshape(matrix_real, (-1))
-    dzi = backend.np.reshape(matrix_imag, (-1))
+    dzr = backend.reshape(matrix_real, (-1))
+    dzi = backend.reshape(matrix_imag, (-1))
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)

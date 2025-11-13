@@ -23,16 +23,16 @@ from qibo.symbols import X, Y, Z
 # all this roundabout due to circular imports
 @cache
 def SIMULATION_BACKEND():
-    from qibo.backends import NumpyBackend
+    from qibo.backends import NumpyBackend  # pylint: disable=import-outside-toplevel
 
     return NumpyBackend()
 
 
 @cache
-def CLIFFORD_BACKEND():
-    from qibo.backends import CliffordBackend
+def CLIFFORD_BACKEND(platform: str = "numpy"):
+    from qibo.backends import CliffordBackend  # pylint: disable=import-outside-toplevel
 
-    return CliffordBackend(engine="numpy")
+    return CliffordBackend(platform)
 
 
 def get_gammas(noise_levels, analytical: bool = True):
@@ -97,15 +97,15 @@ def get_noisy_circuit(
 
     if global_unitary_folding:
 
-        copy_c = Circuit(**circuit.init_kwargs)
+        copy_circuit = Circuit(**circuit.init_kwargs)
         for g in circuit.queue:
             if not isinstance(g, gates.M):
-                copy_c.add(g)
+                copy_circuit.add(g)
 
-        noisy_circuit = copy_c
+        noisy_circuit = copy_circuit
 
         for _ in range(num_insertions):
-            noisy_circuit += copy_c.invert() + copy_c
+            noisy_circuit += copy_circuit.invert() + copy_circuit
 
         for m in circuit.measurements:
             noisy_circuit.add(m)
@@ -243,7 +243,7 @@ def ZNE(
     gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
     gamma = backend.cast(gamma, dtype=gamma.dtype)
 
-    return backend.np.sum(gamma * expected_values)
+    return backend.sum(gamma * expected_values)
 
 
 def sample_training_circuit_cdr(
@@ -296,37 +296,47 @@ def sample_training_circuit_cdr(
         gate_matrix = gate.matrix(backend)
         rep_gate_matrix = [rep_gate.matrix(backend) for rep_gate in rep_gates]
         rep_gate_matrix = backend.cast(rep_gate_matrix, dtype=rep_gate_matrix[0].dtype)
-        matrix_norm = backend.np.linalg.norm(
-            gate_matrix - rep_gate_matrix, ord="fro", axis=(1, 2)
+        matrix_norm = backend.matrix_norm(
+            gate_matrix - rep_gate_matrix, "fro", axis=(1, 2)
         )
 
-        distance.append(backend.np.real(matrix_norm))
+        distance.append(backend.real(matrix_norm))
 
-    distance = backend.np.vstack(distance)
-    prob = backend.np.exp(-(distance**2) / sigma**2)
+    distance = backend.vstack(distance)
+    prob = backend.exp(-(distance**2) / sigma**2)
 
-    index = np.random.choice(
+    index = backend.random_choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
-        p=backend.to_numpy(backend.np.sum(prob, -1) / backend.np.sum(prob)),
+        p=backend.sum(prob, -1) / backend.sum(prob),
+        # seed=local_state,
+        dtype=backend.int64,
     )
+    index = [int(ind) for ind in index]
 
-    gates_to_replace = np.array([gates_to_replace[i] for i in index])
-    prob = [prob[i] for i in index]
-    prob = backend.cast(prob, dtype=prob[0].dtype)
-    prob = backend.to_numpy(prob)
+    gates_to_replace = np.array([gates_to_replace[ind] for ind in index])
+    prob = prob[index]
 
-    replacement = np.array([replacement[i] for i in index])
+    replacement = np.array([replacement[ind] for ind in index])
     replacement = [
-        replacement[i][np.random.choice(range(len(p)), size=1, p=p / np.sum(p))[0]]
-        for i, p in enumerate(prob)
+        replacement[ind][
+            int(
+                backend.random_choice(
+                    range(len(p)),
+                    size=1,
+                    p=p / backend.sum(p),
+                    # seed=local_state
+                )[0]
+            )
+        ]
+        for ind, p in enumerate(prob)
     ]
-    replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
+    replacement = {ind[0]: g for ind, g in zip(gates_to_replace, replacement)}
 
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
-    for i, gate in enumerate(circuit.queue):
-        sampled_circuit.add(replacement.get(i, gate))
+    for ind, gate in enumerate(circuit.queue):
+        sampled_circuit.add(replacement.get(ind, gate))
 
     return sampled_circuit
 
@@ -352,12 +362,12 @@ def _curve_fit(
     Returns:
         ndarray: the optimal parameters.
     """
-    if backend.platform == "pytorch":
+    if backend.platform == "pytorch":  # pragma: no cover
         # pytorch has some problems with the `scipy.optim.curve_fit` function
         # thus we use a `torch.optim` optimizer
         params.requires_grad = True
-        loss = lambda pred, target: backend.np.mean((pred - target) ** 2)
-        optimizer = backend.np.optim.LBFGS(
+        loss = lambda pred, target: backend.mean((pred - target) ** 2)
+        optimizer = backend.engine.optim.LBFGS(
             [params], lr=lr, max_iter=max_iter, tolerance_grad=tolerance_grad
         )
 
@@ -473,8 +483,7 @@ def CDR(
     nparams = (
         len(signature(model).parameters) - 1
     )  # first arg is the input and the *params afterwards
-    params = backend.np.random.rand(nparams)
-    params = backend.cast(params, dtype=params.dtype)
+    params = backend.random_sample(nparams)
 
     train_val_noisy = train_val["noisy"]
     train_val_noisy = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
@@ -579,7 +588,10 @@ def vnCDR(
     backend.set_seed(seed)
 
     if model is None:
-        model = lambda x, *params: backend.np.sum(x * backend.np.vstack(params), axis=0)
+        if backend.platform in ("cupy", "cuquantum"):
+            model = lambda x, *params: np.sum(x * np.vstack(params), axis=0)
+        else:
+            model = lambda x, *params: backend.sum(x * backend.vstack(params), axis=0)
 
     if readout is None:
         readout = {}
@@ -618,9 +630,9 @@ def vnCDR(
 
     train_val_noisy = train_val["noisy"]
     noisy_array = backend.cast(train_val_noisy, dtype=type(train_val_noisy[0]))
-    noisy_array = backend.np.reshape(noisy_array, (-1, len(noise_levels)))
-    params = backend.np.random.rand(len(noise_levels))
-    params = backend.cast(params, dtype=params.dtype)
+    noisy_array = backend.reshape(noisy_array, (-1, len(noise_levels)))
+    # params = local_state.random(len(noise_levels))
+    params = backend.random_sample(len(noise_levels))
     train_val_noiseless = train_val["noise-free"]
     train_val_noiseless = backend.cast(
         train_val_noiseless, dtype=type(train_val_noiseless[0])
@@ -1024,8 +1036,6 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
            `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    from qibo import gates
-
     backend_temp = _check_backend(backend)
     backend = (
         CLIFFORD_BACKEND() if backend is None else backend_temp
@@ -1039,7 +1049,7 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     symplectic_matrix = result.symplectic_matrix[:-1, :-1]
 
     terms = observable.terms[0].factors
-    pauli_symplectic = backend.np.zeros((2 * circuit.nqubits, 1))
+    pauli_symplectic = backend.zeros((2 * circuit.nqubits, 1), dtype=backend.uint8)
     for term in terms:
         term = str(term)
         index = int(term[1])
@@ -1087,11 +1097,11 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
         adjustment_gates.append(adjustment_gate)
 
     sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
+    sensitive_circuit.add(adjustment_gates)
 
-    for gate in adjustment_gates:
-        sensitive_circuit.add(gate)
     for gate in sampled_circuit.queue:
         sensitive_circuit.add(gate)
+
     return sensitive_circuit, sampled_circuit, adjustment_gates
 
 
@@ -1148,6 +1158,9 @@ def ICS(
     backend = _check_backend(backend)
     backend.set_seed(seed)
 
+    platform = backend.name if backend.platform is None else backend.platform
+    clifford_backend = CLIFFORD_BACKEND(platform)
+
     if readout is None:
         readout = {}
 
@@ -1155,7 +1168,7 @@ def ICS(
         qubit_map = list(range(circuit.nqubits))
 
     training_circuits = [
-        error_sensitive_circuit(circuit, observable, backend=CLIFFORD_BACKEND())[0]
+        error_sensitive_circuit(circuit, observable, backend=clifford_backend)[0]
         for _ in range(n_training_samples)
     ]
 
@@ -1164,7 +1177,7 @@ def ICS(
 
     for training_circuit in training_circuits:
         training_circuit_copy = training_circuit.copy(deep=True)
-        circuit_result = CLIFFORD_BACKEND().execute_circuit(
+        circuit_result = clifford_backend.execute_circuit(
             training_circuit_copy, nshots=nshots
         )
         if nshots is None:
@@ -1192,8 +1205,8 @@ def ICS(
         lambda_list.append(1 - noisy_expectation / expectation)
 
     lambda_list = backend.cast(lambda_list, dtype=lambda_list[0].dtype)
-    dep_param = backend.np.mean(lambda_list)
-    dep_param_std = backend.np.std(lambda_list)
+    dep_param = backend.mean(lambda_list)
+    dep_param_std = backend.std(lambda_list)
 
     if nshots is None:
         circuit_result = _execute_circuit(

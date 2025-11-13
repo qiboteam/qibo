@@ -224,7 +224,7 @@ class QuantumNetwork:
         n = len(self.partition)
         order = self._order_tensor_to_operator(n)
 
-        operator = self._backend.np.transpose(
+        operator = self._backend.transpose(
             tensor.reshape(tuple(np.repeat(self.partition, 2))), order
         )
 
@@ -292,13 +292,10 @@ class QuantumNetwork:
             self.matrix(),
             dtype=self._tensor.dtype,
         )
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            adjoint = self._backend.np.transpose(reshaped, (1, 0))
-        else:
-            adjoint = self._backend.np.transpose(reshaped)
+        adjoint = self._backend.transpose(reshaped, axes=(1, 0))
 
-        mat_diff = self._backend.np.conj(adjoint) - reshaped
-        norm = self._backend.calculate_matrix_norm(mat_diff, order=order)
+        mat_diff = self._backend.conj(adjoint) - reshaped
+        norm = self._backend.matrix_norm(mat_diff, order)
 
         return float(norm) <= precision_tol
 
@@ -329,13 +326,13 @@ class QuantumNetwork:
             dtype=self._tensor.dtype,
         )
 
-        if self.is_hermitian():
-            eigenvalues = self._backend.calculate_eigenvalues(reshaped)
-        else:
+        if not self.is_hermitian():
             return False
 
+        eigenvalues = self._backend.eigenvalues(reshaped)
+
         return all(
-            self._backend.np.real(eigenvalue) >= -precision_tol
+            self._backend.real(eigenvalue) >= -precision_tol
             for eigenvalue in eigenvalues
         )
 
@@ -365,7 +362,7 @@ class QuantumNetwork:
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.QuantumNetwork` object."""
         return self.__class__(
-            self._backend.np.copy(self._tensor),
+            self._backend.copy(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -375,7 +372,7 @@ class QuantumNetwork:
     def conj(self):
         """Returns the conjugate of the quantum network."""
         return self.__class__(
-            self._backend.np.conj(self._tensor),
+            self._backend.conj(self._tensor),
             partition=self.partition,
             system_input=self.system_input,
             pure=self._pure,
@@ -629,8 +626,8 @@ class QuantumNetwork:
 
         self.system_input = self._check_system_input(self.system_input, self.partition)
 
-        self._einsum = self._backend.np.einsum
-        self._tensordot = self._backend.np.tensordot
+        self._einsum = self._backend.einsum
+        self._tensordot = self._backend.tensordot
         self._tensor = self._backend.cast(self._tensor, dtype=self._tensor.dtype)
 
         if self._pure:
@@ -641,7 +638,7 @@ class QuantumNetwork:
                     + f"Cannot reshape matrix of size {self._tensor.shape} "
                     + f"to partition {self.partition}.",
                 )
-            self._tensor = self._backend.np.reshape(self._tensor, self.partition)
+            self._tensor = self._backend.reshape(self._tensor, self.partition)
         else:
             if np.prod(tuple(self._tensor.shape)) != np.prod(
                 tuple(dim**2 for dim in self.partition)
@@ -653,7 +650,7 @@ class QuantumNetwork:
                     + f"to partition {self.partition}.",
                 )
             matrix_partition = [dim**2 for dim in self.partition]
-            self._tensor = self._backend.np.reshape(self._tensor, matrix_partition)
+            self._tensor = self._backend.reshape(self._tensor, matrix_partition)
 
     def full(self, update: bool = False, backend=None):
         """Convert the internal representation to the full tensor of the network.
@@ -670,17 +667,14 @@ class QuantumNetwork:
         """
         if backend is None:  # pragma: no cover
             backend = self._backend
-        tensor = self._backend.np.copy(self._tensor)
+        tensor = self._backend.copy(self._tensor)
         tensor = backend.cast(tensor, dtype=self._tensor.dtype)
-        conj = backend.np.conj
+        conj = backend.conj
 
         if self.is_pure():
             # Reshapes input matrix based on purity.
             tensor.reshape(self.dims)
-            if self._backend.__class__.__name__ == "PyTorchBackend":
-                tensor = self._tensordot(tensor, conj(tensor), dims=0)
-            else:
-                tensor = self._tensordot(tensor, conj(tensor), axes=0)
+            tensor = self._tensordot(tensor, conj(tensor), axes=0)
             tensor = self._operator_to_tensor(tensor, self.partition)
 
             if update:
@@ -778,16 +772,11 @@ class QuantumComb(QuantumNetwork):
         trace_out = TraceOperation(dim_out, backend=backend).full()
         trace_in = TraceOperation(dim_in, backend=backend).full()
 
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_out, dims=([-1], [0]))
-            sub_comb = self._tensordot(reduced, trace_in, dims=([-1], [0]))
-            expected = self._tensordot(sub_comb, trace_in / dim_in, dims=0)
-        else:
-            reduced = self._tensordot(self.full(), trace_out, axes=(-1, 0))
-            sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
-            expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
+        reduced = self._tensordot(self.full(), trace_out, axes=(-1, 0))
+        sub_comb = self._tensordot(reduced, trace_in, axes=(-1, 0))
+        expected = self._tensordot(sub_comb, trace_in / dim_in, axes=0)
 
-        norm = self._backend.calculate_vector_norm(reduced - expected, order=order)
+        norm = self._backend.vector_norm(reduced - expected, order=order)
 
         if float(norm) > precision_tol:
             return False
@@ -913,20 +902,11 @@ class QuantumChannel(QuantumComb):
         trace_out = TraceOperation(dim_out, backend=backend).full()
         trace_in = TraceOperation(dim_in, backend=backend).full()
 
-        if self._backend.__class__.__name__ == "PyTorchBackend":
-            reduced = self._tensordot(self.full(), trace_in, dims=([0], [0]))
-            sub_comb = self._tensordot(
-                reduced,
-                trace_out,
-                dims=([0], [0]),
-            )
-            expected = self._tensordot(trace_out / dim_out, sub_comb, dims=0)
-        else:
-            reduced = self._tensordot(self.full(), trace_in, axes=(0, 0))
-            sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
-            expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
+        reduced = self._tensordot(self.full(), trace_in, axes=(0, 0))
+        sub_comb = self._tensordot(reduced, trace_out, axes=(0, 0))
+        expected = self._tensordot(trace_out / dim_out, sub_comb, axes=0)
 
-        norm = self._backend.calculate_vector_norm((reduced - expected), order=order)
+        norm = self._backend.vector_norm((reduced - expected), order=order)
         if float(norm) > precision_tol:
             return False
 
@@ -978,7 +958,7 @@ class QuantumChannel(QuantumComb):
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
         operator = self.copy().operator()
-        conj = self._backend.np.conj
+        conj = self._backend.conj
 
         if self.is_pure():
             return self._einsum("ij,lk,il", operator, conj(operator), state)

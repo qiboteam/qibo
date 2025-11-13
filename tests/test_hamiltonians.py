@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.symbols import I, X, Y, Z
 
@@ -53,16 +53,16 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
         c1 = dtype(4.5)
         if use_eye:
             return a + c1 * backend.to_numpy(backend.matrices.I(a.shape[0])) - b
-        else:
-            return a + c1 - b
+
+        return a + c1 - b
 
     def transformation_d(a, b, use_eye=False):
         c1 = dtype(10.5)
         c2 = dtype(2)
         if use_eye:
             return c1 * backend.to_numpy(backend.matrices.I(a.shape[0])) - a + c2 * b
-        else:
-            return c1 - a + c2 * b
+
+        return c1 - a + c2 * b
 
     if sparse_type is None:
         H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
@@ -89,10 +89,18 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
     HT3 = transformation_c(H1, H2)
     HT4 = transformation_d(H1, H2)
 
-    backend.assert_allclose(hH1, HT1.matrix)
-    backend.assert_allclose(hH2, HT2.matrix)
-    backend.assert_allclose(hH3, HT3.matrix)
-    backend.assert_allclose(hH4, HT4.matrix)
+    target_1, target_2 = HT1.matrix, HT2.matrix
+    target_3, target_4 = HT3.matrix, HT4.matrix
+    if sparse_type is not None:
+        hH1, target_1 = hH1.toarray(), target_1.toarray()
+        hH2, target_2 = hH2.toarray(), target_2.toarray()
+        hH3 = backend.cast(hH3, dtype=hH3.dtype)
+        hH4 = backend.cast(hH4, dtype=hH4.dtype)
+
+    backend.assert_allclose(hH1, target_1)
+    backend.assert_allclose(hH2, target_2)
+    backend.assert_allclose(hH3, target_3)
+    backend.assert_allclose(hH4, target_4)
 
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
@@ -118,10 +126,17 @@ def test_hamiltonian_addition(backend, sparse_type):
 
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
-    backend.assert_allclose(H.matrix, matrix)
+    target = H.matrix
+    if sparse_type is not None:
+        target, matrix = target.toarray(), matrix.toarray()
+    backend.assert_allclose(matrix, target)
+
     H = H1 - 0.5 * H2
     matrix = H1.matrix - 0.5 * H2.matrix
-    backend.assert_allclose(H.matrix, matrix)
+    target = H.matrix
+    if sparse_type is not None:
+        target, matrix = target.toarray(), matrix.toarray()
+    backend.assert_allclose(matrix, target)
 
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
     H2 = hamiltonians.XXZ(nqubits=3, delta=0.1, backend=backend)
@@ -140,6 +155,8 @@ def test_hamiltonian_operation_errors(backend):
         R = H1 * H2
     with pytest.raises(NotImplementedError):
         R = H1 + "a"
+    with pytest.raises(NotImplementedError):
+        R = H1 * "a"
     with pytest.raises(NotImplementedError):
         R = H2 - (2,)
     with pytest.raises(NotImplementedError):
@@ -177,8 +194,12 @@ def test_hamiltonian_matmul(backend, sparse_type):
         with pytest.raises(NotImplementedError):
             _ = H1 @ H2
     else:
-        backend.assert_allclose((H1 @ H2).matrix, (m1 @ m2))
-        backend.assert_allclose((H2 @ H1).matrix, (m2 @ m1))
+        matrix_1, matrix_2 = (H1 @ H2).matrix, (H2 @ H1).matrix
+        target_1, target_2 = m1 @ m2, m2 @ m1
+        if sparse_type is not None:
+            matrix_1, matrix_2 = matrix_1.toarray(), matrix_2.toarray()
+        backend.assert_allclose(matrix_1, target_1)
+        backend.assert_allclose(matrix_2, target_2)
 
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
@@ -262,14 +283,14 @@ def test_hamiltonian_expectation_errors(backend):
 def non_exact_expectation_test_setup(backend, observable):
 
     nqubits = 3
-    c = Circuit(nqubits)
+    circuit = Circuit(nqubits)
     for q in range(nqubits):
-        c.add(gates.RX(q, np.random.rand()))
+        circuit.add(gates.RX(q, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
-    final_state = backend.execute_circuit(c.copy(True)).state()
+    final_state = backend.execute_circuit(circuit.copy(True)).state()
     exp = H.expectation(final_state)
-    return exp, H, c
+    return exp, H, circuit
 
 
 def test_hamiltonian_expectation_from_samples(backend):
@@ -278,9 +299,9 @@ def test_hamiltonian_expectation_from_samples(backend):
 
     nshots = 4 * 10**6
     observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
-    exp, H, c = non_exact_expectation_test_setup(backend, observable)
-    c.add(gates.M(*range(c.nqubits)))
-    freq = backend.execute_circuit(c, nshots=nshots).frequencies()
+    exp, H, circuit = non_exact_expectation_test_setup(backend, observable)
+    circuit.add(gates.M(*range(circuit.nqubits)))
+    freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
     exp_from_samples = H.expectation_from_samples(freq)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
@@ -352,22 +373,20 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
         H1 = hamiltonians.Hamiltonian(5, m, backend=backend)
 
     H1_eigen = sorted(backend.to_numpy(H1.eigenvalues()))
-    hH1_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(H1.matrix)))
+    hH1_eigen = sorted(backend.to_numpy(backend.eigenvalues(H1.matrix)))
     backend.assert_allclose(sorted(H1_eigen), hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
     H2_eigen = sorted(backend.to_numpy(H2.eigenvalues()))
-    hH2_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(c1 * H1.matrix)))
+    hH2_eigen = sorted(backend.to_numpy(backend.eigenvalues(c1 * H1.matrix)))
     backend.assert_allclose(H2_eigen, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     if sparse_type is None:
         H3_eigen = sorted(backend.to_numpy(H3.eigenvalues()))
-        hH3_eigen = sorted(
-            backend.to_numpy(backend.calculate_eigenvalues(H1.matrix * c2))
-        )
+        hH3_eigen = sorted(backend.to_numpy(backend.eigenvalues(H1.matrix * c2)))
         backend.assert_allclose(H3_eigen, hH3_eigen)
     else:
         assert H3._eigenvalues is None
@@ -465,8 +484,12 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
     H1 = construct_hamiltonian()
     _ = H1.eigenvectors()
 
-    backend.assert_allclose(H.exp(0.5), target_matrix, atol=1e-6)
-    backend.assert_allclose(H1.exp(0.5), target_matrix, atol=1e-6)
+    matrix_1, matrix_2 = H.exp(0.5), H1.exp(0.5)
+    if sparse_type is not None:
+        matrix_1, matrix_2 = matrix_1.toarray(), matrix_2.toarray()
+
+    backend.assert_allclose(matrix_1, target_matrix, atol=1e-6)
+    backend.assert_allclose(matrix_2, target_matrix, atol=1e-6)
 
 
 def test_hamiltonian_energy_fluctuation(backend):
@@ -475,7 +498,7 @@ def test_hamiltonian_energy_fluctuation(backend):
     ham = hamiltonians.XXZ(nqubits=2, backend=backend)
     # take ground state and zero state
     ground_state = ham.ground_state()
-    zero_state = backend.np.ones(2**2) / np.sqrt(2**2)
+    zero_state = backend.ones(2**2) / np.sqrt(2**2)
     # collect energy fluctuations
     gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
     zs_energy_fluctuation = ham.energy_fluctuation(zero_state)
