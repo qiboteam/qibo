@@ -37,7 +37,7 @@ tz = ["tzdata"]
 name = "annotated-types"
 version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main", "tests"]
 files = [
@@ -2864,7 +2864,7 @@ files = [
 name = "pydantic"
 version = "2.11.1"
 description = "Data validation using Python type hints"
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main", "tests"]
 files = [
@@ -2886,7 +2886,7 @@ timezone = ["tzdata ; python_version >= \"3.9\" and platform_system == \"Windows
 name = "pydantic-core"
 version = "2.33.0"
 description = "Core functionality for Pydantic validation and serialization"
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main", "tests"]
 files = [
@@ -3058,7 +3058,7 @@ diagrams = ["jinja2", "railroad-diagrams"]
 name = "pyqasm"
 version = "1.0.0"
 description = "Python toolkit providing an OpenQASM 3 semantic analyzer and utilities for program analysis and compilation."
-optional = true
+optional = false
 python-versions = ">=3.10"
 groups = ["main", "tests"]
 files = [
@@ -3097,7 +3097,7 @@ visualization = ["matplotlib", "pillow (<11.4.0)", "tabulate"]
 name = "pyqir"
 version = "0.10.9"
 description = "PyQIR parses, generates and evaluates the Quantum Intermediate Representation."
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main", "tests"]
 files = [
@@ -3404,7 +3404,7 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 name = "qbraid"
 version = "0.10.0"
 description = "Platform-agnostic quantum runtime framework."
-optional = true
+optional = false
 python-versions = ">=3.10"
 groups = ["main", "tests"]
 files = [
@@ -3447,7 +3447,7 @@ visualization = ["ipympl", "ipython", "matplotlib", "pylatexenc", "pyqasm[visual
 name = "qbraid-core"
 version = "0.1.45"
 description = "Python library with core abstractions for software development in the qBraid ecosystem."
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main", "tests"]
 files = [
@@ -3474,7 +3474,7 @@ test = ["pytest", "pytest-asyncio", "pytest-cov"]
 name = "qbraid-qir"
 version = "0.4.0"
 description = "qBraid-SDK extension providing support for QIR conversions."
-optional = true
+optional = false
 python-versions = ">=3.10"
 groups = ["main", "tests"]
 files = [
@@ -3744,7 +3744,7 @@ files = [
 name = "rustworkx"
 version = "0.17.1"
 description = "A High-Performance Graph Library for Python"
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main", "tests"]
 files = [
@@ -4535,7 +4535,7 @@ markers = {dev = "python_version < \"3.12\""}
 name = "typing-inspection"
 version = "0.4.2"
 description = "Runtime typing introspection tools"
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main", "tests"]
 files = [
@@ -4626,4 +4626,4 @@ qulacs = ["qulacs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "57f61ec4033099094e9d52b03af8561e0aa7f8a407858b5a696bfb1639d9f713"
+content-hash = "c6ecdcbca5523fd3cdb57ba240f59b4fc7c0cc8e2dad74f20b079d263e04d8fd"
