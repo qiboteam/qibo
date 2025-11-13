@@ -25,7 +25,7 @@ class AbstractHamiltonian:
     @property
     @abstractmethod
     def matrix(self):  # pragma: no cover
-        """Returns the full matrix representation.
+        """Return the full matrix representation.
 
         For :math:`n` qubits, can be a dense :math:`2^{n} \\times 2^{n}` array or a sparse
         matrix, depending on how the Hamiltonian was created.
@@ -81,13 +81,13 @@ class AbstractHamiltonian:
 
         Args:
             circuit (Circuit): circuit to calculate the expectation value from.
-        If the circuit has already been executed, this will just make use of the cached
-        result, otherwise it will execute the circuit.
+                If the circuit has already been executed, this will just make use of the cached
+                result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
-        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
+                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            float: the expectation value.
+            float: The expectation value.
         """
         raise_error(NotImplementedError)
 

@@ -336,7 +336,7 @@ def test_energy(backend, density_matrix):
     energy = callbacks.Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    circ = random_clifford(4, density_matrix=density_matrix, backend=backend)
+    circ = random_clifford(4, return_circuit=True, density_matrix=density_matrix, backend=backend)
     state = backend.execute_circuit(circ).state()
     if density_matrix:
         target_energy = backend.np.trace(backend.np.matmul(matrix, state))

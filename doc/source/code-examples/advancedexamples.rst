@@ -2198,16 +2198,16 @@ single given basis:
    hamiltonian = SymbolicHamiltonian(3 * Z(2) * (1 - X(1)) ** 2 - (Y(0) * X(3)) / 2, nqubits=4)
    expectation_value = hamiltonian.expectation(circuit)
 
-What is happening under the hood in this case, is that the expectation value is calculated individually
+What is happening under the hood in this case is that the expectation value is calculated individually
 for each group of simultaneously diagonalizable terms by measuring the circuit in the correct (rotated) basis.
 All the contributions are then summed to recover the global expectation value. This means, in particular,
-that several copies of the circuit are parallely executed, one for each group of terms.
+that several copies of the circuit are executed in parallel, one for each group of terms.
 
-For dense hamiltonians, instead, the :meth:`qibo.hamiltonians.Hamiltonian.expectation` works only for diagonal
+For dense Hamiltonians, instead, the :meth:`qibo.hamiltonians.Hamiltonian.expectation` works only for diagonal
 observables when ``nshots != None``, as no method for the decomposition of a matrix in groups of diagonal terms
 is implemented yet.
 
-The same is true for explicit shots extraction and expectation value calculation through the
+The same is true for explicit shot extraction and expectation value calculation through the
 :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples` or
 :meth:`qibo.hamiltonians.SymbolicHamiltonian.expectation_from_samples` methods, as the passed
 set of samples is associated to only a single fixed measurement basis (the one manually appended to the circuit).

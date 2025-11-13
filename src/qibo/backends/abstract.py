@@ -304,17 +304,18 @@ class Backend(abc.ABC):
         nshots: int,
         qubit_map: Optional[Tuple[int, ...]] = None,
     ) -> float:
-        """Compute the expectation value of a dense hamiltonian diagonal in a defined basis
+        """Compute the expectation value of a dense Hamiltonian diagonal in a defined basis
         starting from the samples (measured in the same basis).
 
         Args:
-            circuit (Circuit): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
             observable (ndarray): the (diagonal) matrix corresponding to the observable.
             nqubits (int): the number of qubits of the observable.
             nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...], optional): optional qubits reordering.
+
         Returns:
-            (float) the calculated expectation value.
+            float: The calculated expectation value.
         """
         result = (
             circuit._final_state
@@ -327,7 +328,8 @@ class Backend(abc.ABC):
         if self.np.count_nonzero(observable - self.np.diag(diag)) != 0:
             raise_error(
                 NotImplementedError,
-                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
+                "Observable is not diagonal. Expectation of non-diagonal observables starting "
+                + "from samples is currently supported for `qibo.hamiltonians.SymbolicHamiltonian` only.",
             )
         diag = self.np.reshape(diag, nqubits * (2,))
         if qubit_map is None:
@@ -351,15 +353,16 @@ class Backend(abc.ABC):
         starting from the samples.
 
         Args:
-            circuit (Circuit): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
             nqubits (int): number of qubits of the observable.
             terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal) symbolic observable is acting on.
             terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
             constant (float): the constant term of the observable. Defaults to ``0.``.
             nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...]): custom qubit ordering.
+
         Returns:
-            (float) the calculated expectation value.
+            float: The calculated expectation value.
         """
         result = (
             circuit._final_state
@@ -404,15 +407,16 @@ class Backend(abc.ABC):
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
             diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
-            diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables for each group of terms, e.g.
-            [['IXZ', 'YII'], ['IYZ', 'XIZ']].
-            diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on, e.g.
-            [[(0,1,2), (1,3)], [(2,1,3), (2,4)]].
+            diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables
+                for each group of terms, e.g. ``[['IXZ', 'YII'], ['IYZ', 'XIZ']]``.
+            diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on,
+                e.g. ``[[(0,1,2), (1,3)], [(2,1,3), (2,4)]]``.
             nqubits (int): number of qubits of the observable.
             constant (float): the constant term of the observable.
             nshots (int): how many shots to execute the circuit with.
+
         Returns:
-            (float) the calculated expectation value.
+            float: The calculated expectation value.
         """
         from qibo import gates
 
@@ -480,21 +484,22 @@ class Backend(abc.ABC):
         term_coefficients: List[float],
         nqubits: int,
     ):
-        """
-        Compute the expectation value of a general symbolic observable that is a sum of terms.
+        """Compute the expectation value of a general symbolic observable that is a sum of terms.
+       
         In particular, each term of the observable is contracted with
         the corresponding subspace defined by the qubits it acts on.
 
         Args:
-            circuit (Circuit): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
             terms (List[str]): the lists of strings defining the observables for each term, e.g.
-            ['ZXZ', 'YI', 'IYZ', 'X'].
+                ``['ZXZ', 'YI', 'IYZ', 'X']``.
             term_coefficients (List[float]): the coefficients of each term.
             term_qubits (List[Tuple[int, ...]]): the qubits each term is acting on, e.g.
-            [(0,1,2), (1,3), (2,1,3), (4,)].
+                ``[(0,1,2), (1,3), (2,1,3), (4,)]``.
             nqubits (int): number of qubits of the observable.
+
         Returns:
-            (float) the calculated expectation value.
+            float: the calculated expectation value.
         """
         # get the final state
         result = (
