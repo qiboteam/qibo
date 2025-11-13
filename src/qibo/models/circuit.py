@@ -1211,7 +1211,12 @@ class Circuit:
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
     def to_qir(self):
-        """Convert circuit to QIR string."""
+        """
+        Convert circuit to QIR circuit.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `pyqir` circuits.
+        """
         try:
             from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
             from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
