@@ -110,7 +110,6 @@ Financial Sponsors and Development Partners
 * `Quantum Research Center <https://www.tii.ae/quantum>`_, Technology Innovation Institute (TII), United Arab Emirates.
 * `National Quantum Science and Technology Institute <https://nqsti.it>`_, Italy.
 * `National Quantum Computing Hub <https://nqch.sg>`_, National Quantum Office, Singapore.
-* `QUARKO <https://quarko.tech>`_.
 
 Collaborators
 -------------
