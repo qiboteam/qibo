@@ -485,7 +485,7 @@ class Backend(abc.ABC):
         nqubits: int,
     ):
         """Compute the expectation value of a general symbolic observable that is a sum of terms.
-       
+
         In particular, each term of the observable is contracted with
         the corresponding subspace defined by the qubits it acts on.
 
