@@ -50,7 +50,7 @@ class ReadoutMitigationRoutine(ABC):
         return self._nqubits
 
     @abstractmethod
-    def __call__(self, measurement_result: MeasurementResult) -> MeasurementResult:
+    def __call__(self, frequencies: Dict[int | str, int]) -> Dict[int | str, int]:
         pass
 
     @staticmethod
