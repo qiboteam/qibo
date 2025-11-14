@@ -1219,7 +1219,7 @@ class Circuit:
                 circuit_2.add(gates.CNOT(0, 1))
         """
         parser = QASMParser()
-        circuit_kwargs.pop("nqubits")
+        circuit_kwargs.pop("nqubits", None)
         return parser.to_circuit(qasm_code, **circuit_kwargs)
 
     def to_cudaq(self):  # pragma: no cover
