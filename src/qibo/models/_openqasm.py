@@ -199,7 +199,13 @@ class QASMParser:
             qubits = (qubit,)
         else:
             register = measurement.target.name
-            qubits = self.c_registers[register]
+            qubit = measurement.measure.qubit.name
+            if len(self.c_registers[register]) != len(self.q_registers[qubit]):
+                raise_error(
+                    RuntimeError,
+                    f"Trying to store quantum measurements from quantum register {qubit}: {self.q_registers[qubit]} to the classical register {register} of length {len(self.c_registers[register])}, the lengths of the quantum and classical registers should match.",
+                )
+            qubits = self.q_registers[qubit]
         return getattr(qibo.gates, "M")(*qubits, register_name=register)
 
     def _get_qubit(self, qubit):
