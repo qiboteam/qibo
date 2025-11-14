@@ -131,9 +131,7 @@ class QASMParser:
         self.q_registers = {}
         self.c_registers = set()
 
-    def to_circuit(
-        self, qasm_string: str, accelerators: dict = None, density_matrix: bool = False
-    ):
+    def to_circuit(self, qasm_string: str, **circuit_kwargs):
         """Converts a QASM program into a :class:`qibo.models.Circuit`.
 
         Args:
@@ -172,12 +170,7 @@ class QASMParser:
                 self.c_registers.update({name: list(range(size))})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
-        circ = qibo.Circuit(
-            nqubits,
-            accelerators,
-            density_matrix,
-            wire_names=self._construct_wire_names(),
-        )
+        circ = qibo.Circuit(nqubits, **circuit_kwargs)
         circ.add(self._merge_measurements(gates))
         return circ
 
