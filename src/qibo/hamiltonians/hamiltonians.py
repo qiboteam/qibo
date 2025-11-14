@@ -115,24 +115,26 @@ class Hamiltonian(AbstractHamiltonian):
 
         Args:
             circuit (Circuit): circuit to calculate the expectation value from.
-        If the circuit has already been executed, this will just make use of the cached
-        result, otherwise it will execute the circuit.
+                If the circuit has already been executed, this will just make use of the cached
+                result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
-        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
+                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            float: the expectation value.
+            float: The expectation value.
         """
         if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
             warn(
-                "Calculation of expectation values starting from the state is deprecated, use the ``expectation_from_state`` method if you really need it, or simply pass the circuit you want to calculate the expectation value from."
+                "Calculation of expectation values starting from the state is deprecated, "
+                + "use the ``expectation_from_state`` method if you really need it, "
+                + "or simply pass the circuit you want to calculate the expectation value from."
             )
             return self.expectation_from_state(circuit)
 
         if nshots is None:
             return self.backend.expectation_observable_dense(circuit, self.matrix)
 
-        from qibo import gates
+        from qibo import gates  # pylint: disable=import-outside-toplevel
 
         circuit = circuit.copy(True)
         circuit.add(gates.M(*range(self.nqubits)))
@@ -153,9 +155,9 @@ class Hamiltonian(AbstractHamiltonian):
             qubit_map (Tuple[int, ...], optional): optional qubit reordering.
 
         Returns:
-            (float) the expectation value.
+            float: The expectation value.
         """
-        from qibo import Circuit
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
         circuit = Circuit(1)
 
@@ -185,7 +187,7 @@ class Hamiltonian(AbstractHamiltonian):
         for a given state :math:`\\ket{\\mu}`.
 
         Args:
-            circuit (Circuit): circuit to compute the energy fluctuation from.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to compute the energy fluctuation from.
 
         Returns:
             float: Energy fluctuation value.
@@ -598,17 +600,19 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Args:
             circuit (Circuit): circuit to calculate the expectation value from.
-        If the circuit has already been executed, this will just make use of the cached
-        result, otherwise it will execute the circuit.
+                If the circuit has already been executed, this will just make use of the cached
+                result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
-        it will try to compute the exact expectation value (if possible). Defaults to ``None``.
+                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
             float: the expectation value.
         """
         if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
             warn(
-                "Calculation of expectation values starting from the state is deprecated, use the ``expectation_from_state`` method if you really need it, or simply pass the circuit you want to calculate the expectation value from."
+                "Calculation of expectation values starting from the state is deprecated, "
+                + "use the ``expectation_from_state`` method if you really need it, "
+                + "or simply pass the circuit you want to calculate the expectation value from."
             )
             return self.expectation_from_state(circuit)
         if nshots is None:
@@ -647,7 +651,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             qubit_map (Tuple[int, ...], optional): optional qubit reordering.
 
         Returns:
-            (float) the expectation value.
+            float: The expectation value.
         """
 
         from qibo import Circuit
