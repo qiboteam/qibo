@@ -287,14 +287,3 @@ class QASMParser:
             else:
                 updated_queue.append(gate)
         return updated_queue
-
-    def _construct_wire_names(self):
-        """Builds the wires names from the declared quantum registers."""
-        wire_names = []
-        for reg_name, reg_qubits in self.q_registers.items():
-            wires = sorted(
-                zip(repeat(reg_name, len(reg_qubits)), reg_qubits), key=lambda x: x[1]
-            )
-            for wire in wires:
-                wire_names.append(f"{wire[0]}{wire[1]}")
-        return wire_names
