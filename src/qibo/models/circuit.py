@@ -1226,6 +1226,64 @@ class Circuit:
             ) from e
         return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
 
+    def to_cudaq(self):  # pragma: no cover
+        """Convert circuit to CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `cudaq` circuits.
+        """
+        try:
+            from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
+                openqasm3_to_cudaq,
+            )
+            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+                qasm2_to_qasm3,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --with cudaq`"
+            ) from e
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
+        return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
+
+    @classmethod
+    def from_cudaq(cls, cudaq_circuit_code):  # pragma: no cover
+        """Construct a circuit from CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the `cudaq` circuit into a `qibo.models.circuit.Circuit`.
+
+        Args:
+            cudaq_circuit_code (PyKernel): kernel containing the
+                cudaq circuit code.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit` representing the
+            given circuit.
+        """
+        try:
+            from qbraid.transpiler.conversions.cudaq import (  # pylint: disable=C0415
+                cudaq_to_qasm2,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --with cudaq`"
+            ) from e
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
+        return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
+
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
