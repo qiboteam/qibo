@@ -1220,7 +1220,7 @@ class Circuit:
         try:
             from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
             from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
-        except ModuleNotFoundError as e:  # pragma: no-cover
+        except ModuleNotFoundError as e:  # pragma: no cover
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, please install it with `poetry install --with qir`"
             ) from e
