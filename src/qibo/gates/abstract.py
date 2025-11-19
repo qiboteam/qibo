@@ -183,7 +183,7 @@ class Gate:
         return self.control_qubits + self.target_qubits
 
     @property
-    def qasm_label(self):
+    def qasm_label(self) -> str | Tuple[str, str]:
         """String corresponding to OpenQASM operation of the gate."""
         raise_error(
             NotImplementedError,

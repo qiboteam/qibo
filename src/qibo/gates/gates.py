@@ -856,7 +856,7 @@ class GPI(ParametrizedGate):
 
     @property
     def qasm_label(self):
-        return "gpi"
+        return "gpi", "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}"
 
 
 class GPI2(ParametrizedGate):
@@ -894,7 +894,7 @@ class GPI2(ParametrizedGate):
 
     @property
     def qasm_label(self):
-        return "gpi2"
+        return "gpi2", "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}"
 
     @property
     def clifford(self):
