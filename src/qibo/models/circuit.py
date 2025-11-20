@@ -1243,7 +1243,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --with cudaq`"
+                "please install it with `poetry install --extras cudaq`"
             ) from e
         try:
             import cudaq  # pylint: disable=C0415, W0611
@@ -1275,7 +1275,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --with cudaq`"
+                "please install it with `poetry install --extras cudaq`"
             ) from e
         try:
             import cudaq  # pylint: disable=C0415, W0611
