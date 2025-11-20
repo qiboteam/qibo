@@ -1218,6 +1218,7 @@ class Circuit:
         the circuit into `pyqir` circuits.
         """
         try:
+            import qbraid_qir  # pylint: disable=C0415, W0611
             from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
             from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
         except ModuleNotFoundError as e:  # pragma: no cover
