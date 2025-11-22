@@ -123,22 +123,15 @@ def parameter_shift(
     circuit.set_parameters(shifted)
 
     if nshots is None:
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
         # forward evaluation
-        forward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
+        forward = hamiltonian.expectation(circuit)
 
         # backward shift and evaluation
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
+        backward = hamiltonian.expectation(circuit)
 
     # same but using expectation from samples
     else:
@@ -213,17 +206,14 @@ def finite_differences(
     circuit.set_parameters(shifted)
 
     # forward evaluation
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    forward = hamiltonian.expectation(circuit)
 
     # backward shift and evaluation
     shifted[parameter_index] -= 2 * step_size
     circuit.set_parameters(shifted)
 
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    backward = hamiltonian.expectation(circuit)
 
     circuit.set_parameters(parameters)
 
