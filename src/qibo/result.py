@@ -258,7 +258,9 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.frequencies(binary)
+                gate.register_name: gate.result.frequencies(
+                    binary, backend=self.backend
+                )
                 for gate in self.measurements
             }
 
@@ -331,7 +333,10 @@ class MeasurementOutcomes:
         if self._samples is None:
             if self.measurements[0].result.has_samples():
                 self._samples = self.backend.np.concatenate(
-                    [gate.result.samples() for gate in self.measurements],
+                    [
+                        gate.result.samples(backend=self.backend)
+                        for gate in self.measurements
+                    ],
                     axis=1,
                 )
             else:
@@ -370,7 +375,7 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.samples(binary)
+                gate.register_name: gate.result.samples(binary, backend=backend)
                 for gate in self.measurements
             }
 
