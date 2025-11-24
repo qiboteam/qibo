@@ -1,11 +1,13 @@
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
 
+from functools import reduce
+
 import numpy as np
 import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.hamiltonians.models import LABS, XXX, Heisenberg
+from qibo.hamiltonians.models import GPP, LABS, XXX, Heisenberg
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -115,3 +117,28 @@ def test_xxx(backend, dense):
             dense=dense,
             backend=backend,
         )
+
+
+@pytest.mark.parametrize("dense", [True, False])
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_gpp(backend, nqubits, dense):
+    adj_matrix = np.ones((nqubits, nqubits)) - np.diag(np.ones(nqubits))
+    adj_matrix = backend.cast(adj_matrix, dtype=np.int8)
+
+    hamiltonian = GPP(adj_matrix, dense=dense, backend=backend)
+
+    base_string = [backend.matrices.I] * nqubits
+    rows, columns = backend.np.nonzero(backend.np.tril(adj_matrix, -1))
+    target = 0
+    for col, row in zip(columns, rows):
+        term_col = base_string.copy()
+        term_col[int(col)] = (backend.matrices.I - backend.matrices.Z) / 2
+        term_col = reduce(backend.np.kron, term_col)
+
+        term_row = base_string.copy()
+        term_row[int(row)] = (backend.matrices.I - backend.matrices.Z) / 2
+        term_row = reduce(backend.np.kron, term_row)
+
+        target += term_row + term_col - 2 * (term_col @ term_row)
+
+    backend.assert_allclose(hamiltonian.matrix, target)
