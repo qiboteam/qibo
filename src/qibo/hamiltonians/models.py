@@ -470,7 +470,9 @@ def GPP(
 
 def _gpp_symbolic(adjacency_matrix, backend):
     def term(index: int):
-        return (symbols.I(index) - symbols.Z(index)) / 2
+        return (
+            symbols.I(index, backend=backend) - symbols.Z(index, backend=backend)
+        ) / 2
 
     hamiltonian = 0
     rows, columns = backend.np.nonzero(backend.np.tril(adjacency_matrix, -1))

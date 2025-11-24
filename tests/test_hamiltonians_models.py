@@ -127,16 +127,16 @@ def test_gpp(backend, nqubits, dense):
 
     hamiltonian = GPP(adj_matrix, dense=dense, backend=backend)
 
-    base_string = [backend.matrices.I] * nqubits
+    base_string = [backend.matrices.I()] * nqubits
     rows, columns = backend.np.nonzero(backend.np.tril(adj_matrix, -1))
     target = 0
     for col, row in zip(columns, rows):
         term_col = base_string.copy()
-        term_col[int(col)] = (backend.matrices.I - backend.matrices.Z) / 2
+        term_col[int(col)] = (backend.matrices.I() - backend.matrices.Z) / 2
         term_col = reduce(backend.np.kron, term_col)
 
         term_row = base_string.copy()
-        term_row[int(row)] = (backend.matrices.I - backend.matrices.Z) / 2
+        term_row[int(row)] = (backend.matrices.I() - backend.matrices.Z) / 2
         term_row = reduce(backend.np.kron, term_row)
 
         target += term_row + term_col - 2 * (term_col @ term_row)
