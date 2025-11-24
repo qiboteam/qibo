@@ -397,6 +397,22 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
 
 
+def GPP(adjacency_matrix, backend=None):
+    backend = _check_backend(backend)
+
+    def term(index: int):
+        return (symbols.I(index) - symbols.Z(index)) / 2
+
+    hamiltonian = 0
+    rows, columns = backend.np.nonzero(backend.np.tril(adjacency_matrix, -1))
+    for ind_j, ind_k in zip(rows, columns):
+        ind_j, ind_k = int(ind_j), int(ind_k)
+        x_j = term(ind_j)
+        x_k = term(ind_k)
+        hamiltonian += adjacency_matrix[ind_j, ind_k] * (x_j + x_k - 2 * x_j * x_k)
+
+    return SymbolicHamiltonian(hamiltonian, backend=backend)
+
 def _multikron(matrix_list, backend):
     """Calculates Kronecker product of a list of matrices.
 
