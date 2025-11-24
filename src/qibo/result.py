@@ -375,7 +375,7 @@ class MeasurementOutcomes:
 
         if registers:
             return {
-                gate.register_name: gate.result.samples(binary, backend=backend)
+                gate.register_name: gate.result.samples(binary, backend=self.backend)
                 for gate in self.measurements
             }
 
