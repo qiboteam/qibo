@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo.models import QFT
+from qibo.models.qft import _DistributedQFT
 from qibo.quantum_info import random_statevector
 
 
@@ -71,15 +72,13 @@ def test_qft_execution(backend, nqubits, random, density_matrix):
     if density_matrix:
         initial_state = backend.outer(initial_state, backend.conj(initial_state))
 
-    final_state = backend.execute_circuit(c, backend.copy(initial_state))._state
+    final_state = backend.execute_circuit(circuit, backend.copy(initial_state))._state
     target_state = exact_qft(initial_state, density_matrix, backend)
     backend.assert_allclose(final_state, target_state, atol=1e-6, rtol=1e-6)
 
 
 def test_qft_errors():
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
-    from qibo.models.qft import _DistributedQFT
-
     with pytest.raises(NotImplementedError):
         circuit = QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
