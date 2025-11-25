@@ -190,6 +190,9 @@ class SymbolicTerm(HamiltonianTerm):
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
+    def __repr__(self):
+        return f"{self.coefficient}*" + "*".join(str(factor) for factor in self.factors)
+
     @staticmethod
     def _compute_power(factor):
         """Break down a factor into a base term and its power, e.g. `X**n` returns `X` and `n`. In case the base term is a Pauli also simplify the power calculation, i.e. return the identity for even `n` and the Pauli itself for odd `n`."""
