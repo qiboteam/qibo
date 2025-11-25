@@ -161,7 +161,8 @@ def test_two_qubits_gates(backend, gate):
     [
         15,
         25,
-    ],
+    ]
+    + list(range(100)),
 )
 def test_random_clifford_circuit(backend, prob_qubits, binary, seed):
     np.random.seed(seed)

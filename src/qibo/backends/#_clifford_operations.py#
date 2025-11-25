@@ -441,7 +441,7 @@ def _random_outcome(state, p, q, nqubits, outcome):
             False,
         )
     state[p - nqubits, :] = state[p, :]
-    # outcome = np.random.randint(2, size=1).item()
+    #outcome = np.random.randint(2, size=1).item()
     state[p, :] = 0
     state[p, -1] = outcome
     state[p, nqubits + q] = 1
@@ -495,10 +495,8 @@ def _init_state_for_measurements(state, nqubits, collapse):
         return _unpackbits(state, axis=0, count=_dim(nqubits))
     return state.copy()
 
-
 def _sample_random_outcomes(n_samples):
     return np.random.randint(2, size=n_samples).tolist()
-
 
 def _M(state, qubits, nqubits, collapse=False):
     sample = []
@@ -508,7 +506,7 @@ def _M(state, qubits, nqubits, collapse=False):
         p = state[nqubits:-1, q].nonzero()[0]
         # random outcome, affects the state
         if len(p) > 0:
-            state, _ = _random_outcome(state, p, q, nqubits)
+            state, _ = _random_outcome(state, p, q, nqubits, 0)
             outcome = None
         # determined outcome, state unchanged
         else:
@@ -529,7 +527,11 @@ def M(state, qubits, nqubits, collapse=False, nshots=1):
         )
     sample = _M(state, qubits, nqubits, collapse)
     samples = [
-        (_sample_random_outcomes(nshots) if outcome is None else nshots * [outcome])
+        (
+            _sample_random_outcomes(nshots)
+            if outcome is None
+            else nshots * [outcome]
+        )
         for outcome in sample
     ]
     samples = list(zip(*samples))
