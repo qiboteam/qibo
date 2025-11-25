@@ -426,6 +426,27 @@ measure q[3] -> b[1];"""
     assert circuit.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
 
 
+@pytest.mark.parametrize("creg_size", [2, 3, 4])
+def test_from_qasm_vectorized_measurements(creg_size):
+    target = f"""OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[3];
+creg a[{creg_size}];
+x q[1];
+measure q -> a;
+"""
+    if creg_size != 3:
+        with pytest.raises(RuntimeError):
+            c = Circuit.from_qasm(target)
+    else:
+        c = Circuit.from_qasm(target)
+        assert c.depth == 2
+        assert isinstance(c.queue[0], gates.X)
+        assert c.measurement_tuples == {
+            "a": (0, 1, 2),
+        }
+
+
 def test_from_qasm_measurements_order():
     target = """OPENQASM 2.0;
 include "qelib1.inc";

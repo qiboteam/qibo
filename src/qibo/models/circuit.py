@@ -1210,6 +1210,23 @@ class Circuit:
         parser = QASMParser()
         return parser.to_circuit(qasm_code, accelerators, density_matrix)
 
+    def to_qir(self):
+        """
+        Convert circuit to QIR circuit.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `pyqir` circuits.
+        """
+        try:
+            import qbraid_qir  # pylint: disable=C0415, W0611
+            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+            from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
+        except ModuleNotFoundError as e:  # pragma: no cover
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, please install it with `poetry install --extras qir`"
+            ) from e
+        return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
+
     def to_cudaq(self):  # pragma: no cover
         """Convert circuit to CUDA-Q (quake) code.
 
@@ -1226,7 +1243,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --with cudaq`"
+                "please install it with `poetry install --extras cudaq`"
             ) from e
 
         try:
@@ -1260,7 +1277,7 @@ class Circuit:
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError(
                 "The optional dependency qbraid is missing, "
-                "please install it with `poetry install --with cudaq`"
+                "please install it with `poetry install --extras cudaq`"
             ) from e
 
         try:
