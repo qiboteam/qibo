@@ -114,7 +114,7 @@ class Hamiltonian(AbstractHamiltonian):
         observables if ``nshots != None``.
 
         Args:
-            circuit (Circuit): circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to calculate the expectation value from.
                 If the circuit has already been executed, this will just make use of the cached
                 result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
@@ -599,14 +599,14 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """Computes the expectation value for a given circuit.
 
         Args:
-            circuit (Circuit): circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to calculate the expectation value from.
                 If the circuit has already been executed, this will just make use of the cached
                 result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
                 it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            float: the expectation value.
+            float: The expectation value.
         """
         if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
             warn(

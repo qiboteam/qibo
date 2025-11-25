@@ -284,7 +284,7 @@ class Backend(abc.ABC):
             circuit (Circuit): the circuit to calculate the expectation value from.
             observable (ndarray): the matrix corresponding to the observable.
         Returns:
-            (float) the calculated expectation value.
+            float: The calculated expectation value.
         """
         result = (
             circuit._final_state
@@ -418,7 +418,7 @@ class Backend(abc.ABC):
         Returns:
             float: The calculated expectation value.
         """
-        from qibo import gates
+        from qibo import gates  # pylint: disable=import-outside-toplevel
 
         rotated_circuits = []
         qubit_maps = []
@@ -499,7 +499,7 @@ class Backend(abc.ABC):
             nqubits (int): number of qubits of the observable.
 
         Returns:
-            float: the calculated expectation value.
+            float: The calculated expectation value.
         """
         # get the final state
         result = (
