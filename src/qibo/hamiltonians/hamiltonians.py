@@ -167,7 +167,6 @@ class Hamiltonian(AbstractHamiltonian):
             circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
-
     def energy_fluctuation(self, circuit):
         """
         Evaluate energy fluctuation:
@@ -195,13 +194,15 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be added.",
+                    "Only Hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = self.matrix + other.matrix
         elif isinstance(other, self.backend.numeric_types) or isinstance(
             other, self.backend.tensor_types
         ):
-            new_matrix = self.matrix + other * self.eye()
+            new_matrix = self.matrix + other * self._backend.identity(
+                self.matrix.shape[0], dtype=self.matrix.dtype
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -216,11 +217,13 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be subtracted.",
+                    "Only Hamiltonians with the same number of qubits can be subtracted.",
                 )
             new_matrix = self.matrix - other.matrix
         elif isinstance(other, self.backend.numeric_types):
-            new_matrix = self.matrix - other * self.eye()
+            new_matrix = self.matrix - other * self._backend.identity(
+                self.matrix.shape[0], dtype=self.matrix.dtype
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -236,11 +239,14 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be added.",
+                    "Only Hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = other.matrix - self.matrix
         elif isinstance(other, self.backend.numeric_types):
-            new_matrix = other * self.eye() - self.matrix
+            new_matrix = (
+                other * self._backend.identity(self.matrix.shape[0], dtype=self.matrix.dtype)
+                - self.matrix
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -275,7 +281,9 @@ class Hamiltonian(AbstractHamiltonian):
             if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
-                r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+                r._eigenvectors = self._backend.identity(
+                    int(self._eigenvectors.shape[0]), dtype=self.matrix.dtype
+                )
 
         return r
 
@@ -304,7 +312,9 @@ def _calculate_nqubits_from_form(form):
         else:
             raise_error(
                 RuntimeError,
-                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, you can define a custom symbol for {symbol} by subclassing ``qibo.symbols.Symbol``.",
+                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, "
+                + f"you can define a custom symbol for {symbol} by subclassing "
+                + " ``qibo.symbols.Symbol``.",
             )
         if q > nqubits:  # pylint: disable=E0606
             nqubits = q
