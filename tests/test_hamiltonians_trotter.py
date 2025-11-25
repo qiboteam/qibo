@@ -2,7 +2,8 @@
 
 import pytest
 
-from qibo import hamiltonians, symbols
+from qibo import hamiltonians
+from qibo.symbols import Z
 from qibo.quantum_info.random_ensembles import random_clifford
 
 
@@ -89,7 +90,7 @@ def test_trotter_hamiltonian_matmul(backend, nqubits):
     target_ev = dense_ham.expectation(state)
     backend.assert_allclose(trotter_ev, target_ev, atol=1e-8)
 
-    state = state().state()
+    state = backend.execute_circuit(state).state()
     trotter_matmul = local_ham @ state
     target_matmul = dense_ham @ state
     backend.assert_allclose(trotter_matmul, target_matmul, atol=1e-8)
@@ -97,7 +98,7 @@ def test_trotter_hamiltonian_matmul(backend, nqubits):
 
 def test_symbolic_hamiltonian_circuit_different_dts(backend):
     """Issue: https://github.com/qiboteam/qibo/issues/1357."""
-    ham = hamiltonians.SymbolicHamiltonian(symbols.Z(0), backend=backend)
+    ham = hamiltonians.SymbolicHamiltonian(Z(0, backend=backend), backend=backend)
     a = ham.circuit(0.1)
     b = ham.circuit(0.1)
     matrix1 = ham.circuit(0.2).unitary(backend)

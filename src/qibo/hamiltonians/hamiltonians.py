@@ -129,13 +129,13 @@ class Hamiltonian(AbstractHamiltonian):
             return self.expectation_from_state(circuit)
 
         if nshots is None:
-            return self.backend.expectation_observable_dense(circuit, self.matrix)
+            return self.backend.exp_value_observable_dense(circuit, self.matrix)
 
         from qibo import gates  # pylint: disable=import-outside-toplevel
 
         circuit = circuit.copy(True)
         circuit.add(gates.M(*range(self.nqubits)))
-        return self.backend.expectation_diagonal_observable_dense_from_samples(
+        return self.backend.exp_value_diagonal_observable_dense_from_samples(
             circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
 
@@ -163,7 +163,7 @@ class Hamiltonian(AbstractHamiltonian):
                 return frequencies
 
         circuit._final_state = TMP()
-        return self.backend.expectation_diagonal_observable_dense_from_samples(
+        return self.backend.exp_value_diagonal_observable_dense_from_samples(
             circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
@@ -631,12 +631,12 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             ):
                 return self.dense.expectation(circuit)
             terms_coefficients, terms, term_qubits = self.simple_terms
-            return self.constant.real + self.backend.expectation_observable_symbolic(
+            return self.constant.real + self.backend.exp_value_observable_symbolic(
                 circuit, terms, term_qubits, terms_coefficients, self.nqubits
             )
 
         terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
-        return self.backend.expectation_observable_symbolic_from_samples(
+        return self.backend.exp_value_observable_symbolic_from_samples(
             circuit,
             terms_coefficients,
             terms_observables,
@@ -681,7 +681,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 ]
             )
             coefficients.append(term.coefficient.real)
-        return self.backend.expectation_diagonal_observable_symbolic_from_samples(
+        return self.backend.exp_value_diagonal_observable_symbolic_from_samples(
             circuit, self.nqubits, qubits, coefficients, nshots=1, qubit_map=qubit_map
         )
 

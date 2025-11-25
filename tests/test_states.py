@@ -12,10 +12,10 @@ def test_measurement_result_repr():
     assert str(result) == "MeasurementResult(qubits=(0,), nshots=None)"
 
 
-def test_measurement_result_error():
+def test_measurement_result_error(backend):
     result = MeasurementResult(gates.M(0).qubits)
     with pytest.raises(RuntimeError):
-        samples = result.samples()
+        samples = result.samples(backend=backend)
 
 
 @pytest.mark.parametrize("target", range(5))

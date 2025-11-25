@@ -343,8 +343,8 @@ def test_energy(backend, density_matrix):
     state = backend.execute_circuit(circ).state()
     if density_matrix:
         target_energy = backend.trace(matrix @ state)
-        final_energy = energy.apply_density_matrix(backend, circ)
-        final_energy_from_state = energy.apply_density_matrix(backend, state)
+        final_energy = energy.apply(backend, circ)
+        final_energy_from_state = energy.apply(backend, state)
     else:
         target_energy = np.matmul(
             np.conj(backend.to_numpy(state)),

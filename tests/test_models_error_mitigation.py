@@ -112,7 +112,7 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
     circuit = get_circuit(nqubits)
     circuit_copy = circuit.copy(True)
     # Define the observable
-    obs = np.prod([Z(qubit) for qubit in range(nmeas)])
+    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
@@ -171,7 +171,7 @@ def test_cdr(backend, nqubits, noise, nshots, full_output, readout):
     circuit = get_circuit(nqubits)
     circuit_copy = circuit.copy(True)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nmeas)])
+    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
@@ -197,7 +197,7 @@ def test_cdr(backend, nqubits, noise, nshots, full_output, readout):
 
 
 @pytest.mark.parametrize("nqubits", [3])
-def test_sample_training_circuit(nqubits):
+def test_sample_training_circuit(backend, nqubits):
     # Define the circuit
     hz = -2
     hx = 1
@@ -217,9 +217,9 @@ def test_sample_training_circuit(nqubits):
     circuit.add(gates.M(q) for q in range(nqubits))
 
     with pytest.raises(ValueError):
-        sample_training_circuit_cdr(circuit)
+        sample_training_circuit_cdr(circuit, backend=backend)
     with pytest.raises(ValueError):
-        sample_clifford_training_circuit(circuit)
+        sample_clifford_training_circuit(circuit, backend=backend)
 
 
 @pytest.mark.parametrize(
@@ -253,7 +253,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, ns
     circuit = get_circuit(nqubits)
     circuit_copy = circuit.copy(True)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
     exact = obs.expectation(circuit)
@@ -264,7 +264,6 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, ns
     estimate = vnCDR(
         circuit=circuit_copy,
         observable=obs,
-        backend=backend,
         noise_levels=range(3),
         noise_model=noise,
         nshots=nshots,
@@ -272,6 +271,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, ns
         insertion_gate=insertion_gate,
         full_output=full_output,
         readout=readout,
+        backend=backend
     )
     if full_output:
         estimate = estimate[0]
@@ -302,18 +302,18 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     elif method == "randomized":
         readout = {"ncircuits": 10}
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nmeas)])
+    obs = np.prod([Z(qubit, backend=backend) for qubit in range(nmeas)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # get noise free expected val
     circuit = get_circuit(nqubits)
     circuit_copy = circuit.copy(True)
-    true_val = obs.expectation(c, nshots=nshots)
+    true_val = obs.expectation(circuit, nshots=nshots)
     # get noisy expected val
     circuit.add(gates.M(*range(nmeas)))
     qubits = [term.target_qubits for term in obs.terms]
     coefficients = [term.coefficient.real for term in obs.terms]
-    noisy_val = obs.backend.expectation_diagonal_observable_symbolic_from_samples(
-        noise.apply(c), obs.nqubits, qubits, coefficients, nshots=nshots
+    noisy_val = obs.backend.exp_value_diagonal_observable_symbolic_from_samples(
+        noise.apply(circuit), obs.nqubits, qubits, coefficients, nshots=nshots
     )
 
     mit_val = get_expectation_val_with_readout_mitigation(
@@ -345,11 +345,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
 )
 @pytest.mark.parametrize("nshots", [None, 2000])
 def test_ics(backend, nqubits, noise, full_output, readout, nshots):
-    # np.random.seed(10)
-    # backend.set_seed(10)
     backend.set_dtype("complex128")
-
-    set_dtype("complex128")
 
     if backend.platform == "tensorflow":
         backend.engine.config.threading.set_inter_op_parallelism_threads = 1
@@ -360,7 +356,7 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     """Test that ICS reduces the noise."""
     # Define the circuit
     circuit = get_circuit(nqubits)
-    c_copy = circuit.copy(True)
+    circuit_copy = circuit.copy(True)
     # Define the observable
     obs = reduce(mul, [Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
@@ -374,7 +370,7 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     np.random.seed(8)
     backend.set_seed(8)
     estimate = ICS(
-        circuit=c_copy,
+        circuit=circuit_copy,
         observable=obs,
         noise_model=noise,
         nshots=nshots,

@@ -238,8 +238,7 @@ class SymbolicTerm(HamiltonianTerm):
                     len(self.factors) - self.factors[::-1].index(q_factor) - 1
                 )
                 if pauli_product in INVERSE_PAULI_MAPPING:
-                    factor = INVERSE_PAULI_MAPPING[pauli_product](q)
-                    factor.backend = self.backend
+                    factor = INVERSE_PAULI_MAPPING[pauli_product](q, backend=self.backend)
                     self.factors[factor_index] = factor
                     self.matrix_map[q][-1] = factor.matrix
                 # Otherwise, just remove the factor/matrix
@@ -280,11 +279,10 @@ class SymbolicTerm(HamiltonianTerm):
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
-        new = self.__class__(self.coefficient)
+        new = self.__class__(self.coefficient, backend=self.backend)
         new.factors = self.factors
         new.matrix_map = self.matrix_map
         new.target_qubits = self.target_qubits
-        new.backend = self.backend
         return new
 
     def __mul__(self, x):

@@ -73,7 +73,7 @@ def _observables(nqubits: int) -> List:
 
 
 @cache
-def _get_observable(j: int, nqubits: int):
+def _get_observable(j: int, nqubits: int, backend):
     """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
 
     .. math::
@@ -93,8 +93,8 @@ def _get_observable(j: int, nqubits: int):
     observable = S(1)
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
-            observable *= obs(q)
-    return SymbolicHamiltonian(observable, nqubits=nqubits)
+            observable *= obs(q, backend=backend)
+    return SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
 
 
 @cache
@@ -202,11 +202,11 @@ def _gate_tomography(
                 new_circ = circ.copy()
                 measurements = _measurement_basis(j, nqubits)
                 new_circ.add(measurements)
-                observable = _get_observable(j, nqubits)
+                observable = _get_observable(j, nqubits, backend=backend)
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
                 if transpiler is not None:
-                    new_circ, _ = transpiler(new_circ)
+                    new_circ, _ = transpiler(new_circ, backend=backend)
                 result = backend.execute_circuit(new_circ, nshots=nshots)
                 exp_val = result.expectation_from_samples(observable)
             matrix_jk[j, k] = exp_val

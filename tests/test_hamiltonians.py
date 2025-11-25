@@ -293,7 +293,9 @@ def test_hamiltonian_expectation_from_samples(backend, dense):
     backend.set_seed(12)
 
     nshots = 4 * 10**6
-    observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
+    observable = 2 * Z(0, backend=backend) * (1 - Z(1, backend=backend)) ** 2 + Z(
+        0, backend=backend
+    ) * Z(2, backend=backend)
     exp, H, circuit = non_exact_expectation_test_setup(backend, observable)
     if dense:
         H = H.dense
@@ -301,12 +303,12 @@ def test_hamiltonian_expectation_from_samples(backend, dense):
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 
-def test_hamiltonian_expectation_from_samples_non_diagonal_error():
+def test_hamiltonian_expectation_from_samples_non_diagonal_error(backend):
     nshots = 1000
-    c = Circuit(3)
-    h = XXZ(3, delta=0.5, dense=True)
+    circuit = Circuit(3)
+    h = XXZ(3, delta=0.5, dense=True, backend=backend)
     with pytest.raises(NotImplementedError):
-        h.expectation(c, nshots=nshots)
+        h.expectation(circuit, nshots=nshots)
 
 
 def test_hamiltonian_expectation_from_circuit(backend):
@@ -316,7 +318,11 @@ def test_hamiltonian_expectation_from_circuit(backend):
 
     nshots = 4 * 10**6
     observable = (
-        3.14 + I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
+        3.14
+        + I(0, backend=backend) * Z(1, backend=backend)
+        + X(0, backend=backend) * Z(1, backend=backend)
+        + Y(0, backend=backend) * X(2, backend=backend) / 2
+        - Z(0, backend=backend) * (1 - Y(1, backend=backend)) ** 3
     )
     exp, H, c = non_exact_expectation_test_setup(backend, observable)
     exp_from_samples = H.expectation(c, nshots=nshots)

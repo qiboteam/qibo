@@ -4,22 +4,24 @@ import pickle
 
 import numpy as np
 import pytest
-import sympy
 
-from qibo import get_backend, hamiltonians, matrices
+from qibo import set_backend
 from qibo.backends import NumpyBackend
+from qibo.hamiltonians import TFIM, SymbolicHamiltonian, X as X_model
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
 
 
 @pytest.mark.parametrize("symbol", [I, X, Y, Z])
 def test_symbols_pickling(symbol):
-    symbol = symbol(int(np.random.randint(4)))
+    set_backend("numpy")
+
+    symbol = symbol(int(np.random.randint(4)), backend=NumpyBackend())
     dumped_symbol = pickle.dumps(symbol)
     new_symbol = pickle.loads(dumped_symbol)
     for attr in ("target_qubit", "name", "_gate"):
         assert getattr(symbol, attr) == getattr(new_symbol, attr)
-    get_backend().assert_allclose(symbol.matrix, new_symbol.matrix)
+    NumpyBackend().assert_allclose(symbol.matrix, new_symbol.matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -31,9 +33,9 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits):
     )
     symham += Z(0, backend=backend) * Z(nqubits - 1, backend=backend)
     symham += h * sum(X(i, backend=backend) for i in range(nqubits))
-    ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
+    ham = SymbolicHamiltonian(-symham, backend=backend)
     final_matrix = ham.matrix
-    target_matrix = hamiltonians.TFIM(nqubits, h=h, backend=backend).matrix
+    target_matrix = TFIM(nqubits, h=h, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 
@@ -48,7 +50,7 @@ def test_from_symbolic_with_power(backend):
         - 2 * Symbol(0, matrix, backend=backend) * Symbol(2, matrix, backend=backend)
         + 1
     )
-    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
+    ham = SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
     matrix2 = matrix.dot(matrix)
@@ -69,7 +71,7 @@ def test_from_symbolic_with_complex_numbers(backend):
         - 3j * X(0, backend=backend) * Y(1, backend=backend)
         + 1j * Y(0, backend=backend) * X(1, backend=backend)
     )
-    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
+    ham = SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
     target_matrix = (1 + 2j) * backend.kron(backend.matrices.X, backend.matrices.X)
@@ -83,9 +85,9 @@ def test_from_symbolic_with_complex_numbers(backend):
 def test_x_hamiltonian_from_symbols(backend, nqubits):
     """Check creating sum(X) Hamiltonian using sympy."""
     symham = -sum(X(i, backend=backend) for i in range(nqubits))
-    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
+    ham = SymbolicHamiltonian(symham, backend=backend)
     final_matrix = ham.matrix
-    target_matrix = hamiltonians.X(nqubits, backend=backend).matrix
+    target_matrix = X_model(nqubits, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 
@@ -102,7 +104,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend):
         - 2
         - 3 * X(1, backend=backend) * Y(3, backend=backend)
     )
-    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
+    ham = SymbolicHamiltonian(symham, backend=backend)
     final_matrix = ham.matrix
     target_matrix = backend.kron(
         backend.kron(backend.matrices.X, backend.matrices.Y),
@@ -139,7 +141,7 @@ def test_hamiltonian_with_identity_symbol(backend):
         + 0.5 * Y(0, backend=backend) * Z(1, backend=backend) * I(3, backend=backend)
         + Z(0, backend=backend) * I(1, backend=backend) * X(2, backend=backend)
     )
-    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
+    ham = SymbolicHamiltonian(symham, backend=backend)
 
     final_matrix = ham.matrix
     target_matrix = backend.kron(

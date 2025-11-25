@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
-from qibo.hamiltonians import terms
+from qibo.backends import NumpyBackend
+from qibo.hamiltonians.terms import HamiltonianTerm, SymbolicTerm, TermGroup
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info import random_density_matrix, random_statevector
 from qibo.symbols import I, Symbol, X, Y, Z
@@ -13,29 +14,31 @@ from qibo.symbols import I, Symbol, X, Y, Z
 def test_hamiltonian_term_initialization(backend):
     """Test initialization and matrix assignment of ``HamiltonianTerm``."""
     matrix = np.random.random((2, 2))
-    term = terms.HamiltonianTerm(matrix, 0, backend=backend)
+    term = HamiltonianTerm(matrix, 0, backend=backend)
     assert term.target_qubits == (0,)
     backend.assert_allclose(term.matrix, matrix)
     matrix = np.random.random((4, 4))
-    term = terms.HamiltonianTerm(matrix, 2, 3, backend=backend)
+    term = HamiltonianTerm(matrix, 2, 3, backend=backend)
     assert term.target_qubits == (2, 3)
     backend.assert_allclose(term.matrix, matrix)
 
 
 def test_hamiltonian_term_initialization_errors():
     """Test initializing ``HamiltonianTerm`` with wrong parameters."""
+    backend = NumpyBackend()
+
     # Wrong HamiltonianTerm matrix
     with pytest.raises(TypeError):
-        t = terms.HamiltonianTerm("test", 0, 1)
+        t = HamiltonianTerm("test", 0, 1, backend=backend)
     # Passing negative target qubits in HamiltonianTerm
     with pytest.raises(ValueError):
-        t = terms.HamiltonianTerm("test", 0, -1)
+        t = HamiltonianTerm("test", 0, -1, backend=backend)
     # Passing matrix shape incompatible with number of qubits
     with pytest.raises(ValueError):
-        t = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
+        t = HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2, backend=backend)
     # Merging terms with invalid qubits
-    t1 = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1)
-    t2 = terms.HamiltonianTerm(np.random.random((4, 4)), 1, 2)
+    t1 = HamiltonianTerm(np.random.random((4, 4)), 0, 1, backend=backend)
+    t2 = HamiltonianTerm(np.random.random((4, 4)), 1, 2, backend=backend)
     with pytest.raises(ValueError):
         t = t1.merge(t2)
 
@@ -44,7 +47,7 @@ def test_hamiltonian_term_gates(backend):
     """Test gate application of ``HamiltonianTerm``."""
     nqubits = 4
     matrix = np.random.random((nqubits, nqubits))
-    term = terms.HamiltonianTerm(matrix, 1, 2, backend=backend)
+    term = HamiltonianTerm(matrix, 1, 2, backend=backend)
     gate = term.gate
     assert gate.target_qubits == (1, 2)
     backend.assert_allclose(gate.matrix(backend), matrix)
@@ -62,7 +65,7 @@ def test_hamiltonian_term_exponentiation(backend):
     from scipy.linalg import expm  # pylint: disable=C0415
 
     matrix = np.random.random((2, 2))
-    term = terms.HamiltonianTerm(matrix, 1, backend=backend)
+    term = HamiltonianTerm(matrix, 1, backend=backend)
     exp_matrix = backend.cast(expm(-0.5j * matrix))
     backend.assert_allclose(term.exp(0.5), exp_matrix)
 
@@ -76,7 +79,7 @@ def test_hamiltonian_term_exponentiation(backend):
 def test_hamiltonian_term_mul(backend):
     """Test scalar multiplication of ``HamiltonianTerm``."""
     matrix = np.random.random((4, 4))
-    term = terms.HamiltonianTerm(matrix, 0, 2, backend=backend)
+    term = HamiltonianTerm(matrix, 0, 2, backend=backend)
     mterm = 2 * term
     assert mterm.target_qubits == term.target_qubits
     backend.assert_allclose(mterm.matrix, 2 * matrix)
@@ -89,8 +92,8 @@ def test_hamiltonian_term_merge(backend):
     """Test ``HamiltonianTerm.merge``."""
     matrix1 = np.random.random((2, 2))
     matrix2 = np.random.random((4, 4))
-    term1 = terms.HamiltonianTerm(matrix1, 1, backend=backend)
-    term2 = terms.HamiltonianTerm(matrix2, 0, 1, backend=backend)
+    term1 = HamiltonianTerm(matrix1, 1, backend=backend)
+    term2 = HamiltonianTerm(matrix2, 0, 1, backend=backend)
     mterm = term2.merge(term1)
     target_matrix = np.kron(np.eye(2), matrix1) + matrix2
     assert mterm.target_qubits == (0, 1)
@@ -101,8 +104,8 @@ def test_hamiltonian_term_merge(backend):
 
 def test_symbolic_term_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression."""
-    expression = X(0) * Y(1) * X(1)
-    term = terms.SymbolicTerm(2, expression, backend=backend)
+    expression = X(0, backend=backend) * Y(1, backend=backend) * X(1, backend=backend)
+    term = SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (0, 1)
     assert len(term.matrix_map) == 2
     backend.assert_allclose(term.matrix_map.get(0)[0], backend.matrices.X)
@@ -111,8 +114,10 @@ def test_symbolic_term_creation(backend):
 
 def test_symbolic_term_with_power_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression that contains powers."""
-    expression = X(0) ** 4 * Z(1) ** 2 * X(2)
-    term = terms.SymbolicTerm(2, expression, backend=backend)
+    expression = (
+        X(0, backend=backend) ** 4 * Z(1, backend=backend) ** 2 * X(2, backend=backend)
+    )
+    term = SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (2,)
     assert len(term.matrix_map) == 1
     assert term.coefficient == 2
@@ -123,16 +128,22 @@ def test_symbolic_term_with_power_creation(backend):
 
 def test_symbolic_term_with_imag_creation():
     """Test creating ``SymbolicTerm`` from sympy expression that contains imaginary coefficients."""
-    expression = 3j * Y(0)
-    term = terms.SymbolicTerm(2, expression)
+    backend = NumpyBackend()
+    expression = 3j * Y(0, backend=backend)
+    term = SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (0,)
     assert term.coefficient == 6j
 
 
 def test_symbolic_term_matrix(backend):
     """Test matrix calculation of ``SymbolicTerm``."""
-    expression = X(0) * Y(1) * Z(2) * X(1)
-    term = terms.SymbolicTerm(2, expression, backend=backend)
+    expression = (
+        X(0, backend=backend)
+        * Y(1, backend=backend)
+        * Z(2, backend=backend)
+        * X(1, backend=backend)
+    )
+    term = SymbolicTerm(2, expression, backend=backend)
     assert term.target_qubits == (0, 1, 2)
     target_matrix = np.kron(matrices.X, matrices.Y @ matrices.X)
     target_matrix = backend.cast(2 * np.kron(target_matrix, matrices.Z))
@@ -141,8 +152,13 @@ def test_symbolic_term_matrix(backend):
 
 def test_symbolic_term_mul(backend):
     """Test multiplying scalar to ``SymbolicTerm``."""
-    expression = Y(2) * Z(3) * X(2) * X(3)
-    term = terms.SymbolicTerm(1, expression, backend=backend)
+    expression = (
+        Y(2, backend=backend)
+        * Z(3, backend=backend)
+        * X(2, backend=backend)
+        * X(3, backend=backend)
+    )
+    term = SymbolicTerm(1, expression, backend=backend)
     assert term.target_qubits == (2, 3)
     target_matrix = backend.cast(
         np.kron(matrices.Y @ matrices.X, matrices.Z @ matrices.X)
@@ -155,9 +171,16 @@ def test_symbolic_term_mul(backend):
 def test_symbolic_term_reduction(backend):
     """Test simplification of ``SymbolicTerm`` expressions"""
     expression = (
-        0.1**2 * X(2) * Z(0) * Z(1) * I(0) * Y(0) * I(0) * X(0)
+        0.1**2
+        * X(2, backend=backend)
+        * Z(0, backend=backend)
+        * Z(1, backend=backend)
+        * I(0, backend=backend)
+        * Y(0, backend=backend)
+        * I(0, backend=backend)
+        * X(0, backend=backend)
     )  #  -0.01i * Z(1) * X(2)
-    term = terms.SymbolicTerm(1, expression, backend=backend)
+    term = SymbolicTerm(1, expression, backend=backend)
     assert term.target_qubits == (1, 2)
     backend.assert_allclose(term.coefficient, -0.01j)
     target_matrix = backend.cast(-0.01j * np.kron(matrices.Z, matrices.X))
@@ -168,9 +191,9 @@ def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
     """Test simplification of ``SymbolicTerm`` expressions that include Symbol"""
     matrix = np.random.random((2, 2))
     expression = (
-        Z(0) * (Symbol(0, matrix) ** 2) * (X(0) ** 2) * Y(0)
+        Z(0, backend=backend) * (Symbol(0, matrix, backend=backend) ** 2) * (X(0, backend=backend) ** 2) * Y(0, backend=backend)
     )  #  Z(0) * Symbol(0)**2 * Y(0)
-    term = terms.SymbolicTerm(1, expression, backend=backend)
+    term = SymbolicTerm(1, expression, backend=backend)
     assert term.target_qubits == (0,)
     target_matrix = backend.cast(matrices.Z @ matrix @ matrix @ matrices.Y)
     backend.assert_allclose(term.matrix, target_matrix)
@@ -179,8 +202,8 @@ def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
 @pytest.mark.parametrize("density_matrix", [False])
 def test_symbolic_term_call(backend, density_matrix):
     """Test applying ``SymbolicTerm`` to state."""
-    expression = Z(0) * X(1) * Y(2)
-    term = terms.SymbolicTerm(2, expression)
+    expression = Z(0, backend=backend) * X(1, backend=backend) * Y(2, backend=backend)
+    term = SymbolicTerm(2, expression, backend=backend)
     matrixlist = [
         np.kron(matrices.Z, np.eye(4)),
         np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
@@ -204,8 +227,8 @@ def test_symbolic_term_call(backend, density_matrix):
 def test_symbolic_term_merge(backend):
     """Test merging ``SymbolicTerm`` to ``HamiltonianTerm``."""
     matrix = np.random.random((4, 4))
-    term1 = terms.HamiltonianTerm(matrix, 0, 1, backend=backend)
-    term2 = terms.SymbolicTerm(1, X(0) * Z(1), backend=backend)
+    term1 = HamiltonianTerm(matrix, 0, 1, backend=backend)
+    term2 = SymbolicTerm(1, X(0, backend=backend) * Z(1, backend=backend), backend=backend)
     term = term1.merge(term2)
     target_matrix = backend.cast(matrix + np.kron(matrices.X, matrices.Z))
     backend.assert_allclose(term.matrix, target_matrix)
@@ -213,11 +236,13 @@ def test_symbolic_term_merge(backend):
 
 def test_term_group_append():
     """Test ``GroupTerm.can_append`` method."""
-    term1 = terms.HamiltonianTerm(np.random.random((8, 8)), 0, 1, 3)
-    term2 = terms.HamiltonianTerm(np.random.random((2, 2)), 0)
-    term3 = terms.HamiltonianTerm(np.random.random((2, 2)), 1)
-    term4 = terms.HamiltonianTerm(np.random.random((2, 2)), 2)
-    group = terms.TermGroup(term1)
+    backend = NumpyBackend()
+
+    term1 = HamiltonianTerm(np.random.random((8, 8)), 0, 1, 3, backend=backend)
+    term2 = HamiltonianTerm(np.random.random((2, 2)), 0, backend=backend)
+    term3 = HamiltonianTerm(np.random.random((2, 2)), 1, backend=backend)
+    term4 = HamiltonianTerm(np.random.random((2, 2)), 2, backend=backend)
+    group = TermGroup(term1)
     assert group.can_append(term2)
     assert group.can_append(term3)
     assert not group.can_append(term4)
@@ -228,13 +253,11 @@ def test_term_group_append():
 
 def test_term_group_to_term(backend):
     """Test ``GroupTerm.term`` property."""
-    from qibo.symbols import X, Z
-
     matrix = np.random.random((8, 8))
-    term1 = terms.HamiltonianTerm(matrix, 0, 1, 3, backend=backend)
-    term2 = terms.SymbolicTerm(1, X(0) * Z(3), backend=backend)
-    term3 = terms.SymbolicTerm(2, X(1), backend=backend)
-    group = terms.TermGroup(term1)
+    term1 = HamiltonianTerm(matrix, 0, 1, 3, backend=backend)
+    term2 = SymbolicTerm(1, X(0, backend=backend) * Z(3, backend=backend), backend=backend)
+    term3 = SymbolicTerm(2, X(1, backend=backend), backend=backend)
+    group = TermGroup(term1)
     group.append(term2)
     group.append(term3)
     matrix2 = np.kron(np.kron(matrices.X, np.eye(2)), matrices.Z)
@@ -244,6 +267,7 @@ def test_term_group_to_term(backend):
 
 
 def test_term_representation():
-    term = -2 * Z(0) * X(1) * Y(3)
-    h = SymbolicHamiltonian(term)
+    backend = NumpyBackend()
+    term = -2 * Z(0, backend=backend) * X(1, backend=backend) * Y(3, backend=backend)
+    h = SymbolicHamiltonian(term, backend=backend)
     assert str(h.terms[0]) == "(-2+0j)*Z0*X1*Y3"
