@@ -105,12 +105,12 @@ def test_expectation_from_samples(backend):
     circuit.add(gates.RX(1, np.random.rand()))
     circuit.add(gates.RX(2, np.random.rand()))
     circuit.add(gates.RX(3, np.random.rand()))
-    circuit.add(gates.M(0, 1, 2))
     nshots = 10**5
+    expval = h1.expectation(circuit, nshots=nshots)
+    circuit.add(gates.M(0, 1, 2))
     result = backend.execute_circuit(circuit, nshots=nshots)
     expval_sym = result.expectation_from_samples(h_sym)
     expval_dense = result.expectation_from_samples(h_dense)
-    expval = h1.expectation(result.state())
     backend.assert_allclose(expval_sym, expval_dense)
     backend.assert_allclose(expval_sym, expval, atol=10 / np.sqrt(nshots))
 

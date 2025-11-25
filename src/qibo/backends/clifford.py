@@ -262,6 +262,7 @@ class CliffordBackend(Backend):
                 nshots=nshots,
                 _backend=self,
             )
+            circuit._final_state = clifford
             return clifford
 
         except self.oom_error:  # pragma: no cover

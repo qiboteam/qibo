@@ -31,9 +31,7 @@ def get_noise_model(error, gate, resp_matrix=[False, None]):
     return noise
 
 
-def get_circuit(nqubits, nmeas=None):
-    if nmeas is None:
-        nmeas = nqubits
+def get_circuit(nqubits):
     # Define the circuit
     hz = 0.5
     hx = 0.5
@@ -50,7 +48,6 @@ def get_circuit(nqubits, nmeas=None):
     circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
     circuit.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
     circuit.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    circuit.add(gates.M(*range(nmeas)))
 
     return circuit
 
@@ -112,22 +109,20 @@ def test_zne(backend, nqubits, noise, solve, GUF, nshots, insertion_gate, readou
 
     nshots = 30000
     # Define the circuit
-    circuit = get_circuit(nqubits, nmeas)
+    circuit = get_circuit(nqubits)
+    circuit_copy = circuit.copy(True)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nmeas)])
+    obs = np.prod([Z(qubit) for qubit in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
+    exact = obs_exact.expectation(circuit)
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
-    if nshots is None:
-        noisy = obs.expectation(state.state())
-    else:
-        noisy = state.expectation_from_samples(obs)
+    noisy = obs.expectation(noise.apply(circuit), nshots=nshots)
+
     # Mitigated expected value
     estimate = ZNE(
-        circuit=circuit,
+        circuit=circuit_copy,
         observable=obs,
         noise_levels=np.array(range(4)),
         noise_model=noise,
@@ -173,22 +168,20 @@ def test_cdr(backend, nqubits, noise, nshots, full_output, readout):
 
     nmeas = 1 if nqubits == 1 else nqubits
     # Define the circuit
-    circuit = get_circuit(nqubits, nmeas)
+    circuit = get_circuit(nqubits)
+    circuit_copy = circuit.copy(True)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
+    exact = obs_exact.expectation(circuit)
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
-    if nshots is None:
-        noisy = obs.expectation(state.state())
-    else:
-        noisy = state.expectation_from_samples(obs)
+    noisy = obs.expectation(noise.apply(circuit), nshots=nshots)
+
     # Mitigated expected value
     estimate = CDR(
-        circuit=circuit,
+        circuit=circuit_copy,
         observable=obs,
         noise_model=noise,
         nshots=nshots,
@@ -258,20 +251,18 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, ns
         backend.set_threads(1)
     # Define the circuit
     circuit = get_circuit(nqubits)
+    circuit_copy = circuit.copy(True)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(backend.execute_circuit(circuit).state())
+    exact = obs.expectation(circuit)
     # Noisy expected value without mitigation
-    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
-    if nshots is None:
-        noisy = obs.expectation(state.state())
-    else:
-        noisy = state.expectation_from_samples(obs)
+    noisy = obs.expectation(noise.apply(circuit), nshots=nshots)
+
     # Mitigated expected value
     estimate = vnCDR(
-        circuit=circuit,
+        circuit=circuit_copy,
         observable=obs,
         backend=backend,
         noise_levels=range(3),
@@ -314,15 +305,19 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     obs = np.prod([Z(i) for i in range(nmeas)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # get noise free expected val
-    circuit = get_circuit(nqubits, nmeas)
-    true_state = backend.execute_circuit(circuit, nshots=nshots)
-    true_val = true_state.expectation_from_samples(obs)
+    circuit = get_circuit(nqubits)
+    circuit_copy = circuit.copy(True)
+    true_val = obs.expectation(c, nshots=nshots)
     # get noisy expected val
-    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
-    noisy_val = state.expectation_from_samples(obs)
+    circuit.add(gates.M(*range(nmeas)))
+    qubits = [term.target_qubits for term in obs.terms]
+    coefficients = [term.coefficient.real for term in obs.terms]
+    noisy_val = obs.backend.expectation_diagonal_observable_symbolic_from_samples(
+        noise.apply(c), obs.nqubits, qubits, coefficients, nshots=nshots
+    )
 
     mit_val = get_expectation_val_with_readout_mitigation(
-        circuit, obs, noise, nshots, readout, backend=backend
+        circuit_copy, obs, noise, nshots, readout, backend=backend
     )
 
     assert backend.abs(true_val - mit_val) <= backend.abs(true_val - noisy_val)
@@ -365,25 +360,21 @@ def test_ics(backend, nqubits, noise, full_output, readout, nshots):
     """Test that ICS reduces the noise."""
     # Define the circuit
     circuit = get_circuit(nqubits)
+    c_copy = circuit.copy(True)
     # Define the observable
     obs = reduce(mul, [Z(qubit, backend=backend) for qubit in range(nqubits)])
     obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs_exact.expectation(backend.execute_circuit(circuit).state())
+    exact = obs_exact.expectation(circuit)
     # Noisy expected value without mitigation
-    np.random.seed(8)
-    backend.set_seed(8)
-    state = backend.execute_circuit(noise.apply(circuit), nshots=nshots)
-    if nshots is None:
-        noisy = obs.expectation(state.state())
-    else:
-        noisy = state.expectation_from_samples(obs)
+    noisy = obs.expectation(noise.apply(circuit), nshots=nshots)
+
     # Mitigated expected value
     np.random.seed(8)
     backend.set_seed(8)
     estimate = ICS(
-        circuit=circuit,
+        circuit=c_copy,
         observable=obs,
         noise_model=noise,
         nshots=nshots,

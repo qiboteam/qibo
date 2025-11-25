@@ -237,7 +237,10 @@ class Energy(Callback):
 
     def apply(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
-        expectation = self.hamiltonian.expectation(state)
+        if state.__class__.__name__ == "Circuit":
+            expectation = self.hamiltonian.expectation(state)
+        else:
+            expectation = self.hamiltonian.expectation_from_state(state, False)
         self.append(expectation)
         return expectation
 

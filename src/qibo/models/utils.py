@@ -15,13 +15,11 @@ def convert_bit_to_energy(hamiltonian, bitstring, backend=None):
 
     n = len(bitstring)
     circuit = Circuit(n)
-    active_bit = [i for i in range(n) if bitstring[i] == "1"]
-    for i in active_bit:
-        circuit.add(gates.X(i))
-    result = backend.execute_circuit(
-        circuit
-    )  # this is an execution result, a quantum state
-    return hamiltonian.expectation(result.state())
+    active_bit = [bit for bit in range(n) if bitstring[i] == "1"]
+    for qubit in active_bit:
+        circuit.add(gates.X(qubit))
+
+    return hamiltonian.expectation(circuit)
 
 
 def convert_state_to_count(state):
@@ -220,6 +218,4 @@ def fourier_coefficients(
 
 def vqe_loss(params, circuit, hamiltonian):
     circuit.set_parameters(params)
-    result = hamiltonian.backend.execute_circuit(circuit)
-    final_state = result.state()
-    return hamiltonian.expectation(final_state)
+    return hamiltonian.expectation(circuit)

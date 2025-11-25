@@ -260,7 +260,7 @@ class AdiabaticEvolution(StateEvolution):
         final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(
             params[-1], initial_state=initial_state
         )
-        loss = h1.expectation(final_state, normalize=True)
+        loss = h1.expectation_from_state(final_state, normalize=True)
         if opt_messages:
             opt_history["params"].append(params)
             opt_history["loss"].append(loss)

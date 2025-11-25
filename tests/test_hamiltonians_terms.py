@@ -5,6 +5,7 @@ import pytest
 
 from qibo import Circuit, gates, matrices
 from qibo.hamiltonians import terms
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info import random_density_matrix, random_statevector
 from qibo.symbols import I, Symbol, X, Y, Z
 
@@ -240,3 +241,9 @@ def test_term_group_to_term(backend):
     matrix3 = np.kron(np.kron(np.eye(2), matrices.X), np.eye(2))
     target_matrix = backend.cast(matrix + matrix2 + 2 * matrix3)
     backend.assert_allclose(group.term.matrix, target_matrix)
+
+
+def test_term_representation():
+    term = -2 * Z(0) * X(1) * Y(3)
+    h = SymbolicHamiltonian(term)
+    assert str(h.terms[0]) == "(-2+0j)*Z0*X1*Y3"

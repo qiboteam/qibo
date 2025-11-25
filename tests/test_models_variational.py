@@ -146,8 +146,7 @@ def test_vqe(backend, method, options, compile, filename):
 
     def callback(parameters, loss_values=loss_values, vqe=v):
         vqe.circuit.set_parameters(parameters)
-        state = vqe.backend.execute_circuit(vqe.circuit).state()
-        loss_values.append(vqe.hamiltonian.expectation(state))
+        loss_values.append(vqe.hamiltonian.expectation(vqe.circuit))
 
     best, params, _ = v.minimize(
         initial_parameters,
@@ -166,8 +165,10 @@ def test_vqe(backend, method, options, compile, filename):
     backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
-    state = backend.ones(2**nqubits) / np.sqrt(2**nqubits)
-    energy_fluctuation = v.energy_fluctuation(state)
+    state = backend.ones(2**nqubits) / float(np.sqrt(2**nqubits))
+    hadamard_circ = Circuit(nqubits)
+    hadamard_circ.add([gates.H(qubit) for qubit in range(nqubits)])
+    energy_fluctuation = v.energy_fluctuation(hadamard_circ)
     assert energy_fluctuation >= 0
     backend.set_threads(n_threads)
 

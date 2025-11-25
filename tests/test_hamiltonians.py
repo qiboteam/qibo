@@ -1,11 +1,20 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 
+from collections.abc import Iterable
+
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.backends import construct_backend
+from qibo.hamiltonians.hamiltonians import Hamiltonian
+from qibo.hamiltonians.models import XXZ
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_statevector,
+)
 from qibo.symbols import I, X, Y, Z
 
 from .utils import random_sparse_matrix
@@ -255,29 +264,16 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
         )
 
     matrix = backend.to_numpy(h.matrix)
+    circuit = random_clifford(h.nqubits, density_matrix=density_matrix, backend=backend)
+    state = backend.execute_circuit(circuit).state()
     if density_matrix:
-        state = random_density_matrix(2**h.nqubits, backend=backend)
         state = backend.to_numpy(state)
-        state = state + state.T.conj()
-        norm = np.trace(state)
         target_ev = np.trace(matrix.dot(state)).real
     else:
-        state = random_statevector(2**h.nqubits, backend=backend)
         state = backend.to_numpy(state)
-        norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
-    backend.assert_allclose(h.expectation(state), target_ev)
-    backend.assert_allclose(h.expectation(state, True), target_ev / norm)
-
-
-def test_hamiltonian_expectation_errors(backend):
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5, backend=backend)
-    state = np.random.rand(4, 4, 4) + 1j * np.random.rand(4, 4, 4)
-    with pytest.raises(ValueError):
-        h.expectation(state)
-    with pytest.raises(TypeError):
-        h.expectation("test")
+    backend.assert_allclose(h.expectation(circuit), target_ev, atol=1e-8)
 
 
 def non_exact_expectation_test_setup(backend, observable):
@@ -288,40 +284,30 @@ def non_exact_expectation_test_setup(backend, observable):
         circuit.add(gates.RX(q, np.random.rand()))
 
     H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
-    final_state = backend.execute_circuit(circuit.copy(True)).state()
-    exp = H.expectation(final_state)
+    exp = H.expectation(circuit.copy(True))
     return exp, H, circuit
 
 
-def test_hamiltonian_expectation_from_samples(backend):
+@pytest.mark.parametrize("dense", [True, False])
+def test_hamiltonian_expectation_from_samples(backend, dense):
     """Test Hamiltonian expectation value calculation."""
     backend.set_seed(12)
 
     nshots = 4 * 10**6
     observable = 2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(2)
     exp, H, circuit = non_exact_expectation_test_setup(backend, observable)
-    circuit.add(gates.M(*range(circuit.nqubits)))
-    freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
-    exp_from_samples = H.expectation_from_samples(freq)
+    if dense:
+        H = H.dense
+    exp_from_samples = H.expectation(circuit, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
 
 
-@pytest.mark.parametrize("qmap", (None, [1, 0]))
-def test_hamiltonian_expectation_from_samples_with_some_zero_counts(backend, qmap):
-    """Test Hamiltonian expectation value calculation."""
-    backend.set_seed(12)
-
-    freq = {"01": 48, "11": 52}
-    observable = SymbolicHamiltonian(
-        2 * Z(0) * (1 - Z(1)) ** 2 + Z(0) * Z(1), nqubits=2, backend=backend
-    ).dense
-    # switch the matrix indices if qmap is inverted
-    indices = [1, 3] if qmap is None else [2, 3]
-    true_val = (
-        freq["01"] / 100 * observable.matrix[indices[0], indices[0]]
-        + freq["11"] / 100 * observable.matrix[indices[1], indices[1]]
-    )
-    backend.assert_allclose(observable.expectation_from_samples(freq, qmap), true_val)
+def test_hamiltonian_expectation_from_samples_non_diagonal_error():
+    nshots = 1000
+    c = Circuit(3)
+    h = XXZ(3, delta=0.5, dense=True)
+    with pytest.raises(NotImplementedError):
+        h.expectation(c, nshots=nshots)
 
 
 def test_hamiltonian_expectation_from_circuit(backend):
@@ -334,15 +320,8 @@ def test_hamiltonian_expectation_from_circuit(backend):
         3.14 + I(0) * Z(1) + X(0) * Z(1) + Y(0) * X(2) / 2 - Z(0) * (1 - Y(1)) ** 3
     )
     exp, H, c = non_exact_expectation_test_setup(backend, observable)
-    exp_from_samples = H.expectation_from_circuit(c, nshots=nshots)
+    exp_from_samples = H.expectation(c, nshots=nshots)
     backend.assert_allclose(exp, exp_from_samples, atol=1e-2)
-
-
-def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs = random_density_matrix(4, backend=backend)
-    h = hamiltonians.Hamiltonian(2, obs, backend=backend)
-    with pytest.raises(NotImplementedError):
-        h.expectation_from_samples(None, qubit_map=None)
 
 
 @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
@@ -497,11 +476,27 @@ def test_hamiltonian_energy_fluctuation(backend):
     # define hamiltonian
     ham = hamiltonians.XXZ(nqubits=2, backend=backend)
     # take ground state and zero state
-    ground_state = ham.ground_state()
-    zero_state = backend.ones(2**2) / np.sqrt(2**2)
+    ground_state = Circuit(2)
+    ground_state.add([gates.H(0), gates.CNOT(0, 1), gates.Z(1), gates.X(1)])
+    zero_state = Circuit(2)
+    zero_state.add([gates.H(0), gates.H(1)])
     # collect energy fluctuations
     gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
     zs_energy_fluctuation = ham.energy_fluctuation(zero_state)
 
     assert np.isclose(backend.to_numpy(gs_energy_fluctuation), 0, atol=1e-5)
     assert gs_energy_fluctuation < zs_energy_fluctuation
+
+
+def test_dense_hamiltonian_backend_setter(backend):
+    nqubits = 2
+    matrix = np.random.randn(2**nqubits, 2**nqubits)
+    h = Hamiltonian(nqubits, matrix, backend=construct_backend("numpy"))
+    h.backend = backend
+    if isinstance(backend.tensor_types, Iterable):
+        assert any(
+            isinstance(h.matrix, tensor_type) for tensor_type in backend.tensor_types
+        )
+    else:
+        assert isinstance(h.matrix, backend.tensor_types)
+    assert isinstance(h.backend, type(backend))

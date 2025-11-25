@@ -206,10 +206,9 @@ def _gate_tomography(
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
                 if transpiler is not None:
-                    new_circ, _ = transpiler(new_circ, backend=backend)
-                exp_val = observable.expectation_from_samples(
-                    backend.execute_circuit(new_circ, nshots=nshots).frequencies()
-                )
+                    new_circ, _ = transpiler(new_circ)
+                result = backend.execute_circuit(new_circ, nshots=nshots)
+                exp_val = result.expectation_from_samples(observable)
             matrix_jk[j, k] = exp_val
     return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 
