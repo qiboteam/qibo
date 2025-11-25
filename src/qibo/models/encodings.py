@@ -272,7 +272,9 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     except AttributeError:
         test_dtype = bool("int" in str(type(data[0][0])))
 
-    bitstrings_sorted, data_sorted = zip(*([(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data))
+    bitstrings_sorted, data_sorted = zip(
+        *([(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data)
+    )
     bitstrings_sorted = backend.cast(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
         dtype=_get_int_type(2**nqubits, backend=backend),
