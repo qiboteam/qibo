@@ -32,7 +32,11 @@ optuna = "^4.2.1"
 tabulate = "^0.9.0"
 openqasm3 = { version = "^1.0.1", extras = ["parser"] }
 qulacs = { version = "^0.6.4", optional = true, python = "<3.13" }
-qbraid = { version = "^0.10.0", optional = true, extras = ["cudaq"] }
+qbraid = [
+  { version = "^0.10.0", optional = true, extras = ["qir"], markers = "extra == 'qir'" },
+  { version = "^0.10.0", optional = true, extras = ["cudaq"], markers = "extra == 'cudaq'" },
+  { version = "^0.10.0", optional = true, extras = ["cudaq, qir"], markers = "extra == 'cudaq' and extra == 'qir'" },
+]
 
 [tool.poetry.group.dev]
 optional = true
@@ -71,8 +75,8 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 # qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 stim = "^1.12.0"
 qulacs = { version = "^0.6.4", python = "<3.13" }
-qbraid = { version = "^0.10.0", optional = true, extras = ["cudaq"] }
 qiskit = "^2.2.3"
+qbraid = { version = "^0.10.0", extras = ["cudaq", "qir"] }
 
 [tool.poe.tasks]
 test = "pytest"
@@ -106,6 +110,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 qinfo = ["stim"]
 qulacs = ["qulacs"]
 cudaq = ["qbraid"]
+qir = ["qbraid"]
 
 [tool.pylint.main]
 ignored-modules = ["cvxpy", "torch"]
