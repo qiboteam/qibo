@@ -117,7 +117,7 @@ class EntanglementEntropy(Callback):
             self.partition = list(range(n // 2 + n % 2))
         if len(self.partition) <= self._nqubits // 2:
             self.partition = [
-                i for i in range(self._nqubits) if i not in set(self.partition)
+                qubit for qubit in range(self._nqubits) if i not in set(self.partition)
             ]
 
     def apply(self, backend, state):

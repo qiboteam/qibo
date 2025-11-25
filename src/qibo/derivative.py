@@ -37,7 +37,7 @@ def parameter_shift(
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             if you want to execute on hardware, a symbolic hamiltonian must be
             provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+            ``SymbolicHamiltonian(np.prod([ Z(qubit) for qubit in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
         initial_state (ndarray, optional): initial state on which the circuit
@@ -172,7 +172,7 @@ def finite_differences(
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             To execute on hardware, a symbolic hamiltonian must be
             provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+            ``SymbolicHamiltonian(np.prod([ Z(qubit) for qubit in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the :meth:`qibo.models.Circuit.get_parameters` list.
         initial_state (ndarray, optional): initial state on which the circuit

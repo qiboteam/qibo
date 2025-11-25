@@ -152,7 +152,7 @@ class MeasurementResult:
         """
         if self._symbols is None:
             qubits = self.target_qubits
-            self._symbols = [MeasurementSymbol(i, self) for i in range(len(qubits))]
+            self._symbols = [MeasurementSymbol(qubit, self) for qubit in range(len(qubits))]
 
         return self._symbols
 

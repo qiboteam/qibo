@@ -48,7 +48,7 @@ ancilla qubits, so the command lines simplify greatly.
 and adding Hadamard gates
 ```python
 superposition = Circuit(5)
-superposition.add([gates.H(i) for i in range(5)])
+superposition.add([gates.H(qubit) for qubit in range(5)])
 ```
 
 2. The next step is creating the oracle. In this case, we look for the states where all the

@@ -115,8 +115,11 @@ print(f'Number of quadratic terms: {len(quadratic)}\n')
 
 ```python
 import numpy as np
+
 rng = np.random.default_rng(seed=1234)
-random_solution = {i: rng.integers(2) for i in g.nodes}
+
+random_solution = {elem: rng.integers(2) for elem in g.nodes}
+
 print(f'The random solution is {random_solution}\n')
 ```
 

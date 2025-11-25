@@ -174,19 +174,19 @@ class CliffordBackend(Backend):
         phase_d_n = self._embed_phase_vector(phase_d_m, nqubits, qubit_indices)
 
         symplectic_gate = [symplectic_n, phase_h_n, phase_d_n]
-        for i in range(2 * nqubits):
+        for ind in range(2 * nqubits):
             symplectic_pauli = [
-                symplectic_matrix[i, : 2 * nqubits],
-                symplectic_matrix[i, 2 * nqubits],
-                symplectic_matrix[i, 2 * nqubits + 1],
+                symplectic_matrix[ind, : 2 * nqubits],
+                symplectic_matrix[ind, 2 * nqubits],
+                symplectic_matrix[ind, 2 * nqubits + 1],
             ]
             symplectic_pauli = self._conjugate_pauli(
                 symplectic_gate, symplectic_pauli, nqubits
             )
 
-            symplectic_matrix[i, : 2 * nqubits] = symplectic_pauli[0]
-            symplectic_matrix[i, 2 * nqubits] = symplectic_pauli[1]
-            symplectic_matrix[i, 2 * nqubits + 1] = symplectic_pauli[2]
+            symplectic_matrix[ind, : 2 * nqubits] = symplectic_pauli[0]
+            symplectic_matrix[ind, 2 * nqubits] = symplectic_pauli[1]
+            symplectic_matrix[ind, 2 * nqubits + 1] = symplectic_pauli[2]
 
         return symplectic_matrix
 
@@ -603,11 +603,11 @@ class CliffordBackend(Backend):
     @cache
     def _pauli_generators(m: int) -> List[str]:
         pauli_gens_x, pauli_gens_z = [], []
-        for i in range(m):
+        for ind in range(m):
             p = ["I"] * m
             p = (p, p.copy())
-            p[0][i] = "X"
-            p[1][i] = "Z"
+            p[0][ind] = "X"
+            p[1][ind] = "Z"
             pauli_gens_x.append("".join(p[0]))
             pauli_gens_z.append("".join(p[1]))
         return pauli_gens_x + pauli_gens_z

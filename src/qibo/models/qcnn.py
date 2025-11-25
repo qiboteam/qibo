@@ -46,7 +46,7 @@ class QuantumCNN:
             data = [data]
             labels = [[1]]
             testbias = np.zeros(1)
-            testangles = [random.uniform(0, 2 * np.pi) for i in range(21 * 2)]
+            testangles = [random.uniform(0, 2 * np.pi) for _ in range(21 * 2)]
             init_theta = np.concatenate((testbias, testangles))
             test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
             testcircuit = test_qcnn._circuit
@@ -177,7 +177,7 @@ class QuantumCNN:
             )
 
         # Measurements
-        circuit.add(gates.M(*[nbits - 1 - i for i in range(self.measured_qubits)]))
+        circuit.add(gates.M(*[nbits - 1 - bit for bit in range(self.measured_qubits)]))
 
         return circuit
 

@@ -4,7 +4,6 @@ from typing import Dict, List, Sequence, Tuple
 from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
-from qibo.models.circuit import Circuit
 
 
 class DistributedQubits:
@@ -81,8 +80,8 @@ class DistributedQueues:
         self.device_to_ids = {d: v for d, v in self._ids(circuit.accelerators)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
-            for i in ids:
-                self.ids_to_device[i] = device
+            for elem in ids:
+                self.ids_to_device[elem] = device
 
     @property
     def nqubits(self):
@@ -127,7 +126,7 @@ class DistributedQueues:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
 
-    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]:
+    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]: # type: ignore
         """Generator of device piece indices."""
         start = 0
         for device, n in accelerators.items():
@@ -314,17 +313,17 @@ class DistributedQueues:
                     # device otherwise device parallelization will break
                     devgate.device = device
                     devgate.nqubits = self.nlocal
-                    for i in ids:
+                    for elem in ids:
                         flag = True
                         # If there are control qubits that are global then
                         # the gate should not be applied by all devices
                         for control in set(gate.control_qubits) & self.qubits.set:
                             ic = self.qubits.list.index(control)
                             ic = self.nglobal - ic - 1
-                            flag = bool((i // (2**ic)) % 2)
+                            flag = bool((elem // (2**ic)) % 2)
                             if not flag:
                                 break
                         if flag:
-                            self.queues[-1][i].append(devgate)
+                            self.queues[-1][elem].append(devgate)
                             if isinstance(gate, ParametrizedGate):
                                 gate.device_gates.add(devgate)

@@ -590,11 +590,11 @@ def calculate_symbolic(
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
     strings = list(self._dict_indexes.keys())
-    for i in self.nonzero(state)[0]:
-        i = int(i)
-        b = strings[i]
-        if self.abs(state[i]) >= cutoff:
-            x = self.round(state[i], decimals=decimals)
+    for elem in self.nonzero(state)[0]:
+        elem = int(elem)
+        b = strings[elem]
+        if self.abs(state[elem]) >= cutoff:
+            x = self.round(state[elem], decimals=decimals)
             terms.append(f"{x}|{b}>")
         if len(terms) >= max_terms:
             terms.append("...")

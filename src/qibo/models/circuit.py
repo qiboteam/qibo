@@ -339,11 +339,11 @@ class Circuit:
 
                 # create small circuit on 4 qubits
                 small_circuit = Circuit(4)
-                small_circuit.add(gates.RX(i, theta=0.1) for i in range(4))
+                small_circuit.add(gates.RX(qubit, theta=0.1) for qubit in range(4))
                 small_circuit.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
                 # create large circuit on 8 qubits
                 large_circuit = Circuit(8)
-                large_circuit.add(gates.RY(i, theta=0.1) for i in range(8))
+                large_circuit.add(gates.RY(qubit, theta=0.1) for qubit in range(8))
                 # add the small circuit to the even qubits of the large one
                 large_circuit.add(small_circuit.on_qubits(*range(0, 8, 2)))
         """
@@ -1165,7 +1165,7 @@ class Circuit:
                     ValueError, "OpenQASM does not support multi-controlled gates."
                 )
 
-            qubits = ",".join(f"q[{i}]" for i in gate.qubits)
+            qubits = ",".join(f"q[{qubit}]" for qubit in gate.qubits)
             if isinstance(gate, gates.ParametrizedGate):
                 params = (str(float(x)) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
@@ -1380,9 +1380,9 @@ class Circuit:
         # legend
         if legend:
             legend_rows = {
-                (i.name, i.draw_label)
-                for i in self.queue
-                if isinstance(i, (gates.SpecialGate, gates.Channel))
+                (gate.name, gate.draw_label)
+                for gate in self.queue
+                if isinstance(gate, (gates.SpecialGate, gates.Channel))
             }
 
             table = tabulate(
@@ -1398,7 +1398,7 @@ class Circuit:
 
             def chunkstring(string, length):
                 nchunks = range(0, len(string), length)
-                return (string[i : length + i] for i in nchunks), len(nchunks)
+                return (string[elem : length + elem] for elem in nchunks), len(nchunks)
 
             for row in range(self.nqubits):
                 chunks, nchunks = chunkstring(
@@ -1407,7 +1407,7 @@ class Circuit:
                 if nchunks == 1:
                     loutput = None
                     break
-                for i, c in enumerate(chunks):
+                for elem, c in enumerate(chunks):
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
@@ -1415,15 +1415,15 @@ class Circuit:
                         + " " * (max_name_len - len(wire_names[row]))
                         + ": "
                     )
-                    if i == 0:
+                    if elem == 0:
                         prefix += " " * 4
                     elif row == 0:
                         prefix = "\n" + prefix + "... "
                     else:
                         prefix += "... "
-                    if i == nchunks - 1:
+                    if elem == nchunks - 1:
                         suffix = "\n"
-                    loutput[row + i * self.nqubits] = prefix + c + suffix
+                    loutput[row + elem * self.nqubits] = prefix + c + suffix
             if loutput is not None:
                 output = "".join(loutput)
 

@@ -885,7 +885,7 @@ class Backend:
 
         order = []
         for qj in qs:
-            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            qj = [qj[qubits.index(qub)] for qub in range(len(qubits))]
             order += qj
 
         identity = self.reshape(self.transpose(identity, order), shape)

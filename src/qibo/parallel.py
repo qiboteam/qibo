@@ -26,7 +26,7 @@ def parallel_execution(circuit, states, processes: Optional[int] = None, backend
             nqubits = 22
             circuit = QFT(nqubits)
             # create random states
-            states = [ np.random.random(2**nqubits) for i in range(5)]
+            states = [ np.random.random(2**nqubits) for _ in range(5)]
             # set threads to 1 per process (optional, requires tuning)
             set_threads(1)
             # execute in parallel

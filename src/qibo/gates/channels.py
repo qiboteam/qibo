@@ -274,8 +274,8 @@ class KrausChannel(Channel):
                 operators = [
                     operators[k].on_qubits(
                         {
-                            operators[k].qubits[i]: qubits[k][i]
-                            for i in range(len(operators[k].qubits))
+                            operators[k].qubits[qubit]: qubits[k][qubit]
+                            for qubit in range(len(operators[k].qubits))
                         }
                     )
                     for k in range(len(operators))

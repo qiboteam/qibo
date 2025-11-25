@@ -52,7 +52,7 @@ def get_gammas(noise_levels, analytical: bool = True):
     """
     if analytical:
         noise_levels = 2 * noise_levels + 1
-        a_matrix = np.array([noise_levels**i for i in range(len(noise_levels))])
+        a_matrix = np.array([noise_levels**power for power in range(len(noise_levels))])
         b_vector = np.zeros(len(noise_levels))
         b_vector[0] = 1
         zne_coefficients = np.linalg.solve(a_matrix, b_vector)
@@ -61,15 +61,15 @@ def get_gammas(noise_levels, analytical: bool = True):
         zne_coefficients = np.array(
             [
                 1
-                / (2 ** (2 * max_noise_level) * math.factorial(i))
-                * (-1) ** i
-                / (1 + 2 * i)
+                / (2 ** (2 * max_noise_level) * math.factorial(item))
+                * (-1) ** item
+                / (1 + 2 * item)
                 * math.factorial(1 + 2 * max_noise_level)
                 / (
                     math.factorial(max_noise_level)
-                    * math.factorial(max_noise_level - i)
+                    * math.factorial(max_noise_level - item)
                 )
-                for i in noise_levels
+                for item in noise_levels
             ]
         )
 
@@ -731,8 +731,8 @@ def get_response_matrix(
 
     response_matrix = np.zeros((2**nqubits, 2**nqubits))
 
-    for i in range(2**nqubits):
-        binary_state = format(i, f"0{nqubits}b")
+    for elem in range(2**nqubits):
+        binary_state = format(elem, f"0{nqubits}b")
 
         circuit = Circuit(nqubits, density_matrix=True)
         for qubit, bit in enumerate(binary_state):
@@ -749,7 +749,7 @@ def get_response_matrix(
         column = np.zeros(2**nqubits)
         for key, value in frequencies.items():
             column[int(key, 2)] = value / nshots
-        response_matrix[:, i] = column
+        response_matrix[:, elem] = column
 
     return response_matrix
 
@@ -1075,17 +1075,17 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     z_component = pauli_symplectic[circuit.nqubits :] == 1
     y_obs = reduce(
         mul,
-        [Y(i, backend=backend) for i in (x_component * z_component).nonzero()[0]],
+        [Y(qubit, backend=backend) for qubit in (x_component * z_component).nonzero()[0]],
         1,
     )
     x_obs = reduce(
         mul,
-        [X(i, backend=backend) for i in (x_component * ~z_component).nonzero()[0]],
+        [X(qubit, backend=backend) for qubit in (x_component * ~z_component).nonzero()[0]],
         1,
     )
     z_obs = reduce(
         mul,
-        [Z(i, backend=backend) for i in (z_component * ~x_component).nonzero()[0]],
+        [Z(qubit, backend=backend) for qubit in (z_component * ~x_component).nonzero()[0]],
         1,
     )
     observable = y_obs * x_obs * z_obs

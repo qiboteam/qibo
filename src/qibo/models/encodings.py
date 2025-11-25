@@ -1929,8 +1929,8 @@ def _add_wbd_gate(
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
     for l in range(weight, 0, -1):
         x = [
-            math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i)
-            for i in range(l)
+            math.comb(mqubits, elem) * math.comb(nqubits - mqubits, l - elem)
+            for elem in range(l)
         ]
         s = math.comb(nqubits, l)
         circuit.add(

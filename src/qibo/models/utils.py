@@ -13,11 +13,10 @@ def convert_bit_to_energy(hamiltonian, bitstring, backend=None):
     """
     backend = _check_backend(backend)
 
-    n = len(bitstring)
-    circuit = Circuit(n)
-    active_bit = [bit for bit in range(n) if bitstring[i] == "1"]
-    for qubit in active_bit:
-        circuit.add(gates.X(qubit))
+    nqubits = len(bitstring)
+    circuit = Circuit(nqubits)
+    active_bit = [bit for bit in range(nqubits) if bitstring[bit] == "1"]
+    circuit.add(gates.X(qubit) for qubit in active_bit)
 
     return hamiltonian.expectation(circuit)
 
@@ -105,13 +104,12 @@ def initialize(nqubits: int, basis=gates.Z, eigenstate="+"):
     circuit_basis = Circuit(nqubits)
     circuit_eigenstate = Circuit(nqubits)
     if eigenstate == "-":
-        for i in range(nqubits):
-            circuit_eigenstate.add(gates.X(i))
+        circuit_eigenstate.add(gates.X(qubit) for qubit in range(nqubits))
     elif eigenstate != "+":
         raise_error(NotImplementedError, f"Invalid eigenstate {eigenstate}")
 
-    for i in range(nqubits):
-        value = basis(i).basis_rotation()
+    for qubit in range(nqubits):
+        value = basis(qubit).basis_rotation()
         if value is not None:
             circuit_basis.add(value)
     circuit_basis = circuit_basis.invert()
