@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.backends import construct_backend
 from qibo.hamiltonians.hamiltonians import Hamiltonian
 from qibo.hamiltonians.models import XXZ
