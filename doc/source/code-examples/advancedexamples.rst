@@ -2324,9 +2324,10 @@ pass it to the :class:`qibo.transpiler.qiskit.QiskitPasses` object:
    # some qiskit passes
    qiskit_passes = [passes.Optimize1qGates(), passes.InverseCancellation()]
    qiskit_passes = QiskitPasses(PassManager(qiskit_passes))
+   passes = qibo_passes + [qiskit_passes,]
    # join everythin together
    hybrid_transpiler = Passes(
-        passes=qibo_passes + qiskit_passes,
+        passes=passes,
         native_gates=NativeGates.default(),
     )
 
