@@ -21,7 +21,10 @@ def tsp_phaser(distance_matrix, backend=None):
                     form += (
                         distance_matrix[city_u, city_v]
                         * Z(int(two_to_one[city_u, city_i]), backend=backend)
-                        * Z(int(two_to_one[city_v, (city_i + 1) % num_cities]), backend=backend)
+                        * Z(
+                            int(two_to_one[city_v, (city_i + 1) % num_cities]),
+                            backend=backend,
+                        )
                     )
     ham = SymbolicHamiltonian(form, backend=backend)
     return ham
@@ -40,9 +43,13 @@ def tsp_mixer(num_cities, backend=None):
         for city_u in range(num_cities):
             for city_v in range(num_cities):
                 if city_u != city_v:
-                    form += splus(city_u, city_i) * splus(city_v, (city_i + 1) % num_cities) * sminus(
-                        city_u, (city_i + 1) % num_cities
-                    ) * sminus(city_v, city_i) + sminus(city_u, city_i) * sminus(
+                    form += splus(city_u, city_i) * splus(
+                        city_v, (city_i + 1) % num_cities
+                    ) * sminus(city_u, (city_i + 1) % num_cities) * sminus(
+                        city_v, city_i
+                    ) + sminus(
+                        city_u, city_i
+                    ) * sminus(
                         city_v, (city_i + 1) % num_cities
                     ) * splus(
                         city_u, (city_i + 1) % num_cities

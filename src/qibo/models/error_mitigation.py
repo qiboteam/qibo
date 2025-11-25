@@ -1075,17 +1075,26 @@ def error_sensitive_circuit(circuit, observable, seed=None, backend=None):
     z_component = pauli_symplectic[circuit.nqubits :] == 1
     y_obs = reduce(
         mul,
-        [Y(qubit, backend=backend) for qubit in (x_component * z_component).nonzero()[0]],
+        [
+            Y(qubit, backend=backend)
+            for qubit in (x_component * z_component).nonzero()[0]
+        ],
         1,
     )
     x_obs = reduce(
         mul,
-        [X(qubit, backend=backend) for qubit in (x_component * ~z_component).nonzero()[0]],
+        [
+            X(qubit, backend=backend)
+            for qubit in (x_component * ~z_component).nonzero()[0]
+        ],
         1,
     )
     z_obs = reduce(
         mul,
-        [Z(qubit, backend=backend) for qubit in (z_component * ~x_component).nonzero()[0]],
+        [
+            Z(qubit, backend=backend)
+            for qubit in (z_component * ~x_component).nonzero()[0]
+        ],
         1,
     )
     observable = y_obs * x_obs * z_obs

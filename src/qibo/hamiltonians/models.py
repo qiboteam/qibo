@@ -96,7 +96,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
         q2, backend=backend
     ) + h * symbols.X(q1, backend=backend)
-    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(nqubits - 1, 0)
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
+        nqubits - 1, 0
+    )
     ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
     return ham
 
@@ -133,7 +135,10 @@ def MaxCut(
 
     form = -sum(
         adj_matrix[qubit_i][qubit_j]
-        * (1 - symbols.Z(qubit_i, backend=backend) * symbols.Z(qubit_j, backend=backend))
+        * (
+            1
+            - symbols.Z(qubit_i, backend=backend) * symbols.Z(qubit_j, backend=backend)
+        )
         for qubit_i in range(nqubits)
         for qubit_j in range(nqubits)
     )
@@ -294,7 +299,9 @@ def Heisenberg(
             for coeff, operator in zip(coupling_constants, paulis)
         )
 
-    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(nqubits - 1, 0)
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
+        nqubits - 1, 0
+    )
     form -= sum(
         field_strength * pauli(qubit)
         for qubit in range(nqubits)

@@ -126,7 +126,7 @@ class DistributedQueues:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
 
-    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]: # type: ignore
+    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]:  # type: ignore
         """Generator of device piece indices."""
         start = 0
         for device, n in accelerators.items():
