@@ -7,7 +7,8 @@ import pytest
 
 from qibo import set_backend
 from qibo.backends import NumpyBackend
-from qibo.hamiltonians import TFIM, SymbolicHamiltonian, X as X_model
+from qibo.hamiltonians import TFIM, SymbolicHamiltonian
+from qibo.hamiltonians import X as X_model
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
 

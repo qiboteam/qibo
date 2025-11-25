@@ -1559,7 +1559,9 @@ class Backend:
         density_matrix = bool(len(state.shape) == 2)
 
         if density_matrix:
-            ev = self.real(self.trace(self.cast(hamiltonian @ state)))  # pylint: disable=E1111
+            ev = self.real(
+                self.trace(self.cast(hamiltonian @ state))
+            )  # pylint: disable=E1111
             if normalize:
                 norm = self.real(self.trace(state))
                 ev /= norm
@@ -1619,7 +1621,7 @@ class Backend:
 
     def exp_value_diagonal_observable_symbolic_from_samples(
         self,
-        circuit: "Circuit", # type: ignore
+        circuit: "Circuit",  # type: ignore
         nqubits: int,
         terms_qubits: List[Tuple[int, ...]],
         terms_coefficients: List[float],
@@ -1668,7 +1670,7 @@ class Backend:
         )
         return self.sum(expvals @ counts)
 
-    def exp_value_observable_dense(self, circuit: "Circuit", observable: ArrayLike): # type: ignore
+    def exp_value_observable_dense(self, circuit: "Circuit", observable: ArrayLike):  # type: ignore
         """Compute the expectation value of a generic dense hamiltonian starting from the state.
 
         Args:

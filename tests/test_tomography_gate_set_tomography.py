@@ -274,7 +274,9 @@ def test_GST_invertible_matrix(backend):
 def test_GST_non_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
+        matrices = GST(
+            gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend
+        )
 
 
 def test_GST_with_transpiler(backend, star_connectivity):

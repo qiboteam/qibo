@@ -238,7 +238,9 @@ class SymbolicTerm(HamiltonianTerm):
                     len(self.factors) - self.factors[::-1].index(q_factor) - 1
                 )
                 if pauli_product in INVERSE_PAULI_MAPPING:
-                    factor = INVERSE_PAULI_MAPPING[pauli_product](q, backend=self.backend)
+                    factor = INVERSE_PAULI_MAPPING[pauli_product](
+                        q, backend=self.backend
+                    )
                     self.factors[factor_index] = factor
                     self.matrix_map[q][-1] = factor.matrix
                 # Otherwise, just remove the factor/matrix

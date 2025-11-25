@@ -271,7 +271,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout, ns
         insertion_gate=insertion_gate,
         full_output=full_output,
         readout=readout,
-        backend=backend
+        backend=backend,
     )
     if full_output:
         estimate = estimate[0]

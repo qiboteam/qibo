@@ -3,8 +3,8 @@
 import pytest
 
 from qibo import hamiltonians
-from qibo.symbols import Z
 from qibo.quantum_info.random_ensembles import random_clifford
+from qibo.symbols import Z
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

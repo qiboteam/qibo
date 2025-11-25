@@ -5,8 +5,8 @@ import pytest
 
 from qibo import Circuit, gates, matrices
 from qibo.backends import NumpyBackend
-from qibo.hamiltonians.terms import HamiltonianTerm, SymbolicTerm, TermGroup
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians.terms import HamiltonianTerm, SymbolicTerm, TermGroup
 from qibo.quantum_info import random_density_matrix, random_statevector
 from qibo.symbols import I, Symbol, X, Y, Z
 
@@ -191,7 +191,10 @@ def test_symbolic_term_reduction_with_non_pauli_symbols(backend):
     """Test simplification of ``SymbolicTerm`` expressions that include Symbol"""
     matrix = np.random.random((2, 2))
     expression = (
-        Z(0, backend=backend) * (Symbol(0, matrix, backend=backend) ** 2) * (X(0, backend=backend) ** 2) * Y(0, backend=backend)
+        Z(0, backend=backend)
+        * (Symbol(0, matrix, backend=backend) ** 2)
+        * (X(0, backend=backend) ** 2)
+        * Y(0, backend=backend)
     )  #  Z(0) * Symbol(0)**2 * Y(0)
     term = SymbolicTerm(1, expression, backend=backend)
     assert term.target_qubits == (0,)
@@ -228,7 +231,9 @@ def test_symbolic_term_merge(backend):
     """Test merging ``SymbolicTerm`` to ``HamiltonianTerm``."""
     matrix = np.random.random((4, 4))
     term1 = HamiltonianTerm(matrix, 0, 1, backend=backend)
-    term2 = SymbolicTerm(1, X(0, backend=backend) * Z(1, backend=backend), backend=backend)
+    term2 = SymbolicTerm(
+        1, X(0, backend=backend) * Z(1, backend=backend), backend=backend
+    )
     term = term1.merge(term2)
     target_matrix = backend.cast(matrix + np.kron(matrices.X, matrices.Z))
     backend.assert_allclose(term.matrix, target_matrix)
@@ -255,7 +260,9 @@ def test_term_group_to_term(backend):
     """Test ``GroupTerm.term`` property."""
     matrix = np.random.random((8, 8))
     term1 = HamiltonianTerm(matrix, 0, 1, 3, backend=backend)
-    term2 = SymbolicTerm(1, X(0, backend=backend) * Z(3, backend=backend), backend=backend)
+    term2 = SymbolicTerm(
+        1, X(0, backend=backend) * Z(3, backend=backend), backend=backend
+    )
     term3 = SymbolicTerm(2, X(1, backend=backend), backend=backend)
     group = TermGroup(term1)
     group.append(term2)

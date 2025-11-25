@@ -60,7 +60,9 @@ def test_symbolic_hamiltonian_dense(backend):
         + X(0, backend=backend).matrix @ Y(0, backend=backend).matrix
         + backend.matrices.I()
     )
-    form = Z(0, backend=backend) ** 2 + X(0, backend=backend) * Y(0, backend=backend) + 1
+    form = (
+        Z(0, backend=backend) ** 2 + X(0, backend=backend) * Y(0, backend=backend) + 1
+    )
     sham = SymbolicHamiltonian(form, nqubits=1, backend=backend)
     backend.assert_allclose(sham.dense.matrix, target_matrix)
 
@@ -77,13 +79,16 @@ def test_symbolictfim_hamiltonian_to_dense(backend, nqubits):
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits):
     sham = sum(
-        X(qubit, backend=backend) * X(qubit + 1, backend=backend) for qubit in range(nqubits - 1)
+        X(qubit, backend=backend) * X(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += sum(
-        Y(qubit, backend=backend) * Y(qubit + 1, backend=backend) for qubit in range(nqubits - 1)
+        Y(qubit, backend=backend) * Y(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += 0.5 * sum(
-        Z(qubit, backend=backend) * Z(qubit + 1, backend=backend) for qubit in range(nqubits - 1)
+        Z(qubit, backend=backend) * Z(qubit + 1, backend=backend)
+        for qubit in range(nqubits - 1)
     )
     sham += (
         X(0, backend=backend) * X(nqubits - 1, backend=backend)
