@@ -329,21 +329,15 @@ def test_overlap(backend, nqubits, density_matrix, seed):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_energy(backend, density_matrix):
-    from qibo import hamiltonians
-
-    ham = hamiltonians.TFIM(4, h=1.0, backend=backend)
+    ham = TFIM(4, h=1.0, backend=backend)
     energy = Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     if density_matrix:
-        from qibo.quantum_info import random_density_matrix
-
         state = random_density_matrix(2**4, backend=backend)
         target_energy = backend.trace(backend.matmul(matrix, state))
         final_energy = energy.apply(backend, state)
     else:
-        from qibo.quantum_info import random_statevector
-
         state = random_statevector(2**4, backend=backend)
         target_energy = np.matmul(
             np.conj(backend.to_numpy(state)),

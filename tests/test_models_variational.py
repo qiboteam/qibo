@@ -378,8 +378,6 @@ def test_aavqe(backend, method, options, compile, filename):
     [(cvar, {"alpha": 0.1}, -0.5), (gibbs, {"eta": 0.1}, -2.08)],
 )
 def test_custom_loss(backend, test_input, test_param, expected):
-    from qibo import hamiltonians
-
     h = XXZ(3, backend=backend)
     qaoa = QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]

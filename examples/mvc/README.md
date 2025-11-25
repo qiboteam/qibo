@@ -206,10 +206,10 @@ ham = hamiltonian_mvc(g, penalty=penalty, dense=True)
 
 
 ```python
-from qibo import models, hamiltonians
+from qibo.models import QAOA
 
 # Create QAOA model
-qaoa = models.QAOA(ham)
+qaoa = QAOA(ham)
 
 # Optimize starting from a random guess for the variational parameters
 initial_parameters = 0.01 * np.random.uniform(0,1,2)

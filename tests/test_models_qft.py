@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qibo import models
+from qibo.models import QFT
 from qibo.quantum_info import random_statevector
 
 
@@ -37,28 +37,32 @@ def exact_qft(
 
 @pytest.mark.parametrize("nqubits", [4, 10, 100])
 def test_qft_circuit_size(nqubits):
-    c = models.QFT(nqubits)
-    assert c.nqubits == nqubits
-    assert c.depth == 2 * nqubits
-    assert c.ngates == nqubits**2 // 2 + nqubits
+    circuit = QFT(nqubits)
+    assert circuit.nqubits == nqubits
+    assert circuit.depth == 2 * nqubits
+    assert circuit.ngates == nqubits**2 // 2 + nqubits
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_qft_matrix(backend, nqubits):
-    c = models.QFT(nqubits)
+    circuit = QFT(nqubits)
     dim = 2**nqubits
     target_matrix = qft_matrix(dim)
-    backend.assert_allclose(c.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6)
-    c = c.invert()
+    backend.assert_allclose(
+        circuit.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6
+    )
+    circuit = circuit.invert()
     target_matrix = qft_matrix(dim, inverse=True)
-    backend.assert_allclose(c.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6)
+    backend.assert_allclose(
+        circuit.unitary(backend), target_matrix, atol=1e-6, rtol=1e-6
+    )
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nqubits", [5, 6])
 @pytest.mark.parametrize("random", [False, True])
 def test_qft_execution(backend, nqubits, random, density_matrix):
-    c = models.QFT(nqubits, density_matrix=density_matrix)
+    circuit = QFT(nqubits, density_matrix=density_matrix)
     initial_state = (
         random_statevector(2**nqubits, backend=backend)
         if random
@@ -77,6 +81,6 @@ def test_qft_errors():
     from qibo.models.qft import _DistributedQFT
 
     with pytest.raises(NotImplementedError):
-        c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
+        circuit = QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
-        c = _DistributedQFT(2, accelerators={"/GPU:0": 4})
+        circuit = _DistributedQFT(2, accelerators={"/GPU:0": 4})

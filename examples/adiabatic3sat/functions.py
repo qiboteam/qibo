@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import sympy
 
-from qibo import hamiltonians, matrices, symbols
+from qibo import matrices, symbols
 
 
 def read_file(file_name, instance):

@@ -707,12 +707,13 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 .. testcode::
 
     import numpy as np
-    from qibo import models, hamiltonians
+    from qibo.hamiltonians import XXZ
+    from qibo.models import QAOA
 
     # Create XXZ Hamiltonian for six qubits
-    hamiltonian = hamiltonians.XXZ(6)
+    hamiltonian = XXZ(6)
     # Create QAOA model
-    qaoa = models.QAOA(hamiltonian)
+    qaoa = QAOA(hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = 0.01 * np.random.uniform(0,1,4)
@@ -748,10 +749,11 @@ the model. For example the previous example would have to be modified as:
 
 .. code-block:: python
 
-    from qibo import models, hamiltonians
+    from qibo.hamiltonians import XXZ
+    from qibo.models import QAOA
 
-    hamiltonian = hamiltonians.XXZ(6, dense=False)
-    qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
+    hamiltonian = XXZ(6, dense=False)
+    qaoa = QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
 
 
 .. _autodiff-example:
@@ -1782,10 +1784,10 @@ Below is an example of how to use this object in practice:
 
 .. testcode::
 
-    from qibo import hamiltonians
+    from qibo.hamiltonians import TFIM
 
     # Define TFIM model as a non-dense ``SymbolicHamiltonian``
-    ham = hamiltonians.TFIM(nqubits=5, dense=False)
+    ham = TFIM(nqubits=5, dense=False)
     # This object can be used to create the circuit that
     # implements a single Trotter time step ``dt``
     circuit = ham.circuit(dt=1e-2)
@@ -1831,7 +1833,7 @@ For example:
     # Define the |+++++> initial state
     initial_state = np.ones(2 ** nqubits, dtype=complex) / np.sqrt(2 ** nqubits)
     # Define the evolution model
-    evolve = models.StateEvolution(ham, dt=1e-3)
+    evolve = StateEvolution(ham, dt=1e-3)
     # Evolve for total time T=1
     final_state = evolve(final_time=1, initial_state=initial_state)
 
@@ -2149,7 +2151,7 @@ to allow calculation of expectation values directly from such samples:
 .. testcode::
 
     from qibo import Circuit, gates
-    from qibo import hamiltonians
+    from qibo.hamiltonians import Z
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
@@ -2158,7 +2160,7 @@ to allow calculation of expectation values directly from such samples:
     circuit.add(gates.CNOT(2, 3))
     circuit.add(gates.M(*range(4)))
 
-    hamiltonian = hamiltonians.Z(4)
+    hamiltonian = Z(4)
 
     result = circuit(nshots=1024)
     expectation_value = hamiltonian.expectation_from_samples(result.frequencies())

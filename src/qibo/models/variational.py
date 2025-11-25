@@ -306,12 +306,12 @@ class AAVQE:
             compile (bool): whether the TensorFlow graph should be compiled.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        from qibo import models
+        from qibo.models import VQE  # pylint: disable=import-outside-toplevel
 
         t = 0.0
         while (t - self._t_max) <= self.ATOL_TIME:
             H = self.hamiltonian(t)
-            vqe = models.VQE(self._circuit, H)
+            vqe = VQE(self._circuit, H)
             best, params, _ = vqe.minimize(
                 params,
                 method=method,
@@ -351,18 +351,21 @@ class QAOA:
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import XXZ
+            from qibo.models import QAOA
+
             # create XXZ Hamiltonian for four qubits
-            hamiltonian = hamiltonians.XXZ(4)
+            hamiltonian = XXZ(4)
             # create QAOA model for this Hamiltonian
-            qaoa = models.QAOA(hamiltonian)
+            qaoa = QAOA(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
             best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
 
-    from qibo import hamiltonians, optimizers
+    from qibo import hamiltonians, optimizers  # pylint: disable=import-outside-toplevel
 
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
@@ -492,10 +495,11 @@ class QAOA:
         processes=None,
     ):
         """Optimizes the variational parameters of the QAOA. A few loss functions are
-        provided for QAOA optimizations such as expected value (default), CVar which is introduced in
-        `Quantum 4, 256 <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and
-        Gibbs loss function which is introduced in
-        `PRR 2, 023074 (2020) <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
+        provided for QAOA optimizations such as expected value (default),
+        CVar which is introduced in `Quantum 4, 256
+        <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and Gibbs loss function
+        which is introduced in `PRR 2, 023074 (2020)
+        <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
 
         Args:
             initial_p (np.ndarray): initial guess for the parameters.
@@ -503,7 +507,8 @@ class QAOA:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            loss_func (function): the desired loss function. If it is None, the expectation is used.
+            loss_func (function): the desired loss function. If it is ``None``,
+                the expectation is used.
             loss_func_param (dict): a dictionary to pass in the loss function parameters.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
@@ -528,15 +533,20 @@ class QAOA:
         Example:
             .. testcode::
 
-                from qibo import hamiltonians
+                from qibo.hamiltonians import XXZ
+                from qibo.models import QAOA
                 from qibo.models.utils import cvar, gibbs
 
-                h = hamiltonians.XXZ(3)
-                qaoa = models.QAOA(h)
+                h = XXZ(3)
+                qaoa = QAOA(h)
                 initial_p = [0.314, 0.22, 0.05, 0.59]
                 best, params, _ = qaoa.minimize(initial_p)
-                best, params, _ = qaoa.minimize(initial_p, loss_func=cvar, loss_func_param={'alpha':0.1})
-                best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
+                best, params, _ = qaoa.minimize(
+                    initial_p, loss_func=cvar, loss_func_param={'alpha':0.1}
+                )
+                best, params, _ = qaoa.minimize(
+                    initial_p, loss_func=gibbs, loss_func_param={'eta':0.1}
+                )
 
         """
         if len(initial_p) % 2 != 0:
@@ -620,11 +630,14 @@ class FALQON(QAOA):
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import XXZ
+            from qibo.models import FALQON
+
             # create XXZ Hamiltonian for four qubits
-            hamiltonian = hamiltonians.XXZ(4)
+            hamiltonian = XXZ(4)
             # create FALQON model for this Hamiltonian
-            falqon = models.FALQON(hamiltonian)
+            falqon = FALQON(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01

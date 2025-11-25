@@ -164,7 +164,7 @@ QAP of size 4 is too large for Qibo QAOA. Let's reduce the size to 3
 ham = hamiltonian_qap((F[:3,:3], D[:3,:3]), dense=False)
 
 
-from qibo import models, hamiltonians
+from qibo.models import QAOA
 
 # Create QAOA model
 qaoa = models.QAOA(ham)
