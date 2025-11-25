@@ -312,7 +312,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
-    data = random_statevector(sparsity, seed=10, backend=backend)
+    data = random_statevector(sparsity, seed=seed, backend=backend)
     np.random.seed(seed)
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)

@@ -272,9 +272,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     except AttributeError:
         test_dtype = bool("int" in str(type(data[0][0])))
 
-    _data = [(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data
-
-    bitstrings_sorted, data_sorted = zip(*_data)
+    bitstrings_sorted, data_sorted = zip(*([(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data))
     bitstrings_sorted = backend.cast(
         [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
         dtype=_get_int_type(2**nqubits, backend=backend),
@@ -310,10 +308,10 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         "hyperspherical",
         nqubits=nqubits,
         backend=backend,
-        keep_antictrls=True,
         **kwargs,
     )
     circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
+    # circuit_permutation.queue = circuit_permutation.queue[::-1]
 
     return circuit_binary + circuit_permutation
 
@@ -531,7 +529,7 @@ def binary_encoder(
     if (dims & (dims - 1)) != 0 and parametrization == "hopf":
         raise_error(ValueError, "`data` size must be a power of 2.")
 
-    if nqubits == None:
+    if nqubits is None:
         nqubits = int(backend.np.ceil(backend.np.log2(dims)))
 
     complex_data = bool(
