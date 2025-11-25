@@ -9,6 +9,12 @@ from qibo.models.circuit import Circuit
 
 @dataclass
 class QiskitPasses:
+    """A wrapper to qiskit's transpiler, passes through QASM to convert
+    circuits: qibo -> qiskit -> transpile -> qibo.
+
+    Args:
+        pass_manager (qiskit.transpiler.PassManager): a qiskit ``PassManager``.
+    """
 
     pass_manager: PassManager
 

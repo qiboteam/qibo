@@ -1136,6 +1136,14 @@ class Circuit:
     def to_qasm(self, extended_compatibility: bool = False):
         """Convert circuit to a QASM string.
 
+        Args:
+            extended_compatibility (bool): if ``True``, unrolls more exotic gates in their
+                decomposition by defining them as custom gates, this increases the compatibility
+                with other frameworks, such as qiskit. Defaults to ``False``.
+
+        Returns:
+            (str) the generated QASM.
+
         .. note::
             This method does not support multi-controlled gates
             and gates with ``torch.Tensor`` as parameters.
