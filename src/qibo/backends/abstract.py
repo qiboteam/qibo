@@ -698,35 +698,6 @@ class Backend:
 
         return self.eig(matrix)  # pragma: no cover
 
-    def expectation_value(
-        self,
-        hamiltonian,
-        state,
-        normalize: bool = False,
-        dtype: Optional[DTypeLike] = None,
-    ) -> Union[float, int]:
-        """Calculate expectation value of a state vector given the observable matrix."""
-        if dtype is None:
-            dtype = self.dtype
-
-        density_matrix = bool(len(state.shape) == 2)
-
-        state = self.cast(state, dtype=dtype)  # pylint: disable=E1111
-        prod = hamiltonian @ state
-        exp_val = (
-            self.trace(prod) if density_matrix else self.sum(self.conj(state) * prod)
-        )
-        exp_val = self.real(exp_val)
-
-        if normalize:
-            norm = (
-                self.trace(state) if density_matrix else self.sum(self.abs(state) ** 2)
-            )
-            norm = self.real(norm)
-            exp_val /= norm
-
-        return exp_val
-
     def jacobian(
         self,
         circuit: "Circuit",  # type: ignore
@@ -1587,7 +1558,8 @@ class Backend:
         starting from the samples (measured in the same basis).
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate
+                the expectation value from.
             observable (ndarray): the (diagonal) matrix corresponding to the observable.
             nqubits (int): the number of qubits of the observable.
             nshots (int): how many shots to execute the circuit with.
@@ -1608,7 +1580,8 @@ class Backend:
             raise_error(
                 NotImplementedError,
                 "Observable is not diagonal. Expectation of non-diagonal observables starting "
-                + "from samples is currently supported for `qibo.hamiltonians.SymbolicHamiltonian` only.",
+                + "from samples is currently supported for "
+                + "`qibo.hamiltonians.SymbolicHamiltonian` only.",
             )
         diag = self.reshape(diag, nqubits * (2,))
         if qubit_map is None:
@@ -1628,15 +1601,18 @@ class Backend:
         nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
     ) -> float:
-        """Compute the expectation value of a symbolic observable diagonal in the computational basis,
-        starting from the samples.
+        """Compute the expectation value of a symbolic observable diagonal in the
+        computational basis, starting from the samples.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate
+                the expectation value from.
             nqubits (int): number of qubits of the observable.
-            terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal) symbolic observable is acting on.
-            terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
-            constant (float): the constant term of the observable. Defaults to ``0.``.
+            terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal)
+                symbolic observable is acting on.
+            terms_coefficients (List[float]): the coefficient of each term of the (diagonal)
+                symbolic observable.
+            constant (float): the constant term of the observable. Defaults to :math:`0.0`.
             nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...]): custom qubit ordering.
 
@@ -1702,7 +1678,8 @@ class Backend:
         the corresponding subspace defined by the qubits it acts on.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate the expectation value from.
+            circuit (:class:`qibo.models.circuit.Circuit`): the circuit to calculate
+                the expectation value from.
             terms (List[str]): the lists of strings defining the observables for each term, e.g.
                 ``['ZXZ', 'YI', 'IYZ', 'X']``.
             term_coefficients (List[float]): the coefficients of each term.
@@ -1722,14 +1699,14 @@ class Backend:
         # get the state and separate it in the single qubits
         # subspaces
         state = result.state()
-        N = len(state.shape) * nqubits
-        shape = N * (2,)
+        dims = len(state.shape) * nqubits
+        shape = dims * (2,)
         state = self.reshape(state, shape)
         # prepare the state indices for the contraction
         if circuit.density_matrix:
-            state_indices = [ascii_letters[i] for i in range(N)]
+            state_indices = [ascii_letters[elem] for elem in range(dims)]
         else:
-            state_indices = [ascii_letters[i] for i in range(2 * N)]
+            state_indices = [ascii_letters[elem] for elem in range(2 * dims)]
             state_dag_indices = state_indices[:nqubits]
             state_indices = state_indices[nqubits:]
             state_dag_string = "".join(state_dag_indices)
@@ -1773,7 +1750,9 @@ class Backend:
                     )
                 )
             else:
-                obs_indices = [state_dag_indices[i] + state_indices[i] for i in qubits]
+                obs_indices = [
+                    state_dag_indices[qubit] + state_indices[qubit] for qubit in qubits
+                ]
                 obs_string = ",".join(obs_indices)
                 new_string = state_string[:]
                 for q in set(range(nqubits)) - set(qubits):
@@ -1805,16 +1784,17 @@ class Backend:
         constant: float,
         nshots: int,
     ) -> float:
-        """Compute the expectation value of a general symbolic observable defined by groups of terms
-        that can be diagonalized simultaneously, starting from the samples.
+        """Compute the expectation value of a general symbolic observable defined by groups
+        of terms that can be diagonalized simultaneously, starting from the samples.
 
         Args:
             circuit (Circuit): the circuit to calculate the expectation value from.
-            diagonal_terms_coefficients (List[float]): the coefficients of each term of the (diagonal) symbolic observable.
-            diagonal_terms_observables (List[List[str]]): the lists of strings defining the observables
-                for each group of terms, e.g. ``[['IXZ', 'YII'], ['IYZ', 'XIZ']]``.
-            diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups is acting on,
-                e.g. ``[[(0,1,2), (1,3)], [(2,1,3), (2,4)]]``.
+            diagonal_terms_coefficients (List[float]): the coefficients of each term of the
+                (diagonal) symbolic observable.
+            diagonal_terms_observables (List[List[str]]): the lists of strings defining the
+                observables for each group of terms, e.g. ``[['IXZ', 'YII'], ['IYZ', 'XIZ']]``.
+            diagonal_terms_qubits (List[Tuple[int, ...]]): the qubits each term of the groups
+                is acting on, e.g. ``[[(0,1,2), (1,3)], [(2,1,3), (2,4)]]``.
             nqubits (int): number of qubits of the observable.
             constant (float): the constant term of the observable.
             nshots (int): how many shots to execute the circuit with.
