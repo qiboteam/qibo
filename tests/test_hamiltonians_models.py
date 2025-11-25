@@ -119,19 +119,30 @@ def test_xxx(backend, dense):
         )
 
 
+@pytest.mark.parametrize("node_weights", [False, True])
+@pytest.mark.parametrize("is_list", [False, True])
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("penalty_coeff", [0.0, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
-def test_gpp(backend, nqubits, penalty_coeff, dense):
+def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
     with pytest.raises(ValueError):
         GPP(np.random.rand(3, 3), penalty_coeff, np.random.rand(4), backend=backend)
 
+    with pytest.raises(ValueError):
+        GPP(np.random.rand(3, 2), penalty_coeff, np.random.rand(3), backend=backend)
+
     adj_matrix = np.ones((nqubits, nqubits)) - np.diag(np.ones(nqubits))
-    adj_matrix = backend.cast(adj_matrix, dtype=np.int8)
+    adj_matrix = (
+        list(adj_matrix) if is_list else backend.cast(adj_matrix, dtype=np.int8)
+    )
+
+    node_weights = [1] * nqubits if node_weights else None
+
+    hamiltonian = GPP(
+        adj_matrix, penalty_coeff, node_weights, dense=dense, backend=backend
+    )
 
     term = (backend.matrices.I() - backend.matrices.Z) / 2
-    hamiltonian = GPP(adj_matrix, penalty_coeff, dense=dense, backend=backend)
-
     base_string = [backend.matrices.I()] * nqubits
     rows, columns = backend.np.nonzero(backend.np.tril(adj_matrix, -1))
     target = 0

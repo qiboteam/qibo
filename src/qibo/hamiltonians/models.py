@@ -467,11 +467,11 @@ def GPP(
 
     if isinstance(adjacency_matrix, list):
         adjacency_matrix = backend.cast(
-            adjacency_matrix, dtype=adjacency_matrix[0][0].dtype
+            adjacency_matrix, dtype=type(adjacency_matrix[0][0])
         )
 
     if node_weights is not None and isinstance(node_weights, list):
-        node_weights = backend.cast(node_weights, dtype=node_weights[0].dtype)
+        node_weights = backend.cast(node_weights, dtype=type(node_weights[0]))
 
     if penalty_coeff != 0.0 and node_weights is None:
         node_weights = backend.np.ones(len(adjacency_matrix), dtype=backend.np.int8)
