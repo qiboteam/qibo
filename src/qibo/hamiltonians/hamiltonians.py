@@ -244,7 +244,8 @@ class Hamiltonian(AbstractHamiltonian):
             new_matrix = other.matrix - self.matrix
         elif isinstance(other, self.backend.numeric_types):
             new_matrix = (
-                other * self._backend.identity(self.matrix.shape[0], dtype=self.matrix.dtype)
+                other
+                * self._backend.identity(self.matrix.shape[0], dtype=self.matrix.dtype)
                 - self.matrix
             )
         else:
