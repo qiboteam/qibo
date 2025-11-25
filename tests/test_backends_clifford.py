@@ -287,7 +287,7 @@ def test_non_clifford_error(backend):
     clifford_bkd = construct_clifford_backend(backend)
     c = Circuit(1)
     c.add(gates.T(0))
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(AttributeError) as excinfo:
         clifford_bkd.execute_circuit(c)
         assert str(excinfo.value) == "Circuit contains non-Clifford gates."
 

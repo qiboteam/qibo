@@ -3,6 +3,8 @@ from functools import cache, reduce
 import numpy as np
 from scipy import sparse
 
+from qibo.config import raise_error
+
 name = "numpy"
 
 
@@ -494,8 +496,7 @@ def _init_state_for_measurements(state, nqubits, collapse):
     return state.copy()
 
 
-# valid for a standard basis measurement only
-def M(state, qubits, nqubits, collapse=False):
+def _M(state, qubits, nqubits, collapse=False):
     sample = []
     state = _init_state_for_measurements(state, nqubits, collapse)
     # TODO: parallelize this and get rid of the loop
@@ -503,14 +504,36 @@ def M(state, qubits, nqubits, collapse=False):
         p = state[nqubits:-1, q].nonzero()[0]
         # random outcome, affects the state
         if len(p) > 0:
-            state, outcome = _random_outcome(state, p, q, nqubits)
+            state, _ = _random_outcome(state, p, q, nqubits)
+            outcome = None
         # determined outcome, state unchanged
         else:
             _, outcome = _determined_outcome(state, q, nqubits)
+            outcome = int(outcome)
         sample.append(outcome)
     if collapse:
         state = _packbits(state, axis=0)
     return sample
+
+
+# valid for a standard basis measurement only
+def M(state, qubits, nqubits, collapse=False, nshots=1):
+    if collapse and nshots != 1:
+        raise_error(
+            RuntimeError,
+            "Cannot generate multiple shots with a collapsing measurement.",
+        )
+    sample = _M(state, qubits, nqubits, collapse)
+    samples = [
+        (
+            np.random.randint(2, size=nshots).tolist()
+            if outcome is None
+            else nshots * [outcome]
+        )
+        for outcome in sample
+    ]
+    samples = list(zip(*samples))
+    return samples
 
 
 def cast(x, dtype=None, copy: bool = False):
