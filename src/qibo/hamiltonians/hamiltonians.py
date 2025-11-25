@@ -167,7 +167,6 @@ class Hamiltonian(AbstractHamiltonian):
             circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
 
-
     def energy_fluctuation(self, circuit):
         """
         Evaluate energy fluctuation:
