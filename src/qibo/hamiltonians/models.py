@@ -399,6 +399,8 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
 
 def GPP(
     adjacency_matrix,
+    penalty_coeff: Union[float, int] = 0.0,
+    node_weights=None,
     dense: bool = True,
     backend=None,
 ):
@@ -455,6 +457,12 @@ def GPP(
             + f"but it has shape ({len(adjacency_matrix)}, {len(adjacency_matrix[0])}).",
         )
 
+    if node_weights is not None and len(node_weights) != len(adjacency_matrix):
+        raise_error(
+            ValueError,
+            "``node_weights`` and ``adjacency_matrix`` must have the same dimensions.",
+        )
+
     backend = _check_backend(backend)
 
     if isinstance(adjacency_matrix, list):
@@ -462,13 +470,19 @@ def GPP(
             adjacency_matrix, dtype=adjacency_matrix[0][0].dtype
         )
 
+    if node_weights is not None and isinstance(node_weights, list):
+        node_weights = backend.cast(node_weights, dtype=node_weights[0].dtype)
+
+    if penalty_coeff != 0.0 and node_weights is None:
+        node_weights = backend.np.ones(len(adjacency_matrix), dtype=backend.np.int8)
+
     if not dense:
-        return _gpp_symbolic(adjacency_matrix, backend)
+        return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
 
-    return _gpp_dense(adjacency_matrix, backend)
+    return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
 
 
-def _gpp_symbolic(adjacency_matrix, backend):
+def _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend):
     def term(index: int):
         return (
             symbols.I(index, backend=backend) - symbols.Z(index, backend=backend)
@@ -482,42 +496,53 @@ def _gpp_symbolic(adjacency_matrix, backend):
         x_k = term(ind_k)
         hamiltonian += adjacency_matrix[ind_j, ind_k] * (x_j + x_k - 2 * x_j * x_k)
 
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += weight * (term(elem) - symbols.I(elem, backend=backend) / 2)
+
+        hamiltonian += penalty_coeff * (penalty**2)
+
     return SymbolicHamiltonian(hamiltonian, backend=backend)
 
 
 def _gpp_dense(
     adjacency_matrix,
+    penalty_coeff,
+    node_weights,
     backend,
 ):
+    def term(nqubits, ind_1, ind_2=None):
+        diag = [id_diag] * nqubits
+        diag[ind_1] = term_diag
+        if ind_2 is not None:
+            diag[ind_2] = term_diag
+        diag = _multikron(diag, backend)
+
+        return diag
+
     nqubits = len(adjacency_matrix)
 
     id_diag = backend.cast([1, 1])
     term_diag = backend.cast([0, 1])
-
-    base_diag = [id_diag] * nqubits
 
     hamiltonian = 0
     rows, columns = backend.np.nonzero(backend.np.tril(adjacency_matrix, -1))
     for ind_j, ind_k in zip(columns, rows):
         ind_j, ind_k = int(ind_j), int(ind_k)
 
-        diag = backend.cast(base_diag, copy=True)
-        diag[ind_j] = term_diag
-        diag = _multikron(diag, backend)
-        term = diag
+        diag = term(nqubits, ind_j)
+        diag += term(nqubits, ind_k)
+        diag -= 2 * term(nqubits, ind_j, ind_k)
 
-        diag = backend.cast(base_diag, copy=True)
-        diag[ind_k] = term_diag
-        diag = _multikron(diag, backend)
-        term += diag
+        hamiltonian += diag
 
-        diag = backend.cast(base_diag, copy=True)
-        diag[ind_j] = term_diag
-        diag[ind_k] = term_diag
-        diag = _multikron(diag, backend)
-        term -= 2 * diag
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += weight * (term(nqubits, elem) - 1 / 2)
 
-        hamiltonian += term
+        hamiltonian += penalty_coeff * (penalty**2)
 
     return Hamiltonian(nqubits, backend.np.diag(hamiltonian), backend=backend)
 

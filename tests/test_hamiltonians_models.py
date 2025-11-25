@@ -119,26 +119,41 @@ def test_xxx(backend, dense):
         )
 
 
-@pytest.mark.parametrize("dense", [True, False])
-@pytest.mark.parametrize("nqubits", [4, 5])
-def test_gpp(backend, nqubits, dense):
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("penalty_coeff", [0.0, 2])
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_gpp(backend, nqubits, penalty_coeff, dense):
+    with pytest.raises(ValueError):
+        GPP(np.random.rand(3, 3), penalty_coeff, np.random.rand(4), backend=backend)
+
     adj_matrix = np.ones((nqubits, nqubits)) - np.diag(np.ones(nqubits))
     adj_matrix = backend.cast(adj_matrix, dtype=np.int8)
 
-    hamiltonian = GPP(adj_matrix, dense=dense, backend=backend)
+    term = (backend.matrices.I() - backend.matrices.Z) / 2
+    hamiltonian = GPP(adj_matrix, penalty_coeff, dense=dense, backend=backend)
 
     base_string = [backend.matrices.I()] * nqubits
     rows, columns = backend.np.nonzero(backend.np.tril(adj_matrix, -1))
     target = 0
     for col, row in zip(columns, rows):
         term_col = base_string.copy()
-        term_col[int(col)] = (backend.matrices.I() - backend.matrices.Z) / 2
+        term_col[int(col)] = term
         term_col = reduce(backend.np.kron, term_col)
 
         term_row = base_string.copy()
-        term_row[int(row)] = (backend.matrices.I() - backend.matrices.Z) / 2
+        term_row[int(row)] = term
         term_row = reduce(backend.np.kron, term_row)
 
         target += term_row + term_col - 2 * (term_col @ term_row)
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem in range(len(adj_matrix)):
+            term_weight = base_string.copy()
+            term_weight[elem] = term - backend.matrices.I() / 2
+            term_weight = reduce(backend.np.kron, term_weight)
+            penalty += term_weight
+
+        target += penalty_coeff * (penalty**2)
 
     backend.assert_allclose(hamiltonian.matrix, target)
