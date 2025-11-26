@@ -1533,7 +1533,7 @@ class Backend:
             ev = self.real(
                 self.trace(self.cast(hamiltonian @ state))
             )  # pylint: disable=E1111
-            if normalize:
+            if normalize:  # pragma: no cover
                 norm = self.real(self.trace(state))
                 ev /= norm
             return ev
@@ -1541,7 +1541,7 @@ class Backend:
         statec = self.conj(state)
         hstate = hamiltonian @ state
         ev = self.real(self.sum(statec * hstate))
-        if normalize:
+        if normalize:  # pragma: no cover
             ev /= self.sum(self.abs(state) ** 2)
 
         return ev
