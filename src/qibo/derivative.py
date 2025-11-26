@@ -56,15 +56,16 @@ def parameter_shift(
 
         .. testcode::
 
-            import qibo
             import numpy as np
-            from qibo import Circuit, gates, hamiltonians
+
+            from qibo import Circuit, gates
+            from qibo.hamiltonians import Hamiltonian, Z
             from qibo.derivative import parameter_shift
 
             # defining an observable
             def hamiltonian(nqubits = 1):
-                m0 = (1/nqubits)*hamiltonians.Z(nqubits).matrix
-                ham = hamiltonians.Hamiltonian(nqubits, m0)
+                m0 = (1/nqubits)*Z(nqubits).matrix
+                ham = Hamiltonian(nqubits, m0)
 
                 return ham
 

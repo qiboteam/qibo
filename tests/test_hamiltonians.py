@@ -4,11 +4,13 @@ from collections.abc import Iterable
 
 import numpy as np
 import pytest
+from scipy import sparse
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.backends import construct_backend
 from qibo.hamiltonians.hamiltonians import Hamiltonian
-from qibo.hamiltonians.models import XXZ
+from qibo.hamiltonians.models import TFIM, XXZ, SymbolicHamiltonian
+from qibo.hamiltonians.models import Y as Y_model
 from qibo.quantum_info.random_ensembles import (
     random_clifford,
     random_density_matrix,
@@ -21,13 +23,13 @@ from .utils import random_sparse_matrix
 
 def test_hamiltonian_init(backend):
     with pytest.raises(TypeError):
-        H = hamiltonians.Hamiltonian(2, "test", backend=backend)
+        H = Hamiltonian(2, "test", backend=backend)
     with pytest.raises(ValueError):
-        H1 = hamiltonians.Hamiltonian(-2, np.eye(4), backend=backend)
+        H1 = Hamiltonian(-2, np.eye(4), backend=backend)
     with pytest.raises(RuntimeError):
-        H2 = hamiltonians.Hamiltonian(np.eye(2), np.eye(4), backend=backend)
+        H2 = Hamiltonian(np.eye(2), np.eye(4), backend=backend)
     with pytest.raises(ValueError):
-        H3 = hamiltonians.Hamiltonian(4, np.eye(10), backend=backend)
+        H3 = Hamiltonian(4, np.eye(10), backend=backend)
 
 
 @pytest.mark.parametrize(
@@ -73,8 +75,8 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
         return c1 - a + c2 * b
 
     if sparse_type is None:
-        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
-        H2 = hamiltonians.XXZ(nqubits=2, delta=1, backend=backend)
+        H1 = XXZ(nqubits=2, delta=0.5, backend=backend)
+        H2 = XXZ(nqubits=2, delta=1, backend=backend)
         mH1, mH2 = backend.to_numpy(H1.matrix), backend.to_numpy(H2.matrix)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
@@ -84,8 +86,8 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
 
         mH1 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
         mH2 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
-        H1 = hamiltonians.Hamiltonian(6, mH1, backend=backend)
-        H2 = hamiltonians.Hamiltonian(6, mH2, backend=backend)
+        H1 = Hamiltonian(6, mH1, backend=backend)
+        H2 = Hamiltonian(6, mH2, backend=backend)
 
     hH1 = transformation_a(mH1, mH2)
     hH2 = transformation_b(mH1, mH2)
@@ -114,19 +116,19 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_addition(backend, sparse_type):
     if sparse_type is None:
-        H1 = hamiltonians.Y(nqubits=3, backend=backend)
-        H2 = hamiltonians.TFIM(nqubits=3, h=1.0, backend=backend)
+        H1 = Y_model(nqubits=3, backend=backend)
+        H2 = TFIM(nqubits=3, h=1.0, backend=backend)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
             pytest.skip(
                 "Tensorflow and Pytorch do not support operations with sparse matrices."
             )
-        H1 = hamiltonians.Hamiltonian(
+        H1 = Hamiltonian(
             6,
             random_sparse_matrix(backend, 64, sparse_type=sparse_type),
             backend=backend,
         )
-        H2 = hamiltonians.Hamiltonian(
+        H2 = Hamiltonian(
             6,
             random_sparse_matrix(backend, 64, sparse_type=sparse_type),
             backend=backend,
@@ -146,8 +148,8 @@ def test_hamiltonian_addition(backend, sparse_type):
         target, matrix = target.toarray(), matrix.toarray()
     backend.assert_allclose(matrix, target)
 
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
-    H2 = hamiltonians.XXZ(nqubits=3, delta=0.1, backend=backend)
+    H1 = XXZ(nqubits=2, delta=0.5, backend=backend)
+    H2 = XXZ(nqubits=3, delta=0.1, backend=backend)
     with pytest.raises(RuntimeError):
         R = H1 + H2
     with pytest.raises(RuntimeError):
@@ -156,8 +158,8 @@ def test_hamiltonian_addition(backend, sparse_type):
 
 def test_hamiltonian_operation_errors(backend):
     """Testing hamiltonian not implemented errors."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
-    H2 = hamiltonians.XXZ(nqubits=2, delta=0.1, backend=backend)
+    H1 = XXZ(nqubits=2, delta=0.5, backend=backend)
+    H2 = XXZ(nqubits=2, delta=0.1, backend=backend)
 
     with pytest.raises(NotImplementedError):
         R = H1 * H2
@@ -180,17 +182,17 @@ def test_hamiltonian_matmul(backend, sparse_type):
         )
     if sparse_type is None:
         nqubits = 3
-        H1 = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
-        H2 = hamiltonians.Y(nqubits, backend=backend)
+        H1 = TFIM(nqubits, h=1.0, backend=backend)
+        H2 = Y_model(nqubits, backend=backend)
     else:
         nqubits = 5
         nstates = 2**nqubits
-        H1 = hamiltonians.Hamiltonian(
+        H1 = Hamiltonian(
             nqubits,
             random_sparse_matrix(backend, nstates, sparse_type),
             backend=backend,
         )
-        H2 = hamiltonians.Hamiltonian(
+        H2 = Hamiltonian(
             nqubits,
             random_sparse_matrix(backend, nstates, sparse_type),
             backend=backend,
@@ -215,7 +217,7 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
     """Test matrix multiplication between Hamiltonian and states."""
     if sparse_type is None:
         nqubits = 3
-        H = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
+        H = TFIM(nqubits, h=1.0, backend=backend)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
             pytest.skip(
@@ -224,7 +226,7 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
         nqubits = 3
         nstates = 2**nqubits
         matrix = random_sparse_matrix(backend, nstates, sparse_type)
-        H = hamiltonians.Hamiltonian(nqubits, matrix, backend=backend)
+        H = Hamiltonian(nqubits, matrix, backend=backend)
 
     hm = H.matrix
     v = random_statevector(2**nqubits, backend=backend)
@@ -252,13 +254,13 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
 def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
     """Test Hamiltonian expectation value calculation."""
     if sparse_type is None:
-        h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense, backend=backend)
+        h = XXZ(nqubits=3, delta=0.5, dense=dense, backend=backend)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
             pytest.skip(
                 "Tensorflow and Pytorch do not support operations with sparse matrices."
             )
-        h = hamiltonians.Hamiltonian(
+        h = Hamiltonian(
             6, random_sparse_matrix(backend, 64, sparse_type), backend=backend
         )
 
@@ -282,7 +284,7 @@ def non_exact_expectation_test_setup(backend, observable):
     for q in range(nqubits):
         circuit.add(gates.RX(q, np.random.rand()))
 
-    H = hamiltonians.SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
+    H = SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
     exp = H.expectation(circuit.copy(True))
     return exp, H, circuit
 
@@ -344,7 +346,7 @@ def test_hamiltonian_expectation_from_circuit(backend):
 def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
     """Testing hamiltonian eigenvalues scaling."""
     if sparse_type is None:
-        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
+        H1 = XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
             pytest.skip(
@@ -352,9 +354,9 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
             )
         from scipy import sparse
 
-        H1 = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
+        H1 = XXZ(nqubits=5, delta=0.5, backend=backend)
         m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(H1.matrix))
-        H1 = hamiltonians.Hamiltonian(5, m, backend=backend)
+        H1 = Hamiltonian(5, m, backend=backend)
 
     H1_eigen = sorted(backend.to_numpy(H1.eigenvalues()))
     hH1_eigen = sorted(backend.to_numpy(backend.eigenvalues(H1.matrix)))
@@ -380,7 +382,7 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
 @pytest.mark.parametrize("dense", [True, False])
 def test_hamiltonian_eigenvectors(backend, dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
+    H1 = XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
 
     V1 = backend.to_numpy(H1.eigenvectors())
     U1 = backend.to_numpy(H1.eigenvalues())
@@ -419,7 +421,7 @@ def test_hamiltonian_eigenvectors(backend, dtype, dense):
 def test_hamiltonian_ground_state(backend, sparse_type, dense):
     """Test Hamiltonian ground state."""
     if sparse_type is None:
-        H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
+        H = XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
         if backend.platform in ["tensorflow", "pytorch"]:
             pytest.skip(
@@ -427,9 +429,9 @@ def test_hamiltonian_ground_state(backend, sparse_type, dense):
             )
         from scipy import sparse
 
-        H = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
+        H = XXZ(nqubits=5, delta=0.5, backend=backend)
         m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(H.matrix))
-        H = hamiltonians.Hamiltonian(5, m, backend=backend)
+        H = Hamiltonian(5, m, backend=backend)
     V = backend.to_numpy(H.eigenvectors())
     backend.assert_allclose(H.ground_state(), V[:, 0])
 
@@ -451,17 +453,15 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
 
     def construct_hamiltonian():
         if sparse_type is None:
-            return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
+            return XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
         else:
             if backend.platform in ["tensorflow", "pytorch"]:
                 pytest.skip(
                     "Tensorflow and Pytorch do not support operations with sparse matrices."
                 )
-            from scipy import sparse
-
-            ham = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
+            ham = XXZ(nqubits=5, delta=0.5, backend=backend)
             m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(ham.matrix))
-            return hamiltonians.Hamiltonian(5, m, backend=backend)
+            return Hamiltonian(5, m, backend=backend)
 
     H = construct_hamiltonian()
     target_matrix = expm(-0.5j * backend.to_numpy(H.matrix))
@@ -479,7 +479,7 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
 def test_hamiltonian_energy_fluctuation(backend):
     """Test energy fluctuation."""
     # define hamiltonian
-    ham = hamiltonians.XXZ(nqubits=2, backend=backend)
+    ham = XXZ(nqubits=2, backend=backend)
     # take ground state and zero state
     ground_state = Circuit(2)
     ground_state.add([gates.H(0), gates.CNOT(0, 1), gates.Z(1), gates.X(1)])

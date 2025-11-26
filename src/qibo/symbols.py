@@ -23,7 +23,7 @@ class Symbol(sympy.Symbol):
 
             # construct a XYZ Hamiltonian on two qubits using Qibo symbols
             form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
-            ham = hamiltonians.SymbolicHamiltonian(form)
+            ham = SymbolicHamiltonian(form)
 
     Args:
         q (int): Target qubit id.
