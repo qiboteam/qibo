@@ -101,9 +101,9 @@ def get_noisy_circuit(
     Returns:
         :class:`qibo.models.Circuit`: circuit with the inserted gate pairs or with global folding.
     """
-    if global_unitary_folding:
-        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
+    if global_unitary_folding:
         copy_circuit = Circuit(**circuit.init_kwargs)
         for g in circuit.queue:
             if not isinstance(g, gates.M):
