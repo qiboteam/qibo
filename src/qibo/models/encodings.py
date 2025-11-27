@@ -313,7 +313,6 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
         **kwargs,
     )
     circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
-    # circuit_permutation.queue = circuit_permutation.queue[::-1]
 
     return circuit_binary + circuit_permutation
 
@@ -474,9 +473,9 @@ def binary_encoder(
     data,
     parametrization: str = "hyperspherical",
     nqubits: int = None,
-    backend=None,
     codewords=None,
     keep_antictrls: bool = False,
+    backend=None,
     **kwargs,
 ):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
@@ -1635,9 +1634,9 @@ def _binary_encoder_hyperspherical(
     data,
     nqubits,
     complex_data: bool,
-    backend=None,
     codewords=None,
     keep_antictrls: bool = False,
+    backend=None,
     **kwargs,
 ):
     backend = _check_backend(backend)
@@ -1677,7 +1676,7 @@ def _monotonic_hw_encoder_real(
 
     Args:
         codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
-        non-decreasing
+            non-decreasing.
         data (complex): data to be encoded. assumed to have the same length as the list of codewords
 
     Returns:
@@ -1762,7 +1761,7 @@ def _monotonic_hw_encoder_complex(
 
     Args:
         codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
-        non-decreasing
+            non-decreasing.
         data (complex): data to be encoded. assumed to have the same length as the list of codewords
 
     Returns:
@@ -1890,9 +1889,9 @@ def _gate_params(bsi, bsip1, keep_antictrls: bool = False):
 
 def _binary_codewords(dims: int, backend=None):
     """
-    Return a array of integers produced by `_binary_codewords_ehrlich(d)`, adjusted so that:
-      - Hamming weight is strictly nondecreasing,
-      - Consecutive words have Hamming distance ≤ 2.
+    Return a array of integers produced by `_binary_codewords_ehrlich(d)`, adjusted so that
+    the Hamming weight is strictly nondecreasing, and consecutive words have Hamming 
+    distance <= 2.
 
     """
     backend = _check_backend(backend)
@@ -1991,8 +1990,9 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
     by `_ehrlich_algorithm(initial_string, False)` (assumed to return an iterable of bitstrings).
 
     Args:
-        up2k: Length of the bitstrings and the maximum Hamming weight.
-        reversed_list: If True, generate from weight up2k down to 0; otherwise 0 up to up2k.
+        up2k (int): Length of the bitstrings and the maximum Hamming weight.
+        reversed_list (bool, optional): If ``True``, generate from weight ``up2k`` down to :math:`0`.
+            Otherwise, from :math:`0` up to ``up2k``.
 
     Yields:
         str: Bitstrings produced by concatenating sequences from Ehrlich's algorithm.
