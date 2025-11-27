@@ -59,9 +59,10 @@ class Backend:
 
         Returns:
             List[int] or List[str] or None: For hardware backends, return list of qubit names.
-            For simulation backends, raises a ``NotImplementedError``.
+            For simulation backends, returns ``None``.
         """
-        raise_error(NotImplementedError)
+        # needs to be None and not NotImplementedError because of the transpiler
+        return None
 
     @property
     def connectivity(
@@ -71,9 +72,10 @@ class Backend:
 
         Returns:
             List[Tuple[int]] or List[Tuple[str]] or None: For hardware backends, return
-            available qubit pairs. For simulation backends, raises a ``NotImplementedError``.
+            available qubit pairs. For simulation backends, returns ``None``.
         """
-        raise_error(NotImplementedError)
+        # needs to be None and not NotImplementedError because of the transpiler
+        return None
 
     @property
     def natives(self) -> Optional[List[str]]:  # pragma: no cover
@@ -81,9 +83,10 @@ class Backend:
 
         Returns:
             List[str] or None: For hardware backends, return the native gates of the backend.
-            For the simulation backends, raises a ``NotImplementedError``.
+            For the simulation backends, return ``None``.
         """
-        raise_error(NotImplementedError)
+        # needs to be None and not NotImplementedError because of the transpiler
+        return None
 
     def cast(
         self,
