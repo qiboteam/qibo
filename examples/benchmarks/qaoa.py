@@ -8,8 +8,9 @@ import time
 import numpy as np
 from utils import BenchmarkLogger
 
-import qibo
-from qibo import hamiltonians, models
+from qibo import get_backend, get_device, get_dtype, get_threads
+from qibo.hamiltonians import XXZ
+from qibo.models import QAOA
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, help="Number of qubits.", type=int)
@@ -47,18 +48,18 @@ def main(
             "nangles": nangles,
             "dense": dense,
             "solver": solver,
-            "backend": qibo.get_backend(),
-            "dtype": qibo.get_dtype(),
-            "device": qibo.get_device(),
-            "threads": qibo.get_threads(),
+            "backend": get_backend(),
+            "dtype": get_dtype(),
+            "device": get_device(),
+            "threads": get_threads(),
             "method": method,
             "maxiter": maxiter,
         }
     )
 
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits, dense=dense)
+    hamiltonian = XXZ(nqubits=nqubits, dense=dense)
     start_time = time.time()
-    qaoa = models.QAOA(hamiltonian, solver=solver)
+    qaoa = QAOA(hamiltonian, solver=solver)
     logs[-1]["creation_time"] = time.time() - start_time
 
     target = np.real(np.min(hamiltonian.eigenvalues()))

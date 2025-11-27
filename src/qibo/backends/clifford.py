@@ -1,19 +1,23 @@
 """Module defining the Clifford backend."""
 
-import collections
+from collections import Counter
 from functools import cache, reduce
 from importlib.util import find_spec, module_from_spec
 from itertools import product
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike, DTypeLike
+from scipy.sparse import eye as eye_sparse
 
 from qibo import gates
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.abstract import Backend
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 
 
-class CliffordBackend(NumpyBackend):
+class CliffordBackend(Backend):
     """Backend for the simulation of Clifford circuits following
     `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
 
@@ -21,85 +25,82 @@ class CliffordBackend(NumpyBackend):
         :class:`qibo.backends.abstract.Backend`: Backend used for the calculation.
     """
 
-    def __init__(self, engine=None):
+    def __init__(self, platform: Optional[str] = None):
         super().__init__()
 
-        if engine == "stim":
+        self.name = "clifford"
+        self.platform = platform
+
+        if self.platform == "stim":
             import stim  # pylint: disable=C0415
 
-            engine = "numpy"
             self.platform = "stim"
             self._stim = stim
         else:
-            if engine is None:
+            if self.platform is None:
                 from qibo.backends import (  # pylint: disable=C0415
                     _check_backend,
                     _get_engine_name,
                 )
 
-                engine = _get_engine_name(_check_backend(engine))
+                self.platform = _get_engine_name(_check_backend(self.platform))
 
-            self.platform = engine
+            self._platform = self.platform
 
         spec = find_spec("qibo.backends._clifford_operations")
-        self.engine = module_from_spec(spec)
-        spec.loader.exec_module(self.engine)
+        self._platform = module_from_spec(spec)
+        spec.loader.exec_module(self._platform)
 
-        if engine == "numpy":
-            pass
-        elif engine == "numba":
-            from numba import set_num_threads
-
-            set_num_threads(1)
-
+        if self.platform in ("numpy", "stim"):
+            self.engine = np
+        elif self.platform == "numba":
+            import numba  # pylint: disable=import-outside-toplevel
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_cpu,
             )
 
+            numba.set_num_threads(1)
+
+            self.engine = np
+
             for method in dir(clifford_operations_cpu):
-                setattr(self.engine, method, getattr(clifford_operations_cpu, method))
-        elif engine == "cupy":  # pragma: no cover
+                setattr(
+                    self._platform, method, getattr(clifford_operations_cpu, method)
+                )
+        elif self.platform == "cupy":  # pragma: no cover
+            import cupy  # pylint: disable=import-outside-toplevel,E0401
             from qibojit.backends import (  # pylint: disable=C0415
                 clifford_operations_gpu,
             )
 
+            self.engine = cupy
+
             for method in dir(clifford_operations_gpu):
-                setattr(self.engine, method, getattr(clifford_operations_gpu, method))
-        else:
+                setattr(
+                    self._platform, method, getattr(clifford_operations_gpu, method)
+                )
+        elif self.platform == "pytorch":  # pragma: no cover
+            import torch  # pylint: disable=import-outside-toplevel
+
+            self.engine = torch
+        else:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                f"Backend `{engine}` is not supported for Clifford Simulation.",
+                f"Backend `{self.platform}` is not supported for Clifford Simulation.",
             )
 
-        self.np = self.engine.np
+        self.cast = self._platform.cast
+        self.csr_matrix = self._platform.csr_matrix
+        self._identity_sparse = self._platform._identity_sparse
 
-        self.name = "clifford"
+        self.matrices = NumpyMatrices(self.dtype)
+        self.tensor_types = (self.engine.ndarray,)
 
-    def cast(self, x, dtype=None, copy: bool = False):
-        """Cast an object as the array type of the current backend.
+    ########################################################################################
+    ######## Methods related to the creation and manipulation of quantum objects    ########
+    ########################################################################################
 
-        Args:
-            x: Object to cast to array.
-            dtype (optional): data type of the array or tensor. If ``None``, defaults
-                to the default data type of the current backend. Defaults to ``None``.
-            copy (bool, optional): If ``True`` a copy of the object is created in memory.
-                Defaults to ``False``.
-        """
-        return self.engine.cast(x, dtype=dtype, copy=copy)
-
-    def set_seed(self, seed):
-        super().set_seed(seed)
-        self.engine.set_seed(seed)
-
-    def calculate_frequencies(self, samples):
-        res, counts = self.engine.np.unique(samples, return_counts=True)
-        # The next two lines are necessary for the GPU backends
-        res = [int(r) if not isinstance(r, str) else r for r in res]
-        counts = [int(v) for v in counts]
-
-        return collections.Counter(dict(zip(res, counts)))
-
-    def zero_state(self, nqubits: int, i_phase=False):
+    def zero_state(self, nqubits: int, i_phase: bool = False) -> ArrayLike:
         """Construct the zero state :math`\\ket{00...00}`.
 
         Args:
@@ -112,47 +113,41 @@ class CliffordBackend(NumpyBackend):
         Returns:
             ndarray: Symplectic matrix for the zero state.
         """
-        identity = self.np.eye(nqubits)
+        identity = self.identity(nqubits, dtype=self.uint8)
         ncols = 2 * nqubits + 2 if i_phase else 2 * nqubits + 1
 
-        symplectic_matrix = self.np.zeros((2 * nqubits + 1, ncols), dtype=self.np.uint8)
-        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(identity)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(identity)
+        symplectic_matrix = self.zeros((2 * nqubits + 1, ncols), dtype=self.uint8)
+        symplectic_matrix[:nqubits, :nqubits] = self.cast(
+            identity, dtype=identity.dtype, copy=True
+        )
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.cast(
+            identity, dtype=identity.dtype, copy=True
+        )
         return symplectic_matrix
 
-    def _clifford_pre_execution_reshape(self, state):
-        """Reshape the symplectic matrix to the shape needed by the engine before circuit execution.
+    ########################################################################################
+    ######## Methods related to circuit execution                                   ########
+    ########################################################################################
 
-        Args:
-            state (ndarray): Input state.
+    def apply_channel(self, channel, state: ArrayLike, nqubits: int) -> ArrayLike:
+        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
+        index = self.random_choice(
+            self.arange(len(probabilities)), size=1, p=probabilities
+        )[0]
+        index = int(index)
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = gate.apply_clifford(self, state, nqubits)
+        return state
 
-        Returns:
-            ndarray: Reshaped state.
-        """
-        return self.engine._clifford_pre_execution_reshape(  # pylint: disable=protected-access
-            state
-        )
-
-    def _clifford_post_execution_reshape(self, state, nqubits: int):
-        """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
-
-        Args:
-            state (ndarray): Input state.
-            nqubits (int): Number of qubits.
-
-        Returns:
-            ndarray: Reshaped state.
-        """
-        return self.engine._clifford_post_execution_reshape(  # pylint: disable=protected-access
-            state, nqubits
-        )
-
-    def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
+    def apply_gate_clifford(
+        self, gate: Gate, symplectic_matrix: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         """Apply a gate to a symplectic matrix."""
         if isinstance(gate, gates.Unitary):
             return self.apply_unitary(gate, symplectic_matrix, nqubits)
 
-        operation = getattr(self.engine, gate.__class__.__name__)
+        operation = getattr(self._platform, gate.__class__.__name__)
 
         kwargs = {}
         for param_name in ["theta", "phi"]:
@@ -161,237 +156,45 @@ class CliffordBackend(NumpyBackend):
 
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
-    def apply_unitary(self, gate, symplectic_matrix, nqubits):
+    def apply_unitary(
+        self, gate: Gate, symplectic_matrix: ArrayLike, nqubits: int
+    ) -> ArrayLike:
         """Apply a unitary gate to a symplectic matrix following
         `Dehaene & Moor (2003) <https://arxiv.org/abs/quant-ph/0304125>`_."""
         qubit_indices = list(gate.qubits)
         m = len(qubit_indices)
-        matrix = gate._parameters[0]
-        symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
-        phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
+        matrix = gate._parameters[0]  # pylint: disable=protected-access
+        matrix = self.cast(matrix, dtype=matrix.dtype)
 
+        symplectic_m, phase_h_m = self._compute_symplectic_matrix(matrix, m)
         symplectic_n = self._embed_clifford(symplectic_m, nqubits, qubit_indices)
+
+        phase_d_m = self._get_phase_vector_dk(symplectic_m, m)
         phase_h_n = self._embed_phase_vector(phase_h_m, nqubits, qubit_indices)
         phase_d_n = self._embed_phase_vector(phase_d_m, nqubits, qubit_indices)
 
         symplectic_gate = [symplectic_n, phase_h_n, phase_d_n]
-        for i in range(2 * nqubits):
+        for ind in range(2 * nqubits):
             symplectic_pauli = [
-                symplectic_matrix[i, : 2 * nqubits],
-                symplectic_matrix[i, 2 * nqubits],
-                symplectic_matrix[i, 2 * nqubits + 1],
+                symplectic_matrix[ind, : 2 * nqubits],
+                symplectic_matrix[ind, 2 * nqubits],
+                symplectic_matrix[ind, 2 * nqubits + 1],
             ]
             symplectic_pauli = self._conjugate_pauli(
                 symplectic_gate, symplectic_pauli, nqubits
             )
 
-            symplectic_matrix[i, : 2 * nqubits] = symplectic_pauli[0]
-            symplectic_matrix[i, 2 * nqubits] = symplectic_pauli[1]
-            symplectic_matrix[i, 2 * nqubits + 1] = symplectic_pauli[2]
+            symplectic_matrix[ind, : 2 * nqubits] = symplectic_pauli[0]
+            symplectic_matrix[ind, 2 * nqubits] = symplectic_pauli[1]
+            symplectic_matrix[ind, 2 * nqubits + 1] = symplectic_pauli[2]
 
         return symplectic_matrix
 
-    def _pauli_string_to_matrix(self, pauli_str):
-        """Convert Pauli string to matrix (tensor product)."""
-        from qibo import matrices  # pylint: disable=C0415
-
-        paulis = {
-            pauli: self.engine.cast(getattr(matrices, pauli), dtype=self.dtype)
-            for pauli in ("I", "X", "Y", "Z")
-        }
-        paulis["Y"] = 1j * paulis["Y"]
-        pauli_matrices = [paulis.get(p) for p in pauli_str]
-        matrix = reduce(self.engine.np.kron, pauli_matrices)
-        return matrix
-
-    def _pauli_to_binary(self, pauli_str, nqubits):
-        """Convert Pauli string to binary vector of length :math`2*nqubits`."""
-        pauli_symplectic = self.np.zeros(2 * nqubits, dtype=self.np.uint8)
-        for q, term in enumerate(pauli_str):
-            if term in ["X", "Y"]:
-                pauli_symplectic[q] = 1
-            if term in ["Z", "Y"]:
-                pauli_symplectic[q + nqubits] = 1
-        return pauli_symplectic
-
-    @staticmethod
-    @cache
-    def _pauli_generators(m):
-        pauli_gens_x, pauli_gens_z = [], []
-        for i in range(m):
-            p = ["I"] * m
-            p = (p, p.copy())
-            p[0][i] = "X"
-            p[1][i] = "Z"
-            pauli_gens_x.append("".join(p[0]))
-            pauli_gens_z.append("".join(p[1]))
-        return pauli_gens_x + pauli_gens_z
-
-    def _compute_symplectic_matrix(self, unitary, m):
-        """Compute the symplectic matrix for Clifford unitary on :math`m` qubits and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
-        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0` or :math`1` else :math`1`.
-        """
-        pauli_gens = self._pauli_generators(m)
-
-        symplectic = self.np.zeros((2 * m, 2 * m), dtype=self.np.uint8)
-        phase_vector = self.np.zeros(2 * m, dtype=self.np.uint8)
-
-        for i, p_str in enumerate(pauli_gens):
-            pauli = self._pauli_string_to_matrix(p_str)
-            pauli_uconj = unitary @ pauli @ unitary.conj().T
-
-            found = False
-            for candidate_str in product("IXYZ", repeat=m):
-                candidate_str = "".join(candidate_str)
-                candidate_P = self._pauli_string_to_matrix(candidate_str)
-                for phase_val, phase_code in zip([1, 1j, -1, -1j], [0, 0, 1, 1]):
-                    if self.np.allclose(
-                        pauli_uconj, phase_val * candidate_P, atol=1e-10
-                    ):
-                        phase_vector[i] = phase_code
-                        symplectic[i, :] = self._pauli_to_binary(candidate_str, m)
-                        found = True
-                        break
-                if found:
-                    break
-        return symplectic % 2, phase_vector
-
-    def _get_phase_vector_dk(self, symplectic, m):
-        """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
-        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1` else :math`1`.
-        """
-        u_matrix = self.np.zeros((2 * m, 2 * m), dtype=self.np.uint8)
-        u_matrix[0:m, m : 2 * m] = self.np.eye(m, dtype=self.np.uint8)
-        d = self.np.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
-        return d
-
-    def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits):
-        """Compute the conjugate of a Pauli operator under a symplectic transformation."""
-        symplectic_matrix, phase_h, phase_d = symplectic_gate
-        symplectic_vector, epsilon, delta = symplectic_pauli
-
-        new_symplectic_vector = (symplectic_matrix.T @ symplectic_vector) % 2
-
-        pd_dot_sv = self.np.dot(phase_d, symplectic_vector) % 2
-        new_delta = delta ^ pd_dot_sv
-
-        u_matrix = self.np.zeros((2 * nqubits, 2 * nqubits), dtype=self.np.uint8)
-        u_matrix[0:nqubits, nqubits : 2 * nqubits] = self.np.eye(
-            nqubits, dtype=self.np.uint8
-        )
-
-        lows = self.np.tril(
-            symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
-            ^ self.np.outer(phase_d, phase_d)
-        )
-
-        ph_dot_sv = self.np.dot(phase_h, symplectic_vector) % 2
-        sv_lows_sv = self.np.dot(symplectic_vector, lows @ symplectic_vector) % 2
-        delta_pd_dot_sv = (delta * pd_dot_sv) % 2
-        new_epsilon = epsilon ^ ph_dot_sv ^ sv_lows_sv ^ delta_pd_dot_sv
-        return new_symplectic_vector, new_epsilon, new_delta
-
-    def _convert_dehaene_to_aaronson(self, dehaene_tableau):
-        """
-        Convert Dehaene-De Moor tableau with two phase columns to Aaronson-Gottesman format.
-
-        Dehaene-De Moor format:
-        - Columns :math`0` to :math`n-1`: X components
-        - Columns :math`n` to :math`2n-1`: Z components
-        - Column :math`2n`: real phase/sign (:math`0=+1`, :math`1=-1`)
-        - Column :math`2n+1`: :math`i`-phase (powers of :math`i`)
-
-        Aaronson-Gottesman format:
-        - Columns :math`0` to :math`n-1`: X components
-        - Columns :math`n` to :math`2n-1`: Z components
-        - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
-
-        Args:
-            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)` in extended Dehaene-De Moor format.
-
-        Returns:
-            (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
-        """
-        n_rows, n_cols = dehaene_tableau.shape
-        n = (n_cols - 2) // 2
-
-        X_part = dehaene_tableau[:, :n]
-        Z_part = dehaene_tableau[:, n : 2 * n]
-        real_phases = dehaene_tableau[:, -2]
-        i_phases = dehaene_tableau[:, -1]
-
-        y_count = self.np.sum(X_part[:-1] & Z_part[:-1], axis=-1)
-        total_i_power = (i_phases[:-1] + y_count) % 4
-
-        final_real_phases = real_phases.copy()
-        indices = total_i_power == 2
-        final_real_phases[: n_rows - 1][indices] = (
-            final_real_phases[: n_rows - 1][indices] + 1
-        ) % 2
-
-        aaronson_tableau = np.column_stack([X_part, Z_part, final_real_phases])
-        return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
-
-    def _embed_clifford(self, symplectic_m, n, qubit_indices):
-        """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
-        symplectic_n = self.np.eye(2 * n, dtype=self.np.uint8)
-
-        x_indices = qubit_indices
-        z_indices = [q + n for q in qubit_indices]
-        full_indices = x_indices + z_indices
-
-        symplectic_n[np.ix_(full_indices, full_indices)] = symplectic_m
-
-        return symplectic_n % 2
-
-    def _embed_phase_vector(self, phase_m, n, qubit_indices):
-        """Embed m-qubit phase vector into n-qubit system."""
-        phase_n = self.np.zeros(2 * n, dtype=self.np.uint8)
-        m = len(qubit_indices)
-
-        qubit_indices = np.array(qubit_indices)
-        phase_n[qubit_indices] = phase_m[:m]
-        phase_n[qubit_indices + n] = phase_m[m:]
-
-        return phase_n
-
-    def apply_channel(self, channel, state, nqubits):
-        probabilities = channel.coefficients + (1 - sum(channel.coefficients),)
-        index = self.np.random.choice(
-            range(len(probabilities)), size=1, p=probabilities
-        )[0]
-        index = int(index)
-        if index != len(channel.gates):
-            gate = channel.gates[index]
-            state = gate.apply_clifford(self, state, nqubits)
-        return state
-
-    def _execute_circuit_stim(self, circuit, initial_state=None, nshots: int = 1000):
-        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
-
-        circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
-        for gate in circuit.queue:
-            name = gate.__class__.__name__
-            name = "S_DAG" if name == "SDG" else name
-            circuit_stim.append(name, list(gate.qubits))
-
-        x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
-            self._stim.Tableau.from_circuit(  # pylint: disable=no-member
-                circuit_stim
-            ).to_numpy()
-        )
-        symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
-        symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
-
-        return Clifford(
-            symplectic_matrix,
-            measurements=circuit.measurements,
-            nshots=nshots,
-            _backend=self,
-        )
-
     def execute_circuit(  # pylint: disable=R1710
-        self, circuit, initial_state=None, nshots: int = 1000
+        self,
+        circuit,
+        initial_state: Optional[ArrayLike] = None,
+        nshots: int = 1000,
     ):
         """Execute a Clifford circuits.
 
@@ -432,14 +235,17 @@ class CliffordBackend(NumpyBackend):
                 else initial_state
             )
             if i_phase is False:
-                state = self._clifford_pre_execution_reshape(state)
+                state = self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
+                    state
+                )
             for gate in circuit.queue:
                 if i_phase:
                     if isinstance(gate, gates.M):
                         if gate.collapse:
                             raise_error(
                                 NotImplementedError,
-                                "Collapsing measurements with `gates.Unitary` are not implemented in the `CliffordBackend`.",
+                                "Collapsing measurements with `gates.Unitary` are not"
+                                + "implemented in the `CliffordBackend`.",
                             )
                     elif not isinstance(gate, gates.Unitary):
                         gate = gates.Unitary(gate.matrix(backend=self), *gate.qubits)
@@ -447,7 +253,9 @@ class CliffordBackend(NumpyBackend):
             if i_phase:
                 state = self._convert_dehaene_to_aaronson(state)
             else:
-                state = self._clifford_post_execution_reshape(state, nqubits)
+                state = self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
+                    state, nqubits
+                )
             clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
@@ -465,7 +273,9 @@ class CliffordBackend(NumpyBackend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit, nshots: int = 1000, initial_state=None):
+    def execute_circuit_repeated(
+        self, circuit, nshots: int = 1000, initial_state: Optional[ArrayLike] = None
+    ):
         """Execute a Clifford circuits ``nshots`` times.
 
         This is used for all the simulations that involve repeated execution.
@@ -491,7 +301,7 @@ class CliffordBackend(NumpyBackend):
             for measurement in circuit_copy.measurements:
                 measurement.result.reset()
             samples.append(res.samples())
-        samples = self.np.vstack(samples)
+        samples = self.vstack(samples)
 
         for meas in circuit.measurements:
             meas.result.register_samples(samples[:, meas.target_qubits])
@@ -506,14 +316,26 @@ class CliffordBackend(NumpyBackend):
 
         return result
 
+    ########################################################################################
+    ######## Methods related to the execution and post-processing of measurements   ########
+    ########################################################################################
+
+    def calculate_frequencies(self, samples: ArrayLike) -> Counter:
+        res, counts = self.unique(samples, return_counts=True)
+        # The next two lines are necessary for the GPU backends
+        res = [int(r) if not isinstance(r, str) else r for r in res]
+        counts = [int(v) for v in counts]
+
+        return Counter(dict(zip(res, counts)))
+
     def sample_shots(
         self,
-        state,
-        qubits: Union[tuple, list],
+        state: ArrayLike,
+        qubits: Union[List[int], Tuple[int, ...]],
         nqubits: int,
         nshots: int,
         collapse: bool = False,
-    ):  # pylint: disable=W0221
+    ) -> ArrayLike:  # pylint: disable=W0221
         """Sample shots by measuring selected ``qubits`` in symplectic matrix of a ``state``.
 
         Args:
@@ -531,15 +353,18 @@ class CliffordBackend(NumpyBackend):
             qubits = tuple(qubits)
 
         if collapse:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)]
-            samples.append(self.engine.M(state, qubits, nqubits, collapse))
+            samples = [
+                self._platform.M(state, qubits, nqubits) for _ in range(nshots - 1)
+            ]
+            samples.append(self._platform.M(state, qubits, nqubits, collapse))
         else:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
-        return self.engine.cast(samples, dtype=int)
+            samples = [self._platform.M(state, qubits, nqubits) for _ in range(nshots)]
+
+        return self.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(
-        self, symplectic_matrix, return_array: bool = False
-    ):
+        self, symplectic_matrix: ArrayLike, return_array: bool = False
+    ) -> Union[Tuple[List[str], List[int]], Tuple[List[ArrayLike], List[int]]]:
         """Extract the stabilizers and destabilizers generators from symplectic matrix.
 
         Args:
@@ -555,15 +380,15 @@ class CliffordBackend(NumpyBackend):
         nqubits = int((symplectic_matrix.shape[1] - 1) / 2)
         phases = (-1) ** symplectic_matrix[:-1, -1].astype(np.int16)
         tmp = 1 * symplectic_matrix[:-1, :-1]
-        X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
+        x_part, z_part = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []
-        for x, z in zip(X, Z):
+        for x, z in zip(x_part, z_part):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
                 from qibo import matrices  # pylint: disable=C0415
 
                 paulis = [self.cast(getattr(matrices, p)) for p in paulis]
-                matrix = reduce(self.np.kron, paulis)
+                matrix = reduce(self.kron, paulis)
                 generators.append(matrix)
             else:
                 generators.append("".join(paulis))
@@ -572,3 +397,240 @@ class CliffordBackend(NumpyBackend):
             generators = self.cast(generators)
 
         return generators, phases
+
+    ########################################################################################
+    ######## Helper methods                                                         ########
+    ########################################################################################
+
+    def _clifford_pre_execution_reshape(self, state: ArrayLike) -> ArrayLike:
+        """Reshape the symplectic matrix to the shape needed by the engine before circuit execution.
+
+        Args:
+            state (ndarray): Input state.
+
+        Returns:
+            ndarray: Reshaped state.
+        """
+        return self._platform._clifford_pre_execution_reshape(  # pylint: disable=protected-access
+            state
+        )
+
+    def _clifford_post_execution_reshape(
+        self, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
+        """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
+
+        Args:
+            state (ndarray): Input state.
+            nqubits (int): Number of qubits.
+
+        Returns:
+            ndarray: Reshaped state.
+        """
+        return self._platform._clifford_post_execution_reshape(  # pylint: disable=protected-access
+            state, nqubits
+        )
+
+    def _compute_symplectic_matrix(
+        self, unitary: ArrayLike, m: int
+    ) -> Tuple[ArrayLike, ArrayLike]:
+        """Compute the symplectic matrix for Clifford unitary on :math`m` qubits
+        and the phase vector :math`h` of length :math`2m` for Clifford unitary :math`U`.
+        :math`h[j] = 0` if :math`U g_j U^\\dagger = i^r p_j` with :math`r=0`
+        or :math`1` else :math`1`.
+        """
+        pauli_gens = self._pauli_generators(m)
+
+        symplectic = self.zeros((2 * m, 2 * m), dtype=self.uint8)
+        phase_vector = self.zeros(2 * m, dtype=self.uint8)
+
+        for ind, p_str in enumerate(pauli_gens):
+            pauli = self._pauli_string_to_matrix(p_str)
+            pauli_uconj = unitary @ pauli @ self.conj(unitary).T
+
+            found = False
+            for candidate_str in product("IXYZ", repeat=m):
+                candidate_str = "".join(candidate_str)
+                candidate_p = self._pauli_string_to_matrix(candidate_str)
+                for phase_val, phase_code in zip([1, 1j, -1, -1j], [0, 0, 1, 1]):
+                    if self.allclose(pauli_uconj, phase_val * candidate_p, atol=1e-10):
+                        phase_vector[ind] = phase_code
+                        symplectic[ind, :] = self._pauli_to_binary(candidate_str, m)
+                        found = True
+                        break
+                if found:
+                    break
+        return symplectic % 2, phase_vector
+
+    def _conjugate_pauli(self, symplectic_gate, symplectic_pauli, nqubits: int):
+        """Compute the conjugate of a Pauli operator under a symplectic transformation."""
+        symplectic_matrix, phase_h, phase_d = symplectic_gate
+        symplectic_vector, epsilon, delta = symplectic_pauli
+
+        new_symplectic_vector = (symplectic_matrix.T @ symplectic_vector) % 2
+
+        pd_dot_sv = self.dot(phase_d, symplectic_vector) % 2
+        new_delta = delta ^ pd_dot_sv
+
+        u_matrix = self.zeros((2 * nqubits, 2 * nqubits), dtype=self.uint8)
+        u_matrix[0:nqubits, nqubits : 2 * nqubits] = self.identity(
+            nqubits, dtype=self.uint8
+        )
+
+        lows = self.tril(
+            symplectic_matrix @ (u_matrix @ symplectic_matrix.T)
+            ^ self.outer(phase_d, phase_d)
+        )
+
+        ph_dot_sv = self.dot(phase_h, symplectic_vector) % 2
+        sv_lows_sv = self.dot(symplectic_vector, lows @ symplectic_vector) % 2
+        delta_pd_dot_sv = (delta * pd_dot_sv) % 2
+        new_epsilon = epsilon ^ ph_dot_sv ^ sv_lows_sv ^ delta_pd_dot_sv
+        return new_symplectic_vector, new_epsilon, new_delta
+
+    def _convert_dehaene_to_aaronson(self, dehaene_tableau: ArrayLike):
+        """
+        Convert Dehaene-De Moor tableau with two phase columns to Aaronson-Gottesman format.
+
+        Dehaene-De Moor format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase/sign (:math`0=+1`, :math`1=-1`)
+        - Column :math`2n+1`: :math`i`-phase (powers of :math`i`)
+
+        Aaronson-Gottesman format:
+        - Columns :math`0` to :math`n-1`: X components
+        - Columns :math`n` to :math`2n-1`: Z components
+        - Column :math`2n`: real phase (:math`0=+1`, :math`1=-1`)
+
+        Args:
+            dehaene_tableau (ndarray): array of shape :math`(2n+1, 2n+2)`
+                in extended Dehaene-De Moor format.
+
+        Returns:
+            (ndarray): aaronson_tableau of shape :math`(2n+1, 2n+1)`.
+        """
+        n_rows, n_cols = dehaene_tableau.shape
+        n = (n_cols - 2) // 2
+
+        x_part = dehaene_tableau[:, :n]
+        z_part = dehaene_tableau[:, n : 2 * n]
+        real_phases = dehaene_tableau[:, -2]
+        i_phases = dehaene_tableau[:, -1]
+
+        y_count = self.sum(x_part[:-1] & z_part[:-1], axis=-1)
+        total_i_power = (i_phases[:-1] + y_count) % 4
+
+        final_real_phases = real_phases.copy()
+        indices = total_i_power == 2
+        final_real_phases[: n_rows - 1][indices] = (
+            final_real_phases[: n_rows - 1][indices] + 1
+        ) % 2
+
+        aaronson_tableau = np.column_stack([x_part, z_part, final_real_phases])
+        return self.cast(aaronson_tableau, dtype=aaronson_tableau.dtype)
+
+    def _embed_clifford(
+        self,
+        symplectic_m: ArrayLike,
+        n: int,
+        qubit_indices: Union[List[int], Tuple[int, ...]],
+    ) -> ArrayLike:
+        """Embed m-qubit symplectic :math`S_U_m` into n-qubit system at qubit_indices."""
+        symplectic_n = self.identity(2 * n, dtype=self.uint8)
+
+        x_indices = qubit_indices
+        z_indices = [q + n for q in qubit_indices]
+        full_indices = x_indices + z_indices
+
+        symplectic_n[np.ix_(full_indices, full_indices)] = symplectic_m
+
+        return symplectic_n % 2
+
+    def _embed_phase_vector(
+        self,
+        phase_m: ArrayLike,
+        n: int,
+        qubit_indices: Union[List[int], Tuple[int, ...]],
+    ):
+        """Embed m-qubit phase vector into n-qubit system."""
+        phase_n = self.zeros(2 * n, dtype=self.uint8)
+        m = len(qubit_indices)
+
+        qubit_indices = np.array(qubit_indices)
+        phase_n[qubit_indices] = phase_m[:m]
+        phase_n[qubit_indices + n] = phase_m[m:]
+
+        return phase_n
+
+    def _execute_circuit_stim(
+        self, circuit, initial_state: Optional[ArrayLike] = None, nshots: int = 1000
+    ):
+        from qibo.quantum_info.clifford import Clifford  # pylint: disable=C0415
+
+        circuit_stim = self._stim.Circuit()  # pylint: disable=E1101
+        for gate in circuit.queue:
+            name = gate.__class__.__name__
+            name = "S_DAG" if name == "SDG" else name
+            circuit_stim.append(name, list(gate.qubits))
+
+        x_destab, z_destab, x_stab, z_stab, x_phases, z_phases = (
+            self._stim.Tableau.from_circuit(  # pylint: disable=no-member
+                circuit_stim
+            ).to_numpy()
+        )
+        symplectic_matrix = np.block([[x_destab, z_destab], [x_stab, z_stab]])
+        symplectic_matrix = np.c_[symplectic_matrix, np.r_[x_phases, z_phases]]
+
+        return Clifford(
+            symplectic_matrix,
+            measurements=circuit.measurements,
+            nshots=nshots,
+            _backend=self,
+        )
+
+    def _get_phase_vector_dk(self, symplectic: ArrayLike, m: int) -> ArrayLike:
+        """Compute phase vector :math`d` of length :math`2m` for Clifford unitary :math`U`.
+        :math`d[j] = 0` if :math`U g_j U^\\dagger = (-1)^r p_j` with :math`r=0` or :math`1`
+        else :math`1`.
+        """
+        u_matrix = self.zeros((2 * m, 2 * m), dtype=self.uint8)
+        u_matrix[0:m, m : 2 * m] = self.identity(m, dtype=self.uint8)
+        d = self.diag(symplectic @ (u_matrix @ symplectic.T) % 2) % 2
+        return d
+
+    @staticmethod
+    @cache
+    def _pauli_generators(m: int) -> List[str]:
+        pauli_gens_x, pauli_gens_z = [], []
+        for ind in range(m):
+            p = ["I"] * m
+            p = (p, p.copy())
+            p[0][ind] = "X"
+            p[1][ind] = "Z"
+            pauli_gens_x.append("".join(p[0]))
+            pauli_gens_z.append("".join(p[1]))
+        return pauli_gens_x + pauli_gens_z
+
+    def _pauli_string_to_matrix(self, pauli_str: str) -> ArrayLike:
+        """Convert Pauli string to matrix (tensor product)."""
+        from qibo import matrices  # pylint: disable=C0415
+
+        paulis = {
+            pauli: self.cast(getattr(matrices, pauli), dtype=self.dtype)
+            for pauli in ("I", "X", "Y", "Z")
+        }
+        paulis["Y"] = 1j * paulis["Y"]
+        pauli_matrices = [paulis.get(p) for p in pauli_str]
+        matrix = reduce(self.kron, pauli_matrices)
+        return matrix
+
+    def _pauli_to_binary(self, pauli_str: str, nqubits: int) -> ArrayLike:
+        """Convert Pauli string to binary vector of length :math`2*nqubits`."""
+        pauli_symplectic = self.zeros(2 * nqubits, dtype=self.uint8)
+        for q, term in enumerate(pauli_str):
+            if term in ["X", "Y"]:
+                pauli_symplectic[q] = 1
+            if term in ["Z", "Y"]:
+                pauli_symplectic[q + nqubits] = 1
+        return pauli_symplectic

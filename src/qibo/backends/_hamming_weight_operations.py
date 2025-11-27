@@ -81,7 +81,7 @@ def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int 
     try:
         if initial_state is None:
             n_choose_k = int(binom(nqubits, weight))
-            initial_state = self.np.zeros(n_choose_k)
+            initial_state = self.zeros(n_choose_k)
             initial_state[0] = 1
             initial_state = self.cast(initial_state, dtype=self.dtype)
 
@@ -95,7 +95,7 @@ def execute_circuit(self, circuit, weight: int, initial_state=None, nshots: int 
             nqubits,
             measurements=circuit.measurements,
             nshots=nshots,
-            engine=self.platform,
+            platform=self.platform,
         )
 
         return result
@@ -125,7 +125,7 @@ def _gray_code(self, initial_string):
 
     strings = _ehrlich_algorithm(initial_string, return_indices=False)
     strings = [list(string) for string in strings]
-    strings = self.np.asarray(strings, dtype=int)
+    strings = self.cast(strings, dtype=self.int64)
 
     return strings
 
@@ -156,21 +156,24 @@ def _get_cached_strings(
         of bitstrings for single-qubit gates.
     """
     if two_qubit_gate:
-        initial_string = self.np.array(
+        initial_string = self.cast(
             [1] * (weight - 1 - ncontrols)
-            + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols))
+            + [0] * ((nqubits - 2 - ncontrols) - (weight - 1 - ncontrols)),
+            dtype=self.int64,
         )
         strings = self._gray_code(initial_string)
     else:
-        initial_string = self.np.array(
+        initial_string = self.cast(
             [1] * (weight - ncontrols)
-            + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols))
+            + [0] * ((nqubits - 1 - ncontrols) - (weight - ncontrols)),
+            dtype=self.int64,
         )
         strings_0 = self._gray_code(initial_string)
 
-        initial_string = self.np.array(
+        initial_string = self.cast(
             [1] * (weight - 1 - ncontrols)
-            + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols)))
+            + [0] * ((nqubits - 1 - ncontrols) - max(0, (weight - 1 - ncontrols))),
+            dtype=self.int64,
         )
         strings_1 = self._gray_code(initial_string)
 
@@ -199,7 +202,7 @@ def _get_lexicographical_order(self, nqubits, weight):
 
     lexicographical_order = self._get_cached_strings(nqubits + 2, weight + 1)
     lexicographical_order = [
-        "".join(item.astype(str)) for item in lexicographical_order
+        "".join(str(elem) for elem in item) for item in lexicographical_order
     ]
     lexicographical_order.sort()
     lexicographical_order_int = [int(item, base=2) for item in lexicographical_order]
@@ -226,7 +229,7 @@ def _get_single_qubit_matrix(self, gate):
     if gate.name in ["cz", "crz", "cu1"]:
         matrix = matrix[2:, 2:]
 
-    return self.np.diag(matrix)
+    return self.diag(matrix)
 
 
 def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
@@ -267,16 +270,20 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
 
     matrix_00, matrix_11 = self._get_single_qubit_matrix(gate)
 
-    indexes_one = self.np.zeros((len(strings_1), nqubits), dtype=str)
+    indexes_one = self.zeros((len(strings_1), nqubits), dtype=self.int64)
 
     if matrix_00 != 1.0 and nqubits - weight > 0:
-        indexes_zero = self.np.zeros((len(strings_0), nqubits), dtype=str)
+        indexes_zero = self.zeros((len(strings_0), nqubits), dtype=self.int64)
         indexes_zero[:, other_qubits] = strings_0
-        indexes_zero[:, qubits] = ["0"]
+        indexes_zero[:, qubits] = [0]
         if len(controls) > 0:
-            indexes_zero[:, controls] = "1"
-        indexes_zero = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_zero]
+            indexes_zero[:, controls] = 1
+        indexes_zero = self.cast(
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_zero
+            ],
+            dtype=self.int64,
         )
 
         state[indexes_zero] *= matrix_00
@@ -284,11 +291,15 @@ def _apply_gate_single_qubit(self, gate, state, nqubits, weight):
     if matrix_11 != 1.0 and weight - ncontrols > 0:
         indexes_one[:, other_qubits] = strings_1
         if len(controls) > 0:
-            indexes_one[:, controls] = "1"
+            indexes_one[:, controls] = 1
 
-        indexes_one[:, qubits] = ["1"]
-        indexes_one = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_one]
+        indexes_one[:, qubits] = [1]
+        indexes_one = self.cast(
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_one
+            ],
+            dtype=self.int64,
         )
 
         state[indexes_one] *= matrix_11
@@ -334,13 +345,14 @@ def _update_amplitudes(
     nqubits = len(qubits) + ncontrols + len(other_qubits)
 
     strings = self._get_cached_strings(nqubits, weight + shift, ncontrols)
-    indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+    indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
     indexes_in[:, other_qubits] = strings
     if ncontrols > 0:
-        indexes_in[:, controls] = "1"
+        indexes_in[:, controls] = 1
     indexes_in[:, qubits] = bitlist
-    indexes_in = self.np.array(
-        [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+    indexes_in = self.cast(
+        [self._dict_indexes["".join(str(e) for e in elem)][0] for elem in indexes_in],
+        dtype=self.int64,
     )
     state[indexes_in] *= matrix_element
 
@@ -383,18 +395,26 @@ def _apply_gate_two_qubit(self, gate, state, nqubits, weight):
     matrix_1001, matrix_1010 = matrix[2, 1], matrix[2, 2]
 
     if weight - ncontrols > 0 and weight not in [0, nqubits]:
-        indexes_in = self.np.zeros((len(strings), nqubits), dtype=str)
+        indexes_in = self.zeros((len(strings), nqubits), dtype=self.int64)
         indexes_in[:, other_qubits] = strings
         if len(controls) > 0:
-            indexes_in[:, controls] = "1"
-        indexes_in[:, qubits] = ["1", "0"]
-        indexes_out = self.np.copy(indexes_in)
-        indexes_out[:, qubits] = ["0", "1"]
-        indexes_in = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_in]
+            indexes_in[:, controls] = 1
+        indexes_in[:, qubits] = [1, 0]
+        indexes_out = self.cast(indexes_in, dtype=indexes_in.dtype, copy=True)
+        indexes_out[:, qubits] = [0, 1]
+        indexes_in = self.cast(
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_in
+            ],
+            dtype=self.int64,
         )
-        indexes_out = self.np.array(
-            [self._dict_indexes["".join(elem)][0] for elem in indexes_out]
+        indexes_out = self.cast(
+            [
+                self._dict_indexes["".join(str(e) for e in elem)][0]
+                for elem in indexes_out
+            ],
+            dtype=self.int64,
         )
 
         old_in, old_out = state[indexes_in], state[indexes_out]
@@ -502,18 +522,21 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
-    strings = self.np.array(list(self._dict_indexes.keys()))
-    indexes = self.np.array([index[1] for index in self._dict_indexes.values()])
+    strings = np.array(list(self._dict_indexes.keys()))
+    indexes = self.cast(
+        [index[1] for index in self._dict_indexes.values()], dtype=self.int64
+    )
     dim = len(indexes)
 
-    matrix = self.np.zeros((dim, dim))
+    matrix = self.zeros((dim, dim))
     matrix = self.cast(matrix, dtype=self.dtype)
     mod_condition = indexes[:, None] % 2 ** (
         nqubits - gate_qubits - ncontrols
     ) == indexes[None, :] % 2 ** (nqubits - gate_qubits - ncontrols)
 
-    control_substrings = self.np.array(
-        [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings]
+    control_substrings = self.cast(
+        [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings],
+        dtype=self.int64,
     )
     control_condition = control_substrings[:, None] == ncontrols
 
@@ -524,23 +547,21 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
         mod_condition & control_condition
     ]
 
-    diagonal_indices = self.np.eye(dim, dtype=bool)
+    diagonal_indices = self.identity(dim, dtype=bool)
     matrix[mod_condition & ~control_condition & diagonal_indices] = 1
 
-    new_matrix = self.np.zeros((dim, dim))
-    new_matrix = self.cast(new_matrix, dtype=self.dtype)
+    new_matrix = self.zeros((dim, dim), dtype=self.dtype)
 
-    strings_array = self.np.array([list(s) for s in strings])
+    strings_array = np.array([list(s) for s in strings])
     reordered_strings_array = strings_array[:, map_]
 
-    reordered_strings = self.np.array(["".join(s) for s in reordered_strings_array])
+    reordered_strings = ["".join(s) for s in reordered_strings_array]
     reordered_indexes = [
-        self.np.where(strings == new_string_i)[0][0]
-        for new_string_i in reordered_strings
+        np.where(strings == new_string_i)[0][0] for new_string_i in reordered_strings
     ]
     new_matrix = matrix[reordered_indexes][:, reordered_indexes]
 
-    new_matrix = self.cast(new_matrix)
+    new_matrix = self.cast(new_matrix, dtype=new_matrix.dtype)
     state = new_matrix @ state
 
     return state
@@ -565,17 +586,16 @@ def calculate_symbolic(
     Returns:
         str: String representing the state in the computational basis.
     """
-    state = self.to_numpy(state)
     terms = []
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
     strings = list(self._dict_indexes.keys())
-    for i in self.np.nonzero(state)[0]:
-        i = int(i)
-        b = strings[i]
-        if self.np.abs(state[i]) >= cutoff:
-            x = self.np.round(state[i], decimals)
+    for elem in self.nonzero(state)[0]:
+        elem = int(elem)
+        b = strings[elem]
+        if self.abs(state[elem]) >= cutoff:
+            x = self.round(state[elem], decimals=decimals)
             terms.append(f"{x}|{b}>")
         if len(terms) >= max_terms:
             terms.append("...")
@@ -595,7 +615,7 @@ def calculate_probabilities(self, state, qubits, weight, nqubits):
     Returns:
         ndarray: Probabilities over the input qubits.
     """
-    rtype = self.np.real(state).dtype
+    rtype = self.real(state).dtype
 
     self._dict_indexes = self._get_lexicographical_order(nqubits, weight)
 
@@ -607,11 +627,11 @@ def calculate_probabilities(self, state, qubits, weight, nqubits):
         measured_string = "".join(string[q] for q in qubits)
         measured_strings[measured_string] = measured_strings.get(
             measured_string, 0
-        ) + self.np.real(self.np.abs(state[index]) ** 2)
+        ) + self.real(self.abs(state[index]) ** 2)
 
     strings = list(measured_strings.keys())
     indexes = [int(string, 2) for string in strings]
-    probs = self.np.zeros(2 ** len(qubits), dtype=rtype)
+    probs = self.zeros(2 ** len(qubits), dtype=rtype)
     for index, string in zip(indexes, strings):
         probs[index] = measured_strings[string]
 
@@ -645,7 +665,7 @@ def collapse_state(self, state, qubits, shot, weight, nqubits, normalize=True):
             state[index] = 0
 
     if normalize:
-        norm = self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))
+        norm = self.sqrt(self.sum(self.abs(state) ** 2))
         state = state / norm
 
     return state

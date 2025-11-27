@@ -5,10 +5,12 @@ import numpy as np
 import pytest
 from sympy import S
 
-from qibo import gates, symbols
+from qibo import gates
+from qibo.backends import NumpyBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
+from qibo.symbols import Z
 from qibo.tomography.gate_set_tomography import (
     GST,
     _gate_tomography,
@@ -119,45 +121,46 @@ def test__measurement_basis(j, nqubits):
     INDEX_NQUBITS,
 )
 def test__get_observable(j, nqubits):
+    backend = NumpyBackend()
     correct_observables = {
         1: [
             (S(1),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
         ],
         2: [
             (S(1), S(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
         ],
     }
     correct_observables[1] = [
-        SymbolicHamiltonian(h[0]).form for h in correct_observables[1]
+        SymbolicHamiltonian(h[0], backend=backend).form for h in correct_observables[1]
     ]
     correct_observables[2] = [
-        SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
+        SymbolicHamiltonian(reduce(lambda x, y: x * y, h), backend=backend).form
         for h in correct_observables[2]
     ]
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
-            prepared_observable = _get_observable(j, nqubits)
+            prepared_observable = _get_observable(j, nqubits, backend=str(backend))
     else:
-        prepared_observable = _get_observable(j, nqubits).form
+        prepared_observable = _get_observable(j, nqubits, backend=str(backend)).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
 
@@ -239,11 +242,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        T_2q = backend.np.kron(T, T)
+        T_2q = backend.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = backend.np.linalg.inv(G)
+                G_inv = backend.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
@@ -262,16 +265,18 @@ def test_GST(backend, target_gates, pauli_liouville):
             )
 
 
-def test_GST_invertible_matrix():
+def test_GST_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
     assert True
 
 
-def test_GST_non_invertible_matrix():
+def test_GST_non_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+        matrices = GST(
+            gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend
+        )
 
 
 def test_GST_with_transpiler(backend, star_connectivity):

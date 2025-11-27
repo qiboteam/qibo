@@ -65,11 +65,11 @@ def vectorization(state, order: str = "row", backend=None):
     dims = state.shape[-1]
 
     if len(state.shape) == 1:
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
     elif len(state.shape) == 3 and state.shape[1] == 1:
-        state = backend.np.einsum(
-            "aij,akl->aijkl", state, backend.np.conj(state)
-        ).reshape(state.shape[0], dims, dims)
+        state = backend.einsum("aij,akl->aijkl", state, backend.conj(state)).reshape(
+            state.shape[0], dims, dims
+        )
 
     if order == "row":
         state = backend.qinfo._vectorization_row(state, dims)
@@ -78,7 +78,7 @@ def vectorization(state, order: str = "row", backend=None):
     else:
         state = backend.qinfo._vectorization_system(state)
 
-    state = backend.np.squeeze(
+    state = backend.squeeze(
         state, axis=tuple(i for i, ax in enumerate(state.shape) if ax == 1)
     )
 
@@ -132,7 +132,7 @@ def unvectorization(state, order: str = "row", backend=None):
     func = getattr(backend.qinfo, f"_unvectorization_{order}")
     state = func(state, dim)
     if state.shape[0] == 1:
-        state = backend.np.squeeze(state, 0)
+        state = backend.squeeze(state, 0)
     return state
 
 
@@ -462,24 +462,22 @@ def choi_to_kraus(
 
     if validate_cp:
         norm = float(
-            backend.calculate_matrix_norm(
-                choi_super_op - backend.np.conj(choi_super_op).T, order=2
-            )
+            backend.matrix_norm(choi_super_op - backend.conj(choi_super_op).T, order=2)
         )
         if norm > PRECISION_TOL:
             non_cp = True
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
-            eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+            eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
             eigenvectors = eigenvectors.T
 
-            non_cp = bool(any(backend.np.real(eigenvalues) < -PRECISION_TOL))
+            non_cp = bool(any(backend.real(eigenvalues) < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
-        eigenvalues, eigenvectors = backend.calculate_eigenvectors(choi_super_op)
+        eigenvalues, eigenvectors = backend.eigenvectors(choi_super_op)
         eigenvectors = eigenvectors.T
 
     if non_cp:
@@ -654,7 +652,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
         kraus_op.append(gate)
         kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
-    kraus_ops = backend.np.vstack(kraus_ops)
+    kraus_ops = backend.vstack(kraus_ops)
     func_order = getattr(backend.qinfo, f"_kraus_to_choi_{order}")
     return func_order(kraus_ops)
 
@@ -792,7 +790,7 @@ def kraus_to_chi(
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
-        super_op = super_op + backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        super_op = super_op + backend.outer(kraus_op, backend.conj(kraus_op))
         del kraus_op
 
     return super_op
@@ -852,15 +850,12 @@ def kraus_to_stinespring(
     dim_env = len(kraus_ops)
 
     if initial_state_env is None:
-        initial_state_env = backend.np.zeros(dim_env, dtype=backend.np.complex128)
+        initial_state_env = backend.zeros(dim_env, dtype=backend.complex128)
         initial_state_env[0] = 1.0
-        initial_state_env = backend.cast(
-            initial_state_env, dtype=initial_state_env.dtype
-        )
 
     # only utility is for outer product,
     # so np.conj here to only do it once
-    initial_state_env = backend.np.conj(initial_state_env)
+    initial_state_env = backend.conj(initial_state_env)
 
     kraus_ops = []
     for gate in gates:
@@ -868,7 +863,7 @@ def kraus_to_stinespring(
         kraus_op.append(gate)
         kraus_ops.append(kraus_op.matrix(backend)[None, :])
         del kraus_op
-    kraus_ops = backend.np.vstack(kraus_ops)
+    kraus_ops = backend.vstack(kraus_ops)
     return backend.qinfo._kraus_to_stinespring(kraus_ops, initial_state_env, dim_env)
 
 
@@ -936,29 +931,26 @@ def liouville_to_pauli(
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(super_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(super_op))
+    nqubits = np.log2(dim)
 
-    if (
-        super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    # backend-agnostic way to check if nqubits and dim are integers
+    if super_op.shape[0] != super_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
     comp_to_pauli = comp_basis_to_pauli(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
 
-    return comp_to_pauli @ super_op @ backend.np.conj(comp_to_pauli.T)
+    return comp_to_pauli @ super_op @ backend.conj(comp_to_pauli.T)
 
 
 def liouville_to_kraus(
@@ -1141,25 +1133,21 @@ def pauli_to_liouville(
 
     backend = _check_backend(backend)
 
-    dim = int(np.sqrt(len(pauli_op)))
-    nqubits = int(np.log2(dim))
+    dim = np.sqrt(len(pauli_op))
+    nqubits = np.log2(dim)
 
-    if (
-        pauli_op.shape[0] != pauli_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
+    if pauli_op.shape[0] != pauli_op.shape[1] or dim % 1 != 0 or nqubits % 1 != 0:
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
     pauli_to_comp = pauli_to_comp_basis(
-        nqubits,
+        int(nqubits),
         normalize=normalize,
         order=order,
         pauli_order=pauli_order,
         backend=backend,
     )
 
-    return pauli_to_comp @ pauli_op @ backend.np.conj(pauli_to_comp).T
+    return pauli_to_comp @ pauli_op @ backend.conj(pauli_to_comp).T
 
 
 def pauli_to_choi(
@@ -2012,7 +2000,7 @@ def kraus_to_unitaries(
         for prob, oper in zip(x0, operators):
             operator = operator + prob * oper
 
-        return float(backend.calculate_matrix_norm(target - operator, order=2))
+        return float(backend.matrix_norm(target - operator, order=2))
 
     # initial parameters as flat distribution
     x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)
@@ -2082,12 +2070,13 @@ def _reshuffling(super_op, order: str = "row", backend=None):
             f"Unsupported {order} order, please pick one in ('row', 'column').",
         )
     backend = _check_backend(backend)
+
     dim = np.sqrt(super_op.shape[0])
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or np.mod(dim, 1) != 0
-        or np.mod(np.log2(int(dim)), 1) != 0
+        or dim % 1 != 0
+        or np.log2(int(dim)) % 1 != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
@@ -2149,7 +2138,7 @@ def _individual_kraus_to_liouville(
         kraus_op.append(gate)
         kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = backend.np.outer(kraus_op, backend.np.conj(kraus_op))
+        kraus_op = backend.outer(kraus_op, backend.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops

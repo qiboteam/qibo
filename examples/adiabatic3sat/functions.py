@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import sympy
 
-from qibo import hamiltonians, matrices, symbols
+from qibo import matrices
+from qibo.symbols import Symbol, X
 
 
 def read_file(file_name, instance):
@@ -52,8 +52,8 @@ def h_problem(qubits, clauses):
             Hamiltonian to the corresponding matrices and target qubits.
     """
     z_matrix = (matrices.I - matrices.Z) / 2.0
-    z = [symbols.Symbol(i, z_matrix) for i in range(qubits)]
-    return sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
+    z = [Symbol(qubit, z_matrix) for qubit in range(qubits)]
+    return sum((sum(z[qubit - 1] for qubit in clause) - 1) ** 2 for clause in clauses)
 
 
 def h_initial(qubits, times):
@@ -67,12 +67,12 @@ def h_initial(qubits, times):
         smap (dict): Dictionary that maps the symbols that appear in the
             Hamiltonian to the corresponding matrices and target qubits.
     """
-    return sum(0.5 * times[i] * (1 - symbols.X(i)) for i in range(qubits))
+    return sum(0.5 * times[qubit] * (1 - X(qubit)) for qubit in range(qubits))
 
 
 def spolynomial(t, params):
     """General polynomial scheduling satisfying s(0)=0 and s(1)=1."""
-    f = sum(p * t ** (i + 2) for i, p in enumerate(params))
+    f = sum(p * t ** (elem + 2) for elem, p in enumerate(params))
     f += (1 - np.sum(params)) * t
     return f
 
