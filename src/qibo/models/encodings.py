@@ -1890,7 +1890,7 @@ def _gate_params(bsi, bsip1, keep_antictrls: bool = False):
 def _binary_codewords(dims: int, backend=None):
     """
     Return a array of integers produced by `_binary_codewords_ehrlich(d)`, adjusted so that
-    the Hamming weight is strictly nondecreasing, and consecutive words have Hamming 
+    the Hamming weight is strictly nondecreasing, and consecutive words have Hamming
     distance <= 2.
 
     """
