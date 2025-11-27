@@ -14,8 +14,8 @@ from qibo import Circuit, gates
 from qibo.models.encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
-    _get_next_bistring,
     _get_int_type,
+    _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
@@ -342,6 +342,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
+
 
 def test_sparse_encoder_helpers_errors(backend):
     with pytest.raises(ValueError):
