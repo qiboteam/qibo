@@ -1689,7 +1689,7 @@ def _monotonic_hw_encoder_real(
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
-        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls 
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls
             when placing the RBS gates. For details, see [1].
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
@@ -1784,7 +1784,7 @@ def _monotonic_hw_encoder_complex(
             Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
-        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls 
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls
             when placing the RBS gates. For details, see [1].
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
             For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
