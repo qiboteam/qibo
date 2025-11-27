@@ -2060,8 +2060,10 @@ def _get_int_type(x: int, backend=None):
         backend.np.int64,
     ]
     for dt in int_types:
-        if x <= backend.np.iinfo(dt).max:
+        if abs(x) <= backend.np.iinfo(dt).max:
             return backend.np.dtype(dt)
+        
+    raise_error(ValueError, f"``|x|`` must not be greater than {backend.np.iinfo(backend.np.int64).max}.")
 
 
 def _sort_data_sparse(data, nqubits, backend):
