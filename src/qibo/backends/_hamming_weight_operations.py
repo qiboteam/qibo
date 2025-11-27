@@ -534,8 +534,9 @@ def _apply_gate_n_qubit(self, gate, state, nqubits, weight):
         nqubits - gate_qubits - ncontrols
     ) == indexes[None, :] % 2 ** (nqubits - gate_qubits - ncontrols)
 
-    control_substrings = self.engine.array(
-        [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings]
+    control_substrings = self.cast(
+        [s[gate_qubits : gate_qubits + ncontrols].count("1") for s in strings],
+        dtype=self.int64,
     )
     control_condition = control_substrings[:, None] == ncontrols
 

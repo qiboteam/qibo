@@ -59,9 +59,9 @@ class Backend:
 
         Returns:
             List[int] or List[str] or None: For hardware backends, return list of qubit names.
-            For simulation backends, return ``None``.
+            For simulation backends, raises a ``NotImplementedError``.
         """
-        return None
+        raise_error(NotImplementedError)
 
     @property
     def connectivity(
@@ -71,9 +71,9 @@ class Backend:
 
         Returns:
             List[Tuple[int]] or List[Tuple[str]] or None: For hardware backends, return
-            available qubit pairs. For simulation backends, return ``None``.
+            available qubit pairs. For simulation backends, raises a ``NotImplementedError``.
         """
-        return None
+        raise_error(NotImplementedError)
 
     @property
     def natives(self) -> Optional[List[str]]:  # pragma: no cover
@@ -81,9 +81,9 @@ class Backend:
 
         Returns:
             List[str] or None: For hardware backends, return the native gates of the backend.
-            For the simulation backends, return ``None``.
+            For the simulation backends, raises a ``NotImplementedError``.
         """
-        return None
+        raise_error(NotImplementedError)
 
     def cast(
         self,
@@ -816,7 +816,7 @@ class Backend:
         state = self.transpose(state, order)
         state = self.reshape(state, shape)
 
-        return self.engine.einsum("abac->bc", state)
+        return self.einsum("abac->bc", state)
 
     def singular_value_decomposition(self, array: ArrayLike) -> Tuple[ArrayLike, ...]:
         """Calculate the Singular Value Decomposition of ``matrix``."""
@@ -1072,11 +1072,11 @@ class Backend:
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
-            state = self.engine.einsum(right, state, matrix_conj)
-            state = self.engine.einsum(left, state, matrix)
+            state = self.einsum(right, state, matrix_conj)
+            state = self.einsum(left, state, matrix)
         else:
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
-            state = self.engine.einsum(opstring, state, matrix)
+            state = self.einsum(opstring, state, matrix)
 
         shape = (2**nqubits,)
         if density_matrix:
@@ -1102,7 +1102,7 @@ class Backend:
 
         matrix = self.reshape(matrix, 2 * len(gate.qubits) * (2,))
         left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
-        state = self.engine.einsum(left, state, matrix)
+        state = self.einsum(left, state, matrix)
 
         return self.reshape(state, 2 * (2**nqubits,))
 
