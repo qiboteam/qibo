@@ -158,9 +158,9 @@ def test__get_observable(j, nqubits):
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
-            prepared_observable = _get_observable(j, nqubits, backend=backend)
+            prepared_observable = _get_observable(j, nqubits, backend=str(backend))
     else:
-        prepared_observable = _get_observable(j, nqubits, backend=backend).form
+        prepared_observable = _get_observable(j, nqubits, backend=str(backend)).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
 
