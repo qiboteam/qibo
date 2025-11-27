@@ -505,7 +505,7 @@ def binary_encoder(
             ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
             Defaults to ``None``.
         codewords (int, optional): list of codewords. When parametrization is ``hyperspherical``,
-            the list is used to encode the data in the given order. If ``None``, 
+            the list is used to encode the data in the given order. If ``None``,
             the codewords are set by the erhlich algorithm.
         keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
             don't simplify the anti-controls when placing the RBS gates. For details, see [1].
