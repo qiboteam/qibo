@@ -1682,7 +1682,17 @@ def _monotonic_hw_encoder_real(
     Args:
         codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
             non-decreasing.
-        data (complex): data to be encoded. assumed to have the same length as the list of codewords
+        data (float): data to be encoded. assumed to have the same length as the list of codewords
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls 
+            when placing the RBS gates. For details, see [1].
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
@@ -1768,6 +1778,16 @@ def _monotonic_hw_encoder_complex(
         codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
             non-decreasing.
         data (complex): data to be encoded. assumed to have the same length as the list of codewords
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls 
+            when placing the RBS gates. For details, see [1].
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
