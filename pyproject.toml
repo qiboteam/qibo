@@ -75,6 +75,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 # qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 stim = "^1.12.0"
 qulacs = { version = "^0.6.4", python = "<3.13" }
+qiskit = "^2.2.3"
 qbraid = { version = "^0.10.0", extras = ["cudaq", "qir"] }
 
 [tool.poe.tasks]

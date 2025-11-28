@@ -1133,8 +1133,16 @@ class Circuit:
 
         return circ
 
-    def to_qasm(self):
+    def to_qasm(self, extended_compatibility: bool = False):
         """Convert circuit to a QASM string.
+
+        Args:
+            extended_compatibility (bool): if ``True``, unrolls more exotic gates in their
+                decomposition by defining them as custom gates, this increases the compatibility
+                with other frameworks, such as qiskit. Defaults to ``False``.
+
+        Returns:
+            (str) the generated QASM.
 
         .. note::
             This method does not support multi-controlled gates
@@ -1144,6 +1152,8 @@ class Circuit:
         code += ["OPENQASM 2.0;"]
         code += ['include "qelib1.inc";']
         code += [f"qreg q[{self.nqubits}];"]
+
+        gate_definitions = []
 
         # Set measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1166,12 +1176,21 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
+            if isinstance(gate.qasm_label, tuple):
+                qasm_label, qasm_definition = gate.qasm_label
+                if qasm_definition not in gate_definitions:
+                    gate_definitions.append(qasm_definition)
+            else:
+                qasm_label = gate.qasm_label
             if isinstance(gate, gates.ParametrizedGate):
                 params = (str(float(x)) for x in gate.parameters)
-                name = f"{gate.qasm_label}({', '.join(params)})"
+                name = f"{qasm_label}({', '.join(params)})"
             else:
-                name = gate.qasm_label
+                name = qasm_label
             code.append(f"{name} {qubits};")
+
+        if extended_compatibility:
+            code = code[:4] + gate_definitions + code[4:]
 
         # Add measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1181,7 +1200,7 @@ class Circuit:
         return "\n".join(code)
 
     @classmethod
-    def from_qasm(cls, qasm_code, accelerators=None, density_matrix=False):
+    def from_qasm(cls, qasm_code, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
@@ -1210,7 +1229,8 @@ class Circuit:
                 circuit_2.add(gates.CNOT(0, 1))
         """
         parser = QASMParser()
-        return parser.to_circuit(qasm_code, accelerators, density_matrix)
+        circuit_kwargs.pop("nqubits", None)
+        return parser.to_circuit(qasm_code, **circuit_kwargs)
 
     def to_qir(self):
         """

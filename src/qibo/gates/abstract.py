@@ -183,8 +183,12 @@ class Gate:
         return self.control_qubits + self.target_qubits
 
     @property
-    def qasm_label(self):
-        """String corresponding to OpenQASM operation of the gate."""
+    def qasm_label(self) -> str | Tuple[str, str]:
+        """String corresponding to OpenQASM operation of the gate.
+        For more exotic gates, both the internal qibo name of the gate
+        and the custom gate QASM definition are returned as a tuple for
+        broader compatibility.
+        """
         raise_error(
             NotImplementedError,
             f"{self.__class__.__name__} is not supported by OpenQASM",

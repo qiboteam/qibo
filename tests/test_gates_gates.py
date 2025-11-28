@@ -398,7 +398,10 @@ def test_gpi(backend):
     target_state = backend.np.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    assert gates.GPI(0, phi).qasm_label == "gpi"
+    assert gates.GPI(0, phi).qasm_label == (
+        "gpi",
+        "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}",
+    )
     assert not gates.GPI(0, phi).clifford
     assert not gates.GPI(0, phi).hamming_weight
     assert gates.GPI(0, phi).unitary
@@ -419,7 +422,10 @@ def test_gpi2(backend):
     target_state = backend.np.matmul(matrix, initial_state)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    assert gates.GPI2(0, phi).qasm_label == "gpi2"
+    assert gates.GPI2(0, phi).qasm_label == (
+        "gpi2",
+        "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}",
+    )
     assert not gates.GPI2(0, phi).clifford
     assert not gates.GPI2(0, phi).hamming_weight
     assert gates.GPI2(0, phi).unitary
