@@ -591,6 +591,9 @@ class Backend:
     def swapaxes(self, array: ArrayLike, axis_1: int, axis_2: int) -> ArrayLike:
         return self.engine.swapaxes(array, axis_1, axis_2)
 
+    def tanh(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.tanh(array, **kwargs)
+
     def tensordot(
         self,
         array_1: ArrayLike,
