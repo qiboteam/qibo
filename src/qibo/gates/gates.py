@@ -2857,7 +2857,7 @@ class Unitary(ParametrizedGate):
 
         if check_unitary:
             engine = _check_engine(unitary)
-            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
+            product = engine.conj(unitary).T @ unitary
             diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
             off_diagonals = bool(
                 engine.all(
