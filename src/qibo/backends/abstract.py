@@ -566,6 +566,9 @@ class Backend:
     def shuffle(self, array: ArrayLike, **kwargs) -> ArrayLike:
         self.engine.random.shuffle(array, **kwargs)
 
+    def sign(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        return self.engine.sign(array, **kwargs)
+
     def sin(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return self.engine.sin(array, **kwargs)
 
