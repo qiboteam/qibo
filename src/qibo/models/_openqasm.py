@@ -109,6 +109,9 @@ def _qibo_gate_name(gate):
     if gate == "ccx":
         return "TOFFOLI"
 
+    if gate == "p":
+        return "U1"
+
     if gate in ["u", "U"]:
         # `u` for QASM 2.0
         # `U` for QASM 3.0
@@ -128,9 +131,7 @@ class QASMParser:
         self.q_registers = {}
         self.c_registers = set()
 
-    def to_circuit(
-        self, qasm_string: str, accelerators: dict = None, density_matrix: bool = False
-    ):
+    def to_circuit(self, qasm_string: str, **circuit_kwargs):
         """Converts a QASM program into a :class:`qibo.models.Circuit`.
 
         Args:
@@ -169,12 +170,7 @@ class QASMParser:
                 self.c_registers.update({name: list(range(size))})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
-        circ = qibo.Circuit(
-            nqubits,
-            accelerators,
-            density_matrix,
-            wire_names=self._construct_wire_names(),
-        )
+        circ = qibo.Circuit(nqubits, **circuit_kwargs)
         circ.add(self._merge_measurements(gates))
         return circ
 
@@ -182,16 +178,28 @@ class QASMParser:
         """Converts a :class:`openqasm3.ast.QuantumMeasurementStatement` statement
         into :class:`qibo.gates.measurements.M`."""
         qubit = self._get_qubit(measurement.measure.qubit)
-        register = measurement.target.name.name
-        if register not in self.c_registers:
-            raise_error(ValueError, f"Undefined measurement register `{register}`.")
-        ind = measurement.target.indices[0][0].value
-        if ind >= len(self.c_registers[register]):
-            raise_error(
-                IndexError, f"Index `{ind}` is out of bounds of register `{register}`."
-            )
-        self.c_registers[register][ind] = qubit
-        return getattr(qibo.gates, "M")(qubit, register_name=register)
+        if hasattr(measurement.target, "indices"):
+            register = measurement.target.name.name
+            if register not in self.c_registers:
+                raise_error(ValueError, f"Undefined measurement register `{register}`.")
+            ind = measurement.target.indices[0][0].value
+            if ind >= len(self.c_registers[register]):
+                raise_error(
+                    IndexError,
+                    f"Index `{ind}` is out of bounds of register `{register}`.",
+                )
+            self.c_registers[register][ind] = qubit
+            qubits = (qubit,)
+        else:
+            register = measurement.target.name
+            qubit = measurement.measure.qubit.name
+            if len(self.c_registers[register]) != len(self.q_registers[qubit]):
+                raise_error(
+                    RuntimeError,
+                    f"Trying to store quantum measurements from quantum register {qubit}: {self.q_registers[qubit]} to the classical register {register} of length {len(self.c_registers[register])}, the lengths of the quantum and classical registers should match.",
+                )
+            qubits = self.q_registers[qubit]
+        return getattr(qibo.gates, "M")(*qubits, register_name=register)
 
     def _get_qubit(self, qubit):
         """Extracts the qubit from a :class:`openqasm3.ast.QubitDeclaration` statement."""
@@ -291,14 +299,3 @@ class QASMParser:
             else:
                 updated_queue.append(gate)
         return updated_queue
-
-    def _construct_wire_names(self):
-        """Builds the wires names from the declared quantum registers."""
-        wire_names = []
-        for reg_name, reg_qubits in self.q_registers.items():
-            wires = sorted(
-                zip(repeat(reg_name, len(reg_qubits)), reg_qubits), key=lambda x: x[1]
-            )
-            for wire in wires:
-                wire_names.append(f"{wire[0]}{wire[1]}")
-        return wire_names

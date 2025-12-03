@@ -212,7 +212,7 @@ class MeasurementResult:
         backend = _check_backend(backend)
         if self._frequencies is None:
             self._frequencies = backend.calculate_frequencies(
-                self.samples(binary=False)
+                self.samples(binary=False, backend=backend)
             )
         if binary:
             qubits = self.target_qubits

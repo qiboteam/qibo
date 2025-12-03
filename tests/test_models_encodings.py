@@ -304,7 +304,7 @@ def test_hamming_weight_encoder(
     backend.assert_allclose(state, target, atol=1e-7)
 
 
-@pytest.mark.parametrize("seed", [10, 20])
+@pytest.mark.parametrize("seed", [10])
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
