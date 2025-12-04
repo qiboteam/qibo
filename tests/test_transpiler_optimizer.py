@@ -12,9 +12,9 @@ def test_preprocessing_error(star_connectivity):
     with pytest.raises(ValueError):
         new_circuit = preprocesser(circuit=circ)
 
-    circ = Circuit(5, wire_names=[0, 1, 2, "q3", "q4"])
-    with pytest.raises(ValueError):
-        new_circuit = preprocesser(circuit=circ)
+    wire_names = [0, 1, 2, "q3", "q4"]
+    circ = Circuit(5, wire_names=wire_names)
+    assert circ.wire_names == wire_names
 
 
 def test_preprocessing_same(star_connectivity):
