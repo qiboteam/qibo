@@ -2383,6 +2383,100 @@ Setting an empty transpiler is equivalent to disabling transpilation.
 
     set_transpiler(Passes())
 
+
+.. _tutorials_set_transpiler:
+
+How to optimize a circuit during transpilation?
+-----------------------------------------------
+
+This process optimizes quantum circuits by detecting and removing gates
+that do not affect the final output. Such gates may cancel each other out or
+simply have no operational impact. Eliminating them shortens the circuit depth,
+reduces resource consumption, and enhances execution on quantum hardware.
+
+In the current Qibo version, five techniques are available:
+
+- Preprocessing (:class:`qibo.transpiler.optimizer.Preprocessing`): pads the circuit with unused qubits to match the number of physical qubits.
+- Rearrange (:class:`qibo.transpiler.optimizer.Rearrange`): rearranges gates using Qibo's fusion algorithm.
+- InverseCancellation (:class:`qibo.transpiler.optimizer.InverseCancellation`): eliminates adjacent gate pairs in the quantum circuit.
+- RotationGateFusion (:class:`qibo.transpiler.optimizer.RotationGateFusion`): combines RX, RY, and RZ rotation gates in a quantum circuit.
+- U3GateFusion (:class:`qibo.transpiler.optimizer.U3GateFusion`): merges pairs of U3 gates in the circuit.
+
+
+In this example, we used the following passes to transpile the circuit on a star-shaped hardware connectivity,
+optimize the circuit, and target a custom set of native gates:
+:class:`qibo.transpiler.optimizer.InverseCancellation`,
+:class:`qibo.transpiler.optimizer.RotationGateFusion`,
+:class:`qibo.transpiler.optimizer.Preprocessing`,
+:class:`qibo.transpiler.placer.Random`,
+:class:`qibo.transpiler.router.ShortestPaths`,
+:class:`qibo.transpiler.unroller.Unroller`, and
+:class:`qibo.transpiler.optimizer.U3GateFusion`.
+
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import gates
+    from qibo.models import Circuit
+    from qibo.transpiler.asserts import assert_transpiling
+
+    from qibo.transpiler import (
+        NativeGates,
+        Passes,
+        Preprocessing,
+        ShortestPaths,
+        Unroller,
+        InverseCancellation,
+        RotationGateFusion,
+        U3GateFusion
+    )
+
+    # Define hardware connectivity
+    def star_connectivity():
+        chip = nx.Graph([("q0", "q2"), ("q1", "q2"), ("q2", "q3"), ("q2", "q4")])
+        return chip
+
+    # Define a custom set of native gates
+    glist = [gates.U3, gates.RZ, gates.Z, gates.CZ]
+    natives = NativeGates(0).from_gatelist(glist)
+
+    # Define a custom transpiler pipeline
+    custom_passes = [InverseCancellation(), RotationGateFusion(), Preprocessing(), Random(), ShortestPaths(),
+                     Unroller(native_gates=natives), U3GateFusion()]
+
+    # Create a transpiler pipeline with hardware configuration
+    transpiler = Passes(custom_passes, connectivity=star_connectivity())
+
+
+    # Create a quantum circuit with 5 qubits
+    # Define the hardware qubit names to be used in wire_names
+    circuit = Circuit(5, wire_names=["q0", "q1", "q2", "q3", "q4"])
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(3, 4))
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(1))
+    circuit.add(gates.Z(4))
+    circuit.add(gates.Z(4))
+    circuit.add(gates.RX(1, 3.14))
+    circuit.add(gates.RY(1, 3.14))
+
+    # Transpile the circuit using the custom transpiler pipeline
+    transpiled_circuit, final_layout = transpiler(circuit)
+
+    # Verify that the transpiled circuit can be executed on the hardware (optional)
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        connectivity=star_connectivity(),
+        final_layout=final_layout,
+        native_gates=natives
+    )
+
+
 .. _gst_example:
 
 How to perform Gate Set Tomography?
