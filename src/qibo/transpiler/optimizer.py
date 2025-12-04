@@ -22,7 +22,7 @@ class Preprocessing(Optimizer):
     def __call__(self, circuit: Circuit) -> Circuit:
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
             circuit.wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
-            log.info(
+            log.warning(
                 f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {circuit.wire_names}."
             )
 
