@@ -4,7 +4,7 @@ import networkx as nx
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 
@@ -21,10 +21,8 @@ class Preprocessing(Optimizer):
 
     def __call__(self, circuit: Circuit) -> Circuit:
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            raise_error(
-                ValueError,
-                "Some wire_names in the circuit are not in the connectivity graph.",
-            )
+            circuit.wire_names = list(self.connectivity.nodes)[:circuit.nqubits]
+            log.info(f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {circuit.wire_names}.")
 
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
