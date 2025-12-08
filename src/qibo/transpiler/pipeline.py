@@ -95,6 +95,8 @@ class Passes:
                 circuit, final_layout = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit)
+            elif transpiler_pass.__class__.__name__ == "QiskitPasses":
+                circuit = transpiler_pass(circuit)
             else:
                 raise_error(
                     TranspilerPipelineError,

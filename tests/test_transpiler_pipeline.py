@@ -1,6 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
+import qiskit.transpiler.passes as passes
+from qiskit.transpiler import PassManager
 
 from qibo import gates
 from qibo.models import Circuit
@@ -9,6 +11,7 @@ from qibo.transpiler.asserts import assert_circuit_equivalence, assert_transpili
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, ReverseTraversal
+from qibo.transpiler.qiskit import QiskitPasses
 from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
 
@@ -209,6 +212,37 @@ def test_int_qubit_names(backend, star_connectivity):
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,
         connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=NativeGates.default(),
+    )
+
+
+def test_qiskit_passes(star_connectivity):
+    nqubits = 5
+    ngates = 10
+    connectivity = star_connectivity()
+    circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
+    custom_passes = []
+    custom_passes.append(Preprocessing())
+    custom_passes.append(
+        ReverseTraversal(
+            routing_algorithm=Sabre(),
+        )
+    )
+    custom_passes.append(Sabre())
+    qiskit_passes = [passes.Optimize1qGates(), passes.InverseCancellation()]
+    custom_passes.append(QiskitPasses(PassManager(qiskit_passes)))
+    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_pipeline = Passes(
+        passes=custom_passes,
+        connectivity=connectivity,
+        native_gates=NativeGates.default(),
+    )
+    transpiled_circ, final_layout = custom_pipeline(circ)
+    assert_transpiling(
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
+        connectivity=star_connectivity(),
         final_layout=final_layout,
         native_gates=NativeGates.default(),
     )

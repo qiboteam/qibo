@@ -2307,6 +2307,39 @@ or the ``on_qubits`` parameter.
     - :class:`qibo.transpiler.optimizer.Preprocessing` pads the circuit with the remaining qubits from the connectivity graph.
     - The ``on_qubits`` parameter in :class:`qibo.transpiler.pipeline.Passes` restricts the connectivity graph.
 
+Additionally, a wrapper to qiskit's transpiler (:class:`qibo.transpiler.qiskit.QiskitPasses`) is implemented to make available
+all the qiskit transpilation tools for qibo circuits.
+In order to use it, you just need to construct a :class:`qiskit.transpiler.PassManager` as you would normally do in qiskit and
+pass it to the :class:`qibo.transpiler.qiskit.QiskitPasses` object:
+
+.. testcode:: python
+
+   import qiskit.transpiler.passes as passes
+   from qiskit.transpiler import PassManager
+   from qibo.transpiler.qiskit import QiskitPasses
+   from qibo.transpiler.router import Sabre
+   from qibo.transpiler.optimizer import Preprocessing
+   from qibo.transpiler.placer import ReverseTraversal
+   from qibo.transpiler.unroller import NativeGates
+
+   # some qibo passes
+   qibo_passes = []
+   qibo_passes.append(Preprocessing())
+   qibo_passes.append(
+       ReverseTraversal(
+       routing_algorithm=Sabre(),
+       )
+   )
+   qibo_passes.append(Sabre())
+   # some qiskit passes
+   qiskit_passes = [passes.Optimize1qGates(), passes.InverseCancellation()]
+   qiskit_passes = QiskitPasses(PassManager(qiskit_passes))
+   passes = qibo_passes + [qiskit_passes,]
+   # join everythin together
+   hybrid_transpiler = Passes(
+        passes=passes,
+        native_gates=NativeGates.default(),
+    )
 
 .. _tutorials_set_transpiler:
 

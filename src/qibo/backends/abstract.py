@@ -1609,6 +1609,7 @@ class Backend:
         terms_coefficients: List[float],
         nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
+        constant: Union[float, int] = 0.0,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the
         computational basis, starting from the samples.
@@ -1621,9 +1622,9 @@ class Backend:
                 symbolic observable is acting on.
             terms_coefficients (List[float]): the coefficient of each term of the (diagonal)
                 symbolic observable.
-            constant (float): the constant term of the observable. Defaults to :math:`0.0`.
             nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...]): custom qubit ordering.
+            constant (float): the constant term of the observable. Defaults to :math:`0.0`.
 
         Returns:
             float: The calculated expectation value.
@@ -1653,7 +1654,7 @@ class Backend:
         expvals = self.cast(expvals, dtype=counts.dtype).reshape(
             len(terms_coefficients), len(freq)
         )
-        return self.sum(expvals @ counts)
+        return self.sum(expvals @ counts) + constant
 
     def exp_value_observable_dense(self, circuit: "Circuit", observable: ArrayLike):  # type: ignore
         """Compute the expectation value of a generic dense hamiltonian starting from the state.
