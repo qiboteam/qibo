@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.23"
+version = "0.2.24"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -75,6 +75,7 @@ qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 # qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 stim = "^1.12.0"
 qulacs = { version = "^0.6.4", python = "<3.13" }
+qiskit = "^2.2.3"
 qbraid = { version = "^0.10.0", extras = ["cudaq", "qir"] }
 
 [tool.poe.tasks]

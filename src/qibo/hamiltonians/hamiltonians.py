@@ -674,7 +674,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             )
             coefficients.append(term.coefficient.real)
         return self.backend.expectation_diagonal_observable_symbolic_from_samples(
-            circuit, self.nqubits, qubits, coefficients, nshots=1, qubit_map=qubit_map
+            circuit,
+            self.nqubits,
+            qubits,
+            coefficients,
+            nshots=1,
+            qubit_map=qubit_map,
+            constant=self.constant.real,
         )
 
     def _compose(self, other, operator):

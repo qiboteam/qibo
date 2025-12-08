@@ -348,6 +348,7 @@ class Backend(abc.ABC):
         terms_coefficients: List[float],
         nshots: int,
         qubit_map: Optional[Union[Tuple[int, ...], List[int]]] = None,
+        constant: Union[float, int] = 0.0,
     ) -> float:
         """Compute the expectation value of a symbolic observable diagonal in the computational basis,
         starting from the samples.
@@ -357,9 +358,9 @@ class Backend(abc.ABC):
             nqubits (int): number of qubits of the observable.
             terms_qubits (List[Tuple[int, ...]]): the qubits each term of the (diagonal) symbolic observable is acting on.
             terms_coefficients (List[float]): the coefficient of each term of the (diagonal) symbolic observable.
-            constant (float): the constant term of the observable. Defaults to ``0.``.
             nshots (int): how many shots to execute the circuit with.
             qubit_map (Tuple[int, ...]): custom qubit ordering.
+            constant (float): the constant term of the observable. Defaults to :math:`0.0`.
 
         Returns:
             float: The calculated expectation value.
@@ -389,7 +390,7 @@ class Backend(abc.ABC):
         expvals = self.cast(expvals, dtype=counts.dtype).reshape(
             len(terms_coefficients), len(freq)
         )
-        return self.np.sum(expvals @ counts)
+        return self.np.sum(expvals @ counts) + constant
 
     def expectation_observable_symbolic_from_samples(
         self,
