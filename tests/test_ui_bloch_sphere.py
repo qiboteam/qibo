@@ -5,7 +5,7 @@ import numpy as np
 mpl.use("agg")
 
 from qibo import Circuit, gates
-from qibo.ui.bloch import Bloch
+from qibo.ui.bloch import BlochSphere
 
 
 def _circuit(weight, boolean=False):
