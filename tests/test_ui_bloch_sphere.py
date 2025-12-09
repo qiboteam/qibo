@@ -17,7 +17,7 @@ def _circuit(weight, boolean=False):
 
 
 def test_empty_sphere():
-    bs = Bloch()
+    bs = BlochSphere()
     bs.render()
     plt.show()
 
