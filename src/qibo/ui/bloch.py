@@ -8,8 +8,8 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from numpy.typing import ArrayLike
 
-from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.config import raise_error
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.symbols import X, Y, Z
 
 
