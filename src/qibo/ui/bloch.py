@@ -179,13 +179,13 @@ class Bloch:
             if state[0] == 1 and state[0] == 0:
                 z = 1
                 return x, y, z
-            
+
             if state[0] == 0 and state[0] == 1:
                 z = -1
                 return x, y, z
-            
+
             return self._paulis_expectation(state)
-        
+
         return self._paulis_expectation(state)
 
     def _is_density_matrix(self, rho: np.ndarray) -> bool:
