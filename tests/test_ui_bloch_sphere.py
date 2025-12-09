@@ -31,7 +31,7 @@ def test_state():
 
 
 def test_vector_point():
-    bs = Bloch()
+    bs = BlochSphere()
     vector = np.array([0, 0, 1])
     bs.add_vector(vector, mode="point", color="green")
     bs.render()
@@ -39,7 +39,7 @@ def test_vector_point():
 
 
 def test_multiple_vectors_array():
-    bs = Bloch()
+    bs = BlochSphere()
     vectors = np.random.normal(size=(100, 3))
     vectors /= np.linalg.norm(vectors, axis=1)[:, np.newaxis]
     bs.add_vector(vectors, color="royalblue")
@@ -48,7 +48,7 @@ def test_multiple_vectors_array():
 
 
 def test_multiple_vectors_list():
-    bs = Bloch()
+    bs = BlochSphere()
 
     vectors = []
     for _ in range(100):
@@ -62,7 +62,7 @@ def test_multiple_vectors_list():
 
 
 def test_multiple_states():
-    bs = Bloch()
+    bs = BlochSphere()
     states = np.random.normal(size=(100, 2))
     states /= np.linalg.norm(states, axis=1)[:, np.newaxis]
     bs.add_state(states)
@@ -71,7 +71,7 @@ def test_multiple_states():
 
 
 def test_state_clear():
-    bs = Bloch()
+    bs = BlochSphere()
     states = np.zeros(shape=(100, 2), dtype="complex")
 
     for i in range(100):
@@ -91,7 +91,7 @@ def test_state_clear():
 
 
 def test_classification():
-    bs = Bloch()
+    bs = BlochSphere()
     bs.add_state(np.array([1, 0]), color="black")
     bs.add_state(np.array([0, 1]), color="black")
 
@@ -110,7 +110,7 @@ def test_classification():
 
 
 def test_multi_classification():
-    bs = Bloch()
+    bs = BlochSphere()
     bs.add_state(np.array([1, 0]), color="black")
     bs.add_state(np.array([0, 1]), color="black")
     bs.add_vector(np.array([0, 1, 0]), color="black")
@@ -136,7 +136,7 @@ def test_multi_classification():
 
 
 def test_qibo_output():
-    bs = Bloch()
+    bs = BlochSphere()
 
     # --Circuit--
     nqubits = 1
@@ -154,7 +154,7 @@ def test_qibo_output():
 
 
 def test_point_vector_state():
-    bs = Bloch()
+    bs = BlochSphere()
 
     nqubits = 1
     layers = 2
@@ -180,7 +180,7 @@ def test_point_vector_state():
 
 
 def test_save():
-    bs = Bloch()
+    bs = BlochSphere()
 
     nqubits = 1
     layers = 2
@@ -198,7 +198,7 @@ def test_save():
 
 
 def test_many_spheres():
-    bs = Bloch()
+    bs = BlochSphere()
     bs.render()
 
     weight = 0.1
@@ -226,7 +226,7 @@ def test_many_spheres():
 
 
 def test_density_matrix():
-    bs = Bloch()
+    bs = BlochSphere()
     weight = 1.0
     boolean = True
 
@@ -253,7 +253,7 @@ def test_density_matrix_vs_state():
     In this way every time that we have a density matrix the input will have three dimensions.
     """
 
-    bs = Bloch()
+    bs = BlochSphere()
     weight = 1.0
 
     # Scenario 1
@@ -319,7 +319,7 @@ def test_density_matrix_vs_state():
 
 
 def test_mixed_state():
-    bs = Bloch()
+    bs = BlochSphere()
 
     state = [0.5, 0, 0]
     bs.add_vector(state)

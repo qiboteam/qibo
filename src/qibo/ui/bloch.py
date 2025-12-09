@@ -35,7 +35,7 @@ class Arrow3D(FancyArrowPatch):
 
 
 @dataclass
-class Bloch:
+class BlochSphere:
     """This class creates a Bloch sphere."""
 
     @staticmethod
