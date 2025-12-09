@@ -229,7 +229,6 @@ class Bloch:
                 self._points.append(vector)
                 self._color_points.append(color)
 
-
     def add_state(
         self,
         state: ArrayLike,
