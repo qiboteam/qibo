@@ -968,6 +968,14 @@ Deutsch
     :member-order: bysource
 
 
+Fan-out
+"""""""
+
+.. autoclass:: qibo.gates.FanOut
+    :members:
+    :member-order: bysource
+
+
 Generalized Reconfigurable Beam Splitter (RBS)
 """"""""""""""""""""""""""""""""""""""""""""""
 
@@ -1320,23 +1328,12 @@ Max Cut
     :members:
     :member-order: bysource
 
+LABS
+^^^^
 
-.. note::
-    All pre-coded Hamiltonians can be created as
-    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
-    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
-    using the ``dense=False``. In the first case the Hamiltonian is created
-    using its full matrix representation of size ``(2 ** n, 2 ** n)``
-    where ``n`` is the number of qubits that the Hamiltonian acts on. This
-    matrix is used to calculate expectation values by direct matrix multiplication
-    to the state and for time evolution by exact exponentiation.
-    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
-    representation as a sum of local terms. This compact representation can be
-    used to calculate expectation values via a sum of the local term expectations
-    and time evolution via the Trotter decomposition of the evolution operator.
-    This is useful for systems that contain many qubits for which constructing
-    the full matrix is intractable.
-
+.. autoclass:: qibo.hamiltonians.LABS
+    :members:
+    :member-order: bysource
 
 Heisenberg model
 ^^^^^^^^^^^^^^^^
@@ -1360,6 +1357,23 @@ Heisenberg XXZ
 .. autoclass:: qibo.hamiltonians.XXZ
     :members:
     :member-order: bysource
+
+
+.. note::
+    All pre-coded Hamiltonians can be created as
+    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
+    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
+    using the ``dense=False``. In the first case the Hamiltonian is created
+    using its full matrix representation of size ``(2 ** n, 2 ** n)``
+    where ``n`` is the number of qubits that the Hamiltonian acts on. This
+    matrix is used to calculate expectation values by direct matrix multiplication
+    to the state and for time evolution by exact exponentiation.
+    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
+    representation as a sum of local terms. This compact representation can be
+    used to calculate expectation values via a sum of the local term expectations
+    and time evolution via the Trotter decomposition of the evolution operator.
+    This is useful for systems that contain many qubits for which constructing
+    the full matrix is intractable.
 
 _______________________
 
@@ -1908,6 +1922,36 @@ Infidelity
 """"""""""
 
 .. autofunction:: qibo.quantum_info.infidelity
+
+
+A fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.a_fidelity
+
+
+N fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.n_fidelity
+
+
+Chen fidelity
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.chen_fidelity
+
+
+Geometric-mean fidelity
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.geometric_mean_fidelity
+
+
+Max fidelity
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.max_fidelity
 
 
 Bures angle

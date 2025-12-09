@@ -4,10 +4,9 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import symbols
-from qibo.backends import Backend, _check_backend, matrices
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.hamiltonians.terms import HamiltonianTerm
 
 
 def X(nqubits, dense: bool = True, backend=None):
@@ -139,9 +138,60 @@ def MaxCut(
     form /= 2
 
     ham = SymbolicHamiltonian(form, nqubits=nqubits, backend=backend)
+
     if dense:
         return ham.dense
+
     return ham
+
+
+def LABS(nqubits: int, dense: bool = True, backend: Optional[Backend] = None):
+    """Create Hamiltonian of the Low Autocorrelation Binary Sequences (LABS) problem.
+
+    Given an integer :math:`n > 2`, the LABS problem consists of finding a binary sequence
+    :math:`b \\in \\{0, \\, 1\\}^{n}` the minimizes the *sidelobe energy* :math:`E(b)`
+    defined as
+
+    .. math::
+        E(b) = \\sum_{j=1}^{n-1} \\, C_{j}^{2}(b) \\, ;
+        \\quad C_{j}(b) = \\sum_{k=0}^{n-j} \\, b_{k} \\, b_{k + j} \\, ,
+
+    where :math:`C_{j}(b)` is the :math:`j`-th *autocorrelation* of :math:`b`.
+
+    Args:
+        nqubits (int): Total number of qubits.
+        dense (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    References:
+        1. T. Packebusch and S. Mertens, *Low autocorrelation binary sequences*,
+        `J. Phys. A: Math. Theor. 49 (2016) 165001
+        <https://doi.org/10.1088/1751-8113/49/16/165001>`_.
+    """
+    if nqubits < 2:
+        raise_error(
+            ValueError,
+            f"LABS problem only defined for ``nqubits > 2``, but ``nqubits = {nqubits}``.",
+        )
+
+    hamiltonian = 0
+    for ind in range(1, nqubits):
+        term = sum(
+            symbols.Z(qubit, backend=backend) * symbols.Z(qubit + ind, backend=backend)
+            for qubit in range(nqubits - ind)
+        )
+        hamiltonian += term**2
+
+    hamiltonian = SymbolicHamiltonian(hamiltonian, nqubits=nqubits, backend=backend)
+
+    if dense:
+        return hamiltonian.dense
+
+    return hamiltonian
 
 
 def Heisenberg(

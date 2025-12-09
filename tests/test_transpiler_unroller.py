@@ -47,7 +47,7 @@ def test_translate_gate_error_2q():
     "natives_1q",
     [NativeGates.U3, NativeGates.GPI2, NativeGates.U3 | NativeGates.GPI2],
 )
-def test_unroller(natives_1q, natives_2q):
+def test_unroller(backend, natives_1q, natives_2q):
     circuit = Circuit(3)
     circuit.add(gates.H(0))
     circuit.add(gates.X(0))
@@ -81,7 +81,7 @@ def test_unroller(natives_1q, natives_2q):
     circuit.add(gates.RZZ(0, 1, 0.3))
     circuit.add(gates.fSim(0, 1, 0.4, 0.5))
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    unroller = Unroller(native_gates=natives_1q | natives_2q)
+    unroller = Unroller(native_gates=natives_1q | natives_2q, backend=backend)
     translated_circuit = unroller(circuit)
     assert_decomposition(
         translated_circuit,
@@ -89,8 +89,8 @@ def test_unroller(natives_1q, natives_2q):
     )
 
 
-def test_measurements_non_comp_basis():
-    unroller = Unroller(native_gates=NativeGates.default())
+def test_measurements_non_comp_basis(backend):
+    unroller = Unroller(native_gates=NativeGates.default(), backend=backend)
     circuit = Circuit(1)
     circuit.add(gates.M(0, basis=gates.X))
     transpiled_circuit = unroller(circuit)
@@ -99,7 +99,7 @@ def test_measurements_non_comp_basis():
     assert transpiled_circuit.queue[2].basis == []
 
 
-def test_temp_cnot_decomposition():
+def test_temp_cnot_decomposition(backend):
     from qibo.transpiler.pipeline import Passes
 
     circ = Circuit(2)
@@ -112,7 +112,7 @@ def test_temp_cnot_decomposition():
     glist = [gates.GPI2, gates.RZ, gates.Z, gates.M, gates.CNOT]
     native_gates = NativeGates(0).from_gatelist(glist)
 
-    unroller = Unroller(native_gates=native_gates)
+    unroller = Unroller(native_gates=native_gates, backend=backend)
     transpiled_circuit = unroller(circ)
 
     # H

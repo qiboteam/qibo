@@ -5,17 +5,22 @@ from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
 from qibo.models.encodings import _generate_rbs_angles, unary_encoder
 from qibo.quantum_info.metrics import (
+    a_fidelity,
     average_gate_fidelity,
     bures_angle,
     bures_distance,
+    chen_fidelity,
     diamond_norm,
     expressibility,
     fidelity,
     frame_potential,
     gate_error,
+    geometric_mean_fidelity,
     hilbert_schmidt_distance,
     impurity,
     infidelity,
+    max_fidelity,
+    n_fidelity,
     process_fidelity,
     process_infidelity,
     purity,
@@ -240,6 +245,31 @@ def test_fidelity_and_infidelity_and_bures(backend):
         np.sqrt(2),
         atol=PRECISION_TOL,
     )
+
+
+@pytest.mark.parametrize("target_pure", [False, True])
+@pytest.mark.parametrize("state_pure", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 2, 5])
+def test_alternative_fidelities(backend, nqubits, state_pure, target_pure):
+    dims = 2**nqubits
+    state = random_density_matrix(dims, pure=state_pure, seed=10, backend=backend)
+    target = random_density_matrix(dims, pure=target_pure, seed=8, backend=backend)
+
+    fid = fidelity(state, target, backend=backend)
+    a_fid = a_fidelity(state, target, backend=backend)
+    n_fid = n_fidelity(state, target, backend=backend)
+    gm_fid = geometric_mean_fidelity(state, target, backend=backend)
+    max_fid = max_fidelity(state, target, backend=backend)
+
+    assert backend.np.round(fid, 10) <= backend.np.round(n_fid, 10)
+    assert backend.np.round(fid, 10) >= backend.np.round(a_fid, 10)
+    assert backend.np.round(gm_fid, 10) >= backend.np.round(max_fid, 10)
+
+    if nqubits == 1:
+        chen_fid = chen_fidelity(state, target, backend=backend)
+
+        backend.assert_allclose(chen_fid, fid, atol=1e-6)
+        backend.assert_allclose(chen_fid, n_fid, atol=1e-6)
 
 
 @pytest.mark.parametrize("seed", [10])

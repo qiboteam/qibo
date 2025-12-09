@@ -12,9 +12,9 @@ def test_preprocessing_error(star_connectivity):
     with pytest.raises(ValueError):
         new_circuit = preprocesser(circuit=circ)
 
-    circ = Circuit(5, wire_names=[0, 1, 2, "q3", "q4"])
-    with pytest.raises(ValueError):
-        new_circuit = preprocesser(circuit=circ)
+    wire_names = [0, 1, 2, "q3", "q4"]
+    circ = Circuit(5, wire_names=wire_names)
+    assert circ.wire_names == wire_names
 
 
 def test_preprocessing_same(star_connectivity):
@@ -34,12 +34,12 @@ def test_preprocessing_add(star_connectivity):
     assert new_circuit.nqubits == 5
 
 
-def test_fusion():
+def test_fusion(backend):
     circuit = Circuit(2)
     circuit.add(gates.X(0))
     circuit.add(gates.Z(0))
     circuit.add(gates.Y(0))
     circuit.add(gates.X(1))
     fusion = Rearrange(max_qubits=1)
-    fused_circ = fusion(circuit)
+    fused_circ = fusion(circuit, backend=backend)
     assert isinstance(fused_circ.queue[0], gates.Unitary)
