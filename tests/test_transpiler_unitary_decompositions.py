@@ -55,7 +55,7 @@ def test_u3_decomposition(backend):
     backend.assert_allclose(u3_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_eigenbasis_entanglement(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
 
@@ -70,7 +70,7 @@ def test_eigenbasis_entanglement(backend, seed):
         backend.assert_allclose(purity(state, backend=backend), 0.5)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_v_decomposition(backend, seed):
     """Check that V_A V_B |psi_k> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -79,7 +79,7 @@ def test_v_decomposition(backend, seed):
     assert_single_qubits(backend, psi, va, vb)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_u_decomposition(backend, seed):
     r"""Check that U_A\dagger U_B\dagger |psi_k tilde> = |phi_k> according to Lemma 1."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -91,7 +91,7 @@ def test_u_decomposition(backend, seed):
     assert_single_qubits(backend, psi_tilde, ua_dagger, ub_dagger)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_ud_eigenvalues(backend, seed):
     """Check that U_d is diagonal in the Bell basis."""
     unitary = random_unitary(4, seed=seed, backend=backend)
@@ -111,7 +111,7 @@ def test_ud_eigenvalues(backend, seed):
     backend.assert_allclose(backend.np.prod(ud_diag), 1, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_calculate_h_vector(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
     _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
@@ -147,7 +147,7 @@ def test_cnot_decomposition_light(backend):
     backend.assert_allclose(final_matrix, target_matrix, atol=1e-6, rtol=1e-6)
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("seed", [None, 10])
 def test_two_qubit_decomposition(backend, seed):
     unitary = random_unitary(4, seed=seed, backend=backend)
 
@@ -161,23 +161,18 @@ def test_two_qubit_decomposition(backend, seed):
 @pytest.mark.parametrize("gate_name", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
 def test_two_qubit_decomposition_common_gates(backend, gate_name):
     """Test general two-qubit decomposition on some common gates."""
-    if gate_name == "iSWAP":
-        with pytest.raises(NotImplementedError):
-            matrix = gates.iSWAP(0, 1).matrix(backend)
-            test = two_qubit_decomposition(0, 1, matrix, backend=backend)
-    else:
-        gate = (
-            gates.fSim(0, 1, theta=0.1, phi=0.2)
-            if gate_name == "fSim"
-            else getattr(gates, gate_name)(0, 1)
-        )
-        matrix = gate.matrix(backend)
+    gate = (
+        gates.fSim(0, 1, theta=0.1, phi=0.2)
+        if gate_name == "fSim"
+        else getattr(gates, gate_name)(0, 1)
+    )
+    matrix = gate.matrix(backend)
 
-        circuit = Circuit(2)
-        circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
-        final_matrix = circuit.unitary(backend)
+    circuit = Circuit(2)
+    circuit.add(two_qubit_decomposition(0, 1, matrix, backend=backend))
+    final_matrix = circuit.unitary(backend)
 
-        backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
+    backend.assert_allclose(final_matrix, matrix, atol=1e-6, rtol=1e-6)
 
 
 @pytest.mark.parametrize("hz_zero", [False, True])

@@ -7,7 +7,7 @@ import numpy as np
 from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.linalg_operations import matrix_power, partial_trace
-from qibo.quantum_info.metrics import _check_hermitian, purity
+from qibo.quantum_info.metrics import purity
 
 
 def shannon_entropy(prob_dist, base: float = 2, backend=None):
@@ -484,23 +484,19 @@ def classical_relative_tsallis_entropy(
 def von_neumann_entropy(
     state,
     base: float = 2,
-    check_hermitian: bool = False,
     return_spectrum: bool = False,
     backend=None,
 ):
-    """Calculates the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
+    """Calculate the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
 
     It is given by
 
     .. math::
-        S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S(\\rho) = - \\text{tr}\\left(\\rho \\, \\log(\\rho)\\right)
 
     Args:
         state (ndarray): statevector or density matrix.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian .
-            Defaults to ``False``.
         return_spectrum: if ``True``, returns ``entropy`` and
             :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
             If ``False``, returns only ``entropy``. Default is ``False``.
@@ -526,35 +522,26 @@ def von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if not isinstance(check_hermitian, bool):
-        raise_error(
-            TypeError,
-            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
-        )
-
     if purity(state, backend=backend) == 1.0:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=float)
 
         return 0.0
 
-    eigenvalues = backend.calculate_eigenvalues(
-        state,
-        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
-    )
-
-    log_prob = backend.np.where(
-        backend.np.real(eigenvalues) > 0.0,
-        backend.np.log2(eigenvalues) / np.log2(base),
-        0.0,
-    )
-
-    ent = -backend.np.sum(eigenvalues * log_prob)
-    # absolute value if entropy == 0.0 to avoid returning -0.0
-    ent = backend.np.abs(ent) if ent == 0.0 else backend.np.real(ent)
+    ent = backend.calculate_matrix_log(state, base=base)
+    ent = -backend.np.trace(state @ ent)
+    ent = backend.np.real(ent)
 
     if return_spectrum:
+        eigenvalues = backend.calculate_eigenvalues(state)
+
+        log_prob = backend.np.where(
+            backend.np.real(eigenvalues) > 0.0,
+            backend.np.log2(eigenvalues) / np.log2(base),
+            0.0,
+        )
         log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
+
         return ent, -log_prob
 
     return ent
@@ -564,8 +551,6 @@ def relative_von_neumann_entropy(
     state,
     target,
     base: float = 2,
-    check_hermitian: bool = False,
-    precision_tol: float = 1e-14,
     backend=None,
 ):
     """Calculates the relative von Neumann entropy  between two quantum states.
@@ -573,8 +558,8 @@ def relative_von_neumann_entropy(
     Also known as *quantum relative entropy*, :math:`S(\\rho \\, \\| \\, \\sigma)` is given by
 
     .. math::
-        S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
-            - \\text{tr}\\left[\\rho \\, \\log(\\sigma)\\right]
+        S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left(\\rho \\, \\log(\\rho)\\right)
+            - \\text{tr}\\left(\\rho \\, \\log(\\sigma)\\right)
 
     where ``state`` :math:`\\rho` and ``target`` :math:`\\sigma` are two quantum states.
 
@@ -582,18 +567,12 @@ def relative_von_neumann_entropy(
         state (ndarray): statevector or density matrix :math:`\\rho`.
         target (ndarray): statevector or density matrix :math:`\\sigma`.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): If ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian .
-            Defaults to ``False``.
-        precision_tol (float, optional): Used when entropy is calculated via engenvalue
-            decomposition. Eigenvalues that are smaller than ``precision_tol`` in absolute value
-            are set to :math:`0`. Defaults to :math:`10^{-14}`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
 
     Returns:
-        float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
+        float: Relative von-Neumann entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
     """
     backend = _check_backend(backend)
     state = backend.cast(state)
@@ -622,12 +601,6 @@ def relative_von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if not isinstance(check_hermitian, bool):
-        raise_error(
-            TypeError,
-            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
-        )
-
     if purity(state, backend=backend) == 1.0 and purity(target, backend=backend) == 1.0:
         return 0.0
 
@@ -637,43 +610,16 @@ def relative_von_neumann_entropy(
     if len(target.shape) == 1:
         target = backend.np.outer(target, backend.np.conj(target))
 
-    eigenvalues_state, eigenvectors_state = backend.calculate_eigenvectors(
-        state,
-        hermitian=(not check_hermitian or _check_hermitian(state, backend=backend)),
-    )
-    eigenvalues_target, eigenvectors_target = backend.calculate_eigenvectors(
-        target,
-        hermitian=(not check_hermitian or _check_hermitian(target, backend=backend)),
+    relative = backend.calculate_matrix_log(target, base=base)
+    relative = -backend.np.trace(state @ relative)
+    relative -= von_neumann_entropy(
+        state, base=base, return_spectrum=False, backend=backend
     )
 
-    overlaps = backend.np.conj(eigenvectors_state.T) @ eigenvectors_target
-    overlaps = backend.np.abs(overlaps) ** 2
-
-    log_state = backend.np.where(
-        backend.np.real(eigenvalues_state) > precision_tol,
-        backend.np.log2(eigenvalues_state) / np.log2(base),
-        0.0,
-    )
-    log_target = backend.np.where(
-        backend.np.real(eigenvalues_target) > precision_tol,
-        backend.np.log2(eigenvalues_target) / np.log2(base),
-        0.0,
-    )
-
-    log_target = overlaps @ log_target
-
-    log_target = backend.np.where(eigenvalues_state != 0.0, log_target, 0.0)
-
-    entropy_state = backend.np.sum(eigenvalues_state * log_state)
-
-    relative = backend.np.sum(eigenvalues_state * log_target)
-
-    return float(backend.np.real(entropy_state - relative))
+    return backend.np.real(relative)
 
 
-def mutual_information(
-    state, partition, base: float = 2, check_hermitian: bool = False, backend=None
-):
+def mutual_information(state, partition, base: float = 2, backend=None):
     """Calculates the mutual information of a bipartite state.
 
     Given a qubit ``partition`` :math:`A`, the mutual information
@@ -689,8 +635,6 @@ def mutual_information(
         state (ndarray): statevector or density matrix.
         partition (Union[List[int], Tuple[int]]): indices of qubits in partition :math:`A`.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             the current backend. Defaults to ``None``.
@@ -708,10 +652,10 @@ def mutual_information(
     state_a = partial_trace(state, partition_b, backend)
     state_b = partial_trace(state, partition, backend)
 
-    return (
-        von_neumann_entropy(state_a, base, check_hermitian, False, backend)
-        + von_neumann_entropy(state_b, base, check_hermitian, False, backend)
-        - von_neumann_entropy(state, base, check_hermitian, False, backend)
+    return backend.np.real(
+        von_neumann_entropy(state_a, base, False, backend)
+        + von_neumann_entropy(state_b, base, False, backend)
+        - von_neumann_entropy(state, base, False, backend)
     )
 
 
@@ -963,7 +907,6 @@ def relative_tsallis_entropy(
     target,
     alpha: Union[float, int],
     base: float = 2,
-    check_hermitian: bool = False,
     backend=None,
 ):
     """Calculate the relative Tsallis entropy between two quantum states.
@@ -984,10 +927,6 @@ def relative_tsallis_entropy(
         alpha (float or int): entropic index :math:`\\alpha \\in [0, \\, 2]`.
         base (float, optional): the base of the log used when :math:`\\alpha = 1`.
             Defaults to :math:`2`.
-        check_hermitian (bool, optional): Used when :math:`\\alpha = 1`.
-            If ``True``, checks if ``state`` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian .
-            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -1006,9 +945,7 @@ def relative_tsallis_entropy(
         <https://doi.org/10.1063/1.1805729>`_ .
     """
     if alpha == 1.0:
-        return relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        return relative_von_neumann_entropy(state, target, base=base, backend=backend)
 
     if not isinstance(alpha, (float, int)):
         raise_error(
@@ -1043,7 +980,6 @@ def entanglement_entropy(
     state,
     bipartition,
     base: float = 2,
-    check_hermitian: bool = False,
     return_spectrum: bool = False,
     backend=None,
 ):
@@ -1060,8 +996,6 @@ def entanglement_entropy(
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float, optional): the base of the log. Defaults to :math: `2`.
-        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
         return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
             If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -1091,7 +1025,6 @@ def entanglement_entropy(
     entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
         base=base,
-        check_hermitian=check_hermitian,
         return_spectrum=return_spectrum,
         backend=backend,
     )

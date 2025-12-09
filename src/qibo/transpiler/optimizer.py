@@ -3,7 +3,8 @@ from typing import Optional
 import networkx as nx
 
 from qibo import gates
-from qibo.config import raise_error
+from qibo.backends import Backend, _check_backend
+from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 
@@ -20,10 +21,11 @@ class Preprocessing(Optimizer):
 
     def __call__(self, circuit: Circuit) -> Circuit:
         if not all(qubit in self.connectivity.nodes for qubit in circuit.wire_names):
-            raise_error(
-                ValueError,
-                "Some wire_names in the circuit are not in the connectivity graph.",
+            default_wire_names = list(self.connectivity.nodes)[: circuit.nqubits]
+            log.warning(
+                f"Some wire_names in the circuit are not in the connectivity graph. Using wire name {default_wire_names}."
             )
+            circuit.wire_names = default_wire_names
 
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
@@ -57,12 +59,13 @@ class Rearrange(Optimizer):
     def __init__(self, max_qubits: int = 1):
         self.max_qubits = max_qubits
 
-    def __call__(self, circuit: Circuit):
+    def __call__(self, circuit: Circuit, backend: Optional[Backend] = None):
+        backend = _check_backend(backend)
         fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
         new = circuit.__class__(nqubits=circuit.nqubits, wire_names=circuit.wire_names)
         for fgate in fused_circuit.queue:
             if isinstance(fgate, gates.FusedGate):
-                new.add(gates.Unitary(fgate.matrix(), *fgate.qubits))
+                new.add(gates.Unitary(fgate.matrix(backend), *fgate.qubits))
             else:
                 new.add(fgate)
         return new

@@ -2,11 +2,12 @@
 
 import collections
 import math
+from importlib.util import find_spec, module_from_spec
 from typing import Union
 
 import numpy as np
 from scipy import sparse
-from scipy.linalg import block_diag, fractional_matrix_power
+from scipy.linalg import block_diag, fractional_matrix_power, logm
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -35,6 +36,10 @@ class NumpyBackend(Backend):
             np.complex64,
             np.complex128,
         )
+        # load the quantum info basic operations
+        spec = find_spec("qibo.quantum_info._quantum_info")
+        self.qinfo = module_from_spec(spec)
+        spec.loader.exec_module(self.qinfo)
 
     @property
     def qubits(self):
@@ -134,8 +139,13 @@ class NumpyBackend(Backend):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
-        if callable(_matrix):
+        if name == "I":
             _matrix = _matrix(2 ** len(gate.target_qubits))
+        elif name == "Align":
+            _matrix = _matrix(0, 2)
+        elif callable(_matrix):
+            return self.matrix_parametrized(gate)
+
         return self.cast(_matrix, dtype=_matrix.dtype)
 
     def matrix_parametrized(self, gate):
@@ -149,6 +159,8 @@ class NumpyBackend(Backend):
                 theta=gate.init_kwargs["theta"],
                 phi=gate.init_kwargs["phi"],
             )
+        elif name == "FanOut":
+            _matrix = _matrix(*gate.init_args)
         else:
             _matrix = _matrix(*gate.parameters)
         return self.cast(_matrix, dtype=_matrix.dtype)
@@ -676,6 +688,7 @@ class NumpyBackend(Backend):
 
     def set_seed(self, seed):
         self.np.random.seed(seed)
+        self.qinfo.ENGINE.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
         return self.random_choice(
@@ -793,16 +806,39 @@ class NumpyBackend(Backend):
             ev /= norm
         return ev
 
-    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+    def calculate_matrix_exp(
+        self,
+        matrix,
+        phase: Union[float, int, complex] = 1,
+        eigenvectors=None,
+        eigenvalues=None,
+    ):
         if eigenvectors is None or self.is_sparse(matrix):
             if self.is_sparse(matrix):
                 from scipy.sparse.linalg import expm
             else:
                 from scipy.linalg import expm
-            return expm(-1j * a * matrix)
-        expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+
+            return expm(phase * matrix)
+
+        expd = self.np.exp(phase * eigenvalues)
+        ud = self.np.transpose(self.np.conj(eigenvectors))
+
+        return (eigenvectors * expd) @ ud
+
+    def calculate_matrix_log(self, matrix, base=2, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None:
+            # to_numpy and cast needed for GPUs
+            matrix_log = logm(self.to_numpy(matrix)) / float(np.log(base))
+            matrix_log = self.cast(matrix_log, dtype=matrix_log.dtype)
+
+            return matrix_log
+
+        # log = self.np.diag(self.np.log(eigenvalues) / float(np.log(base)))
+        log = self.np.log(eigenvalues) / float(np.log(base))
         ud = self.np.transpose(np.conj(eigenvectors))
-        return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
+
+        return (eigenvectors * log) @ ud
 
     def calculate_matrix_power(
         self,
@@ -825,6 +861,9 @@ class NumpyBackend(Backend):
                 )
 
         return fractional_matrix_power(matrix, power)
+
+    def calculate_matrix_sqrt(self, matrix):
+        return self.calculate_matrix_power(matrix, power=0.5)
 
     def calculate_singular_value_decomposition(self, matrix):
         return self.np.linalg.svd(matrix)

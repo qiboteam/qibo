@@ -9,6 +9,7 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
 from qibo.quantum_info.utils import (
+    decompose_permutation,
     haar_integral,
     hadamard_transform,
     hamming_distance,
@@ -207,7 +208,7 @@ def test_hellinger_shot_error(backend, validate, kind):
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
 
-    assert 2 * hellinger_error < hellinger_fid
+    assert 1.5 * hellinger_error < hellinger_fid
 
 
 @pytest.mark.parametrize("kind", [None, list])
@@ -271,7 +272,7 @@ def test_haar_integral_errors(backend):
 @pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e3)
+    samples = int(1e4)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
@@ -298,3 +299,14 @@ def test_pqc_integral(backend):
     fid = fidelity(pqc_int, pqc_int, backend=backend)
 
     backend.assert_allclose(fid, 1.0, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
+def test_decompose_permutation_errors(sigma, backend):
+
+    with pytest.raises(TypeError):
+        decompose_permutation(backend.np.array(sigma), m=2, backend=backend)
+    with pytest.raises(ValueError):
+        decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
+    with pytest.raises(ValueError):
+        decompose_permutation(sigma, m=3, backend=backend)

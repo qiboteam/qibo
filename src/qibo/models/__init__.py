@@ -8,6 +8,7 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    permutation_synthesis,
     phase_encoder,
     sparse_encoder,
     unary_encoder,

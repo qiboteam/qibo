@@ -819,6 +819,8 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 circuit.set_parameters(params)
         """
+        # reset the final state
+        self._final_state = None
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
@@ -1131,8 +1133,16 @@ class Circuit:
 
         return circ
 
-    def to_qasm(self):
+    def to_qasm(self, extended_compatibility: bool = False):
         """Convert circuit to a QASM string.
+
+        Args:
+            extended_compatibility (bool): if ``True``, unrolls more exotic gates in their
+                decomposition by defining them as custom gates, this increases the compatibility
+                with other frameworks, such as qiskit. Defaults to ``False``.
+
+        Returns:
+            (str) the generated QASM.
 
         .. note::
             This method does not support multi-controlled gates
@@ -1142,6 +1152,8 @@ class Circuit:
         code += ["OPENQASM 2.0;"]
         code += ['include "qelib1.inc";']
         code += [f"qreg q[{self.nqubits}];"]
+
+        gate_definitions = []
 
         # Set measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1164,12 +1176,21 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
+            if isinstance(gate.qasm_label, tuple):
+                qasm_label, qasm_definition = gate.qasm_label
+                if qasm_definition not in gate_definitions:
+                    gate_definitions.append(qasm_definition)
+            else:
+                qasm_label = gate.qasm_label
             if isinstance(gate, gates.ParametrizedGate):
                 params = (str(float(x)) for x in gate.parameters)
-                name = f"{gate.qasm_label}({', '.join(params)})"
+                name = f"{qasm_label}({', '.join(params)})"
             else:
-                name = gate.qasm_label
+                name = qasm_label
             code.append(f"{name} {qubits};")
+
+        if extended_compatibility:
+            code = code[:4] + gate_definitions + code[4:]
 
         # Add measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1179,7 +1200,7 @@ class Circuit:
         return "\n".join(code)
 
     @classmethod
-    def from_qasm(cls, qasm_code, accelerators=None, density_matrix=False):
+    def from_qasm(cls, qasm_code, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
@@ -1208,7 +1229,83 @@ class Circuit:
                 circuit_2.add(gates.CNOT(0, 1))
         """
         parser = QASMParser()
-        return parser.to_circuit(qasm_code, accelerators, density_matrix)
+        circuit_kwargs.pop("nqubits", None)
+        return parser.to_circuit(qasm_code, **circuit_kwargs)
+
+    def to_qir(self):
+        """
+        Convert circuit to QIR circuit.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `pyqir` circuits.
+        """
+        try:
+            import qbraid_qir  # pylint: disable=C0415, W0611
+            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+            from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
+        except ModuleNotFoundError as e:  # pragma: no cover
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, please install it with `poetry install --extras qir`"
+            ) from e
+        return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
+
+    def to_cudaq(self):  # pragma: no cover
+        """Convert circuit to CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `cudaq` circuits.
+        """
+        try:
+            from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
+                openqasm3_to_cudaq,
+            )
+            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+                qasm2_to_qasm3,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --extras cudaq`"
+            ) from e
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
+        return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
+
+    @classmethod
+    def from_cudaq(cls, cudaq_circuit_code):  # pragma: no cover
+        """Construct a circuit from CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the `cudaq` circuit into a `qibo.models.circuit.Circuit`.
+
+        Args:
+            cudaq_circuit_code (PyKernel): kernel containing the
+                cudaq circuit code.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit` representing the
+            given circuit.
+        """
+        try:
+            from qbraid.transpiler.conversions.cudaq import (  # pylint: disable=C0415
+                cudaq_to_qasm2,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --extras cudaq`"
+            ) from e
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "'cudaq' is not installed, please install it with `pip install cudaq`."
+            ) from e
+        return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
