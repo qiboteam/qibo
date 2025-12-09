@@ -23,7 +23,7 @@ def test_empty_sphere():
 
 
 def test_state():
-    bs = Bloch()
+    bs = BlochSphere()
     state = np.array([1 / np.sqrt(2), 1 / np.sqrt(2) * 1j], dtype="complex")
     bs.add_state(state)
     bs.render()
