@@ -179,13 +179,14 @@ class Bloch:
             if state[0] == 1 and state[0] == 0:
                 z = 1
                 return x, y, z
-            elif state[0] == 0 and state[0] == 1:
+            
+            if state[0] == 0 and state[0] == 1:
                 z = -1
                 return x, y, z
-            else:
-                return self._paulis_expectation(state)
-        elif state.ndim == 2:
+            
             return self._paulis_expectation(state)
+        
+        return self._paulis_expectation(state)
 
     def _is_density_matrix(self, rho: np.ndarray) -> bool:
         """This function is used only to check whether an input of shape (2,2) is two state vectors or one density matrix."""
