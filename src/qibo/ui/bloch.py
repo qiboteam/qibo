@@ -243,7 +243,7 @@ class BlochSphere:
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
             x, y, z = self._coordinates(vector)
-            
+
             if mode == "vector":
                 self._vectors.append(np.array([x, y, z]))
                 self._color_vectors.append(color)
