@@ -220,14 +220,15 @@ class Bloch:
 
         vectors, modes, colors = self._broadcasting_semantics(vector, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
+            if mode not in ("vector", "point"):
+                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
             if mode == "vector":
                 self._vectors.append(vector)
                 self._color_vectors.append(color)
-            elif mode == "point":
+            else:
                 self._points.append(vector)
                 self._color_points.append(color)
-            else:
-                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
+
 
     def add_state(
         self,
