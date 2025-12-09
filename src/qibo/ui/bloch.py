@@ -158,8 +158,9 @@ class Bloch:
 
     # -----States and Vectors-----
     def _paulis_expectation(self, state):
-        """This function computes the expectation value of Pauli matrices 
-        on the considered state and yields its cartesian coordinates on the Bloch sphere."""
+        """This function computes the expectation value of Pauli matrices
+        on the considered state and yields its cartesian coordinates on the Bloch sphere.
+        """
 
         sigma_X = SymbolicHamiltonian(X(0))
         sigma_Y = SymbolicHamiltonian(Y(0))
@@ -169,7 +170,7 @@ class Bloch:
         y = sigma_Y.expectation(state)
         z = sigma_Z.expectation(state)
         return x, y, z
-    
+
     def _coordinates(self, state):
         """This function determines the coordinates of a qubit in the sphere."""
 
