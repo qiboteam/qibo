@@ -166,9 +166,9 @@ class BlochSphere:
         sigma_Y = SymbolicHamiltonian(Y(0))
         sigma_Z = SymbolicHamiltonian(Z(0))
 
-        x = sigma_X.expectation(state)
-        y = sigma_Y.expectation(state)
-        z = sigma_Z.expectation(state)
+        x = sigma_X.expectation_from_state(state)
+        y = sigma_Y.expectation_from_state(state)
+        z = sigma_Z.expectation_from_state(state)
         return x, y, z
 
     def _coordinates(self, state):
@@ -247,7 +247,7 @@ class BlochSphere:
             if mode == "vector":
                 self._vectors.append(np.array([x, y, z]))
                 self._color_vectors.append(color)
-            else mode == "point":
+            else:
                 self._points.append(np.array([x, y, z]))
                 self._color_points.append(color)
 
