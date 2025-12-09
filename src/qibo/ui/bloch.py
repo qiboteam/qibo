@@ -157,18 +157,21 @@ class Bloch:
             self.ax.text(0, 0, -1.3, r"$|1\rangle$", ha="center")
 
     # -----States and Vectors-----
+    def _paulis_expectation(self, state):
+        """This function computes the expectation value of Pauli matrices 
+        on the considered state and yields its cartesian coordinates on the Bloch sphere."""
+
+        sigma_X = SymbolicHamiltonian(X(0))
+        sigma_Y = SymbolicHamiltonian(Y(0))
+        sigma_Z = SymbolicHamiltonian(Z(0))
+
+        x = sigma_X.expectation(state)
+        y = sigma_Y.expectation(state)
+        z = sigma_Z.expectation(state)
+        return x, y, z
+    
     def _coordinates(self, state):
         """This function determines the coordinates of a qubit in the sphere."""
-
-        def _paulis_expectation(state):
-            sigma_X = hamiltonians.SymbolicHamiltonian(X(0))
-            sigma_Y = hamiltonians.SymbolicHamiltonian(Y(0))
-            sigma_Z = hamiltonians.SymbolicHamiltonian(Z(0))
-
-            x = sigma_X.expectation(state)
-            y = sigma_Y.expectation(state)
-            z = sigma_Z.expectation(state)
-            return x, y, z
 
         x, y, z = 0, 0, 0
         if state.ndim == 1:
@@ -179,9 +182,9 @@ class Bloch:
                 z = -1
                 return x, y, z
             else:
-                return _paulis_expectation(state)
+                return self._paulis_expectation(state)
         elif state.ndim == 2:
-            return _paulis_expectation(state)
+            return self._paulis_expectation(state)
 
     def _is_density_matrix(self, rho: np.ndarray) -> bool:
         """This function is used only to check whether an input of shape (2,2) is two state vectors or one density matrix."""
