@@ -6,6 +6,7 @@ import pytest
 from sympy import S
 
 from qibo import Circuit, gates, symbols
+from qibo.backends import NumpyBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
@@ -285,7 +286,12 @@ def test_gate_tomography_single_gate(backend):
         noise_model=None,
         backend=backend,
     )
+
+    ground_truth_matrix = np.array(
+        [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, -1], [-1, 1, 0, 0]]
+    )
     assert matrix_jk.shape == (4**nqubits, 4**nqubits)
+    backend.assert_allclose(matrix_jk, ground_truth_matrix, atol=1e-1)
 
 
 @pytest.mark.parametrize(
@@ -311,6 +317,14 @@ def test_gate_tomography_apply_ancillas(backend, nqubits, gate, ancilla, raise_e
                 ancilla=ancilla,
             )
     else:
+        ground_truth_matrix = _gate_tomography(
+            nqubits=nqubits,
+            gate=gate,
+            nshots=int(5e4),
+            noise_model=None,
+            backend=NumpyBackend(),
+            ancilla=ancilla,
+        )
         matrix_jk = _gate_tomography(
             nqubits=nqubits,
             gate=gate,
@@ -320,6 +334,7 @@ def test_gate_tomography_apply_ancillas(backend, nqubits, gate, ancilla, raise_e
             ancilla=ancilla,
         )
         assert matrix_jk.shape == (4**nqubits, 4**nqubits)
+        backend.assert_allclose(matrix_jk, ground_truth_matrix, atol=1e-1)
 
 
 def test_gate_tomography_ancilla_error(backend):
@@ -414,12 +429,11 @@ def test_GST(backend, target_gates, pauli_liouville):
 def test_GST_2qb_basis_op_diff_registers(backend):
     gate_set = [gates.T, gates.TDG, gates.S]
     with pytest.raises(RuntimeError):
-        if len(gate_set) > 2:
-            matrices = GST(
-                gate_set=gate_set,
-                two_qubit_basis_op_diff_registers=True,
-                include_empty=False,
-            )
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
 
 
 @pytest.mark.parametrize(
@@ -430,7 +444,7 @@ def test_GST_2qb_basis_op_diff_registers(backend):
         [gates.CNOT, gates.CNOT],
     ],
 )
-def test_GST_2qb_basis_op_diff_registers_wrong_gates(backend, gate_set):
+def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):
     with pytest.raises(RuntimeError):
         matrices = GST(
             gate_set=gate_set,
@@ -447,8 +461,11 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
     ]
 
     ground_truth_matrices = [
-        np.kron(gates.T(0).matrix(), gates.TDG(0).matrix()),
-        np.kron(gates.RX(0, np.pi / 4).matrix(), gates.RY(0, np.pi / 3).matrix()),
+        np.kron(gates.T(0).matrix(backend), gates.TDG(0).matrix(backend)),
+        np.kron(
+            gates.RX(0, np.pi / 4).matrix(backend),
+            gates.RY(0, np.pi / 3).matrix(backend),
+        ),
         np.eye(4),
     ]
 

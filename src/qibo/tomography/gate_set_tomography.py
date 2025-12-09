@@ -192,21 +192,21 @@ def _get_nqubits_and_angles(
         params (list[float]): Stores all the parameters of the gate in a list.
     """
 
-    nqubits = None
-    original_gate = gate
+    # nqubits = None
+    # original_gate = gate
     if isinstance(gate, tuple):
         angles = ANGLES
         gate, params = gate
         if not (isinstance(params, list) or isinstance(params, tuple)):
-            if isinstance(params, np.ndarray):
-                params = [params]
+            # if isinstance(params, np.ndarray):
+            params = [params]
     else:
         angles = None
         params = None
     init_args = signature(gate).parameters
     nqubits = _extract_nqubits(gate, params)
 
-    if angles:
+    if angles is not None:
         angle_names = [arg for arg in init_args if arg in angles]
         angle_values = dict(zip(angle_names, params))
     else:
@@ -496,20 +496,17 @@ def GST(
     # Then, if gate_set has two single-qubit gates, extract its :class:`qibo.gates.Gate` and
     # append to gate for _gate_tomography.
     if two_qubit_basis_op_diff_registers:
-        if len(gate_set) == 2:
-            gate_set_nqubits = []
-            for gate in gate_set:
-                params = None
-                if isinstance(gate, tuple):
-                    gate, params = gate
-                nqubits = _extract_nqubits(gate)
-                gate_set_nqubits.append(nqubits)
-            if 2 in gate_set_nqubits:
-                raise_error(RuntimeError, f"Requires two single-qubit gates")
-        else:
+        if len(gate_set) != 2:
             raise_error(RuntimeError, f"Requires two single-qubit gates")
-        # if two_qubit_basis_op_diff_registers and len(gate_set) != 2:
-        #     raise_error(RuntimeError, f"Requires two single-qubit gates")
+        gate_set_nqubits = []
+        for gate in gate_set:
+            params = None
+            if isinstance(gate, tuple):
+                gate, params = gate
+            nqubits = _extract_nqubits(gate)
+            gate_set_nqubits.append(nqubits)
+        if 2 in gate_set_nqubits:
+            raise_error(RuntimeError, f"Requires two single-qubit gates")
 
         gate = []
         for idx, _gate in enumerate(gate_set):
