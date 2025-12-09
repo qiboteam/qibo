@@ -239,15 +239,17 @@ class BlochSphere:
 
         vectors, modes, colors = self._broadcasting_semantics(state, mode, color)
         for vector, color, mode in zip(vectors, colors, modes):
+            if mode not in ("vector", "point"):
+                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
+
             x, y, z = self._coordinates(vector)
+            
             if mode == "vector":
                 self._vectors.append(np.array([x, y, z]))
                 self._color_vectors.append(color)
-            elif mode == "point":
+            else mode == "point":
                 self._points.append(np.array([x, y, z]))
                 self._color_points.append(color)
-            else:
-                raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
     # -----Clear and produce the sphere-----
     def clear(self):
