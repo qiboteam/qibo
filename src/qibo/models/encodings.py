@@ -1714,7 +1714,7 @@ def _monotonic_hw_encoder_real(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.atan2(backend.vector_norm(data[i:], 2), data[i - 1])
+        theta = backend.arctan2(backend.vector_norm(data[i:], 2), data[i - 1])
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1743,7 +1743,7 @@ def _monotonic_hw_encoder_real(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.atan2(data[-1], data[-2])
+    theta = backend.arctan2(data[-1], data[-2])
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
@@ -1818,7 +1818,7 @@ def _monotonic_hw_encoder_complex(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.atan2(backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1]))
+        theta = backend.arctan2(backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1]))
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1848,7 +1848,7 @@ def _monotonic_hw_encoder_complex(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.atan2(abs(data[-1]), abs(data[-2]))
+    theta = backend.arctan2(abs(data[-1]), abs(data[-2]))
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])

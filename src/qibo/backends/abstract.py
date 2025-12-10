@@ -209,6 +209,10 @@ class Backend:
         return self.engine.int8
 
     @property
+    def int16(self) -> DTypeLike:
+        return self.engine.int16
+
+    @property
     def int32(self) -> DTypeLike:
         return self.engine.int32
 
