@@ -1,6 +1,4 @@
-"""
-Testing Variational Quantum Circuits.
-"""
+"""Testing Variational Quantum Circuits."""
 
 import pathlib
 
