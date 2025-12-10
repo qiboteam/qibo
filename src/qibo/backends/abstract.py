@@ -1,6 +1,7 @@
 """Module defining the Backend class."""
 
 import math
+from abc import ABC, abstractmethod
 from collections import Counter
 from functools import reduce
 from importlib.util import find_spec, module_from_spec
@@ -16,7 +17,7 @@ from qibo.gates.abstract import Gate
 from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
-class Backend:
+class Backend(ABC):  # pylint: disable=R0904
     def __init__(self):
         super().__init__()
 
@@ -88,6 +89,7 @@ class Backend:
         # needs to be None and not NotImplementedError because of the transpiler
         return None
 
+    @abstractmethod
     def cast(
         self,
         array: ArrayLike,
@@ -107,10 +109,12 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
+    @abstractmethod
     def is_sparse(self, array: ArrayLike) -> bool:  # pragma: no cover
         """Determine if a given array is a sparse tensor."""
         raise_error(NotImplementedError)
 
+    @abstractmethod
     def set_device(self, device: str) -> None:  # pragma: no cover
         """Set simulation device. Works in-place.
 
@@ -172,6 +176,7 @@ class Backend:
         """Set the seed of the random number generator. Works in-place."""
         self.engine.random.seed(seed)
 
+    @abstractmethod
     def set_threads(self, nthreads: int) -> None:  # pragma: no cover
         """Set number of threads for CPU backend simulations that accept it. Works in-place.
 
@@ -180,6 +185,7 @@ class Backend:
         """
         raise_error(NotImplementedError)
 
+    @abstractmethod
     def to_numpy(self, array: ArrayLike) -> ArrayLike:  # pragma: no cover
         """Cast a given array to numpy."""
         raise_error(NotImplementedError)
@@ -268,6 +274,7 @@ class Backend:
     def block(self, arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         return self.engine.block(arrays)
 
+    @abstractmethod
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -289,6 +296,7 @@ class Backend:
     def count_nonzero(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.count_nonzero(array, **kwargs)
 
+    @abstractmethod
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -315,6 +323,7 @@ class Backend:
     def eigh(self, array: ArrayLike, **kwargs) -> Tuple[ArrayLike, ArrayLike]:
         return self.engine.linalg.eigh(array, **kwargs)
 
+    @abstractmethod
     def eigsh(
         self, array: ArrayLike, **kwargs
     ) -> Tuple[ArrayLike, ArrayLike]:  # pragma: no cover
@@ -342,6 +351,7 @@ class Backend:
     ) -> ArrayLike:
         return self.engine.expand_dims(array, axis)
 
+    @abstractmethod
     def expm(self, array: ArrayLike) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -383,6 +393,7 @@ class Backend:
     def log(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.log(array, **kwargs)
 
+    @abstractmethod
     def logm(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -711,6 +722,7 @@ class Backend:
 
         return self.eig(matrix)  # pragma: no cover
 
+    @abstractmethod
     def jacobian(
         self,
         circuit: "Circuit",  # type: ignore
@@ -774,6 +786,7 @@ class Backend:
 
         return (eigenvectors * log_matrix) @ ud
 
+    @abstractmethod
     def matrix_power(
         self,
         matrix: ArrayLike,
@@ -1371,6 +1384,7 @@ class Backend:
 
         return final_result
 
+    @abstractmethod
     def execute_distributed_circuit(
         self,
         circuit: "Circuit",  # type: ignore
@@ -2077,6 +2091,7 @@ class Backend:
 
         return circuit._final_state
 
+    @abstractmethod
     def _identity_sparse(
         self, dims: int, dtype: Optional[DTypeLike] = None, **kwargs
     ) -> ArrayLike:  # pragma: no cover
