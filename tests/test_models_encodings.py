@@ -141,7 +141,7 @@ def test_binary_encoder(
         target = backend.real(target)
         target /= backend.vector_norm(target)
 
-    codewords = backend.np.arange(dims) if custom_codewords else None
+    codewords = backend.arange(dims) if custom_codewords else None
 
     circuit = binary_encoder(
         target,
@@ -155,11 +155,11 @@ def test_binary_encoder(
     if parametrization == "hyperspherical" and not_power_of_two:
         # need to insert zeros at the end of target to get
         # matching shapes
-        trail_zeros = backend.np.zeros(
-            2 ** int(backend.np.ceil(backend.np.log2(dims))) - dims, dtype=target.dtype
+        trail_zeros = backend.zeros(
+            2 ** int(backend.ceil(backend.log2(dims))) - dims, dtype=target.dtype
         )
         trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
-        target = backend.np.concatenate((target, trail_zeros))
+        target = backend.concatenate((target, trail_zeros))
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
@@ -346,7 +346,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
 
 def test_sparse_encoder_helpers_errors(backend):
     with pytest.raises(ValueError):
-        _get_int_type(backend.np.iinfo(backend.np.int64).max + 1, backend=backend)
+        _get_int_type(backend.engine.iinfo(backend.int64).max + 1, backend=backend)
 
 
 @pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])

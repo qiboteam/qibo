@@ -284,7 +284,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     dim = len(data_sorted)
-    sigma = backend.np.arange(2**nqubits)
+    sigma = backend.arange(2**nqubits)
 
     flag = backend.zeros(dim, dtype=backend.int8)
     indexes = list(
@@ -292,7 +292,7 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     )
     flag[indexes] = 1
 
-    data_binary = backend.np.zeros(dim, dtype=data_sorted.dtype)
+    data_binary = backend.zeros(dim, dtype=data_sorted.dtype)
     for bi_int, xi in zip(bitstrings_sorted, data_sorted):
         bi_int = int(bi_int)
         if bi_int >= dim:
@@ -538,7 +538,7 @@ def binary_encoder(
         raise_error(ValueError, "`data` size must be a power of 2.")
 
     if nqubits is None:
-        nqubits = int(backend.np.ceil(backend.np.log2(dims)))
+        nqubits = int(backend.ceil(backend.log2(dims)))
 
     complex_data = bool(
         "complex" in str(data.dtype)
@@ -1714,7 +1714,7 @@ def _monotonic_hw_encoder_real(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.np.atan2(backend.np.linalg.norm(data[i:], 2), data[i - 1])
+        theta = backend.atan2(backend.vector_norm(data[i:], 2), data[i - 1])
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1743,7 +1743,7 @@ def _monotonic_hw_encoder_real(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.np.atan2(data[-1], data[-2])
+    theta = backend.atan2(data[-1], data[-2])
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
@@ -1806,7 +1806,7 @@ def _monotonic_hw_encoder_complex(
     def phis(x, k):
         cumsum = 0.0
         for i in range(k + 1):
-            val = (-backend.np.angle(x[i]) + cumsum) % (2.0 * np.pi)
+            val = (-backend.angle(x[i]) + cumsum) % (2.0 * np.pi)
             cumsum += val
         return val
 
@@ -1818,8 +1818,8 @@ def _monotonic_hw_encoder_complex(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.np.atan2(
-            backend.np.linalg.norm(abs(data[i:]), 2), abs(data[i - 1])
+        theta = backend.atan2(
+            backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1])
         )
 
         if keep_antictrls:
@@ -1850,17 +1850,17 @@ def _monotonic_hw_encoder_complex(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.np.atan2(abs(data[-1]), abs(data[-2]))
+    theta = backend.atan2(abs(data[-1]), abs(data[-2]))
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
 
     if len(in_bits) + len(out_bits) == 1:
-        phil = (0.5 * (backend.np.angle(data[-1]) - backend.np.angle(data[-2]))) % (
+        phil = (0.5 * (backend.angle(data[-1]) - backend.angle(data[-2]))) % (
             2.0 * np.pi
         )
         lambdal = (
-            0.5 * (-backend.np.angle(data[-1]) + backend.np.angle(data[-2]))
+            0.5 * (-backend.angle(data[-1]) + backend.angle(data[-2]))
             + phis(data, dims - 2)
         ) % (2.0 * np.pi)
 
@@ -1930,19 +1930,19 @@ def _binary_codewords(dims: int, backend=None):
 
     cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
 
-    cw = backend.np.array(
+    cw = backend.cast(
         [int(bin_cw, 2) for bin_cw in cw_binary],
         dtype=_get_int_type(dims, backend=backend),
     )
 
     if (dims & (dims - 1)) != 0:
-        n = int(backend.np.floor(backend.np.log2(dims)))
+        n = int(backend.floor(backend.log2(dims)))
         dres = 2**n
         # split the list to fix the order
         cwres, cw = cw[dres:], cw[:dres]
 
         # keep weights for O(1) lookups
-        weights = backend.np.array(
+        weights = backend.cast(
             [hamming_weight(int(w)) for w in cw],
             dtype=_get_int_type(n, backend=backend),
         )
@@ -1961,14 +1961,14 @@ def _binary_codewords(dims: int, backend=None):
                         hamming_distance(int(word), int(cw[i])) <= 2
                         and hamming_distance(int(word), int(cw[i + 1])) <= 2
                     ):
-                        cw = backend.np.insert(cw, i + 1, word, axis=0)
-                        weights = backend.np.insert(weights, i + 1, hw)
+                        cw = backend.engine.insert(cw, i + 1, word, axis=0)
+                        weights = backend.engine.insert(weights, i + 1, hw)
                         inserted = True
                         break
             if not inserted:
                 # append if no suitable interior gap is found
-                cw = backend.np.hstack((cw, word))
-                weights = backend.np.hstack((weights, hw))
+                cw = backend.engine.hstack((cw, word))
+                weights = backend.engine.hstack((weights, hw))
 
     return cw
 
@@ -1990,7 +1990,7 @@ def _binary_codewords_ehrlich(dims: int, backend=None):
 
     # General case
     n = int(
-        max(1, backend.np.ceil(backend.np.log2(dims)))
+        max(1, backend.ceil(backend.log2(dims)))
     )  # width so that 2^(n-1) < b < 2^n
     # Bits of b in most-significant-bit → least-significant-bit order
     bits = [(dims >> i) & 1 for i in range(n - 1, -1, -1)]
@@ -2061,7 +2061,7 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
 
         # get Ehrlich sequence
         k_seq = _ehrlich_algorithm(
-            backend.np.array([int(b) for b in initial[::-1]]), False
+            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int64), False
         )
 
         # generate in the correct order
@@ -2081,18 +2081,18 @@ def _get_int_type(x: int, backend=None):
 
     backend = _check_backend(backend)
     int_types = [
-        backend.np.int8,
-        backend.np.int16,
-        backend.np.int32,
-        backend.np.int64,
+        backend.int8,
+        backend.int16,
+        backend.int32,
+        backend.int64,
     ]
     for dt in int_types:
-        if abs(x) <= backend.np.iinfo(dt).max:
-            return backend.np.dtype(dt)
+        if abs(x) <= backend.engine.iinfo(dt).max:
+            return backend.engine.dtype(dt)
 
     raise_error(
         ValueError,
-        f"``|x|`` must not be greater than {backend.np.iinfo(backend.np.int64).max}.",
+        f"``|x|`` must not be greater than {backend.engine.iinfo(backend.int64).max}.",
     )
 
 
