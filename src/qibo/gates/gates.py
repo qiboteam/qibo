@@ -2802,11 +2802,9 @@ class GeneralizedRBS(ParametrizedGate):
         qubits_in = tuple(qubit_map.get(q) for q in self.init_args[0])
         qubits_out = tuple(qubit_map.get(q) for q in self.init_args[1])
         gate = self.__class__(qubits_in, qubits_out, **self.init_kwargs)
-
         if self.is_controlled_by:
             controls = (qubit_map.get(q) for q in self.control_qubits)
             gate = gate.controlled_by(*controls)
-
         return gate
 
     def _base_decompose(self, *free, use_toffolis=True, **kwargs) -> List[Gate]:
