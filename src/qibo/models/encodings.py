@@ -1818,9 +1818,7 @@ def _monotonic_hw_encoder_complex(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.atan2(
-            backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1])
-        )
+        theta = backend.atan2(backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1]))
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1989,9 +1987,7 @@ def _binary_codewords_ehrlich(dims: int, backend=None):
         return
 
     # General case
-    n = int(
-        max(1, backend.ceil(backend.log2(dims)))
-    )  # width so that 2^(n-1) < b < 2^n
+    n = int(max(1, backend.ceil(backend.log2(dims))))  # width so that 2^(n-1) < b < 2^n
     # Bits of b in most-significant-bit → least-significant-bit order
     bits = [(dims >> i) & 1 for i in range(n - 1, -1, -1)]
     prefix = ""
