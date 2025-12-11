@@ -192,13 +192,10 @@ def _get_nqubits_and_angles(
         params (list[float]): Stores all the parameters of the gate in a list.
     """
 
-    # nqubits = None
-    # original_gate = gate
     if isinstance(gate, tuple):
         angles = ANGLES
         gate, params = gate
         if not (isinstance(params, list) or isinstance(params, tuple)):
-            # if isinstance(params, np.ndarray):
             params = [params]
     else:
         angles = None
@@ -498,19 +495,11 @@ def GST(
     if two_qubit_basis_op_diff_registers:
         if len(gate_set) != 2:
             raise_error(RuntimeError, f"Requires two single-qubit gates")
-        gate_set_nqubits = []
-        for gate in gate_set:
-            params = None
-            if isinstance(gate, tuple):
-                gate, params = gate
-            nqubits = _extract_nqubits(gate)
-            gate_set_nqubits.append(nqubits)
-        if 2 in gate_set_nqubits:
-            raise_error(RuntimeError, f"Requires two single-qubit gates")
-
         gate = []
         for idx, _gate in enumerate(gate_set):
-            _gate, _ = _extract_gate(_gate, idx)
+            _gate, nqubits = _extract_gate(_gate, idx)
+            if nqubits != 1:
+                raise_error(RuntimeError, f"Requires two single-qubit gates")
             gate.append(_gate)
 
         matrices.append(
