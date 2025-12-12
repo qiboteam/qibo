@@ -1207,7 +1207,7 @@ class Circuit:
             qasm_code (str): String with the QASM script.
 
         Returns:
-            A :class:`qibo.models.circuit.Circuit` that contains the gates
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
 
         Example:
@@ -1231,6 +1231,22 @@ class Circuit:
         parser = QASMParser()
         circuit_kwargs.pop("nqubits", None)
         return parser.to_circuit(qasm_code, **circuit_kwargs)
+
+    @classmethod
+    def from_qasm_file(cls, qasm_file, **circuit_kwargs):
+        """Constructs a circuit from QASM code.
+
+        Args:
+            qasm_file (str): Path to file containing the string with the QASM script.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
+            specified by the given QASM script.
+        """
+        with open(qasm_file, "r") as file:
+            string = file.read()
+
+        return cls.from_qasm(string, **circuit_kwargs)
 
     def to_qir(self):
         """
