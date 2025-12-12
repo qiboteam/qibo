@@ -13,20 +13,22 @@ def ansatz(p=0):
     Returns:
       Qibo circuit implementing the variational ansatz.
     """
-    C = Circuit(3, density_matrix=p > 0)
-    for i in range(3):
-        C.add(gates.RZ(i, theta=0))
-        C.add(gates.RY(i, theta=0))
-        C.add(gates.RZ(i, theta=0))
+    circuit = Circuit(3, density_matrix=p > 0)
+    for qubit in range(3):
+        circuit.add(gates.RZ(qubit, theta=0))
+        circuit.add(gates.RY(qubit, theta=0))
+        circuit.add(gates.RZ(qubit, theta=0))
         if p > 0:
-            C.add(
-                gates.PauliNoiseChannel(i, [("X", p / 3), ("Y", p / 3), ("Z", p / 3)])
+            circuit.add(
+                gates.PauliNoiseChannel(
+                    qubit, [("X", p / 3), ("Y", p / 3), ("Z", p / 3)]
+                )
             )
-    for i in range(3):
+    for qubit in range(3):
         if p > 0:
-            C.add(gates.PauliNoiseChannel(i, [("X", 10 * p)]))
-        C.add(gates.M(i))
-    return C
+            circuit.add(gates.PauliNoiseChannel(qubit, [("X", 10 * p)]))
+        circuit.add(gates.M(qubit))
+    return circuit
 
 
 def cost_function(theta, state, circuit, shots: int = 1000):

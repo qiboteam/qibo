@@ -1,6 +1,8 @@
 from abc import abstractmethod
 from typing import Dict, Optional, Tuple
 
+from numpy.typing import ArrayLike
+
 from qibo.config import raise_error
 
 
@@ -84,27 +86,25 @@ class AbstractHamiltonian:
                 If the circuit has already been executed, this will just make use of the cached
                 result, otherwise it will execute the circuit.
             nshots (int, optional): number of shots to calculate the expectation value, if ``None``
-                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
+                it will try to compute the exact expectation value (if possible).
+                Defaults to ``None``.
 
         Returns:
             float: The expectation value.
         """
         raise_error(NotImplementedError)
 
-    def expectation_from_state(self, state: "ndarray", normalize: bool = False):
+    def expectation_from_state(self, state: ArrayLike, normalize: bool = False):
         """Compute the expectation value starting from a quantum state.
 
         Args:
             state (ndarray): the quantum state.
             normalize (bool): whether to normalize the input state. Defaults to ``False``.
+
         Returns:
-            (float) the expectation value.
+            float: The expectation value.
         """
-        if len(state.shape) == 2:
-            return self.backend.calculate_expectation_density_matrix(  # pylint: disable=no-member
-                self.matrix, state, normalize
-            )
-        return self.backend.calculate_expectation_state(  # pylint: disable=no-member
+        return self.backend.expectation_value(  # pylint: disable=no-member
             self.matrix, state, normalize
         )
 

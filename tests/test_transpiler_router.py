@@ -108,14 +108,14 @@ def test_bell_state_3q():
 
 
 @pytest.mark.parametrize("ngates", [5, 25])
-def test_random_circuits_5q(ngates, star_connectivity):
+def test_random_circuits_5q(backend, ngates, star_connectivity):
     connectivity = star_connectivity()
     placer = Random(connectivity)
     transpiler = ShortestPaths(connectivity)
 
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
     original_circuit = circuit.copy()
-    placer(circuit)
+    placer(circuit, backend=backend)
     transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
@@ -130,14 +130,14 @@ def test_random_circuits_5q(ngates, star_connectivity):
 
 
 @pytest.mark.parametrize("ngates", [5, 25])
-def test_random_circuits_5q_grid(ngates, grid_connectivity):
+def test_random_circuits_5q_grid(backend, ngates, grid_connectivity):
     connectivity = grid_connectivity()
     placer = Random(connectivity)
     transpiler = ShortestPaths(connectivity)
 
     circuit = generate_random_circuit(nqubits=5, ngates=ngates)
     original_circuit = circuit.copy()
-    placer(circuit)
+    placer(circuit, backend=backend)
     transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
@@ -153,14 +153,14 @@ def test_random_circuits_5q_grid(ngates, grid_connectivity):
 
 @pytest.mark.parametrize("nqubits", [11, 12, 13, 14, 15])
 @pytest.mark.parametrize("ngates", [30, 50])
-def test_random_circuits_15q_50g(nqubits, ngates):
+def test_random_circuits_15q_50g(backend, nqubits, ngates):
     connectivity = line_connectivity(nqubits, None)
     placer = Random(connectivity=connectivity)
     transpiler = Sabre(connectivity=connectivity)
     circuit = generate_random_circuit(nqubits=nqubits, ngates=ngates)
     original_circuit = circuit.copy()
 
-    placer(circuit)
+    placer(circuit, backend=backend)
     transpiled_circuit, final_layout = transpiler(circuit)
 
     assert transpiler.added_swaps >= 0
@@ -411,7 +411,7 @@ def test_sabre_simple(seed, star_connectivity):
 @pytest.mark.parametrize("n_gates", [10, 40])
 @pytest.mark.parametrize("look", [0, 5])
 @pytest.mark.parametrize("decay", [0.5, 1.0])
-def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
+def test_sabre_random_circuits(backend, decay, look, n_gates, star_connectivity):
     connectivity = star_connectivity()
     circuit = generate_random_circuit(nqubits=5, ngates=n_gates)
     measurement = gates.M(*range(5))
@@ -420,7 +420,7 @@ def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
     placer = Random(connectivity)
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
-    placer(circuit)
+    placer(circuit, backend=backend)
     transpiled_circuit, final_layout = router(circuit)
 
     assert router.added_swaps >= 0
@@ -438,7 +438,7 @@ def test_sabre_random_circuits(n_gates, look, decay, star_connectivity):
 @pytest.mark.parametrize("n_gates", [10, 40])
 @pytest.mark.parametrize("look", [0, 5])
 @pytest.mark.parametrize("decay", [0.5, 1.0])
-def test_sabre_random_circuits_grid(n_gates, look, decay, grid_connectivity):
+def test_sabre_random_circuits_grid(backend, decay, look, n_gates, grid_connectivity):
     connectivity = grid_connectivity()
     circuit = generate_random_circuit(nqubits=5, ngates=n_gates)
     measurement = gates.M(*range(5))
@@ -447,7 +447,7 @@ def test_sabre_random_circuits_grid(n_gates, look, decay, grid_connectivity):
     placer = Random(connectivity)
     router = Sabre(connectivity, lookahead=look, decay_lookahead=decay)
 
-    placer(circuit)
+    placer(circuit, backend=backend)
     transpiled_circuit, final_layout = router(circuit)
 
     assert router.added_swaps >= 0

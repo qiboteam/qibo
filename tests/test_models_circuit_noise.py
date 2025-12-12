@@ -3,25 +3,22 @@
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates
-from qibo.config import PRECISION_TOL
+from qibo import Circuit, gates, matrices
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import (
     random_clifford,
     random_density_matrix,
-    random_statevector,
     random_unitary,
 )
 
 
 def test_pauli_noise_channel(backend):
-    from qibo import matrices
-
-    c = Circuit(2, density_matrix=True)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.5, 0.3]))))
-    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.1, 0.3]))))
-    final_rho = backend.execute_circuit(c)._state
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.5, 0.3]))))
+    circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.1, 0.3]))))
+    final_rho = backend.execute_circuit(circuit)._state
 
     psi = np.ones(4) / 2
     rho = np.outer(psi, psi.conj())
@@ -36,62 +33,68 @@ def test_pauli_noise_channel(backend):
 
 
 def test_noisy_circuit_reexecution(backend):
-    c = Circuit(2, density_matrix=True)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
-    c.add(gates.PauliNoiseChannel(1, [("Z", 0.3)]))
-    final_rho = backend.execute_circuit(c).state()
-    final_rho2 = backend.execute_circuit(c).state()
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
+    circuit.add(gates.PauliNoiseChannel(1, [("Z", 0.3)]))
+    final_rho = backend.execute_circuit(circuit).state()
+    final_rho2 = backend.execute_circuit(circuit).state()
     backend.assert_allclose(final_rho, final_rho2)
 
 
 def test_circuit_with_pauli_noise_gates():
-    c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-    noisy_c = c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
-    assert noisy_c.depth == 4
-    assert noisy_c.ngates == 7
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    noisy_circuit = circuit.with_pauli_noise(
+        list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3]))
+    )
+    assert noisy_circuit.depth == 4
+    assert noisy_circuit.ngates == 7
     for i in [1, 3, 5, 6]:
-        assert noisy_c.queue[i].__class__.__name__ == "PauliNoiseChannel"
+        assert noisy_circuit.queue[i].__class__.__name__ == "PauliNoiseChannel"
 
 
 def test_circuit_with_pauli_noise_execution(backend):
-    c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1)])
-    noisy_c = c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
-    final_state = backend.execute_circuit(noisy_c).state()
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1)])
+    noisy_circuit = circuit.with_pauli_noise(
+        list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3]))
+    )
+    final_state = backend.execute_circuit(noisy_circuit).state()
 
-    target_c = Circuit(2, density_matrix=True)
-    target_c.add(gates.H(0))
-    target_c.add(
+    target_circuit = Circuit(2, density_matrix=True)
+    target_circuit.add(gates.H(0))
+    target_circuit.add(
         gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     )
-    target_c.add(gates.H(1))
-    target_c.add(
+    target_circuit.add(gates.H(1))
+    target_circuit.add(
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     )
-    target_state = backend.execute_circuit(target_c).state()
+    target_state = backend.execute_circuit(target_circuit).state()
     backend.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_pauli_noise_measurements(backend):
-    c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.M(0))
-    noisy_c = c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
-    final_state = backend.execute_circuit(noisy_c).state()
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1)])
+    circuit.add(gates.M(0))
+    noisy_circuit = circuit.with_pauli_noise(
+        list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1]))
+    )
+    final_state = backend.execute_circuit(noisy_circuit).state()
 
-    target_c = Circuit(2, density_matrix=True)
-    target_c.add(gates.H(0))
-    target_c.add(
+    target_circuit = Circuit(2, density_matrix=True)
+    target_circuit.add(gates.H(0))
+    target_circuit.add(
         gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
     )
-    target_c.add(gates.H(1))
-    target_c.add(
+    target_circuit.add(gates.H(1))
+    target_circuit.add(
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
     )
-    target_state = backend.execute_circuit(target_c).state()
+    target_state = backend.execute_circuit(target_circuit).state()
     backend.assert_allclose(final_state, target_state)
 
 
@@ -102,37 +105,39 @@ def test_circuit_with_pauli_noise_noise_map(backend):
         2: list(zip(["X", "Y", "Z"], [0.0, 0.0, 0.0])),
     }
 
-    c = Circuit(3, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.X(2)])
-    c.add(gates.M(2))
-    noisy_c = c.with_pauli_noise(noise_map)
-    final_state = backend.execute_circuit(noisy_c).state()
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1), gates.X(2)])
+    circuit.add(gates.M(2))
+    noisy_circuit = circuit.with_pauli_noise(noise_map)
+    final_state = backend.execute_circuit(noisy_circuit).state()
 
-    target_c = Circuit(3, density_matrix=True)
-    target_c.add(gates.H(0))
-    target_c.add(
+    target_circuit = Circuit(3, density_matrix=True)
+    target_circuit.add(gates.H(0))
+    target_circuit.add(
         gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     )
-    target_c.add(gates.H(1))
-    target_c.add(
+    target_circuit.add(gates.H(1))
+    target_circuit.add(
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.0])))
     )
-    target_c.add(gates.X(2))
-    target_state = backend.execute_circuit(target_c).state()
+    target_circuit.add(gates.X(2))
+    target_state = backend.execute_circuit(target_circuit).state()
     backend.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_pauli_noise_errors():
-    c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, [("X", 0.2)])])
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, [("X", 0.2)])])
     with pytest.raises(ValueError):
-        noisy_c = c.with_pauli_noise(list(zip(["X", "Y"], [0.2, 0.3])))
-    c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1)])
+        noisy_circuit = circuit.with_pauli_noise(list(zip(["X", "Y"], [0.2, 0.3])))
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
-        noisy_c = c.with_pauli_noise({0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))})
+        noisy_circuit = circuit.with_pauli_noise(
+            {0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))}
+        )
     with pytest.raises(TypeError):
-        noisy_c = c.with_pauli_noise({0, 1})
+        noisy_circuit = circuit.with_pauli_noise({0, 1})
 
 
 def test_density_matrix_circuit_measurement(backend):
@@ -143,12 +148,12 @@ def test_density_matrix_circuit_measurement(backend):
     state[0] = 1
     init_rho = np.outer(state, state.conj())
 
-    c = Circuit(4, density_matrix=True)
-    c.add(gates.X(1))
-    c.add(gates.X(3))
-    c.add(gates.M(0, 1, register_name="A"))
-    c.add(gates.M(3, 2, register_name="B"))
-    result = backend.execute_circuit(c, init_rho, nshots=100)
+    circuit = Circuit(4, density_matrix=True)
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(3))
+    circuit.add(gates.M(0, 1, register_name="A"))
+    circuit.add(gates.M(3, 2, register_name="B"))
+    result = backend.execute_circuit(circuit, init_rho, nshots=100)
 
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
@@ -219,7 +224,7 @@ def test_probabilities_repeated_execution(backend, nqubits):
     qubits_list = [(q,) for q in range(nqubits)]
     qubits_list += [tuple(q for q in range(nqubits))]
 
-    circuit = random_clifford(nqubits, return_circuit=True, backend=backend)
+    circuit = random_clifford(nqubits, return_circuit=True, backend=NumpyBackend())
     circuit.add(gates.UnitaryChannel(qubits_list, list(zip(probabilities, unitaries))))
     circuit.add(gates.M(*range(nqubits)))
 

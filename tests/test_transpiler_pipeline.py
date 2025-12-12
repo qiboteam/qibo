@@ -115,7 +115,7 @@ def test_is_satisfied_false_connectivity(star_connectivity):
 @pytest.mark.parametrize("ngates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, ReverseTraversal])
 @pytest.mark.parametrize("router", [ShortestPaths, Sabre])
-def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
+def test_custom_passes(backend, router, placer, ngates, nqubits, star_connectivity):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
     custom_passes = []
@@ -135,7 +135,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
         connectivity=connectivity,
         native_gates=NativeGates.default(),
     )
-    transpiled_circ, final_layout = custom_pipeline(circ)
+    transpiled_circ, final_layout = custom_pipeline(circ, backend=backend)
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
@@ -150,7 +150,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
 @pytest.mark.parametrize("restrict_names", [[1, 2, 3], [0, 2, 4], [4, 2, 3]])
 def test_custom_passes_restrict(
-    ngates, placer, routing, restrict_names, star_connectivity
+    backend, ngates, placer, routing, restrict_names, star_connectivity
 ):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=3, ngates=ngates, names=restrict_names)
@@ -172,7 +172,7 @@ def test_custom_passes_restrict(
         native_gates=NativeGates.default(),
         on_qubits=restrict_names,
     )
-    transpiled_circ, final_layout = custom_pipeline(circ)
+    transpiled_circ, final_layout = custom_pipeline(circ, backend=backend)
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
@@ -191,7 +191,7 @@ def test_custom_passes_wrong_pass():
         custom_pipeline(circ)
 
 
-def test_int_qubit_names(star_connectivity):
+def test_int_qubit_names(backend, star_connectivity):
     names = [980, 123, 45, 9, 210464]
     connectivity = star_connectivity(names)
     transpiler = Passes(
@@ -207,7 +207,7 @@ def test_int_qubit_names(star_connectivity):
     circuit.add(gates.I(0))
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
-    transpiled_circuit, final_layout = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,

@@ -50,7 +50,7 @@ class Grover:
 
             # Create superoposition circuit. Ex: Full superposition over 5 qubits.
             superposition = Circuit(5)
-            superposition.add([gates.H(i) for i in range(5)])
+            superposition.add([gates.H(qubit) for qubit in range(5)])
 
             # Generate and execute Grover class
             grover = Grover(oracle, superposition_circuit=superposition, number_solutions=1)
@@ -84,7 +84,9 @@ class Grover:
                     "qubits is not specified.",
                 )
             self.superposition = Circuit(superposition_qubits)
-            self.superposition.add([gates.H(i) for i in range(superposition_qubits)])
+            self.superposition.add(
+                [gates.H(qubit) for qubit in range(superposition_qubits)]
+            )
 
         if superposition_qubits:
             self.sup_qubits = superposition_qubits
@@ -141,9 +143,9 @@ class Grover:
                     *range(self.initial_state_circuit.nqubits)
                 )
             )
-        circuit.add([gates.X(i) for i in range(self.sup_qubits)])
+        circuit.add([gates.X(qubit) for qubit in range(self.sup_qubits)])
         circuit.add(gates.X(nqubits - 1).controlled_by(*range(self.sup_qubits)))
-        circuit.add([gates.X(i) for i in range(self.sup_qubits)])
+        circuit.add([gates.X(qubit) for qubit in range(self.sup_qubits)])
         if self.initial_state_circuit:
             circuit.add(
                 self.initial_state_circuit.on_qubits(
@@ -251,13 +253,13 @@ class Grover:
                 most_common = result.most_common(self.num_sol)
             self.solution = []
             self.iterations = it
-            for i in most_common:
+            for elem in most_common:
                 if logs:
-                    log.info(i[0])
-                self.solution.append(i[0])
+                    log.info(elem[0])
+                self.solution.append(elem[0])
                 if logs:
                     if self.check:
-                        if self.check(i[0], *self.check_args):
+                        if self.check(elem[0], *self.check_args):
                             log.info("Solution checked and successful.")
                         else:
                             log.info(

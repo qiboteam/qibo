@@ -9,7 +9,6 @@ from typing import List, Sequence, Tuple
 import sympy
 
 from qibo import config
-from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -553,6 +552,8 @@ class Gate:
         Returns:
             ndarray: Matrix representation of gate.
         """
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
         backend = _check_backend(backend)
 
         return backend.matrix(self)
@@ -584,11 +585,8 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    def apply(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits: int):
         return backend.apply_gate(self, state, nqubits)
-
-    def apply_density_matrix(self, backend, state, nqubits):
-        return backend.apply_gate_density_matrix(self, state, nqubits)
 
     def apply_clifford(self, backend, state, nqubits):
         return backend.apply_gate_clifford(self, state, nqubits)
@@ -680,6 +678,8 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
     def matrix(self, backend=None):
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
         backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)

@@ -1,11 +1,37 @@
+import pathlib
+
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo.models import QAOA, Circuit
+from qibo.models import QAOA
 from qibo.models.tsp import TSP
 
-from .test_models_variational import assert_regression_fixture
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
+
+
+def assert_regression_fixture(backend, array, filename, rtol=1e-5, atol=1e-12):
+    """Check array matches data inside filename.
+
+    Args:
+        array: numpy array/
+        filename: fixture filename
+
+    If filename does not exists, this function
+    creates the missing file otherwise it loads
+    from file and compare.
+    """
+
+    def load(filename):
+        return np.loadtxt(filename)
+
+    filename = REGRESSION_FOLDER / filename
+    try:
+        array_fixture = load(filename)
+    except:  # pragma: no cover
+        # case not tested in GitHub workflows because files exist
+        np.savetxt(filename, array)
+        array_fixture = load(filename)
+    backend.assert_allclose(array, array_fixture, rtol=rtol, atol=atol)
 
 
 def qaoa_function_of_layer(backend, layer):
@@ -36,8 +62,8 @@ def qaoa_function_of_layer(backend, layer):
 
 @pytest.mark.parametrize("nlayers", [2, 4])
 def test_tsp(backend, nlayers):
-    if nlayers == 4 and backend.platform in ("cupy", "cuquantum"):
-        pytest.skip("Failing for cupy and cuquantum.")
+    # if nlayers == 4 and backend.platform in ("cupy", "cuquantum"):
+    #     pytest.skip("Failing for cupy and cuquantum.")
     final_state = backend.to_numpy(qaoa_function_of_layer(backend, nlayers))
     atol = 4e-5 if backend.platform in ("cupy", "cuquantum") else 1e-5
     assert_regression_fixture(

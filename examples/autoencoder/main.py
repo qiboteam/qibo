@@ -50,8 +50,8 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         circuit.set_parameters(
             params
         )  # this will change all thetas to the appropriate values
-        for i in range(len(ising_groundstates)):
-            final_state = circuit(np.copy(ising_groundstates[i]))
+        for ind in range(len(ising_groundstates)):
+            final_state = circuit(np.copy(ising_groundstates[ind]))
             cost += np.real(encoder.expectation(final_state.state()))
 
         if count[0] % 50 == 0:

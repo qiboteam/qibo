@@ -284,15 +284,15 @@ def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     dim = len(data_sorted)
-    sigma = backend.np.arange(2**nqubits)
+    sigma = backend.arange(2**nqubits)
 
-    flag = backend.np.zeros(dim, dtype=backend.np.int8)
+    flag = backend.zeros(dim, dtype=backend.int8)
     indexes = list(
         backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
     )
     flag[indexes] = 1
 
-    data_binary = backend.np.zeros(dim, dtype=data_sorted.dtype)
+    data_binary = backend.zeros(dim, dtype=data_sorted.dtype)
     for bi_int, xi in zip(bitstrings_sorted, data_sorted):
         bi_int = int(bi_int)
         if bi_int >= dim:
@@ -405,16 +405,16 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
     # sort data by HW of the bitstrings
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
     # calculate phases
-    _data_sorted = backend.np.abs(data_sorted) if complex_data else data_sorted
+    _data_sorted = backend.abs(data_sorted) if complex_data else data_sorted
     thetas = _generate_rbs_angles(
         _data_sorted, architecture="diagonal", backend=backend
     )
-    phis = backend.np.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data_sorted[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data_sorted[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data_sorted[k]) + backend.np.sum(phis[:k])
+                -backend.angle(data_sorted[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -431,8 +431,8 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
         difference = b_1 - b_0
 
         ones, new_ones = (
-            list(backend.np.argsort(b_0)[-hw_0:]),
-            list(backend.np.argsort(b_1)[-hw_1:]),
+            list(backend.argsort(b_0)[-hw_0:]),
+            list(backend.argsort(b_1)[-hw_1:]),
         )
         ones, new_ones = {int(elem) for elem in ones}, {int(elem) for elem in new_ones}
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
@@ -447,6 +447,7 @@ def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
             hw_1,
             theta,
             phi,
+            backend=backend,
         )
         circuit.add(gate)
 
@@ -537,7 +538,7 @@ def binary_encoder(
         raise_error(ValueError, "`data` size must be a power of 2.")
 
     if nqubits is None:
-        nqubits = int(backend.np.ceil(backend.np.log2(dims)))
+        nqubits = int(backend.ceil(backend.log2(dims)))
 
     complex_data = bool(
         "complex" in str(data.dtype)
@@ -689,6 +690,7 @@ def unary_encoder_random_gaussian(
         _ProbabilityDistributionGaussianLoader,
     )
 
+    # needs to rely on numpy's rng because of scipy
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
@@ -782,15 +784,13 @@ def hamming_weight_encoder(
     del lex_order, lex_order_sorted
 
     # Calculate all gate phases necessary to encode the amplitudes.
-    _data = backend.np.abs(data) if complex_data else data
+    _data = backend.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-    phis = backend.np.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
-            )
+            phis[k] = _angle_mod_two_pi(-backend.angle(data[k]) + backend.sum(phis[:k]))
 
     last_qubit = nqubits - 1
 
@@ -1016,7 +1016,7 @@ def graph_state(matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=int)
 
-    if not backend.np.allclose(matrix, matrix.T):
+    if not backend.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
             f"``matrix`` is not symmetric, not representing an undirected graph",
@@ -1028,7 +1028,7 @@ def graph_state(matrix, backend=None, **kwargs):
     circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     # since the matrix is symmetric, we only need the upper triangular part
-    rows, columns = backend.np.nonzero(backend.np.triu(matrix))
+    rows, columns = backend.nonzero(backend.triu(matrix))
     circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
@@ -1212,10 +1212,10 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=N
 
     if architecture == "diagonal":
         phases = [
-            backend.np.arctan2(backend.calculate_vector_norm(data[k + 1 :]), data[k])
+            backend.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(backend.np.arctan2(data[-1], data[-2]))
+        phases.append(backend.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
         if nqubits is None:  # pragma: no cover
@@ -1448,7 +1448,8 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
     markers = markers | (set(range(max_index + 1, nqubits)) - last_run)
 
     new_ones = np.argsort(new_bitstring)[-hamming_weight:]
-    controls = list(set(ones) & set(new_ones))
+
+    controls = list({int(elem) for elem in ones} & {int(elem) for elem in new_ones})
     difference = new_bitstring - bitstring
     qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
 
@@ -1492,11 +1493,11 @@ def _ehrlich_algorithm(initial_string, return_indices: bool = True):
 
     markers = _get_markers(initial_string, last_run=False)
     string = initial_string
-    strings = ["".join(string[::-1].astype(str))]
+    strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
         string, markers, c_and_t = _get_next_bistring(string, markers, k)
-        strings.append("".join(string[::-1].astype(str)))
+        strings.append("".join(str(elem) for elem in string[::-1]))
         controls_and_targets.append(c_and_t)
 
     if return_indices:
@@ -1598,10 +1599,10 @@ def _binary_encoder_hopf(
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = backend.np.reshape(base_strings, (-1, 2))
+    base_strings = np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        base_strings = backend.np.reshape(base_strings[:, 0], (-1, 2))
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 
@@ -1713,7 +1714,7 @@ def _monotonic_hw_encoder_real(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.np.atan2(backend.np.linalg.norm(data[i:], 2), data[i - 1])
+        theta = backend.arctan2(backend.vector_norm(data[i:], 2), data[i - 1])
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1742,7 +1743,7 @@ def _monotonic_hw_encoder_real(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.np.atan2(data[-1], data[-2])
+    theta = backend.arctan2(data[-1], data[-2])
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
@@ -1805,7 +1806,7 @@ def _monotonic_hw_encoder_complex(
     def phis(x, k):
         cumsum = 0.0
         for i in range(k + 1):
-            val = (-backend.np.angle(x[i]) + cumsum) % (2.0 * np.pi)
+            val = (-backend.angle(x[i]) + cumsum) % (2.0 * np.pi)
             cumsum += val
         return val
 
@@ -1817,9 +1818,7 @@ def _monotonic_hw_encoder_complex(
 
         in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-        theta = backend.np.atan2(
-            backend.np.linalg.norm(abs(data[i:]), 2), abs(data[i - 1])
-        )
+        theta = backend.arctan2(backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1]))
 
         if keep_antictrls:
             circuit.add([gates.X(ac) for ac in actrls])
@@ -1849,17 +1848,17 @@ def _monotonic_hw_encoder_complex(
 
     in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
 
-    theta = backend.np.atan2(abs(data[-1]), abs(data[-2]))
+    theta = backend.arctan2(abs(data[-1]), abs(data[-2]))
 
     if keep_antictrls:
         circuit.add([gates.X(ac) for ac in actrls])
 
     if len(in_bits) + len(out_bits) == 1:
-        phil = (0.5 * (backend.np.angle(data[-1]) - backend.np.angle(data[-2]))) % (
+        phil = (0.5 * (backend.angle(data[-1]) - backend.angle(data[-2]))) % (
             2.0 * np.pi
         )
         lambdal = (
-            0.5 * (-backend.np.angle(data[-1]) + backend.np.angle(data[-2]))
+            0.5 * (-backend.angle(data[-1]) + backend.angle(data[-2]))
             + phis(data, dims - 2)
         ) % (2.0 * np.pi)
 
@@ -1929,19 +1928,19 @@ def _binary_codewords(dims: int, backend=None):
 
     cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
 
-    cw = backend.np.array(
+    cw = backend.cast(
         [int(bin_cw, 2) for bin_cw in cw_binary],
         dtype=_get_int_type(dims, backend=backend),
     )
 
     if (dims & (dims - 1)) != 0:
-        n = int(backend.np.floor(backend.np.log2(dims)))
+        n = int(backend.floor(backend.log2(dims)))
         dres = 2**n
         # split the list to fix the order
         cwres, cw = cw[dres:], cw[:dres]
 
         # keep weights for O(1) lookups
-        weights = backend.np.array(
+        weights = backend.cast(
             [hamming_weight(int(w)) for w in cw],
             dtype=_get_int_type(n, backend=backend),
         )
@@ -1960,14 +1959,14 @@ def _binary_codewords(dims: int, backend=None):
                         hamming_distance(int(word), int(cw[i])) <= 2
                         and hamming_distance(int(word), int(cw[i + 1])) <= 2
                     ):
-                        cw = backend.np.insert(cw, i + 1, word, axis=0)
-                        weights = backend.np.insert(weights, i + 1, hw)
+                        cw = backend.engine.insert(cw, i + 1, word, axis=0)
+                        weights = backend.engine.insert(weights, i + 1, hw)
                         inserted = True
                         break
             if not inserted:
                 # append if no suitable interior gap is found
-                cw = backend.np.hstack((cw, word))
-                weights = backend.np.hstack((weights, hw))
+                cw = backend.engine.hstack((cw, word))
+                weights = backend.engine.hstack((weights, hw))
 
     return cw
 
@@ -1988,9 +1987,7 @@ def _binary_codewords_ehrlich(dims: int, backend=None):
         return
 
     # General case
-    n = int(
-        max(1, backend.np.ceil(backend.np.log2(dims)))
-    )  # width so that 2^(n-1) < b < 2^n
+    n = int(max(1, backend.ceil(backend.log2(dims))))  # width so that 2^(n-1) < b < 2^n
     # Bits of b in most-significant-bit → least-significant-bit order
     bits = [(dims >> i) & 1 for i in range(n - 1, -1, -1)]
     prefix = ""
@@ -2060,7 +2057,7 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
 
         # get Ehrlich sequence
         k_seq = _ehrlich_algorithm(
-            backend.np.array([int(b) for b in initial[::-1]]), False
+            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int64), False
         )
 
         # generate in the correct order
@@ -2080,18 +2077,18 @@ def _get_int_type(x: int, backend=None):
 
     backend = _check_backend(backend)
     int_types = [
-        backend.np.int8,
-        backend.np.int16,
-        backend.np.int32,
-        backend.np.int64,
+        backend.int8,
+        backend.int16,
+        backend.int32,
+        backend.int64,
     ]
     for dt in int_types:
-        if abs(x) <= backend.np.iinfo(dt).max:
-            return backend.np.dtype(dt)
+        if abs(x) <= backend.engine.iinfo(dt).max:
+            return backend.engine.dtype(dt)
 
     raise_error(
         ValueError,
-        f"``|x|`` must not be greater than {backend.np.iinfo(backend.np.int64).max}.",
+        f"``|x|`` must not be greater than {backend.engine.iinfo(backend.int64).max}.",
     )
 
 
@@ -2115,7 +2112,7 @@ def _sort_data_sparse(data, nqubits, backend):
         np.array(list(string)).astype(int) for string in bitstrings_sorted
     ]
 
-    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.np.int8)
+    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.int8)
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     return data_sorted, bitstrings_sorted
@@ -2135,7 +2132,7 @@ def _get_gate_sparse(
 ):
     backend = _check_backend(backend)
     if distance == 1:
-        qubit = int(backend.np.where(difference == 1)[0][0])
+        qubit = int(backend.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
             touched_qubits.append(qubit)
         gate = (
@@ -2293,8 +2290,8 @@ def _add_wbd_gate(
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
     for l in range(weight, 0, -1):
         x = [
-            math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i)
-            for i in range(l)
+            math.comb(mqubits, elem) * math.comb(nqubits - mqubits, l - elem)
+            for elem in range(l)
         ]
         s = math.comb(nqubits, l)
         circuit.add(
@@ -2353,14 +2350,14 @@ def _perm_column_ops(
         for k in range(n):
             bits.append((x >> k) & 1)
         A.append(bits)
-    A = backend.cast(A, dtype=backend.np.int8)
+    A = backend.cast(A, dtype=backend.int8)
     ncols = A.shape[1]
     # initialize the list of gates
     qgates = []
 
     # number of non-zero columns
     ell = 0
-    flag = backend.np.zeros(n, dtype=int)
+    flag = backend.zeros(n, dtype=int)
     for idxj in range(ncols):
         if any(elem != 0 for elem in A[:, idxj]):
             ell += 1
@@ -2368,14 +2365,14 @@ def _perm_column_ops(
 
             # look for columns that are equal to A[:,idxj]
             for idxk in range(idxj + 1, ncols):
-                if backend.np.array_equal(A[:, idxj], A[:, idxk]):
+                if backend.array_equal(A[:, idxj], A[:, idxk]):
                     qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
                     # this should transform the k-th column into an all-zero column
                     A[:, idxk] = 0
 
     # Now, we need to swap the ell non-zero columns to the first ell columns
     for idxk in range(ell, ncols):
-        if not backend.np.array_equal(A[:, idxk], backend.np.zeros_like(A[:, idxk])):
+        if not backend.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
             for k in range(len(flag)):
                 if flag[k] == 0:
                     flag[k] = 1
@@ -2395,8 +2392,8 @@ def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
     """Return gates that reduce all rows after row0 to target form."""
     backend = _check_backend(backend)
 
-    log2m = int(backend.np.log2(2 * m))
-    atilde = backend.np.array(
+    log2m = int(backend.log2(2 * m))
+    atilde = backend.cast(
         [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
     )
 
@@ -2462,7 +2459,7 @@ def _perm_pair_flip_ops(n: int, m: int, backend=None):
     """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
     backend = _check_backend(backend)
     # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
-    prefix = int(backend.np.ceil(backend.np.log2(2 * m)))
+    prefix = int(backend.ceil(backend.log2(2 * m)))
     x_qubits, controls = range(prefix, n), range(n - prefix)
     qgates = [gates.X(n - q - 1) for q in x_qubits]
     qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
@@ -2508,7 +2505,7 @@ def permutation_synthesis(
             f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
         )
 
-    nqubits = int(backend.np.ceil(backend.np.log2(len(sigma))))
+    nqubits = int(backend.ceil(backend.log2(len(sigma))))
     if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
         raise_error(
             ValueError, "Permutation sigma must contain all indices {0,...,n-1}"

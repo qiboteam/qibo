@@ -80,7 +80,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     """
     if nqubits < 2:
         raise_error(ValueError, "Number of qubits must be larger than one.")
+
     backend = _check_backend(backend)
+
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, backend.matrices.Z, condition, backend)
@@ -94,7 +96,9 @@ def TFIM(nqubits, h: float = 0.0, dense: bool = True, backend=None):
     term = lambda q1, q2: symbols.Z(q1, backend=backend) * symbols.Z(
         q2, backend=backend
     ) + h * symbols.X(q1, backend=backend)
-    form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
+        nqubits - 1, 0
+    )
     ham = SymbolicHamiltonian(form=form, nqubits=nqubits, backend=backend)
     return ham
 
@@ -130,10 +134,13 @@ def MaxCut(
         )
 
     form = -sum(
-        adj_matrix[i][j]
-        * (1 - symbols.Z(i, backend=backend) * symbols.Z(j, backend=backend))
-        for i in range(nqubits)
-        for j in range(nqubits)
+        adj_matrix[qubit_i][qubit_j]
+        * (
+            1
+            - symbols.Z(qubit_i, backend=backend) * symbols.Z(qubit_j, backend=backend)
+        )
+        for qubit_i in range(nqubits)
+        for qubit_j in range(nqubits)
     )
     form /= 2
 
@@ -267,8 +274,8 @@ def Heisenberg(
 
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
-        matrix = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
-        matrix = backend.cast(matrix, dtype=matrix.dtype)
+        matrix = np.zeros((2**nqubits, 2**nqubits))
+        matrix = backend.cast(matrix, dtype=backend.complex128)
         for ind, pauli in enumerate(paulis):
             double_term = _build_spin_model(
                 nqubits, pauli(0, backend=backend).matrix, condition, backend
@@ -292,7 +299,9 @@ def Heisenberg(
             for coeff, operator in zip(coupling_constants, paulis)
         )
 
-    form = -1 * sum(term(i, i + 1) for i in range(nqubits - 1)) - term(nqubits - 1, 0)
+    form = -1 * sum(term(qubit, qubit + 1) for qubit in range(nqubits - 1)) - term(
+        nqubits - 1, 0
+    )
     form -= sum(
         field_strength * pauli(qubit)
         for qubit in range(nqubits)
@@ -406,20 +415,20 @@ def _multikron(matrix_list, backend):
     Returns:
         ndarray: Kronecker product of all matrices in ``matrix_list``.
     """
-    return reduce(backend.np.kron, matrix_list)
+    return reduce(backend.kron, matrix_list)
 
 
 def _build_spin_model(nqubits, matrix, condition, backend):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
     h = sum(
         reduce(
-            backend.np.kron,
+            backend.kron,
             (
-                matrix if condition(i, j) else backend.matrices.I()
-                for j in range(nqubits)
+                matrix if condition(qubit_i, qubit_j) else backend.matrices.I()
+                for qubit_j in range(nqubits)
             ),
         )
-        for i in range(nqubits)
+        for qubit_i in range(nqubits)
     )
     return h
 
@@ -435,6 +444,6 @@ def _OneBodyPauli(nqubits, operator, dense: bool = True, backend=None):
         )
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    form = sum([-1 * operator(i, backend=backend) for i in range(nqubits)])
+    form = sum([-1 * operator(qubit, backend=backend) for qubit in range(nqubits)])
     ham = SymbolicHamiltonian(form=form, backend=backend)
     return ham

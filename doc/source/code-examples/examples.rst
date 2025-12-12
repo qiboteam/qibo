@@ -11,6 +11,7 @@ Here is an example of a circuit with 2 qubits:
 .. testcode::
 
     import numpy as np
+
     from qibo import Circuit, gates
 
     # Construct the circuit
@@ -19,7 +20,7 @@ Here is an example of a circuit with 2 qubits:
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
     # Define an initial state (optional - default initial state is |00>)
-    initial_state = np.ones(4) / 2.0
+    initial_state = np.ones(4, dtype=complex) / 2.0
     # Execute the circuit and obtain the final state
     result = circuit(initial_state) # circuit.execute(initial_state) also works
     print(result.state())
@@ -39,10 +40,11 @@ evaluation performance, e.g.:
 .. code-block::  python
 
     import numpy as np
+
+    from qibo import Circuit, gates, set_backend
+
     # switch backend to "tensorflow" through the Qiboml provider
-    import qibo
-    qibo.set_backend(backend="qiboml", platform="tensorflow")
-    from qibo import Circuit, gates
+    set_backend(backend="qiboml", platform="tensorflow")
 
     circuit = Circuit(2)
     circuit.add(gates.X(0))
@@ -50,8 +52,8 @@ evaluation performance, e.g.:
     circuit.add(gates.CU1(0, 1, 0.1234))
     circuit.compile()
 
-    for i in range(100):
-        init_state = np.ones(4) / 2.0 + i
+    for num in range(100):
+        init_state = np.ones(4) / 2.0 + num
         circuit(init_state)
 
 Note that compiling is only supported when the ``tensorflow`` backend is

@@ -105,7 +105,7 @@ def spin2QiboHamiltonian(
         offset (float): offset of the binary model
     """
 
-    from qibo import hamiltonians
+    from qibo.hamiltonians import SymbolicHamiltonian
     from qibo.symbols import Z
 
     form = 0
@@ -114,9 +114,9 @@ def spin2QiboHamiltonian(
     for (k0, k1), v in J.items():
         form -= Z(k0, commutative=True) * Z(k1, commutative=True) * v
 
-    ham = hamiltonians.SymbolicHamiltonian(form)
+    ham = SymbolicHamiltonian(form)
 
     if dense:
         return ham.dense
-    else:
-        return ham
+
+    return ham
