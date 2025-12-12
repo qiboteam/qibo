@@ -2300,12 +2300,14 @@ def _to_pauli_liouville_fht(super_op, normalize: bool = False, backend=None):
     """Fast conversion from Liouville to Pauli-Liouville representation using the Fast Walsh–Hadamard Transform.
 
     Args:
-        super_op (ndarray): superoperator in the Liouville representation.
-        normalize (bool, optional): If ``True``, return the normalized Pauli basis representation. Defaults to ``False``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the execution. If ``None``, uses the current backend.
+        super_op (ndarray): Superoperator in the Liouville representation.
+        normalize (bool, optional): If ``True``, return the normalized Pauli basis representation.
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used in the execution.
+            If ``None``, uses the current backend.
 
     Returns:
-        ndarray: superoperator in the Pauli-Liouville representation.
+        ndarray: Superoperator in the Pauli-Liouville representation.
     """
     # Obtain backend
     backend = _check_backend(backend)
