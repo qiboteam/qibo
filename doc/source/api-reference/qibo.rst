@@ -1359,6 +1359,14 @@ Heisenberg XXZ
     :member-order: bysource
 
 
+Graph Partitioning Problem
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.hamiltonians.GPP
+    :members:
+    :member-order: bysource
+
+
 .. note::
     All pre-coded Hamiltonians can be created as
     :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
