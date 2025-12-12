@@ -601,3 +601,17 @@ def logical_meas(qubit[3] d) -> bit {
 """
     with pytest.raises(RuntimeError):
         c = Circuit.from_qasm(target)
+
+
+def test_from_qasm_file(backend):
+    nqubits = 5
+    target = Circuit(nqubits)
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+    target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+    target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(1, nqubits - 1, 2))
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+
+    circuit = Circuit.from_qasm_file("tests/circ.qasm")
+
+    backend.assert_circuitclose(circuit, target)
