@@ -592,6 +592,7 @@ def test_GST_2qb_basis_op_diff_registers(backend):
     [
         [gates.T, gates.T, gates.T],
         [gates.CNOT],
+        [gates.CNOT, gates.CNOT],
     ],
 )
 def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):

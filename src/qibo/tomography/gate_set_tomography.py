@@ -234,7 +234,6 @@ def _extract_gate(
         gate (:class:`qibo.gates.Gate`): An instance of the gate that can be applied directly to the circuit.
         nqubits (int): The number of qubits that the gate acts on.
     """
-
     gate, nqubits, angle_names, angle_values, params = _get_nqubits_and_angles(gate)
     # Construct gate instance
     idx = (
@@ -497,9 +496,15 @@ def GST(
             raise_error(RuntimeError, f"Requires two single-qubit gates")
         gate = []
         for idx, _gate in enumerate(gate_set):
-            _gate, nqubits = _extract_gate(_gate, idx)
+            params = None
+            if isinstance(_gate, tuple):
+                _g, params = _gate
+            else:
+                _g = _gate
+            nqubits = _extract_nqubits(_g, params)
             if nqubits != 1:
                 raise_error(RuntimeError, f"Requires two single-qubit gates")
+            _gate, nqubits = _extract_gate(_gate, idx)
             gate.append(_gate)
 
         matrices.append(
