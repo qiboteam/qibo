@@ -1,5 +1,7 @@
 """Tests creating abstract Qibo circuits from OpenQASM code."""
+
 import os
+
 import numpy as np
 import pytest
 from openqasm3 import parser
