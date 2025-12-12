@@ -1243,7 +1243,7 @@ class Circuit:
             :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
         """
-        with open(qasm_file, "r") as file:
+        with open(qasm_file) as file:
             string = file.read()
 
         return cls.from_qasm(string, **circuit_kwargs)
