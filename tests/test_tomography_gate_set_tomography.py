@@ -587,21 +587,20 @@ def test_GST_2qb_basis_op_diff_registers(backend):
         )
 
 
-# @pytest.mark.parametrize(
-#     "gate_set",
-#     [
-#         [gates.T, gates.CNOT],
-#         [gates.CNOT, gates.T],
-#         [gates.CNOT, gates.CNOT],
-#     ],
-# )
-# def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):
-#     with pytest.raises(RuntimeError):
-#         matrices = GST(
-#             gate_set=gate_set,
-#             two_qubit_basis_op_diff_registers=True,
-#             include_empty=False,
-#         )
+@pytest.mark.parametrize(
+    "gate_set",
+    [
+        [gates.T, gates.T, gates.T],
+        [gates.CNOT],
+    ],
+)
+def test_GST_2qb_basis_op_diff_registers_incorrect_gates(backend, gate_set):
+    with pytest.raises(RuntimeError):
+        matrices = GST(
+            gate_set=gate_set,
+            two_qubit_basis_op_diff_registers=True,
+            include_empty=False,
+        )
 
 
 def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
