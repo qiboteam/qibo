@@ -1,5 +1,5 @@
 """Tests creating abstract Qibo circuits from OpenQASM code."""
-
+import os
 import numpy as np
 import pytest
 from openqasm3 import parser
@@ -603,7 +603,7 @@ def logical_meas(qubit[3] d) -> bit {
         c = Circuit.from_qasm(target)
 
 
-def test_from_qasm_file(backend):
+def test_qasm_file(backend):
     nqubits = 5
     target = Circuit(nqubits)
     target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
@@ -612,6 +612,10 @@ def test_from_qasm_file(backend):
     target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(1, nqubits - 1, 2))
     target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
 
+    target.to_qasm_file("tests/circ.qasm")
+
     circuit = Circuit.from_qasm_file("tests/circ.qasm")
 
     backend.assert_circuitclose(circuit, target)
+
+    os.remove("tests/circ.qasm")

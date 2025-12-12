@@ -1199,8 +1199,13 @@ class Circuit:
 
         return "\n".join(code)
 
+    def to_qasm_file(self, qasm_file: str, extended_compatibility: bool = False):
+        string = self.to_qasm(extended_compatibility=extended_compatibility)
+        with open(qasm_file, "w") as file:
+            file.writelines(string)
+
     @classmethod
-    def from_qasm(cls, qasm_code, **circuit_kwargs):
+    def from_qasm(cls, qasm_code: str, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
@@ -1233,7 +1238,7 @@ class Circuit:
         return parser.to_circuit(qasm_code, **circuit_kwargs)
 
     @classmethod
-    def from_qasm_file(cls, qasm_file, **circuit_kwargs):
+    def from_qasm_file(cls, qasm_file: str, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
