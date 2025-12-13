@@ -237,6 +237,7 @@ def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
     smallc.add(gates.RY(1, theta=0.2).controlled_by(0))
     smallc.add(gates.RX(2, theta=0.3).controlled_by(1, 0))
     smallc.add(gates.RZ(1, theta=0.4).controlled_by(0, 2))
+    smallc.add(gates.GeneralizedRBS((0,), (1,), theta=0.1).controlled_by(2))
 
     largec = Circuit(6, accelerators=accelerators)
     largec.add(gates.H(i) for i in range(6))
@@ -248,6 +249,7 @@ def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
     targetc.add(gates.RY(4, theta=0.2).controlled_by(1))
     targetc.add(gates.RX(3, theta=0.3).controlled_by(1, 4))
     targetc.add(gates.RZ(4, theta=0.4).controlled_by(1, 3))
+    targetc.add(gates.GeneralizedRBS((1,), (4,), theta=0.1).controlled_by(3))
 
     assert largec.depth == targetc.depth
     backend.assert_circuitclose(largec, targetc)
@@ -264,7 +266,6 @@ def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, control
         smallc.add(gates.Unitary(unitaries[0], 0))
         smallc.add(gates.Unitary(unitaries[1], 1))
     smallc.add(gates.CNOT(0, 1))
-    smallc.add(gates.GeneralizedRBS((0,), (1,), theta=0.1))
 
     largec = Circuit(4, accelerators=accelerators)
     largec.add(gates.RY(0, theta=0.1))
@@ -285,7 +286,6 @@ def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, control
         targetc.add(gates.Unitary(unitaries[0], 3))
         targetc.add(gates.Unitary(unitaries[1], 0))
     targetc.add(gates.CNOT(3, 0))
-    targetc.add(gates.GeneralizedRBS((3,), (0,), theta=0.1))
     assert largec.depth == targetc.depth
     backend.assert_circuitclose(largec, targetc)
 
