@@ -91,7 +91,7 @@ class CustomQASMGate:
         return fused_gate
 
     def _compile_gate_qubits_and_args(self, gate, qubit_map, args_map):
-        """Compile the qubits and arguments placeholders contained in the 
+        """Compile the qubits and arguments placeholders contained in the
         input gate with their actual values.
 
         Args:
