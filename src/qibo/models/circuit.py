@@ -1201,6 +1201,15 @@ class Circuit:
         return "\n".join(code)
 
     def to_qasm_file(self, qasm_file: str, extended_compatibility: bool = False):
+        """_summary_
+
+        Args:
+            qasm_file (str): Path to file containing the QASM script.
+            extended_compatibility (bool, optional): if ``True``, unrolls more exotic
+                gates in their decomposition by defining them as custom gates,
+                this increases the compatibility with other frameworks,
+                such as ``qiskit``. Defaults to ``False``.
+        """
         string = self.to_qasm(extended_compatibility=extended_compatibility)
         with open(qasm_file, "w") as file:
             file.writelines(string)
@@ -1211,6 +1220,7 @@ class Circuit:
 
         Args:
             qasm_code (str): String with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
@@ -1240,10 +1250,11 @@ class Circuit:
 
     @classmethod
     def from_qasm_file(cls, qasm_file: str, **circuit_kwargs):
-        """Constructs a circuit from QASM code.
+        """Constructs a circuit from QASM code in a ``qasm_file``.
 
         Args:
             qasm_file (str): Path to file containing the string with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
