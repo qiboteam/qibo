@@ -2,6 +2,7 @@
 
 from typing import Union
 
+import numpy as np  # cannot be removed
 import openqasm3
 
 import qibo
