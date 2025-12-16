@@ -1,4 +1,5 @@
 from functools import reduce
+from typing import Dict, List, Tuple, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -20,19 +21,19 @@ _PAULI_MATRICES_SPARSE = {
 
 def get_expval_hamiltonian(
     circuit: Circuit,
-    hamiltonian: (
-        Hamiltonian
-        | csr_matrix
-        | list[tuple[float, str]]
-        | dict[str, list[tuple[float, str]]]
-    ),
+    hamiltonian: Union[
+        Hamiltonian,
+        csr_matrix,
+        List[Tuple[float, str]],
+        Dict[str, List[Tuple[float, str]]],
+    ],
     force_complete_z: bool = True,
-    nshots: int | None = None,
-    backend: Backend | None = None,
-) -> (
-    tuple[float, dict[str, tuple[float, float]]]
-    | tuple[tuple[float, float], dict[str, tuple[float, float, float]]]
-):
+    nshots: Optional[int] = None,
+    backend: Optional[Backend] = None,
+) -> Union[
+    Tuple[float, Dict[str, Tuple[float, float]]],
+    Tuple[Tuple[float, float], Dict[str, Tuple[float, float, float]]],
+]:
     """
     Estimate the expectation value of a Hamiltonian with respect to a quantum circuit.
 
@@ -188,9 +189,9 @@ def _pauli_word_to_sparse(pauli_word: str) -> csr_matrix:
 
 def _get_expval_hamilt_list_of_terms_inf_prec(
     circuit: Circuit,
-    hamilt_terms_list: list[tuple[float, str]],
-    backend: Backend | None = None,
-) -> tuple[float, dict[str, tuple[float, float]]]:
+    hamilt_terms_list: List[Tuple[float, str]],
+    backend: Optional[Backend] = None,
+) -> Tuple[float, Dict[str, Tuple[float, float]]]:
     """Computes the the expected value of the observable represented as a list [(coef, pauli_word)]
     of the terms in the linear combination of Pauli words with respect to the state prepared by
     the circuit, using statevector simulation (i.e., with infinite precision).
@@ -294,11 +295,10 @@ def _check_terms_commutativity(term1: str, term2: str, qubitwise: bool) -> bool:
     # term1 and term2 have general commutativity iff n_noncommuting_ops is even
     return n_noncommuting_ops % 2 == 0
 
-
 def _group_commuting_paulis(
-    hamilt_terms_list: list[tuple[float, str]],
+    hamilt_terms_list: List[Tuple[float, str]],
     force_complete_z: bool = True,
-) -> list[list[tuple[float, str]]]:
+) -> List[List[Tuple[float, str]]]:
     """Receives as input an observable represented as a list with terms in the linear combination
     of Pauli words, and returns a list with mutually-commuting terms.
 
@@ -377,7 +377,7 @@ def _group_commuting_paulis(
     return term_groups
 
 
-def _get_measure_pauli_from_commuting_terms(group: list[tuple[float, str]]) -> str:
+def _get_measure_pauli_from_commuting_terms(group: List[Tuple[float, str]]) -> str:
     """Extract the measurement basis word from a group of mutually commuting Pauli words.
 
     For a set of Pauli words that commute qubitwise, this function determines the
@@ -414,9 +414,9 @@ def _get_measure_pauli_from_commuting_terms(group: list[tuple[float, str]]) -> s
 
 
 def _get_commuting_grouped_terms_from_hamilt_list_terms(
-    hamilt_terms_list: list[tuple[float, str]],
+    hamilt_terms_list: List[Tuple[float, str]],
     force_complete_z: bool = True,
-) -> dict[str, list[tuple[float, str]]]:
+) -> Dict[str, List[Tuple[float, str]]]:
     """Builds a dictionary with the groups of measurements and respective goruped terms
     for the input operator. Output structure: {pauli_word_measure: [(coef, pauli_word)]}.
 
@@ -477,10 +477,10 @@ def _measure_circuit_pauli_word_operator(
 
 def _get_expval_hamilt_dict_grouped_terms_samples(
     circuit: Circuit,
-    grouped_hamilt_dict: dict[str, list[tuple[float, str]]],
+    grouped_hamilt_dict: Dict[str, List[Tuple[float, str]]],
     nshots: int,
-    backend: Backend | None = None,
-) -> tuple[tuple[float, float], dict[str, tuple[float, float, float]]]:
+    backend: Optional[Backend] = None,
+) -> Tuple[Tuple[float, float], Dict[str, Tuple[float, float, float]]]:
     """Computes the expected value of a Hamiltonian represented as a dictionary of
     mutually-commuting grouped terms, with respect to the samples produced by the input circuit,
     controlled by the number of shots specified by `nshots`.
@@ -582,14 +582,14 @@ def _get_expval_hamilt_dict_grouped_terms_samples(
 
 def _get_expval_hamilt_list_of_terms(
     circuit: Circuit,
-    hamilt_terms_list: list[tuple[float, str]],
+    hamilt_terms_list: List[Tuple[float, str]],
     force_complete_z: bool = True,
-    nshots: int | None = None,
-    backend: Backend | None = None,
-) -> (
-    tuple[float, dict[str, tuple[float, float]]]
-    | tuple[tuple[float, float], dict[str, tuple[float, float, float]]]
-):
+    nshots: Optional[int] = None,
+    backend: Optional[Backend] = None,
+) -> Union[
+    Tuple[float, Dict[str, Tuple[float, float]]],
+    Tuple[Tuple[float, float], Dict[str, Tuple[float, float, float]]],
+]:
     """Computes the the expected value of the observable represented as a list [(coef, pauli_word)]
     of the terms in the linear combination of Pauli words, either:
     with respect to the samples produced by the input circuit,
@@ -637,19 +637,15 @@ def _get_expval_hamilt_list_of_terms(
         )
 
 
-def _flatten_list(list_of_lists):
-    return [x for sublist in list_of_lists for x in sublist]
-
-
 def _get_expval_hamilt_dict_grouped_terms(
     circuit: Circuit,
-    grouped_hamilt_dict: dict[str, list[tuple[float, str]]],
-    nshots: int | None = None,
-    backend: Backend | None = None,
-) -> (
-    tuple[float, dict[str, tuple[float, float]]]
-    | tuple[tuple[float, float], dict[str, tuple[float, float, float]]]
-):
+    grouped_hamilt_dict: Dict[str, List[Tuple[float, str]]],
+    nshots: Optional[int] = None,
+    backend: Optional[Backend] = None,
+) -> Union[
+    Tuple[float, Dict[str, Tuple[float, float]]],
+    Tuple[Tuple[float, float], Dict[str, Tuple[float, float, float]]],
+]:
     """Computes the expected value of a Hamiltonian represented as a dictionary of
     mutually-commuting grouped terms, either:
     with respect to the samples produced by the input circuit,
@@ -677,6 +673,9 @@ def _get_expval_hamilt_dict_grouped_terms(
         dictionary whose keys are the Pauli words, and tuple of coef, expval and std error as value.
     """
 
+    def _flatten_list(list_of_lists):
+        return [x for sublist in list_of_lists for x in sublist]
+    
     if nshots is None:
         hamilt_terms_list = _flatten_list(grouped_hamilt_dict.values())
 
