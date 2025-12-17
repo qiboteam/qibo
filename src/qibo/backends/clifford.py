@@ -410,14 +410,6 @@ class CliffordBackend(NumpyBackend):
         if self.platform == "stim":
             return self._execute_circuit_stim(circuit, initial_state, nshots)
 
-        for gate in circuit.queue:
-            if (
-                not gate.clifford
-                and not gate.__class__.__name__ == "M"
-                and not isinstance(gate, gates.PauliNoiseChannel)
-            ):
-                raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
-
         if circuit.repeated_execution and nshots != 1:
             return self.execute_circuit_repeated(circuit, nshots, initial_state)
 
@@ -531,10 +523,10 @@ class CliffordBackend(NumpyBackend):
             qubits = tuple(qubits)
 
         if collapse:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots - 1)]
-            samples.append(self.engine.M(state, qubits, nqubits, collapse))
+            samples = self.engine.M(state, qubits, nqubits, nshots=nshots - 1)
+            samples.append(self.engine.M(state, qubits, nqubits, collapse, nshots=1))
         else:
-            samples = [self.engine.M(state, qubits, nqubits) for _ in range(nshots)]
+            samples = self.engine.M(state, qubits, nqubits, nshots=nshots)
         return self.engine.cast(samples, dtype=int)
 
     def symplectic_matrix_to_generators(
