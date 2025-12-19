@@ -413,6 +413,19 @@ cz_dec.add(
         0, 1, gate.matrix(backend), backend=backend
     ),
 )
+cz_dec.add(
+    gates.RBS,
+    lambda gate: [
+        gates.H(0),
+        gates.H(1),
+        gates.CZ(0, 1),
+        gates.RY(0, gate.parameters[0]),
+        gates.RY(1, -gate.parameters[0]),
+        gates.CZ(0, 1),
+        gates.H(1),
+        gates.H(0),
+    ],
+)
 
 # temporary CNOT decompositions for CNOT, CZ, SWAP
 cnot_dec_temp = GateDecompositions()
