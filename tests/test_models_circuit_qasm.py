@@ -1,5 +1,7 @@
 """Tests creating abstract Qibo circuits from OpenQASM code."""
 
+import os
+
 import numpy as np
 import pytest
 from openqasm3 import parser
@@ -384,9 +386,9 @@ def test_from_qasm_pi_half():
 include "qelib1.inc";
 qreg q[1];
 rx(pi/2) q[0];"""
-    c = Circuit.from_qasm(target)
-    assert c.depth == 1
-    assert c.queue[0].parameters == (np.pi / 2,)
+    circuit = Circuit.from_qasm(target)
+    assert circuit.depth == 1
+    assert circuit.queue[0].parameters == (np.pi / 2,)
 
 
 def test_from_qasm_invalid_script():
@@ -601,3 +603,21 @@ def logical_meas(qubit[3] d) -> bit {
 """
     with pytest.raises(RuntimeError):
         c = Circuit.from_qasm(target)
+
+
+def test_qasm_file(backend):
+    nqubits = 5
+    target = Circuit(nqubits)
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+    target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(0, nqubits - 1, 2))
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+    target.add(gates.CNOT(qubit, qubit + 1) for qubit in range(1, nqubits - 1, 2))
+    target.add(gates.RY(qubit, 0.0) for qubit in range(nqubits))
+
+    target.to_qasm_file("tests/circ.qasm")
+
+    circuit = Circuit.from_qasm_file("tests/circ.qasm")
+
+    backend.assert_circuitclose(circuit, target)
+
+    os.remove("tests/circ.qasm")
