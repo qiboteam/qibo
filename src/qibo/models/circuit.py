@@ -1137,12 +1137,13 @@ class Circuit:
         """Convert circuit to a QASM string.
 
         Args:
-            extended_compatibility (bool): if ``True``, unrolls more exotic gates in their
-                decomposition by defining them as custom gates, this increases the compatibility
-                with other frameworks, such as qiskit. Defaults to ``False``.
+            extended_compatibility (bool): if ``True``, unrolls more exotic gates
+                in their decomposition by defining them as custom gates,
+                this increases the compatibility with other frameworks,
+                such as ``qiskit``. Defaults to ``False``.
 
         Returns:
-            (str) the generated QASM.
+            str: The generated QASM.
 
         .. note::
             This method does not support multi-controlled gates
@@ -1199,15 +1200,30 @@ class Circuit:
 
         return "\n".join(code)
 
+    def to_qasm_file(self, qasm_file: str, extended_compatibility: bool = False):
+        """_summary_
+
+        Args:
+            qasm_file (str): Path to file containing the QASM script.
+            extended_compatibility (bool, optional): if ``True``, unrolls more exotic
+                gates in their decomposition by defining them as custom gates,
+                this increases the compatibility with other frameworks,
+                such as ``qiskit``. Defaults to ``False``.
+        """
+        string = self.to_qasm(extended_compatibility=extended_compatibility)
+        with open(qasm_file, "w") as file:
+            file.writelines(string)
+
     @classmethod
-    def from_qasm(cls, qasm_code, **circuit_kwargs):
+    def from_qasm(cls, qasm_code: str, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
             qasm_code (str): String with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
 
         Returns:
-            A :class:`qibo.models.circuit.Circuit` that contains the gates
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
 
         Example:
@@ -1231,6 +1247,23 @@ class Circuit:
         parser = QASMParser()
         circuit_kwargs.pop("nqubits", None)
         return parser.to_circuit(qasm_code, **circuit_kwargs)
+
+    @classmethod
+    def from_qasm_file(cls, qasm_file: str, **circuit_kwargs):
+        """Constructs a circuit from QASM code in a ``qasm_file``.
+
+        Args:
+            qasm_file (str): Path to file containing the string with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
+            specified by the given QASM script.
+        """
+        with open(qasm_file) as file:
+            string = file.read()
+
+        return cls.from_qasm(string, **circuit_kwargs)
 
     def to_qir(self):
         """
