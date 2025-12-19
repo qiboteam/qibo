@@ -1,5 +1,6 @@
 import networkx as nx
 
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import (
@@ -70,7 +71,7 @@ class Passes:
         self.native_gates = native_gates
         self.passes = [] if passes is None else passes
 
-    def __call__(self, circuit):
+    def __call__(self, circuit, backend=None):  # , backend=None):
         """Apply the transpiler pipeline to the circuit.
 
         Args:
@@ -79,6 +80,7 @@ class Passes:
         Returns:
             (:class:`qibo.models.circuit.Circuit`, dict): Transpiled circuit and final {logical: physical} qubit mapping.
         """
+        backend = _check_backend(backend)
 
         final_layout = None
         for transpiler_pass in self.passes:
@@ -87,7 +89,7 @@ class Passes:
                 circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
                 transpiler_pass.connectivity = self.connectivity
-                final_layout = transpiler_pass(circuit)
+                final_layout = transpiler_pass(circuit, backend=backend)
             elif isinstance(transpiler_pass, Router):
                 transpiler_pass.connectivity = self.connectivity
                 circuit, final_layout = transpiler_pass(circuit)

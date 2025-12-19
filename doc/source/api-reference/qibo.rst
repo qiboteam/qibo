@@ -1710,7 +1710,7 @@ passing a symplectic matrix to the constructor.
    # construct the |00...0> state
    backend = CliffordBackend("numpy")
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine="numpy")
+   clifford = Clifford(symplectic_matrix, platform="numpy")
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
@@ -1725,21 +1725,21 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
 We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
-It is possible to run Clifford circuits using `stim` as an engine:
+It is possible to run Clifford circuits using `stim` as a platform:
 
 .. code-block::  python
 
     from qibo.backends import CliffordBackend
     from qibo.quantum_info import Clifford, random_clifford
 
-    clifford_backend = CliffordBackend(engine="stim")
+    clifford_backend = CliffordBackend(platform="stim")
 
     circuit = random_clifford(nqubits)
     result = clifford_backend.execute_circuit(circuit)
 
     ## Note that the execution above is equivalent to the one below
 
-    result = Clifford.from_circuit(circuit, engine="stim")
+    result = Clifford.from_circuit(circuit, platform="stim")
 
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford

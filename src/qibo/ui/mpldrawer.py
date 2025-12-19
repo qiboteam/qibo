@@ -902,15 +902,15 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
             %matplotlib inline
 
             # create a 5-qubits QFT circuit
-            c = QFT(5)
-            c.add(gates.M(qubit) for qubit in range(2))
+            circuit = QFT(5)
+            circuit.add(gates.M(qubit) for qubit in range(2))
 
             # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
-            plot_circuit(c);
+            plot_circuit(circuit);
 
             # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
             # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
-            plot_circuit(c, scale = 0.8, cluster_gates = True, style="garnacha");
+            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style="garnacha");
 
             # plot the Qibo circuit with a custom style
             custom_style = {
@@ -923,7 +923,7 @@ def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
                 "controlcolor" : "#360000"
             }
 
-            plot_circuit(c, scale = 0.8, cluster_gates = True, style=custom_style);
+            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
     """
 
     params = PLOT_PARAMS.copy()

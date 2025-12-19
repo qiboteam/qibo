@@ -88,20 +88,22 @@ class VQE:
         """
         if loss_func is None:
             loss_func = vqe_loss
-        if compile:
-            loss = self.hamiltonian.backend.compile(loss_func)
+
+        if compile:  # pragma: no cover
+            loss = self.backend.compile(loss_func)
         else:
             loss = loss_func
 
         if method == "cma":
-            dtype = self.hamiltonian.backend.np.float64
+            dtype = self.backend.float64
             loss = (
                 (lambda p, c, h: loss_func(p, c, h).item())
-                if str(dtype) == "torch.float64"
+                if self.backend.platform == "pytorch"
                 else (lambda p, c, h: dtype(loss_func(p, c, h)))
             )
         elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(loss_func(p, c, h))
+            loss = lambda p, c, h: self.backend.to_numpy(loss_func(p, c, h))
+
         result, parameters, extra = self.optimizers.optimize(
             loss,
             initial_state,
@@ -117,9 +119,11 @@ class VQE:
             options=options,
             compile=compile,
             processes=processes,
-            backend=self.hamiltonian.backend,
+            backend=self.backend,
         )
+
         self.circuit.set_parameters(parameters)
+
         return result, parameters, extra
 
     def energy_fluctuation(self, state):
@@ -302,12 +306,12 @@ class AAVQE:
             compile (bool): whether the TensorFlow graph should be compiled.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        from qibo import models
+        from qibo.models import VQE  # pylint: disable=import-outside-toplevel
 
         t = 0.0
         while (t - self._t_max) <= self.ATOL_TIME:
             H = self.hamiltonian(t)
-            vqe = models.VQE(self._circuit, H)
+            vqe = VQE(self._circuit, H)
             best, params, _ = vqe.minimize(
                 params,
                 method=method,
@@ -347,18 +351,21 @@ class QAOA:
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import XXZ
+            from qibo.models import QAOA
+
             # create XXZ Hamiltonian for four qubits
-            hamiltonian = hamiltonians.XXZ(4)
+            hamiltonian = XXZ(4)
             # create QAOA model for this Hamiltonian
-            qaoa = models.QAOA(hamiltonian)
+            qaoa = QAOA(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
             best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
 
-    from qibo import hamiltonians, optimizers
+    from qibo import hamiltonians, optimizers  # pylint: disable=import-outside-toplevel
 
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
@@ -371,6 +378,9 @@ class QAOA:
         if not isinstance(hamiltonian, AbstractHamiltonian):
             raise_error(TypeError, f"Invalid Hamiltonian type {type(hamiltonian)}.")
         self.hamiltonian = hamiltonian
+        self.backend = (
+            hamiltonian.backend
+        )  # to avoid error with _create_calculate_callbacks
         self.nqubits = hamiltonian.nqubits
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer is None:
@@ -378,7 +388,7 @@ class QAOA:
                 self.hamiltonian, self.hamiltonians.SymbolicHamiltonian
             )
             self.mixer = self.hamiltonians.X(
-                self.nqubits, dense=not trotter, backend=self.hamiltonian.backend
+                self.nqubits, dense=not trotter, backend=self.backend
             )
         else:
             if type(mixer) != type(hamiltonian):
@@ -417,9 +427,6 @@ class QAOA:
         self.mix_solver = get_solver(solver, 1e-2, self.mixer)
 
         self.callbacks = callbacks
-        self.backend = (
-            hamiltonian.backend
-        )  # to avoid error with _create_calculate_callbacks
         self.accelerators = accelerators
         self.normalize_state = StateEvolution._create_normalize_state(self, solver)
         self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
@@ -454,9 +461,9 @@ class QAOA:
             State vector after applying the QAOA exponential gates.
         """
         if initial_state is None:
-            state = self.hamiltonian.backend.plus_state(self.nqubits)
+            state = self.backend.plus_state(self.nqubits)
         else:
-            state = self.hamiltonian.backend.cast(initial_state)
+            state = self.backend.cast(initial_state, dtype=initial_state.dtype)
 
         self.calculate_callbacks(state)
         n = int(self.params.shape[0])
@@ -488,10 +495,11 @@ class QAOA:
         processes=None,
     ):
         """Optimizes the variational parameters of the QAOA. A few loss functions are
-        provided for QAOA optimizations such as expected value (default), CVar which is introduced in
-        `Quantum 4, 256 <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and
-        Gibbs loss function which is introduced in
-        `PRR 2, 023074 (2020) <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
+        provided for QAOA optimizations such as expected value (default),
+        CVar which is introduced in `Quantum 4, 256
+        <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and Gibbs loss function
+        which is introduced in `PRR 2, 023074 (2020)
+        <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
 
         Args:
             initial_p (np.ndarray): initial guess for the parameters.
@@ -499,7 +507,8 @@ class QAOA:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            loss_func (function): the desired loss function. If it is None, the expectation is used.
+            loss_func (function): the desired loss function. If it is ``None``,
+                the expectation is used.
             loss_func_param (dict): a dictionary to pass in the loss function parameters.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
@@ -524,15 +533,20 @@ class QAOA:
         Example:
             .. testcode::
 
-                from qibo import hamiltonians
+                from qibo.hamiltonians import XXZ
+                from qibo.models import QAOA
                 from qibo.models.utils import cvar, gibbs
 
-                h = hamiltonians.XXZ(3)
-                qaoa = models.QAOA(h)
+                h = XXZ(3)
+                qaoa = QAOA(h)
                 initial_p = [0.314, 0.22, 0.05, 0.59]
                 best, params, _ = qaoa.minimize(initial_p)
-                best, params, _ = qaoa.minimize(initial_p, loss_func=cvar, loss_func_param={'alpha':0.1})
-                best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
+                best, params, _ = qaoa.minimize(
+                    initial_p, loss_func=cvar, loss_func_param={'alpha':0.1}
+                )
+                best, params, _ = qaoa.minimize(
+                    initial_p, loss_func=gibbs, loss_func_param={'eta':0.1}
+                )
 
         """
         if len(initial_p) % 2 != 0:
@@ -545,27 +559,38 @@ class QAOA:
 
         def _loss(params, qaoa, hamiltonian, state):
             if state is not None:
-                state = hamiltonian.backend.cast(state, copy=True)
+                state = self.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
+
             if loss_func is None:
                 return hamiltonian.expectation_from_state(state)
-            else:
-                func_hyperparams = {
-                    key: loss_func_param[key]
-                    for key in loss_func_param
-                    if key in loss_func.__code__.co_varnames
-                }
-                param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
-                return loss_func(**param)
+            func_hyperparams = {
+                key: loss_func_param[key]
+                for key in loss_func_param
+                if key in loss_func.__code__.co_varnames
+            }
+            param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
-        if method == "sgd":
-            loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
+            func_hyperparams = {
+                key: loss_func_param[key]
+                for key in loss_func_param
+                if key in loss_func.__code__.co_varnames
+            }
+            param = {
+                **func_hyperparams,
+                "hamiltonian": hamiltonian,
+                "state": state,
+                "backend": self.backend,
+            }
+
+            return loss_func(**param)
+
+        if method == "sgd":  # pragma: no cover
+            loss = lambda p, c, h, s: _loss(self.backend.cast(p), c, h, s)
         else:
-            loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
-                _loss(p, c, h, s)
-            )
+            loss = lambda p, c, h, s: self.backend.to_numpy(_loss(p, c, h, s))
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
@@ -584,7 +609,9 @@ class QAOA:
             processes=processes,
             backend=self.backend,
         )
+
         self.set_parameters(parameters)
+
         return result, parameters, extra
 
 
@@ -610,11 +637,14 @@ class FALQON(QAOA):
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import XXZ
+            from qibo.models import FALQON
+
             # create XXZ Hamiltonian for four qubits
-            hamiltonian = hamiltonians.XXZ(4)
+            hamiltonian = XXZ(4)
             # create FALQON model for this Hamiltonian
-            falqon = models.FALQON(hamiltonian)
+            falqon = FALQON(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01
@@ -658,15 +688,11 @@ class FALQON(QAOA):
         energy = [np.inf]
         callback_result = []
         for _ in range(1, max_layers + 1):
-            beta = self.hamiltonian.backend.to_numpy(
-                _loss(parameters, self, self.evol_hamiltonian)
-            )
+            beta = self.backend.to_numpy(_loss(parameters, self, self.evol_hamiltonian))
 
             if tol is not None:
                 energy.append(
-                    self.hamiltonian.backend.to_numpy(
-                        _loss(parameters, self, self.hamiltonian)
-                    )
+                    self.backend.to_numpy(_loss(parameters, self, self.hamiltonian))
                 )
                 if abs(energy[-1] - energy[-2]) < tol:
                     break

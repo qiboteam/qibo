@@ -84,11 +84,11 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = backend.np.random.rand(nqubits)
+    phases = backend.random_sample(nqubits)
 
     gate = getattr(gates, rotation)
     target = reduce(
-        backend.np.kron,
+        backend.kron,
         [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
     )[:, 0]
 
@@ -138,10 +138,10 @@ def test_binary_encoder(
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
-        target = backend.np.real(target)
-        target /= backend.np.linalg.norm(target)
+        target = backend.real(target)
+        target /= backend.vector_norm(target)
 
-    codewords = backend.np.arange(dims) if custom_codewords else None
+    codewords = backend.arange(dims) if custom_codewords else None
 
     circuit = binary_encoder(
         target,
@@ -155,11 +155,11 @@ def test_binary_encoder(
     if parametrization == "hyperspherical" and not_power_of_two:
         # need to insert zeros at the end of target to get
         # matching shapes
-        trail_zeros = backend.np.zeros(
-            2 ** int(backend.np.ceil(backend.np.log2(dims))) - dims, dtype=target.dtype
+        trail_zeros = backend.zeros(
+            2 ** int(backend.ceil(backend.log2(dims))) - dims, dtype=target.dtype
         )
         trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
-        target = backend.np.concatenate((target, trail_zeros))
+        target = backend.concatenate((target, trail_zeros))
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
@@ -192,11 +192,11 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.np.real(state[indexes])
+    state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,
-        backend.cast(data, dtype=np.float64) / backend.calculate_vector_norm(data, 2),
+        backend.cast(data, dtype=np.float64) / backend.vector_norm(data, 2),
         rtol=1e-5,
     )
 
@@ -318,7 +318,7 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
-    target = backend.cast(backend.np.zeros(dims))
+    target = backend.cast(backend.zeros(dims))
     target[indices] = data
 
     if not integers:
@@ -346,14 +346,16 @@ def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
 
 def test_sparse_encoder_helpers_errors(backend):
     with pytest.raises(ValueError):
-        _get_int_type(backend.np.iinfo(backend.np.int64).max + 1, backend=backend)
+        _get_int_type(backend.engine.iinfo(backend.int64).max + 1, backend=backend)
 
 
 @pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
 def test_permutation_synthesis_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        permutation_synthesis(backend.np.array(sigma), m=2, backend=backend)
+        permutation_synthesis(
+            backend.cast(sigma, dtype=backend.int64), m=2, backend=backend
+        )
     with pytest.raises(ValueError):
         permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
@@ -483,7 +485,7 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = backend.cast(np.random.rand(5), dtype=backend.np.float64)
+    data = backend.cast(np.random.rand(5), dtype=backend.float64)
     test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
@@ -514,7 +516,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -557,7 +559,7 @@ def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
         state = result.state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -610,8 +612,8 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
-                initial = backend.np.outer(initial, backend.np.conj(initial.T))
-                target = backend.np.outer(target, backend.np.conj(target.T))
+                initial = backend.outer(initial, backend.conj(initial.T))
+                target = backend.outer(target, backend.conj(target.T))
 
             result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()
