@@ -300,8 +300,8 @@ class QASMParser:
         two measurements in a same register:
 
         # not allowed
-        c.add(gates.M(0, register="m0"))
-        c.add(gates.M(1, register="m0"))
+        circuit.add(gates.M(0, register="m0"))
+        circuit.add(gates.M(1, register="m0"))
         """
         updated_queue = []
         for gate in gates:

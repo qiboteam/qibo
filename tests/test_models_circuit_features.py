@@ -12,13 +12,13 @@ from qibo.noise import NoiseModel, PauliError
 
 
 def test_circuit_unitary(backend):
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.X(0))
-    c.add(gates.Y(1))
-    final_matrix = c.unitary(backend)
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.X(0))
+    circuit.add(gates.Y(1))
+    final_matrix = circuit.unitary(backend)
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     target_matrix = np.kron(matrices.X, matrices.Y) @ cnot @ np.kron(h, h)
@@ -27,14 +27,14 @@ def test_circuit_unitary(backend):
 
 @pytest.mark.parametrize("with_measurement", [False, True])
 def test_circuit_unitary_bigger(backend, with_measurement):
-    c = Circuit(4)
-    c.add(gates.H(i) for i in range(4))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.CNOT(0, 3))
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.CNOT(0, 3))
     if with_measurement:
-        c.add(gates.M(*range(4)))
-    final_matrix = c.unitary(backend)
+        circuit.add(gates.M(*range(4)))
+    final_matrix = circuit.unitary(backend)
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     h = np.kron(np.kron(h, h), np.kron(h, h))
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -80,16 +80,16 @@ def test_circuit_unitary_non_trivial(backend):
     backend.assert_allclose(unitary, target)
 
 
-@pytest.mark.parametrize("compile", [False, True])
-def test_circuit_vs_gate_execution(backend, compile):
+@pytest.mark.parametrize("compile_flag", [False, True])
+def test_circuit_vs_gate_execution(backend, compile_flag):
     """Check consistency between executing circuit and stand alone gates."""
     nqubits = 2
     theta = 0.1234
-    target_c = Circuit(nqubits)
-    target_c.add(gates.X(0))
-    target_c.add(gates.X(1))
-    target_c.add(gates.CU1(0, 1, theta))
-    target_result = backend.execute_circuit(target_c)._state
+    target_circuit = Circuit(nqubits)
+    target_circuit.add(gates.X(0))
+    target_circuit.add(gates.X(1))
+    target_circuit.add(gates.CU1(0, 1, theta))
+    target_result = backend.execute_circuit(target_circuit)._state
 
     # custom circuit
     def custom_circuit(state, theta):
@@ -99,12 +99,14 @@ def test_circuit_vs_gate_execution(backend, compile):
         return state
 
     initial_state = backend.zero_state(nqubits)
-    if compile:
-        c = backend.compile(custom_circuit)
+    if compile_flag:
+        if backend.platform != "tensorflow":
+            pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
+        circuit = backend.compile(custom_circuit)
     else:
-        c = custom_circuit
+        circuit = custom_circuit
 
-    result = c(initial_state, theta)
+    result = circuit(initial_state, theta)
     backend.assert_allclose(result, target_result)
 
 
@@ -118,13 +120,13 @@ def test_circuit_addition_execution(backend, accelerators):
     c2.add(gates.CZ(2, 3))
     c3 = c1 + c2
 
-    c = Circuit(4, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.H(2))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CZ(2, 3))
-    backend.assert_circuitclose(c3, c)
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.H(2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CZ(2, 3))
+    backend.assert_circuitclose(c3, circuit)
 
 
 @pytest.mark.parametrize("deep", [False, True])
@@ -144,174 +146,175 @@ def test_copied_circuit_execution(backend, accelerators, deep):
 
 @pytest.mark.parametrize("fuse", [False, True])
 def test_inverse_circuit_execution(backend, accelerators, fuse):
-    c = Circuit(4, accelerators)
-    c.add(gates.RX(0, theta=0.1))
-    c.add(gates.U2(1, phi=0.2, lam=0.3))
-    c.add(gates.U3(2, theta=0.1, phi=0.3, lam=0.2))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.fSim(0, 2, theta=0.1, phi=0.3))
-    c.add(gates.CU2(0, 1, phi=0.1, lam=0.1))
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.RX(0, theta=0.1))
+    circuit.add(gates.U2(1, phi=0.2, lam=0.3))
+    circuit.add(gates.U3(2, theta=0.1, phi=0.3, lam=0.2))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.fSim(0, 2, theta=0.1, phi=0.3))
+    circuit.add(gates.CU2(0, 1, phi=0.1, lam=0.1))
     if fuse:
         if accelerators:  # pragma: no cover
             with pytest.raises(NotImplementedError):
-                c = c.fuse()
+                circuit = circuit.fuse()
         else:
-            c = c.fuse()
-    invc = c.invert()
-    target_state = np.ones(2**4) / 4.0
-    final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))._state
-    final_state = backend.execute_circuit(invc, initial_state=final_state)._state
+            circuit = circuit.fuse()
+    inv_circuit = circuit.invert()
+    target_state = backend.plus_state(4)
+    final_state = backend.execute_circuit(
+        circuit,
+        initial_state=backend.cast(target_state, dtype=target_state.dtype, copy=True),
+    )._state
+    final_state = backend.execute_circuit(inv_circuit, initial_state=final_state)._state
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
 
-def test_circuit_invert_and_addition_execution(backend, accelerators):
+def test_circuit_invert_and_addition_execution(backend):
     subroutine = Circuit(6)
     subroutine.add([gates.RX(i, theta=0.1) for i in range(5)])
     subroutine.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
     middle = Circuit(6)
     middle.add([gates.CU2(i, i + 1, phi=0.1, lam=0.2) for i in range(0, 5, 2)])
-    circuit = subroutine + middle + subroutine.invert()
+    circuit_add = subroutine + middle + subroutine.invert()
 
-    c = Circuit(6)
-    c.add([gates.RX(i, theta=0.1) for i in range(5)])
-    c.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
-    c.add([gates.CU2(i, i + 1, phi=0.1, lam=0.2) for i in range(0, 5, 2)])
-    c.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
-    c.add([gates.RX(i, theta=-0.1) for i in range(5)])
+    circuit = Circuit(6)
+    circuit.add([gates.RX(i, theta=0.1) for i in range(5)])
+    circuit.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
+    circuit.add([gates.CU2(i, i + 1, phi=0.1, lam=0.2) for i in range(0, 5, 2)])
+    circuit.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
+    circuit.add([gates.RX(i, theta=-0.1) for i in range(5)])
 
-    assert c.depth == circuit.depth
-    backend.assert_circuitclose(circuit, c)
+    assert circuit_add.depth == circuit.depth
+    backend.assert_circuitclose(circuit_add, circuit)
 
 
 @pytest.mark.parametrize("distribute_small", [False, True])
 def test_circuit_on_qubits_execution(backend, accelerators, distribute_small):
     if distribute_small:
-        smallc = Circuit(3, accelerators=accelerators)
+        small_circuit = Circuit(3, accelerators=accelerators)
     else:
-        smallc = Circuit(3)
-    smallc.add(gates.RX(i, theta=i + 0.1) for i in range(3))
-    smallc.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
+        small_circuit = Circuit(3)
+    small_circuit.add(gates.RX(i, theta=i + 0.1) for i in range(3))
+    small_circuit.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
 
-    largec = Circuit(6, accelerators=accelerators)
-    largec.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
-    largec.add(smallc.on_qubits(1, 3, 5))
+    large_circuit = Circuit(6, accelerators=accelerators)
+    large_circuit.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+    large_circuit.add(small_circuit.on_qubits(1, 3, 5))
 
-    targetc = Circuit(6)
-    targetc.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
-    targetc.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
-    targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
-    assert largec.depth == targetc.depth
-    backend.assert_circuitclose(largec, targetc)
+    target_circuit = Circuit(6)
+    target_circuit.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+    target_circuit.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
+    target_circuit.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
+    assert large_circuit.depth == target_circuit.depth
+    backend.assert_circuitclose(large_circuit, target_circuit)
 
 
 @pytest.mark.parametrize("distribute_small", [False, True])
 def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_small):
     if distribute_small:
-        smallc = Circuit(3, accelerators=accelerators)
+        small_circuit = Circuit(3, accelerators=accelerators)
     else:
-        smallc = Circuit(3)
-    smallc.add(gates.RX(i, theta=i + 0.1) for i in range(3))
-    smallc.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
+        small_circuit = Circuit(3)
+    small_circuit.add(gates.RX(i, theta=i + 0.1) for i in range(3))
+    small_circuit.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
     # execute the small circuit before adding it to the large one
-    _ = backend.execute_circuit(smallc)
+    _ = backend.execute_circuit(small_circuit)
 
-    largec = Circuit(6, accelerators=accelerators)
-    largec.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+    large_circuit = Circuit(6, accelerators=accelerators)
+    large_circuit.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
     if distribute_small and accelerators is not None:  # pragma: no cover
         with pytest.raises(RuntimeError):
-            largec.add(smallc.on_qubits(1, 3, 5))
+            large_circuit.add(small_circuit.on_qubits(1, 3, 5))
     else:
-        largec.add(smallc.on_qubits(1, 3, 5))
-        targetc = Circuit(6)
-        targetc.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
-        targetc.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
-        targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
-        assert largec.depth == targetc.depth
-        backend.assert_circuitclose(largec, targetc)
+        large_circuit.add(small_circuit.on_qubits(1, 3, 5))
+        target_circuit = Circuit(6)
+        target_circuit.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+        target_circuit.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
+        target_circuit.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
+        assert large_circuit.depth == target_circuit.depth
+        backend.assert_circuitclose(large_circuit, target_circuit)
 
 
 def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
-    smallc = Circuit(3)
-    smallc.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
-    smallc.add(gates.RY(1, theta=0.2).controlled_by(0))
-    smallc.add(gates.RX(2, theta=0.3).controlled_by(1, 0))
-    smallc.add(gates.RZ(1, theta=0.4).controlled_by(0, 2))
-    smallc.add(gates.GeneralizedRBS((0,), (1,), theta=0.1).controlled_by(2))
+    small_circuit = Circuit(3)
+    small_circuit.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
+    small_circuit.add(gates.RY(1, theta=0.2).controlled_by(0))
+    small_circuit.add(gates.RX(2, theta=0.3).controlled_by(1, 0))
+    small_circuit.add(gates.RZ(1, theta=0.4).controlled_by(0, 2))
 
-    largec = Circuit(6, accelerators=accelerators)
-    largec.add(gates.H(i) for i in range(6))
-    largec.add(smallc.on_qubits(1, 4, 3))
+    large_circuit = Circuit(6, accelerators=accelerators)
+    large_circuit.add(gates.H(i) for i in range(6))
+    large_circuit.add(small_circuit.on_qubits(1, 4, 3))
 
-    targetc = Circuit(6)
-    targetc.add(gates.H(i) for i in range(6))
-    targetc.add(gates.RX(1, theta=0.1).controlled_by(3, 4))
-    targetc.add(gates.RY(4, theta=0.2).controlled_by(1))
-    targetc.add(gates.RX(3, theta=0.3).controlled_by(1, 4))
-    targetc.add(gates.RZ(4, theta=0.4).controlled_by(1, 3))
-    targetc.add(gates.GeneralizedRBS((1,), (4,), theta=0.1).controlled_by(3))
+    target_circuit = Circuit(6)
+    target_circuit.add(gates.H(i) for i in range(6))
+    target_circuit.add(gates.RX(1, theta=0.1).controlled_by(3, 4))
+    target_circuit.add(gates.RY(4, theta=0.2).controlled_by(1))
+    target_circuit.add(gates.RX(3, theta=0.3).controlled_by(1, 4))
+    target_circuit.add(gates.RZ(4, theta=0.4).controlled_by(1, 3))
 
-    assert largec.depth == targetc.depth
-    backend.assert_circuitclose(largec, targetc)
+    assert large_circuit.depth == target_circuit.depth
+    backend.assert_circuitclose(large_circuit, target_circuit)
 
 
 @pytest.mark.parametrize("controlled", [False, True])
 def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, controlled):
     unitaries = np.random.random((2, 2, 2))
-    smallc = Circuit(2)
+    small_circuit = Circuit(2)
     if controlled:
-        smallc.add(gates.Unitary(unitaries[0], 0).controlled_by(1))
-        smallc.add(gates.Unitary(unitaries[1], 1).controlled_by(0))
+        small_circuit.add(gates.Unitary(unitaries[0], 0).controlled_by(1))
+        small_circuit.add(gates.Unitary(unitaries[1], 1).controlled_by(0))
     else:
-        smallc.add(gates.Unitary(unitaries[0], 0))
-        smallc.add(gates.Unitary(unitaries[1], 1))
-    smallc.add(gates.CNOT(0, 1))
+        small_circuit.add(gates.Unitary(unitaries[0], 0))
+        small_circuit.add(gates.Unitary(unitaries[1], 1))
+    small_circuit.add(gates.CNOT(0, 1))
 
-    largec = Circuit(4, accelerators=accelerators)
-    largec.add(gates.RY(0, theta=0.1))
-    largec.add(gates.RY(1, theta=0.2))
-    largec.add(gates.RY(2, theta=0.3))
-    largec.add(gates.RY(3, theta=0.2))
-    largec.add(smallc.on_qubits(3, 0))
+    large_circuit = Circuit(4, accelerators=accelerators)
+    large_circuit.add(gates.RY(0, theta=0.1))
+    large_circuit.add(gates.RY(1, theta=0.2))
+    large_circuit.add(gates.RY(2, theta=0.3))
+    large_circuit.add(gates.RY(3, theta=0.2))
+    large_circuit.add(small_circuit.on_qubits(3, 0))
 
-    targetc = Circuit(4)
-    targetc.add(gates.RY(0, theta=0.1))
-    targetc.add(gates.RY(1, theta=0.2))
-    targetc.add(gates.RY(2, theta=0.3))
-    targetc.add(gates.RY(3, theta=0.2))
+    target_circuit = Circuit(4)
+    target_circuit.add(gates.RY(0, theta=0.1))
+    target_circuit.add(gates.RY(1, theta=0.2))
+    target_circuit.add(gates.RY(2, theta=0.3))
+    target_circuit.add(gates.RY(3, theta=0.2))
     if controlled:
-        targetc.add(gates.Unitary(unitaries[0], 3).controlled_by(0))
-        targetc.add(gates.Unitary(unitaries[1], 0).controlled_by(3))
+        target_circuit.add(gates.Unitary(unitaries[0], 3).controlled_by(0))
+        target_circuit.add(gates.Unitary(unitaries[1], 0).controlled_by(3))
     else:
-        targetc.add(gates.Unitary(unitaries[0], 3))
-        targetc.add(gates.Unitary(unitaries[1], 0))
-    targetc.add(gates.CNOT(3, 0))
-    assert largec.depth == targetc.depth
-    backend.assert_circuitclose(largec, targetc)
+        target_circuit.add(gates.Unitary(unitaries[0], 3))
+        target_circuit.add(gates.Unitary(unitaries[1], 0))
+    target_circuit.add(gates.CNOT(3, 0))
+    assert large_circuit.depth == target_circuit.depth
+    backend.assert_circuitclose(large_circuit, target_circuit)
 
 
 def test_circuit_decompose_execution(backend):
-    c = Circuit(6)
-    c.add(gates.RX(0, 0.1234))
-    c.add(gates.RY(1, 0.4321))
-    c.add(gates.H(i) for i in range(2, 6))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.X(3).controlled_by(0, 1, 2, 4))
-    decomp_c = c.decompose(5)
-    backend.assert_circuitclose(c, decomp_c, atol=1e-6)
+    circuit = Circuit(6)
+    circuit.add(gates.RX(0, 0.1234))
+    circuit.add(gates.RY(1, 0.4321))
+    circuit.add(gates.H(i) for i in range(2, 6))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.X(3).controlled_by(0, 1, 2, 4))
+    decomp_circuit = circuit.decompose(5)
+    backend.assert_circuitclose(circuit, decomp_circuit, atol=1e-6)
 
 
 def test_repeated_execute_pauli_noise_channel(backend):
     thetas = np.random.random(4)
     backend.set_seed(1234)
-    c = Circuit(4)
-    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add(
+    circuit = Circuit(4)
+    circuit.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    circuit.add(
         gates.PauliNoiseChannel(i, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
         for i in range(4)
     )
     with pytest.raises(RuntimeError) as excinfo:
-        final_state = backend.execute_circuit(c, nshots=20)
+        final_state = backend.execute_circuit(circuit, nshots=20)
     assert (
         str(excinfo.value)
         == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
@@ -320,12 +323,12 @@ def test_repeated_execute_pauli_noise_channel(backend):
 
 def test_repeated_execute_with_pauli_noise(backend):
     thetas = np.random.random(4)
-    c = Circuit(4)
-    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    noisy_c = c.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
+    circuit = Circuit(4)
+    circuit.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    noisy_circuit = circuit.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
     with pytest.raises(RuntimeError) as excinfo:
-        final_state = backend.execute_circuit(noisy_c, nshots=20)
+        final_state = backend.execute_circuit(noisy_circuit, nshots=20)
     assert (
         str(excinfo.value)
         == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."

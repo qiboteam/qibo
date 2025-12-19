@@ -173,11 +173,8 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
-        hadamards = backend.np.real(
-            reduce(backend.np.kron, [backend.matrices.H] * nqubits)
-        )
+        hadamards = reduce(backend.kron, [backend.real(backend.matrices.H)] * nqubits)
         hadamards /= 2 ** (nqubits / 2)
-        hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
         array = hadamards @ array
 
@@ -245,16 +242,14 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
-        backend.calculate_vector_norm(
-            backend.np.sqrt(prob_dist_p) - backend.np.sqrt(prob_dist_q)
-        )
+        backend.vector_norm(backend.sqrt(prob_dist_p) - backend.sqrt(prob_dist_q))
         / np.sqrt(2)
     )
 
@@ -332,7 +327,7 @@ def hellinger_shot_error(
     hellinger_error = hellinger_fidelity(
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
-    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.np.sum(
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.sum(
         np.sqrt(prob_dist_q * (1 - prob_dist_p))
         + np.sqrt(prob_dist_p * (1 - prob_dist_q))
     )
@@ -381,13 +376,13 @@ def total_variation_distance(
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    tvd = backend.calculate_vector_norm(prob_dist_p - prob_dist_q, order=1)
+    tvd = backend.vector_norm(prob_dist_p - prob_dist_q, order=1)
 
     return tvd / 2
 
@@ -442,32 +437,22 @@ def haar_integral(
     dim = 2**nqubits
 
     if samples is not None:
-        from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
-            random_statevector,
-        )
-
         rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
         rand_unit_density = backend.cast(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
 
-        random_states = backend.qinfo.ENGINE.random.standard_normal((samples, dim))
+        random_states = backend.random_normal(0, 1, size=(samples, dim))
         random_states = backend.cast(random_states, dtype=rand_unit_density.dtype)
-        random_states += 1.0j * backend.qinfo.ENGINE.random.standard_normal(
-            (samples, dim)
-        )
-        random_states /= backend.qinfo.ENGINE.linalg.norm(
-            random_states, axis=1
-        ).reshape(-1, 1)
+        random_states += 1.0j * backend.random_normal(0, 1, size=(samples, dim))
+        random_states /= backend.vector_norm(random_states, axis=1).reshape(-1, 1)
         random_states = random_states.reshape(samples, 1, dim)
-        rho = backend.np.einsum(
-            "ijk,ijl->ikl", random_states, backend.np.conj(random_states)
-        )
+        rho = backend.einsum("ijk,ijl->ikl", random_states, backend.conj(random_states))
 
         for state in rho:
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.np.kron, [state] * power_t
+                backend.kron, [state] * power_t
             )
 
         integral = rand_unit_density / samples
@@ -488,8 +473,8 @@ def haar_integral(
     integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
     integral = backend.cast(integral, dtype=integral.dtype)
     for indices in permutations_list:
-        integral = integral + backend.np.reshape(
-            backend.np.transpose(identity, indices), (-1, dim**power_t)
+        integral = integral + backend.reshape(
+            backend.transpose(identity, indices), (-1, dim**power_t)
         )
     integral = integral * normalization
 
@@ -531,15 +516,14 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
     circuit.density_matrix = True
     dim = 2**circuit.nqubits
 
-    rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
-    rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
+    rand_unit_density = backend.zeros((dim**power_t, dim**power_t), dtype=complex)
     for _ in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params = backend.random_uniform(
+            -float(np.pi), float(np.pi), circuit.trainable_gates.nparams
+        )
         circuit.set_parameters(params)
-
         rho = backend.execute_circuit(circuit).state()
-
-        rand_unit_density = rand_unit_density + reduce(np.kron, [rho] * power_t)
+        rand_unit_density = rand_unit_density + reduce(backend.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 
@@ -550,15 +534,15 @@ def _hadamard_transform_1d(array, backend=None):
     # necessary because of tf.EagerTensor
     # does not accept item assignment
     backend = _check_backend(backend)
-    array_copied = backend.np.copy(array)
+    array_copied = backend.copy(array)
 
     indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
     for index in indexes:
         for k in range(0, len(array_copied), 2 * index):
             for j in range(k, k + index):
                 # copy necessary because of cupy backend
-                elem_1 = backend.np.copy(array_copied[j])
-                elem_2 = backend.np.copy(array_copied[j + index])
+                elem_1 = backend.copy(array_copied[j])
+                elem_2 = backend.copy(array_copied[j + index])
                 array_copied[j] = elem_1 + elem_2
                 array_copied[j + index] = elem_1 - elem_2
         array_copied /= 2.0

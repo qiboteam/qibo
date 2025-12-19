@@ -41,7 +41,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
 
         index = 0
         encoder = Circuit(n_qubits)
-        for i in range(n_layers):
+        for _ in range(n_layers):
             for j in range(n_qubits):
                 encoder.add(gates.RX(j, params[index]))
                 encoder.add(gates.RY(j, params[index + 1]))
@@ -149,12 +149,12 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     print("Start training")
     for epoch in range(nepochs):
         tf.random.shuffle(train)
-        for i in range(steps_for_epoch):
+        for ind in range(steps_for_epoch):
             loss = train_step(
                 batch_size,
                 encoder,
                 params,
-                train[i * batch_size : (i + 1) * batch_size],
+                train[ind * batch_size : (ind + 1) * batch_size],
             )
         trained_params[epoch] = params.numpy()
         print("Epoch: %d  Loss: %f" % (epoch + 1, loss))
