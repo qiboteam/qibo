@@ -707,12 +707,13 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 .. testcode::
 
     import numpy as np
-    from qibo import models, hamiltonians
+    from qibo.hamiltonians import XXZ
+    from qibo.models import QAOA
 
     # Create XXZ Hamiltonian for six qubits
-    hamiltonian = hamiltonians.XXZ(6)
+    hamiltonian = XXZ(6)
     # Create QAOA model
-    qaoa = models.QAOA(hamiltonian)
+    qaoa = QAOA(hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = 0.01 * np.random.uniform(0,1,4)
@@ -748,10 +749,11 @@ the model. For example the previous example would have to be modified as:
 
 .. code-block:: python
 
-    from qibo import models, hamiltonians
+    from qibo.hamiltonians import XXZ
+    from qibo.models import QAOA
 
-    hamiltonian = hamiltonians.XXZ(6, dense=False)
-    qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
+    hamiltonian = XXZ(6, dense=False)
+    qaoa = QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
 
 
 .. _autodiff-example:
@@ -1681,14 +1683,15 @@ unitary evolution using the full state vector. For example:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models
+    from qibo.models import StateEvolution
+    from qibo.hamiltonians import Z
 
     # Define evolution model under the non-interacting sum(Z) Hamiltonian
     # with time step dt=1e-1
     nqubits = 4
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-1)
+    evolve = StateEvolution(Z(nqubits), dt=1e-1)
     # Define initial state as |++++>
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2 ** nqubits, dtype=complex) / np.sqrt(2 ** nqubits)
     # Get the final state after time t=2
     final_state = evolve(final_time=2, initial_state=initial_state)
 
@@ -1701,16 +1704,19 @@ can track how <X> changes as follows:
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models, callbacks
+
+    from qibo.callbacks import Energy
+    from qibo.hamiltonians import X, Z
+    from qibo.models import StateEvolution
 
     nqubits = 4
+
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
-    observable = callbacks.Energy(hamiltonians.X(nqubits))
+    observable = Energy(X(nqubits))
     # Create evolution object using the above callback and a time step of dt=1e-3
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
-                                   callbacks=[observable])
+    evolve = StateEvolution(Z(nqubits), dt=1e-3, callbacks=[observable])
     # Evolve for total time t=1
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2 ** nqubits, dtype=complex) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
     print(observable[:])
@@ -1734,14 +1740,16 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
 .. testcode::
 
     import numpy as np
-    from qibo import hamiltonians, models
+
+    from qibo.hamiltonians import Z
+    from qibo.models import StateEvolution
 
     # Defina a time dependent Hamiltonian
     nqubits = 4
-    ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
+    ham = lambda t: np.cos(t) * Z(nqubits)
     # and pass it to the evolution model
-    evolve = models.StateEvolution(ham, dt=1e-3)
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    evolve = StateEvolution(ham, dt=1e-3)
+    initial_state = np.ones(2 ** nqubits, dtype=complex) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
 
@@ -1772,10 +1780,10 @@ Below is an example of how to use this object in practice:
 
 .. testcode::
 
-    from qibo import hamiltonians
+    from qibo.hamiltonians import TFIM
 
     # Define TFIM model as a non-dense ``SymbolicHamiltonian``
-    ham = hamiltonians.TFIM(nqubits=5, dense=False)
+    ham = TFIM(nqubits=5, dense=False)
     # This object can be used to create the circuit that
     # implements a single Trotter time step ``dt``
     circuit = ham.circuit(dt=1e-2)
@@ -1811,15 +1819,17 @@ For example:
 .. testcode::
 
     import numpy as np
-    from qibo import models, hamiltonians
+
+    from qibo.hamiltonians import TFIM
+    from qibo.models import StateEvolution
 
     nqubits = 5
     # Create a critical TFIM Hamiltonian as ``SymbolicHamiltonian``
-    ham = hamiltonians.TFIM(nqubits=nqubits, h=1.0, dense=False)
+    ham = TFIM(nqubits=nqubits, h=1.0, dense=False)
     # Define the |+++++> initial state
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2 ** nqubits, dtype=complex) / np.sqrt(2 ** nqubits)
     # Define the evolution model
-    evolve = models.StateEvolution(ham, dt=1e-3)
+    evolve = StateEvolution(ham, dt=1e-3)
     # Evolve for total time T=1
     final_state = evolve(final_time=1, initial_state=initial_state)
 
@@ -2147,7 +2157,7 @@ to trigger the calculation of expectation values directly from the samples:
 .. testcode::
 
     from qibo import Circuit, gates
-    from qibo import hamiltonians
+    from qibo.hamiltonians import Z
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
@@ -2155,7 +2165,7 @@ to trigger the calculation of expectation values directly from the samples:
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(2, 3))
 
-    hamiltonian = hamiltonians.Z(4)
+    hamiltonian = Z(4)
 
     expectation_value = hamiltonian.expectation(circuit, nshots=1024)
     # this is equivalent to explicit sample calculation

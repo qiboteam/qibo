@@ -23,7 +23,7 @@ def main(N, p, shots, post_selection, no_plot):
     tangles = np.empty(N)
     opt_tangles = np.empty(N)
     circuit = ansatz(p)
-    for i in range(N):
+    for qubit in range(N):
         """
         For every seed from 0 to N, the steps to follow are
         1) A random state with three qubits is created from the seed
@@ -35,12 +35,12 @@ def main(N, p, shots, post_selection, no_plot):
 
         Results are stored into variables to paint the results
         """
-        if i % 10 == 0:
-            print("Initialized state with seed %s" % i + "/ %s" % N)
-        state = create_random_state(i, p > 0)
-        tangles[i] = compute_random_tangle(i)
-        fun, params = canonize(state, circuit, shots=np.int32(shots))
-        opt_tangles[i] = canonical_tangle(
+        if qubit % 10 == 0:
+            print("Initialized state with seed %s" % qubit + "/ %s" % N)
+        state = create_random_state(qubit, p > 0)
+        tangles[qubit] = compute_random_tangle(qubit)
+        _, params = canonize(state, circuit, shots=np.int32(shots))
+        opt_tangles[qubit] = canonical_tangle(
             state, params, circuit, post_selection=post_selection
         )
 

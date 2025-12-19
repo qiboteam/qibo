@@ -57,32 +57,32 @@ def superposition_circuit(n, r):
     """Creates an equal quantum superposition over the column choices."""
     n_anc = int(np.ceil(np.log2(r + 1)))
     ancillas = [i for i in range(n, n + n_anc)]
-    c = Circuit(n + n_anc)
-    c.add(set_ancillas_to_num(ancillas, r))
+    circuit = Circuit(n + n_anc)
+    circuit.add(set_ancillas_to_num(ancillas, r))
     tmp = n
     L = superposition_probabilities(n, r)
     for i in L:
         if tmp != i[0]:
-            c.add(sub_one(ancillas, [n - tmp]))
+            circuit.add(sub_one(ancillas, [n - tmp]))
             tmp = i[0]
 
         if i[2] == (0, 1):
-            c.add(add_negates_for_check(ancillas, i[1]))
-            c.add(gates.X(n - i[0]).controlled_by(*ancillas))
-            c.add(add_negates_for_check(ancillas, i[1]))
+            circuit.add(add_negates_for_check(ancillas, i[1]))
+            circuit.add(gates.X(n - i[0]).controlled_by(*ancillas))
+            circuit.add(add_negates_for_check(ancillas, i[1]))
         else:
             if i[0] != n:
-                c.add(add_negates_for_check(ancillas, i[1]))
-                c.add(
+                circuit.add(add_negates_for_check(ancillas, i[1]))
+                circuit.add(
                     gates.RY(
                         n - i[0], float(2 * np.arccos(np.sqrt(i[2][0])))
                     ).controlled_by(*ancillas)
                 )
-                c.add(add_negates_for_check(ancillas, i[1]))
+                circuit.add(add_negates_for_check(ancillas, i[1]))
             else:
-                c.add(gates.RY(0, float(2 * np.arccos(np.sqrt(i[2][0])))))
-    c.add(sub_one(ancillas, [n - 1]))
-    return c
+                circuit.add(gates.RY(0, float(2 * np.arccos(np.sqrt(i[2][0])))))
+    circuit.add(sub_one(ancillas, [n - 1]))
+    return circuit
 
 
 def oracle(n, s):
