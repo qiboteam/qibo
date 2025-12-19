@@ -483,7 +483,7 @@ def GPP(
         node_weights = backend.cast(node_weights, dtype=type(node_weights[0]))
 
     if penalty_coeff != 0.0 and node_weights is None:
-        node_weights = backend.np.ones(len(adjacency_matrix), dtype=backend.np.int8)
+        node_weights = backend.ones(len(adjacency_matrix), dtype=backend.int8)
 
     if not dense:
         return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
@@ -498,7 +498,7 @@ def _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend):
         ) / 2
 
     hamiltonian = 0
-    rows, columns = backend.np.nonzero(backend.np.tril(adjacency_matrix, -1))
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
     for ind_j, ind_k in zip(columns, rows):
         ind_j, ind_k = int(ind_j), int(ind_k)
         x_j = term(ind_j)
@@ -536,7 +536,7 @@ def _gpp_dense(
     term_diag = backend.cast([0, 1])
 
     hamiltonian = 0
-    rows, columns = backend.np.nonzero(backend.np.tril(adjacency_matrix, -1))
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
     for ind_j, ind_k in zip(columns, rows):
         ind_j, ind_k = int(ind_j), int(ind_k)
 
@@ -553,7 +553,7 @@ def _gpp_dense(
 
         hamiltonian += penalty_coeff * (penalty**2)
 
-    return Hamiltonian(nqubits, backend.np.diag(hamiltonian), backend=backend)
+    return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
 
 
 def _multikron(matrix_list, backend):

@@ -140,16 +140,16 @@ def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
 
     term = (backend.matrices.I() - backend.matrices.Z) / 2
     base_string = [backend.matrices.I()] * nqubits
-    rows, columns = backend.np.nonzero(backend.np.tril(adj_matrix, -1))
+    rows, columns = backend.nonzero(backend.tril(adj_matrix, -1))
     target = 0
     for col, row in zip(columns, rows):
         term_col = base_string.copy()
         term_col[int(col)] = term
-        term_col = reduce(backend.np.kron, term_col)
+        term_col = reduce(backend.kron, term_col)
 
         term_row = base_string.copy()
         term_row[int(row)] = term
-        term_row = reduce(backend.np.kron, term_row)
+        term_row = reduce(backend.kron, term_row)
 
         target += term_row + term_col - 2 * (term_col @ term_row)
 
@@ -158,7 +158,7 @@ def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
         for elem in range(len(adj_matrix)):
             term_weight = base_string.copy()
             term_weight[elem] = term - backend.matrices.I() / 2
-            term_weight = reduce(backend.np.kron, term_weight)
+            term_weight = reduce(backend.kron, term_weight)
             penalty += term_weight
 
         target += penalty_coeff * (penalty**2)
