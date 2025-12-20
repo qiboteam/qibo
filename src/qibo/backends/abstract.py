@@ -705,6 +705,7 @@ class Backend:  # pylint: disable=R0904
                 return self.eigsh(matrix, k=k, which="SA")
 
             matrix = self.to_numpy(matrix)  # pylint: disable=E1111  # pragma: no cover
+            matrix = self.cast(matrix, dtype=matrix.dtype)
 
         if hermitian:
             return self.eigh(matrix)
