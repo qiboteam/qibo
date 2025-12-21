@@ -326,3 +326,19 @@ def test_mixed_state():
 
     bs.render()
     plt.show()
+
+
+def test_bloch_error_mode():
+    bs = BlochSphere()
+
+    vector = np.array([1, 0, 0])
+
+    try:
+        bs.add_vector(vector, mode="invalid_mode")
+    except ValueError as e:
+        assert str(e) == "Mode not supported. Try: `point` or `vector`."
+
+    try:
+        bs.add_state(vector, mode="invalid_mode")
+    except ValueError as e:
+        assert str(e) == "Mode not supported. Try: `point` or `vector`."
