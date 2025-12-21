@@ -549,12 +549,14 @@ def _clifford_post_execution_reshape(state, nqubits: int):
     return state
 
 
-def identity_density_matrix(nqubits, normalize: bool = True):
-    state = np.eye(2**nqubits, dtype="complex128")
-    if normalize is True:  # pragma: no cover
-        state /= 2**nqubits
-    return state
+def csr_matrix(array, **kwargs):
+    return sparse.csr_matrix(array, **kwargs)
 
 
-def set_seed(seed):
-    np.random.seed(seed)
+def _identity_sparse(dims: int, dtype=None, **kwargs):
+    if dtype is None:  # pragma: no cover
+        dtype = "complex128"
+
+    sparsity_format = kwargs.get("format", "csr")
+
+    return sparse.eye(dims, dtype=dtype, format=sparsity_format, **kwargs)

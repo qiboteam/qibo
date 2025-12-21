@@ -18,14 +18,15 @@ def parallel_execution(circuit, states, processes: Optional[int] = None, backend
 
             import qibo
             qibo.set_backend('qibojit')
-            from qibo import models, set_threads
+            from qibo import set_threads
+            from qibo.models import QFT
             from qibo.parallel import parallel_execution
             import numpy as np
             # create circuit
             nqubits = 22
-            circuit = models.QFT(nqubits)
+            circuit = QFT(nqubits)
             # create random states
-            states = [ np.random.random(2**nqubits) for i in range(5)]
+            states = [ np.random.random(2**nqubits) for _ in range(5)]
             # set threads to 1 per process (optional, requires tuning)
             set_threads(1)
             # execute in parallel
@@ -66,11 +67,12 @@ def parallel_circuits_execution(
 
             import qibo
             qibo.set_backend('qibojit')
-            from qibo import models, set_threads
+            from qibo import set_threads
+            from qibo.models import QFT
             from qibo.parallel import parallel_circuits_execution
             import numpy as np
             # create different circuits
-            circuits = [models.QFT(n) for n in range(5, 16)]
+            circuits = [QFT(n) for n in range(5, 16)]
             # set threads to 1 per process (optional, requires tuning)
             set_threads(1)
             # execute in parallel

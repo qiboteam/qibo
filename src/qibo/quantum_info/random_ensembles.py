@@ -71,7 +71,12 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
     if ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+
+    # necessary to use numpy rng explicitly because of scipy
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
 
     sampler = _probability_distribution_sin(a=0, b=np.pi, seed=local_state)
     phases = local_state.random((ngates, 3))
@@ -170,7 +175,7 @@ def random_hermitian(
         matrix = backend.qinfo._random_hermitian(dims)
 
     if normalize:
-        matrix = matrix / backend.np.linalg.norm(matrix)
+        matrix = matrix / backend.matrix_norm(matrix)
 
     return matrix
 
@@ -395,6 +400,7 @@ def random_statevector(dims: int, dtype=None, seed=None, backend=None):
         state = backend.qinfo._random_statevector(dims)
     else:
         state = backend.qinfo._random_statevector_real(dims)
+
     return backend.cast(state, dtype=dtype)
 
 
@@ -538,21 +544,16 @@ def random_clifford(
     hadamards, permutations = backend.qinfo._sample_from_quantum_mallows_distribution(
         nqubits
     )
-    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
-    permutations = backend.cast(permutations, dtype=permutations.dtype)
+    hadamards = backend.cast(hadamards, dtype=backend.uint8)
+    permutations = backend.cast(permutations, dtype=backend.uint8)
 
-    gamma = backend.np.diag(
-        backend.np.random.randint(2, size=nqubits, dtype=backend.np.uint8)
+    gamma = backend.diag(backend.random_integers(2, size=nqubits, dtype=backend.uint8))
+
+    gamma_prime = backend.diag(
+        backend.random_integers(2, size=nqubits, dtype=backend.uint8)
     )
-    gamma = backend.cast(gamma, dtype=gamma.dtype)
 
-    gamma_prime = backend.np.diag(
-        backend.np.random.randint(2, size=nqubits, dtype=backend.np.uint8)
-    )
-    gamma_prime = backend.cast(gamma_prime, dtype=gamma_prime.dtype)
-
-    delta = backend.np.eye(nqubits, dtype=backend.np.uint8)
-    delta = backend.cast(delta, dtype=delta.dtype)
+    delta = backend.identity(nqubits, dtype=backend.uint8)
     delta_prime = backend.cast(delta, dtype=delta.dtype, copy=True)
 
     backend.qinfo._fill_tril(gamma, symmetric=True)
@@ -567,49 +568,47 @@ def random_clifford(
     block_inverse_threshold = 50
 
     # Compute stabilizer table
-    zero = backend.np.zeros((nqubits, nqubits), dtype=np.uint8)
-    zero = backend.cast(zero, dtype=zero.dtype)
+    zero = backend.zeros((nqubits, nqubits), dtype=backend.uint8)
     prod1 = (gamma @ delta) % 2
     prod2 = (gamma_prime @ delta_prime) % 2
     inv1 = backend.qinfo._inverse_tril(delta, block_inverse_threshold).T
     inv2 = backend.qinfo._inverse_tril(delta_prime, block_inverse_threshold).T
 
-    # backend.np.block cannot be used below because there is no cupy equivalent
-    # hence the necessity for three backend.np.concatenate's
-    had_free_operator_1 = backend.np.concatenate(
+    # backend.block cannot be used below because there is no cupy equivalent
+    # hence the necessity for three backend.concatenate's
+    had_free_operator_1 = backend.concatenate(
         [
-            backend.np.concatenate([delta, zero], axis=1),
-            backend.np.concatenate([prod1, inv1], axis=1),
+            backend.concatenate([delta, zero], axis=1),
+            backend.concatenate([prod1, inv1], axis=1),
         ],
         axis=0,
     )
-    had_free_operator_2 = backend.np.concatenate(
+    had_free_operator_2 = backend.concatenate(
         [
-            backend.np.concatenate([delta_prime, zero], axis=1),
-            backend.np.concatenate([prod2, inv2], axis=1),
+            backend.concatenate([delta_prime, zero], axis=1),
+            backend.concatenate([prod2, inv2], axis=1),
         ],
         axis=0,
     )
 
     # Apply qubit permutation
     table = had_free_operator_2[
-        backend.np.concatenate([permutations, nqubits + permutations])
+        backend.concatenate([permutations, nqubits + permutations], axis=0)
     ]
 
     # Apply layer of Hadamards
-    inds = hadamards * backend.cast(backend.np.arange(1, nqubits + 1), dtype=int)
+    inds = hadamards * backend.arange(1, nqubits + 1)
     inds = inds[inds > 0] - 1
-    lhs_inds = backend.np.concatenate([inds, inds + nqubits])
-    rhs_inds = backend.np.concatenate([inds + nqubits, inds])
+    lhs_inds = backend.concatenate([inds, inds + nqubits], axis=0)
+    rhs_inds = backend.concatenate([inds + nqubits, inds], axis=0)
     table[lhs_inds, :] = table[rhs_inds, :]
 
     # Apply table
-    tableau = backend.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
-    tableau = backend.cast(tableau, dtype=tableau.dtype)
+    tableau = backend.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
     tableau[:, :-1] = (had_free_operator_1 @ table) % 2
 
     # Generate random phases
-    integers = backend.np.random.randint(2, size=2 * nqubits)
+    integers = backend.random_integers(2, size=2 * nqubits)
     integers = backend.cast(integers, dtype=integers.dtype)
     tableau[:, -1] = integers
 
@@ -618,7 +617,7 @@ def random_clifford(
         if backend.name in ("clifford", "qibojit", "qiboml")
         else backend.name
     )
-    cliff = Clifford(tableau, engine=engine)
+    cliff = Clifford(tableau, platform=engine)
 
     if return_circuit:
         method = "BM20" if engine == "cupy" else "AG04"
@@ -719,8 +718,8 @@ def random_pauli(
             qubits = [qubits]
 
     # this may be optimized as well (the sampling mostly) but maybe it's not worth it
-    indexes = backend.np.random.randint(0, len(subset), size=(len(qubits), depth))
-    indexes = [[keys[item] for item in row] for row in indexes]
+    indexes = backend.random_integers(0, len(subset), size=(len(qubits), depth))
+    indexes = [[keys[int(item)] for item in row] for row in indexes]
 
     if return_circuit:
         gate_grid = Circuit(max_qubits, density_matrix=density_matrix)
@@ -807,7 +806,7 @@ def random_pauli_hamiltonian(
 
     hamiltonian = random_hermitian(d, normalize=True, seed=seed, backend=backend)
 
-    eigenvalues, eigenvectors = backend.calculate_eigenvectors(hamiltonian)
+    eigenvalues, eigenvectors = backend.eigenvectors(hamiltonian)
     if backend.platform == "tensorflow":
         eigenvalues = backend.to_numpy(eigenvalues)
         eigenvectors = backend.to_numpy(eigenvectors)
@@ -823,21 +822,21 @@ def random_pauli_hamiltonian(
         )
         eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
 
-        hamiltonian = np.zeros((d, d), dtype=complex)
+        hamiltonian = backend.zeros((d, d), dtype=backend.complex128)
         hamiltonian = backend.cast(hamiltonian, dtype=hamiltonian.dtype)
         # excluding the first eigenvector because first eigenvalue is zero
         for eigenvalue, eigenvector in zip(
-            eigenvalues[1:], backend.np.transpose(eigenvectors, (1, 0))[1:]
+            eigenvalues[1:], backend.transpose(eigenvectors, (1, 0))[1:]
         ):
-            hamiltonian = hamiltonian + eigenvalue * backend.np.outer(
-                eigenvector, backend.np.conj(eigenvector)
+            hamiltonian = hamiltonian + eigenvalue * backend.outer(
+                eigenvector, backend.conj(eigenvector)
             )
 
     U = comp_basis_to_pauli(
         nqubits, normalize=True, pauli_order=pauli_order, backend=backend
     )
 
-    hamiltonian = backend.np.real(U @ vectorization(hamiltonian, backend=backend))
+    hamiltonian = backend.real(U @ vectorization(hamiltonian, backend=backend))
 
     return hamiltonian, eigenvalues
 
@@ -918,39 +917,37 @@ def random_stochastic_matrix(
         max_iterations = MAX_ITERATIONS
 
     matrix = local_state.random(size=(dims, dims))
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
     if diagonally_dominant:
         matrix /= dims**2
         for k, row in enumerate(matrix):
-            row = np.delete(row, obj=k)
-            matrix[k, k] = 1 - np.sum(row)
-    row_sum = np.sum(matrix, axis=1)
+            row = backend.delete(row, k)
+            matrix[k, k] = 1 - backend.sum(row)
 
-    row_sum = matrix.sum(axis=1)
+    row_sum = backend.sum(matrix, axis=1)
 
     if bistochastic:
-        column_sum = matrix.sum(axis=0)
+        column_sum = backend.sum(matrix, axis=0)
         count = 0
         while count <= max_iterations - 1 and (
             (
-                np.any(row_sum >= 1 + precision_tol)
-                or np.any(row_sum <= 1 - precision_tol)
+                backend.any(row_sum >= 1 + precision_tol)
+                or backend.any(row_sum <= 1 - precision_tol)
             )
             or (
-                np.any(column_sum >= 1 + precision_tol)
-                or np.any(column_sum <= 1 - precision_tol)
+                backend.any(column_sum >= 1 + precision_tol)
+                or backend.any(column_sum <= 1 - precision_tol)
             )
         ):
-            matrix = matrix / matrix.sum(axis=0)
-            matrix = matrix / matrix.sum(axis=1)[:, np.newaxis]
-            row_sum = matrix.sum(axis=1)
-            column_sum = matrix.sum(axis=0)
+            matrix = matrix / backend.sum(matrix, axis=0)
+            matrix = matrix / backend.sum(matrix, axis=1)[:, np.newaxis]
+            row_sum = backend.sum(matrix, axis=1)
+            column_sum = backend.sum(matrix, axis=0)
             count += 1
         if count == max_iterations:
             warnings.warn("Reached max iterations.", RuntimeWarning)
     else:
-        matrix = matrix / np.outer(row_sum, [1] * dims)
-
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
+        matrix = matrix / backend.outer(row_sum, backend.ones(dims, dtype=int))
 
     return matrix
 

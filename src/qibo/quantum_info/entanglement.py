@@ -147,10 +147,10 @@ def negativity(state, bipartition, backend=None):
     backend = _check_backend(backend)
 
     reduced = partial_transpose(state, bipartition, backend)
-    reduced = backend.np.conj(reduced.T) @ reduced
-    norm = backend.np.trace(matrix_power(reduced, 1 / 2, backend=backend))
+    reduced = backend.conj(reduced.T) @ reduced
+    norm = backend.trace(matrix_power(reduced, 1 / 2, backend=backend))
 
-    return backend.np.real((norm - 1) / 2)
+    return backend.real((norm - 1) / 2)
 
 
 def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
@@ -203,14 +203,14 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     backend = _check_backend(backend)
 
     if state is None:
-        state = backend.plus_density_matrix(nqubits)
+        state = backend.plus_state(nqubits, density_matrix=True)
 
     # necessary because this function do support repeated execution,
     # so it has to default to density matrices
     if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
-    state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
+    state_final = backend.apply_channel(channel, state, nqubits)
 
     entang_fidelity = fidelity(state_final, state, backend=backend)
 
@@ -326,12 +326,17 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
     backend = _check_backend(backend)
 
     local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+        backend.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     capability = []
     for _ in range(samples):
-        params = local_state.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params = backend.random_uniform(
+            -float(np.pi),
+            float(np.pi),
+            size=circuit.trainable_gates.nparams,
+            seed=local_state,
+        )
         circuit.set_parameters(params)
         state = backend.execute_circuit(circuit).state()
         entanglement = meyer_wallach_entanglement(state, backend=backend)
