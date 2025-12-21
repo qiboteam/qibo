@@ -171,23 +171,6 @@ class BlochSphere:
         z = sigma_Z.expectation_from_state(state)
         return x, y, z
 
-    def _coordinates(self, state):
-        """This function determines the coordinates of a qubit in the sphere."""
-
-        x, y, z = 0, 0, 0
-        if state.ndim == 1:
-            if state[0] == 1 and state[0] == 0:
-                z = 1
-                return x, y, z
-
-            if state[0] == 0 and state[0] == 1:
-                z = -1
-                return x, y, z
-
-            return self._paulis_expectation(state)
-
-        return self._paulis_expectation(state)
-
     def _is_density_matrix(self, rho: np.ndarray) -> bool:
         """This function is used only to check whether an input of shape (2,2) is two state vectors or one density matrix."""
         return np.allclose(rho, rho.conj().T) and np.isclose(np.trace(rho), 1)
@@ -242,7 +225,7 @@ class BlochSphere:
             if mode not in ("vector", "point"):
                 raise_error(ValueError, "Mode not supported. Try: `point` or `vector`.")
 
-            x, y, z = self._coordinates(vector)
+            x, y, z = self._paulis_expectation(vector)
 
             if mode == "vector":
                 self._vectors.append(np.array([x, y, z]))
