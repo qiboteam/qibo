@@ -1,6 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
 mpl.use("agg")
 
@@ -333,12 +334,8 @@ def test_bloch_error_mode():
 
     vector = np.array([1, 0, 0])
 
-    try:
+    with pytest.raises(ValueError):
         bs.add_vector(vector, mode="invalid_mode")
-    except ValueError as e:
-        assert str(e) == "Mode not supported. Try: `point` or `vector`."
 
-    try:
+    with pytest.raises(ValueError):
         bs.add_state(vector, mode="invalid_mode")
-    except ValueError as e:
-        assert str(e) == "Mode not supported. Try: `point` or `vector`."
