@@ -58,17 +58,17 @@ def assert_gates_equivalent(
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    c = Circuit(nqubits, accelerators)
-    c.add(qibo_gate)
-    assert c.depth == target_depth
+    circuit = Circuit(nqubits, accelerators)
+    circuit.add(qibo_gate)
+    assert circuit.depth == target_depth
     if accelerators and not backend.supports_multigpu:
         with pytest.raises(NotImplementedError):
             final_state = backend.execute_circuit(
-                c, backend.cast(initial_state, copy=True)
+                circuit, backend.cast(initial_state, copy=True)
             ).state()
     else:
         final_state = backend.execute_circuit(
-            c, backend.cast(initial_state, copy=True)
+            circuit, backend.cast(initial_state, copy=True)
         ).state()
         backend.assert_allclose(final_state, target_state, atol=atol)
 

@@ -115,8 +115,11 @@ print(f'Number of quadratic terms: {len(quadratic)}\n')
 
 ```python
 import numpy as np
+
 rng = np.random.default_rng(seed=1234)
-random_solution = {i: rng.integers(2) for i in g.nodes}
+
+random_solution = {elem: rng.integers(2) for elem in g.nodes}
+
 print(f'The random solution is {random_solution}\n')
 ```
 
@@ -206,10 +209,10 @@ ham = hamiltonian_mvc(g, penalty=penalty, dense=True)
 
 
 ```python
-from qibo import models, hamiltonians
+from qibo.models import QAOA
 
 # Create QAOA model
-qaoa = models.QAOA(ham)
+qaoa = QAOA(ham)
 
 # Optimize starting from a random guess for the variational parameters
 initial_parameters = 0.01 * np.random.uniform(0,1,2)

@@ -10,6 +10,7 @@ from qibo.backends import NumpyBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.quantum_info.superoperator_transformations import to_pauli_liouville
+from qibo.symbols import Z
 from qibo.tomography.gate_set_tomography import (
     GST,
     _extract_gate,
@@ -123,45 +124,46 @@ def test__measurement_basis(j, nqubits):
     INDEX_NQUBITS,
 )
 def test__get_observable(j, nqubits):
+    backend = NumpyBackend()
     correct_observables = {
         1: [
             (S(1),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
-            (symbols.Z(0),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
+            (Z(0, backend=backend),),
         ],
         2: [
             (S(1), S(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (S(1), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), S(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
-            (symbols.Z(0), symbols.Z(1)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (S(1), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), S(1)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
+            (Z(0, backend=backend), Z(1, backend=backend)),
         ],
     }
     correct_observables[1] = [
-        SymbolicHamiltonian(h[0]).form for h in correct_observables[1]
+        SymbolicHamiltonian(h[0], backend=backend).form for h in correct_observables[1]
     ]
     correct_observables[2] = [
-        SymbolicHamiltonian(reduce(lambda x, y: x * y, h)).form
+        SymbolicHamiltonian(reduce(lambda x, y: x * y, h), backend=backend).form
         for h in correct_observables[2]
     ]
     errors = {(0, 3): ValueError, (17, 1): IndexError}
     if (j, nqubits) in [(0, 3), (17, 1)]:
         with pytest.raises(errors[(j, nqubits)]):
-            prepared_observable = _get_observable(j, nqubits)
+            prepared_observable = _get_observable(j, nqubits, backend=str(backend))
     else:
-        prepared_observable = _get_observable(j, nqubits).form
+        prepared_observable = _get_observable(j, nqubits, backend=str(backend)).form
         groundtruth = correct_observables[nqubits][j]
         assert groundtruth == prepared_observable
 
@@ -180,48 +182,53 @@ def test__extract_nqubits():
                 nqubits = _extract_nqubits(gate)
 
 
-@pytest.mark.parametrize(
-    "idx",
-    (
-        5
-        * [
-            None,
-        ],
-        [2, 2, 2, (2, 3), (2, 3)],
-    ),
-)
-def test__extract_gate(idx):
-
-    chosen_idx = idx
+def test__extract_gate_default_qubits():
 
     gates_to_test = [
-        (gates.T),
-        ((gates.RX, [np.pi / 2])),
-        ((gates.Unitary, [np.eye(2)])),
-        ((gates.CRX, [np.pi / 3])),
-        ((gates.Unitary, [np.eye(4)])),
+        gates.T,
+        (gates.RX, [np.pi / 2]),
+        (gates.Unitary, [np.eye(2)]),
+        (gates.CRX, [np.pi / 3]),
+        (gates.Unitary, [np.eye(4)]),
     ]
 
-    if all(i is None for i in chosen_idx):
-        correct_gates = [
-            gates.T(0),
-            gates.RX(0, np.pi / 2),
-            gates.Unitary(np.eye(2), 0),
-            gates.CRX(0, 1, np.pi / 3),
-            gates.Unitary(np.eye(4), 0, 1),
-        ]
-    else:
-        correct_gates = [
-            gates.T(2),
-            gates.RX(2, np.pi / 2),
-            gates.Unitary(np.eye(2), 2),
-            gates.CRX(2, 3, np.pi / 3),
-            gates.Unitary(np.eye(4), 2, 3),
-        ]
+    expected_qubits_list = [
+        (0,),
+        (0,),
+        (0,),
+        (0, 1),
+        (0, 1),
+    ]
 
-    for _i in range(len(gates_to_test)):
-        extracted_gate, _ = _extract_gate(gates_to_test[_i], idx=chosen_idx[_i])
-        assert extracted_gate.qubits == correct_gates[_i].qubits
+    for gate_spec, expected_qubits in zip(gates_to_test, expected_qubits_list):
+        extracted_gate, _ = _extract_gate(gate_spec, qubits=None)
+        assert extracted_gate.qubits == expected_qubits
+
+
+def test__extract_gate_user_defined_qubits():
+
+    gates_to_test = [
+        gates.T,
+        (gates.RX, [np.pi / 2]),
+        (gates.Unitary, [np.eye(2)]),
+        (gates.CRX, [np.pi / 3]),
+        (gates.Unitary, [np.eye(4)]),
+    ]
+
+    qubits_list = [2, 2, 2, (2, 3), (2, 3)]
+    expected_qubits_list = [
+        (2,),
+        (2,),
+        (2,),
+        (2, 3),
+        (2, 3),
+    ]
+
+    for gate_spec, qubit_spec, expected_qubits in zip(
+        gates_to_test, qubits_list, expected_qubits_list
+    ):
+        extracted_gate, _ = _extract_gate(gate_spec, qubits=qubit_spec)
+        assert extracted_gate.qubits == expected_qubits
 
 
 @pytest.mark.parametrize(
@@ -554,11 +561,11 @@ def test_GST(backend, target_gates, pauli_liouville):
             pauli_liouville=pauli_liouville,
             backend=backend,
         )
-        T_2q = backend.np.kron(T, T)
+        T_2q = backend.kron(T, T)
         for target, estimate in zip(target_matrices, approx_gates):
             if not pauli_liouville:
                 G = empty_1q if estimate.shape[0] == 4 else empty_2q
-                G_inv = backend.np.linalg.inv(G)
+                G_inv = backend.inv(G)
                 T_matrix = T if estimate.shape[0] == 4 else T_2q
                 estimate = T_matrix @ G_inv @ estimate @ G_inv
             backend.assert_allclose(
@@ -635,16 +642,18 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
         backend.assert_allclose(test_matrix[0], ground_truth_matrix[0], atol=1e-1)
 
 
-def test_GST_invertible_matrix():
+def test_GST_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
     assert True
 
 
-def test_GST_non_invertible_matrix():
+def test_GST_non_invertible_matrix(backend):
     T = np.array([[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, -1, 0, 0]])
     with pytest.raises(ValueError):
-        matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T)
+        matrices = GST(
+            gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend
+        )
 
 
 def test_GST_with_transpiler(backend, star_connectivity):

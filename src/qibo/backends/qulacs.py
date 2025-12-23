@@ -1,21 +1,23 @@
 """Module defining the Qulacs backend."""
 
 import re
+from typing import Optional
 
 import qulacs  # pylint: disable=import-error
+from numpy.typing import ArrayLike
 from qulacs import (  # pylint: disable=no-name-in-module, import-error
     QuantumCircuitSimulator,
     converter,
 )
 
-from qibo import __version__
+from qibo import Circuit, __version__
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.result import CircuitResult, QuantumState
 
 
 def circuit_to_qulacs(
-    circuit: "qibo.Circuit",  # type: ignore
+    circuit: Circuit,
 ) -> "qulacs.QuantumCircuit":  # pylint: disable=no-member
     """
     Converts a qibo circuit in a qulacs circuit.
@@ -24,7 +26,7 @@ def circuit_to_qulacs(
         circuit (:class:`qibo.models.circuit.Circuit`): Input circuit to convert.
 
     Returns:
-        qulacs.QuantumCircuit: The converted qulacs circuit.
+        :class:`qulacs.QuantumCircuit`: The converted qulacs circuit.
     """
     qasm_str = re.sub("^//.+\n", "", circuit.to_qasm())
     qasm_str = re.sub(r"creg\s.+;", "", qasm_str)
@@ -44,8 +46,8 @@ class QulacsBackend(NumpyBackend):
 
     def execute_circuit(
         self,
-        circuit: "qibo.Circuit",  # type: ignore
-        initial_state=None,
+        circuit: Circuit,
+        initial_state: Optional[ArrayLike] = None,
         nshots: int = 1000,
     ):
         """Execute a circuit with qulacs.
@@ -80,8 +82,10 @@ class QulacsBackend(NumpyBackend):
             )
         else:
             state = state.get_vector().reshape(circuit.nqubits * (2,)).T.ravel()
+
         if len(circuit.measurements) > 0:
             return CircuitResult(
                 state, circuit.measurements, backend=self, nshots=nshots
             )
+
         return QuantumState(state, backend=self)

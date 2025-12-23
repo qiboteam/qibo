@@ -1,3 +1,7 @@
+import pytest
+
+pytest.skip("Soon to be moved to `qiboml`.", allow_module_level=True)
+
 import math
 
 import numpy as np
@@ -233,40 +237,40 @@ def get_real_vector4():
 
 
 def one_qubit_unitary(nqubits, bit, symbols):
-    c = Circuit(nqubits)
-    c.add(gates.RX(bit, symbols[0]))
-    c.add(gates.RY(bit, symbols[1]))
-    c.add(gates.RZ(bit, symbols[2]))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RX(bit, symbols[0]))
+    circuit.add(gates.RY(bit, symbols[1]))
+    circuit.add(gates.RZ(bit, symbols[2]))
 
-    return c
+    return circuit
 
 
 def RXX_unitary(nqubits, bit0, bit1, angle):
-    c = Circuit(nqubits)
-    c.add(gates.RXX(bit0, bit1, angle))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RXX(bit0, bit1, angle))
 
-    return c
+    return circuit
 
 
 def RYY_unitary(nqubits, bit0, bit1, angle):
-    c = Circuit(nqubits)
-    c.add(gates.RYY(bit0, bit1, angle))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RYY(bit0, bit1, angle))
 
-    return c
+    return circuit
 
 
 def RZZ_unitary(nqubits, bit0, bit1, angle):
-    c = Circuit(nqubits)
-    c.add(gates.RZZ(bit0, bit1, angle))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.RZZ(bit0, bit1, angle))
 
-    return c
+    return circuit
 
 
 def CNOT_unitary(nqubits, bit0, bit1):
-    c = Circuit(nqubits)
-    c.add(gates.CNOT(bit0, bit1))
+    circuit = Circuit(nqubits)
+    circuit.add(gates.CNOT(bit0, bit1))
 
-    return c
+    return circuit
 
 
 def test_1_qubit_classifier_circuit_error():
@@ -310,22 +314,22 @@ def test_qcnn_training():
 
 
 def test_two_qubit_ansatz():
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.RX(0, 0))
-    c.add(gates.CNOT(1, 0))
-    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RX(0, 0))
+    circuit.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=circuit)
 
 
 def test_two_qubit_ansatz_training():
     # test qibojit case (copy initial state as quick-fix for in-place update)
     set_backend("qibojit")
 
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.RX(0, 0))
-    c.add(gates.CNOT(1, 0))
-    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RX(0, 0))
+    circuit.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=circuit)
 
     data = np.zeros([2, 16])
     for i in range(2):
