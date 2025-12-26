@@ -14,14 +14,17 @@ def tsp_phaser(distance_matrix, backend=None):
     num_cities = distance_matrix.shape[0]
     two_to_one = calculate_two_to_one(num_cities)
     form = 0
-    for i in range(num_cities):
-        for u in range(num_cities):
-            for v in range(num_cities):
-                if u != v:
+    for city_i in range(num_cities):
+        for city_u in range(num_cities):
+            for city_v in range(num_cities):
+                if city_u != city_v:
                     form += (
-                        distance_matrix[u, v]
-                        * Z(int(two_to_one[u, i]), backend=backend)
-                        * Z(int(two_to_one[v, (i + 1) % num_cities]), backend=backend)
+                        distance_matrix[city_u, city_v]
+                        * Z(int(two_to_one[city_u, city_i]), backend=backend)
+                        * Z(
+                            int(two_to_one[city_v, (city_i + 1) % num_cities]),
+                            backend=backend,
+                        )
                     )
     ham = SymbolicHamiltonian(form, backend=backend)
     return ham
@@ -36,18 +39,22 @@ def tsp_mixer(num_cities, backend=None):
         int(two_to_one[u, i]), backend=backend
     )
     form = 0
-    for i in range(num_cities):
-        for u in range(num_cities):
-            for v in range(num_cities):
-                if u != v:
-                    form += splus(u, i) * splus(v, (i + 1) % num_cities) * sminus(
-                        u, (i + 1) % num_cities
-                    ) * sminus(v, i) + sminus(u, i) * sminus(
-                        v, (i + 1) % num_cities
+    for city_i in range(num_cities):
+        for city_u in range(num_cities):
+            for city_v in range(num_cities):
+                if city_u != city_v:
+                    form += splus(city_u, city_i) * splus(
+                        city_v, (city_i + 1) % num_cities
+                    ) * sminus(city_u, (city_i + 1) % num_cities) * sminus(
+                        city_v, city_i
+                    ) + sminus(
+                        city_u, city_i
+                    ) * sminus(
+                        city_v, (city_i + 1) % num_cities
                     ) * splus(
-                        u, (i + 1) % num_cities
+                        city_u, (city_i + 1) % num_cities
                     ) * splus(
-                        v, i
+                        city_v, city_i
                     )
     ham = SymbolicHamiltonian(form, backend=backend)
     return ham
@@ -171,7 +178,7 @@ class TSP:
 
         """
         circuit = Circuit(len(ordering) ** 2)
-        for i in range(len(ordering)):
-            circuit.add(gates.X(int(self.two_to_one[ordering[i], i])))
+        for order in range(len(ordering)):
+            circuit.add(gates.X(int(self.two_to_one[ordering[order], order])))
         result = self.backend.execute_circuit(circuit)
         return result.state()

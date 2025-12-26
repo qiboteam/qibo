@@ -1,7 +1,7 @@
 """Module with common linear algebra operations for quantum information."""
 
 import math
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibo.backends import _check_backend, _check_backend_and_local_state
 from qibo.config import raise_error
@@ -126,39 +126,7 @@ def partial_trace(
 
     backend = _check_backend(backend)
 
-    state = backend.cast(state, dtype=state.dtype)
-    nqubits = math.log2(state.shape[0])
-
-    if not nqubits.is_integer():
-        raise_error(
-            ValueError,
-            "dimension(s) of ``state`` must be a power of 2, "
-            + f"but it is {2**nqubits}.",
-        )
-
-    nqubits = int(nqubits)
-
-    statevector = bool(len(state.shape) == 1)
-
-    factor = 1 if statevector else 2
-    state = backend.np.reshape(state, factor * nqubits * (2,))
-
-    if statevector:
-        axes = 2 * [list(traced_qubits)]
-        rho = backend.np.tensordot(state, backend.np.conj(state), axes)
-        shape = 2 * (2 ** (nqubits - len(traced_qubits)),)
-
-        return backend.np.reshape(rho, shape)
-
-    order = tuple(sorted(traced_qubits))
-    order += tuple(set(list(range(nqubits))) ^ set(traced_qubits))
-    order += tuple(k + nqubits for k in order)
-    shape = 2 * (2 ** len(traced_qubits), 2 ** (nqubits - len(traced_qubits)))
-
-    state = backend.np.transpose(state, order)
-    state = backend.np.reshape(state, shape)
-
-    return backend.np.einsum("abac->bc", state)
+    return backend.partial_trace(state, traced_qubits)
 
 
 def partial_transpose(
@@ -215,10 +183,10 @@ def partial_transpose(
     nqubits = int(nqubits)
 
     if len(shape) == 1:
-        operator = backend.np.outer(operator, backend.np.conj(operator.T))
+        operator = backend.outer(operator, backend.conj(operator.T))
     elif len(shape) == 3 and shape[1] == 1:
-        operator = backend.np.einsum(
-            "aij,akl->aijkl", operator, backend.np.conj(operator)
+        operator = backend.einsum(
+            "aij,akl->aijkl", operator, backend.conj(operator)
         ).reshape(nstates, dims, dims)
 
     new_shape = list(range(2 * nqubits + 1))
@@ -228,19 +196,19 @@ def partial_transpose(
         new_shape[ind + nqubits] = ind
     new_shape = tuple(new_shape)
 
-    reshaped = backend.np.reshape(operator, [-1] + [2] * (2 * nqubits))
-    reshaped = backend.np.transpose(reshaped, new_shape)
+    reshaped = backend.reshape(operator, [-1] + [2] * (2 * nqubits))
+    reshaped = backend.transpose(reshaped, new_shape)
 
     final_shape = (dims, dims)
     if len(operator.shape) == 3:
         final_shape = (nstates,) + final_shape
 
-    return backend.np.reshape(reshaped, final_shape)
+    return backend.reshape(reshaped, final_shape)
 
 
 def matrix_exponentiation(
-    phase: Union[float, complex],
     matrix,
+    phase: Optional[Union[float, int, complex]] = None,
     eigenvectors=None,
     eigenvalues=None,
     backend=None,
@@ -251,14 +219,15 @@ def matrix_exponentiation(
     it returns the exponential of the form
 
     .. math::
-        \\exp\\left(-i \\, \\theta \\, H \\right) \\, .
+        \\exp\\left(\\theta \\, H \\right) \\, .
 
     If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
     is used for the exponentiation.
 
     Args:
-        phase (float or complex): phase that multiplies the matrix.
         matrix (ndarray): matrix to be exponentiated.
+        phase (float or int or complex): phase that multiplies the matrix.
+            If ``None``, defaults to :math:`1`. Defaults to ``None``.
         eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
             to calculate ``matrix`` exponentiation as part of diagonalization.
             Must be used together with ``eigenvalues``. Defaults to ``None``.
@@ -274,7 +243,44 @@ def matrix_exponentiation(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_exp(phase, matrix, eigenvectors, eigenvalues)
+    return backend.matrix_exp(matrix, phase, eigenvectors, eigenvalues)
+
+
+def matrix_logarithm(
+    matrix,
+    base: Union[float, int] = 2,
+    eigenvectors=None,
+    eigenvalues=None,
+    backend=None,
+):
+    """Calculates the logarithm of a matrix.
+
+    Given a ``matrix`` :math:`A` and a log base :math:`b`, it returns the logarithm of the form
+
+    .. math::
+        \\log_{b}\\left(\\theta \\, H \\right) \\, .
+
+    If the ``eigenvectors`` and ``eigenvalues`` are given, the matrix diagonalization
+    is used for the calculation.
+
+    Args:
+        matrix (ndarray): matrix to be logarithmed.
+        eigenvectors (ndarray, optional): _if not ``None``, eigenvectors are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvalues``. Defaults to ``None``.
+        eigenvalues (ndarray, optional): if not ``None``, eigenvalues are used
+            to calculate the ``matrix`` logarithm as part of diagonalization.
+            Must be used together with ``eigenvectors``. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix logarithm :math:`\\log_{b}(H)`.
+    """
+    backend = _check_backend(backend)
+
+    return backend.matrix_log(matrix, base, eigenvectors, eigenvalues)
 
 
 def matrix_power(
@@ -297,7 +303,22 @@ def matrix_power(
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_matrix_power(matrix, power, precision_singularity)
+    return backend.matrix_power(matrix, power, precision_singularity)
+
+
+def matrix_sqrt(matrix, backend=None):
+    """Given a ``matrix`` :math:`A`, calculate :math:`A^{1/2}`.
+
+    Args:
+        matrix (ndarray): matrix whose power to calculate.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
+
+    Returns:
+        ndarray: Matrix power :math:`A^{1/2}`.
+    """
+    return matrix_power(matrix, power=0.5, backend=backend)
 
 
 def singular_value_decomposition(matrix, backend=None):
@@ -324,7 +345,7 @@ def singular_value_decomposition(matrix, backend=None):
     """
     backend = _check_backend(backend)
 
-    return backend.calculate_singular_value_decomposition(matrix)
+    return backend.singular_value_decomposition(matrix)
 
 
 def schmidt_decomposition(
@@ -377,9 +398,9 @@ def schmidt_decomposition(
     nqubits = int(nqubits)
     partition_2 = partition.__class__(set(list(range(nqubits))) ^ set(partition))
 
-    tensor = backend.np.reshape(state, [2] * nqubits)
-    tensor = backend.np.transpose(tensor, partition + partition_2)
-    tensor = backend.np.reshape(tensor, (2 ** len(partition), -1))
+    tensor = backend.reshape(state, [2] * nqubits)
+    tensor = backend.transpose(tensor, partition + partition_2)
+    tensor = backend.reshape(tensor, (2 ** len(partition), -1))
 
     return singular_value_decomposition(tensor, backend=backend)
 
@@ -450,7 +471,8 @@ def lanczos(
         random_statevector,
     )
 
-    backend, local_state = _check_backend_and_local_state(seed, backend)
+    backend = _check_backend(backend)
+    backend.set_seed(seed)
 
     dims = matrix.shape[0]
 
@@ -458,23 +480,23 @@ def lanczos(
         steps = dims
 
     vector = (
-        random_statevector(dims, seed=local_state, backend=backend)
+        random_statevector(dims, seed=seed, backend=backend)
         if initial_vector is None
         else initial_vector
     )
 
     omega_prime = matrix @ vector
-    alpha = backend.np.conj(omega_prime.T) @ vector
+    alpha = backend.conj(omega_prime.T) @ vector
     omega = omega_prime - alpha * vector
 
     lanczos_vectors = [vector]
     for _ in range(steps - 1):
-        norm = backend.calculate_vector_norm(omega)
+        norm = backend.vector_norm(omega)
         if norm > precision_tol:
             vector = omega / norm
         else:  # pragma: no cover
             # this part is tested separatedly
-            vector = random_statevector(dims, seed=local_state, backend=backend)
+            vector = random_statevector(dims, seed=seed, backend=backend)
             vector = _gram_schmidt_process(
                 vector, backend.cast(lanczos_vectors).T, backend=backend
             )
@@ -482,11 +504,11 @@ def lanczos(
         lanczos_vectors.append(vector)
 
         omega_prime = matrix @ vector
-        alpha = backend.np.conj(omega_prime.T) @ vector
+        alpha = backend.conj(omega_prime.T) @ vector
         omega = omega_prime - alpha * vector - norm * lanczos_vectors[-2]
 
     lanczos_vectors = backend.cast(lanczos_vectors)
-    triadiagonal = backend.np.conj(lanczos_vectors) @ matrix
+    triadiagonal = backend.conj(lanczos_vectors) @ matrix
     lanczos_vectors = lanczos_vectors.T
     triadiagonal = triadiagonal @ lanczos_vectors
 
@@ -513,17 +535,17 @@ def _vector_projection(vector, directions, backend):
 
     if len(directions.shape) == 1:
         return (
-            backend.np.dot(backend.np.conj(vector), directions)
+            backend.dot(backend.conj(vector), directions)
             * directions
-            / backend.np.dot(backend.np.conj(directions), directions)
+            / backend.dot(backend.conj(directions), directions)
         )
 
-    dot_products = backend.np.einsum("j,kj", backend.np.conj(vector), directions)
-    inner_prods = backend.np.diag(
-        backend.np.einsum("jk,lk", backend.np.conj(directions), directions)
+    dot_products = backend.einsum("j,kj", backend.conj(vector), directions)
+    inner_prods = backend.diag(
+        backend.einsum("jk,lk", backend.conj(directions), directions)
     )
 
-    return (dot_products / inner_prods).reshape(-1, 1) * directions
+    return backend.reshape(dot_products / inner_prods, (-1, 1)) * directions
 
 
 def _gram_schmidt_process(vector, directions, backend):
@@ -547,6 +569,6 @@ def _gram_schmidt_process(vector, directions, backend):
     projections = _vector_projection(vector, directions, backend=backend)
 
     if len(directions.shape) > 1:
-        projections = backend.np.sum(projections, axis=0)
+        projections = backend.sum(projections, axis=0)
 
     return vector - projections

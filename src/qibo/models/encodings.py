@@ -2,7 +2,6 @@
 
 import math
 from inspect import signature
-from re import finditer
 from typing import List, Optional, Union
 
 import numpy as np
@@ -123,7 +122,9 @@ def phase_encoder(data, rotation: str = "RY", backend=None, **kwargs):
     return circuit
 
 
-def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
+def sparse_encoder(
+    data, method: str = "li", nqubits: int = None, backend=None, **kwargs
+):
     """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
     of the computational basis.
 
@@ -143,9 +144,203 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
 
     .. math::
         s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
-            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{F}} \\, \\ket{b_{j}} \\, ,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
 
-    where :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
+    where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
+
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+
+    Args:
+        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+            The addresses :math:`b_{j}` can be either integers or in bitstring
+            format of size :math:`n`.
+        method (str, optional): method to be used, either ``li`` or ``farias``. They refer to
+            methods in references [1] and [2], respectively.
+            Defaults to ``li``
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
+        2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*,
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        3. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(data, zip):
+        data = list(data)
+
+    # TODO: Fix this mess with qibo native dtypes
+    try:
+        type_test = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        type_test = bool("int" in str(type(data[0][0])))
+
+    if type_test and nqubits is None:
+        raise_error(
+            ValueError,
+            "``nqubits`` must be specified when computational basis states are "
+            + "indidated by integers.",
+        )
+
+    if isinstance(data[0][0], str) and nqubits is None:
+        nqubits = len(data[0][0])
+
+    if method not in ("li", "farias"):
+        raise_error(
+            ValueError,
+            f"``method`` should be either ``li`` or ``farias``, but it is {method}",
+        )
+
+    func = _sparse_encoder_farias if method == "farias" else _sparse_encoder_li
+
+    return func(data, nqubits, backend, **kwargs)
+
+
+def _sparse_encoder_li(data, nqubits: int, backend=None, **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
+    of the computational basis.
+
+    Consider a sparse-access model, where for a data vector
+    :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}` and
+    :math:`s` non-zero amplitudes, one has access to the data vector
+    :math:`\\mathbf{y}` of the form
+
+    .. math::
+        \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
+
+
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
+    and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
+    Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
+
+    The resulting circuit parametrizes ``data`` in hyperspherical coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+
+    Args:
+        data (ndarray or list or zip): sequence of tuples of the form :math:`(b_{j}, x_{j})`.
+            The addresses :math:`b_{j}` can be either integers or in bitstring
+            format of size :math:`n`.
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads sparse :math:`\\mathbf{x}`.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+    """
+    backend = _check_backend(backend)
+
+    # TODO: Fix this mess with qibo native data types
+    try:
+        test_dtype = bool("int" in str(data[0][0].dtype))
+    except AttributeError:
+        test_dtype = bool("int" in str(type(data[0][0])))
+
+    bitstrings_sorted, data_sorted = zip(
+        *([(f"{row[0]:0{nqubits}b}", row[1]) for row in data] if test_dtype else data)
+    )
+    bitstrings_sorted = backend.cast(
+        [int("".join(map(str, string)), 2) for string in bitstrings_sorted],
+        dtype=_get_int_type(2**nqubits, backend=backend),
+    )
+
+    data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
+
+    dim = len(data_sorted)
+    sigma = backend.arange(2**nqubits)
+
+    flag = backend.zeros(dim, dtype=backend.int8)
+    indexes = list(
+        backend.to_numpy(bitstrings_sorted[bitstrings_sorted < dim]).astype(int)
+    )
+    flag[indexes] = 1
+
+    data_binary = backend.zeros(dim, dtype=data_sorted.dtype)
+    for bi_int, xi in zip(bitstrings_sorted, data_sorted):
+        bi_int = int(bi_int)
+        if bi_int >= dim:
+            for k in range(dim):
+                if flag[k] == 0:
+                    flag[k] = 1
+                    sigma[[bi_int, k]] = [k, bi_int]
+                    data_binary[k] = xi
+                    break
+        else:
+            data_binary[bi_int] = xi
+
+    # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
+    circuit_binary = binary_encoder(
+        data_binary,
+        "hyperspherical",
+        nqubits=nqubits,
+        backend=backend,
+        **kwargs,
+    )
+    circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
+
+    return circuit_binary + circuit_permutation
+
+
+def _sparse_encoder_farias(data, nqubits: int, backend=None, **kwargs):
+    """Create circuit that encodes :math:`1`-dimensional data in a subset of amplitudes
+    of the computational basis.
+
+    Consider a sparse-access model, where for a data vector
+    :math:`\\mathbf{x} \\in \\mathbb{C}^{d}`, with :math:`d = 2^{n}` and
+    :math:`s` non-zero amplitudes, one has access to the data vector
+    :math:`\\mathbf{y}` of the form
+
+    .. math::
+        \\mathbf{y} = \\left\\{ (b_{1}, x_{1}), \\, \\dots, \\, (b_{s}, x_{s}) \\right\\} \\, ,
+
+
+    where :math:`\\{x_{j}\\}_{j\\in[s]}` are the non-zero components of :math:`\\mathbf{x}`
+    and :math:`\\{b_{j}\\}_{j\\in[s]}` is the set of addresses associated with these values.
+    Then, this function generates a quantum circuit  :math:`s\\text{-}\\mathrm{Load}` that encodes
+    :math:`\\mathbf{x}` in the amplitudes of an :math:`n`-qubit quantum state as
+
+    .. math::
+        s\\text{-}\\mathrm{Load}(\\mathbf{y}) \\, \\ket{0}^{\\otimes \\, n} = \\sum_{j\\in[s]} \\,
+            \\frac{x_{j}}{\\|\\mathbf{x}\\|_{2}} \\, \\ket{b_{j}} \\, ,
+
+    where :math:`\\|\\cdot\\|_{2}` is the l2-norm.
 
     Resulting circuit parametrizes ``data`` in hyperspherical coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
@@ -210,16 +405,16 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
     # sort data by HW of the bitstrings
     data_sorted, bitstrings_sorted = _sort_data_sparse(data, nqubits, backend)
     # calculate phases
-    _data_sorted = backend.np.abs(data_sorted) if complex_data else data_sorted
+    _data_sorted = backend.abs(data_sorted) if complex_data else data_sorted
     thetas = _generate_rbs_angles(
         _data_sorted, architecture="diagonal", backend=backend
     )
-    phis = backend.np.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data_sorted[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data_sorted[0]))
         for k in range(1, len(phis)):
             phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data_sorted[k]) + backend.np.sum(phis[:k])
+                -backend.angle(data_sorted[k]) + backend.sum(phis[:k])
             )
     phis = backend.cast(phis, dtype=phis[0].dtype)
 
@@ -236,8 +431,8 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
         difference = b_1 - b_0
 
         ones, new_ones = (
-            list(backend.np.argsort(b_0)[-hw_0:]),
-            list(backend.np.argsort(b_1)[-hw_1:]),
+            list(backend.argsort(b_0)[-hw_0:]),
+            list(backend.argsort(b_1)[-hw_1:]),
         )
         ones, new_ones = {int(elem) for elem in ones}, {int(elem) for elem in new_ones}
         controls = (set(ones) & set(new_ones)) & set(touched_qubits)
@@ -252,6 +447,7 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
             hw_1,
             theta,
             phi,
+            backend=backend,
         )
         circuit.add(gate)
 
@@ -276,7 +472,13 @@ def sparse_encoder(data, nqubits: int = None, backend=None, **kwargs):
 
 
 def binary_encoder(
-    data, parametrization: str = "hyperspherical", backend=None, **kwargs
+    data,
+    parametrization: str = "hyperspherical",
+    nqubits: int = None,
+    codewords=None,
+    keep_antictrls: bool = False,
+    backend=None,
+    **kwargs,
 ):
     """Create circuit that encodes :math:`1`-dimensional data in all amplitudes
     of the computational basis.
@@ -292,12 +494,23 @@ def binary_encoder(
     where :math:`b_{j} \\in \\{0, \\, 1\\}^{\\otimes \\, n}` is the :math:`n`-bit representation
     of the integer :math:`j`, :math:`\\|\\cdot\\|_{F}` is the Frobenius norm.
 
-    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``Hopf`` coordinates
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``hopf`` coordinates
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
         data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
+        parametrization (str): choice of circuit parametrization. either ``hyperspherical``
+            or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        codewords (int, optional): list of codewords. When parametrization is ``hyperspherical``,
+            the list is used to encode the data in the given order. If ``None``,
+            the codewords are set by the erhlich algorithm.
+        keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
+            don't simplify the anti-controls when placing the RBS gates. For details, see [1].
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
         kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
@@ -321,10 +534,11 @@ def binary_encoder(
     backend = _check_backend(backend)
 
     dims = len(data)
-    nqubits = float(np.log2(dims))
-    if not nqubits.is_integer():
+    if (dims & (dims - 1)) != 0 and parametrization == "hopf":
         raise_error(ValueError, "`data` size must be a power of 2.")
-    nqubits = int(nqubits)
+
+    if nqubits is None:
+        nqubits = int(backend.ceil(backend.log2(dims)))
 
     complex_data = bool(
         "complex" in str(data.dtype)
@@ -336,7 +550,13 @@ def binary_encoder(
         )
 
     return _binary_encoder_hyperspherical(
-        data, nqubits, complex_data=complex_data, backend=backend, **kwargs
+        data,
+        nqubits,
+        complex_data=complex_data,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+        **kwargs,
     )
 
 
@@ -470,6 +690,7 @@ def unary_encoder_random_gaussian(
         _ProbabilityDistributionGaussianLoader,
     )
 
+    # needs to rely on numpy's rng because of scipy
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
@@ -563,15 +784,13 @@ def hamming_weight_encoder(
     del lex_order, lex_order_sorted
 
     # Calculate all gate phases necessary to encode the amplitudes.
-    _data = backend.np.abs(data) if complex_data else data
+    _data = backend.abs(data) if complex_data else data
     thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-    phis = backend.np.zeros(len(thetas) + 1)
+    phis = backend.zeros(len(thetas) + 1, dtype=float)
     if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
+        phis[0] = _angle_mod_two_pi(-backend.angle(data[0]))
         for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
-            )
+            phis[k] = _angle_mod_two_pi(-backend.angle(data[k]) + backend.sum(phis[:k]))
 
     last_qubit = nqubits - 1
 
@@ -797,7 +1016,7 @@ def graph_state(matrix, backend=None, **kwargs):
     if isinstance(matrix, list):
         matrix = backend.cast(matrix, dtype=int)
 
-    if not backend.np.allclose(matrix, matrix.T):
+    if not backend.allclose(matrix, matrix.T):
         raise_error(
             ValueError,
             f"``matrix`` is not symmetric, not representing an undirected graph",
@@ -809,7 +1028,7 @@ def graph_state(matrix, backend=None, **kwargs):
     circuit.add(gates.H(qubit) for qubit in range(nqubits))
 
     # since the matrix is symmetric, we only need the upper triangular part
-    rows, columns = backend.np.nonzero(backend.np.triu(matrix))
+    rows, columns = backend.nonzero(backend.triu(matrix))
     circuit.add(gates.CZ(int(ind_r), int(ind_c)) for ind_r, ind_c in zip(rows, columns))
 
     return circuit
@@ -993,10 +1212,10 @@ def _generate_rbs_angles(data, architecture: str, nqubits: int = None, backend=N
 
     if architecture == "diagonal":
         phases = [
-            backend.np.arctan2(backend.calculate_vector_norm(data[k + 1 :]), data[k])
+            backend.arctan2(backend.vector_norm(data[k + 1 :]), data[k])
             for k in range(len(data) - 2)
         ]
-        phases.append(backend.np.arctan2(data[-1], data[-2]))
+        phases.append(backend.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
         if nqubits is None:  # pragma: no cover
@@ -1229,7 +1448,8 @@ def _get_next_bistring(bitstring, markers, hamming_weight):
     markers = markers | (set(range(max_index + 1, nqubits)) - last_run)
 
     new_ones = np.argsort(new_bitstring)[-hamming_weight:]
-    controls = list(set(ones) & set(new_ones))
+
+    controls = list({int(elem) for elem in ones} & {int(elem) for elem in new_ones})
     difference = new_bitstring - bitstring
     qubits = [np.where(difference == -1)[0][0], np.where(difference == 1)[0][0]]
 
@@ -1273,11 +1493,11 @@ def _ehrlich_algorithm(initial_string, return_indices: bool = True):
 
     markers = _get_markers(initial_string, last_run=False)
     string = initial_string
-    strings = ["".join(string[::-1].astype(str))]
+    strings = ["".join(str(elem) for elem in string[::-1])]
     controls_and_targets = []
     for _ in range(n_choose_k - 1):
         string, markers, c_and_t = _get_next_bistring(string, markers, k)
-        strings.append("".join(string[::-1].astype(str)))
+        strings.append("".join(str(elem) for elem in string[::-1]))
         controls_and_targets.append(c_and_t)
 
     if return_indices:
@@ -1379,10 +1599,10 @@ def _binary_encoder_hopf(
     dims = 2**nqubits
 
     base_strings = [f"{elem:0{nqubits}b}" for elem in range(dims)]
-    base_strings = backend.np.reshape(base_strings, (-1, 2))
+    base_strings = np.reshape(base_strings, (-1, 2))
     strings = [base_strings]
     for _ in range(nqubits - 1):
-        base_strings = backend.np.reshape(base_strings[:, 0], (-1, 2))
+        base_strings = np.reshape(base_strings[:, 0], (-1, 2))
         strings.append(base_strings)
     strings = strings[::-1]
 
@@ -1418,135 +1638,458 @@ def _binary_encoder_hopf(
 
 
 def _binary_encoder_hyperspherical(
-    data, nqubits, complex_data: bool, backend=None, **kwargs
+    data,
+    nqubits,
+    complex_data: bool,
+    codewords=None,
+    keep_antictrls: bool = False,
+    backend=None,
+    **kwargs,
 ):
     backend = _check_backend(backend)
 
-    dims = 2**nqubits
-    last_qubit = nqubits - 1
+    dims = len(data)
 
-    indexes_to_double, lex_order_global = [0], [0]
+    if codewords is None:
+        codewords = _binary_codewords(dims, backend=backend)
 
     circuit = Circuit(nqubits, **kwargs)
     if complex_data:
-        circuit.add(gates.U3(last_qubit, 0.0, 0.0, 0.0))
-    else:
-        circuit.add(gates.RY(last_qubit, 0.0))
-
-    cummul_n_k = 0
-    initial_string = np.array([1] + [0] * (nqubits - 1))
-    for weight in range(1, nqubits):
-        n_choose_k = int(binom(nqubits, weight))
-        cummul_n_k += n_choose_k
-        placeholder = np.random.rand(n_choose_k)
-        if complex_data:
-            placeholder = placeholder.astype(complex) + 1j * np.random.rand(n_choose_k)
-        placeholder = backend.cast(placeholder, dtype=placeholder[0].dtype)
-
-        circuit += hamming_weight_encoder(
-            placeholder,
+        circuit += _monotonic_hw_encoder_complex(
+            codewords,
+            data[codewords],
             nqubits,
-            weight,
-            full_hwp=True,
-            optimize_controls=False,
-            phase_correction=False,
-            initial_string=initial_string,
             backend=backend,
+            keep_antictrls=keep_antictrls,
             **kwargs,
         )
-
-        # add gate to be place between blocks of Hamming-weight encoders
-        gate, lex_order, initial_string, phase_index = _intermediate_gate(
-            initial_string,
-            weight,
-            last_qubit,
-            cummul_n_k,
-            complex_data,
+    else:
+        circuit += _monotonic_hw_encoder_real(
+            codewords,
+            data[codewords],
+            nqubits,
+            backend=backend,
+            keep_antictrls=keep_antictrls,
+            **kwargs,
         )
-        circuit.add(gate)
-        lex_order_global.extend(lex_order)
-        indexes_to_double.append(phase_index)
-
-    # sort data such that the encoding is performed in lexicographical order
-    lex_order_global.append(dims - 1)
-    lex_order_sorted = np.sort(np.copy(lex_order_global))
-    lex_order_global = [
-        np.where(lex_order_sorted == num)[0][0] for num in lex_order_global
-    ]
-    data = data[lex_order_global]
-    del lex_order_global, lex_order_sorted
-
-    _data = backend.np.abs(data) if complex_data else data
-
-    thetas = _generate_rbs_angles(_data, architecture="diagonal", backend=backend)
-
-    phis = backend.np.zeros(len(thetas) + 1)
-    if complex_data:
-        phis[0] = _angle_mod_two_pi(-backend.np.angle(data[0]))
-        for k in range(1, len(phis)):
-            phis[k] = _angle_mod_two_pi(
-                -backend.np.angle(data[k]) + backend.np.sum(phis[:k])
-            )
-    phis = backend.cast(phis, dtype=phis[0].dtype)
-
-    zero_casted = backend.cast(0.0, dtype=backend.np.float64)  # because of GPU backends
-
-    angles = []
-    for k, (theta, phi) in enumerate(zip(thetas, phis)):
-        if k in indexes_to_double:
-            angle = [2 * theta, 2 * phi, zero_casted] if complex_data else [2 * theta]
-        else:
-            angle = [theta, -phi, phi] if complex_data else [theta]
-
-        angles.extend(angle)
-
-    if complex_data:
-        angles[-2] = 2 * _angle_mod_two_pi(
-            (backend.np.angle(data[-1]) - backend.np.angle(data[-2])) / 2
-        )
-        angles[-1] = 2 * _angle_mod_two_pi(
-            (-0.5) * (backend.np.angle(data[-2]) + backend.np.angle(data[-1]))
-            + backend.np.sum(phis[:-2])
-        )
-
-    circuit.set_parameters(angles)
 
     return circuit
 
 
-def _intermediate_gate(
-    initial_string,
-    weight,
-    last_qubit,
-    cummul_n_k,
-    complex_data,
+def _monotonic_hw_encoder_real(
+    codewords, data, nqubits, backend=None, keep_antictrls: bool = False, **kwargs
 ):
-    """Calculate where to place the intermediate gate by finding the last string
-    of the previous Hamming-weight block that was encoded"""
+    """Implements Algorithm 3 from [1]
 
-    # sort data such that the encoding is performed in lexicographical order
-    bitstrings = _ehrlich_algorithm(initial_string, False)
-    initial_string = bitstrings[-1]
-    lex_order = [int(string, 2) for string in bitstrings]
+    Args:
+        codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
+            non-decreasing.
+        data (float): data to be encoded. assumed to have the same length as the list of codewords
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls
+            when placing the RBS gates. For details, see [1].
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
 
-    controls = [item.start() for item in finditer("1", initial_string)]
-    index = (
-        initial_string.find("0")
-        if weight % 2 == 0
-        else last_qubit - initial_string[::-1].find("0")
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+    """
+    dims = len(data)
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    bsi = [int(b) for b in format(codewords[0], "0{}b".format(nqubits))]
+    for i in range(1, dims - 1):
+        bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
+
+        in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
+
+        theta = backend.arctan2(backend.vector_norm(data[i:], 2), data[i - 1])
+
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
+        targ_bits = len(in_bits) + len(out_bits)
+        if targ_bits == 1:
+            targ_gate = out_bits if len(out_bits) > 0 else in_bits
+            sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+            circuit.add(
+                gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+            )
+        elif targ_bits == 2:
+            circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
+        else:
+            circuit.add(
+                gates.GeneralizedRBS(
+                    tuple(in_bits), tuple(out_bits), theta=theta
+                ).controlled_by(*ctrls)
+            )
+
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
+        bsi = bsip1
+    bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
+
+    in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
+
+    theta = backend.arctan2(data[-1], data[-2])
+
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
+    targ_bits = len(in_bits) + len(out_bits)
+    if targ_bits == 1:
+        targ_gate = out_bits if len(out_bits) > 0 else in_bits
+        sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+        circuit.add(
+            gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+        )
+
+    elif targ_bits == 2:
+        circuit.add(gates.RBS(*in_bits, *out_bits, theta).controlled_by(*ctrls))
+    else:
+        circuit.add(
+            gates.GeneralizedRBS(
+                tuple(in_bits), tuple(out_bits), theta=theta
+            ).controlled_by(*ctrls)
+        )
+
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
+    return circuit
+
+
+def _monotonic_hw_encoder_complex(
+    codewords, data, nqubits, backend=None, keep_antictrls: bool = False, **kwargs
+):
+    """Implements Algorithm 4 from [1]
+
+    Args:
+        codewords (int): list of codewords. Assumed ordered such that their hamming-weights are
+            non-decreasing.
+        data (complex): data to be encoded. assumed to have the same length as the list of codewords
+        nqubits (int, optional): total number of qubits in the system.
+            To be used when :math:`b_j` are integers. If :math:`b_j` are strings and
+            ``nqubits`` is ``None``, defaults to the length of the strings :math:`b_{j}`.
+            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        keep_antictrls (bool, optional): If ``True``, we don't simplify the anti-controls
+            when placing the RBS gates. For details, see [1].
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads :math:`\\mathbf{x}`.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+    """
+    dims = len(data)
+
+    # the angles phi wil be computed on the fly,
+    # so we don't have to keep them in memory
+    def phis(x, k):
+        cumsum = 0.0
+        for i in range(k + 1):
+            val = (-backend.angle(x[i]) + cumsum) % (2.0 * np.pi)
+            cumsum += val
+        return val
+
+    circuit = Circuit(nqubits, **kwargs)
+
+    bsi = [int(b) for b in format(codewords[0], "0{}b".format(nqubits))]
+    for i in range(1, dims - 1):
+        bsip1 = [int(b) for b in format(codewords[i], "0{}b".format(nqubits))]
+
+        in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
+
+        theta = backend.arctan2(backend.vector_norm(abs(data[i:]), 2), abs(data[i - 1]))
+
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
+        if len(in_bits) + len(out_bits) == 1:
+            targ_gate = out_bits if len(out_bits) > 0 else in_bits
+            sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+            circuit.add(
+                gates.RY(*targ_gate, 2.0 * sign_angle * theta).controlled_by(*ctrls)
+            )
+            circuit.add(
+                gates.RZ(
+                    *targ_gate, 2.0 * sign_angle * phis(data, i - 1)
+                ).controlled_by(*ctrls)
+            )
+        else:
+            circuit.add(
+                gates.GeneralizedRBS(
+                    in_bits, out_bits, theta, -phis(data, i - 1)
+                ).controlled_by(*ctrls)
+            )
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
+        bsi = bsip1
+    bsip1 = [int(b) for b in format(codewords[dims - 1], "0{}b".format(nqubits))]
+
+    in_bits, out_bits, ctrls, actrls = _gate_params(bsi, bsip1, keep_antictrls)
+
+    theta = backend.arctan2(abs(data[-1]), abs(data[-2]))
+
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
+    if len(in_bits) + len(out_bits) == 1:
+        phil = (0.5 * (backend.angle(data[-1]) - backend.angle(data[-2]))) % (
+            2.0 * np.pi
+        )
+        lambdal = (
+            0.5 * (-backend.angle(data[-1]) + backend.angle(data[-2]))
+            + phis(data, dims - 2)
+        ) % (2.0 * np.pi)
+
+        targ_gate = out_bits if len(out_bits) > 0 else in_bits
+        sign_angle = 1.0 if len(out_bits) > 0 else -1.0
+        circuit.add(
+            gates.U3(
+                *targ_gate,
+                2.0 * sign_angle * theta,
+                2.0 * sign_angle * phil,
+                2.0 * sign_angle * lambdal,
+            ).controlled_by(*ctrls)
+        )
+    else:
+        circuit.add(
+            gates.GeneralizedRBS(
+                in_bits, out_bits, theta, -phis(data, dims - 2)
+            ).controlled_by(*ctrls)
+        )
+
+        ctrls = [i for i in range(len(bsip1)) if (bsip1[i] == 1)]
+        in_bits = [i for i in range(len(bsip1)) if (bsip1[i] == 0)]
+
+        circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
+        circuit.add(gates.U1(in_bits[0], -phis(data, dims - 1)).controlled_by(*ctrls))
+        circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
+
+    if keep_antictrls:
+        circuit.add([gates.X(ac) for ac in actrls])
+
+    return circuit
+
+
+def _gate_params(bsi, bsip1, keep_antictrls: bool = False):
+
+    one_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 1)}
+    one_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 1)}
+
+    ctrls = one_ind_bsi.intersection(one_ind_bsip1)
+
+    actrls = []
+    if keep_antictrls:
+        zero_ind_bsi = {i for i in range(len(bsi)) if (bsi[i] == 0)}
+        zero_ind_bsip1 = {i for i in range(len(bsip1)) if (bsip1[i] == 0)}
+        actrls = zero_ind_bsi.intersection(zero_ind_bsip1)
+        ctrls = ctrls.union(actrls)
+
+    in_bits = one_ind_bsi.difference(ctrls)
+    out_bits = one_ind_bsip1.difference(ctrls)
+
+    return list(in_bits), list(out_bits), list(ctrls), list(actrls)
+
+
+def _binary_codewords(dims: int, backend=None):
+    """
+    Return a array of integers produced by `_binary_codewords_ehrlich(d)`, adjusted so that
+    the Hamming weight is strictly nondecreasing, and consecutive words have Hamming
+    distance <= 2.
+
+    """
+    backend = _check_backend(backend)
+
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_distance,
+        hamming_weight,
     )
-    initial_string = np.array(list(initial_string), dtype=int)
-    initial_string[index] = 1
-    initial_string = initial_string[::-1]
 
-    phase_index = cummul_n_k
-    gate = (
-        gates.U3(index, 0.0, 0.0, 0.0).controlled_by(*controls)
-        if complex_data
-        else gates.RY(index, 0.0).controlled_by(*controls)
+    cw_binary = _binary_codewords_ehrlich(dims, backend=backend)
+
+    cw = backend.cast(
+        [int(bin_cw, 2) for bin_cw in cw_binary],
+        dtype=_get_int_type(dims, backend=backend),
     )
 
-    return gate, lex_order, initial_string, phase_index
+    if (dims & (dims - 1)) != 0:
+        n = int(backend.floor(backend.log2(dims)))
+        dres = 2**n
+        # split the list to fix the order
+        cwres, cw = cw[dres:], cw[:dres]
+
+        # keep weights for O(1) lookups
+        weights = backend.cast(
+            [hamming_weight(int(w)) for w in cw],
+            dtype=_get_int_type(n, backend=backend),
+        )
+
+        # insert the remainder words at positions that preserve
+        # strictly increasing weights and distance ≤ 2 to neighbors
+        for word in cwres:
+
+            hw = hamming_weight(int(word))
+
+            inserted = False
+            for i in range(len(cw) - 1):
+                wi, wj = weights[i], weights[i + 1]
+                if wi <= hw <= wj:
+                    if (
+                        hamming_distance(int(word), int(cw[i])) <= 2
+                        and hamming_distance(int(word), int(cw[i + 1])) <= 2
+                    ):
+                        cw = backend.engine.insert(cw, i + 1, word, axis=0)
+                        weights = backend.engine.insert(weights, i + 1, hw)
+                        inserted = True
+                        break
+            if not inserted:
+                # append if no suitable interior gap is found
+                cw = backend.engine.hstack((cw, word))
+                weights = backend.engine.hstack((weights, hw))
+
+    return cw
+
+
+def _binary_codewords_ehrlich(dims: int, backend=None):
+    """
+    Yield fixed-width bitstrings representing integers 0..d-1, arranged so that
+    Hamming weights are strictly nondecreasing. Uses at most hamming_weight(d) calls
+    to `_ehrlich_codewords_up_to_k(k)`; when d is a power of two, exactly one call.
+    """
+    backend = _check_backend(backend)
+
+    # Check power-of-two case: b == 2^k
+    if (dims & (dims - 1)) == 0:
+        k = dims.bit_length() - 1  # since 2^k has bit_length k+1
+        # get_ehrlich_codewords(k) yields k-bit strings for 0..2^k-1 == 0..d-1
+        yield from _ehrlich_codewords_up_to_k(k, False, backend=backend)
+        return
+
+    # General case
+    n = int(max(1, backend.ceil(backend.log2(dims))))  # width so that 2^(n-1) < b < 2^n
+    # Bits of b in most-significant-bit → least-significant-bit order
+    bits = [(dims >> i) & 1 for i in range(n - 1, -1, -1)]
+    prefix = ""
+    flip = False
+    for i, bit in enumerate(bits):
+        k = n - 1 - i
+        if bit == 1:
+            # emit the full 0-prefixed block of width k, using Ehrlich order
+            # flip every other time to keep consecutive codes close
+            for suffix in _ehrlich_codewords_up_to_k(k, flip, backend=backend):
+                yield prefix + "0" + suffix
+            flip = not flip
+            prefix += "1"
+        else:
+            prefix += "0"
+    # no final singleton: we've generated exactly d bitstrings (0..d-1)
+
+
+def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=None):
+    """
+    Yield all bitstrings with monotonically changing Hamming weight from 0..up2k (or the reverse),
+    such that consecutive strings have Hamming distance ≤ 2. Codewords for each weight are produced
+    by `_ehrlich_algorithm(initial_string, False)` (assumed to return an iterable of bitstrings).
+
+    Args:
+        up2k (int): Length of the bitstrings and the maximum Hamming weight.
+        reversed_list (bool, optional): If ``True``, generate from weight ``up2k`` down to :math:`0`.
+            Otherwise, from :math:`0` up to ``up2k``.
+
+    Yields:
+        str: Bitstrings produced by concatenating sequences from Ehrlich's algorithm.
+    """
+
+    if up2k == 0:
+        # Only the empty string by convention; mirror original intent by yielding once.
+        yield ""
+        return
+
+    def ones_left(k: int):
+        # 1...1 0...0  (k ones flush-left)
+        return "1" * k + "0" * (up2k - k)
+
+    def ones_right(k: int):
+        # 0...0 1...1  (k ones flush-right)
+        return "0" * (up2k - k) + "1" * k
+
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        hamming_distance,
+    )
+
+    # boundary codeword
+    last_emitted = "1" * up2k if reversed_list else "0" * up2k
+    yield last_emitted
+
+    # Iterate weights in the chosen direction (skip endpoints handled above/below)
+    weights = range(up2k - 1, 0, -1) if reversed_list else range(1, up2k)
+
+    for k in weights:
+        # Pick initial string of weight k that is closer to the last emitted string
+        left, right = ones_left(k), ones_right(k)
+        if hamming_distance(last_emitted, left) <= hamming_distance(
+            last_emitted, right
+        ):
+            initial = left
+        else:
+            initial = right
+
+        # get Ehrlich sequence
+        k_seq = _ehrlich_algorithm(
+            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int64), False
+        )
+
+        # generate in the correct order
+        if reversed_list:
+            yield from reversed(k_seq)
+            last_emitted = k_seq[0]  # last yielded in reversed order
+        else:
+            yield from k_seq
+            last_emitted = k_seq[-1]  # last yielded in forward order
+
+    # generate the opposite boundary codeword
+    yield ("0" * up2k) if reversed_list else ("1" * up2k)
+
+
+def _get_int_type(x: int, backend=None):
+    # Candidates in increasing size of memory usage
+
+    backend = _check_backend(backend)
+    int_types = [
+        backend.int8,
+        backend.int16,
+        backend.int32,
+        backend.int64,
+    ]
+    for dt in int_types:
+        if abs(x) <= backend.engine.iinfo(dt).max:
+            return backend.engine.dtype(dt)
+
+    raise_error(
+        ValueError,
+        f"``|x|`` must not be greater than {backend.engine.iinfo(backend.int64).max}.",
+    )
 
 
 def _sort_data_sparse(data, nqubits, backend):
@@ -1569,7 +2112,7 @@ def _sort_data_sparse(data, nqubits, backend):
         np.array(list(string)).astype(int) for string in bitstrings_sorted
     ]
 
-    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.np.int8)
+    bitstrings_sorted = backend.cast(bitstrings_sorted, dtype=backend.int8)
     data_sorted = backend.cast(data_sorted, dtype=data_sorted[0].dtype)
 
     return data_sorted, bitstrings_sorted
@@ -1589,7 +2132,7 @@ def _get_gate_sparse(
 ):
     backend = _check_backend(backend)
     if distance == 1:
-        qubit = int(backend.np.where(difference == 1)[0][0])
+        qubit = int(backend.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
             touched_qubits.append(qubit)
         gate = (
@@ -1747,8 +2290,8 @@ def _add_wbd_gate(
     theta_gate = lambda qubit, theta: gates.RY(qubit, 2 * math.acos(theta))
     for l in range(weight, 0, -1):
         x = [
-            math.comb(mqubits, i) * math.comb(nqubits - mqubits, l - i)
-            for i in range(l)
+            math.comb(mqubits, elem) * math.comb(nqubits - mqubits, l - elem)
+            for elem in range(l)
         ]
         s = math.comb(nqubits, l)
         circuit.add(
@@ -1787,3 +2330,209 @@ def _add_wbd_gate(
                 )
             )
         circuit.add(gates.CNOT(second_register[control - dif], first_register[0]))
+
+
+def _perm_column_ops(
+    indices: list[int],
+    n: int,
+    backend=None,
+):
+    """Return (ell, gate_list) performing duplicate‑col removal + compaction."""
+    backend = _check_backend(backend)
+    # flatten the (x_0, x_1),...(x_{2m-2}, x_{2m-1})
+    # We construct a matrix composed of
+    # xj to track the changes in xj where xj,k represents the k-th bit and the
+    # bits are arranged from the least significant bit to the most significant bit
+    indices = list(sum(indices, ()))
+    A = []
+    for x in indices:
+        bits = []
+        for k in range(n):
+            bits.append((x >> k) & 1)
+        A.append(bits)
+    A = backend.cast(A, dtype=backend.int8)
+    ncols = A.shape[1]
+    # initialize the list of gates
+    qgates = []
+
+    # number of non-zero columns
+    ell = 0
+    flag = backend.zeros(n, dtype=int)
+    for idxj in range(ncols):
+        if any(elem != 0 for elem in A[:, idxj]):
+            ell += 1
+            flag[idxj] = 1
+
+            # look for columns that are equal to A[:,idxj]
+            for idxk in range(idxj + 1, ncols):
+                if backend.array_equal(A[:, idxj], A[:, idxk]):
+                    qgates.append(gates.CNOT(n - idxj - 1, n - idxk - 1))
+                    # this should transform the k-th column into an all-zero column
+                    A[:, idxk] = 0
+
+    # Now, we need to swap the ell non-zero columns to the first ell columns
+    for idxk in range(ell, ncols):
+        if not backend.array_equal(A[:, idxk], backend.zeros_like(A[:, idxk])):
+            for k in range(len(flag)):
+                if flag[k] == 0:
+                    flag[k] = 1
+                    flag[idxk] = 0
+
+                    qgates.append(gates.SWAP(n - idxk - 1, n - k - 1))
+
+                    bits = A[:, idxk].copy()
+                    A[:, idxk] = A[:, k]
+                    A[:, k] = bits
+                    break
+
+    return ell, qgates, A
+
+
+def _perm_row_ops(A, ell: int, m: int, n: int, backend=None):
+    """Return gates that reduce all rows after row0 to target form."""
+    backend = _check_backend(backend)
+
+    log2m = int(backend.log2(2 * m))
+    atilde = backend.cast(
+        [[(x >> k) & 1 for k in range(n)] for x in range(2 * m)], dtype=int
+    )
+
+    qgates = []
+    nrows = A.shape[0]
+    ncols = A.shape[1]
+    # Start with the first row (indexed as row 0)
+    for k in range(ncols):
+        # If we find a0,k = 1 for any 0 <= k <= n−1
+        if A[0, k] == 1:
+            qgates.append(gates.X(n - k - 1))
+            A[:, k] = (A[:, k] + 1) % 2
+
+    for j in range(1, nrows):
+        flag = False
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
+                flag = True
+                break
+
+        if not flag:
+            # There is no element b_{j},k != 0 for k > {log2m-1}"
+            ctrls = [n - l - 1 for l in range(ncols) if A[j, l] != 0]
+            qgates.append(gates.X(n - log2m - 1).controlled_by(*ctrls))
+            ctrls = [l for l in range(ncols) if A[j, l] == 1]
+
+            # check whether the gate is applied on other rows
+            for l in range(j, nrows):
+                if all(elem == 1 for elem in A[l, ctrls]):
+                    A[l, log2m] = (A[l, log2m] + 1) % 2
+
+        # There is always an element b_{j},k != 0 for k > {log2m-1}
+        for k in range(log2m, ncols):
+            if A[j, k] != 0:
+                # Element b_{j},{k} != 0, {k} > {log2m-1}"
+                for kprime in range(ell):
+                    # There is a typo in the paper
+                    # b_{j},{kprime} should be different from Ã_{j},{kprime} not Ã_{j},{k}
+                    if kprime != k and A[j, kprime] != atilde[j, kprime]:
+                        qgates.append(gates.CNOT(n - k - 1, n - kprime - 1))
+                        # check whether the gate is applied on other rows
+                        for l in range(nrows):
+                            if A[l, k] == 1:
+                                A[l, kprime] = (A[l, kprime] + 1) % 2
+
+                # Let us clean the element b_{j},{k}
+
+                # There is another typo in the paper
+                # the control qubits for this gate correspond to the non-zero elements in row j of matrix A, not Ã
+                ctrls = [n - l - 1 for l in range(k) if A[j, l] != 0]
+                qgates.append(gates.X(n - k - 1).controlled_by(*ctrls))
+                ctrls = [l for l in range(k) if A[j, l] != 0]
+
+                # check whether the gate is applied on other rows
+                for l in range(nrows):
+                    if all(elem == 1 for elem in A[l, ctrls]):
+                        A[l, k] = (A[l, k] + 1) % 2
+
+    return qgates
+
+
+def _perm_pair_flip_ops(n: int, m: int, backend=None):
+    """Implement σ_{i,2} as X fan‑in + MCX + X fan‑out."""
+    backend = _check_backend(backend)
+    # let us flip the first qubit when the last {int(n-math.log2(2*m))} qubits are all in the state |0⟩
+    prefix = int(backend.ceil(backend.log2(2 * m)))
+    x_qubits, controls = range(prefix, n), range(n - prefix)
+    qgates = [gates.X(n - q - 1) for q in x_qubits]
+    qgates.append(gates.X(n - 1).controlled_by(*controls))  # flip qubit 0
+    qgates.extend(gates.X(n - q - 1) for q in x_qubits)
+
+    return qgates
+
+
+def permutation_synthesis(
+    sigma: Union[List[int], tuple[int, ...]], m: int = 2, backend=None, **kwargs
+):
+    """Return circuit that implements a given permutation.
+
+    Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}`
+    such that:
+        - each layer has at most :math:`m` disjoint transpositions;
+        - each layer moves a power‑of‑two number of indices.
+
+    The function returns a circuit synthesis of ``sigma``.
+
+    Args:
+        sigma (list or tuple): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget. Defauls to :math:`2`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that implements the permutation ``sigma``.
+
+    References:
+        1. L. Li, and J. Luo,
+        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
+
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(
+            TypeError,
+            f"Permutation ``sigma`` must be either a ``list`` or a ``tuple`` of ``int``s.",
+        )
+
+    nqubits = int(backend.ceil(backend.log2(len(sigma))))
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(2**nqubits))]) != 0:
+        raise_error(
+            ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
+        )
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
+
+    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
+        decompose_permutation,
+    )
+
+    # factor sigma into the fewest layers such that
+    # each layer has at most m disjoint transpositions, and
+    # each layer moves a power‑of‑two number of indices
+    layers = decompose_permutation(sigma, m)
+
+    circuit = Circuit(nqubits)
+    # in case we have more than one permutation to do, do it in layers
+    for layer in layers:
+        m = len(layer)
+        ell, col_gates, A = _perm_column_ops(layer, nqubits, backend)
+        row_gates = _perm_row_ops(A, ell, m, nqubits, backend)
+        flip_gates = _perm_pair_flip_ops(nqubits, m, backend)
+        col_row = col_gates + row_gates
+        circuit.add(col_row)
+        circuit.add(flip_gates)
+        circuit.add(col_row[::-1])
+
+    return circuit

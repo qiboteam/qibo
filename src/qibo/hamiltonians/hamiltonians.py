@@ -3,8 +3,8 @@
 import operator
 from functools import cache, cached_property, reduce
 from itertools import chain
-from math import prod
-from typing import Optional
+from logging import warn
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import sympy
@@ -13,7 +13,7 @@ from qibo.backends import Backend, _check_backend
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.terms import SymbolicTerm
-from qibo.symbols import Symbol, Z
+from qibo.symbols import PauliSymbol, Symbol, Z
 
 
 class Hamiltonian(AbstractHamiltonian):
@@ -31,9 +31,11 @@ class Hamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix, backend=None):
-        from qibo.backends import _check_backend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            _check_backend,
+        )
 
-        self.backend = _check_backend(backend)
+        self._backend = _check_backend(backend)
 
         if not (
             isinstance(matrix, self.backend.tensor_types)
@@ -43,7 +45,7 @@ class Hamiltonian(AbstractHamiltonian):
                 TypeError,
                 f"Matrix of invalid type {type(matrix)} given during Hamiltonian initialization",
             )
-        matrix = self.backend.cast(matrix)
+        matrix = self.backend.cast(matrix, dtype=matrix.dtype)
 
         super().__init__()
         self.nqubits = nqubits
@@ -72,80 +74,100 @@ class Hamiltonian(AbstractHamiltonian):
             )
         self._matrix = mat
 
+    @property
+    def backend(self):
+        return self._backend
+
+    @backend.setter
+    def backend(self, new_backend: Backend):
+        self._backend = new_backend
+        self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
+
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
-            self._eigenvalues = self.backend.calculate_eigenvalues(self.matrix, k)
+            self._eigenvalues = self.backend.eigenvalues(self.matrix, k=k)
         return self._eigenvalues
 
     def eigenvectors(self, k=6):
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.backend.calculate_eigenvectors(
-                self.matrix, k
+            self._eigenvalues, self._eigenvectors = self.backend.eigenvectors(
+                self.matrix, k=k
             )
         return self._eigenvectors
 
     def exp(self, a):
-        from qibo.quantum_info.linalg_operations import (  # pylint: disable=C0415
-            matrix_exponentiation,
-        )
-
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = matrix_exponentiation(
-                a, self.matrix, self._eigenvectors, self._eigenvalues, self.backend
+            self._exp["result"] = self.backend.matrix_exp(
+                self.matrix,
+                -1j * a,
+                self._eigenvectors,
+                self._eigenvalues,
             )
         return self._exp.get("result")
 
-    def expectation(self, state, normalize=False):
-        if isinstance(state, self.backend.tensor_types):
-            state = self.backend.cast(state)
-            shape = tuple(state.shape)
-            if len(shape) == 1:  # state vector
-                return self.backend.calculate_expectation_state(self, state, normalize)
+    def expectation(self, circuit, nshots=None, qubit_map=None):
+        """Computes the expectation value for a given circuit. This works only for diagonal
+        observables if ``nshots != None``.
 
-            if len(shape) == 2:  # density matrix
-                return self.backend.calculate_expectation_density_matrix(
-                    self, state, normalize
-                )
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to calculate the expectation value from.
+                If the circuit has already been executed, this will just make use of the cached
+                result, otherwise it will execute the circuit.
+            nshots (int, optional): number of shots to calculate the expectation value, if ``None``
+                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
-            raise_error(
-                ValueError,
-                "Cannot calculate Hamiltonian expectation value "
-                + f"for state of shape {shape}",
+        Returns:
+            float: The expectation value.
+        """
+        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+            warn(
+                "Calculation of expectation values starting from the state is deprecated, "
+                + "use the ``expectation_from_state`` method if you really need it, "
+                + "or simply pass the circuit you want to calculate the expectation value from."
             )
+            return self.expectation_from_state(circuit)
 
-        raise_error(
-            TypeError,
-            "Cannot calculate Hamiltonian expectation "
-            + f"value for state of type {type(state)}",
+        if nshots is None:
+            return self.backend.exp_value_observable_dense(circuit, self.matrix)
+
+        from qibo import gates  # pylint: disable=import-outside-toplevel
+
+        circuit = circuit.copy(True)
+        circuit.add(gates.M(*range(self.nqubits)))
+        return self.backend.exp_value_diagonal_observable_dense_from_samples(
+            circuit, self.matrix, self.nqubits, nshots, qubit_map
         )
 
-    def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.matrix
-        diag = self.backend.np.diagonal(obs)
-        if self.backend.np.count_nonzero(obs - self.backend.np.diag(diag)) != 0:
-            raise_error(
-                NotImplementedError,
-                "Observable is not diagonal. Expectation of non diagonal observables starting from samples is currently supported for `qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` only.",
-            )
-        diag = self.backend.np.reshape(diag, self.nqubits * (2,))
-        if qubit_map is None:
-            qubit_map = range(self.nqubits)
-        diag = self.backend.np.transpose(diag, axes=qubit_map).ravel()
-        # select only the elements with non-zero counts
-        diag = diag[[int(state, 2) for state in freq.keys()]]
-        counts = self.backend.cast(list(freq.values()), dtype=diag.dtype) / sum(
-            freq.values()
+    def expectation_from_samples(
+        self,
+        frequencies: Dict[str | int, int],
+        qubit_map: Optional[Tuple[int, ...]] = None,
+    ):
+        """Compute the expectation value starting from some samples, works only for diagonal
+        observables.
+
+        Args:
+            frequencies (Dict[str | int, int]): the dictionary of samples.
+            qubit_map (Tuple[int, ...], optional): optional qubit reordering.
+
+        Returns:
+            float: The expectation value.
+        """
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
+
+        circuit = Circuit(1)
+
+        class TMP:
+            def frequencies(self):
+                return frequencies
+
+        circuit._final_state = TMP()
+        return self.backend.exp_value_diagonal_observable_dense_from_samples(
+            circuit, self.matrix, self.nqubits, nshots=1, qubit_map=qubit_map
         )
-        return self.backend.np.real(self.backend.np.sum(diag * counts))
 
-    def eye(self, dim: Optional[int] = None):
-        """Generate Identity matrix with dimension ``dim``"""
-        if dim is None:
-            dim = int(self.matrix.shape[0])
-        return self.backend.cast(self.backend.matrices.I(dim), dtype=self.matrix.dtype)
-
-    def energy_fluctuation(self, state):
+    def energy_fluctuation(self, circuit):
         """
         Evaluate energy fluctuation:
 
@@ -156,30 +178,31 @@ class Hamiltonian(AbstractHamiltonian):
         for a given state :math:`\\ket{\\mu}`.
 
         Args:
-            state (ndarray): quantum state to be used to compute the energy fluctuation.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to compute the energy fluctuation from.
 
         Returns:
             float: Energy fluctuation value.
         """
-        state = self.backend.cast(state)
-        energy = self.expectation(state)
+        energy = self.expectation(circuit)
         h = self.matrix
         h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return self.backend.np.sqrt(self.backend.np.abs(average_h2 - energy**2))
+        average_h2 = h2.expectation(circuit)
+        return self.backend.sqrt(self.backend.abs(average_h2 - energy**2))
 
     def __add__(self, other):
         if isinstance(other, self.__class__):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be added.",
+                    "Only Hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = self.matrix + other.matrix
         elif isinstance(other, self.backend.numeric_types) or isinstance(
             other, self.backend.tensor_types
         ):
-            new_matrix = self.matrix + other * self.eye()
+            new_matrix = self.matrix + other * self._backend.identity(
+                self.matrix.shape[0], dtype=self.matrix.dtype
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -194,11 +217,13 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be subtracted.",
+                    "Only Hamiltonians with the same number of qubits can be subtracted.",
                 )
             new_matrix = self.matrix - other.matrix
         elif isinstance(other, self.backend.numeric_types):
-            new_matrix = self.matrix - other * self.eye()
+            new_matrix = self.matrix - other * self._backend.identity(
+                self.matrix.shape[0], dtype=self.matrix.dtype
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -214,11 +239,15 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != other.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same number of qubits can be added.",
+                    "Only Hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = other.matrix - self.matrix
         elif isinstance(other, self.backend.numeric_types):
-            new_matrix = other * self.eye() - self.matrix
+            new_matrix = (
+                other
+                * self._backend.identity(self.matrix.shape[0], dtype=self.matrix.dtype)
+                - self.matrix
+            )
         else:
             raise_error(
                 NotImplementedError,
@@ -229,41 +258,48 @@ class Hamiltonian(AbstractHamiltonian):
         )
 
     def __mul__(self, other):
-        if isinstance(other, self.backend.tensor_types):
+        if isinstance(other, self.backend.tensor_types):  # pragma: no cover
             other = complex(other)
         elif not isinstance(other, self.backend.numeric_types):
             raise_error(
                 NotImplementedError,
                 f"Hamiltonian multiplication to {type(other)} not implemented.",
             )
-        new_matrix = self.matrix * other
-        r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+
         other = self.backend.cast(other)
+
+        new_matrix = self.matrix * other
+
+        r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
+
         if self._eigenvalues is not None:
-            if self.backend.np.real(other) >= 0:  # TODO: check for side effects K.qnp
+            if self.backend.real(other) >= 0:  # TODO: check for side effects K.qnp
                 r._eigenvalues = other * self._eigenvalues
             elif not self.backend.is_sparse(self.matrix):
-                axis = (0,) if (self.backend.platform == "pytorch") else 0
-                r._eigenvalues = other * self.backend.np.flip(self._eigenvalues, axis)
+                r._eigenvalues = other * self.backend.flip(self._eigenvalues, axis=(0,))
+
         if self._eigenvectors is not None:
-            if self.backend.np.real(other) > 0:  # TODO: see above
+            if self.backend.real(other) > 0:  # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif other == 0:
-                r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+                r._eigenvectors = self._backend.identity(
+                    int(self._eigenvectors.shape[0]), dtype=self.matrix.dtype
+                )
+
         return r
 
     def __matmul__(self, other):
+        if not isinstance(other, (self.__class__, self.backend.tensor_types)):
+            raise_error(
+                NotImplementedError,
+                f"Hamiltonian ``matmul`` to {type(other)} not implemented.",
+            )
+
         if isinstance(other, self.__class__):
             matrix = self.matrix @ other.matrix
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
-        if isinstance(other, self.backend.tensor_types):
-            return self.matrix @ other
-
-        raise_error(
-            NotImplementedError,
-            f"Hamiltonian matmul to {type(other)} not implemented.",
-        )
+        return self.matrix @ other
 
 
 def _calculate_nqubits_from_form(form):
@@ -277,7 +313,9 @@ def _calculate_nqubits_from_form(form):
         else:
             raise_error(
                 RuntimeError,
-                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, you can define a custom symbol for {symbol} by subclassing ``qibo.symbols.Symbol``.",
+                f"Symbol {symbol} is not a ``qibo.symbols.Symbol``, "
+                + f"you can define a custom symbol for {symbol} by subclassing "
+                + " ``qibo.symbols.Symbol``.",
             )
         if q > nqubits:  # pylint: disable=E0606
             nqubits = q
@@ -323,13 +361,27 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._form = form
         self.constant = 0  # used only when we perform calculations using ``_terms``
 
-        self.backend = _check_backend(backend)
+        self._backend = _check_backend(backend)
 
         self.nqubits = (
             _calculate_nqubits_from_form(form) if nqubits is None else nqubits
         )
+        self._matrix = None
 
-    @cached_property
+    def __repr__(self):
+        return str(self.form)
+
+    @property
+    def backend(self):
+        return self._backend
+
+    @backend.setter
+    def backend(self, new_backend: Backend):
+        self._backend = new_backend
+        if self._matrix is not None:
+            self._matrix = new_backend.cast(self._matrix, new_backend.dtype)
+
+    @property
     def dense(self) -> "MatrixHamiltonian":  # type: ignore
         """Creates the equivalent Hamiltonian matrix."""
         return self.calculate_dense()
@@ -361,13 +413,91 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         form = sympy.expand(self.form)
         terms = []
-        for f, c in form.as_coefficients_dict().items():
-            term = SymbolicTerm(c, f, backend=self.backend)
+        for factors, coeff in form.as_coefficients_dict().items():
+            term = SymbolicTerm(coeff, factors, backend=self.backend)
             if term.target_qubits:
-                terms.append(term)
+                # Check for any terms with the same factors and add their coefficients together
+                found = False
+                for i, _term in enumerate(terms):
+                    if set(_term.factors) == set(term.factors):
+                        found = True
+                        terms[i].coefficient += term.coefficient
+                        break
+                if not found:
+                    terms.append(term)
             else:
                 self.constant += term.coefficient
         return terms
+
+    @cached_property
+    def simple_terms(self) -> Tuple[List[float], List[str], List[Tuple[int, ...]]]:
+        """A simpler (more framework agnostic) representation of the of terms
+        composing the Hamiltonian, defined as: their scalar coefficients,
+        the strings of the names of their observables and the qubits they act on
+
+        Returns:
+            (Tuple[List[float], List[str], List[Tuple[int, ...]]])
+        """
+        term_coefficients, terms, term_qubits = [], [], []
+        for term in self.terms:
+            term_coefficients.append(term.coefficient)
+            terms.append("".join(factor.__class__.__name__ for factor in term.factors))
+            term_qubits.append(tuple(factor.target_qubit for factor in term.factors))
+        return term_coefficients, terms, term_qubits
+
+    @cached_property
+    def diagonal_terms(self) -> list[list[SymbolicTerm]]:
+        """List of terms that can be diagonalized simultaneously, i.e. that
+        commute with each other. In detail each element of the list is a sublist
+        of commuting ``SymbolicTerm``s.
+        """
+        diagonal_terms = []
+        terms = self.terms
+        # loop until there are no more terms
+        while len(terms) > 0:
+            # take the first (remaining) term
+            t0 = terms[0]
+            diagonal_term = [t0]
+            removable_indices = {
+                0,
+            }
+            # look for all the following terms that commute with the
+            # first one and among themselves
+            for i, t1 in enumerate(terms[1:], 1):
+                # commutes with all the other terms -> append it
+                if all(term.commute(t1) for term in diagonal_term):
+                    diagonal_term.append(t1)
+                    removable_indices.add(i)
+            # append the new sublist of commuting terms found
+            diagonal_terms.append(diagonal_term)
+            # remove them from the original terms
+            terms = [term for i, term in enumerate(terms) if i not in removable_indices]
+        return diagonal_terms
+
+    @cached_property
+    def diagonal_simple_terms(
+        self,
+    ) -> Tuple[List[List[float]], List[List[str]], List[List[Tuple[int, ...]]]]:
+        """A simpler (more framework agnostic) representation of the simultaneously
+        diagonalizable terms of the hamiltonian, defined as: their scalar coefficients,
+        the strings of the names of their observables and the qubits they act on.
+
+        Returns:
+            Tuple[List[List[float]], List[List[str]], List[List[Tuple[int, ...]]]]
+        """
+        terms_qubits = []
+        terms_coefficients = []
+        terms_observables = []
+        for terms in self.diagonal_terms:
+            tmp_qubits, tmp_coeffs, tmp_obs = [], [], []
+            for term in terms:
+                tmp_qubits.append(term.target_qubits)
+                tmp_coeffs.append(term.coefficient.real)
+                tmp_obs.append("".join(factor.name[0] for factor in term.factors))
+            terms_qubits.append(tmp_qubits)
+            terms_coefficients.append(tmp_coeffs)
+            terms_observables.append(tmp_obs)
+        return terms_coefficients, terms_observables, terms_qubits
 
     @property
     def matrix(self):
@@ -375,7 +505,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Consisting of :math:`2^{n} \\times 2^{n}`` elements.
         """
-        return self.dense.matrix
+        if self._matrix is None:
+            self._matrix = self._get_symbol_matrix(self.form)
+        return self._matrix
 
     def eigenvalues(self, k=6):
         return self.dense.eigenvalues(k)
@@ -419,7 +551,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
             result = reduce(
-                self.backend.np.matmul,
+                self.backend.matmul,
                 (self._get_symbol_matrix(subterm) for subterm in factors),
             )
 
@@ -430,7 +562,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             matrix_power = (
                 np.linalg.matrix_power
                 if self.backend.name == "tensorflow"
-                else self.backend.np.linalg.matrix_power
+                else self.backend.matrix_power
             )
             result = matrix_power(matrix, int(exponent))
 
@@ -460,8 +592,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         Useful when the term representation is not available.
         """
-        matrix = self._get_symbol_matrix(self.form)
-        return Hamiltonian(self.nqubits, matrix, backend=self.backend)
+        return Hamiltonian(self.nqubits, self.matrix, backend=self.backend)
 
     def calculate_dense(self) -> Hamiltonian:
         log.warning(
@@ -472,115 +603,93 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # costly ``sympy.expand`` call
         return self._calculate_dense_from_form()
 
-    def expectation(self, state, normalize=False):
-        return Hamiltonian.expectation(self, state, normalize)
-
-    def expectation_from_circuit(self, circuit: "Circuit", nshots: int = 1000) -> float:  # type: ignore
-        """
-        Calculate the expectation value from a circuit.
-        This even works for observables not completely diagonal in the computational
-        basis, but only diagonal at a term level in a defined basis. Namely, for
-        an observable of the form :math:``H = \\sum_i H_i``, where each :math:``H_i``
-        consists in a `n`-qubits pauli operator :math:`P_0 \\otimes P_1 \\otimes \\cdots \\otimes P_n`,
-        the expectation value is computed by rotating the input circuit in the suitable
-        basis for each term :math:``H_i`` thus extracting the `term-wise` expectations
-        that are then summed to build the global expectation value.
-        Each term of the observable is treated separately, by measuring in the correct
-        basis and re-executing the circuit.
+    def expectation(self, circuit: "Circuit", nshots: Optional[int] = None) -> float:  # type: ignore
+        """Computes the expectation value for a given circuit.
 
         Args:
-            circuit (Circuit): input circuit.
-            nshots (int): number of shots, defaults to 1000.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to calculate the expectation value from.
+                If the circuit has already been executed, this will just make use of the cached
+                result, otherwise it will execute the circuit.
+            nshots (int, optional): number of shots to calculate the expectation value, if ``None``
+                it will try to compute the exact expectation value (if possible). Defaults to ``None``.
 
         Returns:
-            (float): the calculated expectation value.
+            float: The expectation value.
         """
-        from qibo import gates
+        if not circuit.__class__.__name__ == "Circuit":  # pragma: no cover
+            warn(
+                "Calculation of expectation values starting from the state is deprecated, "
+                + "use the ``expectation_from_state`` method if you really need it, "
+                + "or simply pass the circuit you want to calculate the expectation value from."
+            )
+            return self.expectation_from_state(circuit)
+        if nshots is None:
+            if not all(
+                isinstance(factor, PauliSymbol)
+                for term in self.terms
+                for factor in term.factors
+            ):
+                return self.dense.expectation(circuit)
+            terms_coefficients, terms, term_qubits = self.simple_terms
+            return self.constant.real + self.backend.exp_value_observable_symbolic(
+                circuit, terms, term_qubits, terms_coefficients, self.nqubits
+            )
 
-        rotated_circuits = []
-        coefficients = []
-        Z_observables = []
-        qubit_maps = []
-        for term in self.terms:
-            # store coefficient
-            coefficients.append(term.coefficient)
-            # Only care about non-I terms
-            non_identity_factors = [
-                factor for factor in term.factors if factor.name[0] != "I"
-            ]
-            # build diagonal observable
-            Z_observables.append(
-                SymbolicHamiltonian(
-                    prod(Z(factor.target_qubit) for factor in non_identity_factors),
-                    nqubits=circuit.nqubits,
-                    backend=self.backend,
-                )
-            )
-            # Get the qubits we want to measure for each term
-            qubit_map = sorted(factor.target_qubit for factor in non_identity_factors)
-            # prepare the measurement basis and append it to the circuit
-            measurements = [
-                gates.M(factor.target_qubit, basis=factor.gate.__class__)
-                for factor in non_identity_factors
-            ]
-            circ_copy = circuit.copy(True)
-            circ_copy.add(measurements)
-            rotated_circuits.append(circ_copy)
-            # for mapping the obtained sample frequencies to the original qubits
-            qubit_maps.append(qubit_map)
-        frequencies = [
-            result.frequencies()
-            for result in self.backend.execute_circuits(rotated_circuits, nshots=nshots)
-        ]
-        return sum(
-            coeff * obs.expectation_from_samples(freq, qubit_map)
-            for coeff, freq, obs, qubit_map in zip(
-                coefficients, frequencies, Z_observables, qubit_maps
-            )
+        terms_coefficients, terms_observables, terms_qubits = self.diagonal_simple_terms
+        return self.backend.exp_value_observable_symbolic_from_samples(
+            circuit,
+            terms_coefficients,
+            terms_observables,
+            terms_qubits,
+            self.nqubits,
+            self.constant.real,
+            nshots,
         )
 
-    def expectation_from_samples(self, freq: dict, qubit_map: list = None) -> float:
-        """
-        Calculate the expectation value from the samples.
-        The observable has to be diagonal in the computational basis.
+    def expectation_from_samples(
+        self,
+        frequencies: Dict[str | int, int],
+        qubit_map: Optional[Tuple[int, ...]] = None,
+    ):
+        """Compute the expectation value starting from some samples, works only for diagonal
+        observables.
 
         Args:
-            freq (dict): input frequencies of the samples.
-            qubit_map (list): qubit map.
+            frequencies (Dict[str | int, int]): the dictionary of samples.
+            qubit_map (Tuple[int, ...], optional): optional qubit reordering.
 
         Returns:
-            (float): the calculated expectation value.
+            float: The expectation value.
         """
-        for term in self.terms:
-            # pylint: disable=E1101
-            for factor in term.factors:
-                if not isinstance(factor, Z):
-                    raise_error(
-                        NotImplementedError, "Observable is not a Pauli-Z string."
-                    )
 
-        if qubit_map is None:
-            qubit_map = list(range(self.nqubits))
+        from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
-        keys = list(freq.keys())
-        counts = list(freq.values())
-        counts = self.backend.cast(counts, dtype=type(counts[0])) / sum(counts)
-        expvals = []
+        circuit = Circuit(1)
+
+        class TMP:
+            def frequencies(self):
+                return frequencies
+
+        circuit._final_state = TMP()
+        qubits, coefficients = [], []
         for term in self.terms:
-            qubits = {
-                factor.target_qubit for factor in term.factors if factor.name[0] != "I"
-            }
-            expvals.extend(
+            qubits.append(
                 [
-                    term.coefficient.real
-                    * (-1) ** [state[qubit_map.index(q)] for q in qubits].count("1")
-                    for state in keys
+                    factor.target_qubit
+                    for factor in term.factors
+                    if factor.__class__.__name__ != "I"
                 ]
             )
-        expvals = self.backend.cast(expvals, dtype=counts.dtype).reshape(
-            len(self.terms), len(freq)
+            coefficients.append(term.coefficient.real)
+        return self.backend.exp_value_diagonal_observable_symbolic_from_samples(
+            circuit,
+            self.nqubits,
+            qubits,
+            coefficients,
+            nshots=1,
+            qubit_map=qubit_map,
+            constant=self.constant.real,
         )
-        return self.backend.np.sum(expvals @ counts) + self.constant.real
 
     def _compose(self, other, operator):
         form = self._form
@@ -640,32 +749,35 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, other):
         """Matrix multiplication with other Hamiltonians or state vectors."""
+        if not isinstance(other, (self.__class__, self.backend.tensor_types)):
+            raise_error(
+                NotImplementedError,
+                f"Hamiltonian matmul to {type(other)} not implemented.",
+            )
+
         if isinstance(other, self.__class__):
             return other * self
 
-        if isinstance(other, self.backend.tensor_types):
-            rank = len(tuple(other.shape))
-            if rank not in (1, 2):
-                raise_error(
-                    NotImplementedError,
-                    f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
-                )
-            state_qubits = int(np.log2(int(other.shape[0])))
-            if state_qubits != self.nqubits:
-                raise_error(
-                    ValueError,
-                    f"Cannot multiply Hamiltonian on {self.nqubits} qubits to "
-                    + f"state of {state_qubits} qubits.",
-                )
-            if rank == 1:  # state vector
-                return self.apply_gates(other)
+        rank = len(tuple(other.shape))
+        if rank not in (1, 2):
+            raise_error(
+                NotImplementedError,
+                f"Cannot multiply Hamiltonian with rank-{rank} tensor.",
+            )
 
-            return self.apply_gates(other, density_matrix=True)
+        state_qubits = int(np.log2(int(other.shape[0])))
 
-        raise_error(
-            NotImplementedError,
-            f"Hamiltonian matmul to {type(other)} not implemented.",
-        )
+        if state_qubits != self.nqubits:
+            raise_error(
+                ValueError,
+                f"Cannot multiply Hamiltonian on {self.nqubits} qubits to "
+                + f"state of {state_qubits} qubits.",
+            )
+
+        if rank == 1:  # state vector
+            return self.apply_gates(other)
+
+        return self.apply_gates(other, density_matrix=True)
 
     def circuit(self, dt, accelerators=None):
         """Circuit that implements a Trotter step of this Hamiltonian.

@@ -58,18 +58,18 @@ class QuantumClassifer:
         Returns:
             Circuit implementing the variational ansatz
         """
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         for _ in range(nlayers):
-            c.add(rotations())
-            c.add(self._CZ_gates1())
-            c.add(rotations())
-            c.add(self._CZ_gates2())
+            circuit.add(rotations())
+            circuit.add(self._CZ_gates1())
+            circuit.add(rotations())
+            circuit.add(self._CZ_gates2())
         # Final rotations
-        c.add(rotations())
+        circuit.add(rotations())
         # Measurements
-        c.add(gates.M(*range(self.measured_qubits)))
+        circuit.add(gates.M(*range(self.measured_qubits)))
 
-        return c
+        return circuit
 
     def Classifier_circuit(self, theta):
         """

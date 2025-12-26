@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import numpy as np
 from scipy import sparse
 
@@ -11,9 +14,19 @@ def random_sparse_matrix(backend, n, sparse_type=None):
 
         return backend.tf.sparse.SparseTensor(indices, data, (n, n))
 
-    re = sparse.rand(n, n, format=sparse_type)
-    im = sparse.rand(n, n, format=sparse_type)
-    return re + 1j * im
+    n_tries = 0
+    while n_tries < 100:
+        re = sparse.rand(n, n, format=sparse_type, dtype=complex)
+        im = sparse.rand(n, n, format=sparse_type, dtype=complex)
+        try:
+            matrix = re + 1j * im
+            break
+        except ValueError:
+            n_tries += 1
+            continue
+    if n_tries == 100:
+        raise RuntimeError("Maximum number of tries reached for random sparse matrix.")
+    return matrix
 
 
 def fig2array(fig):
@@ -24,6 +37,30 @@ def fig2array(fig):
     return data
 
 
-def match_figure_image(fig, arr_path):
-    """Check whether the two image arrays match."""
+def match_figure_image(fig, arr_path: str):
+    """Check whether the two image arrays match.
+
+    Args:
+        fig (:class:`matplotlib.figure.Figure`): Figure to compare.
+        arr_path (str): Path to the ``numpy`` array file containing the reference image.
+
+    Returns:
+        bool: ``True`` if the images match, ``False`` otherwise.
+    """
     return np.all(fig2array(fig) == np.load(arr_path))
+
+
+def fig2png(figure):
+    """Save a matplotlib figure to a temporary PNG file.
+    Args:
+        figure (:class:`matplotlib.figure.Figure`): The figure to save.
+    Returns:
+        str: The path to the temporary PNG file if successful, otherwise None.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+        # Save the figure as a PNG file in the temporary file
+        temp_file_path = temp_file.name
+        figure.savefig(temp_file_path)
+        if os.path.exists(temp_file_path):
+            return temp_file_path
+        return None

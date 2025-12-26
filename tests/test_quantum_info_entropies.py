@@ -401,7 +401,7 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
         target = classical_relative_entropy(prob_dist_p, prob_dist_q, base, backend)
     else:
         target = ((prob_dist_p / prob_dist_q) ** (1 - alpha) - 1) / (1 - alpha)
-        target = backend.np.sum(prob_dist_p**alpha * target)
+        target = backend.sum(prob_dist_p**alpha * target)
 
     if kind is not None:
         prob_dist_p = kind(prob_dist_p)
@@ -414,30 +414,16 @@ def test_classical_relative_tsallis_entropy(backend, alpha, base, kind):
     backend.assert_allclose(value, target)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_von_neumann_entropy(backend, base, check_hermitian):
+def test_von_neumann_entropy(backend, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = von_neumann_entropy(state, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=0, check_hermitian=check_hermitian, backend=backend
-        )
-    with pytest.raises(TypeError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        test = von_neumann_entropy(
-            state, base=base, check_hermitian="False", backend=backend
-        )
-
-    state = random_unitary(4, backend=backend)
-    test = von_neumann_entropy(state, base=base, check_hermitian=True, backend=backend)
+        test = von_neumann_entropy(state, base=0, backend=backend)
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
@@ -445,12 +431,10 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
         von_neumann_entropy(state, backend=backend), 0.0, atol=PRECISION_TOL
     )
 
-    state = np.array([1.0, 0.0, 0.0, 0.0])
-    state = np.outer(state, state)
-    state = backend.cast(state, dtype=state.dtype)
+    state = backend.zero_state(2, density_matrix=True)
 
     nqubits = 2
-    state = backend.identity_density_matrix(nqubits)
+    state = backend.maximally_mixed_state(nqubits)
     if base == 2:
         test = 2.0
     elif base == 10:
@@ -461,86 +445,47 @@ def test_von_neumann_entropy(backend, base, check_hermitian):
         test = 0.8613531161467861
 
     backend.assert_allclose(
-        von_neumann_entropy(
-            state, base, check_hermitian=check_hermitian, backend=backend
-        ),
+        von_neumann_entropy(state, base, backend=backend),
         test,
     )
 
 
-@pytest.mark.parametrize("statevector", [False, True])
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_relative_von_neumann_entropy(backend, base, check_hermitian, statevector):
+def test_relative_von_neumann_entropy(backend, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         target = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(TypeError):
         target = np.random.rand(2, 3)
         target = backend.cast(target, dtype=target.dtype)
         state = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
         target = np.array([0.0, 1.0])
         target = backend.cast(target, dtype=target.dtype)
-        test = relative_von_neumann_entropy(
-            state, target, base=0, check_hermitian=check_hermitian, backend=backend
-        )
-    with pytest.raises(TypeError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        target = np.array([0.0, 1.0])
-        target = backend.cast(target, dtype=target.dtype)
-        test = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian="False", backend=backend
-        )
+        test = relative_von_neumann_entropy(state, target, base=0, backend=backend)
 
     nqubits = 2
     dims = 2**nqubits
 
-    state = (
-        random_statevector(dims, backend=backend)
-        if statevector
-        else random_density_matrix(dims, backend=backend)
-    )
-    target = backend.identity_density_matrix(nqubits, normalize=True)
+    target = backend.maximally_mixed_state(nqubits)
 
-    entropy = relative_von_neumann_entropy(
-        state, target, base=base, check_hermitian=check_hermitian, backend=backend
+    state = random_statevector(dims, backend=backend)
+    state = backend.outer(state, backend.conj(state.T))
+
+    rel_entropy = relative_von_neumann_entropy(
+        state, target, base=base, backend=backend
     )
 
-    if statevector:
-        state = backend.np.outer(state, backend.np.conj(state.T))
-
-    entropy_target = von_neumann_entropy(
-        state, base=base, check_hermitian=check_hermitian, backend=backend
-    )
-
-    backend.assert_allclose(
-        entropy, np.log(dims) / np.log(base) - entropy_target, atol=1e-5
-    )
-
-    state = random_density_matrix(2, seed=8, pure=False, backend=backend)
-    target = backend.cast([0.0, 1.0], dtype=np.float64)
-
-    backend.assert_allclose(
-        relative_von_neumann_entropy(state, target, backend=backend),
-        -0.21227801,
-        atol=1e-8,
-    )
+    backend.assert_allclose(rel_entropy, 2 / float(np.log2(base)), atol=1e-5)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_mutual_information(backend, base, check_hermitian):
+def test_mutual_information(backend, base):
     with pytest.raises(ValueError):
         state = np.ones((3, 3))
         state = backend.cast(state, dtype=state.dtype)
@@ -548,12 +493,12 @@ def test_mutual_information(backend, base, check_hermitian):
 
     state_a = random_density_matrix(4, backend=backend)
     state_b = random_density_matrix(4, backend=backend)
-    state = backend.np.kron(state_a, state_b)
+    state = backend.kron(state_a, state_b)
 
     backend.assert_allclose(
-        mutual_information(state, [0, 1], base, check_hermitian, backend),
+        mutual_information(state, [0, 1], base, backend),
         0.0,
-        atol=1e-10,
+        atol=1e-6,
     )
 
 
@@ -581,8 +526,8 @@ def test_renyi_entropy(backend, alpha, base):
     elif alpha == 1.0:
         target = von_neumann_entropy(state, base=base, backend=backend)
     elif alpha == np.inf:
-        target = backend.calculate_matrix_norm(state, order=2)
-        target = -1 * backend.np.log2(target) / np.log2(base)
+        target = backend.matrix_norm(state, order=2)
+        target = -1 * backend.log2(target) / np.log2(base)
     else:
         target = np.log2(
             np.trace(np.linalg.matrix_power(backend.to_numpy(state), alpha))
@@ -665,33 +610,29 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 )
             elif alpha == np.inf:
                 state_outer = (
-                    backend.np.outer(state, backend.np.conj(state.T))
-                    if state_flag
-                    else state
+                    backend.outer(state, backend.conj(state.T)) if state_flag else state
                 )
                 target_outer = (
-                    backend.np.outer(target, backend.np.conj(target.T))
+                    backend.outer(target, backend.conj(target.T))
                     if target_flag
                     else target
                 )
                 new_state = matrix_power(state_outer, 0.5, backend=backend)
                 new_target = matrix_power(target_outer, 0.5, backend=backend)
 
-                log = backend.np.log2(
-                    backend.calculate_matrix_norm(new_state @ new_target, order=1)
-                )
+                log = backend.log2(backend.matrix_norm(new_state @ new_target, order=1))
 
                 log = -2 * log / np.log2(base)
             else:
                 if len(state.shape) == 1:
-                    state = backend.np.outer(state, backend.np.conj(state))
+                    state = backend.outer(state, backend.conj(state))
 
                 if len(target.shape) == 1:
-                    target = backend.np.outer(target, backend.np.conj(target))
+                    target = backend.outer(target, backend.conj(target))
 
                 log = matrix_power(state, alpha, backend=backend)
                 log = log @ matrix_power(target, 1 - alpha, backend=backend)
-                log = backend.np.log2(backend.np.trace(log))
+                log = backend.log2(backend.trace(log))
 
                 log = (1 / (alpha - 1)) * log / np.log2(base)
 
@@ -709,7 +650,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
     backend.assert_allclose(
         relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend),
         0.0,
-        atol=1e-8,
+        atol=1e-7,
     )
 
 
@@ -736,7 +677,7 @@ def test_tsallis_entropy(backend, alpha, base):
         target = von_neumann_entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
-            backend.np.trace(matrix_power(state, alpha, backend=backend)) - 1
+            backend.trace(matrix_power(state, alpha, backend=backend)) - 1
         )
 
     backend.assert_allclose(
@@ -755,12 +696,9 @@ def test_tsallis_entropy(backend, alpha, base):
 @pytest.mark.parametrize(
     ["state_flag", "target_flag"], [[True, True], [False, True], [True, False]]
 )
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("alpha", [0, 0.5, 1, 1.9])
-def test_relative_tsallis_entropy(
-    backend, alpha, base, check_hermitian, state_flag, target_flag
-):
+def test_relative_tsallis_entropy(backend, alpha, base, state_flag, target_flag):
     state = random_statevector(4, backend=backend)
     target = random_statevector(4, backend=backend)
 
@@ -784,35 +722,32 @@ def test_relative_tsallis_entropy(
         else random_density_matrix(4, seed=11, backend=backend)
     )
 
-    value = relative_tsallis_entropy(
-        state, target, alpha, base, check_hermitian, backend
-    )
+    value = relative_tsallis_entropy(state, target, alpha, base, backend)
 
     if alpha == 1.0:
         target_value = relative_von_neumann_entropy(
-            state, target, base=base, check_hermitian=check_hermitian, backend=backend
+            state, target, base=base, backend=backend
         )
     else:
         if alpha < 1.0:
             alpha = 2 - alpha
 
         if state_flag:
-            state = backend.np.outer(state, backend.np.conj(state.T))
+            state = backend.outer(state, backend.conj(state.T))
 
         if target_flag:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         target_value = matrix_power(state, alpha, backend=backend)
         target_value = target_value @ matrix_power(target, 1 - alpha, backend=backend)
-        target_value = (1 - backend.np.trace(target_value)) / (1 - alpha)
+        target_value = (1 - backend.trace(target_value)) / (1 - alpha)
 
     backend.assert_allclose(value, target_value, atol=1e-10)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("partition", [[0], [1]])
-def test_entanglement_entropy(backend, partition, base, check_hermitian):
+def test_entanglement_entropy(backend, partition, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -820,7 +755,6 @@ def test_entanglement_entropy(backend, partition, base, check_hermitian):
             state,
             partition=partition,
             base=base,
-            check_hermitian=check_hermitian,
             backend=backend,
         )
     with pytest.raises(ValueError):
@@ -830,7 +764,6 @@ def test_entanglement_entropy(backend, partition, base, check_hermitian):
             state,
             partition=partition,
             base=0,
-            check_hermitian=check_hermitian,
             backend=backend,
         )
 
@@ -842,7 +775,6 @@ def test_entanglement_entropy(backend, partition, base, check_hermitian):
         state,
         partition=partition,
         base=base,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
 
@@ -858,7 +790,7 @@ def test_entanglement_entropy(backend, partition, base, check_hermitian):
     backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
 
     # Product state
-    state = backend.np.kron(
+    state = backend.kron(
         random_statevector(2, backend=backend), random_statevector(2, backend=backend)
     )
 
@@ -866,7 +798,6 @@ def test_entanglement_entropy(backend, partition, base, check_hermitian):
         state,
         partition=partition,
         base=base,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)

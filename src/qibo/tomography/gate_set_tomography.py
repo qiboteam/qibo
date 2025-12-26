@@ -1,15 +1,19 @@
 from functools import cache
 from inspect import signature
 from itertools import product
-from typing import List, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from sympy import S
 
 from qibo import Circuit, gates, symbols
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend, construct_backend
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.noise import NoiseModel
+from qibo.symbols import Symbol
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes
 from qibo.transpiler.placer import Random
@@ -20,16 +24,16 @@ SUPPORTED_NQUBITS = [1, 2]
 """Supported nqubits for GST."""
 
 
-def _check_nqubits(nqubits):
+def _check_nqubits(nqubits: int):
     if nqubits not in SUPPORTED_NQUBITS:
         raise_error(
             ValueError,
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2.",
+            f"``nqubits`` given as {nqubits}. ``nqubits`` needs to be either 1 or 2.",
         )
 
 
 @cache
-def _gates(nqubits) -> List:
+def _gates(nqubits: int) -> List[Tuple[Gate, ...]]:
     """Gates implementing all the GST state preparations.
 
     Args:
@@ -46,7 +50,7 @@ def _gates(nqubits) -> List:
 
 
 @cache
-def _measurements(nqubits: int) -> List:
+def _measurements(nqubits: int) -> List[Tuple[Gate, ...]]:
     """Measurement gates implementing all the GST measurement bases.
 
     Args:
@@ -59,7 +63,7 @@ def _measurements(nqubits: int) -> List:
 
 
 @cache
-def _observables(nqubits: int) -> List:
+def _observables(nqubits: int) -> List[Tuple[Symbol, ...]]:
     """All the observables measured in the GST protocol.
 
     Args:
@@ -73,8 +77,10 @@ def _observables(nqubits: int) -> List:
 
 
 @cache
-def _get_observable(j: int, nqubits: int):
-    """Returns the :math:`j`-th observable. The :math:`j`-th observable is expressed as a base-4 indexing and is given by
+def _get_observable(j: int, nqubits: int, backend: str) -> SymbolicHamiltonian:
+    """Return the :math:`j`-th observable.
+
+    The :math:`j`-th observable is expressed as a base-:math:`4` indexing and is given by
 
     .. math::
         j \\in \\{0, 1, 2, 3\\}^{\\otimes n} \\equiv \\{ I, X, Y, Z\\}^{\\otimes n}.
@@ -82,10 +88,17 @@ def _get_observable(j: int, nqubits: int):
     Args:
         j (int): index of the measurement basis (in base-4)
         nqubits (int): number of qubits.
+        backend (str): name of the backend to be used in the computation.
 
     Returns:
-        List[:class:`qibo.hamiltonians.SymbolicHamiltonian`]: observables represented by symbolic Hamiltonians.
+        List[:class:`qibo.hamiltonians.SymbolicHamiltonian`]: Observables represented by
+        symbolic Hamiltonians.
     """
+    backend_args = backend.replace("(", "").replace(")", "").split(" ")
+    if len(backend_args) == 2:
+        backend = construct_backend(backend_args[0], platform=backend_args[1])
+    else:
+        backend = construct_backend(backend_args[0])
 
     if j == 0:
         _check_nqubits(nqubits)
@@ -93,12 +106,12 @@ def _get_observable(j: int, nqubits: int):
     observable = S(1)
     for q, obs in enumerate(observables):
         if obs is not symbols.I:
-            observable *= obs(q)
-    return SymbolicHamiltonian(observable, nqubits=nqubits)
+            observable *= obs(q, backend=backend)
+    return SymbolicHamiltonian(observable, nqubits=nqubits, backend=backend)
 
 
 @cache
-def _prepare_state(k, nqubits):
+def _prepare_state(k: int, nqubits: int) -> List[Gate]:
     """Prepares the :math:`k`-th state for an :math:`n`-qubits (`nqubits`) circuit.
     Using base-4 indexing for :math:`k`,
 
@@ -120,7 +133,7 @@ def _prepare_state(k, nqubits):
 
 
 @cache
-def _measurement_basis(j, nqubits):
+def _measurement_basis(j: int, nqubits: int) -> List[Gate]:
     """Constructs the :math:`j`-th measurement basis element for an :math:`n`-qubits (`nqubits`) circuit.
     Base-4 indexing is used for the :math:`j`-th measurement basis and is given by
 
@@ -143,12 +156,12 @@ def _measurement_basis(j, nqubits):
 
 def _gate_tomography(
     nqubits: int,
-    gate: gates.Gate = None,
+    gate: Gate = None,
     nshots: int = int(1e4),
-    noise_model=None,
-    backend=None,
+    noise_model: Optional[NoiseModel] = None,
+    backend: Optional[Backend] = None,
     transpiler=None,
-):
+) -> ArrayLike:
     """Runs gate tomography for a 1 or 2 qubit gate.
 
     It obtains a :math:`4^{n} \\times 4^{n}` matrix, where :math:`n` is the number of qubits.
@@ -170,7 +183,7 @@ def _gate_tomography(
             the current backend. Defaults to ``None``.
 
     Returns:
-        ndarray: matrix approximating the input gate.
+        ArrayLike: Matrix approximating the input gate.
     """
 
     # Check if gate is 1 or 2 qubit gate.
@@ -202,28 +215,27 @@ def _gate_tomography(
                 new_circ = circ.copy()
                 measurements = _measurement_basis(j, nqubits)
                 new_circ.add(measurements)
-                observable = _get_observable(j, nqubits)
+                observable = _get_observable(j, nqubits, backend=str(backend))
                 if noise_model is not None and backend.name != "qibolab":
                     new_circ = noise_model.apply(new_circ)
                 if transpiler is not None:
-                    new_circ, _ = transpiler(new_circ)
-                exp_val = observable.expectation_from_samples(
-                    backend.execute_circuit(new_circ, nshots=nshots).frequencies()
-                )
+                    new_circ, _ = transpiler(new_circ, backend=backend)
+                result = backend.execute_circuit(new_circ, nshots=nshots)
+                exp_val = result.expectation_from_samples(observable)
             matrix_jk[j, k] = exp_val
     return backend.cast(matrix_jk, dtype=matrix_jk.dtype)
 
 
 def GST(
     gate_set: Union[tuple, set, list],
-    nshots=int(1e4),
-    noise_model=None,
-    include_empty=False,
-    pauli_liouville=False,
-    gauge_matrix=None,
-    backend=None,
+    nshots: int = int(1e4),
+    noise_model: Optional[NoiseModel] = None,
+    include_empty: bool = False,
+    pauli_liouville: bool = False,
+    gauge_matrix: Optional[ArrayLike] = None,
+    backend: Optional[Backend] = None,
     transpiler=None,
-):
+) -> List[ArrayLike]:
     """Run Gate Set Tomography on the input ``gate_set``.
 
     Args:
@@ -256,7 +268,7 @@ def GST(
 
 
     Returns:
-        List(ndarray): input ``gate_set`` represented by matrices estimaded via GST.
+        List[ArrayLike]: Input ``gate_set`` represented by matrices estimaded via GST.
     """
 
     backend = _check_backend(backend)
@@ -322,24 +334,19 @@ def GST(
         )
 
     if pauli_liouville:
-        if gauge_matrix is not None:
-            if np.linalg.det(gauge_matrix) == 0:
-                raise_error(ValueError, "Matrix is not invertible")
-        else:
-            gauge_matrix = backend.cast(
-                [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
-            )
+        if gauge_matrix is not None and np.linalg.det(gauge_matrix) == 0:
+            raise_error(ValueError, "Matrix is not invertible")
+        gauge_matrix = backend.cast(
+            [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]]
+        )
         PL_matrices = []
         gauge_matrix_1q = gauge_matrix
-        gauge_matrix_2q = backend.np.kron(gauge_matrix, gauge_matrix)
+        gauge_matrix_2q = backend.kron(gauge_matrix, gauge_matrix)
         for matrix in matrices:
             gauge_matrix = gauge_matrix_1q if matrix.shape[0] == 4 else gauge_matrix_2q
             empty = empty_matrices[0] if matrix.shape[0] == 4 else empty_matrices[1]
             PL_matrices.append(
-                gauge_matrix
-                @ backend.np.linalg.inv(empty)
-                @ matrix
-                @ backend.np.linalg.inv(gauge_matrix)
+                gauge_matrix @ backend.inv(empty) @ matrix @ backend.inv(gauge_matrix)
             )
         matrices = PL_matrices
 

@@ -89,7 +89,7 @@ print(f'offset: {offset}\n')
 
 ```python
 rng = np.random.default_rng(seed=1234)
-random_solution = {i: rng.integers(2) for i in range(F.size)}
+random_solution = {key: rng.integers(2) for key in range(F.size)}
 print(f'The random solution is {random_solution}\n')
 ```
 
@@ -114,8 +114,8 @@ print(f'The feasibility of the random solution is {feasibility}\n')
 feasible_solution = np.zeros(F.shape)
 sequence = np.arange(F.shape[0])
 np.random.shuffle(sequence)
-for i in range(F.shape[0]):
-    feasible_solution[i, sequence[i]] = 1
+for elem in range(F.shape[0]):
+    feasible_solution[elem, sequence[elem]] = 1
 feasible_solution = {k:v for k, v in enumerate(feasible_solution.flatten())}
 print(f'The feasible solution is {feasible_solution}\n')
 ```
@@ -164,7 +164,7 @@ QAP of size 4 is too large for Qibo QAOA. Let's reduce the size to 3
 ham = hamiltonian_qap((F[:3,:3], D[:3,:3]), dense=False)
 
 
-from qibo import models, hamiltonians
+from qibo.models import QAOA
 
 # Create QAOA model
 qaoa = models.QAOA(ham)

@@ -32,8 +32,8 @@ def test_concurrence_and_formation(backend, partition, base, check_purity):
 
     if check_purity is True:
         with pytest.raises(NotImplementedError):
-            state = backend.identity_density_matrix(2, normalize=False)
-            test = concurrence(state, partition=partition, backend=backend)
+            state = backend.identity(4)
+            test = concurrence(state, bipartition=partition, backend=backend)
 
     nqubits = 2
     dim = 2**nqubits
@@ -51,7 +51,7 @@ def test_concurrence_and_formation(backend, partition, base, check_purity):
     backend.assert_allclose(0.0 <= concur <= np.sqrt(2), True)
     backend.assert_allclose(0.0 <= ent_form <= 1.0, True)
 
-    state = backend.np.kron(
+    state = backend.kron(
         random_density_matrix(2, pure=True, backend=backend),
         random_density_matrix(2, pure=True, backend=backend),
     )
@@ -74,7 +74,7 @@ def test_negativity(backend, p):
     psi = (np.kron(zero, one) - np.kron(one, zero)) / np.sqrt(2)
     psi = np.outer(psi, psi.T)
     psi = backend.cast(psi)
-    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+    state = p * psi + (1 - p) * backend.maximally_mixed_state(2)
 
     neg = negativity(state, [0], backend=backend)
 
@@ -88,40 +88,25 @@ def test_negativity(backend, p):
     backend.assert_allclose(neg, target, atol=1e-10)
 
 
-@pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 6])
-@pytest.mark.parametrize("channel", [gates.DepolarizingChannel])
-def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
+def test_entanglement_fidelity(backend, nqubits):
+    channel = gates.DepolarizingChannel([0, 1], 0.5)
+
     with pytest.raises(TypeError):
-        test = entanglement_fidelity(
-            channel, nqubits=[0], check_hermitian=check_hermitian, backend=backend
-        )
+        test = entanglement_fidelity(channel, nqubits=[0], backend=backend)
     with pytest.raises(ValueError):
-        test = entanglement_fidelity(
-            channel, nqubits=0, check_hermitian=check_hermitian, backend=backend
-        )
+        test = entanglement_fidelity(channel, nqubits=0, backend=backend)
     with pytest.raises(TypeError):
-        state = np.random.rand(2, 3, 2)
-        state = backend.cast(state, dtype=state.dtype)
+        state = backend.random_sample((2, 3, 2))
         test = entanglement_fidelity(
             channel,
             nqubits,
             state=state,
-            check_hermitian=check_hermitian,
             backend=backend,
         )
-    with pytest.raises(TypeError):
-        state = random_statevector(2, backend=backend)
-        test = entanglement_fidelity(
-            channel, nqubits, state=state, check_hermitian="False", backend=backend
-        )
-
-    channel = channel([0, 1], 0.5)
 
     # test on maximally entangled state
-    ent_fid = entanglement_fidelity(
-        channel, nqubits=nqubits, check_hermitian=check_hermitian, backend=backend
-    )
+    ent_fid = entanglement_fidelity(channel, nqubits=nqubits, backend=backend)
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
     # test with a state vector
@@ -130,18 +115,16 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
         channel,
         nqubits=nqubits,
         state=state,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
     # test on maximally mixed state
-    state = backend.identity_density_matrix(nqubits)
+    state = backend.maximally_mixed_state(nqubits)
     ent_fid = entanglement_fidelity(
         channel,
         nqubits=nqubits,
         state=state,
-        check_hermitian=check_hermitian,
         backend=backend,
     )
     backend.assert_allclose(ent_fid, 1.0, atol=PRECISION_TOL)

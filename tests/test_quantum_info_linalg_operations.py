@@ -9,7 +9,10 @@ from qibo.quantum_info.linalg_operations import (
     anticommutator,
     commutator,
     lanczos,
+    matrix_exponentiation,
+    matrix_logarithm,
     matrix_power,
+    matrix_sqrt,
     partial_trace,
     partial_transpose,
     schmidt_decomposition,
@@ -48,10 +51,10 @@ def test_commutator(backend):
     )
 
     comm = commutator(X, I)
-    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
+    backend.assert_allclose(comm, backend.zeros((2, 2)))
 
     comm = commutator(X, X)
-    backend.assert_allclose(comm, backend.np.zeros((2, 2)))
+    backend.assert_allclose(comm, backend.zeros((2, 2)))
 
     comm = commutator(X, Y)
     backend.assert_allclose(comm, 2j * Z)
@@ -90,10 +93,10 @@ def test_anticommutator(backend):
     backend.assert_allclose(anticomm, 2 * I)
 
     anticomm = anticommutator(X, Y)
-    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
+    backend.assert_allclose(anticomm, backend.zeros((2, 2)))
 
     anticomm = anticommutator(X, Z)
-    backend.assert_allclose(anticomm, backend.np.zeros((2, 2)))
+    backend.assert_allclose(anticomm, backend.zeros((2, 2)))
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -112,7 +115,6 @@ def test_partial_trace(backend, density_matrix):
         test = partial_trace(state, 1, backend=backend)
 
     nqubits = 4
-
     circuit = Circuit(nqubits, density_matrix=density_matrix)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0, qubit + 1) for qubit in range(1, nqubits - 1))
@@ -120,7 +122,7 @@ def test_partial_trace(backend, density_matrix):
 
     traced = partial_trace(state, (1, 2, 3), backend=backend)
 
-    Id = backend.identity_density_matrix(1, normalize=True)
+    Id = backend.maximally_mixed_state(1)
 
     backend.assert_allclose(traced, Id)
 
@@ -131,7 +133,7 @@ def _werner_state(p, backend):
     psi = np.outer(psi, np.conj(psi.T))
     psi = backend.cast(psi, dtype=psi.dtype)
 
-    state = p * psi + (1 - p) * backend.identity_density_matrix(2, normalize=True)
+    state = p * psi + (1 - p) * backend.maximally_mixed_state(2)
 
     # partial transpose of two-qubit werner state is known analytically
     transposed = (1 / 4) * np.array(
@@ -212,6 +214,18 @@ def test_partial_transpose(backend, p, statevector, batch):
             backend.assert_allclose(transposed, target)
 
 
+def test_matrix_exponentiation(backend):
+    phase = 0.1
+    target = (
+        backend.cos(0.1) * backend.matrices.I()
+        + 1j * backend.sin(phase) * backend.matrices.X
+    )
+
+    matrix = matrix_exponentiation(backend.matrices.X, 1j * phase, backend=backend)
+
+    backend.assert_allclose(matrix, target)
+
+
 @pytest.mark.parametrize("singular", [False, True])
 @pytest.mark.parametrize("power", [-0.5, 0.5, 2, 2.0, "2"])
 def test_matrix_power(backend, power, singular):
@@ -237,9 +251,48 @@ def test_matrix_power(backend, power, singular):
     else:
         power = matrix_power(state, power, backend=backend)
 
-        target = float(backend.np.real(backend.np.trace(power)))
+        target = float(backend.real(backend.trace(power)))
 
         assert abs(purity(state, backend=backend) - target) < 1e-5
+
+
+def test_matrix_sqrt(backend):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, pure=False, backend=backend)
+
+    eigvals, eigvecs = backend.eigenvectors(state)
+    target = backend.zeros_like(state)
+    for eigval, eigvec in zip(eigvals, eigvecs.T):
+        target += backend.sqrt(eigval) * backend.outer(eigvec, backend.conj(eigvec))
+
+    sqrt = matrix_sqrt(state, backend=backend)
+
+    backend.assert_allclose(sqrt, target)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_matrix_log(backend, base):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, pure=False, backend=backend)
+
+    eigvals, eigvecs = backend.eigenvectors(state)
+    target = backend.zeros_like(state)
+    for eigval, eigvec in zip(eigvals, eigvecs.T):
+        target += (backend.log(eigval) / float(np.log(base))) * backend.outer(
+            eigvec, backend.conj(eigvec)
+        )
+
+    sqrt = matrix_logarithm(state, base=base, backend=backend)
+    backend.assert_allclose(sqrt, target)
+
+    sqrt = matrix_logarithm(
+        state, base=base, eigenvectors=eigvecs, eigenvalues=eigvals, backend=backend
+    )
+    backend.assert_allclose(sqrt, target)
 
 
 def test_singular_value_decomposition(backend):
@@ -260,15 +313,13 @@ def test_singular_value_decomposition(backend):
     for k, coeff in enumerate(coeffs):
         bitstring = f"{k:0{2}b}"
         a, b = int(bitstring[0]), int(bitstring[1])
-        ket = backend.np.kron(base[a], base[b])
-        state = state + coeff * backend.np.outer(ket, ket.T)
+        ket = backend.kron(base[a], base[b])
+        state = state + coeff * backend.outer(ket, ket.T)
 
     _, S, _ = singular_value_decomposition(state, backend=backend)
 
-    S_sorted = backend.np.sort(S)
-    coeffs_sorted = backend.np.sort(coeffs)
-    if backend.platform == "pytorch":
-        S_sorted, coeffs_sorted = S_sorted[0], coeffs_sorted[0]
+    S_sorted = backend.sort(S)
+    coeffs_sorted = backend.sort(coeffs)
 
     backend.assert_allclose(S_sorted, coeffs_sorted)
 
@@ -280,23 +331,22 @@ def test_schmidt_decomposition(backend):
 
     state_A = random_statevector(4, seed=10, backend=backend)
     state_B = random_statevector(4, seed=11, backend=backend)
-    state = backend.np.kron(state_A, state_B)
+    state = backend.kron(state_A, state_B)
 
     U, S, Vh = schmidt_decomposition(state, [0, 1], backend=backend)
 
     # recovering original state
-    recovered = np.zeros_like(state.shape, dtype=complex)
-    recovered = backend.cast(recovered, dtype=recovered.dtype)
+    recovered = backend.zeros_like(state, dtype=backend.complex128)
     for coeff, u, vh in zip(S, U.T, Vh):
         if abs(coeff) > 1e-10:
-            recovered = recovered + coeff * backend.np.kron(u, vh)
+            recovered = recovered + coeff * backend.kron(u, vh)
 
     backend.assert_allclose(recovered, state)
 
     # entropy test
-    coeffs = backend.np.abs(S) ** 2
-    entropy = backend.np.where(backend.np.abs(S) < 1e-10, 0.0, backend.np.log(coeffs))
-    entropy = -backend.np.sum(coeffs * entropy)
+    coeffs = backend.abs(S) ** 2
+    entropy = backend.where(backend.abs(S) < 1e-10, 0.0, backend.log(coeffs))
+    entropy = -backend.sum(coeffs * entropy)
 
     assert entropy < 1e-14
 
@@ -310,7 +360,7 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     dims = 2**nqubits
     hamiltonian = random_hermitian(dims, seed=seed, backend=backend)
 
-    eigvals_target, eigvectors_target = backend.np.linalg.eigh(hamiltonian)
+    eigvals_target, eigvectors_target = backend.eigh(hamiltonian)
 
     if initial_vector:
         initial_vector = random_statevector(dims, seed=20, backend=backend)
@@ -320,10 +370,10 @@ def test_lanczos(backend, nqubits, initial_vector, seed):
     )
 
     backend.assert_allclose(
-        tridiag, backend.np.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
+        tridiag, backend.conj(ortho_matrix.T) @ hamiltonian @ ortho_matrix
     )
 
-    eigvals, eigvectors = backend.np.linalg.eigh(tridiag)
+    eigvals, eigvectors = backend.eigh(tridiag)
     eigs = list(zip(eigvals, eigvectors.T))
     eigs.sort()
     eigvectors = [row[1] for row in eigs]
@@ -354,7 +404,7 @@ def test_vector_projection_and_gram_schmidt_process(backend, nqubits, seed):
     # testing several projections
     target = backend.cast(
         [
-            backend.np.dot(backend.np.conj(state), direction) * direction
+            backend.dot(backend.conj(state), direction) * direction
             for direction in directions
         ]
     )

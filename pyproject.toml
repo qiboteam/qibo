@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.20"
+version = "0.2.24"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -32,6 +32,11 @@ optuna = "^4.2.1"
 tabulate = "^0.9.0"
 openqasm3 = { version = "^1.0.1", extras = ["parser"] }
 qulacs = { version = "^0.6.4", optional = true, python = "<3.13" }
+qbraid = [
+  { version = "^0.10.0", optional = true, extras = ["qir"], markers = "extra == 'qir'" },
+  { version = "^0.10.0", optional = true, extras = ["cudaq"], markers = "extra == 'cudaq'" },
+  { version = "^0.10.0", optional = true, extras = ["cudaq, qir"], markers = "extra == 'cudaq' and extra == 'qir'" },
+]
 
 [tool.poetry.group.dev]
 optional = true
@@ -54,7 +59,7 @@ nbsphinx = "^0.8.12"
 qulacs = { version = "^0.6.4", python = "<3.13" }
 seaborn = "^0.13.2"
 ipykernel = "^6.29.4"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch="backends" }
 
 [tool.poetry.group.tests]
 optional = true
@@ -65,11 +70,13 @@ pytest = "^7.2.1"
 pytest-cov = "^4.0.0"
 pylint = "^3.3.5"
 matplotlib = "^3.7.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch="backends" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
-# qiboml = { git  = "https://github.com/qiboteam/qiboml.git", branch="numpy_dep" }
+# qiboml = { git  = "https://github.com/qiboteam/qiboml.git" }
 stim = "^1.12.0"
 qulacs = { version = "^0.6.4", python = "<3.13" }
+qiskit = "^2.2.3"
+qbraid = { version = "^0.10.0", extras = ["cudaq", "qir"] }
 
 [tool.poe.tasks]
 test = "pytest"
@@ -86,7 +93,7 @@ optional = true
 [tool.poetry.group.cuda11.dependencies]
 cupy-cuda11x = "^13.1.0"
 cuquantum-python-cu11 = "^24.1.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch="backends" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 
@@ -96,12 +103,14 @@ optional = true
 [tool.poetry.group.cuda12.dependencies]
 cupy-cuda12x = "^13.1.0"
 cuquantum-python-cu12 = "^24.1.0"
-qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+qibojit = { git = "https://github.com/qiboteam/qibojit.git" , branch="backends" }
 # qibotn = { git = "https://github.com/qiboteam/qibotn.git" }
 
 [tool.poetry.extras]
 qinfo = ["stim"]
 qulacs = ["qulacs"]
+cudaq = ["qbraid"]
+qir = ["qbraid"]
 
 [tool.pylint.main]
 ignored-modules = ["cvxpy", "torch"]
@@ -118,4 +127,13 @@ addopts = [
   '--cov-report=xml',
   '--cov-report=html',
   '--durations=60',
+]
+
+[tool.coverage.run]
+omit=[
+  "src/qibo/models/qcnn.py",
+  "src/qibo/models/variational.py",
+  "src/qibo/models/utils.py",
+  "src/qibo/optimizers.py",
+  "src/qibo/solvers.py",
 ]

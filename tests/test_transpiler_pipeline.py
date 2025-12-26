@@ -1,6 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
+import qiskit.transpiler.passes as passes
+from qiskit.transpiler import PassManager
 
 from qibo import gates
 from qibo.models import Circuit
@@ -9,6 +11,7 @@ from qibo.transpiler.asserts import assert_circuit_equivalence, assert_transpili
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import Passes, restrict_connectivity_qubits
 from qibo.transpiler.placer import Random, ReverseTraversal
+from qibo.transpiler.qiskit import QiskitPasses
 from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
 
@@ -112,7 +115,7 @@ def test_is_satisfied_false_connectivity(star_connectivity):
 @pytest.mark.parametrize("ngates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, ReverseTraversal])
 @pytest.mark.parametrize("router", [ShortestPaths, Sabre])
-def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
+def test_custom_passes(backend, router, placer, ngates, nqubits, star_connectivity):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
     custom_passes = []
@@ -132,7 +135,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
         connectivity=connectivity,
         native_gates=NativeGates.default(),
     )
-    transpiled_circ, final_layout = custom_pipeline(circ)
+    transpiled_circ, final_layout = custom_pipeline(circ, backend=backend)
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
@@ -147,7 +150,7 @@ def test_custom_passes(placer, router, ngates, nqubits, star_connectivity):
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
 @pytest.mark.parametrize("restrict_names", [[1, 2, 3], [0, 2, 4], [4, 2, 3]])
 def test_custom_passes_restrict(
-    ngates, placer, routing, restrict_names, star_connectivity
+    backend, ngates, placer, routing, restrict_names, star_connectivity
 ):
     connectivity = star_connectivity()
     circ = generate_random_circuit(nqubits=3, ngates=ngates, names=restrict_names)
@@ -169,7 +172,7 @@ def test_custom_passes_restrict(
         native_gates=NativeGates.default(),
         on_qubits=restrict_names,
     )
-    transpiled_circ, final_layout = custom_pipeline(circ)
+    transpiled_circ, final_layout = custom_pipeline(circ, backend=backend)
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
@@ -188,7 +191,7 @@ def test_custom_passes_wrong_pass():
         custom_pipeline(circ)
 
 
-def test_int_qubit_names(star_connectivity):
+def test_int_qubit_names(backend, star_connectivity):
     names = [980, 123, 45, 9, 210464]
     connectivity = star_connectivity(names)
     transpiler = Passes(
@@ -204,11 +207,42 @@ def test_int_qubit_names(star_connectivity):
     circuit.add(gates.I(0))
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
-    transpiled_circuit, final_layout = transpiler(circuit)
+    transpiled_circuit, final_layout = transpiler(circuit, backend=backend)
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,
         connectivity=connectivity,
+        final_layout=final_layout,
+        native_gates=NativeGates.default(),
+    )
+
+
+def test_qiskit_passes(star_connectivity):
+    nqubits = 5
+    ngates = 10
+    connectivity = star_connectivity()
+    circ = generate_random_circuit(nqubits=nqubits, ngates=ngates)
+    custom_passes = []
+    custom_passes.append(Preprocessing())
+    custom_passes.append(
+        ReverseTraversal(
+            routing_algorithm=Sabre(),
+        )
+    )
+    custom_passes.append(Sabre())
+    qiskit_passes = [passes.Optimize1qGates(), passes.InverseCancellation()]
+    custom_passes.append(QiskitPasses(PassManager(qiskit_passes)))
+    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_pipeline = Passes(
+        passes=custom_passes,
+        connectivity=connectivity,
+        native_gates=NativeGates.default(),
+    )
+    transpiled_circ, final_layout = custom_pipeline(circ)
+    assert_transpiling(
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
+        connectivity=star_connectivity(),
         final_layout=final_layout,
         native_gates=NativeGates.default(),
     )

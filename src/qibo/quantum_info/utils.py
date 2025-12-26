@@ -1,16 +1,29 @@
 """Utility functions for the Quantum Information module."""
 
-from functools import reduce
+from functools import cache, reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibo import matrices
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import PRECISION_TOL, raise_error
+
+
+@cache
+def _get_single_paulis(order: str, backend: Backend):
+    pauli_labels = {"I": backend.matrices.I()}
+    pauli_labels.update(
+        {label: getattr(backend.matrices, label) for label in ("X", "Y", "Z")}
+    )
+    return [pauli_labels[label] for label in order]
+
+
+@cache
+def _pauli_basis_normalization(nqubits: int):
+    return float(np.sqrt(2**nqubits))
 
 
 def hamming_weight(
@@ -160,9 +173,8 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
     if implementation == "regular":
         nqubits = int(np.log2(array.shape[0]))
-        hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+        hadamards = reduce(backend.kron, [backend.real(backend.matrices.H)] * nqubits)
         hadamards /= 2 ** (nqubits / 2)
-        hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
         array = hadamards @ array
 
@@ -230,16 +242,14 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = float(
-        backend.calculate_vector_norm(
-            backend.np.sqrt(prob_dist_p) - backend.np.sqrt(prob_dist_q)
-        )
+        backend.vector_norm(backend.sqrt(prob_dist_p) - backend.sqrt(prob_dist_q))
         / np.sqrt(2)
     )
 
@@ -254,7 +264,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     .. math::
         (1 - H^{2}(p, q))^{2} \\, ,
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`.
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
@@ -288,9 +298,9 @@ def hellinger_shot_error(
         \\frac{1 - H^{2}(p, q)}{\\sqrt{nshots}} \\, \\sum_{k} \\,
             \\left(\\sqrt{p_{k} \\, (1 - q_{k})} + \\sqrt{q_{k} \\, (1 - p_{k})}\\right)
 
-    where :math:`H(p, q)` is the :func:`qibo.quantum_info.utils.hellinger_distance`,
+    where :math:`H(p, q)` is the :func:`qibo.quantum_info.hellinger_distance`,
     and :math:`1 - H^{2}(p, q)` is the square root of the
-    :func:`qibo.quantum_info.utils.hellinger_fidelity`.
+    :func:`qibo.quantum_info.hellinger_fidelity`.
 
     Args:
         prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
@@ -317,7 +327,7 @@ def hellinger_shot_error(
     hellinger_error = hellinger_fidelity(
         prob_dist_p, prob_dist_q, validate=validate, backend=backend
     )
-    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.np.sum(
+    hellinger_error = np.sqrt(hellinger_error / nshots) * backend.sum(
         np.sqrt(prob_dist_q * (1 - prob_dist_p))
         + np.sqrt(prob_dist_p * (1 - prob_dist_q))
     )
@@ -366,13 +376,13 @@ def total_variation_distance(
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if backend.np.abs(backend.np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if backend.np.abs(backend.np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        if backend.abs(backend.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    tvd = backend.calculate_vector_norm(prob_dist_p - prob_dist_q, order=1)
+    tvd = backend.vector_norm(prob_dist_p - prob_dist_q, order=1)
 
     return tvd / 2
 
@@ -427,23 +437,22 @@ def haar_integral(
     dim = 2**nqubits
 
     if samples is not None:
-        from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
-            random_statevector,
-        )
-
         rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
         rand_unit_density = backend.cast(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
-        for _ in range(samples):
-            haar_state = backend.np.reshape(
-                random_statevector(dim, backend=backend), (-1, 1)
-            )
 
-            rho = haar_state @ backend.np.conj(haar_state).T
+        random_states = backend.random_normal(0, 1, size=(samples, dim))
+        random_states = backend.cast(random_states, dtype=rand_unit_density.dtype)
+        random_states += 1.0j * backend.random_normal(0, 1, size=(samples, dim))
+        random_states /= backend.vector_norm(random_states, axis=1).reshape(-1, 1)
+        random_states = random_states.reshape(samples, 1, dim)
+        rho = backend.einsum("ijk,ijl->ikl", random_states, backend.conj(random_states))
+
+        for state in rho:
 
             rand_unit_density = rand_unit_density + reduce(
-                backend.np.kron, [rho] * power_t
+                backend.kron, [state] * power_t
             )
 
         integral = rand_unit_density / samples
@@ -464,8 +473,8 @@ def haar_integral(
     integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
     integral = backend.cast(integral, dtype=integral.dtype)
     for indices in permutations_list:
-        integral = integral + backend.np.reshape(
-            backend.np.transpose(identity, indices), (-1, dim**power_t)
+        integral = integral + backend.reshape(
+            backend.transpose(identity, indices), (-1, dim**power_t)
         )
     integral = integral * normalization
 
@@ -507,15 +516,14 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
     circuit.density_matrix = True
     dim = 2**circuit.nqubits
 
-    rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
-    rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
+    rand_unit_density = backend.zeros((dim**power_t, dim**power_t), dtype=complex)
     for _ in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params = backend.random_uniform(
+            -float(np.pi), float(np.pi), circuit.trainable_gates.nparams
+        )
         circuit.set_parameters(params)
-
         rho = backend.execute_circuit(circuit).state()
-
-        rand_unit_density = rand_unit_density + reduce(np.kron, [rho] * power_t)
+        rand_unit_density = rand_unit_density + reduce(backend.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 
@@ -526,17 +534,159 @@ def _hadamard_transform_1d(array, backend=None):
     # necessary because of tf.EagerTensor
     # does not accept item assignment
     backend = _check_backend(backend)
-    array_copied = backend.np.copy(array)
+    array_copied = backend.copy(array)
 
     indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
     for index in indexes:
         for k in range(0, len(array_copied), 2 * index):
             for j in range(k, k + index):
                 # copy necessary because of cupy backend
-                elem_1 = backend.np.copy(array_copied[j])
-                elem_2 = backend.np.copy(array_copied[j + index])
+                elem_1 = backend.copy(array_copied[j])
+                elem_2 = backend.copy(array_copied[j + index])
                 array_copied[j] = elem_1 + elem_2
                 array_copied[j + index] = elem_1 - elem_2
         array_copied /= 2.0
 
     return array_copied
+
+
+def _cycles_from_perm(sigma: List[int]):
+    """Extract the cycles from a permutation as follows:
+    - Treat the permutation as a directed graph of arrows i->sigma(i).
+    - Depth‑first walk from every unvisited vertex; each walk closes at the start -> a cycle.
+    - Disjoint cycles partition the set {0,...,n-1} and commute, so we can factorize them independently.
+
+    Args:
+        sigma (list[int] or tuple[int]): permutation description on {0,...,n-1}.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of disjoint cycles.
+    """
+    n, seen, cycles = len(sigma), [False] * len(sigma), []
+    for i in range(n):
+        # Depth‑first walk from every unvisited vertex
+        if seen[i]:
+            continue
+        cur, cyc = i, []
+        # Disjoint cycles
+        while not seen[cur]:
+            seen[cur] = True
+            cyc.append(cur)
+            cur = sigma[cur]
+        if len(cyc) > 1:
+            cycles.append(cyc)
+    return cycles
+
+
+def _star_matchings(cyc: list[int]):
+    """
+    Given a cycle :math:`(a_{1}, \\, a_{2}, \\, \\cdots, \\, a_{k})` with :math:`k \\geq 2`,
+    the star factorization expresses the cycle as the ordered product of :math:`(k-1)`
+    disjoint transpositions that all share the first vertex:
+
+    .. math::
+        (a_{1}, \\, a_{2}), \\, (a_{1}, \\, a_{3}), \\, \\cdots, \\, (a_{1}, \\, a_{k}) \\, .
+
+    Applied right‑to‑left, this product reproduces the original cycle.
+
+    Args:
+        cyc (list[list[tuple[int, int]]]): :math:`t` list of disjoint cycles.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` list of pairwise transpositions.
+    """
+    hub = cyc[0]
+    return [[(min(hub, v), max(hub, v))] for v in cyc[1:]]
+
+
+def _greedy_pack(matchings: List[List[Tuple[int, int]]], m: int):
+    """
+    Add a matching to the current layer if
+        - it shares no vertex with swaps already in the layer, and
+        - new layer size #swaps stays a power of two <= m.
+    Otherwise flush the layer and start a new one.
+    It works since disjointness keeps swaps commutative, and the power‑of‑two size rule
+    aligns exactly with layer constraints.
+
+    Args:
+        matchings (list[list[tuple[int, int]]]): :math:`t` list of pairwise transpositions.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
+    """
+    layers: list[list[tuple[int, int]]] = []
+    cur: list[tuple[int, int]] = []
+    used = set()
+
+    def _flush():
+        nonlocal cur, used
+        if cur:
+            layers.append(cur)
+        cur, used = [], set()
+
+    def _verts(layer: list[tuple[int, int]]):
+        for a, b in layer:
+            yield a
+            yield b
+
+    for M in matchings:
+        x = len(cur) + len(M)
+        # is power of 2 and x<=m
+        legal = (x > 0 and (x & (x - 1)) == 0) and x <= m
+        # shares no vertex with swaps already in the layer
+        if cur and (any(v in used for v in _verts(M)) or not legal):  # pragma: no cover
+            _flush()
+        cur.extend(M)
+        used.update(_verts(M))
+        if len(cur) == m:
+            _flush()
+    _flush()
+    return layers
+
+
+def decompose_permutation(
+    sigma: Union[List[int], Tuple[int, ...]], m: int, backend=None
+):
+    """
+     Given permutation ``sigma`` on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`
+    and a power‑of‑two budget ``m``, this function factors ``sigma``
+    into the fewest layers :math:`\\sigma_{1}, \\, \\sigma_{2}, \\, \\cdots, \\, \\sigma_{t}` such that:
+        - each layer has at most :math:`m` disjoint transpositions
+        - each layer moves a power‑of‑two number of indices.
+
+    We do this as follows:
+        1) Cycle extraction – split sigma into disjoint cycles.
+        2) Star factorisation – a k‑cycle becomes (k-1) hub–spoke swaps.
+        3) Greedy packing – merge swaps into layers while keeping rules.
+
+    Args:
+        sigma (list[int] or tuple[int]): permutation description on :math:`\\{0, \\, 1, \\, \\dots, \\, d-1\\}`.
+        m (int): power‑of‑two budget.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+
+    Returns:
+        list[list[tuple[int, int]]]: :math:`t` layers of pairwise transpositions.
+
+    """
+    backend = _check_backend(backend)
+
+    if isinstance(sigma, tuple):
+        sigma = list(sigma)
+
+    if not isinstance(sigma, (list, tuple)):
+        raise_error(
+            TypeError, f"Permutation sigma must be ``list`` or ``tuple`` of ``int``s."
+        )
+
+    if sum([abs(s - i) for s, i in zip(sorted(sigma), range(len(sigma)))]) != 0:
+        raise_error(
+            ValueError, "Permutation sigma must contain all indices {0,...,n-1}"
+        )
+
+    if m > 0 and (m & (m - 1)) != 0:
+        raise_error(ValueError, f"budget m must be a power‑of‑two")
+
+    matchings = [l for cyc in _cycles_from_perm(sigma) for l in _star_matchings(cyc)]
+
+    return _greedy_pack(matchings, m)

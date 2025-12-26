@@ -11,6 +11,7 @@ Here is an example of a circuit with 2 qubits:
 .. testcode::
 
     import numpy as np
+
     from qibo import Circuit, gates
 
     # Construct the circuit
@@ -19,7 +20,7 @@ Here is an example of a circuit with 2 qubits:
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
     # Define an initial state (optional - default initial state is |00>)
-    initial_state = np.ones(4) / 2.0
+    initial_state = np.ones(4, dtype=complex) / 2.0
     # Execute the circuit and obtain the final state
     result = circuit(initial_state) # circuit.execute(initial_state) also works
     print(result.state())
@@ -39,10 +40,11 @@ evaluation performance, e.g.:
 .. code-block::  python
 
     import numpy as np
+
+    from qibo import Circuit, gates, set_backend
+
     # switch backend to "tensorflow" through the Qiboml provider
-    import qibo
-    qibo.set_backend(backend="qiboml", platform="tensorflow")
-    from qibo import Circuit, gates
+    set_backend(backend="qiboml", platform="tensorflow")
 
     circuit = Circuit(2)
     circuit.add(gates.X(0))
@@ -50,8 +52,8 @@ evaluation performance, e.g.:
     circuit.add(gates.CU1(0, 1, 0.1234))
     circuit.compile()
 
-    for i in range(100):
-        init_state = np.ones(4) / 2.0 + i
+    for num in range(100):
+        init_state = np.ones(4) / 2.0 + num
         circuit(init_state)
 
 Note that compiling is only supported when the ``tensorflow`` backend is
@@ -375,3 +377,29 @@ For example, we can draw the QFT circuit for 5-qubits:
         }
 
         plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
+
+How to visualize the density matrix?
+------------------------------------
+
+Qibo provides a function ``plot_density_hist`` to visualize the real and imaginary parts of a quantum state's density matrix
+as 3D bar plots using matplotlib. This is useful for inspecting the structure of quantum states, especially for small systems.
+The function return, the figure, and axes for the real and the imaginary parts.
+
+The function supports options to control the number of tick labels shown (for large systems), transparency, colors, and figure size.
+
+.. testcode::
+
+    import numpy as np
+    from qibo import Circuit, gates
+    from qibo.ui import plot_density_hist
+
+    # Create the circuit
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.RY(0, theta=np.pi/3))
+    circuit.add(gates.RX(1, theta=np.pi/5))
+
+    # Plot the density matrix as a cityscape (real and imaginary parts)
+    plot_density_hist(circuit);

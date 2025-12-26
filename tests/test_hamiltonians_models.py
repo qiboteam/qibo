@@ -3,8 +3,9 @@
 import numpy as np
 import pytest
 
-from qibo import hamiltonians, matrices
-from qibo.hamiltonians.models import XXX, Heisenberg
+from qibo import hamiltonians, matrices, symbols
+from qibo.hamiltonians import MaxCut, SymbolicHamiltonian
+from qibo.hamiltonians.models import LABS, XXX, Heisenberg
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -37,9 +38,7 @@ def test_hamiltonian_models(backend, model, kwargs, filename):
 def test_maxcut(backend, nqubits, adj_matrix, dense):
     if adj_matrix is not None:
         with pytest.raises(RuntimeError):
-            final_ham = hamiltonians.MaxCut(
-                nqubits, dense, adj_matrix=adj_matrix, backend=backend
-            )
+            final_ham = MaxCut(nqubits, dense, adj_matrix=adj_matrix, backend=backend)
     else:
         size = 2**nqubits
         ham = np.zeros(shape=(size, size), dtype=np.complex128)
@@ -54,10 +53,32 @@ def test_maxcut(backend, nqubits, adj_matrix, dense):
                 M = np.eye(2**nqubits) - h
                 ham += M
         target_ham = backend.cast(-ham / 2)
-        final_ham = hamiltonians.MaxCut(
-            nqubits, dense, adj_matrix=adj_matrix, backend=backend
-        )
+        final_ham = MaxCut(nqubits, dense, adj_matrix=adj_matrix, backend=backend)
         backend.assert_allclose(final_ham.matrix, target_ham)
+
+
+@pytest.mark.parametrize("dense", [True, False])
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_labs(backend, nqubits, dense):
+    with pytest.raises(ValueError):
+        hamiltonian = LABS(1, dense=dense, backend=backend)
+
+    Z = lambda x: symbols.Z(x, backend=backend)
+
+    if nqubits == 3:
+        target = (Z(0) * Z(2)) ** 2 + (Z(0) * Z(1) + Z(1) * Z(2)) ** 2
+    elif nqubits == 4:
+        target = (
+            (Z(0) * Z(3)) ** 2
+            + (Z(0) * Z(2) + Z(1) * Z(3)) ** 2
+            + (Z(0) * Z(1) + Z(1) * Z(2) + Z(2) * Z(3)) ** 2
+        )
+
+    target = SymbolicHamiltonian(target, nqubits, backend=backend)
+
+    hamiltonian = LABS(nqubits, dense=dense, backend=backend)
+
+    backend.assert_allclose(hamiltonian.matrix, target.matrix)
 
 
 @pytest.mark.parametrize("model", ["XXZ", "TFIM"])

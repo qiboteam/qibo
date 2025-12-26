@@ -1,9 +1,9 @@
 from typing import Optional
 
 import networkx as nx
+import numpy as np
 
 from qibo import gates
-from qibo.backends import _check_backend_and_local_state
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import ConnectivityError, PlacementError
@@ -178,20 +178,23 @@ class Random(Placer):
     """
 
     def __init__(
-        self, connectivity: Optional[nx.Graph] = None, samples: int = 100, seed=None
+        self,
+        connectivity: Optional[nx.Graph] = None,
+        samples: int = 100,
+        seed=None,
     ):
+
         self.connectivity = connectivity
         self.samples = samples
         self.seed = seed
 
-    def __call__(self, circuit):
+    def __call__(self, circuit, backend=None):
         """Find an initial layout of the given circuit using random greedy algorithm.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to be transpiled.
         """
         assert_placement(circuit, self.connectivity)
-        _, local_state = _check_backend_and_local_state(self.seed, backend=None)
         gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
@@ -201,7 +204,10 @@ class Random(Placer):
         final_cost = self._cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
             mapping = dict(
-                zip(keys, local_state.choice(range(nodes), nodes, replace=False))
+                zip(
+                    keys,
+                    np.random.choice(range(nodes), size=nodes, replace=False),
+                )
             )
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self._cost(graph, gates_qubits_pairs)
@@ -270,7 +276,7 @@ class ReverseTraversal(Placer):
         self.routing_algorithm = routing_algorithm
         self.depth = depth
 
-    def __call__(self, circuit: Circuit):
+    def __call__(self, circuit: Circuit, backend=None):
         """Find the initial layout of the given circuit using Reverse Traversal placement.
 
         Args:

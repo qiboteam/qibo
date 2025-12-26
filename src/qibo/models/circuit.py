@@ -339,11 +339,11 @@ class Circuit:
 
                 # create small circuit on 4 qubits
                 small_circuit = Circuit(4)
-                small_circuit.add(gates.RX(i, theta=0.1) for i in range(4))
+                small_circuit.add(gates.RX(qubit, theta=0.1) for qubit in range(4))
                 small_circuit.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
                 # create large circuit on 8 qubits
                 large_circuit = Circuit(8)
-                large_circuit.add(gates.RY(i, theta=0.1) for i in range(8))
+                large_circuit.add(gates.RY(qubit, theta=0.1) for qubit in range(8))
                 # add the small circuit to the even qubits of the large one
                 large_circuit.add(small_circuit.on_qubits(*range(0, 8, 2)))
         """
@@ -819,6 +819,8 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 circuit.set_parameters(params)
         """
+        # reset the final state
+        self._final_state = None
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
@@ -1054,7 +1056,7 @@ class Circuit:
         self.compiled.executor = backend.compile(executor)
         if self.measurements:
             self.compiled.result = lambda state, nshots: CircuitResult(
-                state, self.measurements, backend, nshots=nshots
+                state, self.measurements, backend=backend, nshots=nshots
             )
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)
@@ -1120,19 +1122,28 @@ class Circuit:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        circ = cls(
+        circuit = cls(
             raw["nqubits"],
             density_matrix=raw["density_matrix"],
             wire_names=raw.get("wire_names"),
         )
 
         for gate in raw["queue"]:
-            circ.add(Gate.from_dict(gate))
+            circuit.add(Gate.from_dict(gate))
 
-        return circ
+        return circuit
 
-    def to_qasm(self):
+    def to_qasm(self, extended_compatibility: bool = False):
         """Convert circuit to a QASM string.
+
+        Args:
+            extended_compatibility (bool): if ``True``, unrolls more exotic gates
+                in their decomposition by defining them as custom gates,
+                this increases the compatibility with other frameworks,
+                such as ``qiskit``. Defaults to ``False``.
+
+        Returns:
+            str: The generated QASM.
 
         .. note::
             This method does not support multi-controlled gates
@@ -1142,6 +1153,8 @@ class Circuit:
         code += ["OPENQASM 2.0;"]
         code += ['include "qelib1.inc";']
         code += [f"qreg q[{self.nqubits}];"]
+
+        gate_definitions = []
 
         # Set measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1164,12 +1177,21 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
+            if isinstance(gate.qasm_label, tuple):
+                qasm_label, qasm_definition = gate.qasm_label
+                if qasm_definition not in gate_definitions:
+                    gate_definitions.append(qasm_definition)
+            else:
+                qasm_label = gate.qasm_label
             if isinstance(gate, gates.ParametrizedGate):
                 params = (str(float(x)) for x in gate.parameters)
-                name = f"{gate.qasm_label}({', '.join(params)})"
+                name = f"{qasm_label}({', '.join(params)})"
             else:
-                name = gate.qasm_label
+                name = qasm_label
             code.append(f"{name} {qubits};")
+
+        if extended_compatibility:
+            code = code[:4] + gate_definitions + code[4:]
 
         # Add measurements
         for register, qubits in self.measurement_tuples.items():
@@ -1178,15 +1200,30 @@ class Circuit:
 
         return "\n".join(code)
 
+    def to_qasm_file(self, qasm_file: str, extended_compatibility: bool = False):
+        """_summary_
+
+        Args:
+            qasm_file (str): Path to file containing the QASM script.
+            extended_compatibility (bool, optional): if ``True``, unrolls more exotic
+                gates in their decomposition by defining them as custom gates,
+                this increases the compatibility with other frameworks,
+                such as ``qiskit``. Defaults to ``False``.
+        """
+        string = self.to_qasm(extended_compatibility=extended_compatibility)
+        with open(qasm_file, "w") as file:
+            file.writelines(string)
+
     @classmethod
-    def from_qasm(cls, qasm_code, accelerators=None, density_matrix=False):
+    def from_qasm(cls, qasm_code: str, **circuit_kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
             qasm_code (str): String with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
 
         Returns:
-            A :class:`qibo.models.circuit.Circuit` that contains the gates
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
             specified by the given QASM script.
 
         Example:
@@ -1208,7 +1245,104 @@ class Circuit:
                 circuit_2.add(gates.CNOT(0, 1))
         """
         parser = QASMParser()
-        return parser.to_circuit(qasm_code, accelerators, density_matrix)
+        circuit_kwargs.pop("nqubits", None)
+        return parser.to_circuit(qasm_code, **circuit_kwargs)
+
+    @classmethod
+    def from_qasm_file(cls, qasm_file: str, **circuit_kwargs):
+        """Constructs a circuit from QASM code in a ``qasm_file``.
+
+        Args:
+            qasm_file (str): Path to file containing the string with the QASM script.
+            circuit_kwargs (dict): Keyword arguments of the circuit.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Circuit containing the gates
+            specified by the given QASM script.
+        """
+        with open(qasm_file) as file:
+            string = file.read()
+
+        return cls.from_qasm(string, **circuit_kwargs)
+
+    def to_qir(self):
+        """
+        Convert circuit to QIR circuit.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `pyqir` circuits.
+        """
+        try:
+            import qbraid_qir  # pylint: disable=C0415, W0611
+            from qbraid.transpiler.conversions.qasm2 import qasm2_to_qasm3
+            from qbraid.transpiler.conversions.qasm3 import qasm3_to_pyqir
+        except ModuleNotFoundError as e:  # pragma: no cover
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, please install it with `poetry install --extras qir`"
+            ) from e
+        return qasm3_to_pyqir(qasm2_to_qasm3(self.to_qasm()))
+
+    def to_cudaq(self):  # pragma: no cover
+        """Convert circuit to CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the circuit into `cudaq` circuits.
+        """
+        try:
+            from qbraid.transpiler.conversions.openqasm3 import (  # pylint: disable=C0415
+                openqasm3_to_cudaq,
+            )
+            from qbraid.transpiler.conversions.qasm2 import (  # pylint: disable=C0415
+                qasm2_to_qasm3,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --extras cudaq`"
+            ) from e
+
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "``cudaq`` is not installed, please install it with `pip install cudaq`."
+            ) from e
+
+        return openqasm3_to_cudaq(qasm2_to_qasm3(self.to_qasm()))
+
+    @classmethod
+    def from_cudaq(cls, cudaq_circuit_code):  # pragma: no cover
+        """Construct a circuit from CUDA-Q (quake) code.
+
+        Uses `qbraid` (https://github.com/qBraid/qBraid) to transpile
+        the `cudaq` circuit into a `qibo.models.circuit.Circuit`.
+
+        Args:
+            cudaq_circuit_code (PyKernel): kernel containing the
+                cudaq circuit code.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit` representing the
+            given circuit.
+        """
+        try:
+            from qbraid.transpiler.conversions.cudaq import (  # pylint: disable=C0415
+                cudaq_to_qasm2,
+            )
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The optional dependency qbraid is missing, "
+                "please install it with `poetry install --extras cudaq`"
+            ) from e
+
+        try:
+            import cudaq  # pylint: disable=C0415, W0611
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "``cudaq`` is not installed, please install it with `pip install cudaq`."
+            ) from e
+
+        return cls.from_qasm(cudaq_to_qasm2(cudaq_circuit_code))
 
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
@@ -1299,9 +1433,9 @@ class Circuit:
         # legend
         if legend:
             legend_rows = {
-                (i.name, i.draw_label)
-                for i in self.queue
-                if isinstance(i, (gates.SpecialGate, gates.Channel))
+                (gate.name, gate.draw_label)
+                for gate in self.queue
+                if isinstance(gate, (gates.SpecialGate, gates.Channel))
             }
 
             table = tabulate(
@@ -1317,7 +1451,7 @@ class Circuit:
 
             def chunkstring(string, length):
                 nchunks = range(0, len(string), length)
-                return (string[i : length + i] for i in nchunks), len(nchunks)
+                return (string[elem : length + elem] for elem in nchunks), len(nchunks)
 
             for row in range(self.nqubits):
                 chunks, nchunks = chunkstring(
@@ -1326,7 +1460,7 @@ class Circuit:
                 if nchunks == 1:
                     loutput = None
                     break
-                for i, c in enumerate(chunks):
+                for elem, c in enumerate(chunks):
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
@@ -1334,15 +1468,15 @@ class Circuit:
                         + " " * (max_name_len - len(wire_names[row]))
                         + ": "
                     )
-                    if i == 0:
+                    if elem == 0:
                         prefix += " " * 4
                     elif row == 0:
                         prefix = "\n" + prefix + "... "
                     else:
                         prefix += "... "
-                    if i == nchunks - 1:
+                    if elem == nchunks - 1:
                         suffix = "\n"
-                    loutput[row + i * self.nqubits] = prefix + c + suffix
+                    loutput[row + elem * self.nqubits] = prefix + c + suffix
             if loutput is not None:
                 output = "".join(loutput)
 

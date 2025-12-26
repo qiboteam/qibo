@@ -418,6 +418,11 @@ Graph state
 
 .. autofunction:: qibo.models.encodings.graph_state
 
+Permutation synthesis
+"""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.permutation_synthesis
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -963,6 +968,14 @@ Deutsch
     :member-order: bysource
 
 
+Fan-out
+"""""""
+
+.. autoclass:: qibo.gates.FanOut
+    :members:
+    :member-order: bysource
+
+
 Generalized Reconfigurable Beam Splitter (RBS)
 """"""""""""""""""""""""""""""""""""""""""""""
 
@@ -1315,23 +1328,12 @@ Max Cut
     :members:
     :member-order: bysource
 
+LABS
+^^^^
 
-.. note::
-    All pre-coded Hamiltonians can be created as
-    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
-    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
-    using the ``dense=False``. In the first case the Hamiltonian is created
-    using its full matrix representation of size ``(2 ** n, 2 ** n)``
-    where ``n`` is the number of qubits that the Hamiltonian acts on. This
-    matrix is used to calculate expectation values by direct matrix multiplication
-    to the state and for time evolution by exact exponentiation.
-    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
-    representation as a sum of local terms. This compact representation can be
-    used to calculate expectation values via a sum of the local term expectations
-    and time evolution via the Trotter decomposition of the evolution operator.
-    This is useful for systems that contain many qubits for which constructing
-    the full matrix is intractable.
-
+.. autoclass:: qibo.hamiltonians.LABS
+    :members:
+    :member-order: bysource
 
 Heisenberg model
 ^^^^^^^^^^^^^^^^
@@ -1355,6 +1357,23 @@ Heisenberg XXZ
 .. autoclass:: qibo.hamiltonians.XXZ
     :members:
     :member-order: bysource
+
+
+.. note::
+    All pre-coded Hamiltonians can be created as
+    :class:`qibo.hamiltonians.Hamiltonian` using ``dense=True``
+    or :class:`qibo.hamiltonians.SymbolicHamiltonian`
+    using the ``dense=False``. In the first case the Hamiltonian is created
+    using its full matrix representation of size ``(2 ** n, 2 ** n)``
+    where ``n`` is the number of qubits that the Hamiltonian acts on. This
+    matrix is used to calculate expectation values by direct matrix multiplication
+    to the state and for time evolution by exact exponentiation.
+    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
+    representation as a sum of local terms. This compact representation can be
+    used to calculate expectation values via a sum of the local term expectations
+    and time evolution via the Trotter decomposition of the evolution operator.
+    This is useful for systems that contain many qubits for which constructing
+    the full matrix is intractable.
 
 _______________________
 
@@ -1683,7 +1702,7 @@ passing a symplectic matrix to the constructor.
    # construct the |00...0> state
    backend = CliffordBackend("numpy")
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine="numpy")
+   clifford = Clifford(symplectic_matrix, platform="numpy")
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
@@ -1698,21 +1717,21 @@ or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted 
 The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
 We provide integration with the `stim <https://github.com/quantumlib/Stim>`_ package.
-It is possible to run Clifford circuits using `stim` as an engine:
+It is possible to run Clifford circuits using `stim` as a platform:
 
 .. code-block::  python
 
     from qibo.backends import CliffordBackend
     from qibo.quantum_info import Clifford, random_clifford
 
-    clifford_backend = CliffordBackend(engine="stim")
+    clifford_backend = CliffordBackend(platform="stim")
 
     circuit = random_clifford(nqubits)
     result = clifford_backend.execute_circuit(circuit)
 
     ## Note that the execution above is equivalent to the one below
 
-    result = Clifford.from_circuit(circuit, engine="stim")
+    result = Clifford.from_circuit(circuit, platform="stim")
 
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
@@ -1814,26 +1833,11 @@ von Neumann entropy
 
 .. autofunction:: qibo.quantum_info.von_neumann_entropy
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
 
 Relative von Neumann entropy
 """"""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
-
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and either ``state`` or ``target`` is non-Hermitian,
-    an error will be raised when using `cupy` backend.
 
 
 Mutual information
@@ -1871,15 +1875,6 @@ Entanglement entropy
 
 .. autofunction:: qibo.quantum_info.entanglement_entropy
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``partition`` from input
-    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
-    assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
 
 Metrics
 ^^^^^^^
@@ -1904,14 +1899,6 @@ Trace distance
 
 .. autofunction:: qibo.quantum_info.trace_distance
 
-.. note::
-    ``check_hermitian`` flag allows the user to choose if the function will check if difference
-    between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
-    more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
-    raised when using `cupy` backend.
-
 
 Hilbert-Schmidt inner product
 """""""""""""""""""""""""""""
@@ -1935,6 +1922,36 @@ Infidelity
 """"""""""
 
 .. autofunction:: qibo.quantum_info.infidelity
+
+
+A fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.a_fidelity
+
+
+N fidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.n_fidelity
+
+
+Chen fidelity
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.chen_fidelity
+
+
+Geometric-mean fidelity
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.geometric_mean_fidelity
+
+
+Max fidelity
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.max_fidelity
 
 
 Bures angle
@@ -2033,10 +2050,22 @@ Matrix exponentiation
 .. autofunction:: qibo.quantum_info.matrix_exponentiation
 
 
+Matrix logarithm
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_logarithm
+
+
 Matrix power
 """"""""""""
 
 .. autofunction:: qibo.quantum_info.matrix_power
+
+
+Matrix square root
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.matrix_sqrt
 
 
 Singular value decomposition
@@ -2513,6 +2542,11 @@ Parameterized quantum circuit integral
 """"""""""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.pqc_integral
+
+Decompose permutation into the fewest pairwise transpositions
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.decompose_permutation
 
 
 .. _GST:

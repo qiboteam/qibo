@@ -54,20 +54,20 @@ class QSVD:
         Returns:
             Circuit model implementing the variational ansatz
         """
-        c = Circuit(self.nqubits)
+        circuit = Circuit(self.nqubits)
         for _ in range(nlayers):
-            c.add(rotations())
-            c.add(self._CZ_gates())
-            c.add(rotations())
-            c.add(self._CZ_gates())
+            circuit.add(rotations())
+            circuit.add(self._CZ_gates())
+            circuit.add(rotations())
+            circuit.add(self._CZ_gates())
         # Final rotations
-        c.add(rotations())
+        circuit.add(rotations())
         # Measurements
         small = min(self.subsize, self.subsize2)
         for q in range(small):
-            c.add(gates.M(q))
-            c.add(gates.M(q + self.subsize))
-        return c
+            circuit.add(gates.M(q))
+            circuit.add(gates.M(q + self.subsize))
+        return circuit
 
     def QSVD_circuit(self, theta):
         """

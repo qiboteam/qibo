@@ -1,13 +1,17 @@
 from functools import cached_property, reduce
 from typing import Optional
 
-import numpy as np
 import sympy
+from sympy.physics.paulialgebra import Pauli, evaluate_pauli_product
 
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.symbols import I, X, Y, Z
+
+# For mapping between qibo symbols and sympy Pauli objects
+PAULI_MAPPING = {X: Pauli(1), Y: Pauli(2), Z: Pauli(3)}
+INVERSE_PAULI_MAPPING = {_v: _k for _k, _v in PAULI_MAPPING.items()}
 
 
 class HamiltonianTerm:
@@ -62,7 +66,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return self.backend.calculate_matrix_exp(x, self.matrix)
+        return self.backend.matrix_exp(self.matrix, phase=-1j * x)
 
     def expgate(self, x):
         """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -81,10 +85,10 @@ class HamiltonianTerm:
                 "Cannot merge HamiltonianTerm acting on "
                 + f"qubits {term.target_qubits} to term on qubits {self.target_qubits}.",
             )
-        matrix = self.backend.np.kron(
+        matrix = self.backend.kron(
             term.matrix, self.backend.matrices.I(2 ** (len(self) - len(term)))
         )
-        matrix = self.backend.np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = self.backend.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -94,8 +98,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = self.backend.np.transpose(matrix, order)
-        matrix = self.backend.np.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = self.backend.transpose(matrix, order)
+        matrix = self.backend.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(
             self.matrix + matrix, *self.target_qubits, backend=self.backend
         )
@@ -116,8 +120,10 @@ class HamiltonianTerm:
         # TODO: improve this and understand why it works
         if isinstance(gate, bool) or gate is None:
             gate = self.gate
+
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
+
         return backend.apply_gate(gate, state, nqubits)  # pylint: disable=E1102
 
 
@@ -151,43 +157,30 @@ class SymbolicTerm(HamiltonianTerm):
         self.matrix_map = {}
         if factors != 1:
             for factor in factors.as_ordered_factors():
-                # check if factor has some power ``power`` so that the corresponding
-                # matrix is multiplied ``pow`` times
-                if isinstance(factor, sympy.Pow):
-                    factor, pow = factor.args
-                    assert isinstance(pow, sympy.Integer)
-                    assert isinstance(factor, sympy.Symbol)
-                    # if the symbol is a Pauli (i.e. a qibo symbol) and `pow` is even
-                    # the power is the identity, thus the factor vanishes. Otherwise,
-                    # for an odd exponent, it remains unchanged (i.e. `pow`=1)
-                    if factor.__class__ in (I, X, Y, Z):
-                        if not int(pow) % 2:
-                            factor = sympy.N(1)
-                        else:
-                            pow = 1
-                    else:
-                        pow = int(pow)
-                else:
-                    pow = 1
-
+                factor, power = self._compute_power(factor)
                 if isinstance(factor, sympy.Symbol):
+                    # Skip any qibo.symbols.I factors
+                    if isinstance(factor, I):
+                        continue
                     # forces the backend of the factor
                     # this way it is not necessary to explicitely define the
                     # backend of a symbol, i.e. Z(q, backend=backend)
                     factor.backend = self.backend
                     if isinstance(factor.matrix, self.backend.tensor_types):
-                        self.factors.extend(pow * [factor])
-                        q = factor.target_qubit
-                        # if pow > 1 the matrix should be multiplied multiple
-                        # when calculating the term's total matrix so we
-                        # repeat it in the corresponding list that will
-                        # be used during this calculation
-                        # see the ``SymbolicTerm.matrix`` property for the
-                        # full matrix calculation
-                        if q in self.matrix_map:
-                            self.matrix_map[q].extend(pow * [factor.matrix])
+                        q = int(factor.target_qubit)
+                        if q in self.matrix_map.keys():
+                            # Check for possible simplifications only if current factor is X/Y/Z
+                            if isinstance(factor, (X, Y, Z)):
+                                self._simplify_q_factors(factor, q)
+                            # Case whereby factor isn't X/Y/Z: Multiply matrix multiple times based on its power,
+                            # see the ``SymbolicTerm.matrix`` property for the full matrix calculation
+                            else:
+                                self.factors.extend(power * [factor])
+                                self.matrix_map[q].extend(power * [factor.matrix])
                         else:
-                            self.matrix_map[q] = pow * [factor.matrix]
+                            self.factors.extend(power * [factor])
+                            self.matrix_map[q] = power * [factor.matrix]
+
                     else:
                         self.coefficient *= factor.matrix
                 elif factor == sympy.I:
@@ -199,6 +192,70 @@ class SymbolicTerm(HamiltonianTerm):
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
+    def __repr__(self):
+        return f"{self.coefficient}*" + "*".join(str(factor) for factor in self.factors)
+
+    @staticmethod
+    def _compute_power(factor):
+        """Break down a factor into a base term and its power, e.g. `X**n` returns `X` and `n`. In case the base term is a Pauli also simplify the power calculation, i.e. return the identity for even `n` and the Pauli itself for odd `n`."""
+        if isinstance(factor, sympy.Pow):
+            factor, power = factor.args
+            assert isinstance(power, sympy.Integer)
+            assert isinstance(factor, sympy.Symbol)
+            # if the symbol is a Pauli (i.e. a qibo symbol) and `power` is even
+            # the power is the identity, thus the factor vanishes. Otherwise,
+            # for an odd exponent, it remains unchanged (i.e. `power`=1)
+            if factor.__class__ in (I, X, Y, Z):
+                if not int(power) % 2:
+                    factor = sympy.N(1)
+                else:
+                    power = 1
+            else:
+                power = int(power)
+        else:
+            power = 1
+        return factor, power
+
+    def _simplify_q_factors(self, factor, q):
+        """Simplify the factors acting on qubit ``q`` using Pauli algebra after factor is added to ``q``."""
+        q_factors = [_factor for _factor in self.factors if _factor.target_qubit == q]
+        while q_factors:
+            q_factor = q_factors[-1]
+            # Only simplify if the last term in self.matrix_map[q] is a Pauli matrix
+            if q_factor.__class__ in PAULI_MAPPING:
+                pauli_product = evaluate_pauli_product(
+                    PAULI_MAPPING[q_factor.__class__] * PAULI_MAPPING[factor.__class__]
+                )
+                # Move -1 or sympy.I from the product into the coefficient
+                if -1 in pauli_product.atoms():
+                    pauli_product *= -1
+                    self.coefficient *= -1
+                if sympy.I in pauli_product.atoms():
+                    pauli_product *= -sympy.I
+                    self.coefficient *= 1j
+                # If pauli_product is not identity, then update the original factor/matrix
+                factor_index = (
+                    len(self.factors) - self.factors[::-1].index(q_factor) - 1
+                )
+                if pauli_product in INVERSE_PAULI_MAPPING:
+                    factor = INVERSE_PAULI_MAPPING[pauli_product](
+                        q, backend=self.backend
+                    )
+                    self.factors[factor_index] = factor
+                    self.matrix_map[q][-1] = factor.matrix
+                # Otherwise, just remove the factor/matrix
+                else:
+                    self.factors.pop(factor_index)
+                    self.matrix_map[q].pop(-1)
+                    if not self.matrix_map[q]:
+                        del self.matrix_map[q]
+                q_factors.pop(-1)
+            # X/Y/Z factor wasn't the last term previously => Cannot simplify, just extend
+            else:
+                self.factors.extend([factor])
+                self.matrix_map[q].extend([factor.matrix])
+                break
+
     @cached_property
     def matrix(self):
         """Calculates the full matrix corresponding to this term.
@@ -208,19 +265,26 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        matrices = [
-            reduce(self.backend.np.matmul, self.matrix_map.get(q))
+        matrices = list(self.qubit_to_matrix_map.values())
+        return complex(self.coefficient) * reduce(self.backend.kron, matrices)
+
+    @cached_property
+    def qubit_to_matrix_map(self) -> dict:
+        """Dictionary mapping each qubit to the corresponding global matrix
+        that acts on it, i.e. the product of the matrices of all the factors
+        acting on it.
+        """
+        return {
+            q: reduce(self.backend.matmul, self.matrix_map.get(q))
             for q in self.target_qubits
-        ]
-        return complex(self.coefficient) * reduce(self.backend.np.kron, matrices)
+        }
 
     def copy(self):
         """Creates a shallow copy of the term with the same attributes."""
-        new = self.__class__(self.coefficient)
+        new = self.__class__(self.coefficient, backend=self.backend)
         new.factors = self.factors
         new.matrix_map = self.matrix_map
         new.target_qubits = self.target_qubits
-        new.backend = self.backend
         return new
 
     def __mul__(self, x):
@@ -235,6 +299,15 @@ class SymbolicTerm(HamiltonianTerm):
                 backend, state, nqubits, factor.gate, density_matrix
             )
         return self.coefficient * state
+
+    def commute(self, term) -> bool:
+        """Check whether this term commutes with another term."""
+        for q in set(self.target_qubits).intersection(set(term.target_qubits)):
+            m1 = self.qubit_to_matrix_map.get(q)
+            m2 = term.qubit_to_matrix_map.get(q)
+            if not self.backend.all(m1 @ m2 == m2 @ m1):
+                return False
+        return True
 
 
 class TermGroup(list):

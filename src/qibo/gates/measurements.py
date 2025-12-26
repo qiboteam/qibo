@@ -182,10 +182,16 @@ class M(Gate):
     def matrix(self, backend=None):
         """"""
         raise_error(
-            NotImplementedError, "Measurement gates do not have matrix representation."
+            NotImplementedError,
+            "Measurement gates do not have a matrix representation.",
         )
 
     def apply(self, backend, state, nqubits):
+        density_matrix = bool(len(state.shape) == 2)
+
+        if density_matrix:
+            return self._apply_density_matrix(backend, state, nqubits)
+
         self.result.backend = backend
         if not self.collapse:
             return state
@@ -197,17 +203,19 @@ class M(Gate):
         # collapse state
         return backend.collapse_state(state, qubits, shot, nqubits)
 
-    def apply_density_matrix(self, backend, state, nqubits):
+    def _apply_density_matrix(self, backend, state, nqubits):
         self.result.backend = backend
         if not self.collapse:
             return state
 
         qubits = sorted(self.target_qubits)
         # measure and get result
-        probs = backend.calculate_probabilities_density_matrix(state, qubits, nqubits)
+        probs = backend.calculate_probabilities(
+            state, qubits, nqubits, density_matrix=True
+        )
         shot = self.result.add_shot(probs, backend=backend)
         # collapse state
-        return backend.collapse_density_matrix(state, qubits, shot, nqubits)
+        return backend.collapse_state(state, qubits, shot, nqubits, density_matrix=True)
 
     def apply_clifford(self, backend, state, nqubits):
         self.result.backend = backend

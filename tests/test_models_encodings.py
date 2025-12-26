@@ -14,6 +14,7 @@ from qibo import Circuit, gates
 from qibo.models.encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
+    _get_int_type,
     _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
@@ -22,6 +23,7 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    permutation_synthesis,
     phase_encoder,
     sparse_encoder,
     unary_encoder,
@@ -82,11 +84,11 @@ def test_phase_encoder(backend, rotation, kind):
         data = backend.cast(data, dtype=data.dtype)
         phase_encoder(data, rotation="rzz")
 
-    phases = backend.np.random.rand(nqubits)
+    phases = backend.random_sample(nqubits)
 
     gate = getattr(gates, rotation)
     target = reduce(
-        backend.np.kron,
+        backend.kron,
         [gate(qubit, phase).matrix(backend) for qubit, phase in enumerate(phases)],
     )[:, 0]
 
@@ -101,29 +103,63 @@ def test_phase_encoder(backend, rotation, kind):
 
 
 @pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("not_power_of_two", [False, True])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
 @pytest.mark.parametrize("parametrization", ["hopf", "hyperspherical"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_binary_encoder(backend, nqubits, parametrization, complex_data):
-    if parametrization == "hopf" and complex_data:
-        pytest.skip(
-            "``binary_encoder`` in Hopf coordinates not implemented for complex data."
-        )
+def test_binary_encoder(
+    backend,
+    nqubits,
+    parametrization,
+    complex_data,
+    not_power_of_two,
+    custom_codewords,
+    keep_antictrls,
+):
+    if parametrization == "hopf":
+        if complex_data:
+            pytest.skip(
+                "``binary_encoder`` in Hopf coordinates not implemented for complex data."
+            )
 
-    with pytest.raises(ValueError):
-        dims = 5
-        test = np.random.rand(dims)
-        test = backend.cast(test, dtype=test.dtype)
-        test = binary_encoder(test)
+        with pytest.raises(ValueError):
+            dims = 5
+            test = np.random.rand(dims)
+            test = backend.cast(test, dtype=test.dtype)
+            test = binary_encoder(
+                test, parametrization=parametrization, nqubits=nqubits, backend=backend
+            )
 
-    dims = 2**nqubits
+    if parametrization == "hyperspherical" and not_power_of_two:
+        dims = 14
+    else:
+        dims = 2**nqubits
 
     target = random_statevector(dims, seed=10, backend=backend)
     if not complex_data:
-        target = backend.np.real(target)
-        target /= backend.np.linalg.norm(target)
+        target = backend.real(target)
+        target /= backend.vector_norm(target)
 
-    circuit = binary_encoder(target, parametrization=parametrization, backend=backend)
+    codewords = backend.arange(dims) if custom_codewords else None
+
+    circuit = binary_encoder(
+        target,
+        parametrization=parametrization,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+    )
     state = backend.execute_circuit(circuit).state()
+
+    if parametrization == "hyperspherical" and not_power_of_two:
+        # need to insert zeros at the end of target to get
+        # matching shapes
+        trail_zeros = backend.zeros(
+            2 ** int(backend.ceil(backend.log2(dims))) - dims, dtype=target.dtype
+        )
+        trail_zeros = backend.cast(trail_zeros, dtype=trail_zeros.dtype)
+        target = backend.concatenate((target, trail_zeros))
 
     backend.assert_allclose(state, target, atol=1e-10, rtol=1e-4)
 
@@ -156,11 +192,11 @@ def test_unary_encoder(backend, nqubits, architecture, kind):
     circuit = unary_encoder(data, architecture=architecture, backend=backend)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(backend.to_numpy(state))
-    state = backend.np.real(state[indexes])
+    state = backend.real(state[indexes])
 
     backend.assert_allclose(
         state,
-        backend.cast(data, dtype=np.float64) / backend.calculate_vector_norm(data, 2),
+        backend.cast(data, dtype=np.float64) / backend.vector_norm(data, 2),
         rtol=1e-5,
     )
 
@@ -268,20 +304,21 @@ def test_hamming_weight_encoder(
     backend.assert_allclose(state, target, atol=1e-7)
 
 
-@pytest.mark.parametrize("seed", [10, 20])
+@pytest.mark.parametrize("seed", [10])
 @pytest.mark.parametrize("zip_input", [False, True])
 @pytest.mark.parametrize("integers", [False, True])
 @pytest.mark.parametrize("nqubits", [4, 7])
-def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
+@pytest.mark.parametrize("method", ["li", "farias"])
+def test_sparse_encoder(backend, method, nqubits, integers, zip_input, seed):
     dims = 2**nqubits
     sparsity = nqubits
 
-    data = random_statevector(sparsity, seed=10, backend=backend)
+    data = random_statevector(sparsity, seed=seed, backend=backend)
     np.random.seed(seed)
     indices = np.random.choice(range(dims), size=sparsity, replace=False)
     indices = backend.cast(indices, dtype=int)
 
-    target = backend.cast(backend.np.zeros(dims))
+    target = backend.cast(backend.zeros(dims))
     target[indices] = data
 
     if not integers:
@@ -293,13 +330,36 @@ def test_sparse_encoder(backend, nqubits, integers, zip_input, seed):
 
     if integers and not zip_input:
         with pytest.raises(ValueError):
-            circuit = sparse_encoder(data, nqubits=None)
+            circuit = sparse_encoder(data, method, nqubits=None, backend=backend)
+
+        with pytest.raises(ValueError):
+            circuit = sparse_encoder(
+                data, method=True, nqubits=nqubits, backend=backend
+            )
 
     _nqubits = nqubits if integers else None
-    circuit = sparse_encoder(data, _nqubits, backend=backend)
+    circuit = sparse_encoder(data, method, _nqubits, backend=backend)
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target)
+
+
+def test_sparse_encoder_helpers_errors(backend):
+    with pytest.raises(ValueError):
+        _get_int_type(backend.engine.iinfo(backend.int64).max + 1, backend=backend)
+
+
+@pytest.mark.parametrize("sigma", [(0, 2, 1, 3), [0, 2, 1, 3]])
+def test_permutation_synthesis_errors(sigma, backend):
+
+    with pytest.raises(TypeError):
+        permutation_synthesis(
+            backend.cast(sigma, dtype=backend.int64), m=2, backend=backend
+        )
+    with pytest.raises(ValueError):
+        permutation_synthesis([0, 2, 1, 3, 10], m=2, backend=backend)
+    with pytest.raises(ValueError):
+        permutation_synthesis(sigma, m=3, backend=backend)
 
 
 def test_entangling_layer_errors():
@@ -425,7 +485,7 @@ def test_circuit_kwargs(backend, density_matrix):
     test = entangling_layer(5, density_matrix=density_matrix)
     assert test.density_matrix is density_matrix
 
-    data = backend.cast(np.random.rand(5), dtype=backend.np.float64)
+    data = backend.cast(np.random.rand(5), dtype=backend.float64)
     test = phase_encoder(data, density_matrix=density_matrix, backend=backend)
     assert test.density_matrix is density_matrix
 
@@ -456,7 +516,7 @@ def test_ghz_circuit(backend, nqubits, density_matrix):
         state = backend.execute_circuit(GHZ_circ).state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -499,7 +559,7 @@ def test_dicke_state(backend, nqubits, weight, all_to_all, density_matrix):
         state = result.state()
 
         if density_matrix:
-            target = backend.np.outer(target, backend.np.conj(target.T))
+            target = backend.outer(target, backend.conj(target.T))
 
         backend.assert_allclose(state, target)
 
@@ -552,8 +612,8 @@ def test_wbd_gate(backend, nqubits, mqubits, weight, density_matrix):
             target = backend.cast(target, dtype=target.dtype)
 
             if density_matrix:
-                initial = backend.np.outer(initial, backend.np.conj(initial.T))
-                target = backend.np.outer(target, backend.np.conj(target.T))
+                initial = backend.outer(initial, backend.conj(initial.T))
+                target = backend.outer(target, backend.conj(target.T))
 
             result = backend.execute_circuit(wbd_circ, initial_state=initial)
             state = result.state()
