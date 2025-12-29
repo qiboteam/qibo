@@ -705,6 +705,9 @@ class Backend:  # pylint: disable=R0904
                 return self.eigsh(matrix, k=k, which="SA")
 
             # sparse matrix becomes dense matrix
+            log.warning(
+                "Since `k == matrix.shape[0]`, transforming sparse matrix into dense matrix."
+            )
             matrix = self.to_numpy(matrix)  # pylint: disable=E1111
             matrix = self.cast(matrix, dtype=matrix.dtype)  # pylint: disable=E1111
 
