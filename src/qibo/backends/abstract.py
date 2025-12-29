@@ -700,8 +700,13 @@ class Backend:  # pylint: disable=R0904
         self, matrix: ArrayLike, k: int = 6, hermitian: bool = True
     ) -> ArrayLike:
         """Calculate eigenvectors of a matrix."""
-        if self.is_sparse(matrix) and k < matrix.shape[0]:
-            return self.eigsh(matrix, k=k, which="SA")
+        if self.is_sparse(matrix):
+            if k < matrix.shape[0]:
+                return self.eigsh(matrix, k=k, which="SA")
+
+            # sparse matrix becomes dense matrix
+            matrix = self.to_numpy(matrix)  # pylint: disable=E1111
+            matrix = self.cast(matrix, dtype=matrix.dtype)  # pylint: disable=E1111
 
         if hermitian:
             return self.eigh(matrix)
@@ -1124,7 +1129,6 @@ class Backend:  # pylint: disable=R0904
         cutoff: float = 1e-10,
         max_terms: int = 20,
     ) -> List[str]:
-        # state = self.to_numpy(state)
         density_matrix = bool(len(state.shape) == 2)
         ind_j = self.nonzero(state)
         if density_matrix:
