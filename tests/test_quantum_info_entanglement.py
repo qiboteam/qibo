@@ -33,7 +33,7 @@ def test_concurrence_and_formation(backend, partition, base, check_purity):
     if check_purity is True:
         with pytest.raises(NotImplementedError):
             state = backend.identity(4)
-            test = concurrence(state, bipartition=partition, backend=backend)
+            test = concurrence(state, partition=partition, backend=backend)
 
     nqubits = 2
     dim = 2**nqubits

@@ -1043,35 +1043,28 @@ def entanglement_entropy(
     """Calculate the entanglement entropy of a bipartite quantum state.
 
 
-        Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
-        its base-:math:`b` entanglement entropy is given by
+    Given a bipartite quantum state :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}`,
+    its base-:math:`b` entanglement entropy is given by
 
-        .. math::
-            \\operatorname{S}_{b}^{\\text{ent}}(\\rho) \\equiv \\operatorname{S}_{b}(\\rho_{A}) =
-                -\\text{Tr}\\left(\\rho_{A} \\, \\log_{b}(\\rho_{A})\\right) \\, ,
+    .. math::
+        \\operatorname{S}_{b}^{\\text{ent}}(\\rho) \\equiv \\operatorname{S}_{b}(\\rho_{A}) =
+            -\\text{Tr}\\left(\\rho_{A} \\, \\log_{b}(\\rho_{A})\\right) \\, ,
 
-        where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix calculated
-        by tracing out the ``partition`` :math:`B`.
+    where :math:`\\rho_{A} = \\text{Tr}_{B}(\\rho)` is the reduced density matrix calculated
+    by tracing out the ``partition`` :math:`B`.
 
-        Args:
-            state (ndarray): statevector or density matrix.
-    <<<<<<< HEAD
-            partition (list or tuple): qubits in the partition :math:`B` to be traced out.
-            base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
-            check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
-                If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
-    =======
-            bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-            base (float, optional): the base of the log. Defaults to :math: `2`.
-    >>>>>>> master
-            return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
-                If ``False``, returns only ``entropy``. Default is ``False``.
-            backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-                in the execution. If ``None``, it uses
-                the current backend. Defaults to ``None``.
+    Args:
+        state (ndarray): statevector or density matrix.
+        partition (list or tuple): qubits in the partition :math:`B` to be traced out.
+        base (float, optional): the base of the :math:`\\log`. Defaults to :math:`2`.
+        return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            the current backend. Defaults to ``None``.
 
-        Returns:
-            float: Entanglement entropy :math:`\\operatorname{S}_{b}^{\\text{ent}}`.
+    Returns:
+        float: Entanglement entropy :math:`\\operatorname{S}_{b}^{\\text{ent}}`.
     """
     backend = _check_backend(backend)
 
