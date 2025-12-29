@@ -700,9 +700,8 @@ class Backend:  # pylint: disable=R0904
         self, matrix: ArrayLike, k: int = 6, hermitian: bool = True
     ) -> ArrayLike:
         """Calculate eigenvectors of a matrix."""
-        if self.is_sparse(matrix):
-            if k < matrix.shape[0]:
-                return self.eigsh(matrix, k=k, which="SA")
+        if self.is_sparse(matrix) and k < matrix.shape[0]:
+            return self.eigsh(matrix, k=k, which="SA")
 
         if hermitian:
             return self.eigh(matrix)
