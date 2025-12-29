@@ -108,14 +108,14 @@ Financial Sponsors and Development Partners
 -------------------------------------------
 
 * `Quantum Research Center <https://www.tii.ae/quantum>`_, Technology Innovation Institute (TII), United Arab Emirates.
-* `National Quantum Science and Technology Institute <https://nqsti.it>`_, Italy.
 * `National Quantum Computing Hub <https://nqch.sg>`_, National Quantum Office, Singapore.
+* `Istituto Nazionale di Fisica Nucleare (INFN) <https://web.infn.it/quartet/>`_, QUART&T CSN5, Italy.
+* `National Quantum Science and Technology Institute <https://nqsti.it>`_, Italy.
 
 Collaborators
 -------------
 
 * Università degli Studi di Milano (UNIMI), Italy.
-* Istituto Nazionale di Fisica Nucleare (INFN), Italy.
 * Università degli Studi di Milano-Bicocca (UNIMIB), Italy.
 * European Organization for Nuclear research (CERN), Switzerland.
 * Universitat de Barcelona (UB), Spain.
