@@ -704,7 +704,15 @@ class Backend:  # pylint: disable=R0904
             if k < matrix.shape[0]:
                 return self.eigsh(matrix, k=k, which="SA")
 
+            # sparse matrix becomes dense matrix
+            # these lines are tested by qibojit
+            log.warning(  # pragma: no cover
+                "Since `k == matrix.shape[0]`, transforming sparse matrix into dense matrix."
+            )
             matrix = self.to_numpy(matrix)  # pylint: disable=E1111  # pragma: no cover
+            matrix = self.cast(  # pylint: disable=E1111  # pragma: no cover
+                matrix, dtype=matrix.dtype
+            )
 
         if hermitian:
             return self.eigh(matrix)
@@ -1127,7 +1135,6 @@ class Backend:  # pylint: disable=R0904
         cutoff: float = 1e-10,
         max_terms: int = 20,
     ) -> List[str]:
-        # state = self.to_numpy(state)
         density_matrix = bool(len(state.shape) == 2)
         ind_j = self.nonzero(state)
         if density_matrix:
