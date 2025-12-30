@@ -705,11 +705,14 @@ class Backend:  # pylint: disable=R0904
                 return self.eigsh(matrix, k=k, which="SA")
 
             # sparse matrix becomes dense matrix
-            log.warning(
+            # these lines are tested by qibojit
+            log.warning(  # pragma: no cover
                 "Since `k == matrix.shape[0]`, transforming sparse matrix into dense matrix."
             )
-            matrix = self.to_numpy(matrix)  # pylint: disable=E1111
-            matrix = self.cast(matrix, dtype=matrix.dtype)  # pylint: disable=E1111
+            matrix = self.to_numpy(matrix)  # pylint: disable=E1111  # pragma: no cover
+            matrix = self.cast(  # pylint: disable=E1111  # pragma: no cover
+                matrix, dtype=matrix.dtype
+            )
 
         if hermitian:
             return self.eigh(matrix)
