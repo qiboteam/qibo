@@ -506,10 +506,8 @@ def von_neumann_entropy(
     """
     backend = _check_backend(backend)
 
-    if (
-        (len(state.shape) >= 3)
-        or (len(state) == 0)
-        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    if len(state.shape) not in (1, 2) or (
+        len(state.shape) == 2 and state.shape[0] != state.shape[1]
     ):
         raise_error(
             TypeError,
@@ -519,14 +517,11 @@ def von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if purity(state, backend=backend) == 1.0:
+    if backend.abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=backend.float64)
 
         return 0.0
-
-    if len(state.shape) == 1:
-        state = backend.outer(state, backend.conj(state.T))
 
     eigenvalues = backend.eigenvalues(state)
 
