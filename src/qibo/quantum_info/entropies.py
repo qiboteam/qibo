@@ -525,6 +525,9 @@ def von_neumann_entropy(
 
         return 0.0
 
+    if len(state.shape) == 1:
+        state = backend.outer(state, backend.conj(state.T))
+
     eigenvalues = backend.eigenvalues(state)
 
     log_prob = backend.where(
@@ -601,6 +604,12 @@ def relative_von_neumann_entropy(
         and backend.abs(purity(target, backend=backend) - 1.0) <= PRECISION_TOL
     ):
         return 0.0
+
+    if len(state.shape) == 1:
+        state = backend.outer(state, backend.conj(target.T))
+
+    if len(state.shape) == 1:
+        target = backend.outer(target, backend.conj(target.T))
 
     eigs_state = backend.eigenvalues(state)
     eigs_target = backend.eigenvalues(target)
