@@ -599,19 +599,19 @@ def relative_von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if purity(state, backend=backend) == 1.0 and purity(target, backend=backend) == 1.0:
+    if (
+        backend.abs(purity(state, backend=backend) - 1.0) <= PRECISION_TOL
+        and backend.abs(purity(target, backend=backend) - 1.0) <= PRECISION_TOL
+    ):
         return 0.0
 
-    if len(state.shape) == 1:
-        state = backend.outer(state, backend.conj(state))
+    eigs_state = backend.eigenvalues(state)
+    eigs_target = backend.eigenvalues(target)
 
-    if len(target.shape) == 1:
-        target = backend.outer(target, backend.conj(target))
-
-    relative = backend.matrix_log(target, base=base)
-    relative = -backend.trace(state @ relative)
-    relative -= von_neumann_entropy(
-        state, base=base, return_spectrum=False, backend=backend
+    relative = backend.log2(eigs_target) / backend.log2(base)
+    relative = -backend.sum(eigs_state * relative)
+    relative -= backend.sum(
+        eigs_state * (backend.log2(eigs_state) / backend.log2(base))
     )
 
     return backend.real(relative)
