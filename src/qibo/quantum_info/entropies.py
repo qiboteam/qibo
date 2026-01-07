@@ -605,18 +605,32 @@ def relative_von_neumann_entropy(
     ):
         return 0.0
 
-    if len(state.shape) == 1:
-        state = backend.outer(state, backend.conj(target.T))
+    print(state.shape)
 
     if len(state.shape) == 1:
+        state = backend.outer(state, backend.conj(state.T))
+
+    if len(target.shape) == 1:
         target = backend.outer(target, backend.conj(target.T))
+
+    print(state.shape)
 
     eigs_state = backend.eigenvalues(state)
     eigs_target = backend.eigenvalues(target)
 
-    relative = backend.log2(eigs_target) / math.log2(base)
+    logs_state = backend.where(
+        backend.real(eigs_state) > 0.0,
+        backend.log2(eigs_state) / math.log2(base),
+        0.0,
+    )
+
+    relative = backend.where(
+        backend.real(eigs_target) > 0.0,
+        backend.log2(eigs_target) / math.log2(base),
+        0.0,
+    )
     relative = -backend.sum(eigs_state * relative)
-    relative -= backend.sum(eigs_state * (backend.log2(eigs_state) / math.log2(base)))
+    relative -= backend.sum(eigs_state * logs_state)
 
     return backend.real(relative)
 
@@ -823,6 +837,9 @@ def relative_renyi_entropy(
 
     if len(state.shape) == 1:
         state = backend.outer(state, backend.conj(state))
+
+    if len(target.shape) == 1:
+        target = backend.outer(target, backend.conj(target))
 
     if alpha == 1.0:
         return relative_von_neumann_entropy(state, target, base, backend=backend)
