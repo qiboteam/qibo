@@ -524,24 +524,22 @@ def von_neumann_entropy(
 
     if purity(state, backend=backend) == 1.0:
         if return_spectrum:
-            return 0.0, backend.cast([0.0], dtype=float)
+            return 0.0, backend.cast([0.0], dtype=backend.float64)
 
         return 0.0
 
-    ent = backend.matrix_log(state, base=base)
-    ent = -backend.trace(state @ ent)
-    ent = backend.real(ent)
+    eigenvalues = backend.eigenvalues(state)
+
+    log_prob = backend.where(
+        backend.real(eigenvalues) > 0.0,
+        backend.log2(eigenvalues) / backend.log2(base),
+        0.0,
+    )
+    log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
+
+    ent = -backend.sum(eigenvalues * log_prob)
 
     if return_spectrum:
-        eigenvalues = backend.eigenvalues(state)
-
-        log_prob = backend.where(
-            backend.real(eigenvalues) > 0.0,
-            backend.log2(eigenvalues) / backend.log2(base),
-            0.0,
-        )
-        log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
-
         return ent, -log_prob
 
     return ent
