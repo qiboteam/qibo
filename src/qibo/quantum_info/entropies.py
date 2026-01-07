@@ -605,15 +605,11 @@ def relative_von_neumann_entropy(
     ):
         return 0.0
 
-    print(state.shape)
-
     if len(state.shape) == 1:
         state = backend.outer(state, backend.conj(state.T))
 
     if len(target.shape) == 1:
         target = backend.outer(target, backend.conj(target.T))
-
-    print(state.shape)
 
     eigs_state = backend.eigenvalues(state)
     eigs_target = backend.eigenvalues(target)
