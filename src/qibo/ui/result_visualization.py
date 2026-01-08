@@ -71,7 +71,7 @@ def visualize_state(
         ax.bar(x, y_values, color=QIBO_DEFAULT_COLOR, edgecolor="black")
 
     elif mode == "amplitudes":
-        amplitudes = execution_outcome.backend.to_numpy(execution_outcome.amplitudes())
+        amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
         real_parts = np.real(amplitudes)
         imag_parts = np.imag(amplitudes)
         width = 0.3
