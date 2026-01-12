@@ -2345,7 +2345,7 @@ class GIVENS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\exp(i \\, \\frac{\\theta}{2} \\, (X \\otimes Y - Y \\otimes X)) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
             0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
@@ -2399,7 +2399,7 @@ class RBS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\exp(-i \\, \\frac{\\theta}{2} \\, (X \\otimes Y - Y \\otimes X)) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
             0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
