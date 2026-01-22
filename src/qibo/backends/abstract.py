@@ -1495,7 +1495,8 @@ class Backend:  # pylint: disable=R0904
             unmeasured_qubits = tuple(set(list(range(nqubits))) ^ set(qubits))
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
             probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
-            probs = self.sum(probs, axis=unmeasured_qubits)
+            if len(unmeasured_qubits) != 0:
+                probs = self.sum(probs, axis=unmeasured_qubits)
 
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
