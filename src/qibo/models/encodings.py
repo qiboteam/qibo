@@ -779,7 +779,7 @@ def hamming_weight_encoder(
     # sort data such that the encoding is performed in lexicographical order
     lex_order = [int(string, 2) for string in bitstrings]
     lex_order_sorted = np.sort(np.copy(lex_order))
-    lex_order = [np.where(lex_order_sorted == num)[0][0] for num in lex_order]
+    lex_order = np.array([np.where(lex_order_sorted == num)[0][0] for num in lex_order])
     data = data[lex_order]
     del lex_order, lex_order_sorted
 
