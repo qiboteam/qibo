@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -294,6 +294,7 @@ def _check_terms_commutativity(term1: str, term2: str, qubitwise: bool) -> bool:
     n_noncommuting_ops = sum(_op1 != _op2 for _op1, _op2 in zip(term1_ops, term2_ops))
     # term1 and term2 have general commutativity iff n_noncommuting_ops is even
     return n_noncommuting_ops % 2 == 0
+
 
 def _group_commuting_paulis(
     hamilt_terms_list: List[Tuple[float, str]],
@@ -675,7 +676,7 @@ def _get_expval_hamilt_dict_grouped_terms(
 
     def _flatten_list(list_of_lists):
         return [x for sublist in list_of_lists for x in sublist]
-    
+
     if nshots is None:
         hamilt_terms_list = _flatten_list(grouped_hamilt_dict.values())
 
