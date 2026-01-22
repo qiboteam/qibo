@@ -41,8 +41,10 @@ def visualize_state(
             to `n_most_relevant_components`. Default is None.
     """
     # Collect amplitude
-    amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
-    nqubits = int(np.log2(len(amplitudes)))
+    probabilities = execution_outcome.backend.to_numpy(
+        execution_outcome.probabilities()
+    )
+    nqubits = int(np.log2(len(probabilities)))
 
     bitstrings = generate_bitstring_combinations(nqubits)
 
@@ -69,6 +71,7 @@ def visualize_state(
         ax.bar(x, y_values, color=QIBO_DEFAULT_COLOR, edgecolor="black")
 
     elif mode == "amplitudes":
+        amplitudes = execution_outcome.backend.to_numpy(execution_outcome.state())
         real_parts = np.real(amplitudes)
         imag_parts = np.imag(amplitudes)
         width = 0.3
@@ -93,7 +96,6 @@ def visualize_state(
         y_values = np.abs(amplitudes)
 
     elif mode == "probabilities":
-        probabilities = np.abs(amplitudes) ** 2
         ax.bar(x, probabilities, color=QIBO_DEFAULT_COLOR, edgecolor="black")
         y_values = probabilities
 
@@ -199,7 +201,7 @@ def plot_density_hist(
     # Create a density matrix from state vector
     if not circuit.density_matrix:
         state = backend.cast(state)
-        state = backend.np.outer(state, backend.np.conj(state))
+        state = backend.outer(state, backend.conj(state))
 
     nqubits = circuit.nqubits
     row_names = _get_labels(nqubits)
@@ -219,8 +221,8 @@ def plot_density_hist(
 
     dx = 0.5 * np.ones_like(zpos)
     dy = dx.copy()
-    dzr = backend.np.reshape(matrix_real, (-1))
-    dzi = backend.np.reshape(matrix_imag, (-1))
+    dzr = backend.reshape(matrix_real, (-1))
+    dzi = backend.reshape(matrix_imag, (-1))
 
     max_dzr = np.max(dzr)
     max_dzi = np.max(dzi)

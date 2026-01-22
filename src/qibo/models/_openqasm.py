@@ -1,9 +1,8 @@
 """Qibo wrapper for QASM 3.0 parser."""
 
-from itertools import repeat
 from typing import Union
 
-import numpy as np
+import numpy as np  # cannot be removed
 import openqasm3
 
 import qibo
@@ -34,40 +33,49 @@ class CustomQASMGate:
 
     def get_gate(self, qubits: Union[list, tuple], args: Union[list, tuple]):
         """Returns the gates composing the defined gate applied on the
-        specified qubits with the specified ``args`` as a unique :class:`qibo.gates.special.FusedGate`.
+        specified qubits with the specified ``args`` as a unique
+        :class:`qibo.gates.special.FusedGate`.
 
         Args:
             qubits (list or tuple): Qubits where to apply the gates.
             args (list or tuple): Arguments to evaluate the gates on.
 
         Returns:
-            :class:`qibo.gates.special.FusedGate`: the composed gate evaluated on the input qubits with the input arguments.
+            :class:`qibo.gates.special.FusedGate`: the composed gate evaluated
+            on the input qubits with the input arguments.
         """
         if len(self.args) != len(args):
             raise_error(
                 ValueError,
-                f"Invalid `args` argument passed to the user-defined gate `{self.name}` upon construction. {args} was passed but something of the form {self.args} is expected.",
+                f"Invalid `args` argument passed to the user-defined gate `{self.name}`"
+                + f"upon construction. {args} was passed but something of the form {self.args}"
+                + "is expected.",
             )
         elif len(self.qubits) != len(qubits):
             raise_error(
                 ValueError,
-                f"Invalid `qubits` argument passed to the user-defined gate `{self.name}` upon construction. {qubits} was passed but something of the form {self.qubits} is expected.",
+                f"Invalid `qubits` argument passed to the user-defined gate `{self.name}` "
+                + f"upon construction. {qubits} was passed but something of the form "
+                + f"{self.qubits} is expected.",
             )
         qubit_map = dict(zip(self.qubits, qubits))
         args_map = dict(zip(self.args, args))
         return self._construct_fused_gate(self.gates, qubits, qubit_map, args_map)
 
     def _construct_fused_gate(self, gates, qubits, qubit_map, args_map):
-        """Constructs a :class:`qibo.gates.special.FusedGate` out of the provided list of gates on the specified qubits.
+        """Constructs a :class:`qibo.gates.special.FusedGate` out of the provided
+        list of gates on the specified qubits.
 
         Args:
             gates (list(:class:`qibo.gates.Gate`)): List of gates to build the fused gate from.
             qubits (list(int)): List of qubits to construct the gate on.
-            qubit_map (dict): Mapping between the placeholders for the qubits contained in `gates` and the actual qubits indices to apply them on.
-            args_map (dict): Mapping between the placeholders for the kwargs contained in `gates` and the actual kwargs values.
+            qubit_map (dict): Mapping between the placeholders for the qubits contained
+                in `gates` and the actual qubits indices to apply them on.
+            args_map (dict): Mapping between the placeholders for the kwargs contained
+                in `gates` and the actual kwargs values.
 
         Returns:
-            (qibo.gates.special.FusedGate): The resulting fused gate.
+            :class:`qibo.gates.special.FusedGate`: The resulting fused gate.
         """
         fused_gate = FusedGate(*qubits)
         for gate in gates:
@@ -84,15 +92,20 @@ class CustomQASMGate:
         return fused_gate
 
     def _compile_gate_qubits_and_args(self, gate, qubit_map, args_map):
-        """Compile the qubits and arguments placeholders contained in the input gate with their actual values.
+        """Compile the qubits and arguments placeholders contained in the
+        input gate with their actual values.
 
         Args:
-            gate (:class:`qibo.gates.Gate`): The input gate containing the qubits and arguments placeholders.
-            qubit_map (dict): Mapping between the placeholders for the qubits contained in `gate` and the actual qubits indices to apply them on.
-            args_map (dict): Mapping between the placeholders for the kwargs contained in `gate` and the actual kwargs values.
+            gate (:class:`qibo.gates.Gate`): The input gate containing the
+                qubits and arguments placeholders.
+            qubit_map (dict): Mapping between the placeholders for the
+                qubits contained in `gate` and the actual qubits indices
+                to apply them on.
+            args_map (dict): Mapping between the placeholders for the kwargs
+                contained in `gate` and the actual kwargs values.
 
         Returns:
-            tuple(list, list): The compiled qubits and arguments.
+            Tuple(List[int], List[int]): The compiled qubits and arguments.
         """
         new_qubits = [qubit_map[q] for q in gate.qubits]
         new_args = [args_map.get(arg, arg) for arg in gate.init_kwargs.values()]
@@ -109,9 +122,11 @@ def _qibo_gate_name(gate):
     if gate == "ccx":
         return "TOFFOLI"
 
-    if gate in ["u", "U"]:
-        # `u` for QASM 2.0
-        # `U` for QASM 3.0
+    if gate == "p":
+        return "U1"
+
+    if gate in ("u", "U"):
+        # `u` for QASM 2.0, `U` for QASM 3.0
         return "U3"
 
     return gate.upper()
@@ -128,9 +143,7 @@ class QASMParser:
         self.q_registers = {}
         self.c_registers = set()
 
-    def to_circuit(
-        self, qasm_string: str, accelerators: dict = None, density_matrix: bool = False
-    ):
+    def to_circuit(self, qasm_string: str, **circuit_kwargs):
         """Converts a QASM program into a :class:`qibo.models.Circuit`.
 
         Args:
@@ -169,12 +182,7 @@ class QASMParser:
                 self.c_registers.update({name: list(range(size))})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
-        circ = qibo.Circuit(
-            nqubits,
-            accelerators,
-            density_matrix,
-            wire_names=self._construct_wire_names(),
-        )
+        circ = qibo.Circuit(nqubits, **circuit_kwargs)
         circ.add(self._merge_measurements(gates))
         return circ
 
@@ -182,16 +190,31 @@ class QASMParser:
         """Converts a :class:`openqasm3.ast.QuantumMeasurementStatement` statement
         into :class:`qibo.gates.measurements.M`."""
         qubit = self._get_qubit(measurement.measure.qubit)
-        register = measurement.target.name.name
-        if register not in self.c_registers:
-            raise_error(ValueError, f"Undefined measurement register `{register}`.")
-        ind = measurement.target.indices[0][0].value
-        if ind >= len(self.c_registers[register]):
-            raise_error(
-                IndexError, f"Index `{ind}` is out of bounds of register `{register}`."
-            )
-        self.c_registers[register][ind] = qubit
-        return getattr(qibo.gates, "M")(qubit, register_name=register)
+        if hasattr(measurement.target, "indices"):
+            register = measurement.target.name.name
+            if register not in self.c_registers:
+                raise_error(ValueError, f"Undefined measurement register `{register}`.")
+            ind = measurement.target.indices[0][0].value
+            if ind >= len(self.c_registers[register]):
+                raise_error(
+                    IndexError,
+                    f"Index `{ind}` is out of bounds of register `{register}`.",
+                )
+            self.c_registers[register][ind] = qubit
+            qubits = (qubit,)
+        else:
+            register = measurement.target.name
+            qubit = measurement.measure.qubit.name
+            if len(self.c_registers[register]) != len(self.q_registers[qubit]):
+                raise_error(
+                    RuntimeError,
+                    f"Trying to store quantum measurements from quantum register {qubit}: "
+                    + f"{self.q_registers[qubit]} to the classical register {register} of "
+                    + f"length {len(self.c_registers[register])}, the lengths of the quantum "
+                    + "and classical registers should match.",
+                )
+            qubits = self.q_registers[qubit]
+        return getattr(qibo.gates, "M")(*qubits, register_name=register)
 
     def _get_qubit(self, qubit):
         """Extracts the qubit from a :class:`openqasm3.ast.QubitDeclaration` statement."""
@@ -272,11 +295,13 @@ class QASMParser:
 
     def _merge_measurements(self, gates):
         """Merges separated measurements of a same register into a single one.
-        This is needed because qibo doesn't allow to separetely define two measurements in a same register:
+
+        This is needed because qibo doesn't allow to separetely define
+        two measurements in a same register:
 
         # not allowed
-        c.add(gates.M(0, register="m0"))
-        c.add(gates.M(1, register="m0"))
+        circuit.add(gates.M(0, register="m0"))
+        circuit.add(gates.M(1, register="m0"))
         """
         updated_queue = []
         for gate in gates:
@@ -291,14 +316,3 @@ class QASMParser:
             else:
                 updated_queue.append(gate)
         return updated_queue
-
-    def _construct_wire_names(self):
-        """Builds the wires names from the declared quantum registers."""
-        wire_names = []
-        for reg_name, reg_qubits in self.q_registers.items():
-            wires = sorted(
-                zip(repeat(reg_name, len(reg_qubits)), reg_qubits), key=lambda x: x[1]
-            )
-            for wire in wires:
-                wire_names.append(f"{wire[0]}{wire[1]}")
-        return wire_names

@@ -63,11 +63,11 @@ def assert_register_result(
 @pytest.mark.parametrize("n", [0, 1])
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_gate(backend, n, nshots):
-    c = Circuit(2)
+    circuit = Circuit(2)
     if n:
-        c.add(gates.X(1))
-    c.add(gates.M(1))
-    result = backend.execute_circuit(c, nshots=nshots)
+        circuit.add(gates.X(1))
+    circuit.add(gates.M(1))
+    result = backend.execute_circuit(circuit, nshots=nshots)
     assert_result(
         backend,
         result,
@@ -79,10 +79,10 @@ def test_measurement_gate(backend, n, nshots):
 
 
 def test_multiple_qubit_measurement_gate(backend):
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.M(0, 1))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0, 1))
+    result = backend.execute_circuit(circuit, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
     assert_result(
@@ -106,10 +106,10 @@ def test_measurement_gate_errors(backend):
 
 
 def test_measurement_circuit(backend, accelerators):
-    c = Circuit(4, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.M(0))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0))
+    result = backend.execute_circuit(circuit, nshots=100)
     assert_result(
         backend, result, np.ones((100,)), np.ones((100, 1)), {1: 100}, {"1": 100}
     )
@@ -117,14 +117,14 @@ def test_measurement_circuit(backend, accelerators):
 
 @pytest.mark.parametrize("registers", [False, True])
 def test_measurement_qubit_order_simple(backend, registers):
-    c = Circuit(2)
-    c.add(gates.X(0))
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
     if registers:
-        c.add(gates.M(1, 0))
+        circuit.add(gates.M(1, 0))
     else:
-        c.add(gates.M(1))
-        c.add(gates.M(0))
-    result = backend.execute_circuit(c, nshots=100)
+        circuit.add(gates.M(1))
+        circuit.add(gates.M(0))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 1] = 1
@@ -135,11 +135,11 @@ def test_measurement_qubit_order_simple(backend, registers):
 
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_qubit_order(backend, accelerators, nshots):
-    c = Circuit(6, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.M(1, 5, 2, 0))
-    result = backend.execute_circuit(c, nshots=nshots)
+    circuit = Circuit(6, accelerators)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(1))
+    circuit.add(gates.M(1, 5, 2, 0))
+    result = backend.execute_circuit(circuit, nshots=nshots)
 
     target_binary_samples = np.zeros((nshots, 4))
     target_binary_samples[:, 0] = 1
@@ -155,13 +155,13 @@ def test_measurement_qubit_order(backend, accelerators, nshots):
 
 
 def test_multiple_measurement_gates_circuit(backend):
-    c = Circuit(4)
-    c.add(gates.X(1))
-    c.add(gates.X(2))
-    c.add(gates.M(0, 1))
-    c.add(gates.M(2))
-    c.add(gates.X(3))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(4)
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.M(0, 1))
+    circuit.add(gates.M(2))
+    circuit.add(gates.X(3))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     target_binary_samples = np.ones((100, 3))
     target_binary_samples[:, 0] = 0
@@ -171,13 +171,13 @@ def test_multiple_measurement_gates_circuit(backend):
 
 
 def test_circuit_with_unmeasured_qubits(backend, accelerators):
-    c = Circuit(5, accelerators)
-    c.add(gates.X(4))
-    c.add(gates.X(2))
-    c.add(gates.M(0, 2))
-    c.add(gates.X(3))
-    c.add(gates.M(1, 4))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(5, accelerators)
+    circuit.add(gates.X(4))
+    circuit.add(gates.X(2))
+    circuit.add(gates.M(0, 2))
+    circuit.add(gates.X(3))
+    circuit.add(gates.M(1, 4))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
@@ -193,15 +193,15 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
 
 
 def test_circuit_addition_with_measurements(backend):
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(1))
 
-    meas_c = Circuit(2)
-    c.add(gates.M(0, 1))
+    meas_circuit = Circuit(2)
+    circuit.add(gates.M(0, 1))
 
-    c += meas_c
-    result = backend.execute_circuit(c, nshots=100)
+    circuit += meas_circuit
+    result = backend.execute_circuit(circuit, nshots=100)
 
     assert_result(
         backend,
@@ -214,17 +214,17 @@ def test_circuit_addition_with_measurements(backend):
 
 
 def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerators):
-    c1 = Circuit(4, accelerators)
-    c1.add(gates.X(0))
-    c1.add(gates.X(1))
-    c1.add(gates.M(1, register_name="a"))
+    circuit_1 = Circuit(4, accelerators)
+    circuit_1.add(gates.X(0))
+    circuit_1.add(gates.X(1))
+    circuit_1.add(gates.M(1, register_name="a"))
 
-    c2 = Circuit(4, accelerators)
-    c2.add(gates.X(0))
-    c2.add(gates.M(0, register_name="b"))
+    circuit_2 = Circuit(4, accelerators)
+    circuit_2.add(gates.X(0))
+    circuit_2.add(gates.M(0, register_name="b"))
 
-    c = c1 + c2
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = circuit_1 + circuit_2
+    result = backend.execute_circuit(circuit, nshots=100)
     assert_result(
         backend,
         result,
@@ -233,14 +233,14 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
-    c1 = Circuit(6, accelerators)
-    c1.add([gates.X(0), gates.X(1), gates.X(3)])
-    c1.add(gates.M(5, 1, 3, register_name="a"))
-    c1.add(gates.M(2, 0, register_name="b"))
-    c2 = c1.copy(deep=True)
+    circuit_1 = Circuit(6, accelerators)
+    circuit_1.add([gates.X(0), gates.X(1), gates.X(3)])
+    circuit_1.add(gates.M(5, 1, 3, register_name="a"))
+    circuit_1.add(gates.M(2, 0, register_name="b"))
+    circuit_2 = circuit_1.copy(deep=True)
 
-    r1 = backend.execute_circuit(c1, nshots=100)
-    r2 = backend.execute_circuit(c2, nshots=100)
+    r1 = backend.execute_circuit(circuit_1, nshots=100)
+    r2 = backend.execute_circuit(circuit_2, nshots=100)
 
     backend.assert_allclose(r1.samples(), r2.samples())
     rg1 = r1.frequencies(registers=True)
@@ -251,12 +251,14 @@ def test_circuit_copy_with_measurements(backend, accelerators):
 
 
 def test_measurement_compiled_circuit(backend):
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.M(0))
-    c.add(gates.M(1))
-    c.compile(backend)
-    result = c(nshots=100)
+    if backend.platform != "tensorflow":
+        pytest.skip("``compile`` only defined for ``TensorFlowBackend``.")
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0))
+    circuit.add(gates.M(1))
+    circuit.compile(backend)
+    result = circuit(nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
     assert_result(
@@ -268,26 +270,26 @@ def test_measurement_compiled_circuit(backend):
         {"10": 100},
     )
 
-    target_state = np.zeros_like(c.final_state.state())
+    target_state = np.zeros_like(circuit.final_state.state())
     target_state[2] = 1
-    backend.assert_allclose(c.final_state._state, target_state)
+    backend.assert_allclose(circuit.final_state._state, target_state)
 
 
 def test_final_state(backend, accelerators):
     """Check that final state is logged correctly when using measurements."""
-    c = Circuit(4, accelerators)
-    c.add(gates.X(1))
-    c.add(gates.X(2))
-    c.add(gates.M(0, 1))
-    c.add(gates.M(2))
-    c.add(gates.X(3))
-    result = backend.execute_circuit(c, nshots=100)
-    c = Circuit(4, accelerators)
-    c.add(gates.X(1))
-    c.add(gates.X(2))
-    c.add(gates.X(3))
-    target_state = backend.execute_circuit(c)
-    backend.assert_allclose(c.final_state, target_state)
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.M(0, 1))
+    circuit.add(gates.M(2))
+    circuit.add(gates.X(3))
+    result = backend.execute_circuit(circuit, nshots=100)
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.X(3))
+    target_state = backend.execute_circuit(circuit)
+    backend.assert_allclose(circuit.final_state, target_state)
 
 
 def test_measurement_gate_bitflip_errors():
@@ -301,15 +303,21 @@ def test_measurement_gate_bitflip_errors():
 
 
 def test_register_measurements(backend):
-    c = Circuit(3)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.M(0, 2))
-    c.add(gates.M(1))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(3)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(1))
+    circuit.add(gates.M(0, 2))
+    circuit.add(gates.M(1))
+    result = backend.execute_circuit(circuit, nshots=100)
 
-    decimal_samples = {"register0": 2 * np.ones((100,)), "register1": np.ones((100,))}
-    binary_samples = {"register0": np.zeros((100, 2)), "register1": np.ones((100, 1))}
+    decimal_samples = {
+        "register0": 2 * backend.ones((100,)),
+        "register1": backend.ones((100,)),
+    }
+    binary_samples = {
+        "register0": backend.zeros((100, 2)),
+        "register1": backend.ones((100, 1)),
+    }
     binary_samples["register0"][:, 0] = 1
     decimal_frequencies = {"register0": {2: 100}, "register1": {1: 100}}
     binary_frequencies = {"register0": {"10": 100}, "register1": {"1": 100}}
@@ -324,13 +332,13 @@ def test_register_measurements(backend):
 
 
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
-    c = Circuit(6, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.X(3))
-    c.add(gates.M(5, 1, 3, register_name="a"))
-    c.add(gates.M(2, 0, register_name="b"))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(6, accelerators)
+    circuit.add(gates.X(0))
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(3))
+    circuit.add(gates.M(5, 1, 3, register_name="a"))
+    circuit.add(gates.M(2, 0, register_name="b"))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     # Check full result
     target_binary_samples = np.zeros((100, 5))
@@ -365,13 +373,13 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
 
 def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     """Check that register measurements are unaffected by unmeasured qubits."""
-    c = Circuit(5, accelerators)
-    c.add(gates.X(1))
-    c.add(gates.X(2))
-    c.add(gates.M(0, 2, register_name="A"))
-    c.add(gates.X(3))
-    c.add(gates.M(1, 4, register_name="B"))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(5, accelerators)
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.M(0, 2, register_name="A"))
+    circuit.add(gates.X(3))
+    circuit.add(gates.M(1, 4, register_name="B"))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     target = {}
     decimal_samples = {"A": np.ones((100,)), "B": 2 * np.ones((100,))}
@@ -391,10 +399,10 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
 
 
 def test_measurement_density_matrix(backend):
-    c = Circuit(2, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.M(0, 1))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0, 1))
+    result = backend.execute_circuit(circuit, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
     assert_result(
@@ -408,11 +416,11 @@ def test_measurement_density_matrix(backend):
 
 
 def test_measurement_result_vs_circuit_result(backend, accelerators):
-    c = Circuit(6, accelerators)
-    c.add([gates.X(0), gates.X(1), gates.X(3)])
-    ma = c.add(gates.M(5, 1, 3, register_name="a"))
-    mb = c.add(gates.M(2, 0, register_name="b"))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(6, accelerators)
+    circuit.add([gates.X(0), gates.X(1), gates.X(3)])
+    ma = circuit.add(gates.M(5, 1, 3, register_name="a"))
+    mb = circuit.add(gates.M(2, 0, register_name="b"))
+    result = backend.execute_circuit(circuit, nshots=100)
 
     ma_freq = ma.frequencies()
     mb_freq = mb.frequencies()
@@ -424,51 +432,48 @@ def test_measurement_result_vs_circuit_result(backend, accelerators):
 @pytest.mark.parametrize("nqubits", [1, 4])
 @pytest.mark.parametrize("outcome", [0, 1])
 def test_measurement_basis(backend, nqubits, outcome):
-    c = Circuit(nqubits)
+    circuit = Circuit(nqubits)
     if outcome:
-        c.add(gates.X(q) for q in range(nqubits))
-    c.add(gates.H(q) for q in range(nqubits))
-    c.add(gates.M(*range(nqubits), basis=gates.X))
-    result = backend.execute_circuit(c, nshots=100)
+        circuit.add(gates.X(q) for q in range(nqubits))
+    circuit.add(gates.H(q) for q in range(nqubits))
+    circuit.add(gates.M(*range(nqubits), basis=gates.X))
+    result = backend.execute_circuit(circuit, nshots=100)
     assert result.frequencies() == {nqubits * str(outcome): 100}
 
 
 def test_measurement_basis_list(backend):
-    c = Circuit(4, wire_names=["q0", "q1", "q2", "q3"])
-    c.add(gates.H(0))
-    c.add(gates.X(2))
-    c.add(gates.H(2))
-    c.add(gates.X(3))
-    c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
-    result = backend.execute_circuit(c, nshots=100)
+    circuit = Circuit(4, wire_names=["q0", "q1", "q2", "q3"])
+    circuit.add(gates.H(0))
+    circuit.add(gates.X(2))
+    circuit.add(gates.H(2))
+    circuit.add(gates.X(3))
+    circuit.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
+    result = backend.execute_circuit(circuit, nshots=100)
     assert result.frequencies() == {"0011": 100}
-    assert (
-        str(c)
-        == """q0: ─H─H───M─
+    assert str(circuit) == """q0: ─H─H───M─
 q1: ───────M─
 q2: ─X─H─H─M─
 q3: ─X─────M─"""
-    )
 
 
 def test_measurement_basis_list_error():
-    c = Circuit(4)
+    circuit = Circuit(4)
     with pytest.raises(ValueError):
-        c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
+        circuit.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
 
 
 def test_measurement_same_qubit_different_registers_error():
-    c = Circuit(4)
-    c.add(gates.M(0, 1, 3, register_name="a"))
+    circuit = Circuit(4)
+    circuit.add(gates.M(0, 1, 3, register_name="a"))
     with pytest.raises(KeyError):
-        c.add(gates.M(1, 2, 3, register_name="a"))
+        circuit.add(gates.M(1, 2, 3, register_name="a"))
 
 
 def test_measurementsymbol_pickling(backend):
-    c = QFT(3)
-    c.add(gates.M(0, 2, basis=[gates.X, gates.Z]))
-    backend.execute_circuit(c).samples()
-    for symbol in c.measurements[0].result.symbols:
+    circuit = QFT(3)
+    circuit.add(gates.M(0, 2, basis=[gates.X, gates.Z]))
+    backend.execute_circuit(circuit).samples()
+    for symbol in circuit.measurements[0].result.symbols:
         dumped_symbol = pickle.dumps(symbol)
         new_symbol = pickle.loads(dumped_symbol)
         assert symbol.index == new_symbol.index
@@ -482,7 +487,7 @@ def test_measurementresult_nshots(backend):
     # nshots starting from samples
     nshots = 10
     samples = backend.cast(
-        [[i % 2, i % 2, i % 2] for i in range(nshots)], backend.np.int64
+        [[i % 2, i % 2, i % 2] for i in range(nshots)], backend.int64
     )
     result.register_samples(samples)
     assert result.nshots == nshots
@@ -505,7 +510,7 @@ def test_measurement_serialization(backend):
         "p1": 0.2,
     }
     gate = gates.M(*range(3), **kwargs)
-    samples = backend.cast(np.random.randint(2, size=(100, 3)), backend.np.int64)
+    samples = backend.cast(np.random.randint(2, size=(100, 3)), backend.int64)
     gate.result.register_samples(samples)
     dump = gate.to_json()
     load = gates.M.from_dict(json.loads(dump))

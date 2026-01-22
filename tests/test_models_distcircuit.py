@@ -19,75 +19,76 @@ def check_device_queues(queues):
 def test_distributed_circuit_init():
     """Check if error is raised if total devices is not a power of 2."""
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(5, devices)
-    assert c.ndevices == 4
-    assert c.nglobal == 2
+    circuit = Circuit(5, devices)
+    assert circuit.ndevices == 4
+    assert circuit.nglobal == 2
     devices = {"/GPU:0": 2, "/GPU:1": 1}
     with pytest.raises(ValueError):
-        c = Circuit(4, devices)
+        circuit = Circuit(4, devices)
 
 
 def test_distributed_circuit_add_gate():
     # Attempt to add gate so that available global qubits are not enough
-    c = Circuit(2, {"/GPU:0": 2})
+    circuit = Circuit(2, {"/GPU:0": 2})
     with pytest.raises(ValueError):
-        c.add(gates.SWAP(0, 1))
+        circuit.add(gates.SWAP(0, 1))
     # Attempt adding noise channel
     with pytest.raises(NotImplementedError):
-        c.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.1)]))
+        circuit.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.1)]))
 
 
-def test_distributed_circuit_various_errors():
+def test_distributed_circuit_various_errors(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(5, devices)
+    circuit = Circuit(5, devices)
     # Attempt to use ``.with_pauli_noise``
     with pytest.raises(NotImplementedError):
-        c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
-    # Attempt to compile
-    with pytest.raises(RuntimeError):
-        c.compile()
+        circuit.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
-        final_state = c.final_state
+        final_state = circuit.final_state
+    # Attempt to compile
+    if backend.platform == "tensorflow":
+        with pytest.raises(RuntimeError):
+            circuit.compile()
 
 
 def test_distributed_circuit_fusion(accelerators):
-    c = Circuit(4, accelerators)
-    c.add(gates.H(i) for i in range(4))
+    circuit = Circuit(4, accelerators)
+    circuit.add(gates.H(i) for i in range(4))
     with pytest.raises(NotImplementedError):
-        c.fuse()
+        circuit.fuse()
 
 
 def test_distributed_circuit_set_gates():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(6, devices)
-    c.add(gates.H(i) for i in range(4))
-    c.queues.set(c.queue)
+    circuit = Circuit(6, devices)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.queues.set(circuit.queue)
 
-    check_device_queues(c.queues)
-    assert len(c.queues.queues) == 1
-    assert len(c.queues.queues[0]) == 4
-    for queues in c.queues.queues[0]:
+    check_device_queues(circuit.queues)
+    assert len(circuit.queues.queues) == 1
+    assert len(circuit.queues.queues[0]) == 4
+    for queues in circuit.queues.queues[0]:
         assert len(queues) == 4
 
 
 def test_distributed_circuit_set_gates_controlled():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(6, devices)
-    c.add([gates.H(0), gates.H(2), gates.H(3)])
-    c.add(gates.CNOT(4, 5))
-    c.add(gates.Z(1).controlled_by(0))
-    c.add(gates.SWAP(2, 3))
-    c.add([gates.X(2), gates.X(3), gates.X(4)])
-    c.queues.set(c.queue)
+    circuit = Circuit(6, devices)
+    circuit.add([gates.H(0), gates.H(2), gates.H(3)])
+    circuit.add(gates.CNOT(4, 5))
+    circuit.add(gates.Z(1).controlled_by(0))
+    circuit.add(gates.SWAP(2, 3))
+    circuit.add([gates.X(2), gates.X(3), gates.X(4)])
+    circuit.queues.set(circuit.queue)
 
-    check_device_queues(c.queues)
-    assert len(c.queues.queues) == 7
-    for i, queue in enumerate(c.queues.queues[:-2]):
+    check_device_queues(circuit.queues)
+    assert len(circuit.queues.queues) == 7
+    for i, queue in enumerate(circuit.queues.queues[:-2]):
         assert len(queue) == 4 * (1 - i % 2)
-    for device_group in c.queues.queues[0]:
+    for device_group in circuit.queues.queues[0]:
         assert len(device_group) == 7
-    for device_group in c.queues.queues[2]:
+    for device_group in circuit.queues.queues[2]:
         assert len(device_group) == 1
 
 
@@ -97,17 +98,17 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     from qibo.models import QFT
 
-    c = QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    c.queues.set(c.queue)  # pylint: disable=E1101
-    check_device_queues(c.queues)  # pylint: disable=E1101
+    circuit = QFT(nqubits, accelerators={"/GPU:0": ndevices})
+    circuit.queues.set(circuit.queue)  # pylint: disable=E1101
+    check_device_queues(circuit.queues)  # pylint: disable=E1101
 
 
 def test_transform_queue_simple():
     devices = {"/GPU:0": 1, "/GPU:1": 1}
-    c = Circuit(4, devices)
-    c.add(gates.H(i) for i in range(4))
-    c.queues.qubits = DistributedQubits([0], c.nqubits)
-    tqueue = c.queues.transform(c.queue)
+    circuit = Circuit(4, devices)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.queues.qubits = DistributedQubits([0], circuit.nqubits)
+    tqueue = circuit.queues.transform(circuit.queue)
     assert len(tqueue) == 6
     for i in range(3):
         assert isinstance(tqueue[i], gates.H)
@@ -122,15 +123,15 @@ def test_transform_queue_simple():
 
 def test_transform_queue_more_gates():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(4, devices)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(2, 3))
-    c.add(gates.CZ(0, 1))
-    c.add(gates.CNOT(3, 0))
-    c.add(gates.CNOT(1, 2))
-    c.queues.qubits = DistributedQubits([2, 3], c.nqubits)
-    tqueue = c.queues.transform(c.queue)
+    circuit = Circuit(4, devices)
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CNOT(3, 0))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.queues.qubits = DistributedQubits([2, 3], circuit.nqubits)
+    tqueue = circuit.queues.transform(circuit.queue)
 
     assert len(tqueue) == 10
     assert isinstance(tqueue[0], gates.H)
@@ -157,35 +158,35 @@ def test_transform_queue_more_gates():
 
 def test_create_queue_with_global_swap():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = Circuit(6, devices)
-    c.add([gates.H(0), gates.H(2), gates.H(3)])
-    c.add(gates.SWAP(3, 4))
-    c.add([gates.X(1), gates.X(2)])
-    c.queues.qubits = DistributedQubits([4, 5], c.nqubits)
-    c.queues.create(c.queues.transform(c.queue))
+    circuit = Circuit(6, devices)
+    circuit.add([gates.H(0), gates.H(2), gates.H(3)])
+    circuit.add(gates.SWAP(3, 4))
+    circuit.add([gates.X(1), gates.X(2)])
+    circuit.queues.qubits = DistributedQubits([4, 5], circuit.nqubits)
+    circuit.queues.create(circuit.queues.transform(circuit.queue))
 
-    check_device_queues(c.queues)
-    assert len(c.queues.special_queue) == 1
-    assert len(c.queues.queues) == 3
-    assert len(c.queues.queues[0]) == 4
-    assert len(c.queues.queues[1]) == 0
-    assert len(c.queues.queues[2]) == 4
-    for device_group in c.queues.queues[0]:
+    check_device_queues(circuit.queues)
+    assert len(circuit.queues.special_queue) == 1
+    assert len(circuit.queues.queues) == 3
+    assert len(circuit.queues.queues[0]) == 4
+    assert len(circuit.queues.queues[1]) == 0
+    assert len(circuit.queues.queues[2]) == 4
+    for device_group in circuit.queues.queues[0]:
         assert len(device_group) == 3
-    for device_group in c.queues.queues[2]:
+    for device_group in circuit.queues.queues[2]:
         assert len(device_group) == 2
 
 
 def test_create_queue_errors(backend):
-    c = Circuit(4, {"/GPU:0": 2})
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.queues.qubits = DistributedQubits([0], c.nqubits)
+    circuit = Circuit(4, {"/GPU:0": 2})
+    circuit.add(gates.H(0))
+    circuit.add(gates.H(1))
+    circuit.queues.qubits = DistributedQubits([0], circuit.nqubits)
     with pytest.raises(ValueError):
-        c.queues.create(c.queue)
+        circuit.queues.create(circuit.queue)
 
-    c = Circuit(4, {"/GPU:0": 4})
-    c.add(gates.SWAP(0, 1))
-    c.queues.qubits = DistributedQubits([0, 1], c.nqubits)
+    circuit = Circuit(4, {"/GPU:0": 4})
+    circuit.add(gates.SWAP(0, 1))
+    circuit.queues.qubits = DistributedQubits([0, 1], circuit.nqubits)
     with pytest.raises(ValueError):
-        c.queues.create(c.queue)
+        circuit.queues.create(circuit.queue)

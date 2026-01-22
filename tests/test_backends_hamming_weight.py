@@ -21,7 +21,7 @@ def test_set_backend(backend):
     hamming_bkd = construct_hamming_weight_backend(backend)
     platform = _get_engine_name(backend)
     set_backend("hamming_weight", platform=platform)
-    assert get_backend().name == HammingWeightBackend(engine=platform).name
+    assert get_backend().name == HammingWeightBackend(platform=platform).name
     global_platform = get_backend().platform
     assert global_platform == platform
 
@@ -41,7 +41,7 @@ def get_full_initial_state(state, weight, nqubits, backend):
     ):
         backend._dict_indexes = backend._get_lexicographical_order(nqubits, weight)
 
-    full_state = backend.np.zeros(2**nqubits, dtype=backend.np.complex128)
+    full_state = backend.zeros(2**nqubits, dtype=backend.complex128)
     for i, j in backend._dict_indexes.values():
         full_state[j] = state[i]
 
@@ -163,6 +163,8 @@ def test_two_qubit_gates(backend, gate, weight):
         initial_state_full = get_full_initial_state(
             initial_state, weight, nqubits, hamming_bkd
         )
+        initial_state_full = hamming_bkd.to_numpy(initial_state_full)
+
         result = numpy_bkd.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
         state = backend.cast(state)
@@ -287,10 +289,12 @@ def test_n_qubit_gates(backend, weight):
             initial_state, weight, 4, hamming_bkd
         )
 
-        initial_state_full = numpy_bkd.cast(initial_state_full)
+        initial_state_full = backend.cast(
+            initial_state_full, dtype=initial_state_full.dtype
+        )
         result = backend.execute_circuit(circuit, initial_state=initial_state_full)
         state = result.state()
-        state = backend.cast(state)
+        state = backend.cast(state, dtype=state.dtype)
 
         backend.assert_allclose(hamming_full_state, state, atol=1e-8)
         assert result.symbolic() == hamming_result.symbolic()
@@ -298,7 +302,7 @@ def test_n_qubit_gates(backend, weight):
 
 @pytest.mark.parametrize("weight", [1, 2, 3])
 @pytest.mark.parametrize("collapse", [False, True])
-@pytest.mark.parametrize("nshots", [None, 100])
+@pytest.mark.parametrize("nshots", [None, 500])
 def test_measurement(backend, weight, collapse, nshots):
     backend.set_seed(2024)
     hamming_bkd = construct_hamming_weight_backend(backend)

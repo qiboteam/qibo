@@ -1,12 +1,12 @@
-"""
-Testing Variational Quantum Circuits.
-"""
+"""Testing Variational Quantum Circuits."""
 
 import pathlib
 
 import numpy as np
 import pytest
 from scipy.linalg import expm
+
+pytest.skip("To be moved to `qiboml`.", allow_module_level=True)
 
 from qibo import Circuit, gates
 from qibo.hamiltonians import TFIM, XXZ, X, Y
@@ -144,8 +144,7 @@ def test_vqe(backend, method, options, compile, filename):
 
     def callback(parameters, loss_values=loss_values, vqe=v):
         vqe.circuit.set_parameters(parameters)
-        state = vqe.backend.execute_circuit(vqe.circuit).state()
-        loss_values.append(vqe.hamiltonian.expectation(state))
+        loss_values.append(vqe.hamiltonian.expectation(vqe.circuit))
 
     best, params, _ = v.minimize(
         initial_parameters,
@@ -164,8 +163,10 @@ def test_vqe(backend, method, options, compile, filename):
     backend.assert_allclose(best, min(loss_values), rtol=1e-6, atol=1e-6)
 
     # test energy fluctuation
-    state = backend.np.ones(2**nqubits) / np.sqrt(2**nqubits)
-    energy_fluctuation = v.energy_fluctuation(state)
+    state = backend.ones(2**nqubits) / float(np.sqrt(2**nqubits))
+    hadamard_circ = Circuit(nqubits)
+    hadamard_circ.add([gates.H(qubit) for qubit in range(nqubits)])
+    energy_fluctuation = v.energy_fluctuation(hadamard_circ)
     assert energy_fluctuation >= 0
     backend.set_threads(n_threads)
 
@@ -375,10 +376,8 @@ def test_aavqe(backend, method, options, compile, filename):
     "test_input, test_param, expected",
     [(cvar, {"alpha": 0.1}, -0.5), (gibbs, {"eta": 0.1}, -2.08)],
 )
-def test_custom_loss(test_input, test_param, expected):
-    from qibo import hamiltonians
-
-    h = XXZ(3)
+def test_custom_loss(backend, test_input, test_param, expected):
+    h = XXZ(3, backend=backend)
     qaoa = QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
     best, params, _ = qaoa.minimize(

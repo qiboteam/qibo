@@ -105,15 +105,15 @@ def test_subgraph_leasttwoqubitgates(star_connectivity):
 
 @pytest.mark.parametrize("reps", [1, 10, 100])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_random(reps, names, star_connectivity):
+def test_random(backend, names, reps, star_connectivity):
     connectivity = star_connectivity(names)
     placer = Random(connectivity=connectivity, samples=reps)
     circuit = star_circuit(names=names)
-    placer(circuit)
+    placer(circuit, backend=backend)
     assert_placement(circuit, connectivity)
 
 
-def test_random_restricted(star_connectivity):
+def test_random_restricted(backend, star_connectivity):
     names = [0, 1, 2, 3, 4]
     circuit = Circuit(4, wire_names=[0, 2, 3, 4])
     circuit.add(gates.CNOT(1, 3))
@@ -125,31 +125,31 @@ def test_random_restricted(star_connectivity):
     connectivity = star_connectivity(names)
     restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3, 4])
     placer = Random(connectivity=restricted_connectivity, samples=100)
-    placer(circuit)
+    placer(circuit, backend=backend)
     assert_placement(circuit, restricted_connectivity)
 
 
 @pytest.mark.parametrize("ngates", [None, 5, 13])
 @pytest.mark.parametrize("names", [["A", "B", "C", "D", "E"], [0, 1, 2, 3, 4]])
-def test_reverse_traversal(ngates, names, star_connectivity):
+def test_reverse_traversal(backend, names, ngates, star_connectivity):
     circuit = star_circuit(names=names)
     connectivity = star_connectivity(names=names)
     routing = ShortestPaths(connectivity=connectivity)
     placer = ReverseTraversal(routing, connectivity, depth=ngates)
-    placer(circuit)
+    placer(circuit, backend=backend)
     assert_placement(circuit, connectivity)
 
 
-def test_reverse_traversal_no_gates(star_connectivity):
+def test_reverse_traversal_no_gates(backend, star_connectivity):
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
     placer = ReverseTraversal(routing, connectivity, depth=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
-        placer(circuit)
+        placer(circuit, backend=backend)
 
 
-def test_reverse_traversal_restricted(star_connectivity):
+def test_reverse_traversal_restricted(backend, star_connectivity):
     circuit = Circuit(4)
     circuit.add(gates.CNOT(1, 3))
     circuit.add(gates.CNOT(2, 1))
@@ -165,7 +165,7 @@ def test_reverse_traversal_restricted(star_connectivity):
     placer = ReverseTraversal(
         connectivity=restricted_connectivity, routing_algorithm=routing, depth=5
     )
-    placer(circuit)
+    placer(circuit, backend=backend)
     assert_placement(circuit, restricted_connectivity)
 
 

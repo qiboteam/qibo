@@ -37,13 +37,16 @@ class StateEvolution:
         .. testcode::
 
             import numpy as np
-            from qibo import models, hamiltonians
+
+            from qibo.hamiltonians import TFIM
+            from qibo.models import StateEvolution
+
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
-            hamiltonian = hamiltonians.TFIM(3, h=1.0)
+            hamiltonian = TFIM(3, h=1.0)
             # initialize evolution model with step dt=1e-2
-            evolve = models.StateEvolution(hamiltonian, dt=1e-2)
+            evolve = StateEvolution(hamiltonian, dt=1e-2)
             # initialize state to |+++>
-            initial_state = np.ones(8) / np.sqrt(8)
+            initial_state = np.ones(8, dtype=complex) / np.sqrt(8)
             # execute evolution for total time T=2
             final_state2 = evolve(final_time=2, initial_state=initial_state)
     """
@@ -81,7 +84,7 @@ class StateEvolution:
     def _create_normalize_state(self, solver):
         if "rk" in solver:
             log.info("Normalizing state during RK solution.")
-            return lambda s: s / self.backend.calculate_vector_norm(s)
+            return lambda s: s / self.backend.vector_norm(s)
         else:
             return lambda s: s
 
@@ -244,7 +247,9 @@ class AdiabaticEvolution(StateEvolution):
         return super().execute(final_time, start_time, initial_state)
 
     @staticmethod
-    def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):
+    def _loss(
+        params, adiabatic_evolution, h1, opt_messages, opt_history
+    ):  # pragma: no cover
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``tf.Tensor``.
@@ -255,14 +260,16 @@ class AdiabaticEvolution(StateEvolution):
         final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(
             params[-1], initial_state=initial_state
         )
-        loss = h1.expectation(final_state, normalize=True)
+        loss = h1.expectation_from_state(final_state, normalize=True)
         if opt_messages:
             opt_history["params"].append(params)
             opt_history["loss"].append(loss)
             log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
-    def minimize(self, initial_parameters, method="BFGS", options=None, messages=False):
+    def minimize(
+        self, initial_parameters, method="BFGS", options=None, messages=False
+    ):  # pragma: no cover
         """Optimize the free parameters of the scheduling function.
 
         Args:

@@ -856,7 +856,7 @@ class GPI(ParametrizedGate):
 
     @property
     def qasm_label(self):
-        return "gpi"
+        return "gpi", "gate gpi(phi) q {u3(pi, phi - pi/2, pi/2 - phi) q;}"
 
 
 class GPI2(ParametrizedGate):
@@ -894,7 +894,7 @@ class GPI2(ParametrizedGate):
 
     @property
     def qasm_label(self):
-        return "gpi2"
+        return "gpi2", "gate gpi2(phi) q {u3(pi/2, phi - pi/2, pi/2 - phi) q;}"
 
     @property
     def clifford(self):
@@ -2345,7 +2345,7 @@ class GIVENS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\exp(i \\, \\frac{\\theta}{2} \\, (X \\otimes Y - Y \\otimes X)) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
             0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
@@ -2399,7 +2399,7 @@ class RBS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\exp(-i \\, \\frac{\\theta}{2} \\, (X \\otimes Y - Y \\otimes X)) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
             0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
@@ -2798,6 +2798,15 @@ class GeneralizedRBS(ParametrizedGate):
     def hamming_weight(self):
         return len(self.init_args[0]) == len(self.init_args[1])
 
+    def on_qubits(self, qubit_map: dict):
+        qubits_in = tuple(qubit_map.get(q) for q in self.init_args[0])
+        qubits_out = tuple(qubit_map.get(q) for q in self.init_args[1])
+        gate = self.__class__(qubits_in, qubits_out, **self.init_kwargs)
+        if self.is_controlled_by:
+            controls = (qubit_map.get(q) for q in self.control_qubits)
+            gate = gate.controlled_by(*controls)
+        return gate
+
     def _base_decompose(self, *free, use_toffolis=True, **kwargs) -> List[Gate]:
         """Decomposition of :math:`\\text{gRBS}` gate.
 
@@ -2857,7 +2866,7 @@ class Unitary(ParametrizedGate):
 
         if check_unitary:
             engine = _check_engine(unitary)
-            product = engine.transpose(engine.conj(unitary), (1, 0)) @ unitary
+            product = engine.conj(unitary).T @ unitary
             diagonals = all(engine.abs(1 - engine.diag(product)) < PRECISION_TOL)
             off_diagonals = bool(
                 engine.all(
@@ -2898,10 +2907,10 @@ class Unitary(ParametrizedGate):
 
     def on_qubits(self, qubit_map: dict):
         args = [self.init_args[0]]
-        args.extend(qubit_map.get(i) for i in self.target_qubits)
+        args.extend(qubit_map.get(qubit) for qubit in self.target_qubits)
         gate = self.__class__(*args, **self.init_kwargs)
         if self.is_controlled_by:
-            controls = (qubit_map.get(i) for i in self.control_qubits)
+            controls = (qubit_map.get(qubit) for qubit in self.control_qubits)
             gate = gate.controlled_by(*controls)
         gate.parameters = self.parameters
         return gate

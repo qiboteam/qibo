@@ -37,7 +37,7 @@ def parameter_shift(
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             if you want to execute on hardware, a symbolic hamiltonian must be
             provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+            ``SymbolicHamiltonian(np.prod([ Z(qubit) for qubit in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
         initial_state (ndarray, optional): initial state on which the circuit
@@ -56,39 +56,40 @@ def parameter_shift(
 
         .. testcode::
 
-            import qibo
             import numpy as np
-            from qibo import Circuit, gates, hamiltonians
+
+            from qibo import Circuit, gates
+            from qibo.hamiltonians import Hamiltonian, Z
             from qibo.derivative import parameter_shift
 
             # defining an observable
             def hamiltonian(nqubits = 1):
-                m0 = (1/nqubits)*hamiltonians.Z(nqubits).matrix
-                ham = hamiltonians.Hamiltonian(nqubits, m0)
+                m0 = (1/nqubits)*Z(nqubits).matrix
+                ham = Hamiltonian(nqubits, m0)
 
                 return ham
 
             # defining a dummy circuit
             def circuit(nqubits = 1):
-                c = Circuit(nqubits = 1)
-                c.add(gates.RY(q = 0, theta = 0))
-                c.add(gates.RX(q = 0, theta = 0))
-                c.add(gates.M(0))
+                circ = Circuit(nqubits = 1)
+                circ.add(gates.RY(q = 0, theta = 0))
+                circ.add(gates.RX(q = 0, theta = 0))
+                circ.add(gates.M(0))
 
-                return c
+                return circ
 
             # initializing the circuit
-            c = circuit(nqubits = 1)
+            circ = circuit(nqubits = 1)
 
             # some parameters
             test_params = np.random.randn(2)
-            c.set_parameters(test_params)
+            circ.set_parameters(test_params)
 
             test_hamiltonian = hamiltonian()
 
             # running the psr with respect to the two parameters
-            grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
-            grad_1 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=1)
+            grad_0 = parameter_shift(circuit=circ, hamiltonian=test_hamiltonian, parameter_index=0)
+            grad_1 = parameter_shift(circuit=circ, hamiltonian=test_hamiltonian, parameter_index=1)
 
     """
 
@@ -123,22 +124,15 @@ def parameter_shift(
     circuit.set_parameters(shifted)
 
     if nshots is None:
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
         # forward evaluation
-        forward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
+        forward = hamiltonian.expectation(circuit)
 
         # backward shift and evaluation
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
+        backward = hamiltonian.expectation(circuit)
 
     # same but using expectation from samples
     else:
@@ -179,7 +173,7 @@ def finite_differences(
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
             To execute on hardware, a symbolic hamiltonian must be
             provided as follows (example with Pauli-:math:`Z` and :math:`n = 1`):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+            ``SymbolicHamiltonian(np.prod([ Z(qubit) for qubit in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the :meth:`qibo.models.Circuit.get_parameters` list.
         initial_state (ndarray, optional): initial state on which the circuit
@@ -213,17 +207,14 @@ def finite_differences(
     circuit.set_parameters(shifted)
 
     # forward evaluation
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    forward = hamiltonian.expectation(circuit)
 
     # backward shift and evaluation
     shifted[parameter_index] -= 2 * step_size
     circuit.set_parameters(shifted)
 
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    backward = hamiltonian.expectation(circuit)
 
     circuit.set_parameters(parameters)
 

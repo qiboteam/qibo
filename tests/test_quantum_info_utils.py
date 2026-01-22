@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, matrices
+from qibo.backends import NumpyBackend
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.random_ensembles import random_clifford
@@ -165,8 +166,7 @@ def test_hellinger(backend, validate, kind):
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
     target = float(
-        backend.calculate_vector_norm(backend.np.sqrt(prob_p) - backend.np.sqrt(prob_q))
-        / np.sqrt(2)
+        backend.vector_norm(backend.sqrt(prob_p) - backend.sqrt(prob_q)) / np.sqrt(2)
     )
 
     prob_p = (
@@ -188,10 +188,14 @@ def test_hellinger(backend, validate, kind):
 def test_hellinger_shot_error(backend, validate, kind):
     nqubits, nshots = 5, 1000
 
-    circuit = random_clifford(nqubits, seed=1, backend=backend)
-    circuit.add(gates.M(qubit) for qubit in range(nqubits))
+    if backend.platform in ("cupy", "cuquantum"):
+        circuit = random_clifford(nqubits, seed=1, backend=NumpyBackend())
+        circuit_2 = random_clifford(nqubits, seed=2, backend=NumpyBackend())
+    else:
+        circuit = random_clifford(nqubits, seed=1, backend=backend)
+        circuit_2 = random_clifford(nqubits, seed=2, backend=backend)
 
-    circuit_2 = random_clifford(nqubits, seed=2, backend=backend)
+    circuit.add(gates.M(qubit) for qubit in range(nqubits))
     circuit_2.add(gates.M(qubit) for qubit in range(nqubits))
 
     prob_dist_p = backend.execute_circuit(circuit, nshots=nshots).probabilities()
@@ -240,7 +244,7 @@ def test_total_variation_distance(backend, validate, kind):
     prob_p = backend.cast(prob_p, dtype=prob_p.dtype)
     prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
 
-    target = float(backend.calculate_vector_norm(prob_p - prob_q, order=1) / 2)
+    target = float(backend.vector_norm(prob_p - prob_q, order=1) / 2)
 
     prob_p = (
         kind(prob_p) if kind is not None else backend.cast(prob_p, dtype=prob_p.dtype)
@@ -272,7 +276,7 @@ def test_haar_integral_errors(backend):
 @pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e3)
+    samples = int(1e4)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
@@ -305,7 +309,7 @@ def test_pqc_integral(backend):
 def test_decompose_permutation_errors(sigma, backend):
 
     with pytest.raises(TypeError):
-        decompose_permutation(backend.np.array(sigma), m=2, backend=backend)
+        decompose_permutation(backend.cast(sigma, dtype=int), m=2, backend=backend)
     with pytest.raises(ValueError):
         decompose_permutation([0, 2, 1, 3, 10], m=2, backend=backend)
     with pytest.raises(ValueError):
