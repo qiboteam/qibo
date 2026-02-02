@@ -517,7 +517,9 @@ def von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if backend.abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
+    threshold = purity(state, backend=backend) - 1.0
+    threshold = backend.cast(threshold, dtype=backend.float64)
+    if backend.abs(threshold) < PRECISION_TOL:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=backend.float64)
 
