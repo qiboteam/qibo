@@ -195,7 +195,7 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
                 "No measurements were performed. Cannot return samples.",
             )
 
-        self._probs = self._exact_probabilities()
+        self._probs = self._exact_probabilities(self.measurement_gate.qubits)
         return super().samples(binary=binary, registers=registers)
 
     def frequencies(self, binary: bool = True, registers: bool = False):
@@ -231,6 +231,6 @@ class HammingWeightResult(QuantumState, MeasurementOutcomes):
             )
 
         if not self.has_samples():
-            self._probs = self._exact_probabilities(self._measurement_gate.qubits)
+            self._probs = self._exact_probabilities(self.measurement_gate.qubits)
 
         return super().frequencies(binary=binary, registers=registers)
