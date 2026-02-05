@@ -1013,7 +1013,7 @@ def test_rxx(backend, theta):
         assert gates.RXX(0, 1, theta).hamming_weight
     else:
         assert not gates.RXX(0, 1, theta).hamming_weight
-    
+
     circuit = Circuit(2)
     circuit.add(gates.RXX(0, 1, theta).decompose())
     unitary = circuit.unitary(backend)
