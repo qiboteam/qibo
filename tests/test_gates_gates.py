@@ -1018,7 +1018,7 @@ def test_rxx(backend, theta):
     circuit.add(gates.RXX(0, 1, theta).decompose())
     unitary = circuit.unitary(backend)
 
-    target = gates.RXX(0, 1, theta).matrix()
+    target = gates.RXX(0, 1, theta).matrix(backend)
 
     backend.assert_allclose(unitary, target)
 
