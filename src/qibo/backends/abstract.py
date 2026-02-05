@@ -1001,7 +1001,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             nqubits (int): Number of qubits :math:`n`.
             density_matrix (bool, optional): If ``True``, returns the density matrix
-                :math:`\\ketbra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
+                :math:`\\ket{0}\\!\\bra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
                 :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
 
         Returns:
