@@ -2069,6 +2069,13 @@ class _Rnn_(ParametrizedGate):
         q0, q1 = self.target_qubits
         return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class RXX(_Rnn_):
     """Parametric 2-qubit XX interaction, or rotation about XX-axis.
