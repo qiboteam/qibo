@@ -1049,6 +1049,14 @@ def test_ryy(backend, theta):
     else:
         assert not gates.RYY(0, 1, theta).hamming_weight
 
+    circuit = Circuit(2)
+    circuit.add(gates.RYY(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RYY(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_rzz(backend):
     theta = 0.1234
@@ -1063,6 +1071,14 @@ def test_rzz(backend):
     assert not gates.RZZ(0, 1, theta).clifford
     assert gates.RZZ(0, 1, theta).hamming_weight
     assert gates.RZZ(0, 1, theta).unitary
+
+    circuit = Circuit(2)
+    circuit.add(gates.RZZ(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.RZZ(0, 1, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
 
 
 @pytest.mark.parametrize("theta", [np.random.rand(), 2 * np.pi])
