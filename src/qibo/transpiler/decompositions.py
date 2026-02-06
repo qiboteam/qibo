@@ -700,6 +700,15 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.DEUTSCH,
+    lambda gate: [
+        gates.Z(2).controlled_by(0, 1),
+        gates.Y(2).controlled_by(0, 1),
+        gates.RX(2, 2 * gate.parameters[0]).controlled_by(0, 1),
+        gates.X(2).controlled_by(0, 1),
+    ],
+)
+standard_decompositions.add(
     gates.FanOut,
     lambda gate: [gates.CNOT(0, qub) for qub in range(1, len(gate.qubits))],
 )

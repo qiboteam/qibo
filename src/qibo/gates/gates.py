@@ -2250,14 +2250,6 @@ class RZX(_Rnn_):
     def hamming_weight(self):
         return _is_hamming_weight_given_angle(self.parameters[0])
 
-    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
-        """"""
-        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
-            standard_decompositions,
-        )
-
-        return standard_decompositions(self)
-
 
 class RXXYY(_Rnn_):
     """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about
@@ -2726,6 +2718,13 @@ class DEUTSCH(ParametrizedGate):
     @property
     def hamming_weight(self):
         return _is_hamming_weight_given_angle(self.parameters[0], np.pi)
+
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class FanOut(Gate):

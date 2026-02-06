@@ -1499,6 +1499,14 @@ def test_deutsch(backend, theta):
     else:
         assert not gates.DEUTSCH(0, 1, 2, theta).hamming_weight
 
+    circuit = Circuit(3)
+    circuit.add(gates.DEUTSCH(0, 1, 2, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.DEUTSCH(0, 1, 2, theta).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 @pytest.mark.parametrize("qubits", [(0, 1, 2), (1, 0, 2)])
 def test_fanout(backend, qubits):
