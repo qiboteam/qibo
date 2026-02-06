@@ -573,6 +573,23 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.SiSWAP,
+    [
+        gates.SX(0),
+        gates.SX(1),
+        gates.RZ(0, np.pi / 2),
+        gates.CNOT(0, 1),
+        gates.SX(0),
+        gates.RZ(1, -np.pi / 4),
+        gates.RZ(0, -np.pi / 4),
+        gates.SX(1),
+        gates.SX(0),
+        gates.RZ(0, np.pi / 2),
+        gates.CNOT(0, 1),
+        gates.SX(0),
+    ],
+)
+standard_decompositions.add(
     gates.RXX,
     lambda gate: [
         gates.H(0),

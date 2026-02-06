@@ -1819,6 +1819,13 @@ class SiSWAP(Gate):
     def _dagger(self) -> "Gate":
         return SiSWAPDG(*self.qubits)
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class SiSWAPDG(Gate):
     """The :math:`\\left(\\sqrt{\\text{iSWAP}}\\right)^{\\dagger}` gate.
