@@ -134,15 +134,59 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
     (where UU^* = rho = density matrix)
     """
 
-    def __init__(self, params_dict):
+    def __init__(self, target_DM, labels,
+            measurement_list, symProj_list,
+            Nr=1, convergence_check_period = 1,
+            num_iterations=150, seed = 0,
+            relative_error_tolerance=0.001):
         #
         # 	read in params_dict
         #
 
-        BasicParameterInfo.__init__(self, params_dict)
+        # BasicParameterInfo.__init__(self, params_dict)
 
-        symProj_list = params_dict.get("symProj_list")
+        #
+        # basic system information
+        #
+        n = len(labels[0])
+        d = 2**n
+
+        self.n = n  # number of qubits
+        self.num_elements = d
+
+        self.Nr = Nr  # the rank of the target_density_matrix
+
+        self.target_DM = target_DM  #  target state -->  density matrix
+
+        self.num_labels = len(labels)
+        self.measurement_list = measurement_list
+
         Pauli_Op.__init__(self, symProj_list)
+
+        #
+        # 	numerical book keeping
+        #
+
+        self.num_iterations           = num_iterations
+
+        self.convergence_check_period = (
+            convergence_check_period  # how often to check convergence
+        )
+        self.relative_error_tolerance = relative_error_tolerance    # user-decided relative error
+
+        self.seed = seed
+
+
+        self.Err_relative_st = []
+
+        self.Target_Err_Xk = []  #   Frobenius norm difference from matrix Xk
+        self.Err_relative_Xk = []
+
+        self.iteration = 0
+        self.converged = False
+        self.convergence_iteration = 0
+
+
 
     def initialize_RndSt(self):
         """
@@ -497,8 +541,9 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         Utilized in "step" function below.
         """
         if (
-            self.process_idx == 0
-            and self.iteration % self.convergence_check_period == 0
+            # self.process_idx == 0
+            # and 
+            self.iteration % self.convergence_check_period == 0
         ):
             # compute relative error
 
