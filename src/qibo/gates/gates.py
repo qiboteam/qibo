@@ -1732,6 +1732,13 @@ class SWAP(Gate):
     def qasm_label(self):
         return "swap"
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class iSWAP(Gate):
     """The iSWAP gate.
