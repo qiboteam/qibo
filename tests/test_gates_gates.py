@@ -836,6 +836,14 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).hamming_weight
     assert gates.iSWAP(0, 1).unitary
 
+    circuit = Circuit(2)
+    circuit.add(gates.iSWAP(0, 1))
+    unitary = circuit.unitary(backend)
+
+    target = gates.iSWAP(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)

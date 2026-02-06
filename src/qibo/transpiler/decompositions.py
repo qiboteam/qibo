@@ -562,6 +562,17 @@ standard_decompositions.add(
     gates.SWAP, [gates.CNOT(0, 1), gates.CNOT(1, 0), gates.CNOT(0, 1)]
 )
 standard_decompositions.add(
+    gates.iSWAP,
+    [
+        gates.S(0),
+        gates.S(1),
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.CNOT(1, 0),
+        gates.H(1),
+    ],
+)
+standard_decompositions.add(
     gates.RXX,
     lambda gate: [
         gates.H(0),
