@@ -567,16 +567,6 @@ class Align(ParametrizedGate):
         self.nparams = 1
 
 
-def _is_clifford_given_angle(angle):
-    """Helper function to update Clifford boolean condition according to the given angle ``angle``."""
-    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
-
-
-def _is_hamming_weight_given_angle(angle, target=2 * np.pi):
-    """Helper function to update Hamming weight boolean condition according to the given angles ``angle`` and ``target``."""
-    return isinstance(angle, (float, int)) and (angle % target).is_integer()
-
-
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
@@ -2938,3 +2928,15 @@ def _check_engine(array):
         return torch
 
     return np
+
+
+def _is_clifford_given_angle(angle):
+    """Helper function to update Clifford boolean condition according to
+    the given angle ``angle``."""
+    return isinstance(angle, (float, int)) and (angle % (np.pi / 2)).is_integer()
+
+
+def _is_hamming_weight_given_angle(angle, target=2 * np.pi):
+    """Helper function to update Hamming weight boolean condition according to
+    the given angles ``angle`` and ``target``."""
+    return isinstance(angle, (float, int)) and (angle % target).is_integer()
