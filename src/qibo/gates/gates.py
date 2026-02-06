@@ -1396,6 +1396,15 @@ class _CRn_(ParametrizedGate):
         theta = -self.parameters[0]
         return self.__class__(q0, q1, theta)  # pylint: disable=E1130
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        """Decompositions might have a global phase difference with respect to
+        the original gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class CRX(_CRn_):
     """Controlled rotation around the X-axis for the Bloch sphere.

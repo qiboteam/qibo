@@ -753,7 +753,7 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         decomposition = gate.decompose()
 
     assert gate.unitary
@@ -798,7 +798,7 @@ def test_cun(backend, name, params):
 
     backend.assert_allclose(final_state, target_state, atol=1e-6)
 
-    if name == "CRY":
+    if name in ("CRX", "CRY", "CRZ"):
         matrix = Circuit(2)
         matrix.add(decomposition)
         matrix = matrix.unitary(backend=backend)
