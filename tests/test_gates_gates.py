@@ -1055,7 +1055,8 @@ def test_ryy(backend, theta):
 
     target = gates.RYY(0, 1, theta).matrix(backend)
 
-    backend.assert_allclose(unitary, target)
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_rzz(backend):
@@ -1717,6 +1718,15 @@ def test_controlled_u1(backend):
     backend.assert_allclose(final_state, target_state, atol=1e-6)
     gate = gates.U1(0, theta).controlled_by(1)
     assert gate.__class__.__name__ == "CU1"
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU1(0, 1, theta).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU1(0, 1, theta).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary / unitary[0, 0], target)
 
 
 def test_controlled_u2(backend):
