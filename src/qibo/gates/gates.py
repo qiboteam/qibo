@@ -1536,6 +1536,15 @@ class _CUn_(ParametrizedGate):
         self.unitary = True
         self.init_kwargs = {"trainable": trainable}
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        """Decompositions might have a global phase difference with respect to
+        the original gate."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class CU1(_CUn_):
     """Controlled first general unitary gate.
@@ -2060,6 +2069,8 @@ class _Rnn_(ParametrizedGate):
         return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
 
     def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        """Decompositions might have a global phase difference with respect to
+        the original gate."""
         from qibo.transpiler.decompositions import (  # pylint: disable=C0415
             standard_decompositions,
         )

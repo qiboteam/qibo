@@ -1743,6 +1743,15 @@ def test_controlled_u2(backend):
     gate = gates.CU2(0, 1, phi, lam)
     assert gate.parameters == (phi, lam)
 
+    circuit = Circuit(2)
+    circuit.add(gates.CU2(0, 1, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU2(0, 1, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target, atol=1e-10)
+
 
 def test_controlled_u3(backend):
     theta, phi, lam = 0.1, 0.1234, 0.4321
@@ -1758,6 +1767,15 @@ def test_controlled_u3(backend):
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameters == (theta, phi, lam)
+
+    circuit = Circuit(2)
+    circuit.add(gates.CU3(0, 1, theta, phi, lam).decompose())
+    unitary = circuit.unitary(backend)
+
+    target = gates.CU3(0, 1, theta, phi, lam).matrix(backend)
+
+    # global phase difference
+    backend.assert_allclose(unitary, target)
 
 
 @pytest.mark.parametrize("applyx", [False, True])

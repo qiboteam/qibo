@@ -524,6 +524,41 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.CU1,
+    lambda gate: [
+        gates.RZ(0, gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.RZ(1, -gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.RZ(1, gate.parameters[0] / 2.0),
+    ],
+)
+standard_decompositions.add(
+    gates.CU2,
+    lambda gate: [
+        gates.RZ(1, (gate.parameters[1] - gate.parameters[0]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(1, -np.pi / 4, 0, -(gate.parameters[1] + gate.parameters[0]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(1, np.pi / 4, gate.parameters[0], 0),
+    ],
+)
+standard_decompositions.add(
+    gates.CU3,
+    lambda gate: [
+        gates.RZ(1, (gate.parameters[2] - gate.parameters[1]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(
+            1,
+            -gate.parameters[0] / 2.0,
+            0,
+            -(gate.parameters[2] + gate.parameters[1]) / 2.0,
+        ),
+        gates.CNOT(0, 1),
+        gates.U3(1, gate.parameters[0] / 2.0, gate.parameters[1], 0),
+    ],
+)
+standard_decompositions.add(
     gates.RXX,
     lambda gate: [
         gates.H(0),
