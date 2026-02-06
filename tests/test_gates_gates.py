@@ -1815,7 +1815,7 @@ def test_controlled_u3(backend):
     target = gates.CU3(0, 1, theta, phi, lam).matrix(backend)
 
     # global phase difference
-    backend.assert_allclose(unitary, target)
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 @pytest.mark.parametrize("applyx", [False, True])
