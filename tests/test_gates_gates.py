@@ -817,7 +817,7 @@ def test_swap(backend):
     assert gates.SWAP(0, 1).unitary
 
     circuit = Circuit(2)
-    circuit.add(gates.SWAP(0, 1))
+    circuit.add(gates.SWAP(0, 1).decompose())
     unitary = circuit.unitary(backend)
 
     target = gates.SWAP(0, 1).matrix(backend)
@@ -837,7 +837,7 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).unitary
 
     circuit = Circuit(2)
-    circuit.add(gates.iSWAP(0, 1))
+    circuit.add(gates.iSWAP(0, 1).decompose())
     unitary = circuit.unitary(backend)
 
     target = gates.iSWAP(0, 1).matrix(backend)
@@ -857,20 +857,20 @@ def test_siswap(backend):
     assert gates.SiSWAP(0, 1).unitary
 
     circuit = Circuit(2)
-    circuit.add(gates.SiSWAP(0, 1))
+    circuit.add(gates.SiSWAP(0, 1).decompose())
     unitary = circuit.unitary(backend)
 
     target = gates.SiSWAP(0, 1).matrix(backend)
 
-    backend.assert_allclose(unitary, target)
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
     circuit = Circuit(2)
-    circuit.add(gates.SiSWAPDG(0, 1))
+    circuit.add(gates.SiSWAPDG(0, 1).decompose())
     unitary = circuit.unitary(backend)
 
     target = gates.SiSWAPDG(0, 1).matrix(backend)
 
-    backend.assert_allclose(unitary, target)
+    backend.assert_allclose(unitary, target, atol=1e-10)
 
 
 def test_fswap(backend):
