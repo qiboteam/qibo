@@ -134,11 +134,18 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
     (where UU^* = rho = density matrix)
     """
 
-    def __init__(self, target_DM, labels,
-            measurement_list, symProj_list,
-            Nr=1, convergence_check_period = 1,
-            num_iterations=150, seed = 0,
-            relative_error_tolerance=0.001):
+    def __init__(
+        self,
+        target_DM,
+        labels,
+        measurement_list,
+        symProj_list,
+        Nr=1,
+        convergence_check_period=1,
+        num_iterations=150,
+        seed=0,
+        relative_error_tolerance=0.001,
+    ):
         #
         # 	read in params_dict
         #
@@ -167,15 +174,16 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         # 	numerical book keeping
         #
 
-        self.num_iterations           = num_iterations
+        self.num_iterations = num_iterations
 
         self.convergence_check_period = (
             convergence_check_period  # how often to check convergence
         )
-        self.relative_error_tolerance = relative_error_tolerance    # user-decided relative error
+        self.relative_error_tolerance = (
+            relative_error_tolerance  # user-decided relative error
+        )
 
         self.seed = seed
-
 
         self.Err_relative_st = []
 
@@ -185,8 +193,6 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         self.iteration = 0
         self.converged = False
         self.convergence_iteration = 0
-
-
 
     def initialize_RndSt(self):
         """
@@ -542,8 +548,9 @@ class BasicWorkerRGD(BasicParameterInfo, Pauli_Op):
         """
         if (
             # self.process_idx == 0
-            # and 
-            self.iteration % self.convergence_check_period == 0
+            # and
+            self.iteration % self.convergence_check_period
+            == 0
         ):
             # compute relative error
 
