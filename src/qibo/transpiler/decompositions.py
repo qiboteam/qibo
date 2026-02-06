@@ -590,6 +590,9 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
+    gates.SiSWAPDG, [gate.dagger() for gate in gates.SiSWAP(0, 1).decompose()[::-1]]
+)
+standard_decompositions.add(
     gates.RXX,
     lambda gate: [
         gates.H(0),

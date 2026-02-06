@@ -1860,6 +1860,13 @@ class SiSWAPDG(Gate):
     def _dagger(self) -> "Gate":
         return SiSWAP(*self.qubits)
 
+    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
+
 
 class FSWAP(Gate):
     """The fermionic swap gate.

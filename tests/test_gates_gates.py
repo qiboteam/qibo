@@ -864,6 +864,14 @@ def test_siswap(backend):
 
     backend.assert_allclose(unitary, target)
 
+    circuit = Circuit(2)
+    circuit.add(gates.SiSWAPDG(0, 1))
+    unitary = circuit.unitary(backend)
+
+    target = gates.SiSWAPDG(0, 1).matrix(backend)
+
+    backend.assert_allclose(unitary, target)
+
 
 def test_fswap(backend):
     nqubits = 2
