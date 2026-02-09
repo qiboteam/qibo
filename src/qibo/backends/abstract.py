@@ -419,8 +419,18 @@ class Backend:  # pylint: disable=R0904
 
         return self.engine.linalg.norm(state, order, **kwargs)
 
+    def max(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+        return self.engine.max(array, **kwargs)
+
     def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
         return self.engine.mean(array, **kwargs)
+
+    def min(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+        return self.engine.min(array, **kwargs)
 
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
@@ -634,6 +644,11 @@ class Backend:  # pylint: disable=R0904
         self, array: ArrayLike, **kwargs
     ) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
         return self.engine.unique(array, **kwargs)
+
+    def var(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, ArrayLike]:  # pragma: no cover
+        return self.engine.var(array, **kwargs)
 
     def vector_norm(
         self,
