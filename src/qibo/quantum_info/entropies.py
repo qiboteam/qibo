@@ -55,7 +55,6 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
         )
 
     total_sum = backend.sum(prob_dist)
-
     if backend.abs(total_sum - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
@@ -118,8 +117,8 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
             ValueError,
             "All elements of the probability array must be between 0. and 1..",
         )
-    total_sum_p = backend.sum(prob_dist_p)
 
+    total_sum_p = backend.sum(prob_dist_p)
     total_sum_q = backend.sum(prob_dist_q)
 
     if backend.abs(total_sum_p - 1.0) > PRECISION_TOL:
@@ -517,7 +516,9 @@ def von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if backend.abs(purity(state, backend=backend) - 1.0) < PRECISION_TOL:
+    threshold = purity(state, backend=backend) - 1.0
+    threshold = backend.cast(threshold, dtype=backend.float64)
+    if backend.abs(threshold) < PRECISION_TOL:
         if return_spectrum:
             return 0.0, backend.cast([0.0], dtype=backend.float64)
 
@@ -594,9 +595,15 @@ def relative_von_neumann_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
+    threshold_state = backend.cast(
+        purity(state, backend=backend) - 1.0, dtype=backend.float64
+    )
+    threshold_target = backend.cast(
+        purity(target, backend=backend) - 1.0, dtype=backend.float64
+    )
     if (
-        backend.abs(purity(state, backend=backend) - 1.0) <= PRECISION_TOL
-        and backend.abs(purity(target, backend=backend) - 1.0) <= PRECISION_TOL
+        backend.abs(threshold_state) <= PRECISION_TOL
+        and backend.abs(threshold_target) <= PRECISION_TOL
     ):
         return 0.0
 
