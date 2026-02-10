@@ -280,6 +280,9 @@ class Backend:  # pylint: disable=R0904
     def conj(self, array: ArrayLike) -> ArrayLike:
         return self.engine.conj(array)
 
+    def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        raise_error(NotImplementedError)
+
     def copy(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.copy(array, **kwargs)
 
