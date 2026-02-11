@@ -503,12 +503,16 @@ def _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend):
         ind_j, ind_k = int(ind_j), int(ind_k)
         x_j = term(ind_j)
         x_k = term(ind_k)
-        hamiltonian += float(adjacency_matrix[ind_j, ind_k]) * (x_j + x_k - 2 * x_j * x_k)
+        hamiltonian += float(adjacency_matrix[ind_j, ind_k]) * (
+            x_j + x_k - 2 * x_j * x_k
+        )
 
     if penalty_coeff != 0.0:
         penalty = 0
         for elem, weight in enumerate(node_weights):
-            penalty += float(weight) * (term(elem) - symbols.I(elem, backend=backend) / 2)
+            penalty += float(weight) * (
+                term(elem) - symbols.I(elem, backend=backend) / 2
+            )
 
         hamiltonian += penalty_coeff * (penalty**2)
 
