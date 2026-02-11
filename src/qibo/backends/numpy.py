@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 from scipy.sparse import eye as eye_sparse
 from scipy.sparse import issparse
 from scipy.sparse.linalg import eigsh
@@ -72,6 +72,9 @@ class NumpyBackend(Backend):
 
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
         return block_diag(*arrays)
+
+    def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
+        return coo_matrix(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return csr_matrix(array, **kwargs)
