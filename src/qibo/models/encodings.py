@@ -173,7 +173,7 @@ def sparse_encoder(
 
     References:
         1. L. Li, and J. Luo,
-        *Nearly Optimal Circuit Size for Sparse Quantum State Preparation*
+        *Nearly optimal circuit size for sparse quantum state preparation*
         `arXiv:2406.16142 (2024) <https://doi.org/10.48550/arXiv.2406.16142>`_.
 
         2. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,

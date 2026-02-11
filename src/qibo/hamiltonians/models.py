@@ -406,6 +406,160 @@ def XXZ(nqubits, delta=0.5, dense: bool = True, backend=None):
     return Heisenberg(nqubits, [-1, -1, -delta], 0, dense=dense, backend=backend)
 
 
+def GPP(
+    adjacency_matrix,
+    penalty_coeff: Union[float, int] = 0.0,
+    node_weights=None,
+    dense: bool = True,
+    backend=None,
+):
+    """The Graph Partitioning Problem (GPP) as a quadratic function.
+
+    For a (possibly weighted) graph :math:`G = (V, E)` defined by its set :math:`V` of vertices
+    and set :math:`E` of edges, the GPP is the task of dividing a graph's vertices into :math:`m`
+    subsets of approximately equal size, such that :math:`\\bigcup_{k=1}^{m} \\, V_{k} = V`,
+    while minimizing the number of edges that connect vertices in different subsets.
+
+    The formulation of the GPP as a quadratic unconstrained binary optimization (QUBO) reduces to
+    minimizing the following objective function :math:`C(x)`:
+
+    .. math::
+        C(x) = \\sum_{(j,k) \\in E} \\, A_{jk} \\, (x_{j} + x_{k} - 2 \\, x_{j} \\, x_{k})
+        \\, + \\lambda \\, P(x),
+
+    where :math:`x_{j} \\in \\{0, \\, 1\\}` is a binary variable,
+
+    .. math::
+        P(x) = \\left(\\sum_{k} \\, v_{k} \\, x_{k} - \\sum_{k} \\, \\frac{v_{k}}{2}\\right)^{2}
+
+    is a term designed to penalize deviations in the total node weight on each partition,
+    and :math:`\\lambda > 0` is a hyperparameter.
+
+    Args:
+        adjacency_matrix (ndarray): Square symmetric matrix with weigths :math:`A_{jk}`
+            representing the edges of the graph. For an unweighted graph,
+            :math:`\\A_{jk} = 1, \\,\\, \\forall \\, j,k`.
+        dense (bool, optional): If ``True``, creates the Hamiltonian as a
+            :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
+            a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+            Defaults to ``True``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.hamiltonians.Hamiltonian` or :class:`qibo.hamiltonians.SymbolicHamiltonian`:
+        GPP Hamiltonian :math:`H_{C}`.
+
+
+    References:
+        1. W. Aboumrad, D. Zhu, C. Girotto, F.-H. Rouet, J. Jojo, R. Lucas, J. Pathak,
+        A. Kaushik, and M. Roetteler, *Accelerating large-scale linear algebra using
+        variational quantum imaginary time evolution*, `arXiv:2503.13128 (2025)
+        <https://doi.org/10.48550/arXiv.2406.16142>`_.
+
+    """
+    if len(adjacency_matrix) != len(adjacency_matrix[0]):
+        raise_error(
+            ValueError,
+            "``adjacency_matrix`` must be a square matrix, "
+            + f"but it has shape ({len(adjacency_matrix)}, {len(adjacency_matrix[0])}).",
+        )
+
+    if node_weights is not None and len(node_weights) != len(adjacency_matrix):
+        raise_error(
+            ValueError,
+            "``node_weights`` and ``adjacency_matrix`` must have the same dimensions.",
+        )
+
+    backend = _check_backend(backend)
+
+    if isinstance(adjacency_matrix, list):
+        adjacency_matrix = backend.cast(
+            adjacency_matrix, dtype=type(adjacency_matrix[0][0])
+        )
+
+    if node_weights is not None and isinstance(node_weights, list):
+        node_weights = backend.cast(node_weights, dtype=type(node_weights[0]))
+
+    if penalty_coeff != 0.0 and node_weights is None:
+        node_weights = backend.ones(len(adjacency_matrix), dtype=backend.int8)
+
+    if not dense:
+        return _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend)
+
+    return _gpp_dense(adjacency_matrix, penalty_coeff, node_weights, backend)
+
+
+def _gpp_symbolic(adjacency_matrix, penalty_coeff, node_weights, backend):
+    def term(index: int):
+        return (
+            symbols.I(index, backend=backend) - symbols.Z(index, backend=backend)
+        ) / 2
+
+    hamiltonian = 0
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
+    for ind_j, ind_k in zip(columns, rows):
+        ind_j, ind_k = int(ind_j), int(ind_k)
+        x_j = term(ind_j)
+        x_k = term(ind_k)
+        hamiltonian += float(adjacency_matrix[ind_j, ind_k]) * (
+            x_j + x_k - 2 * x_j * x_k
+        )
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += float(weight) * (
+                term(elem) - symbols.I(elem, backend=backend) / 2
+            )
+
+        hamiltonian += penalty_coeff * (penalty**2)
+
+    return SymbolicHamiltonian(hamiltonian, backend=backend)
+
+
+def _gpp_dense(
+    adjacency_matrix,
+    penalty_coeff,
+    node_weights,
+    backend,
+):
+    def term(nqubits, ind_1, ind_2=None):
+        diag = [id_diag] * nqubits
+        diag[ind_1] = term_diag
+        if ind_2 is not None:
+            diag[ind_2] = term_diag
+        diag = _multikron(diag, backend)
+
+        return diag
+
+    nqubits = len(adjacency_matrix)
+
+    id_diag = backend.cast([1, 1])
+    term_diag = backend.cast([0, 1])
+
+    hamiltonian = 0
+    rows, columns = backend.nonzero(backend.tril(adjacency_matrix, -1))
+    for ind_j, ind_k in zip(columns, rows):
+        ind_j, ind_k = int(ind_j), int(ind_k)
+
+        diag = term(nqubits, ind_j)
+        diag += term(nqubits, ind_k)
+        diag -= 2 * term(nqubits, ind_j, ind_k)
+
+        hamiltonian += diag
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem, weight in enumerate(node_weights):
+            penalty += weight * (term(nqubits, elem) - 1 / 2)
+
+        hamiltonian += penalty_coeff * (penalty**2)
+
+    return Hamiltonian(nqubits, backend.diag(hamiltonian), backend=backend)
+
+
 def _multikron(matrix_list, backend):
     """Calculates Kronecker product of a list of matrices.
 
