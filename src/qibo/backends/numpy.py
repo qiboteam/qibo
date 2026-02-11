@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.linalg import block_diag, expm, fractional_matrix_power, logm
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse import eye as eye_sparse
 from scipy.sparse import issparse
 from scipy.sparse.linalg import eigsh
