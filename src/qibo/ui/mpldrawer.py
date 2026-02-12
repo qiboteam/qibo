@@ -60,7 +60,6 @@ PLOT_PARAMS = {
 }
 
 
-
 def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
     """Main matplotlib plot function for Qibo circuit
 
