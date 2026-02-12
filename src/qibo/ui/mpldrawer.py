@@ -60,6 +60,128 @@ PLOT_PARAMS = {
 }
 
 
+
+def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
+    """Main matplotlib plot function for Qibo circuit
+
+    Args:
+        circuit (qibo.models.circuit.Circuit): A Qibo circuit to plot.
+        scale (float): Scaling factor for matplotlib output drawing.
+        cluster_gates (boolean): Group (or not) circuit gates on drawing.
+        style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
+        (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
+
+    Returns:
+        matplotlib.axes.Axes: Axes object that encapsulates all the elements of an individual plot in a figure.
+
+        matplotlib.figure.Figure: A matplotlib figure object.
+
+    Example:
+
+        .. testcode::
+
+            import matplotlib.pyplot as plt
+            import qibo
+            from qibo import gates, models
+            from qibo.models import QFT
+
+            # new plot function based on matplotlib
+            from qibo.ui import plot_circuit
+
+            %matplotlib inline
+
+            # create a 5-qubits QFT circuit
+            circuit = QFT(5)
+            circuit.add(gates.M(qubit) for qubit in range(2))
+
+            # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
+            plot_circuit(circuit);
+
+            # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
+            # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
+            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style="garnacha");
+
+            # plot the Qibo circuit with a custom style
+            custom_style = {
+                "facecolor" : "#6497bf",
+                "edgecolor" : "#01016f",
+                "linecolor" : "#01016f",
+                "textcolor" : "#01016f",
+                "fillcolor" : "#ffb9b9",
+                "gatecolor" : "#d8031c",
+                "controlcolor" : "#360000"
+            }
+
+            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
+    """
+
+    params = PLOT_PARAMS.copy()
+    params.update(_plot_params(style))
+
+    inits = list(range(circuit.nqubits))
+
+    labels = []
+    for i in range(circuit.nqubits):
+        labels.append("q_" + str(i))
+
+    hash_unitary_gates = []
+    all_gates = []
+    for gate in circuit.queue:
+
+        _build_unitary_gates_register(gate, hash_unitary_gates)
+
+        if isinstance(gate, gates.FusedGate):
+            min_q, max_q = _get_min_max_qbits(gate)
+
+            fgates = None
+
+            if cluster_gates and circuit.nqubits > 1:
+                fgates = _make_cluster_gates(
+                    _process_gates(gate.gates, circuit.nqubits)
+                )
+            else:
+                fgates = _process_gates(gate.gates, circuit.nqubits)
+
+            l_gates = len(gate.gates)
+            equal_qbits = False
+            if min_q != max_q:
+                l_gates = len(fgates)
+            else:
+                max_q += 1
+                equal_qbits = True
+
+            all_gates.append(FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits))
+            all_gates += gate.gates
+            all_gates.append(FusedEndGateBarrier(min_q, max_q))
+        else:
+            all_gates.append(gate)
+
+    gates_plot = _process_gates(all_gates, circuit.nqubits)
+
+    if hash_unitary_gates:
+        params["hash_unitary_gates"] = hash_unitary_gates
+
+    hash_global_unitary_gates = {}
+    _build_hash_init_unitary_gates_register(circuit.queue, hash_global_unitary_gates)
+
+    if hash_global_unitary_gates:
+        params["hash_global_unitary_gates"] = hash_global_unitary_gates
+
+    params["wire_names"] = (
+        circuit.init_kwargs["wire_names"]
+        if circuit.init_kwargs["wire_names"] is not None
+        else []
+    )
+
+    if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
+        gates_cluster = _make_cluster_gates(gates_plot)
+        ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
+        return ax, ax.figure
+
+    ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
+    return ax, ax.figure
+
+
 def _plot_quantum_schedule(
     schedule, inits, plot_params, labels=[], plot_labels=True, fold=20, **kwargs
 ):
@@ -970,127 +1092,6 @@ def _plot_params(style: Union[dict, str, None]) -> dict:
         )
 
     return style
-
-
-def plot_circuit(circuit, scale=0.6, cluster_gates=True, style=None):
-    """Main matplotlib plot function for Qibo circuit
-
-    Args:
-        circuit (qibo.models.circuit.Circuit): A Qibo circuit to plot.
-        scale (float): Scaling factor for matplotlib output drawing.
-        cluster_gates (boolean): Group (or not) circuit gates on drawing.
-        style (Union[dict, str, None]): Style applied to the circuit, it can a built-in sytle or custom
-        (built-in styles: garnacha, fardelejo, quantumspain, color-blind, cachirulo or custom dictionary).
-
-    Returns:
-        matplotlib.axes.Axes: Axes object that encapsulates all the elements of an individual plot in a figure.
-
-        matplotlib.figure.Figure: A matplotlib figure object.
-
-    Example:
-
-        .. testcode::
-
-            import matplotlib.pyplot as plt
-            import qibo
-            from qibo import gates, models
-            from qibo.models import QFT
-
-            # new plot function based on matplotlib
-            from qibo.ui import plot_circuit
-
-            %matplotlib inline
-
-            # create a 5-qubits QFT circuit
-            circuit = QFT(5)
-            circuit.add(gates.M(qubit) for qubit in range(2))
-
-            # print circuit with default options (default black & white style, scale factor of 0.6 and clustered gates)
-            plot_circuit(circuit);
-
-            # print the circuit with built-int style "garnacha", clustering gates and a custom scale factor
-            # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind", "cachirulo" or custom dictionary
-            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style="garnacha");
-
-            # plot the Qibo circuit with a custom style
-            custom_style = {
-                "facecolor" : "#6497bf",
-                "edgecolor" : "#01016f",
-                "linecolor" : "#01016f",
-                "textcolor" : "#01016f",
-                "fillcolor" : "#ffb9b9",
-                "gatecolor" : "#d8031c",
-                "controlcolor" : "#360000"
-            }
-
-            plot_circuit(circuit, scale = 0.8, cluster_gates = True, style=custom_style);
-    """
-
-    params = PLOT_PARAMS.copy()
-    params.update(_plot_params(style))
-
-    inits = list(range(circuit.nqubits))
-
-    labels = []
-    for i in range(circuit.nqubits):
-        labels.append("q_" + str(i))
-
-    hash_unitary_gates = []
-    all_gates = []
-    for gate in circuit.queue:
-
-        _build_unitary_gates_register(gate, hash_unitary_gates)
-
-        if isinstance(gate, gates.FusedGate):
-            min_q, max_q = _get_min_max_qbits(gate)
-
-            fgates = None
-
-            if cluster_gates and circuit.nqubits > 1:
-                fgates = _make_cluster_gates(
-                    _process_gates(gate.gates, circuit.nqubits)
-                )
-            else:
-                fgates = _process_gates(gate.gates, circuit.nqubits)
-
-            l_gates = len(gate.gates)
-            equal_qbits = False
-            if min_q != max_q:
-                l_gates = len(fgates)
-            else:
-                max_q += 1
-                equal_qbits = True
-
-            all_gates.append(FusedStartGateBarrier(min_q, max_q, l_gates, equal_qbits))
-            all_gates += gate.gates
-            all_gates.append(FusedEndGateBarrier(min_q, max_q))
-        else:
-            all_gates.append(gate)
-
-    gates_plot = _process_gates(all_gates, circuit.nqubits)
-
-    if hash_unitary_gates:
-        params["hash_unitary_gates"] = hash_unitary_gates
-
-    hash_global_unitary_gates = {}
-    _build_hash_init_unitary_gates_register(circuit.queue, hash_global_unitary_gates)
-
-    if hash_global_unitary_gates:
-        params["hash_global_unitary_gates"] = hash_global_unitary_gates
-
-    params["wire_names"] = (
-        circuit.init_kwargs["wire_names"]
-        if circuit.init_kwargs["wire_names"] is not None
-        else []
-    )
-
-    if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
-        gates_cluster = _make_cluster_gates(gates_plot)
-        ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, scale=scale)
-        return ax, ax.figure
-
-    ax = _plot_quantum_circuit(gates_plot, inits, params, labels, scale=scale)
-    return ax, ax.figure
 
 
 def _measured_wires_with_folds(
