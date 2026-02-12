@@ -73,7 +73,7 @@ class NumpyBackend(Backend):
     def block_diag(self, *arrays: ArrayLike) -> ArrayLike:
         return block_diag(*arrays)
 
-    def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
+    def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
         return coo_matrix(array, **kwargs)
 
     def csr_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:
