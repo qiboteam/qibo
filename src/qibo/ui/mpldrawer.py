@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Union
 
 import matplotlib
+import matplotlib.lines
+import matplotlib.patches
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.transforms import Bbox
-import matplotlib.patches
-import matplotlib.lines
 
 from qibo import gates
 
@@ -55,7 +55,7 @@ PLOT_PARAMS = {
     "gate_box_w": 0.80,  # gate box width
     "gate_box_h": 0.70,  # gate box height
     "gate_pad": 0.10,  # padding inside box
-    "margin_left_cols": 1.10,   # space for |q⟩ labels
+    "margin_left_cols": 1.10,  # space for |q⟩ labels
     "margin_right_cols": 0.15,  # trim the extra space on the right
 }
 
@@ -483,13 +483,12 @@ def _swapx(ax, x, y, plot_params):
 
 def _swapx_with_folds(ax, x, y, p):
     # match the CNOT symbol footprint
-    R  = p["not_radius_with_folds"]        # ⊕'s horizontal diameter = R
-    sx = R * 0.5                # half-width of the box (so total width = R)
-    sy = 0.85 * R * 0.5         # half-height (so total height = 0.85*R)
+    R = p["not_radius_with_folds"]  # ⊕'s horizontal diameter = R
+    sx = R * 0.5  # half-width of the box (so total width = R)
+    sy = 0.85 * R * 0.5  # half-height (so total height = 0.85*R)
 
     _line(ax, x - sx, x + sx, y - sy, y + sy, p)
     _line(ax, x - sx, x + sx, y + sy, y - sy, p)
-
 
 
 def _setup_figure_with_folds(nq, ng, gate_grid, wire_grid, plot_params, cols, rows):
@@ -499,7 +498,7 @@ def _setup_figure_with_folds(nq, ng, gate_grid, wire_grid, plot_params, cols, ro
     plot_params.setdefault("margin_cols", 0.75)  # left/right margins in columns
     plot_params.setdefault("margin_rows", 0.75)  # top/bottom margins in rows
 
-    left_cols  = plot_params.get("margin_left_cols",  plot_params["margin_cols"])
+    left_cols = plot_params.get("margin_left_cols", plot_params["margin_cols"])
     right_cols = plot_params.get("margin_right_cols", plot_params["margin_cols"])
     rows_margin = plot_params["margin_rows"]
 
@@ -518,7 +517,7 @@ def _setup_figure_with_folds(nq, ng, gate_grid, wire_grid, plot_params, cols, ro
     ax.set_xlim(-left_cols, cols + right_cols)
     ax.set_ylim(-rows_margin, rows + rows_margin)
     ax.set_aspect("auto")
-    
+
     return ax, fig
 
 
@@ -544,7 +543,7 @@ def _draw_wires_with_folds(ax, nq, gate_grid, wire_grid, plot_params, measured={
     yscale = plot_params["yscale"]
     linewidth = plot_params["linewidth"]
     xmin, xmax = ax.get_xlim()
-    
+
     for i in range(nq):
         _line(
             ax,
@@ -1548,7 +1547,7 @@ def _draw_fold_boundaries(ax, gate_grid, wire_grid, nq, num_folds, plot_params):
 def _cdot_with_folds(ax, x, y, p):
     r = p["control_radius_with_folds"]
     e = matplotlib.patches.Ellipse(
-        (x, y), r, 0.85*r, ec=p["edgecolor"], fc=p["controlcolor"], lw=p["linewidth"]
+        (x, y), r, 0.85 * r, ec=p["edgecolor"], fc=p["controlcolor"], lw=p["linewidth"]
     )
     ax.add_patch(e)
 
@@ -1566,7 +1565,7 @@ def _oplus_with_folds(ax, x, y, p, _num_folds_unused=None):
         fill=True,
     )
     ax.add_patch(c)
-    _line(ax, x, x, y, y-(0.85 * R)/2, p)
+    _line(ax, x, x, y, y - (0.85 * R) / 2, p)
 
 
 # Gate box + text
@@ -1583,14 +1582,28 @@ def _text_with_folds(ax, x, y, label, p, box=False):
             fc=p["facecolor"],
             lw=p["linewidth"],
             fill=True,
-            zorder=20
+            zorder=20,
         )
         ax.add_patch(rect)
         pad = p["gate_pad"]
         return ax.text(
-            x, y, label, ha="center", va="center", color=p["textcolor"], size=fs, zorder=30,
+            x,
+            y,
+            label,
+            ha="center",
+            va="center",
+            color=p["textcolor"],
+            size=fs,
+            zorder=30,
         )
     else:
         return ax.text(
-            x, y, label, ha="center", va="center", color=p["textcolor"], size=fs, zorder=30
+            x,
+            y,
+            label,
+            ha="center",
+            va="center",
+            color=p["textcolor"],
+            size=fs,
+            zorder=30,
         )
