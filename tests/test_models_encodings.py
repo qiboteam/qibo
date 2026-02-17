@@ -23,12 +23,12 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
-    up_to_k_hamming_weight_encoder,
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
+    up_to_k_hamming_weight_encoder,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -307,6 +307,7 @@ def test_hamming_weight_encoder(
 
 from qibo.models.encodings import _ehrlich_codewords_up_to_k
 
+
 @pytest.mark.parametrize("nqubits", [4, 5, 6])
 @pytest.mark.parametrize("up_to_k", [1, 2, 3])
 @pytest.mark.parametrize("custom_codewords", [False, True])
@@ -321,7 +322,7 @@ def test_up_to_k_hamming_weight_encoder(
     keep_antictrls,
 ):
     seed = 10
-    dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k+1))
+    dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
     dims = 2**nqubits
     dtype = complex if complex_data else float
 

@@ -843,7 +843,7 @@ def up_to_k_hamming_weight_encoder(
     """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`
     subspace of ``nqubits``.
 
-    Let :math:`\mathbf{x}` be a :math:`1`-dimensional array of size
+    Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size
 
     .. math::
         d = \\sum_{l=0}^{k} \\binom{n}{l},
@@ -851,8 +851,8 @@ def up_to_k_hamming_weight_encoder(
     and define the union-Hamming-weight-subspace
 
     .. math::
-        B_{\\le k} \\equiv \\left\{ \\ket{b_j} :
-        b_j \\in \{0,1\}^{\\otimes n}, \; |b_j| \\le k \\right\},
+        B_{\\le k} \\equiv \\left\\{ \\ket{b_j} :
+        b_j \\in \\{0,1\\}^{\\otimes n}, \\; |b_j| \\le k \\right\\},
 
     i.e., the set of all computational basis states of :math:`n` qubits whose
     bitstrings have Hamming weight less than or equal to :math:`k`.
@@ -869,12 +869,12 @@ def up_to_k_hamming_weight_encoder(
     :math:`\\operatorname{Load}_{B_{\\le k}}` such that
 
     .. math::
-        \\operatorname{Load}_{B_{\\le k}}(\\mathbf{x}) \, \\ket{0}^{\\otimes n}
+        \\operatorname{Load}_{B_{\\le k}}(\\mathbf{x}) \\, \\ket{0}^{\\otimes n}
         =
-        \\frac{1}{\|\\mathbf{x}\|}
+        \\frac{1}{\\|\\mathbf{x}\\|}
         \\sum_{j=1}^{d} x_j \\ket{b_j},
 
-    where :math:`\{ \\ket{b_j} \}_{j=1}^d` is an enumeration of the elements
+    where :math:`\\{ \\ket{b_j} \\}_{j=1}^d` is an enumeration of the elements
     of :math:`B_{\\le k}`.
 
     Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``hopf`` coordinates
