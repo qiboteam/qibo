@@ -955,10 +955,6 @@ def _up_to_k_encoder_hyperspherical(
             codewords, copy=True, dtype=_get_int_type(dims, backend=backend)
         )
 
-    print()
-    print(data)
-    print(codewords)
-    print()
 
     circuit = Circuit(nqubits, **kwargs)
     if complex_data:
