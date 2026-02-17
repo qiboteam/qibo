@@ -23,6 +23,7 @@ from qibo.models.encodings import (
     ghz_state,
     graph_state,
     hamming_weight_encoder,
+    up_to_k_hamming_weight_encoder,
     permutation_synthesis,
     phase_encoder,
     sparse_encoder,
@@ -299,6 +300,60 @@ def test_hamming_weight_encoder(
         circuit.queue = [
             gates.X(nqubits - 1 - qubit) for qubit in range(weight)
         ] + circuit.queue
+    state = backend.execute_circuit(circuit).state()
+
+    backend.assert_allclose(state, target, atol=1e-7)
+
+
+from qibo.models.encodings import _ehrlich_codewords_up_to_k
+
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
+@pytest.mark.parametrize("up_to_k", [1, 2, 3])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
+def test_up_to_k_hamming_weight_encoder(
+    backend,
+    nqubits,
+    up_to_k,
+    custom_codewords,
+    complex_data,
+    keep_antictrls,
+):
+    seed = 10
+    dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k+1))
+    dims = 2**nqubits
+    dtype = complex if complex_data else float
+
+    indices = _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend)
+    indices = [int(string, 2) for string in indices]
+    indices_lex = np.sort(np.copy(indices))
+
+    rng = np.random.default_rng(seed)
+    data = rng.random(dim)
+    if complex_data:
+        data = data.astype(complex) + 1j * rng.random(dim)
+    data /= np.linalg.norm(data)
+
+    data = backend.cast(data, dtype=data.dtype)
+
+    codewords = backend.arange(dim) if custom_codewords else None
+
+    target = np.zeros(dims, dtype=dtype)
+    if codewords is None:
+        target[indices_lex] = data
+    else:
+        target[codewords] = data
+    target = backend.cast(target, dtype=target.dtype)
+
+    circuit = up_to_k_hamming_weight_encoder(
+        data,
+        nqubits=nqubits,
+        up_to_k=up_to_k,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+        backend=backend,
+    )
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-7)
