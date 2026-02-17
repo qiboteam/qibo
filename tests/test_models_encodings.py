@@ -29,6 +29,7 @@ from qibo.models.encodings import (
     unary_encoder,
     unary_encoder_random_gaussian,
     up_to_k_hamming_weight_encoder,
+    _ehrlich_codewords_up_to_k,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -304,12 +305,8 @@ def test_hamming_weight_encoder(
 
     backend.assert_allclose(state, target, atol=1e-7)
 
-
-from qibo.models.encodings import _ehrlich_codewords_up_to_k
-
-
 @pytest.mark.parametrize("nqubits", [4, 5, 6])
-@pytest.mark.parametrize("up_to_k", [1, 2, 3])
+@pytest.mark.parametrize("up_to_k", [1, 2, 7])
 @pytest.mark.parametrize("custom_codewords", [False, True])
 @pytest.mark.parametrize("complex_data", [False, True])
 @pytest.mark.parametrize("keep_antictrls", [False, True])
@@ -321,43 +318,47 @@ def test_up_to_k_hamming_weight_encoder(
     complex_data,
     keep_antictrls,
 ):
+   
     seed = 10
     dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
     dims = 2**nqubits
     dtype = complex if complex_data else float
-
-    indices = _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend)
-    indices = [int(string, 2) for string in indices]
-    indices_lex = np.sort(np.copy(indices))
 
     rng = np.random.default_rng(seed)
     data = rng.random(dim)
     if complex_data:
         data = data.astype(complex) + 1j * rng.random(dim)
     data /= np.linalg.norm(data)
-
     data = backend.cast(data, dtype=data.dtype)
 
     codewords = backend.arange(dim) if custom_codewords else None
 
-    target = np.zeros(dims, dtype=dtype)
-    if codewords is None:
-        target[indices_lex] = data
+    if up_to_k > nqubits:
+        with pytest.raises(ValueError):
+            _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
     else:
-        target[codewords] = data
-    target = backend.cast(target, dtype=target.dtype)
+        indices = _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend)
+        indices = [int(string, 2) for string in indices]
+        indices_lex = np.sort(np.copy(indices))
 
-    circuit = up_to_k_hamming_weight_encoder(
-        data,
-        nqubits=nqubits,
-        up_to_k=up_to_k,
-        codewords=codewords,
-        keep_antictrls=keep_antictrls,
-        backend=backend,
-    )
-    state = backend.execute_circuit(circuit).state()
+        target = np.zeros(dims, dtype=dtype)
+        if codewords is None:
+            target[indices_lex] = data
+        else:
+            target[codewords] = data
+        target = backend.cast(target, dtype=target.dtype)
 
-    backend.assert_allclose(state, target, atol=1e-7)
+        circuit = up_to_k_hamming_weight_encoder(
+            data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+        state = backend.execute_circuit(circuit).state()
+
+        backend.assert_allclose(state, target, atol=1e-7)
 
 
 @pytest.mark.parametrize("seed", [10])
