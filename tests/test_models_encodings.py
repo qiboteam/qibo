@@ -14,6 +14,7 @@ from qibo import Circuit, gates
 from qibo.models.encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
+    _ehrlich_codewords_up_to_k,
     _get_int_type,
     _get_next_bistring,
     binary_encoder,
@@ -29,7 +30,6 @@ from qibo.models.encodings import (
     unary_encoder,
     unary_encoder_random_gaussian,
     up_to_k_hamming_weight_encoder,
-    _ehrlich_codewords_up_to_k,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -305,6 +305,7 @@ def test_hamming_weight_encoder(
 
     backend.assert_allclose(state, target, atol=1e-7)
 
+
 @pytest.mark.parametrize("nqubits", [4, 5, 6])
 @pytest.mark.parametrize("up_to_k", [1, 2, 7])
 @pytest.mark.parametrize("custom_codewords", [False, True])
@@ -318,7 +319,7 @@ def test_up_to_k_hamming_weight_encoder(
     complex_data,
     keep_antictrls,
 ):
-   
+
     seed = 10
     dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
     dims = 2**nqubits
