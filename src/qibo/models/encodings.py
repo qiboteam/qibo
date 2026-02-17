@@ -8,7 +8,7 @@ import numpy as np
 from scipy.special import binom
 
 from qibo import gates
-from qibo.backends import _check_backend
+from qibo.backends import _check_backend, Backend
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
@@ -2227,7 +2227,7 @@ def _ehrlich_codewords_up_to_k(
     for k in weights:
         # skip boundary already yielded
         if (not reversed_list and k == 0) or (reversed_list and k == up2k):
-            continue
+            continue # pragma:no cover
 
         left = ones_left(k)
         right = ones_right(k)
