@@ -80,7 +80,7 @@ def plot_circuit(
             Built-in options are: ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
             Custom style needs to be a dictionary.
     Returns:
-        (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`): 
+        (:class:`matplotlib.axes.Axes`, :class:`matplotlib.figure.Figure`):
             Respectively, axes object that encapsulates all the elements of an individual plot,
             and a ``matplotlib`` figure object.
 
@@ -105,7 +105,7 @@ def plot_circuit(
             plot_circuit(circuit)
 
             # print the circuit with built-in style "garnacha", clustering gates
-            # and a custom scale factor 
+            # and a custom scale factor
             # built-in styles: "garnacha", "fardelejo", "quantumspain", "color-blind",
             # "cachirulo" or custom dictionary
             plot_circuit(circuit, scale = 0.8, cluster_gates = True, style="garnacha");
@@ -185,10 +185,14 @@ def plot_circuit(
 
     if cluster_gates and len(gates_plot) > 0 and circuit.nqubits > 1:
         gates_cluster = _make_cluster_gates(gates_plot)
-        ax = _plot_quantum_schedule(gates_cluster, inits, params, labels, fold=fold, scale=scale)
+        ax = _plot_quantum_schedule(
+            gates_cluster, inits, params, labels, fold=fold, scale=scale
+        )
         return ax, ax.figure
 
-    ax = _plot_quantum_circuit(gates_plot, inits, params, labels, fold=fold, scale=scale)
+    ax = _plot_quantum_circuit(
+        gates_plot, inits, params, labels, fold=fold, scale=scale
+    )
     return ax, ax.figure
 
 
@@ -205,7 +209,7 @@ def _plot_quantum_schedule(
 
     Args:
         schedule (list):  List of time steps, each containing a sequence of gates during that step.
-        Each gate is a tuple containing (name,target,control1,control2...). 
+        Each gate is a tuple containing (name,target,control1,control2...).
         Targets and controls initially defined in terms of labels.
 
         inits (list): Initialization list of gates (list(range(circuit.nqubits)).
@@ -319,9 +323,7 @@ def _plot_quantum_circuit(
     return ax
 
 
-def _enumerate_gates(
-    gates_plot: list, schedule: bool = False
-) -> Iterator[tuple]:
+def _enumerate_gates(gates_plot: list, schedule: bool = False) -> Iterator[tuple]:
     """Enumerate the gates in a way that can take l as either a list of gates or a schedule
 
     Args:
@@ -343,7 +345,8 @@ def _enumerate_gates(
         for i, gate in enumerate(gates_plot):
             yield i, gate
 
-# TODO: This function is unused, hence commented out. Is it ok to remove? 
+
+# TODO: This function is unused, hence commented out. Is it ok to remove?
 # def _measured_wires(gates_plot: list, labels: list, schedule: bool = False):
 #     measured = {}
 #     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
@@ -380,9 +383,7 @@ def _draw_gates(
     for i, gate in _enumerate_gates(gates_plot, schedule=schedule):
         _draw_target(ax, i, gate, labels, gate_grid, wire_grid, plot_params)
         if len(gate) > 2:  # Controlled
-            _draw_controls(
-                ax, i, gate, labels, gate_grid, wire_grid, plot_params
-            )
+            _draw_controls(ax, i, gate, labels, gate_grid, wire_grid, plot_params)
 
 
 def _draw_controls(
@@ -939,7 +940,9 @@ def _draw_labels(
             ax,
             xdata[0] - label_buffer,
             wire_grid[j],
-            _render_label(labels[i], inits), # TODO: inits is unused in _render_label. Consider removing it.
+            _render_label(
+                labels[i], inits
+            ),  # TODO: inits is unused in _render_label. Consider removing it.
             plot_params,
         )
 
@@ -953,6 +956,7 @@ def _get_min_max_qbits(gates: gates.FusedGate) -> tuple[int, int]:
     Returns:
         tuple: Minimum and maximum qubit indices used by the fused gate.
     """
+
     def _get_all_tuple_items(iterable):
         t = []
         for each in iterable:
@@ -1095,11 +1099,11 @@ def _auto_fit_fontsize(
 
     # get text bounding box in figure coordinates
     # TODO: check if this is fine.
-    # fig.canvas.get_renderer is outdated. 
-    
-    fig.draw_without_rendering() # newly added
+    # fig.canvas.get_renderer is outdated.
+
+    fig.draw_without_rendering()  # newly added
     # renderer = fig.canvas.get_renderer()
-    bbox_text = text.get_window_extent() # removed renderer parameter
+    bbox_text = text.get_window_extent()  # removed renderer parameter
 
     # transform bounding box to data coordinates
     bbox_text = Bbox(ax.transData.inverted().transform(bbox_text))
@@ -1108,7 +1112,7 @@ def _auto_fit_fontsize(
     fits_width = bbox_text.width < width if width else True
     fits_height = bbox_text.height < height if height else True
     if not all((fits_width, fits_height)):
-        text.set_fontsize(text.get_fontsize() - 1) # type: ignore 
+        text.set_fontsize(text.get_fontsize() - 1)  # type: ignore
         text.set_fontweight("bold")
         return _auto_fit_fontsize(text, width, height, fig, ax)
 
@@ -1139,13 +1143,13 @@ def _render_label(label: str, inits: Optional[dict] = None) -> str:
         str: Rendered label string.
     """
     # TODO: Check whether inits parameter is actually needed.
-    # inits is defined as list(range(circuit.nqubits)), 
+    # inits is defined as list(range(circuit.nqubits)),
     # and label is qubit labels (q_0, q_1 etc.)
     # As such, the statement "if label in inits" is always False.
     # I have kept the if statements commented, they can be removed later
     # The inits parameter can also be removed, as it was defined as dictionary
     # but a list of int is being passed
-    
+
     # if label in inits:
     #     s = inits[label]
     #     if s is None:
@@ -1170,7 +1174,7 @@ def _check_list_str(substrings: list, string: str) -> bool:
 
 def _make_cluster_gates(gates_items: list) -> list:
     """
-    Given a list of gates from a Qibo circuit, 
+    Given a list of gates from a Qibo circuit,
     this function gathers all gates to reduce the depth of the circuit,
     making the circuit more user-friendly to avoid very large circuits printed on screen.
 
@@ -1230,11 +1234,9 @@ def _build_hash_init_unitary_gates_register(
     return dict_init_param
 
 
-def _build_unitary_gates_register(
-    gate: Any, array_register: list
-) -> None:
+def _build_unitary_gates_register(gate: Any, array_register: list) -> None:
     """
-    Given a gate, this function builds a dictionary to register the unitary gates 
+    Given a gate, this function builds a dictionary to register the unitary gates
     and their parameters to identify them uniquely. Only for Unitary gates.
 
     Args:
@@ -1298,7 +1300,7 @@ def _u_hash(gate: gates.Unitary, param_index: int) -> str:
 
 def _process_gates(array_gates: list, nqubits: int) -> list:
     """
-    Transforms the list of gates given by the Qibo circuit 
+    Transforms the list of gates given by the Qibo circuit
     into a list of gates with a suitable structre to print on screen with matplotlib.
 
     Args:
@@ -1416,7 +1418,7 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
 def _plot_params(style: Union[dict, str]) -> dict:
     """
     Given a style name, the function gets the style configuration.
-    If the style is not available, it return the default style. 
+    If the style is not available, it return the default style.
     It is allowed to give a custom dictionary to give the circuit a style.
 
     Args:
@@ -1432,7 +1434,8 @@ def _plot_params(style: Union[dict, str]) -> dict:
             else STYLE["default"]
         )
 
-    return style # type: ignore
+    return style  # type: ignore
+
 
 # TODO: If _measured_wires function is removed, this should also be removed.
 # Unused hence commenting out.
@@ -1495,7 +1498,7 @@ def _plot_quantum_circuit_with_folds(
 
         schedule (bool, optional): Check whether process single gate or array of gates at a time. Defaults to ``False``.
 
-        fold (int, optional): Number of gates in a row. 
+        fold (int, optional): Number of gates in a row.
             Defaults to :math:`-1`, which implies no folding (all gates in a single row).
 
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
@@ -1526,11 +1529,7 @@ def _plot_quantum_circuit_with_folds(
     gate_grid = np.arange(0.0, cols, 1.0, dtype=float)  # 1 unit per column
     wire_grid = np.arange(0.0, rows, 1.0, dtype=float)  # 1 unit per wire
 
-    ax, _ = _setup_figure_with_folds(
-        rows,
-        cols,
-        plot_params
-    )
+    ax, _ = _setup_figure_with_folds(rows, cols, plot_params)
 
     # TODO: unused variable. Is it ok to remove?
     # measured = (
@@ -1546,9 +1545,7 @@ def _plot_quantum_circuit_with_folds(
     #     )
     # )
 
-    _draw_wires_with_folds(
-        ax, nq * num_folds, wire_grid, plot_params
-    )
+    _draw_wires_with_folds(ax, nq * num_folds, wire_grid, plot_params)
 
     if plot_labels:
         _draw_labels_with_folds(
@@ -1721,7 +1718,11 @@ def _draw_controls_with_folds(
             ax,
             float(gate_grid[col + 1] - dx_left),  # use folded column
             float(gate_grid[min(col + nfused, len(gate_grid) - 1)] + dx_right),
-            float(wire_grid[min_wire + yoff] - dy - (0 if not equal_qbits else -0.9 * scale)),
+            float(
+                wire_grid[min_wire + yoff]
+                - dy
+                - (0 if not equal_qbits else -0.9 * scale)
+            ),
             float(wire_grid[max_wire + yoff] + dy),
             plot_params,
         )
@@ -1923,7 +1924,7 @@ def _draw_labels_with_folds(
     nq = len(labels)
 
     if "wire_names" in plot_params and len(plot_params["wire_names"]) > 0:
-        labels = (plot_params["wire_names"])
+        labels = plot_params["wire_names"]
 
     direction = plot_params.get("fold_direction", "down")
 
@@ -1935,7 +1936,7 @@ def _draw_labels_with_folds(
                 ax,
                 left,
                 wire_grid[j + fold_idx * nq],
-                _render_label(labels[i], inits), # TODO: Is inits needed here?
+                _render_label(labels[i], inits),  # TODO: Is inits needed here?
                 plot_params,
             )
 
@@ -1972,11 +1973,15 @@ def _draw_fold_boundaries(
         y_bot = wire_grid[(f + 1) * nq - 1]
 
         # LEFT bracket (start of fold), skip for first fold
-        if (f != num_folds - 1):  # checking for {num_folds - 1} because folds are actually indexed bottom to top, so first fold is at f = num_folds-1
+        if (
+            f != num_folds - 1
+        ):  # checking for {num_folds - 1} because folds are actually indexed bottom to top, so first fold is at f = num_folds-1
             _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
 
         # RIGHT bracket (end of fold), skip for last fold
-        if (f != 0):  # checking for 0 because folds are actually indexed bottom to top, so last fold is at f = 0
+        if (
+            f != 0
+        ):  # checking for 0 because folds are actually indexed bottom to top, so last fold is at f = 0
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
 
 
@@ -2045,7 +2050,7 @@ def _text_with_folds(
         :class:`matplotlib.text.Text`: Matplotlib text artist.
     """
     fs = p["fontsize"] * p.get("gate_font_scale", 1.0)
-    
+
     if box:
         w = p["gate_box_w"]
         h = p["gate_box_h"]
@@ -2060,7 +2065,7 @@ def _text_with_folds(
             zorder=20,
         )
         ax.add_patch(rect)
-        
+
     return ax.text(
         x,
         y,
