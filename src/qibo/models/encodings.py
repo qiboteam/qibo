@@ -835,9 +835,9 @@ def up_to_k_hamming_weight_encoder(
     data,
     nqubits: int,
     up_to_k: int,
-    codewords=None,
+    codewords: List[int] =None,
     keep_antictrls: bool = False,
-    backend=None,
+    backend: Optional[Backend] = None,
     **kwargs,
 ):
     """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`
@@ -887,7 +887,7 @@ def up_to_k_hamming_weight_encoder(
         nqubits (int): total number of qubits in the system.
         up_to_k (int): upper limit for the Hamming weight of the union-Hamming-weight-subspace
             in which the data to be loaded will be supported.
-        codewords (int, optional): list of codewords used to encode the data in the given order.
+        codewords (list, optional): List of codewords used to encode the data in the given order.
             If ``None``, the codewords are set by the erhlich algorithm.
         keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
             don't simplify the anti-controls when placing the RBS gates. For details, see [1].
@@ -2194,7 +2194,7 @@ def _ehrlich_codewords_up_to_k(
 
     n = up2k if nqubits is None else nqubits
     if up2k > n:
-        raise ValueError("up2k must be <= nqubits.")
+        raise_error(ValueError, "up2k must be <= nqubits.")
 
     if n == 0:
         yield ""
