@@ -835,7 +835,7 @@ def up_to_k_hamming_weight_encoder(
     data,
     nqubits: int,
     up_to_k: int,
-    codewords: List[int] =None,
+    codewords: List[int] = None,
     keep_antictrls: bool = False,
     backend: Optional[Backend] = None,
     **kwargs,
