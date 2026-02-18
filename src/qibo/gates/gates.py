@@ -292,7 +292,7 @@ class SX(Gate):
     def qasm_label(self):
         return "sx"
 
-    def _base_decompose(self, *free, use_toffolis=True, **kwargs):
+    def decompose(self, *free, use_toffolis=True):
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
         A global phase difference exists between the definitions of
@@ -300,11 +300,7 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
-            standard_decompositions,
-        )
-
-        return standard_decompositions(self)
+        return super().decompose(*free, use_toffolis=use_toffolis)
 
     def _dagger(self):
         """"""
@@ -1043,6 +1039,22 @@ class U3(_Un_):
         theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
+    def decompose(self, *free, use_toffolis=True):
+        """Decomposition of :math:`U_{3}` up to global phase.
+
+        A global phase difference exists between the definitions of
+        :math:`U3` and this decomposition. More precisely,
+
+        .. math::
+            U_{3}(\\theta, \\phi, \\lambda) = e^{i \\, \\frac{3 \\pi}{2}}
+                \\, \\text{RZ}(\\phi + \\pi) \\, \\sqrt{X} \\, \\text{RZ}(\\theta + \\pi)
+                \\, \\sqrt{X} \\, \\text{RZ}(\\lambda) \\, ,
+
+        where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
+        :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
+        """
+        return super().decompose(*free, use_toffolis=use_toffolis)
+
 
 class U1q(_Un_):
     """Native single-qubit gate in the Quantinuum platform.
@@ -1124,10 +1136,6 @@ class CNOT(Gate):
     @property
     def qasm_label(self):
         return "cx"
-
-    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
-        q0, q1 = self.control_qubits[0], self.target_qubits[0]
-        return [self.__class__(q0, q1)]
 
 
 class CY(Gate):
@@ -1777,17 +1785,6 @@ class FSWAP(Gate):
     def qasm_label(self):
         return "fswap"
 
-    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
-        """"""
-        q0, q1 = self.target_qubits
-        return (
-            [X(q1)]
-            + GIVENS(q0, q1, np.pi / 2)._base_decompose(
-                *free, use_toffolis=use_toffolis, **kwargs
-            )
-            + [X(q0)]
-        )
-
 
 class fSim(ParametrizedGate):
     """The fSim gate defined in `arXiv:2001.08343
@@ -2146,6 +2143,15 @@ class RXXYY(_Rnn_):
     def hamming_weight(self):
         return True
 
+    def decompose(self, *free, use_toffolis=True):
+        """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
+
+        This decomposition has a global phase difference with respect to
+        the original gate due to a phase difference in
+        :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
+        """
+        return super().decompose(*free, use_toffolis=use_toffolis)
+
 
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped
@@ -2260,6 +2266,18 @@ class GIVENS(ParametrizedGate):
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
+    def decompose(self, *free, use_toffolis=True):
+        """Decomposition of GIVENS gate according to the decomposition of the
+        RBS gate in Ref. [1].
+
+        References:
+            1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+            *Quantum encoder for fixed-Hamming-weight subspaces*, `Phys. Rev. Applied 23, 044014
+            (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        """
+        return super().decompose(*free, use_toffolis=use_toffolis)
+
 
 class RBS(ParametrizedGate):
     """The Reconfigurable Beam Splitter gate.
@@ -2310,10 +2328,14 @@ class RBS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Gate]:
-        """Decomposition of RBS gate according to `ArXiv:2109.09685
-        <https://arxiv.org/abs/2109.09685>`_."""
-        # )
+        """Decomposition of RBS gate as in Ref. [1].
 
+        References:
+            1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+            *Quantum encoder for fixed-Hamming-weight subspaces*, `Phys. Rev. Applied 23, 044014
+            (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        """
         q0, q1 = self.target_qubits
 
         ncontrols = kwargs.get("ncontrols", 0)
@@ -2365,6 +2387,18 @@ class ECR(Gate):
     @property
     def clifford(self):
         return True
+
+    def decompose(self, *free, use_toffolis=True):
+        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+
+        A global phase difference exists between the definitions of
+        :math:`\\textup{ECR}` and this decomposition. More precisely,
+
+        .. math::
+            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
+                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0}) \\, .
+        """
+        return super().decompose(*free, use_toffolis=use_toffolis)
 
 
 class TOFFOLI(Gate):
