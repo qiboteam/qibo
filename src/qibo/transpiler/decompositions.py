@@ -514,6 +514,17 @@ standard_decompositions.add(
     gates.CSXDG, [gates.H(1), gates.CU1(0, 1, -np.pi / 2), gates.H(1)]
 )
 standard_decompositions.add(
+    gates.CRX,
+    lambda gate: [
+        gates.RX(1, gate.parameters[0] / 2.0),
+        gates.H(1),
+        gates.CNOT(0, 1),
+        gates.RZ(1, -gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.H(1),
+    ],
+)
+standard_decompositions.add(
     gates.CRY,
     lambda gate: [
         gates.RY(1, gate.parameters[0] / 4),
@@ -522,6 +533,84 @@ standard_decompositions.add(
         gates.CNOT(0, 1),
         gates.RY(1, gate.parameters[0] / 4),
     ],
+)
+standard_decompositions.add(
+    gates.CRZ,
+    lambda gate: [
+        gates.RZ(1, gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.RZ(1, -gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+    ],
+)
+standard_decompositions.add(
+    gates.CU1,
+    lambda gate: [
+        gates.RZ(0, gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.RZ(1, -gate.parameters[0] / 2.0),
+        gates.CNOT(0, 1),
+        gates.RZ(1, gate.parameters[0] / 2.0),
+    ],
+)
+standard_decompositions.add(
+    gates.CU2,
+    lambda gate: [
+        gates.RZ(1, (gate.parameters[1] - gate.parameters[0]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(1, -np.pi / 4, 0, -(gate.parameters[1] + gate.parameters[0]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(1, np.pi / 4, gate.parameters[0], 0),
+    ],
+)
+standard_decompositions.add(
+    gates.CU3,
+    lambda gate: [
+        gates.RZ(1, (gate.parameters[2] - gate.parameters[1]) / 2.0),
+        gates.CNOT(0, 1),
+        gates.U3(
+            1,
+            -gate.parameters[0] / 2.0,
+            0,
+            -(gate.parameters[2] + gate.parameters[1]) / 2.0,
+        ),
+        gates.CNOT(0, 1),
+        gates.U3(1, gate.parameters[0] / 2.0, gate.parameters[1], 0),
+    ],
+)
+standard_decompositions.add(
+    gates.SWAP, [gates.CNOT(0, 1), gates.CNOT(1, 0), gates.CNOT(0, 1)]
+)
+standard_decompositions.add(
+    gates.iSWAP,
+    [
+        gates.S(0),
+        gates.S(1),
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.CNOT(1, 0),
+        gates.H(1),
+    ],
+)
+standard_decompositions.add(
+    gates.SiSWAP,
+    [
+        gates.SX(0),
+        gates.SX(1),
+        gates.RZ(0, np.pi / 2),
+        gates.CNOT(0, 1),
+        gates.SX(0),
+        gates.RZ(1, -np.pi / 4),
+        gates.RZ(0, -np.pi / 4),
+        gates.SX(1),
+        gates.SX(0),
+        gates.RZ(0, np.pi / 2),
+        gates.CNOT(0, 1),
+        gates.SX(0),
+    ],
+)
+standard_decompositions.add(
+    gates.SiSWAPDG, [gate.dagger() for gate in gates.SiSWAP(0, 1).decompose()[::-1]]
 )
 standard_decompositions.add(
     gates.RXX,
@@ -628,6 +717,15 @@ standard_decompositions.add(
         gates.TDG(1),
         gates.H(2),
         gates.CNOT(0, 1),
+    ],
+)
+standard_decompositions.add(
+    gates.DEUTSCH,
+    lambda gate: [
+        gates.Z(2).controlled_by(0, 1),
+        gates.Y(2).controlled_by(0, 1),
+        gates.RX(2, 2 * gate.parameters[0]).controlled_by(0, 1),
+        gates.X(2).controlled_by(0, 1),
     ],
 )
 standard_decompositions.add(
