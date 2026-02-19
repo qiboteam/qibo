@@ -8,7 +8,7 @@ import numpy as np
 from scipy.special import binom
 
 from qibo import gates
-from qibo.backends import _check_backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
@@ -498,7 +498,7 @@ def binary_encoder(
     in the :math:`(2^{n} - 1)`-unit sphere.
 
     Args:
-        data (ndarray): :math:`1`-dimensional array or length :math:`d = 2^{n}`
+        data (ndarray): :math:`1`-dimensional array of length :math:`d = 2^{n}`
             to be loaded in the amplitudes of a :math:`n`-qubit quantum state.
         parametrization (str): choice of circuit parametrization. either ``hyperspherical``
             or ``hopf`` coordinates in the :math:`(2^{n} - 1)`-unit sphere.
@@ -827,6 +827,161 @@ def hamming_weight_encoder(
 
     if complex_data and phase_correction:
         circuit.add(_get_phase_gate_correction(bitstrings[-1], phis[-1]))
+
+    return circuit
+
+
+def up_to_k_hamming_weight_encoder(
+    data,
+    nqubits: int,
+    up_to_k: int,
+    codewords: List[int] = None,
+    keep_antictrls: bool = False,
+    backend: Optional[Backend] = None,
+    **kwargs,
+):
+    """Create a circuit that encodes ``data`` in the Hamming-weight-:math:`\\leq k`
+    subspace of ``nqubits``.
+
+    Let :math:`\\mathbf{x}` be a :math:`1`-dimensional array of size
+
+    .. math::
+        d = \\sum_{l=0}^{k} \\binom{n}{l},
+
+    and define the union-Hamming-weight-subspace
+
+    .. math::
+        B_{\\le k} \\equiv \\left\\{ \\ket{b_j} :
+        b_j \\in \\{0,1\\}^{\\otimes n}, \\; |b_j| \\le k \\right\\},
+
+    i.e., the set of all computational basis states of :math:`n` qubits whose
+    bitstrings have Hamming weight less than or equal to :math:`k`.
+    Equivalently,
+
+    .. math::
+        B_{\\le k} = \\bigcup_{w=0}^{k} B_w,
+
+    where :math:`B_w` denotes the set of basis states of fixed Hamming weight
+    :math:`w`.
+
+    An amplitude encoder in the basis :math:`B_{\\le k}` is an
+    :math:`n`-qubit parameterized quantum circuit
+    :math:`\\operatorname{Load}_{B_{\\le k}}` such that
+
+    .. math::
+        \\operatorname{Load}_{B_{\\le k}}(\\mathbf{x}) \\, \\ket{0}^{\\otimes n}
+        =
+        \\frac{1}{\\|\\mathbf{x}\\|}
+        \\sum_{j=1}^{d} x_j \\ket{b_j},
+
+    where :math:`\\{ \\ket{b_j} \\}_{j=1}^d` is an enumeration of the elements
+    of :math:`B_{\\le k}`.
+
+    Resulting circuit parametrizes ``data`` in either ``hyperspherical`` or ``hopf`` coordinates
+    in the :math:`(2^{n} - 1)`-unit sphere.
+
+    Args:
+        data (ndarray): :math:`1`-dimensional array of length
+            :math:`d = \\sum_{l=0}^{k} \\binom{n}{l}` to be loaded in the
+            amplitudes of a :math:`n`-qubit quantum state.
+        nqubits (int): total number of qubits in the system.
+        up_to_k (int): upper limit for the Hamming weight of the union-Hamming-weight-subspace
+            in which the data to be loaded will be supported.
+        codewords (list, optional): List of codewords used to encode the data in the given order.
+            If ``None``, the codewords are set by the erhlich algorithm.
+        keep_antictrls (bool, optional): If ``True`` and parametrization is ``hyperspherical``, we
+            don't simplify the anti-controls when placing the RBS gates. For details, see [1].
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
+        kwargs (dict, optional): Additional arguments used to initialize a Circuit object.
+            For details, see the documentation of :class:`qibo.models.circuit.Circuit`.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: Circuit that loads ``data`` in up-to-k encoding.
+
+    References:
+        1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
+        *Quantum encoder for fixed-Hamming-weight subspaces*
+        `Phys. Rev. Applied 23, 044014 (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
+
+        2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
+    """
+    backend = _check_backend(backend)
+
+    complex_data = bool("complex" in str(data.dtype))
+
+    return _up_to_k_encoder_hyperspherical(
+        data,
+        nqubits,
+        up_to_k,
+        complex_data=complex_data,
+        backend=backend,
+        codewords=codewords,
+        keep_antictrls=keep_antictrls,
+        **kwargs,
+    )
+
+
+def _up_to_k_encoder_hyperspherical(
+    data,
+    nqubits,
+    up_to_k,
+    complex_data: bool,
+    codewords=None,
+    keep_antictrls: bool = False,
+    backend=None,
+    **kwargs,
+):
+    backend = _check_backend(backend)
+
+    dims = len(data)
+    expected_dim = sum(binom(nqubits, l) for l in range(up_to_k + 1))
+    if dims != expected_dim:
+        raise_error(
+            ValueError,
+            f"Data dimension should be {expected_dim}, passed data has dims {dims}.",
+        )
+
+    if codewords is None:
+        codewords = list(
+            _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend=backend)
+        )
+        codewords_lex = sorted(codewords)
+        codewords_reorder = backend.cast(
+            [codewords_lex.index(x) for x in codewords],
+            dtype=_get_int_type(dims, backend=backend),
+        )
+        codewords = backend.cast(
+            [int(bin_cw, 2) for bin_cw in codewords],
+            dtype=_get_int_type(dims, backend=backend),
+        )
+    else:
+        codewords = backend.cast(codewords, dtype=_get_int_type(dims, backend=backend))
+        codewords_reorder = backend.cast(
+            codewords, copy=True, dtype=_get_int_type(dims, backend=backend)
+        )
+
+    circuit = Circuit(nqubits, **kwargs)
+    if complex_data:
+        circuit += _monotonic_hw_encoder_complex(
+            codewords,
+            data[codewords_reorder],
+            # data,
+            nqubits,
+            backend=backend,
+            keep_antictrls=keep_antictrls,
+            **kwargs,
+        )
+    else:
+        circuit += _monotonic_hw_encoder_real(
+            codewords,
+            data[codewords_reorder],
+            # data,
+            nqubits,
+            backend=backend,
+            keep_antictrls=keep_antictrls,
+            **kwargs,
+        )
 
     return circuit
 
@@ -1872,6 +2027,8 @@ def _monotonic_hw_encoder_complex(
                 2.0 * sign_angle * lambdal,
             ).controlled_by(*ctrls)
         )
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
     else:
         circuit.add(
             gates.GeneralizedRBS(
@@ -1879,15 +2036,26 @@ def _monotonic_hw_encoder_complex(
             ).controlled_by(*ctrls)
         )
 
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in actrls])
+
         ctrls = [i for i in range(len(bsip1)) if (bsip1[i] == 1)]
         in_bits = [i for i in range(len(bsip1)) if (bsip1[i] == 0)]
 
         circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
-        circuit.add(gates.U1(in_bits[0], -phis(data, dims - 1)).controlled_by(*ctrls))
+        if keep_antictrls:
+            circuit.add([gates.X(ac) for ac in in_bits[1:]])
+            circuit.add(
+                gates.U1(in_bits[0], -phis(data, dims - 1)).controlled_by(
+                    *ctrls + in_bits[1:]
+                )
+            )
+            circuit.add([gates.X(ac) for ac in in_bits[1:]])
+        else:
+            circuit.add(
+                gates.U1(in_bits[0], -phis(data, dims - 1)).controlled_by(*ctrls)
+            )
         circuit.add(gates.X(in_bits[0]).controlled_by(*ctrls))
-
-    if keep_antictrls:
-        circuit.add([gates.X(ac) for ac in actrls])
 
     return circuit
 
@@ -2006,7 +2174,12 @@ def _binary_codewords_ehrlich(dims: int, backend=None):
     # no final singleton: we've generated exactly d bitstrings (0..d-1)
 
 
-def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=None):
+def _ehrlich_codewords_up_to_k(
+    up2k: int,
+    reversed_list: bool = False,
+    nqubits: int | None = None,
+    backend=None,
+):
     """
     Yield all bitstrings with monotonically changing Hamming weight from 0..up2k (or the reverse),
     such that consecutive strings have Hamming distance ≤ 2. Codewords for each weight are produced
@@ -2016,38 +2189,55 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
         up2k (int): Length of the bitstrings and the maximum Hamming weight.
         reversed_list (bool, optional): If ``True``, generate from weight ``up2k`` down to :math:`0`.
             Otherwise, from :math:`0` up to ``up2k``.
-
+        nqubits (int, optional): Number of qubits to be considered. If None, assumes that the
+            number of qubits is ``up2k``, which is useful for the binary encoding case.
+            Defaults to None.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses the current backend. Defaults to ``None``.
     Yields:
         str: Bitstrings produced by concatenating sequences from Ehrlich's algorithm.
     """
 
-    if up2k == 0:
-        # Only the empty string by convention; mirror original intent by yielding once.
+    n = up2k if nqubits is None else nqubits
+    if up2k > n:
+        raise_error(ValueError, "up2k must be <= nqubits.")
+
+    if n == 0:
         yield ""
         return
 
     def ones_left(k: int):
-        # 1...1 0...0  (k ones flush-left)
-        return "1" * k + "0" * (up2k - k)
+        return "1" * k + "0" * (n - k)
 
     def ones_right(k: int):
-        # 0...0 1...1  (k ones flush-right)
-        return "0" * (up2k - k) + "1" * k
+        return "0" * (n - k) + "1" * k
 
-    from qibo.quantum_info.utils import (  # pylint: disable=import-outside-toplevel
-        hamming_distance,
+    from qibo.quantum_info.utils import (
+        hamming_distance,  # pylint: disable=import-outside-toplevel
     )
 
-    # boundary codeword
-    last_emitted = "1" * up2k if reversed_list else "0" * up2k
+    # starting boundary (weight 0 or weight up2k)
+    if reversed_list:
+        last_emitted = ones_left(up2k)
+    else:
+        last_emitted = "0" * n
+
     yield last_emitted
 
-    # Iterate weights in the chosen direction (skip endpoints handled above/below)
-    weights = range(up2k - 1, 0, -1) if reversed_list else range(1, up2k)
+    # define weight iteration (exclude starting boundary)
+    if reversed_list:
+        weights = range(up2k - 1, -1, -1)
+    else:
+        weights = range(1, up2k + 1)
 
     for k in weights:
-        # Pick initial string of weight k that is closer to the last emitted string
-        left, right = ones_left(k), ones_right(k)
+        # skip boundary already yielded
+        if (not reversed_list and k == 0) or (reversed_list and k == up2k):
+            continue  # pragma:no cover
+
+        left = ones_left(k)
+        right = ones_right(k)
+
         if hamming_distance(last_emitted, left) <= hamming_distance(
             last_emitted, right
         ):
@@ -2055,21 +2245,17 @@ def _ehrlich_codewords_up_to_k(up2k: int, reversed_list: bool = False, backend=N
         else:
             initial = right
 
-        # get Ehrlich sequence
         k_seq = _ehrlich_algorithm(
-            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int64), False
+            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int8),
+            False,
         )
 
-        # generate in the correct order
         if reversed_list:
             yield from reversed(k_seq)
-            last_emitted = k_seq[0]  # last yielded in reversed order
+            last_emitted = k_seq[0]
         else:
             yield from k_seq
-            last_emitted = k_seq[-1]  # last yielded in forward order
-
-    # generate the opposite boundary codeword
-    yield ("0" * up2k) if reversed_list else ("1" * up2k)
+            last_emitted = k_seq[-1]
 
 
 def _get_int_type(x: int, backend=None):
