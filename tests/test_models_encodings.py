@@ -327,7 +327,7 @@ def test_up_to_k_hamming_weight_encoder(
     codewords = backend.arange(dim) if custom_codewords else None
 
     with pytest.raises(ValueError):
-        data = random_statevector(dim+10, dtype=dtype, seed=seed, backend=backend)
+        data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
         _ = up_to_k_hamming_weight_encoder(
             data,
             nqubits=nqubits,
@@ -336,7 +336,7 @@ def test_up_to_k_hamming_weight_encoder(
             keep_antictrls=keep_antictrls,
             backend=backend,
         )
-        
+
     data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
     codewords = backend.arange(dim) if custom_codewords else None
     if up_to_k > nqubits:
