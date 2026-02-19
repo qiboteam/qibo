@@ -3,7 +3,8 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.models.encodings import _generate_rbs_angles, unary_encoder
+from qibo.models.encodings import unary_encoder
+from qibo.models._encodings import _generate_rbs_angles
 from qibo.quantum_info.metrics import (
     a_fidelity,
     average_gate_fidelity,

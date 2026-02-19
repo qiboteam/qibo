@@ -12,11 +12,6 @@ from scipy.special import binom
 
 from qibo import Circuit, gates
 from qibo.models.encodings import (
-    _add_wbd_gate,
-    _ehrlich_algorithm,
-    _ehrlich_codewords_up_to_k,
-    _get_int_type,
-    _get_next_bistring,
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
@@ -30,6 +25,12 @@ from qibo.models.encodings import (
     unary_encoder,
     unary_encoder_random_gaussian,
     up_to_k_hamming_weight_encoder,
+)
+from qibo.models._encodings import (
+    _add_wbd_gate,
+    _ehrlich_algorithm,
+    _ehrlich_codewords_up_to_k,
+    _get_int_type,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
