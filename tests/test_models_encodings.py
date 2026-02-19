@@ -322,18 +322,23 @@ def test_up_to_k_hamming_weight_encoder(
 
     seed = 10
     dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
-    dims = 2**nqubits
-    dtype = complex if complex_data else float
-
-    rng = np.random.default_rng(seed)
-    data = rng.random(dim)
-    if complex_data:
-        data = data.astype(complex) + 1j * rng.random(dim)
-    data /= np.linalg.norm(data)
-    data = backend.cast(data, dtype=data.dtype)
+    dtype = backend.complex128 if complex_data else backend.float64
 
     codewords = backend.arange(dim) if custom_codewords else None
 
+    with pytest.raises(ValueError):
+        data = random_statevector(dim+10, dtype=dtype, seed=seed, backend=backend)
+        _ = up_to_k_hamming_weight_encoder(
+            data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+        
+    data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
+    codewords = backend.arange(dim) if custom_codewords else None
     if up_to_k > nqubits:
         with pytest.raises(ValueError):
             _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
@@ -342,12 +347,11 @@ def test_up_to_k_hamming_weight_encoder(
         indices = [int(string, 2) for string in indices]
         indices_lex = np.sort(np.copy(indices))
 
-        target = np.zeros(dims, dtype=dtype)
+        target = backend.zeros(2**nqubits, dtype=dtype)
         if codewords is None:
             target[indices_lex] = data
         else:
             target[codewords] = data
-        target = backend.cast(target, dtype=target.dtype)
 
         circuit = up_to_k_hamming_weight_encoder(
             data,

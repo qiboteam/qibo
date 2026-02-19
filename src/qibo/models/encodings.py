@@ -935,6 +935,12 @@ def _up_to_k_encoder_hyperspherical(
     backend = _check_backend(backend)
 
     dims = len(data)
+    expected_dim = sum(binom(nqubits, l) for l in range(up_to_k + 1))
+    if dims != expected_dim:
+        raise_error(
+            ValueError,
+            f"Data dimension should be {expected_dim}, passed data has dims {dims}.",
+        )
 
     if codewords is None:
         codewords = list(
@@ -2240,7 +2246,7 @@ def _ehrlich_codewords_up_to_k(
             initial = right
 
         k_seq = _ehrlich_algorithm(
-            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int64),
+            backend.cast([int(b) for b in initial[::-1]], dtype=backend.int8),
             False,
         )
 
