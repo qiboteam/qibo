@@ -6,10 +6,11 @@ import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 from scipy.special import binom
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
+from qibo.models.circuit import Circuit  # to avoid circular import
 
 
 def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int) -> None:
@@ -1561,7 +1562,7 @@ def _sparse_encoder_li(
 
         2. `Hyperpherical coordinates <https://en.wikipedia.org/wiki/N-sphere>`_.
     """
-    from qibo.models.encodings import permutation_synthesis  # pylint: disbale=C0415
+    from qibo.models.encodings import permutation_synthesis  # pylint: disable=C0415
 
     backend = _check_backend(backend)
 
@@ -1603,14 +1604,17 @@ def _sparse_encoder_li(
         else:
             data_binary[bi_int] = xi
 
+    sigma = [int(elem) for elem in sigma]
+
     # binary enconder on \sum_i = xi |sigma^{-1}(b_i)>
     circuit_binary = _binary_encoder_hyperspherical(
         data_binary,
         nqubits=nqubits,
+        complex_data=bool("complex" in str(data_binary.dtype)),
         backend=backend,
         **kwargs,
     )
-    circuit_permutation = permutation_synthesis(list(sigma), **kwargs)
+    circuit_permutation = permutation_synthesis(sigma, **kwargs)
 
     return circuit_binary + circuit_permutation
 
