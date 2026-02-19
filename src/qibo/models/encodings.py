@@ -10,7 +10,6 @@ from scipy.special import binom
 from qibo import gates
 from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
-from qibo.models.circuit import Circuit
 from qibo.models._encodings import (
     _add_dicke_unitary_gate,
     _add_wbd_gate,
@@ -31,6 +30,7 @@ from qibo.models._encodings import (
     _sparse_encoder_li,
     _up_to_k_encoder_hyperspherical,
 )
+from qibo.models.circuit import Circuit
 
 
 def binary_encoder(

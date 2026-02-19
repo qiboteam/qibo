@@ -4,11 +4,12 @@ from typing import List, Optional, Set, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
+from scipy.special import binom
+
 from qibo import Circuit, gates
-from qibo.backends import _check_backend, Backend
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-from scipy.special import binom
 
 
 def _add_dicke_unitary_gate(circuit: Circuit, qubits: List[int], weight: int) -> None:
@@ -1676,7 +1677,9 @@ def _up_to_k_encoder_hyperspherical(
     return circuit
 
 
-def _v_layer(nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs) -> Circuit:
+def _v_layer(
+    nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs
+) -> Circuit:
     """Create entangling layer in V shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
     pairs_gates = pairs_gates[::-1]
@@ -1694,7 +1697,9 @@ def _v_layer(nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, .
     return circuit
 
 
-def _x_layer(nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs) -> Circuit:
+def _x_layer(
+    nqubits: int, gate: Gate, parameters: Union[List[int], Tuple[int, ...]], **kwargs
+) -> Circuit:
     """Create entangling layer in X shape."""
     _, pairs_gates = _generate_rbs_pairs(nqubits, architecture="diagonal")
     pairs_gates = pairs_gates[::-1]
