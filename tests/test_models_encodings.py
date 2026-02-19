@@ -338,7 +338,6 @@ def test_up_to_k_hamming_weight_encoder(
         )
 
     data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
-    codewords = backend.arange(dim) if custom_codewords else None
     if up_to_k > nqubits:
         with pytest.raises(ValueError):
             _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
