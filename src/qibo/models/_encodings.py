@@ -1423,7 +1423,7 @@ def _sparse_encoder_farias(
     except AttributeError:
         type_test = bool("int" in str(type(data[0][0])))
 
-    if type_test and nqubits is None:
+    if type_test and nqubits is None:  # pragma: no cover
         raise_error(
             ValueError,
             "``nqubits`` must be specified when computational basis states are "
