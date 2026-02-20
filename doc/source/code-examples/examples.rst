@@ -83,7 +83,7 @@ For example
     circuit.add(gates.TOFFOLI(0, 1, 2))
 
     circuit.summary()
-    
+
     # Prints
     '''
     Circuit depth = 5
