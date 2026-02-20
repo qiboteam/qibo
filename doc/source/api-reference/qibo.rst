@@ -221,6 +221,13 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+
+Binary encoder
+""""""""""""""
+
+.. autofunction:: qibo.models.encodings.binary_encoder
+
+
 Computational Basis Encoder
 """""""""""""""""""""""""""
 
@@ -251,6 +258,63 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
+Dicke state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.dicke_state
+
+
+Entangling layer
+""""""""""""""""
+
+Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
+With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
+any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
+If the chosen gate is parametrized, all phases are set to :math:`0.0`.
+Note that these phases can be updated a posterior by using
+:meth:`qibo.models.Circuit.set_parameters`.
+The possible choices of layer ``architecture`` are the following, in alphabetical order:
+``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
+For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
+
+
+.. image:: ../_static/entangling_layer.png
+   :width: 800
+   :height: 450
+   :align: center
+
+
+If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
+with the last qubit as the control qubit and the first qubit as a target qubit.
+
+
+.. autofunction:: qibo.models.encodings.entangling_layer
+
+
+Greenberger-Horne-Zeilinger (GHZ) state
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.ghz_state
+
+
+Graph state
+"""""""""""
+
+.. autofunction:: qibo.models.encodings.graph_state
+
+
+Fixed Hamming-weight Encoder
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+
+
+Permutation synthesis
+"""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.permutation_synthesis
 
 
 Phase Encoder
@@ -292,12 +356,6 @@ Sparse encoder
 """"""""""""""
 
 .. autofunction:: qibo.models.encodings.sparse_encoder
-
-
-Binary encoder
-""""""""""""""
-
-.. autofunction:: qibo.models.encodings.binary_encoder
 
 
 Unary Encoder
@@ -368,62 +426,14 @@ of the :math:`d`-dimensional array is sampled from a Gaussian distribution
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
-Fixed Hamming-weight Encoder
-""""""""""""""""""""""""""""
+Up-to-Hamming-weight-:math:`k` Encoder
+""""""""""""""""""""""""""""""""""""""
 
-.. autofunction:: qibo.models.encodings.hamming_weight_encoder
+.. autofunction:: qibo.models.encodings.up_to_k_hamming_weight_encoder
 
-
-Entangling layer
-""""""""""""""""
-
-Generates a layer of nearest-neighbour two-qubit gates, assuming 1-dimensional connectivity.
-With the exception of :class:`qibo.gates.gates.GeneralizedfSim`,
-any of the two-qubit gates implemented in ``qibo`` can be selected to customize the entangling layer.
-If the chosen gate is parametrized, all phases are set to :math:`0.0`.
-Note that these phases can be updated a posterior by using
-:meth:`qibo.models.Circuit.set_parameters`.
-The possible choices of layer ``architecture`` are the following, in alphabetical order:
-``diagonal``, ``even_layer``, ``next_nearest``, ``pyramid``, ``odd_layer``, ``shifted``, ``v``, and ``x``.
-For instance, we show below an example of four of those architectures for ``nqubits = 6`` and ``entangling_gate = "CNOT"``.
-
-
-.. image:: ../_static/entangling_layer.png
-   :width: 800
-   :height: 450
-   :align: center
-
-
-If ``closed_boundary`` is set to ``True``, then an extra gate is added connecting the last and the first qubit,
-with the last qubit as the control qubit and the first qubit as a target qubit.
-
-
-.. autofunction:: qibo.models.encodings.entangling_layer
-
-
-Greenberger-Horne-Zeilinger (GHZ) state
-"""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.ghz_state
-
-
-Dicke state
-"""""""""""
-
-.. autofunction:: qibo.models.encodings.dicke_state
-
-
-Graph state
-"""""""""""
-
-.. autofunction:: qibo.models.encodings.graph_state
-
-Permutation synthesis
-"""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.permutation_synthesis
 
 .. _error-mitigation:
+
 
 Error Mitigation
 ^^^^^^^^^^^^^^^^
