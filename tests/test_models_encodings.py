@@ -11,12 +11,13 @@ from scipy.optimize import curve_fit
 from scipy.special import binom
 
 from qibo import Circuit, gates
-from qibo.models.encodings import (
+from qibo.models._encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
     _ehrlich_codewords_up_to_k,
     _get_int_type,
-    _get_next_bistring,
+)
+from qibo.models.encodings import (
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
