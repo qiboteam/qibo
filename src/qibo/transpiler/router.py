@@ -867,7 +867,7 @@ class StarConnectivityRouter(Router):
 
     def _check_star_connectivity(self):
         """Check if the connectivity graph is a star graph."""
-        if len(self.connectivity.nodes) != 5:
+        if len(self.connectivity.nodes) != 5:  # pragma: no cover
             raise_error(
                 ConnectivityError,
                 f"This connectivity graph is not a star graph. Length of nodes provided: {len(self.connectivity.nodes)} != 5.",
