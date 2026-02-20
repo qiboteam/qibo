@@ -1,7 +1,13 @@
+import math
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 from qibo import gates, matrices
+from qibo.backends import Backend, _check_backend
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 from qibo.quantum_info.linalg_operations import schmidt_decomposition
 
 magic_basis = np.array(
@@ -12,17 +18,17 @@ bell_basis = np.array(
     [[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]
 ) / np.sqrt(2)
 
-H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
-
-def u3_decomposition(unitary, backend):
+def u3_decomposition(
+    unitary: ArrayLike, backend: Backend
+) -> Tuple[float, float, float]:
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
-        unitary (ndarray): Unitary :math:`2 \\times 2` matrix to be decomposed.
+        unitary (ArrayLike): Unitary :math:`2 \\times 2` matrix to be decomposed.
 
     Returns:
-        (float, float, float): parameters of U3 gate.
+        Tuple[float, float, float]: Parameters of :class:`qibo.gates.gates.U3` gate.
     """
     unitary = backend.cast(unitary)
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
@@ -36,20 +42,23 @@ def u3_decomposition(unitary, backend):
     return float(theta), float(phi), float(lam)
 
 
-def calculate_psi(unitary, backend, magic_basis=magic_basis):
+def calculate_psi(
+    unitary: ArrayLike, backend: Backend, magic_basis: ArrayLike = magic_basis
+) -> Tuple[ArrayLike, ArrayLike]:
     """Solves the eigenvalue problem of :math:`U^{T} U`.
 
     See step (1) of Appendix A in arXiv:quant-ph/0011050.
 
     Args:
-        unitary (ndarray): Unitary matrix of the gate we are decomposing
+        unitary (ArrayLike): Unitary matrix of the gate we are decomposing
             in the computational basis.
-        magic_basis (ndarray, optional): basis in which to solve the eigenvalue problem.
+        magic_basis (ArrayLike, optional): basis in which to solve the eigenvalue problem.
             Defaults to ``magic basis``.
         backend (:class:`qibo.backends.abstract.Backend`): Backend to use for calculations.
 
     Returns:
-        ndarray: Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
+        Tuple[ArrayLike, ArrayLike]: Eigenvectors in the computational basis
+        and eigenvalues of :math:`U^{T} U`.
     """
     magic_basis = backend.cast(magic_basis)
     unitary = backend.cast(unitary)
@@ -71,16 +80,24 @@ def calculate_psi(unitary, backend, magic_basis=magic_basis):
     return psi, eigvals
 
 
-def calculate_single_qubit_unitaries(psi, backend=None):
+def calculate_single_qubit_unitaries(
+    psi: ArrayLike, backend: Optional[Backend] = None
+) -> Tuple[ArrayLike, ArrayLike]:
     """Calculates local unitaries that maps a maximally entangled basis to the magic basis.
 
-    See Lemma 1 of Appendix A in arXiv:quant-ph/0011050.
+    See Lemma 1 of Appendix A in Ref. [1].
 
     Args:
-        psi (ndarray): Maximally entangled two-qubit states that define a basis.
+        psi (ArrayLike): Maximally entangled two-qubit states that define a basis.
 
     Returns:
-        (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
+        Tuple[ArrayLike, ArrayLike]: Local unitaries UA and UB that map the given
+        basis to the magic basis.
+
+    References:
+        1. B. Kraus and J. I. Cirac, *Optimal creation of entanglement using a two-qubit gate*,
+        `Phys. Rev. A 63, 062309 (2001) <https://doi.org/10.1103/PhysRevA.63.062309 >`_.
+
     """
     psi_magic = backend.matmul(backend.conj(backend.cast(magic_basis)).T, psi)
     if (
@@ -111,7 +128,14 @@ def calculate_single_qubit_unitaries(psi, backend=None):
     return ua, ub
 
 
-def calculate_diagonal(unitary, ua, ub, va, vb, backend):
+def calculate_diagonal(
+    unitary: ArrayLike,
+    ua: ArrayLike,
+    ub: ArrayLike,
+    va: ArrayLike,
+    vb: ArrayLike,
+    backend: Backend,
+) -> Tuple[ArrayLike, ...]:
     """Calculates Ud matrix that can be written as exp(-iH).
 
     See Eq. (A1) in arXiv:quant-ph/0011050.
@@ -229,7 +253,9 @@ def calculate_diagonal(unitary, ua, ub, va, vb, backend):
     return ua, ub, ud, va, vb
 
 
-def magic_decomposition(unitary, backend=None):
+def magic_decomposition(
+    unitary: ArrayLike, backend: Optional[Backend] = None
+) -> Tuple[ArrayLike, ...]:
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
 
     unitary = backend.cast(unitary, dtype=unitary.dtype)
@@ -242,8 +268,12 @@ def magic_decomposition(unitary, backend=None):
     return calculate_diagonal(unitary, ua, ub, va, vb, backend=backend)
 
 
-def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
+def to_bell_diagonal(
+    ud: ArrayLike, bell_basis: ArrayLike = bell_basis, backend: Optional[Backend] = None
+) -> Union[ArrayLike, None]:
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
+    backend = _check_backend(backend)
+
     ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis)
 
@@ -263,7 +293,9 @@ def to_bell_diagonal(ud, backend, bell_basis=bell_basis):
     return ud_diag
 
 
-def calculate_h_vector(ud_diag, backend):
+def calculate_h_vector(
+    ud_diag: ArrayLike, backend: Backend
+) -> Tuple[ArrayLike, ArrayLike, ArrayLike]:
     """Finds h parameters corresponding to exp(-iH).
 
     See Eq. (4)-(5) in arXiv:quant-ph/0307177.
@@ -275,7 +307,9 @@ def calculate_h_vector(ud_diag, backend):
     return hx, hy, hz
 
 
-def cnot_decomposition(q0, q1, hx, hy, hz, backend):
+def cnot_decomposition(
+    q0: int, q1: int, hx: float, hy: float, hz: float, backend: Backend
+) -> List[Gate]:
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
     h = backend.matrices.H
     u3 = -1j * h
@@ -300,10 +334,12 @@ def cnot_decomposition(q0, q1, hx, hy, hz, backend):
     ]
 
 
-def cnot_decomposition_light(q0, q1, hx, hy, backend):
+def cnot_decomposition_light(
+    q0: int, q1: int, hx: float, hy: float, backend: Backend
+) -> List[Gate]:
     """Performs decomposition (24) from arXiv:quant-ph/0307177."""
-    h = backend.cast(H)
-    w = backend.cast((matrices.I - 1j * matrices.X) / np.sqrt(2))
+    h = backend.matrices.H
+    w = (backend.matrices.I(2) - 1j * backend.matrices.X) / math.sqrt(2)
     u2 = gates.RX(0, 2 * hx).matrix(backend)
     v2 = gates.RZ(0, -2 * hy).matrix(backend)
     # change CNOT to CZ using Hadamard gates
@@ -319,7 +355,32 @@ def cnot_decomposition_light(q0, q1, hx, hy, backend):
     ]
 
 
-def _get_z_component(unitary, backend):
+def two_qubit_decomposition(
+    q0: int, q1: int, unitary: ArrayLike, backend: Backend, threshold: float = 1e-6
+) -> List[Gate]:
+    """Performs two qubit unitary gate decomposition.
+
+    Args:
+        q0 (int): index of the first qubit.
+        q1 (int): index of the second qubit.
+        unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
+        backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
+        threshold (float): Threshold for determining if hz component is zero.
+
+    Returns:
+        list: gates implementing the decomposition
+    """
+    # Handle identity case efficiently
+    if backend.allclose(unitary, backend.identity(4)):
+        return []
+
+    z_component = _get_z_component(unitary, backend)
+    if abs(z_component) < threshold:
+        return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
+    return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
+
+
+def _get_z_component(unitary: ArrayLike, backend: Backend) -> float:
     """Calculates the hz component from a unitary's magic decomposition."""
     _, _, ud, _, _ = magic_decomposition(unitary, backend=backend)
     ud_diag = to_bell_diagonal(ud, backend=backend)
@@ -327,7 +388,9 @@ def _get_z_component(unitary, backend):
     return float(hz)
 
 
-def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
+def _two_qubit_decomposition_without_z(
+    q0: int, q1: int, unitary: ArrayLike, backend: Backend
+) -> List[Gate]:
     """Implements Theorem 2 decomposition (2 CNOTs) for hz=0 case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
@@ -349,7 +412,9 @@ def _two_qubit_decomposition_without_z(q0, q1, unitary, backend):
     return gatelist
 
 
-def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
+def _two_qubit_decomposition_with_z(
+    q0: int, q1: int, unitary: ArrayLike, backend: Backend
+) -> List[Gate]:
     """Implements Theorem 1 decomposition (3 CNOTs) for hz≠0 case."""
     # Get magic decomposition
     u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
@@ -363,7 +428,7 @@ def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
     # Combine with initial and final local unitaries
     gatelist = [
         gates.Unitary(u1, q0),
-        gates.Unitary(backend.cast(H) @ v1, q1),
+        gates.Unitary(backend.matrices.H @ v1, q1),
     ]
     gatelist.extend(cnot_dec[1:])
     g0, g1 = gatelist[-2:]
@@ -371,26 +436,3 @@ def _two_qubit_decomposition_with_z(q0, q1, unitary, backend):
     gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
 
     return gatelist
-
-
-def two_qubit_decomposition(q0, q1, unitary, backend, threshold=1e-6):
-    """Performs two qubit unitary gate decomposition.
-
-    Args:
-        q0 (int): index of the first qubit.
-        q1 (int): index of the second qubit.
-        unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
-        backend (:class:`qibo.backends.Backend`): Backend to use for calculations.
-        threshold (float): Threshold for determining if hz component is zero.
-
-    Returns:
-        list: gates implementing the decomposition
-    """
-    # Handle identity case efficiently
-    if backend.allclose(unitary, backend.identity(4)):
-        return []
-
-    z_component = _get_z_component(unitary, backend)
-    if abs(z_component) < threshold:
-        return _two_qubit_decomposition_without_z(q0, q1, unitary, backend)
-    return _two_qubit_decomposition_with_z(q0, q1, unitary, backend)
