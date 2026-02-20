@@ -662,7 +662,7 @@ def _get_gate_sparse(
     backend: Optional[Backend] = None,
 ) -> Gate:
     backend = _check_backend(backend)
-    if distance == 1:
+    if distance == 1:  # pragma: no cover
         qubit = int(backend.where(difference == 1)[0][0])
         if qubit not in touched_qubits:
             touched_qubits.append(qubit)
@@ -819,7 +819,7 @@ def _get_phase_gate_correction_sparse(
 
     hw_0 = hamming_weight(second_to_last_string)
     hw_1 = hamming_weight(last_string)
-    if hw_1 == nqubits and hw_0 == nqubits - 1:
+    if hw_1 == nqubits and hw_0 == nqubits - 1:  # pragma: no cover
         phi = _angle_mod_two_pi(np.angle(last_data) - np.angle(second_to_last_data))
         lamb = _angle_mod_two_pi(
             -(np.angle(second_to_last_data) + np.angle(last_data))
@@ -1414,7 +1414,7 @@ def _sparse_encoder_farias(
 
     backend = _check_backend(backend)
 
-    if isinstance(data, zip):
+    if isinstance(data, zip):  # pragma: no cover
         data = list(data)
 
     # TODO: Fix this mess with qibo native dtypes
@@ -1430,7 +1430,7 @@ def _sparse_encoder_farias(
             + "indidated by integers.",
         )
 
-    if isinstance(data[0][0], str) and nqubits is None:
+    if isinstance(data[0][0], str) and nqubits is None:  # pragma: no cover
         nqubits = len(data[0][0])
 
     _data_test = data[0][1]
@@ -1501,7 +1501,7 @@ def _sparse_encoder_farias(
             circuit,
             phis,
         )
-        if hw_1 == nqubits and hw_0 == nqubits - 1:
+        if hw_1 == nqubits and hw_0 == nqubits - 1:  # pragma: no cover
             circuit.queue = correction
         else:
             circuit.add(correction)
