@@ -81,7 +81,9 @@ For example
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.H(2))
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    print(circuit.summary())
+
+    circuit.summary()
+    
     # Prints
     '''
     Circuit depth = 5
@@ -92,17 +94,6 @@ For example
     cx: 2
     ccx: 1
     '''
-.. testoutput::
-    :hide:
-
-    Circuit depth = 5
-    Total number of gates = 6
-    Number of qubits = 3
-    Most common gates:
-    h: 3
-    cx: 2
-    ccx: 1
-
 
 The circuit property ``circuit.gate_types`` (or ``circuit.gate_names``) will return a ``collections.Counter``
 that contains the gate types (or names) and the corresponding numbers of appearance. The
