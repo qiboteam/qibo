@@ -13,6 +13,7 @@ from qibo.models.encodings import (
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
+    up_to_k_hamming_weight_encoder,
 )
 from qibo.models.error_mitigation import CDR, ICS, ZNE, vnCDR
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
