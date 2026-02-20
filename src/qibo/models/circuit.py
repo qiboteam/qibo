@@ -914,8 +914,7 @@ class Circuit:
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            .. testcode::
-
+            .. code-block:: python
                 from qibo import Circuit, gates
 
                 circuit = Circuit(3)
