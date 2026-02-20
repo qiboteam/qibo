@@ -70,7 +70,7 @@ total number of qubits and all gates in order of the number of times they appear
 The QASM name is used as identifier of gates.
 For example
 
-.. testcode::
+.. code-block::  python
 
     from qibo import Circuit, gates
 
