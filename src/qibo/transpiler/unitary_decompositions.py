@@ -160,7 +160,7 @@ def calculate_diagonal(
     v_dagger = dag(backend.kron(va, vb))
     ud = u_dagger @ unitary @ v_dagger
 
-    lambdas = to_bell_diagonal(ud, backend)
+    lambdas = to_bell_diagonal(ud, backend=backend)
 
     # We permute to ensure we will have hx >= hy >= hz in the end
     hx, hy, hz = calculate_h_vector(lambdas, backend)
@@ -257,7 +257,7 @@ def magic_decomposition(
     unitary: ArrayLike, backend: Optional[Backend] = None
 ) -> Tuple[ArrayLike, ...]:
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
-
+    backend = _check_backend(backend)
     unitary = backend.cast(unitary, dtype=unitary.dtype)
     psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = backend.conj(backend.sqrt(eigvals)) * backend.matmul(unitary, psi)
