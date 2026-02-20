@@ -9,8 +9,9 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from numpy.typing import ArrayLike
 from tabulate import tabulate
+
 from qibo import __version__, gates
-from qibo.backends import _check_backend, _Global, Backend
+from qibo.backends import Backend, _check_backend, _Global
 from qibo.config import raise_error
 from qibo.gates import ParametrizedGate
 from qibo.gates.abstract import Gate
