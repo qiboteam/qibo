@@ -91,10 +91,20 @@ class X(Gate):
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
-            free: Ids of free qubits to use for the gate decomposition.
+            free (int): Ids of free qubits to use for the gate decomposition.
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.SDG`,
+                :class:`qibo.gates.gates.T`, and :class:`qibo.gates.gates.TDG`.
+                Defaults to ``"standard"``.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -2370,6 +2380,22 @@ class RBS(ParametrizedGate):
         self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of RBS gate as in Ref. [1].
+
+        Args:
+            free (int): Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.SDG`,
+                :class:`qibo.gates.gates.T`, and :class:`qibo.gates.gates.TDG`.
+                Defaults to ``"standard"``.
 
         References:
             1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,

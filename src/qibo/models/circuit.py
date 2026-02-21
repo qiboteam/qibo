@@ -506,7 +506,17 @@ class Circuit:
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
         Args:
-            free: Ids of free (work) qubits to use for gate decomposition.
+            free (int): Ids of free (work) qubits to use for gate decomposition.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.SDG`,
+                :class:`qibo.gates.gates.T`, and :class:`qibo.gates.gates.TDG`.
+                Defaults to ``"standard"``.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: Circuit that contains only

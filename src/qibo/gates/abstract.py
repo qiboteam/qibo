@@ -207,14 +207,24 @@ class Gate:
         the control qubits accordingly.
 
         Args:
-            free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis(bool, optional): If ``True``, the decomposition contains only
-                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent
-                representation is used for :class:`qibo.gates.TOFFOLI` gates.
+            free (int): Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+            method (str, optional): Choice of gate set for the decomposition.
+                If ``"standard"``, decomposes circuit into :class:`qibo.gates.gates.CNOT`,
+                :class:`qibo.gates.gates.RX`, :class:`qibo.gates.gates.RY`,
+                :class:`qibo.gates.gates.RZ`, :class:`qibo.gates.gates.U1`,
+                :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
+                and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
+                into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.SDG`,
+                :class:`qibo.gates.gates.T`, and :class:`qibo.gates.gates.TDG`.
+                Defaults to ``"standard"``.
 
         Returns:
-            list: gates that have the same effect as applying the original gate.
+            List[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
+            applying the original gate.
         """
         if self.is_controlled_by:
             # Step 1: Error check with all controls/targets
