@@ -81,7 +81,9 @@ def _u3_to_gpi2(t, p, l):
 # Decompose single qubit gates using GPI2 (more efficient on hardware)
 gpi2_dec = GateDecompositions()
 gpi2_dec.add(gates.H, [gates.Z(0), gates.GPI2(0, math.pi / 2)])
-gpi2_dec.add(gates.X, [gates.GPI2(0, math.pi / 2), gates.GPI2(0, math.pi / 2), gates.Z(0)])
+gpi2_dec.add(
+    gates.X, [gates.GPI2(0, math.pi / 2), gates.GPI2(0, math.pi / 2), gates.Z(0)]
+)
 gpi2_dec.add(gates.Y, [gates.Z(0), gates.GPI2(0, 0), gates.GPI2(0, 0)])
 gpi2_dec.add(gates.Z, [gates.Z(0)])
 gpi2_dec.add(gates.S, [gates.RZ(0, math.pi / 2)])
@@ -153,7 +155,10 @@ u3_dec.add(
     gates.GPI2,
     lambda gate: [
         gates.U3(
-            0, math.pi / 2, gate.parameters[0] - math.pi / 2, math.pi / 2 - gate.parameters[0]
+            0,
+            math.pi / 2,
+            gate.parameters[0] - math.pi / 2,
+            math.pi / 2 - gate.parameters[0],
         ),
     ],
 )
@@ -676,7 +681,8 @@ standard_decompositions.add(
     gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[0]).decompose()
 )
 standard_decompositions.add(
-    gates.FSWAP, [gates.X(1)] + gates.GIVENS(0, 1, math.pi / 2).decompose() + [gates.X(0)]
+    gates.FSWAP,
+    [gates.X(1)] + gates.GIVENS(0, 1, math.pi / 2).decompose() + [gates.X(0)],
 )
 standard_decompositions.add(
     gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]

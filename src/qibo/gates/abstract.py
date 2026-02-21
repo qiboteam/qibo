@@ -1,14 +1,16 @@
 """Module defines the abstract gate classes Gate, SpecialGate, ParametrizedGate."""
 
-import collections
 import json
 from abc import abstractmethod
+from collections.abc import Iterable
 from math import pi
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Self, Sequence, Tuple
 
 import sympy
+from numpy.typing import ArrayLike
 
 from qibo import config
+from qibo.backends.abstract import Backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -90,43 +92,160 @@ class Gate:
 
         self._clifford = False
 
+    def apply(self, backend: Backend, state: ArrayLike, nqubits: int) -> ArrayLike:
+        return backend.apply_gate(self, state, nqubits)
+
+    def apply_clifford(
+        self, backend: Backend, state: ArrayLike, nqubits: int
+    ) -> ArrayLike:
+        return backend.apply_gate_clifford(self, state, nqubits)
+
+    def basis_rotation(self):
+        """Transformation required to rotate the basis for measuring the gate."""
+        raise_error(
+            NotImplementedError,
+            f"Basis rotation is not implemented for {self.__class__.__name__}",
+        )
+
+    def check_controls(func):  # pylint: disable=E0213
+        def wrapper(self, *args):
+            if self.control_qubits:
+                raise_error(
+                    RuntimeError,
+                    "Cannot use `controlled_by` method "
+                    + f"on gate {self} because it is already "
+                    + f"controlled by {self.control_qubits}.",
+                )
+            return func(self, *args)  # pylint: disable=E1102
+
+        return wrapper
+
     @property
-    def clifford(self):
+    def clifford(self) -> bool:
         """Return boolean value representing if a Gate is Clifford or not."""
         return False
 
-    @property
-    def hamming_weight(self):
-        """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
-        return False
+    def commutes(self, gate: Self) -> bool:
+        """Checks if two gates commute.
 
-    @property
-    def raw(self) -> dict:
-        """Serialize to dictionary.
+        Args:
+            gate: Gate to check if it commutes with the current gate.
 
-        The values used in the serialization should be compatible with a
-        JSON dump (or any other one supporting a minimal set of scalar
-        types). Though the specific implementation is up to the specific
-        gate.
+        Returns:
+            bool: ``True`` if the gates commute, ``False`` otherwise.
         """
-        encoded = self.__dict__
+        if isinstance(gate, SpecialGate):  # pragma: no cover
+            return False
+        t1 = set(self.target_qubits)
+        t2 = set(gate.target_qubits)
+        a = self.__class__ == gate.__class__ and t1 == t2
+        b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
+        return a or b
 
-        encoded_simple = {
-            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
-        }
+    @property
+    def control_qubits(self) -> Tuple[int, ...]:
+        """Tuple with ids of control qubits sorted in increasing order."""
+        return tuple(sorted(self._control_qubits))
 
-        encoded_simple["init_kwargs"] = {
-            key: value
-            for key, value in encoded_simple["init_kwargs"].items()
-            if key in REQUIRED_FIELDS_INIT_KWARGS
-        }
+    @control_qubits.setter
+    def control_qubits(self, qubits: Sequence[int]) -> None:
+        """Sets control qubits set."""
+        self._set_control_qubits(qubits)
+        self._check_control_target_overlap()
 
-        encoded_simple["_class"] = type(self).__name__
+    @check_controls
+    def controlled_by(self, *qubits: int) -> Self:
+        """Controls the gate on (arbitrarily many) qubits.
 
-        return encoded_simple
+        To see how this method affects the underlying matrix representation of a gate,
+        please see the documentation of :meth:`qibo.gates.Gate.matrix`.
+
+        .. note::
+            Some gate classes default to another gate class depending on the number of controls
+            present. For instance, an :math:`1`-controlled :class:`qibo.gates.X` gate
+            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`2`-controlled
+            :class:`qibo.gates.X` gate defaults to a :class:`qibo.gates.TOFFOLI` gate.
+            Other gates affected by this method are: :class:`qibo.gates.Y`, :class:`qibo.gates.Z`,
+            :class:`qibo.gates.RX`, :class:`qibo.gates.RY`, :class:`qibo.gates.RZ`,
+            :class:`qibo.gates.U1`, :class:`qibo.gates.U2`, and :class:`qibo.gates.U3`.
+
+        Args:
+            *qubits (int): Ids of the qubits that the gate will be controlled on.
+
+        Returns:
+            :class:`qibo.gates.Gate`: object in with the corresponding
+                gate being controlled in the given qubits.
+        """
+        if qubits:
+            self.is_controlled_by = True
+            self.control_qubits = qubits
+        return self
+
+    def dagger(self) -> Self:
+        """Returns the dagger (conjugate transpose) of the gate.
+
+        Note that dagger is not persistent for parametrized gates.
+        For example, applying a dagger to an :class:`qibo.gates.gates.RX` gate
+        will change the sign of its parameter at the time of application.
+        However, if the parameter is updated after that, for example using
+        :meth:`qibo.models.circuit.Circuit.set_parameters`, then the
+        action of dagger will be lost.
+
+        Returns:
+            :class:`qibo.gates.Gate`: object representing the dagger of the original gate.
+        """
+        new_gate = self._dagger()
+        new_gate.is_controlled_by = self.is_controlled_by
+        new_gate.control_qubits = self.control_qubits
+        if hasattr(self, "_clifford"):
+            new_gate._clifford = self._clifford
+
+        return new_gate
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Self]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        If the gate is already controlled, it recursively decomposes the base gate and updates
+        the control qubits accordingly.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+            use_toffolis(bool, optional): If ``True``, the decomposition contains only
+                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent
+                representation is used for :class:`qibo.gates.TOFFOLI` gates.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
+
+        Returns:
+            list: gates that have the same effect as applying the original gate.
+        """
+        if self.is_controlled_by:
+            # Step 1: Error check with all controls/targets
+            if set(free) & set(self.qubits):
+                raise_error(
+                    ValueError,
+                    "Cannot decompose multi-controlled ``X`` gate if free "
+                    "qubits coincide with target or controls.",
+                )
+
+            ncontrols = len(self.control_qubits)
+
+            # Step 2: Decompose base gate without controls
+            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
+            decomposed = base_gate._base_decompose(
+                *free, use_toffolis=use_toffolis, ncontrols=ncontrols
+            )
+            mask = self._control_mask_after_stripping(decomposed)
+            for bool_value, gate in zip(mask, decomposed):
+                if bool_value:
+                    gate.is_controlled_by = True
+                    gate.control_qubits += self.control_qubits
+            return decomposed
+
+        return self._base_decompose(*free, use_toffolis=use_toffolis)
 
     @staticmethod
-    def from_dict(raw: dict):
+    def from_dict(raw: dict) -> Self:
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
@@ -144,7 +263,7 @@ class Gate:
                 # gate not found in given module, try next
                 pass
         else:
-            raise ValueError(f"Unknown gate {raw['_class']}")
+            raise_error(ValueError, f"Unknown gate {raw['_class']}")
 
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
         if raw["_class"] == "M":
@@ -158,131 +277,71 @@ class Gate:
                 return gate
             raise e
 
-    def to_json(self):
-        """Dump gate to JSON.
-
-        Note:
-            Consider using :meth:`raw` directly.
-        """
-        return json.dumps(self.raw)
-
-    @property
-    def target_qubits(self) -> Tuple[int, ...]:
-        """Tuple with ids of target qubits."""
-        return self._target_qubits
-
-    @property
-    def control_qubits(self) -> Tuple[int, ...]:
-        """Tuple with ids of control qubits sorted in increasing order."""
-        return tuple(sorted(self._control_qubits))
-
-    @property
-    def qubits(self) -> Tuple[int, ...]:
-        """Tuple with ids of all qubits (control and target) that the gate acts."""
-        return self.control_qubits + self.target_qubits
-
-    @property
-    def qasm_label(self) -> str | Tuple[str, str]:
-        """String corresponding to OpenQASM operation of the gate.
-        For more exotic gates, both the internal qibo name of the gate
-        and the custom gate QASM definition are returned as a tuple for
-        broader compatibility.
-        """
-        raise_error(
-            NotImplementedError,
-            f"{self.__class__.__name__} is not supported by OpenQASM",
-        )
-
-    def _set_target_qubits(self, qubits: Sequence[int]):
-        """Helper method for setting target qubits."""
-        self._target_qubits = tuple(qubits)
-        if len(self._target_qubits) != len(set(qubits)):
-            repeated = self._find_repeated(qubits)
-            raise_error(
-                ValueError,
-                f"Target qubit {repeated} was given twice for gate {self.__class__.__name__}.",
-            )
-
-    def _set_control_qubits(self, qubits: Sequence[int]):
-        """Helper method for setting control qubits."""
-        if len(set(qubits)) != len(qubits):
-            repeated = self._find_repeated(qubits)
-            raise_error(
-                ValueError,
-                f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
-            )
-        self._control_qubits = qubits
-
-    @target_qubits.setter
-    def target_qubits(self, qubits: Sequence[int]):
-        """Sets target qubits tuple."""
-        self._set_target_qubits(qubits)
-        self._check_control_target_overlap()
-
-    @control_qubits.setter
-    def control_qubits(self, qubits: Sequence[int]):
-        """Sets control qubits set."""
-        self._set_control_qubits(qubits)
-        self._check_control_target_overlap()
-
-    def _set_targets_and_controls(
-        self, target_qubits: Sequence[int], control_qubits: Sequence[int]
-    ):
-        """Sets target and control qubits simultaneously.
-
-        This is used for the reduced qubit updates in the distributed
-        circuits because using the individual setters may raise errors
-        due to temporary overlap of control and target qubits.
-        """
-        self._set_target_qubits(target_qubits)
-        self._set_control_qubits(control_qubits)
-        self._check_control_target_overlap()
-
-    @staticmethod
-    def _find_repeated(qubits: Sequence[int]) -> int:
-        """Finds the first qubit id that is repeated in a sequence of qubit ids."""
-        temp_set = set()
-        for qubit in qubits:
-            if qubit in temp_set:
-                return qubit
-            temp_set.add(qubit)
-
-    def _check_control_target_overlap(self):
-        """Checks that there are no qubits that are both target and
-        controls."""
-        control_and_target = self._control_qubits + self._target_qubits
-        common = len(set(control_and_target)) != len(control_and_target)
-        if common:
-            raise_error(
-                ValueError,
-                f"{set(self._target_qubits) & set(self._control_qubits)}"
-                + "qubits are both targets and controls "
-                + f"for gate {self.__class__.__name__}.",
-            )
-
-    @property
-    def parameters(self):
-        """Returns a tuple containing the current value of gate's parameters."""
-        return self._parameters
-
-    def commutes(self, gate: "Gate") -> bool:
-        """Checks if two gates commute.
-
-        Args:
-            gate: Gate to check if it commutes with the current gate.
+    @abstractmethod
+    def generator(self, backend: Backend):
+        """This function returns the gate's generator.
 
         Returns:
-            bool: ``True`` if the gates commute, ``False`` otherwise.
+            ArrayLike: generator.
         """
-        if isinstance(gate, SpecialGate):  # pragma: no cover
-            return False
-        t1 = set(self.target_qubits)
-        t2 = set(gate.target_qubits)
-        a = self.__class__ == gate.__class__ and t1 == t2
-        b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
-        return a or b
 
-    def on_qubits(self, qubit_map: dict) -> "Gate":
+    def generator_eigenvalue(self):
+        """This function returns the eigenvalues of the gate's generator.
+
+        Returns:
+            float: eigenvalue of the generator.
+        """
+
+        raise_error(
+            NotImplementedError,
+            f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
+        )
+
+    @property
+    def hamming_weight(self) -> bool:
+        """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
+        return False
+
+    def matrix(self, backend: Optional[Backend] = None) -> ArrayLike:
+        """Returns the matrix representation of the gate.
+
+        If gate has controlled qubits inserted by :meth:`qibo.gates.Gate.controlled_by`,
+        then :meth:`qibo.gates.Gate.matrix` returns the matrix of the original gate.
+
+        .. code-block:: python
+
+            from qibo import gates
+
+            gate = gates.SWAP(3, 4).controlled_by(0, 1, 2)
+            print(gate.matrix())
+
+        To return the full matrix that takes the control qubits into account,
+        one should use :meth:`qibo.models.Circuit.unitary`, e.g.
+
+        .. code-block:: python
+
+            from qibo import Circuit, gates
+
+            nqubits = 5
+            circuit = Circuit(nqubits)
+            circuit.add(gates.SWAP(3, 4).controlled_by(0, 1, 2))
+            print(circuit.unitary())
+
+        Args:
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+                to be used in the execution. If ``None``, it uses
+                the current backend. Defaults to ``None``.
+
+        Returns:
+            ndarray: Matrix representation of gate.
+        """
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
+        backend = _check_backend(backend)
+
+        return backend.matrix(self)
+
+    def on_qubits(self, qubit_map: dict) -> Self:
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -335,76 +394,73 @@ class Gate:
 
         return gate
 
-    def _dagger(self) -> "Gate":
-        """Helper method for :meth:`qibo.gates.Gate.dagger`."""
-        # By default the ``_dagger`` method creates an equivalent gate, assuming
-        # that the gate is Hermitian (true for common gates like H or Paulis).
-        # If the gate is not Hermitian the ``_dagger`` method should be modified.
-        return self.__class__(*self.init_args, **self.init_kwargs)
+    @property
+    def parameters(self) -> Tuple[float, ...]:
+        """Returns a tuple containing the current value of gate's parameters."""
+        return self._parameters
 
-    def dagger(self) -> "Gate":
-        """Returns the dagger (conjugate transpose) of the gate.
-
-        Note that dagger is not persistent for parametrized gates.
-        For example, applying a dagger to an :class:`qibo.gates.gates.RX` gate
-        will change the sign of its parameter at the time of application.
-        However, if the parameter is updated after that, for example using
-        :meth:`qibo.models.circuit.Circuit.set_parameters`, then the
-        action of dagger will be lost.
-
-        Returns:
-            :class:`qibo.gates.Gate`: object representing the dagger of the original gate.
+    @property
+    def qasm_label(self) -> str | Tuple[str, str]:
+        """String corresponding to OpenQASM operation of the gate.
+        For more exotic gates, both the internal qibo name of the gate
+        and the custom gate QASM definition are returned as a tuple for
+        broader compatibility.
         """
-        new_gate = self._dagger()
-        new_gate.is_controlled_by = self.is_controlled_by
-        new_gate.control_qubits = self.control_qubits
-        if hasattr(self, "_clifford"):
-            new_gate._clifford = self._clifford
+        raise_error(
+            NotImplementedError,
+            f"{self.__class__.__name__} is not supported by OpenQASM",
+        )
 
-        return new_gate
+    @property
+    def qubits(self) -> Tuple[int, ...]:
+        """Tuple with ids of all qubits (control and target) that the gate acts."""
+        return self.control_qubits + self.target_qubits
 
-    def check_controls(func):  # pylint: disable=E0213
-        def wrapper(self, *args):
-            if self.control_qubits:
-                raise_error(
-                    RuntimeError,
-                    "Cannot use `controlled_by` method "
-                    + f"on gate {self} because it is already "
-                    + f"controlled by {self.control_qubits}.",
-                )
-            return func(self, *args)  # pylint: disable=E1102
+    @property
+    def raw(self) -> dict:
+        """Serialize to dictionary.
 
-        return wrapper
-
-    @check_controls
-    def controlled_by(self, *qubits: int) -> "Gate":
-        """Controls the gate on (arbitrarily many) qubits.
-
-        To see how this method affects the underlying matrix representation of a gate,
-        please see the documentation of :meth:`qibo.gates.Gate.matrix`.
-
-        .. note::
-            Some gate classes default to another gate class depending on the number of controls
-            present. For instance, an :math:`1`-controlled :class:`qibo.gates.X` gate
-            will default to a :class:`qibo.gates.CNOT` gate, while a :math:`2`-controlled
-            :class:`qibo.gates.X` gate defaults to a :class:`qibo.gates.TOFFOLI` gate.
-            Other gates affected by this method are: :class:`qibo.gates.Y`, :class:`qibo.gates.Z`,
-            :class:`qibo.gates.RX`, :class:`qibo.gates.RY`, :class:`qibo.gates.RZ`,
-            :class:`qibo.gates.U1`, :class:`qibo.gates.U2`, and :class:`qibo.gates.U3`.
-
-        Args:
-            *qubits (int): Ids of the qubits that the gate will be controlled on.
-
-        Returns:
-            :class:`qibo.gates.Gate`: object in with the corresponding
-                gate being controlled in the given qubits.
+        The values used in the serialization should be compatible with a
+        JSON dump (or any other one supporting a minimal set of scalar
+        types). Though the specific implementation is up to the specific
+        gate.
         """
-        if qubits:
-            self.is_controlled_by = True
-            self.control_qubits = qubits
-        return self
+        encoded = self.__dict__
 
-    def _base_decompose(self, *free, use_toffolis=True, **kwargs) -> List["Gate"]:
+        encoded_simple = {
+            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
+        }
+
+        encoded_simple["init_kwargs"] = {
+            key: value
+            for key, value in encoded_simple["init_kwargs"].items()
+            if key in REQUIRED_FIELDS_INIT_KWARGS
+        }
+
+        encoded_simple["_class"] = type(self).__name__
+
+        return encoded_simple
+
+    @property
+    def target_qubits(self) -> Tuple[int, ...]:
+        """Tuple with ids of target qubits."""
+        return self._target_qubits
+
+    @target_qubits.setter
+    def target_qubits(self, qubits: Sequence[int]) -> None:
+        """Sets target qubits tuple."""
+        self._set_target_qubits(qubits)
+        self._check_control_target_overlap()
+
+    def to_json(self):
+        """Dump gate to JSON.
+
+        Note:
+            Consider using :meth:`raw` directly.
+        """
+        return json.dumps(self.raw)
+
+    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Self]:
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -418,7 +474,8 @@ class Gate:
             kwargs: Aditional parameters.
 
         Returns:
-            list: Synthesis of the original gate in another gate set.
+            List[:class:`qibo.gates.abstract.Gate`]: Synthesis of the original
+            gate in another gate set.
         """
         try:
             from qibo.transpiler.decompositions import (  # pylint: disable=C0415
@@ -429,8 +486,51 @@ class Gate:
         except KeyError:
             return [self.__class__(*self.init_args, **self.init_kwargs)]
 
+    def _check_control_target_overlap(self) -> None:
+        """Checks that there are no qubits that are both target and
+        controls."""
+        control_and_target = self._control_qubits + self._target_qubits
+        common = len(set(control_and_target)) != len(control_and_target)
+        if common:
+            raise_error(
+                ValueError,
+                f"{set(self._target_qubits) & set(self._control_qubits)}"
+                + "qubits are both targets and controls "
+                + f"for gate {self.__class__.__name__}.",
+            )
+
+    def _control_mask_after_stripping(self, gates: List[Self]) -> List[bool]:
+        """Returns a mask indicating which gates should be controlled."""
+        left = 0
+        right = len(gates) - 1
+        mask = [True] * len(gates)
+        while left < right:
+            g1, g2 = gates[left], gates[right]
+            if self._gates_cancel(g1, g2):
+                mask[left] = False
+                mask[right] = False
+            left += 1
+            right -= 1
+        return mask
+
+    def _dagger(self) -> Self:
+        """Helper method for :meth:`qibo.gates.Gate.dagger`."""
+        # By default the ``_dagger`` method creates an equivalent gate, assuming
+        # that the gate is Hermitian (true for common gates like H or Paulis).
+        # If the gate is not Hermitian the ``_dagger`` method should be modified.
+        return self.__class__(*self.init_args, **self.init_kwargs)
+
     @staticmethod
-    def _gates_cancel(g1, g2):
+    def _find_repeated(qubits: Sequence[int]) -> int:
+        """Finds the first qubit id that is repeated in a sequence of qubit ids."""
+        temp_set = set()
+        for qubit in qubits:
+            if qubit in temp_set:
+                return qubit
+            temp_set.add(qubit)
+
+    @staticmethod
+    def _gates_cancel(g1: Self, g2: Self) -> bool:
         """Determines if two gates cancel each other.
 
         Two gates are considered to cancel if:
@@ -471,147 +571,53 @@ class Gate:
 
         return False
 
-    def _control_mask_after_stripping(self, gates: List["Gate"]) -> List[bool]:
-        """Returns a mask indicating which gates should be controlled."""
-        left = 0
-        right = len(gates) - 1
-        mask = [True] * len(gates)
-        while left < right:
-            g1, g2 = gates[left], gates[right]
-            if self._gates_cancel(g1, g2):
-                mask[left] = False
-                mask[right] = False
-            left += 1
-            right -= 1
-        return mask
-
-    def decompose(self, *free, use_toffolis: bool = True) -> List["Gate"]:
-        """Decomposes multi-control gates to gates supported by OpenQASM.
-
-        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
-        If the gate is already controlled, it recursively decomposes the base gate and updates
-        the control qubits accordingly.
-
-        Args:
-            free: Ids of free qubits to use for the gate decomposition.
-            use_toffolis(bool, optional): If ``True``, the decomposition contains only
-                :class:`qibo.gates.TOFFOLI` gates. If ``False``, a congruent
-                representation is used for :class:`qibo.gates.TOFFOLI` gates.
-                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
-
-        Returns:
-            list: gates that have the same effect as applying the original gate.
-        """
-        if self.is_controlled_by:
-            # Step 1: Error check with all controls/targets
-            if set(free) & set(self.qubits):
-                raise_error(
-                    ValueError,
-                    "Cannot decompose multi-controlled ``X`` gate if free "
-                    "qubits coincide with target or controls.",
-                )
-
-            ncontrols = len(self.control_qubits)
-
-            # Step 2: Decompose base gate without controls
-            base_gate = self.__class__(*self.init_args, **self.init_kwargs)
-            decomposed = base_gate._base_decompose(
-                *free, use_toffolis=use_toffolis, ncontrols=ncontrols
+    def _set_control_qubits(self, qubits: Sequence[int]) -> None:
+        """Helper method for setting control qubits."""
+        if len(set(qubits)) != len(qubits):
+            repeated = self._find_repeated(qubits)
+            raise_error(
+                ValueError,
+                f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
-            mask = self._control_mask_after_stripping(decomposed)
-            for bool_value, gate in zip(mask, decomposed):
-                if bool_value:
-                    gate.is_controlled_by = True
-                    gate.control_qubits += self.control_qubits
-            return decomposed
-        return self._base_decompose(*free, use_toffolis=use_toffolis)
+        self._control_qubits = qubits
 
-    def matrix(self, backend=None):
-        """Returns the matrix representation of the gate.
+    def _set_target_qubits(self, qubits: Sequence[int]) -> None:
+        """Helper method for setting target qubits."""
+        self._target_qubits = tuple(qubits)
+        if len(self._target_qubits) != len(set(qubits)):
+            repeated = self._find_repeated(qubits)
+            raise_error(
+                ValueError,
+                f"Target qubit {repeated} was given twice for gate {self.__class__.__name__}.",
+            )
 
-        If gate has controlled qubits inserted by :meth:`qibo.gates.Gate.controlled_by`,
-        then :meth:`qibo.gates.Gate.matrix` returns the matrix of the original gate.
+    def _set_targets_and_controls(
+        self, target_qubits: Sequence[int], control_qubits: Sequence[int]
+    ) -> None:
+        """Sets target and control qubits simultaneously.
 
-        .. code-block:: python
-
-            from qibo import gates
-
-            gate = gates.SWAP(3, 4).controlled_by(0, 1, 2)
-            print(gate.matrix())
-
-        To return the full matrix that takes the control qubits into account,
-        one should use :meth:`qibo.models.Circuit.unitary`, e.g.
-
-        .. code-block:: python
-
-            from qibo import Circuit, gates
-
-            nqubits = 5
-            circuit = Circuit(nqubits)
-            circuit.add(gates.SWAP(3, 4).controlled_by(0, 1, 2))
-            print(circuit.unitary())
-
-        Args:
-            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-                to be used in the execution. If ``None``, it uses
-                the current backend. Defaults to ``None``.
-
-        Returns:
-            ndarray: Matrix representation of gate.
+        This is used for the reduced qubit updates in the distributed
+        circuits because using the individual setters may raise errors
+        due to temporary overlap of control and target qubits.
         """
-        from qibo.backends import _check_backend  # pylint: disable=C0415
-
-        backend = _check_backend(backend)
-
-        return backend.matrix(self)
-
-    def generator_eigenvalue(self):
-        """This function returns the eigenvalues of the gate's generator.
-
-        Returns:
-            float: eigenvalue of the generator.
-        """
-
-        raise_error(
-            NotImplementedError,
-            f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
-        )
-
-    @abstractmethod
-    def generator(self, backend):
-        """This function returns the gate's generator.
-
-        Returns:
-            array: generator.
-        """
-
-    def basis_rotation(self):
-        """Transformation required to rotate the basis for measuring the gate."""
-        raise_error(
-            NotImplementedError,
-            f"Basis rotation is not implemented for {self.__class__.__name__}",
-        )
-
-    def apply(self, backend, state, nqubits: int):
-        return backend.apply_gate(self, state, nqubits)
-
-    def apply_clifford(self, backend, state, nqubits):
-        return backend.apply_gate_clifford(self, state, nqubits)
+        self._set_target_qubits(target_qubits)
+        self._set_control_qubits(control_qubits)
+        self._check_control_target_overlap()
 
 
 class SpecialGate(Gate):
     """Abstract class for special gates."""
 
-    def commutes(self, gate):
+    def commutes(self, gate: Gate) -> bool:
         return False
 
-    def on_qubits(self, qubit_map: dict):
-        raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
-
-    def matrix(self, backend=None):  # pragma: no cover
+    def matrix(self, backend: Optional[Backend] = None):  # pragma: no cover
         raise_error(
             NotImplementedError, "Special gates do not have matrix representation."
         )
+
+    def on_qubits(self, qubit_map: dict):
+        raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
 
 class ParametrizedGate(Gate):
@@ -620,19 +626,38 @@ class ParametrizedGate(Gate):
     Implements the basic functionality of parameter setters and getters.
     """
 
-    def __init__(self, trainable=True):
+    def __init__(self, trainable: bool = True):
         super().__init__()
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable
 
+    @abstractmethod
+    def gradient(self, backend: Optional[Backend] = None) -> Gate:
+        """Returns Unitary with gate's gradient.
+
+        Only gates with a single parameter are currently supported.
+        """
+
+    def matrix(self, backend: Optional[Backend] = None) -> ArrayLike:
+        from qibo.backends import _check_backend  # pylint: disable=C0415
+
+        backend = _check_backend(backend)
+
+        return backend.matrix_parametrized(self)
+
+    def on_qubits(self, qubit_map: dict) -> Gate:
+        gate = super().on_qubits(qubit_map)
+        gate.parameters = self.parameters
+        return gate
+
     @Gate.parameters.setter
-    def parameters(self, x):
+    def parameters(self, x: ArrayLike) -> None:
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
             nparams = 1
             names = [self.parameter_names]
-            if not isinstance(x, collections.abc.Iterable):
+            if not isinstance(x, Iterable):
                 x = [x]
             else:
                 # Captures the ``Unitary`` gate case where the given parameter
@@ -671,11 +696,6 @@ class ParametrizedGate(Gate):
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
-    def on_qubits(self, qubit_map: dict):
-        gate = super().on_qubits(qubit_map)
-        gate.parameters = self.parameters
-        return gate
-
     def substitute_symbols(self):
         params = list(self._parameters)
         for i, param in self.symbolic_parameters.items():
@@ -683,17 +703,3 @@ class ParametrizedGate(Gate):
                 param = symbol.evaluate(param)
             params[i] = float(param)
         self.parameters = tuple(params)
-
-    def matrix(self, backend=None):
-        from qibo.backends import _check_backend  # pylint: disable=C0415
-
-        backend = _check_backend(backend)
-
-        return backend.matrix_parametrized(self)
-
-    @abstractmethod
-    def gradient(self, backend=None) -> Gate:
-        """Returns Unitary with gate's gradient.
-
-        Only gates with a single parameter are currently supported.
-        """
