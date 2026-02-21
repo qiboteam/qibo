@@ -121,7 +121,7 @@ def _gray_code(self, initial_string):
     Returns:
         ndarray: All bitstrings with the same Hamming weight as ``initial_string``.
     """
-    from qibo.models.encodings import _ehrlich_algorithm  # pylint: disable=C0415
+    from qibo.models._encodings import _ehrlich_algorithm  # pylint: disable=C0415
 
     strings = _ehrlich_algorithm(initial_string, return_indices=False)
     strings = [list(string) for string in strings]
