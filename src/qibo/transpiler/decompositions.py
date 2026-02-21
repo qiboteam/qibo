@@ -881,11 +881,13 @@ clifford_plus_t.add(
 )
 clifford_plus_t.add(
     gates.CSX,
-    [gates.H(1), gates.CU1(0, 1, math.pi / 2).decompose(method=method), gates.H(1)],
+    [gates.H(1)] + gates.CU1(0, 1, math.pi / 2).decompose(method=method) + [gates.H(1)],
 )
 clifford_plus_t.add(
     gates.CSXDG,
-    [gates.H(1), gates.CU1(0, 1, -math.pi / 2).decompose(method=method), gates.H(1)],
+    [gates.H(1)]
+    + gates.CU1(0, 1, -math.pi / 2).decompose(method=method)
+    + [gates.H(1)],
 )
 clifford_plus_t.add(gates.SWAP, [gates.CNOT(0, 1), gates.CNOT(1, 0), gates.CNOT(0, 1)])
 clifford_plus_t.add(
