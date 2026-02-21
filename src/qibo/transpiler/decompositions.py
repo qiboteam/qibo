@@ -672,7 +672,7 @@ standard_decompositions.add(
         gates.CNOT(1, 0),
         gates.SDG(0),
         gates.RZ(1, -math.pi / 2),
-        gates.SX(1).dagger(),
+        gates.SXDG(1),
         gates.RZ(1, math.pi / 2),
     ],
 )
@@ -899,7 +899,8 @@ clifford_plus_t.add(
     + [gates.CNOT(0, 1), gates.SX(0)],
 )
 clifford_plus_t.add(
-    gates.SiSWAPDG, [gate.dagger() for gate in gates.SiSWAP(0, 1).decompose()[::-1]]
+    gates.SiSWAPDG,
+    [gate.dagger() for gate in reversed(gates.SiSWAP(0, 1).decompose(method=method))],
 )
 clifford_plus_t.add(
     gates.RXX,
@@ -939,7 +940,7 @@ clifford_plus_t.add(
     + gates.RY(1, -gate.parameters[0] / 2).decompose(method=method)
     + [gates.CNOT(1, 0), gates.SDG(0)]
     + gates.RZ(1, -math.pi / 2).decompose(method=method)
-    + [gates.SX(1).dagger()]
+    + [gates.SXDG(1)]
     + gates.RZ(1, math.pi / 2).decompose(method=method),
 )
 clifford_plus_t.add(
