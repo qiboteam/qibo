@@ -189,9 +189,11 @@ class QiboMatrices:
         if dtype in ("complex64", "complex128"):
             self.Y = self.matrices.Y
             self.SX = self.matrices.SX
+            self.SXDG = self.matrices.SXDG
             self.S = self.matrices.S
-            self.T = self.matrices.T
             self.SDG = self.matrices.SDG
+            self.T = self.matrices.T
+            self.TDG = self.matrices.TDG
             self.CY = self.matrices.CY
             self.CSX = self.matrices.CSX
             self.CSXDG = self.matrices.CSXDG

@@ -218,9 +218,9 @@ class Gate:
                 :class:`qibo.gates.gates.U2`, :class:`qibo.gates.gates.U3`,
                 and Clifford gates. If ``"clifford_plus_t"``, decomposes the circuit
                 into :class:`qibo.gates.gates.CNOT`, :class:`qibo.gates.gates.H`,
-                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.SDG`,
-                :class:`qibo.gates.gates.T`, and :class:`qibo.gates.gates.TDG`.
-                Defaults to ``"standard"``.
+                :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
+                :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
+                and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as

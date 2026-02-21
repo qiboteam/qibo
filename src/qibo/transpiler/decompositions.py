@@ -766,6 +766,8 @@ def _rz_into_cliff_and_t(
 
 method = "clifford_plus_t"
 clifford_plus_t = GateDecompositions()
+clifford_plus_t.add(gates.SDG, [gates.Y(0), gates.S(0), gates.Y(0)])
+clifford_plus_t.add(gates.TDG, [gates.T(0), gates.Y(0), gates.S(0), gates.Y(0)])
 clifford_plus_t.add(
     gates.RX,
     lambda gate: [gates.H(0)] + _rz_into_cliff_and_t(gate.parameters[0]) + [gates.H(0)],
