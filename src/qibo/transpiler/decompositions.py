@@ -741,3 +741,41 @@ standard_decompositions.add(
 standard_decompositions.add(
     gates.GeneralizedRBS, lambda gate: _decomposition_generalized_RBS(gate)
 )
+
+
+def _rz_into_cliff_and_t(theta: float, epsilon: float = 1e-6, mpmath_dps: int = 256):
+    import mpmath  # pylint: disable=C0415
+    from pygridsynth.gridsynth import gridsynth_gates  # pylint: disable=C0415
+
+    theta = float(theta)
+
+    epsilon = mpmath.mpmathify(epsilon)
+    theta = mpmath.mpmathify(theta)
+
+    sequence = gridsynth_gates(theta=theta, epsilon=epsilon)
+    sequence = sequence.split("W")
+    num_global_phase = len(sequence[1:])
+    sequence = sequence[0]
+
+    gate_list = [getattr(gates, gate_name)(0) for gate_name in reversed(sequence)]
+
+    return gate_list
+
+
+clifford_plus_t = GateDecompositions()
+clifford_plus_t.add(gates.RZ, lambda gate: _rz_into_cliff_and_t(gate.parameters[0]))
+clifford_plus_t.add(gates.U1, lambda gate: _rz_into_cliff_and_t(gate.parameters[0]))
+clifford_plus_t.add(
+    gates.U2,
+    lambda gate: _rz_into_cliff_and_t(gate.parameters[1] - math.pi)
+    + [gates.SX(0)]
+    + _rz_into_cliff_and_t(gate.parameters[0] + math.pi),
+)
+clifford_plus_t.add(
+    gates.U3,
+    lambda gate: _rz_into_cliff_and_t(gate.parameters[2])
+    + [gates.SX(0)]
+    + _rz_into_cliff_and_t(gate.parameters[0] + math.pi)
+    + [gates.SX(0)]
+    + _rz_into_cliff_and_t(gate.parameters[1] + math.pi),
+)
