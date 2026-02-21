@@ -502,21 +502,22 @@ class Circuit:
 
         return {q: noise_map for q in range(self.nqubits)}
 
-    def decompose(self, *free: int):
+    def decompose(self, *free: int, method: str = "standard"):
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
         Args:
             free: Ids of free (work) qubits to use for gate decomposition.
 
         Returns:
-            Circuit that contains only gates that are supported by OpenQASM
-            and has the same effect as the original circuit.
+            :class:`qibo.models.circuit.Circuit`: Circuit that contains only
+            gates that are supported by OpenQASM and has the same effect as
+            the original circuit.
         """
         # FIXME: This method is not completed until the ``decompose`` is
         # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
         for gate in self.queue:
-            decomp_circuit.add(gate.decompose(*free))
+            decomp_circuit.add(gate.decompose(*free, method=method))
         return decomp_circuit
 
     def with_pauli_noise(self, noise_map: NoiseMapType):
