@@ -4,7 +4,7 @@ import json
 from abc import abstractmethod
 from collections.abc import Iterable
 from math import pi
-from typing import List, Self, Sequence, Tuple  # pylint: disable=E0611
+from typing import List, Sequence, Tuple  # pylint: disable=E0611
 
 import sympy
 from numpy.typing import ArrayLike
@@ -122,7 +122,7 @@ class Gate:
         """Return boolean value representing if a Gate is Clifford or not."""
         return False
 
-    def commutes(self, gate: Self) -> bool:
+    def commutes(self, gate) -> bool:
         """Checks if two gates commute.
 
         Args:
@@ -151,7 +151,7 @@ class Gate:
         self._check_control_target_overlap()
 
     @check_controls
-    def controlled_by(self, *qubits: int) -> Self:
+    def controlled_by(self, *qubits: int):
         """Controls the gate on (arbitrarily many) qubits.
 
         To see how this method affects the underlying matrix representation of a gate,
@@ -178,7 +178,7 @@ class Gate:
             self.control_qubits = qubits
         return self
 
-    def dagger(self) -> Self:
+    def dagger(self):
         """Returns the dagger (conjugate transpose) of the gate.
 
         Note that dagger is not persistent for parametrized gates.
@@ -199,9 +199,7 @@ class Gate:
 
         return new_gate
 
-    def decompose(
-        self, *free, use_toffolis: bool = True, method: str = "standard"
-    ) -> List[Self]:
+    def decompose(self, *free, use_toffolis: bool = True, method: str = "standard"):
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
@@ -244,7 +242,7 @@ class Gate:
         return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
 
     @staticmethod
-    def from_dict(raw: dict) -> Self:
+    def from_dict(raw: dict):
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
@@ -340,7 +338,7 @@ class Gate:
 
         return backend.matrix(self)
 
-    def on_qubits(self, qubit_map: dict) -> Self:
+    def on_qubits(self, qubit_map: dict):
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -461,7 +459,7 @@ class Gate:
 
     def _base_decompose(
         self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
-    ) -> List[Self]:
+    ):
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -509,7 +507,7 @@ class Gate:
                 + f"for gate {self.__class__.__name__}.",
             )
 
-    def _control_mask_after_stripping(self, gates: List[Self]) -> List[bool]:
+    def _control_mask_after_stripping(self, gates) -> List[bool]:
         """Returns a mask indicating which gates should be controlled."""
         left = 0
         right = len(gates) - 1
@@ -523,7 +521,7 @@ class Gate:
             right -= 1
         return mask
 
-    def _dagger(self) -> Self:
+    def _dagger(self):
         """Helper method for :meth:`qibo.gates.Gate.dagger`."""
         # By default the ``_dagger`` method creates an equivalent gate, assuming
         # that the gate is Hermitian (true for common gates like H or Paulis).
@@ -540,7 +538,7 @@ class Gate:
             temp_set.add(qubit)
 
     @staticmethod
-    def _gates_cancel(g1: Self, g2: Self) -> bool:
+    def _gates_cancel(g1, g2) -> bool:
         """Determines if two gates cancel each other.
 
         Two gates are considered to cancel if:
