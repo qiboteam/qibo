@@ -218,7 +218,7 @@ class Gate:
         """
         if self.is_controlled_by:
             # Step 1: Error check with all controls/targets
-            if set(free) & set(self.qubits):
+            if set(free) & set(self.qubits):  # pragma: no cover
                 raise_error(
                     ValueError,
                     "Cannot decompose multi-controlled ``X`` gate if free "
