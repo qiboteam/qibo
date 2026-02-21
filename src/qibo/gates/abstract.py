@@ -4,7 +4,7 @@ import json
 from abc import abstractmethod
 from collections.abc import Iterable
 from math import pi
-from typing import List, Self, Sequence, Tuple
+from typing import List, Self, Sequence, Tuple  # pylint: disable=E0611
 
 import sympy
 from numpy.typing import ArrayLike
