@@ -202,7 +202,9 @@ class Gate:
 
         return new_gate
 
-    def decompose(self, *free, use_toffolis: bool = True) -> List[Self]:
+    def decompose(
+        self, *free, use_toffolis: bool = True, method: str = "standard"
+    ) -> List[Self]:
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
@@ -233,7 +235,7 @@ class Gate:
             # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(
-                *free, use_toffolis=use_toffolis, ncontrols=ncontrols
+                *free, use_toffolis=use_toffolis, ncontrols=ncontrols, method=method
             )
             mask = self._control_mask_after_stripping(decomposed)
             for bool_value, gate in zip(mask, decomposed):
@@ -242,7 +244,7 @@ class Gate:
                     gate.control_qubits += self.control_qubits
             return decomposed
 
-        return self._base_decompose(*free, use_toffolis=use_toffolis)
+        return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
 
     @staticmethod
     def from_dict(raw: dict) -> Self:
@@ -460,7 +462,9 @@ class Gate:
         """
         return json.dumps(self.raw)
 
-    def _base_decompose(self, *free, use_toffolis: bool = True, **kwargs) -> List[Self]:
+    def _base_decompose(
+        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ) -> List[Self]:
         """Base decomposition for gates.
 
         Returns a list containing the gate itself. Should be overridden by
@@ -478,11 +482,20 @@ class Gate:
             gate in another gate set.
         """
         try:
-            from qibo.transpiler.decompositions import (  # pylint: disable=C0415
-                standard_decompositions,
-            )
+            if method == "clifford_plus_t":
+                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                    clifford_plus_t,
+                )
 
-            return standard_decompositions(self)
+                func = clifford_plus_t
+            else:
+                from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                    standard_decompositions,
+                )
+
+                func = standard_decompositions
+
+            return func(self)
         except KeyError:
             return [self.__class__(*self.init_args, **self.init_kwargs)]
 
