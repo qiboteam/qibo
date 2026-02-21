@@ -743,7 +743,7 @@ standard_decompositions.add(
 
 
 def _rz_into_cliff_and_t(
-    theta: float, qubit: int = 0, epsilon: float = 1e-10, mpmath_dps: int = 256
+    theta: float, qubit: int = 0, epsilon: float = 1e-16, mpmath_dps: int = 256
 ):
     import mpmath  # pylint: disable=C0415
     from pygridsynth.gridsynth import gridsynth_gates  # pylint: disable=C0415
