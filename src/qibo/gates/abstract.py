@@ -4,13 +4,12 @@ import json
 from abc import abstractmethod
 from collections.abc import Iterable
 from math import pi
-from typing import List, Optional, Self, Sequence, Tuple
+from typing import List, Self, Sequence, Tuple
 
 import sympy
 from numpy.typing import ArrayLike
 
 from qibo import config
-from qibo.backends.abstract import Backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -92,12 +91,10 @@ class Gate:
 
         self._clifford = False
 
-    def apply(self, backend: Backend, state: ArrayLike, nqubits: int) -> ArrayLike:
+    def apply(self, backend, state: ArrayLike, nqubits: int) -> ArrayLike:
         return backend.apply_gate(self, state, nqubits)
 
-    def apply_clifford(
-        self, backend: Backend, state: ArrayLike, nqubits: int
-    ) -> ArrayLike:
+    def apply_clifford(self, backend, state: ArrayLike, nqubits: int) -> ArrayLike:
         return backend.apply_gate_clifford(self, state, nqubits)
 
     def basis_rotation(self):
@@ -280,7 +277,7 @@ class Gate:
             raise e
 
     @abstractmethod
-    def generator(self, backend: Backend):
+    def generator(self, backend):
         """This function returns the gate's generator.
 
         Returns:
@@ -304,7 +301,7 @@ class Gate:
         """Return boolean value representing if a Gate is Hamming-weight-preserving or not."""
         return False
 
-    def matrix(self, backend: Optional[Backend] = None) -> ArrayLike:
+    def matrix(self, backend=None) -> ArrayLike:
         """Returns the matrix representation of the gate.
 
         If gate has controlled qubits inserted by :meth:`qibo.gates.Gate.controlled_by`,
@@ -624,7 +621,7 @@ class SpecialGate(Gate):
     def commutes(self, gate: Gate) -> bool:
         return False
 
-    def matrix(self, backend: Optional[Backend] = None):  # pragma: no cover
+    def matrix(self, backend=None):  # pragma: no cover
         raise_error(
             NotImplementedError, "Special gates do not have matrix representation."
         )
@@ -646,13 +643,13 @@ class ParametrizedGate(Gate):
         self.trainable = trainable
 
     @abstractmethod
-    def gradient(self, backend: Optional[Backend] = None) -> Gate:
+    def gradient(self, backend=None) -> Gate:
         """Returns Unitary with gate's gradient.
 
         Only gates with a single parameter are currently supported.
         """
 
-    def matrix(self, backend: Optional[Backend] = None) -> ArrayLike:
+    def matrix(self, backend=None) -> ArrayLike:
         from qibo.backends import _check_backend  # pylint: disable=C0415
 
         backend = _check_backend(backend)
