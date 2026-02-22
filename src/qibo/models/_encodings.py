@@ -265,14 +265,17 @@ def _binary_encoder_hopf(
                     targets.append(k)
             targets_and_controls.append([targets, controls, anticontrols])
 
+    untouched = list(range(nqubits))
     circuit = Circuit(nqubits, **kwargs)
     for targets, controls, anticontrols in targets_and_controls:
+        anticontrols = [qubit for qubit in anticontrols if qubit not in untouched]
         gate_list = []
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         gate_list.append(
             gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
         )
+        untouched = [qubit for qubit in untouched if qubit != targets[0]]
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
