@@ -1147,10 +1147,10 @@ def _render_label(label: str, inits: Optional[dict] = None) -> str:
     # As such, the statement "if label in inits" is always False.
     # The inits parameter can also be removed, as it was defined as dictionary
     # but a list of int is being passed
-    
+
     # inits parameter is kept as some tests fail without it
-    
-    if inits is None: # this if condition is added to suppress type check errors
+
+    if inits is None:  # this if condition is added to suppress type check errors
         return ""
 
     if label in inits:
@@ -1159,7 +1159,7 @@ def _render_label(label: str, inits: Optional[dict] = None) -> str:
             return ""
         else:
             return r"$|%s\rangle$" % inits[label]
-    
+
     return r"$|%s\rangle$" % label
 
 
@@ -1691,7 +1691,7 @@ def _draw_controls_with_folds(
     scale = plot_params["scale"]
 
     num_qubits = len(labels)
-    
+
     col, yoff = _fold_coords(
         i,
         fold,
@@ -1977,17 +1977,13 @@ def _draw_fold_boundaries(
         y_bot = wire_grid[(f + 1) * nq - 1]
 
         # LEFT bracket (start of fold), skip for first fold
-        if (
-            f != num_folds - 1
-        ):
+        if f != num_folds - 1:
             # Folds are indexed bottom-to-top when fold_direction="down".
             # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
 
         # RIGHT bracket (end of fold), skip for last fold
-        if (
-            f != 0
-        ):
+        if f != 0:
             # Folds are indexed bottom-to-top when fold_direction="down".
             # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
