@@ -413,8 +413,9 @@ def test_qfim(backend, nqubits, return_complex, params_flag):
         data = np.random.rand(nqubits)
         data = backend.cast(data, dtype=data.dtype)
 
-        params = _generate_rbs_angles(data, nqubits, "diagonal")
-        params = backend.cast(params, dtype=np.float64)
+        params = _generate_rbs_angles(
+            data, dims=nqubits, architecture="diagonal", backend=backend
+        )
 
         target = [1]
         for param in params[:-1]:
