@@ -27,7 +27,7 @@ SYMBOLS = json.loads((UI / "symbols.json").read_text())
 
 PLOT_PARAMS = {
     "scale": 1.0,
-    "fontsize": 12.0,
+    "fontsize": 14.0,
     "linewidth": 1.0,
     "control_radius": 0.05,
     "not_radius": 0.15,
@@ -66,7 +66,7 @@ def plot_circuit(
     circuit: Circuit,
     scale: float = 0.6,
     cluster_gates: bool = True,
-    fold: int = 20,
+    fold: int = -1,
     style: Optional[Union[dict, str]] = None,
 ) -> tuple:
     """Main matplotlib plot function for Qibo circuit
@@ -75,7 +75,7 @@ def plot_circuit(
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit to plot.
         scale (float, optional): Scaling factor for  ``matplotlib`` output drawing. Defaults to :math:`0.6`.
         cluster_gates (bool, optional): if ``True``, groups circuit gates on drawing. Defaults to ``True``.
-        fold (int, optional): Number of gates to display in a row. Defaults to :math:`20`.
+        fold (int, optional): Number of gates to display in a row. Defaults to :math:`-1` (no folding unless specified).
         style (dict or str or None, optional): Style applied to the circuit. It can a built-in style or custom.
             Built-in options are: ``garnacha``, ``fardelejo``, ``quantumspain``, ``color-blind`` and ``cachirulo``.
             Custom style needs to be a dictionary.
@@ -125,8 +125,7 @@ def plot_circuit(
     """
 
     params = PLOT_PARAMS.copy()
-    if style is not None:
-        params.update(_plot_params(style))
+    params.update(_plot_params(style))
 
     inits = list(range(circuit.nqubits))
 
@@ -202,7 +201,7 @@ def _plot_quantum_schedule(
     plot_params: dict,
     labels: list,
     plot_labels: bool = True,
-    fold: int = 20,
+    fold: int = -1,
     **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a queue of quantum circuit.
@@ -220,7 +219,7 @@ def _plot_quantum_schedule(
 
         plot_labels (bool, optional): Indicates whether labels are to be plotted. Defaults to ``True``.
 
-        fold (int, optional): Number of gates to display in a row. Defaults to :math:`20`.
+        fold (int, optional): Number of gates to display in a row. Defaults to :math:`-1` (no folding unless specified).
 
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
@@ -247,7 +246,7 @@ def _plot_quantum_circuit(
     labels: list,
     plot_labels: bool = True,
     schedule: bool = False,
-    fold: int = 20,
+    fold: int = -1,
     **kwargs: Any,
 ) -> Axes:
     """Use Matplotlib to plot a quantum circuit.
@@ -261,7 +260,7 @@ def _plot_quantum_circuit(
         plot_labels (bool, optional): Indicates whether qubit labels are shown. Defaults to ``True``.
         schedule (bool, optional): If ``True``, treats ``gates`` as a schedule (list of layers).
             Defaults to ``False``.
-        fold (int, optional): Number of gates to display in a row before folding. Defaults to :math:`20`.
+        fold (int, optional): Number of gates to display in a row before folding. Defaults to :math:`-1` (no folding unless specified).
         kwargs (dict, optional): Variadic dictionary that can override plot parameters.
 
     Returns:
@@ -760,7 +759,7 @@ def _swapx_with_folds(ax: Axes, x: float, y: float, plot_params: dict) -> None:
     Returns:
         None: This function updates the provided axes in place.
     """
-    # match the CNOT symbol footprint
+    # match the CNOT symbol outline
     R = plot_params["not_radius_with_folds"]  # ⊕'s horizontal diameter = R
     sx = R * 0.5  # half-width of the box (so total width = R)
     sy = 0.85 * R * 0.5  # half-height (so total height = 0.85*R)
@@ -1071,13 +1070,15 @@ def _composed_rectangle(
 
     ax.add_patch(rect)
     text_gate = _text(ax, x + w * 0.05, y + h / 2, label, plot_style, box=False)
-    # _auto_fit_fontsize(text_gate, w * 0.8, None, fig=ax.figure, ax=ax)
+    # Ensure the label renders above the rectangle patch.
+    text_gate.set_zorder(rect.get_zorder() + 1)
+    _auto_fit_fontsize(text_gate, w * 0.8, None, fig=ax.figure, ax=ax)
 
 
 def _auto_fit_fontsize(
     text: Text,
     width: float,
-    height: float,
+    height: Optional[float],
     fig: Optional[Figure] = None,
     ax: Optional[Axes] = None,
 ) -> float:
@@ -1087,7 +1088,7 @@ def _auto_fit_fontsize(
     Args:
         text (:class:`matplotlib.text.Text`): Text object to resize.
         width (float): Allowed width in data coordinates.
-        height (float): Allowed height in data coordinates.
+        height (float, optional): Allowed height in data coordinates.
         fig (:class:`matplotlib.figure.Figure`, optional): Figure object to use for rendering. Defaults to ``None``.
         ax (:class:`matplotlib.axes.Axes`, optional): Axes object to use for rendering. Defaults to ``None``.
 
@@ -1097,12 +1098,10 @@ def _auto_fit_fontsize(
     fig = fig or plt.gcf()
     ax = ax or plt.gca()
 
-    # get text bounding box in figure coordinates
-    # TODO: check if this is fine.
-    # fig.canvas.get_renderer is outdated.
+    # Compute the text bounding box using a renderer-free draw call.
+    # This avoids relying on fig.canvas.get_renderer().
 
-    fig.draw_without_rendering()  # newly added
-    # renderer = fig.canvas.get_renderer()
+    fig.draw_without_rendering()  # Force a draw so Matplotlib can compute `text.get_window_extent()`.
     bbox_text = text.get_window_extent()  # removed renderer parameter
 
     # transform bounding box to data coordinates
@@ -1146,16 +1145,21 @@ def _render_label(label: str, inits: Optional[dict] = None) -> str:
     # inits is defined as list(range(circuit.nqubits)),
     # and label is qubit labels (q_0, q_1 etc.)
     # As such, the statement "if label in inits" is always False.
-    # I have kept the if statements commented, they can be removed later
     # The inits parameter can also be removed, as it was defined as dictionary
     # but a list of int is being passed
+    
+    # inits parameter is kept as some tests fail without it
+    
+    if inits is None: # this if condition is added to suppress type check errors
+        return ""
 
-    # if label in inits:
-    #     s = inits[label]
-    #     if s is None:
-    #         return ""
-    #     else:
-    #         return r"$|%s\rangle$" % inits[label]
+    if label in inits:
+        s = inits[label]
+        if s is None:
+            return ""
+        else:
+            return r"$|%s\rangle$" % inits[label]
+    
     return r"$|%s\rangle$" % label
 
 
@@ -1301,7 +1305,7 @@ def _u_hash(gate: gates.Unitary, param_index: int) -> str:
 def _process_gates(array_gates: list, nqubits: int) -> list:
     """
     Transforms the list of gates given by the Qibo circuit
-    into a list of gates with a suitable structre to print on screen with matplotlib.
+    into a list of gates with a suitable structure to print on screen with matplotlib.
 
     Args:
         array_gates (list): List of gates provided by the Qibo circuit.
@@ -1415,14 +1419,14 @@ def _process_gates(array_gates: list, nqubits: int) -> list:
     return gates_plot
 
 
-def _plot_params(style: Union[dict, str]) -> dict:
+def _plot_params(style: Optional[Union[dict, str]]) -> dict:
     """
     Given a style name, the function gets the style configuration.
     If the style is not available, it return the default style.
     It is allowed to give a custom dictionary to give the circuit a style.
 
     Args:
-        style (Union[dict, str]): Name of the style.
+        style (dict or str or None): Name of the style.
 
     Returns:
         dict: Style configuration.
@@ -1687,7 +1691,7 @@ def _draw_controls_with_folds(
     scale = plot_params["scale"]
 
     num_qubits = len(labels)
-    num_qubits = len(labels)
+    
     col, yoff = _fold_coords(
         i,
         fold,
@@ -1975,13 +1979,17 @@ def _draw_fold_boundaries(
         # LEFT bracket (start of fold), skip for first fold
         if (
             f != num_folds - 1
-        ):  # checking for {num_folds - 1} because folds are actually indexed bottom to top, so first fold is at f = num_folds-1
+        ):
+            # Folds are indexed bottom-to-top when fold_direction="down".
+            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_left_edge, x_left_edge, y_top, y_bot, plot_params)
 
         # RIGHT bracket (end of fold), skip for last fold
         if (
             f != 0
-        ):  # checking for 0 because folds are actually indexed bottom to top, so last fold is at f = 0
+        ):
+            # Folds are indexed bottom-to-top when fold_direction="down".
+            # Skip the left bracket for the first (bottom) fold.
             _line(ax, x_right_edge, x_right_edge, y_top, y_bot, plot_params)
 
 
