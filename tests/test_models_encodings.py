@@ -11,11 +11,13 @@ from scipy.optimize import curve_fit
 from scipy.special import binom
 
 from qibo import Circuit, gates
-from qibo.models.encodings import (
+from qibo.models._encodings import (
     _add_wbd_gate,
     _ehrlich_algorithm,
+    _ehrlich_codewords_up_to_k,
     _get_int_type,
-    _get_next_bistring,
+)
+from qibo.models.encodings import (
     binary_encoder,
     comp_basis_encoder,
     dicke_state,
@@ -28,6 +30,7 @@ from qibo.models.encodings import (
     sparse_encoder,
     unary_encoder,
     unary_encoder_random_gaussian,
+    up_to_k_hamming_weight_encoder,
 )
 from qibo.quantum_info.random_ensembles import random_statevector
 
@@ -302,6 +305,65 @@ def test_hamming_weight_encoder(
     state = backend.execute_circuit(circuit).state()
 
     backend.assert_allclose(state, target, atol=1e-7)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5, 6])
+@pytest.mark.parametrize("up_to_k", [1, 2, 7])
+@pytest.mark.parametrize("custom_codewords", [False, True])
+@pytest.mark.parametrize("complex_data", [False, True])
+@pytest.mark.parametrize("keep_antictrls", [False, True])
+def test_up_to_k_hamming_weight_encoder(
+    backend,
+    nqubits,
+    up_to_k,
+    custom_codewords,
+    complex_data,
+    keep_antictrls,
+):
+
+    seed = 10
+    dim = sum(int(binom(nqubits, weight)) for weight in range(up_to_k + 1))
+    dtype = backend.complex128 if complex_data else backend.float64
+
+    codewords = backend.arange(dim) if custom_codewords else None
+
+    with pytest.raises(ValueError):
+        data = random_statevector(dim + 10, dtype=dtype, seed=seed, backend=backend)
+        _ = up_to_k_hamming_weight_encoder(
+            data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+
+    data = random_statevector(dim, dtype=dtype, seed=seed, backend=backend)
+    if up_to_k > nqubits:
+        with pytest.raises(ValueError):
+            _ = list(_ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend))
+    else:
+        indices = _ehrlich_codewords_up_to_k(up_to_k, False, nqubits, backend)
+        indices = [int(string, 2) for string in indices]
+        indices_lex = np.sort(np.copy(indices))
+
+        target = backend.zeros(2**nqubits, dtype=dtype)
+        if codewords is None:
+            target[indices_lex] = data
+        else:
+            target[codewords] = data
+
+        circuit = up_to_k_hamming_weight_encoder(
+            data,
+            nqubits=nqubits,
+            up_to_k=up_to_k,
+            codewords=codewords,
+            keep_antictrls=keep_antictrls,
+            backend=backend,
+        )
+        state = backend.execute_circuit(circuit).state()
+
+        backend.assert_allclose(state, target, atol=1e-7)
 
 
 @pytest.mark.parametrize("seed", [10])
