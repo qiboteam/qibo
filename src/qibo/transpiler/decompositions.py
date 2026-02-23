@@ -1,3 +1,4 @@
+import cmath
 import math
 
 from qibo import gates
@@ -76,7 +77,7 @@ class GateDecompositions:
         num_global_phase = len(sequence[1:])
         sequence = sequence[0]
 
-        global_phase = math.exp(1j * num_global_phase * math.pi / 4)
+        global_phase = cmath.exp(1j * num_global_phase * math.pi / 4)
 
         gate_list = [
             getattr(gates, gate_name)(qubit) for gate_name in reversed(sequence)
