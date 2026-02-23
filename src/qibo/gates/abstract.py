@@ -223,6 +223,13 @@ class Gate:
                 :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
                 :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
                 and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Gates that have the same effect as
@@ -486,7 +493,13 @@ class Gate:
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
                 See :class:`qibo.gates.TOFFOLI` for more details on this representation.
-            kwargs: Aditional parameters.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Synthesis of the original

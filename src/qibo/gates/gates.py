@@ -105,6 +105,13 @@ class X(Gate):
                 :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
                 :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
                 and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         Returns:
             List[:class:`qibo.gates.abstract.Gate`]: Set of one-qubit, :class:`qibo.gates.CNOT`,
@@ -2406,6 +2413,13 @@ class RBS(ParametrizedGate):
                 :class:`qibo.gates.gates.S`, :class:`qibo.gates.gates.X`,
                 :class:`qibo.gates.gates.Y`, :class:`qibo.gates.gates.Z`,
                 and :class:`qibo.gates.gates.T`. Defaults to ``"standard"``.
+            kwargs (dict, optional): Additional arguments. When ``method = "clifford_plus_t"``,
+                one can set ``epsilon`` (:math:`\\epsilon`) precision for the transpilation
+                of each gate into the Clifford + :class:`qibo.gates.gates.T` gate set.
+                This precision defaults to :math:`\\epsilon = 10^{-16}`.
+                Another possible keyword argument is ``mpmath_dps``, which defines the
+                number of decimal places used by the ``mpmath`` package.
+                ``mpmmath_dps`` defaults to :math:`256`.
 
         References:
             1. R. M. S. Farias, T. O. Maciel, G. Camilo, R. Lin, S. Ramos-Calderer, and L. Aolita,
