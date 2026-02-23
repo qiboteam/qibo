@@ -643,9 +643,16 @@ def test_GST_2qb_basis_op_diff_registers_param_gates(backend):
 
 
 def test_GST_invertible_matrix(backend):
+
+    ground_truths = [np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]]),
+                    np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]]),
+                    np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])]
+
     T = np.array([[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 1], [1, -1, 0, 0]])
-    matrices = GST(gate_set=[], pauli_liouville=True, gauge_matrix=T, backend=backend)
-    assert True
+    matrices = GST(gate_set=[gates.X, gates.Y, gates.Z], pauli_liouville=True, gauge_matrix=T, backend=backend)
+
+    for ground_truth, test_matrix in zip(ground_truths, matrices):
+        backend.assert_allclose(test_matrix, ground_truth, atol=1e-1)
 
 
 def test_GST_non_invertible_matrix(backend):
