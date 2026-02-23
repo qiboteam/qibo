@@ -52,6 +52,36 @@ class GateDecompositions:
         decomposition = self._check_instance(gate, backend)
         return [g.on_qubits(dict(enumerate(gate.qubits))) for g in decomposition]
 
+    def _set_precision_cliff_plus_t(
+        self, epsilon: float = 1e-16, mpmath_dps: int = 256
+    ):
+        import mpmath  # pylint: disable=C0415
+
+        mpmath.mp.dps = mpmath_dps
+        self._epsilon = mpmath.mpmathify(epsilon)
+
+    def _rz_into_cliff_and_t(
+        self,
+        theta: float,
+        qubit: int = 0,
+    ):
+        import mpmath  # pylint: disable=C0415
+        from pygridsynth.gridsynth import gridsynth_gates  # pylint: disable=C0415
+
+        theta = float(theta)
+        theta = mpmath.mpmathify(theta)
+
+        sequence = gridsynth_gates(theta=theta, epsilon=self._epsilon)
+        sequence = sequence.split("W")
+        num_global_phase = len(sequence[1:])
+        sequence = sequence[0]
+
+        gate_list = [
+            getattr(gates, gate_name)(qubit) for gate_name in reversed(sequence)
+        ]
+
+        return gate_list
+
 
 def _u3_to_gpi2(t, p, l):
     """Decompose a :class:`qibo.gates.U3` gate into :class:`qibo.gates.GPI2` gates.
@@ -741,70 +771,54 @@ standard_decompositions.add(
     gates.GeneralizedRBS, lambda gate: _decomposition_generalized_RBS(gate)
 )
 
-
-def _rz_into_cliff_and_t(
-    theta: float, qubit: int = 0, epsilon: float = 1e-16, mpmath_dps: int = 256
-):
-    import mpmath  # pylint: disable=C0415
-    from pygridsynth.gridsynth import gridsynth_gates  # pylint: disable=C0415
-
-    theta = float(theta)
-
-    mpmath.mp.dps = mpmath_dps
-    epsilon = mpmath.mpmathify(epsilon)
-    theta = mpmath.mpmathify(theta)
-
-    sequence = gridsynth_gates(theta=theta, epsilon=epsilon)
-    sequence = sequence.split("W")
-    num_global_phase = len(sequence[1:])
-    sequence = sequence[0]
-
-    gate_list = [getattr(gates, gate_name)(qubit) for gate_name in reversed(sequence)]
-
-    return gate_list
-
-
 method = "clifford_plus_t"
 clifford_plus_t = GateDecompositions()
+clifford_plus_t._set_precision_cliff_plus_t()
 clifford_plus_t.add(gates.SDG, [gates.Y(0), gates.S(0), gates.Y(0)])
 clifford_plus_t.add(gates.TDG, [gates.T(0), gates.Y(0), gates.S(0), gates.Y(0)])
 clifford_plus_t.add(
     gates.RX,
-    lambda gate: [gates.H(0)] + _rz_into_cliff_and_t(gate.parameters[0]) + [gates.H(0)],
+    lambda gate: [gates.H(0)]
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
+    + [gates.H(0)],
 )
 clifford_plus_t.add(
     gates.RY,
     lambda gate: [gates.SDG(0), gates.H(0)]
-    + _rz_into_cliff_and_t(gate.parameters[0])
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
     + [gates.H(0), gates.S(0)],
 )
-clifford_plus_t.add(gates.RZ, lambda gate: _rz_into_cliff_and_t(gate.parameters[0]))
+clifford_plus_t.add(
+    gates.RZ, lambda gate: clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
+)
 clifford_plus_t.add(
     gates.PRX,
-    lambda gate: _rz_into_cliff_and_t(-gate.parameters[1] - math.pi / 2)
+    lambda gate: clifford_plus_t._rz_into_cliff_and_t(-gate.parameters[1] - math.pi / 2)
     + gates.RY(0, -gate.parameters[0]).decompose(method=method)
-    + _rz_into_cliff_and_t(gate.parameters[1] + math.pi / 2),
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[1] + math.pi / 2),
 )
-clifford_plus_t.add(gates.U1, lambda gate: _rz_into_cliff_and_t(gate.parameters[0]))
+clifford_plus_t.add(
+    gates.U1, lambda gate: clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0])
+)
 clifford_plus_t.add(
     gates.U2,
-    lambda gate: _rz_into_cliff_and_t(gate.parameters[1] - math.pi)
+    lambda gate: clifford_plus_t._rz_into_cliff_and_t(gate.parameters[1] - math.pi)
     + [gates.SX(0)]
-    + _rz_into_cliff_and_t(gate.parameters[0] + math.pi),
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0] + math.pi),
 )
 clifford_plus_t.add(
     gates.U3,
-    lambda gate: _rz_into_cliff_and_t(gate.parameters[2])
+    lambda gate: clifford_plus_t._rz_into_cliff_and_t(gate.parameters[2])
     + [gates.SX(0)]
-    + _rz_into_cliff_and_t(gate.parameters[0] + math.pi)
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[0] + math.pi)
     + [gates.SX(0)]
-    + _rz_into_cliff_and_t(gate.parameters[1] + math.pi),
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[1] + math.pi),
 )
 clifford_plus_t.add(
     gates.PRX,
-    lambda gate: _rz_into_cliff_and_t(-gate.parameters[1] - math.pi / 2)
+    lambda gate: clifford_plus_t._rz_into_cliff_and_t(-gate.parameters[1] - math.pi / 2)
     + gates.RY(0, -gate.parameters[0]).decompose(method=method)
-    + _rz_into_cliff_and_t(gate.parameters[1] + math.pi / 2),
+    + clifford_plus_t._rz_into_cliff_and_t(gate.parameters[1] + math.pi / 2),
 )
 clifford_plus_t.add(gates.CY, [gates.SDG(1), gates.CNOT(0, 1), gates.S(1)])
 clifford_plus_t.add(gates.CZ, [gates.H(1), gates.CNOT(0, 1), gates.H(1)])

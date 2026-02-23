@@ -199,7 +199,9 @@ class Gate:
 
         return new_gate
 
-    def decompose(self, *free, use_toffolis: bool = True, method: str = "standard"):
+    def decompose(
+        self, *free, use_toffolis: bool = True, method: str = "standard", **kwargs
+    ):
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
         Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
@@ -240,7 +242,11 @@ class Gate:
             # Step 2: Decompose base gate without controls
             base_gate = self.__class__(*self.init_args, **self.init_kwargs)
             decomposed = base_gate._base_decompose(
-                *free, use_toffolis=use_toffolis, ncontrols=ncontrols, method=method
+                *free,
+                use_toffolis=use_toffolis,
+                ncontrols=ncontrols,
+                method=method,
+                **kwargs,
             )
             mask = self._control_mask_after_stripping(decomposed)
             for bool_value, gate in zip(mask, decomposed):
@@ -492,7 +498,12 @@ class Gate:
                     clifford_plus_t,
                 )
 
+                mpmath_dps = kwargs.get("mpmath_dps", 256)
+                epsilon = kwargs.get("epsilon", 1e-16)
+
                 func = clifford_plus_t
+                func._set_precision_cliff_plus_t(epsilon, mpmath_dps)
+
             else:
                 from qibo.transpiler.decompositions import (  # pylint: disable=C0415
                     standard_decompositions,
