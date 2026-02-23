@@ -171,9 +171,11 @@ class X(Gate):
         return decomp_gates
 
     def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard"
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
-        return self._base_decompose(*free, use_toffolis=use_toffolis, method=method)
+        return self._base_decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
     def basis_rotation(self) -> Gate:
         return H(self.target_qubits[0])
@@ -310,7 +312,7 @@ class SX(Gate):
         return "sx"
 
     def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard"
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\sqrt{X}` up to global phase.
 
@@ -319,7 +321,9 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis, method=method)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
     def _dagger(self) -> Gate:
         """"""
@@ -1048,7 +1052,7 @@ class U3(_Un_):
         self.parameters = theta, phi, lam
 
     def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard"
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`U_{3}` up to global phase.
 
@@ -1063,7 +1067,9 @@ class U3(_Un_):
         where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
         :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis, method=method)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
     @property
     def hamming_weight(self) -> bool:
@@ -2181,7 +2187,7 @@ class RXXYY(_Rnn_):
         return True
 
     def decompose(
-        self, *free, use_toffolis=True, method: str = "standard"
+        self, *free, use_toffolis=True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
@@ -2189,7 +2195,9 @@ class RXXYY(_Rnn_):
         the original gate due to a phase difference in
         :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
-        return super().decompose(*free, use_toffolis=use_toffolis, method=method)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class MS(ParametrizedGate):
@@ -2314,7 +2322,7 @@ class GIVENS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard"
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of GIVENS gate according to the decomposition of the
         RBS gate in Ref. [1].
@@ -2325,7 +2333,9 @@ class GIVENS(ParametrizedGate):
             (2025) <https://doi.org/10.1103/PhysRevApplied.23.044014>`_.
 
         """
-        return super().decompose(*free, use_toffolis=use_toffolis, method=method)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class RBS(ParametrizedGate):
@@ -2456,7 +2466,7 @@ class ECR(Gate):
         return True
 
     def decompose(
-        self, *free: int, use_toffolis: bool = True, method: str = "standard"
+        self, *free: int, use_toffolis: bool = True, method: str = "standard", **kwargs
     ) -> List[Gate]:
         """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
 
@@ -2467,7 +2477,9 @@ class ECR(Gate):
             \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
                 \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0}) \\, .
         """
-        return super().decompose(*free, use_toffolis=use_toffolis, method=method)
+        return super().decompose(
+            *free, use_toffolis=use_toffolis, method=method, **kwargs
+        )
 
 
 class TOFFOLI(Gate):
