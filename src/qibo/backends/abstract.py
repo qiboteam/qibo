@@ -280,6 +280,9 @@ class Backend:  # pylint: disable=R0904
     def conj(self, array: ArrayLike) -> ArrayLike:
         return self.engine.conj(array)
 
+    def coo_matrix(self, array: ArrayLike, **kwargs) -> ArrayLike:  # pragma: no cover
+        raise_error(NotImplementedError)
+
     def copy(self, array: ArrayLike, **kwargs) -> ArrayLike:
         return self.engine.copy(array, **kwargs)
 
@@ -419,8 +422,18 @@ class Backend:  # pylint: disable=R0904
 
         return self.engine.linalg.norm(state, order, **kwargs)
 
+    def max(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+        return self.engine.max(array, **kwargs)
+
     def mean(self, array: ArrayLike, **kwargs) -> Union[float, complex, ArrayLike]:
         return self.engine.mean(array, **kwargs)
+
+    def min(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, int, complex, ArrayLike]:  # pragma: no cover
+        return self.engine.min(array, **kwargs)
 
     def nonzero(self, array: ArrayLike) -> ArrayLike:
         return self.engine.nonzero(array)
@@ -634,6 +647,11 @@ class Backend:  # pylint: disable=R0904
         self, array: ArrayLike, **kwargs
     ) -> Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]:
         return self.engine.unique(array, **kwargs)
+
+    def var(
+        self, array: ArrayLike, **kwargs
+    ) -> Union[float, ArrayLike]:  # pragma: no cover
+        return self.engine.var(array, **kwargs)
 
     def vector_norm(
         self,
@@ -1001,7 +1019,7 @@ class Backend:  # pylint: disable=R0904
         Args:
             nqubits (int): Number of qubits :math:`n`.
             density_matrix (bool, optional): If ``True``, returns the density matrix
-                :math:`\\ketbra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
+                :math:`\\ket{0}\\!\\bra{0}^{\\otimes \\, n}`. If ``False``, returns the statevector
                 :math:`\\ket{0}^{\\otimes \\, n}`. Defaults to ``False``.
 
         Returns:
@@ -1495,7 +1513,8 @@ class Backend:  # pylint: disable=R0904
             unmeasured_qubits = tuple(set(list(range(nqubits))) ^ set(qubits))
             state = self.reshape(self.abs(state) ** 2, nqubits * (2,))
             probs = self.cast(state, dtype=rtype)  # pylint: disable=E1111
-            probs = self.sum(probs, axis=unmeasured_qubits)
+            if len(unmeasured_qubits) != 0:
+                probs = self.sum(probs, axis=unmeasured_qubits)
 
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 

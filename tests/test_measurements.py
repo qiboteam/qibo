@@ -450,13 +450,10 @@ def test_measurement_basis_list(backend):
     circuit.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
     result = backend.execute_circuit(circuit, nshots=100)
     assert result.frequencies() == {"0011": 100}
-    assert (
-        str(circuit)
-        == """q0: ─H─H───M─
+    assert str(circuit) == """q0: ─H─H───M─
 q1: ───────M─
 q2: ─X─H─H─M─
 q3: ─X─────M─"""
-    )
 
 
 def test_measurement_basis_list_error():

@@ -420,7 +420,14 @@ class Gate:
         Returns:
             list: Synthesis of the original gate in another gate set.
         """
-        return [self.__class__(*self.init_args, **self.init_kwargs)]
+        try:
+            from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+                standard_decompositions,
+            )
+
+            return standard_decompositions(self)
+        except KeyError:
+            return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     @staticmethod
     def _gates_cancel(g1, g2):

@@ -1,11 +1,13 @@
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
 
+from functools import reduce
+
 import numpy as np
 import pytest
 
 from qibo import hamiltonians, matrices, symbols
 from qibo.hamiltonians import MaxCut, SymbolicHamiltonian
-from qibo.hamiltonians.models import LABS, XXX, Heisenberg
+from qibo.hamiltonians.models import GPP, LABS, XXX, Heisenberg
 
 models_config = [
     ("X", {"nqubits": 3}, "x_N3.out"),
@@ -111,3 +113,54 @@ def test_xxx(backend, dense):
             dense=dense,
             backend=backend,
         )
+
+
+@pytest.mark.parametrize("node_weights", [False, True])
+@pytest.mark.parametrize("is_list", [False, True])
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("penalty_coeff", [0.0, 2])
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_gpp(backend, nqubits, penalty_coeff, dense, is_list, node_weights):
+    with pytest.raises(ValueError):
+        GPP(np.random.rand(3, 3), penalty_coeff, np.random.rand(4), backend=backend)
+
+    with pytest.raises(ValueError):
+        GPP(np.random.rand(3, 2), penalty_coeff, np.random.rand(3), backend=backend)
+
+    adj_matrix = np.ones((nqubits, nqubits)) - np.diag(np.ones(nqubits))
+    adj_matrix = (
+        list(adj_matrix) if is_list else backend.cast(adj_matrix, dtype=np.int8)
+    )
+
+    node_weights = [1] * nqubits if node_weights else None
+
+    hamiltonian = GPP(
+        adj_matrix, penalty_coeff, node_weights, dense=dense, backend=backend
+    )
+
+    term = (backend.matrices.I() - backend.matrices.Z) / 2
+    base_string = [backend.matrices.I()] * nqubits
+    rows, columns = backend.nonzero(backend.tril(adj_matrix, -1))
+    target = 0
+    for col, row in zip(columns, rows):
+        term_col = base_string.copy()
+        term_col[int(col)] = term
+        term_col = reduce(backend.kron, term_col)
+
+        term_row = base_string.copy()
+        term_row[int(row)] = term
+        term_row = reduce(backend.kron, term_row)
+
+        target += term_row + term_col - 2 * (term_col @ term_row)
+
+    if penalty_coeff != 0.0:
+        penalty = 0
+        for elem in range(len(adj_matrix)):
+            term_weight = base_string.copy()
+            term_weight[elem] = term - backend.matrices.I() / 2
+            term_weight = reduce(backend.kron, term_weight)
+            penalty += term_weight
+
+        target += penalty_coeff * (penalty**2)
+
+    backend.assert_allclose(hamiltonian.matrix, target)
