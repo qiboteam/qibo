@@ -265,14 +265,17 @@ def _binary_encoder_hopf(
                     targets.append(k)
             targets_and_controls.append([targets, controls, anticontrols])
 
+    untouched = list(range(nqubits))
     circuit = Circuit(nqubits, **kwargs)
     for targets, controls, anticontrols in targets_and_controls:
+        anticontrols = [qubit for qubit in anticontrols if qubit not in untouched]
         gate_list = []
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         gate_list.append(
             gates.RY(targets[0], 0.0).controlled_by(*(controls + anticontrols))
         )
+        untouched = [qubit for qubit in untouched if qubit != targets[0]]
         if len(anticontrols) > 0:
             gate_list.append(gates.X(qubit) for qubit in anticontrols)
         circuit.add(gate_list)
@@ -484,7 +487,7 @@ def _gate_params(
 def _generate_rbs_angles(
     data: ArrayLike,
     architecture: str,
-    nqubits: Optional[int] = None,
+    dims: Optional[int] = None,
     backend: Optional[Backend] = None,
 ) -> List[float]:
     """Generate list of angles for RBS gates based on ``architecture``.
@@ -510,16 +513,16 @@ def _generate_rbs_angles(
         phases.append(backend.arctan2(data[-1], data[-2]))
 
     if architecture == "tree":
-        if nqubits is None:  # pragma: no cover
+        if dims is None:  # pragma: no cover
             raise_error(
                 TypeError,
                 '``nqubits`` must be specified when ``architecture=="tree"``.',
             )
 
-        j_max = int(nqubits / 2)
+        j_max = int(dims / 2)
 
-        r_array = np.zeros(nqubits - 1, dtype=float)
-        phases = np.zeros(nqubits - 1, dtype=float)
+        r_array = np.zeros(dims - 1, dtype=float)
+        phases = np.zeros(dims - 1, dtype=float)
         for j in range(1, j_max + 1):
             r_array[j_max + j - 2] = math.sqrt(
                 data[2 * j - 1] ** 2 + data[2 * j - 2] ** 2
